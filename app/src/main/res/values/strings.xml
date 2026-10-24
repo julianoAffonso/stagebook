@@ -148,6 +148,11 @@
     <string name="settings_sections_help">Linhas como [Refrão], Verso 2:, Ponte, Intro, Solo, Final… viram títulos em destaque no palco, sempre em português: [Chorus] aparece como REFRÃO, [Verse 2] como VERSO 2.</string>
     <string name="settings_section_color">Cor do título da seção</string>
     <string name="settings_chords">Cifras</string>
+    <string name="settings_player">Player</string>
+    <string name="settings_player_on_short">Ligado</string>
+    <string name="settings_player_off_short">Desligado</string>
+    <string name="settings_player_mode">Modo player (Backing track)</string>
+    <string name="settings_player_mode_help">Toca a faixa de cada música (OGG multifaixa) na USB interface ou na saída do aparelho. Desligado, o app é só letra e cifra e nada do player fica carregado.</string>
     <string name="settings_import_sites">Importação</string>
     <string name="settings_lyric_sites">Sites de letra</string>
     <string name="settings_chord_sites">Sites de cifra</string>

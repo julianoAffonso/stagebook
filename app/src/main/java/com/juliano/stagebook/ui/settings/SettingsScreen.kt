@@ -194,6 +194,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onMidiForget = viewModel::forgetMidi,
                 onMidiUsb = viewModel::setMidiUsb,
                 onSites = viewModel::setSites,
+                onPlayerMode = viewModel::setPlayerMode,
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -249,6 +250,7 @@ data class SettingsActions(
     val onMidiUsb: (Boolean) -> Unit = {},
     val onLanguage: (AppLanguage) -> Unit = {},
     val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
+    val onPlayerMode: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onImport: () -> Unit = {},
@@ -262,6 +264,7 @@ data class SettingsActions(
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
     CHORDS(R.string.settings_chords, AppIcons.MusicNote),
+    PLAYER(R.string.settings_player, AppIcons.Play),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
@@ -373,6 +376,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState): String = when (s) 
     else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
     SettingsSection.LANGUAGE -> languageLabel(ui.language)
+    SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
     SettingsSection.UPDATE -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
@@ -390,6 +394,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
+            SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.UPDATE -> UpdateDetail(uiState, actions)
@@ -852,6 +857,15 @@ private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = { url?.let { onDone(ImportSite(ImportSiteRules.nameOf(it), it)) } }, enabled = url != null) { Text(stringResource(R.string.settings_site_add_ok)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
+}
+
+/** Modo player: desligado, o app é só letra e cifra e nada do player gasta CPU ou memória. */
+@Composable
+private fun PlayerDetail(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_player)) {
+        SwitchRow(stringResource(R.string.settings_player_mode), look.playerMode, actions.onPlayerMode)
+        Text(stringResource(R.string.settings_player_mode_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
