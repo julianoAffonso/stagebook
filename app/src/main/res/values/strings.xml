@@ -170,6 +170,7 @@
     <string name="settings_chord_list_none">Não</string>
     <string name="settings_chord_list_top">No topo</string>
     <string name="settings_chord_list_bottom">No fim</string>
+    <string name="settings_chord_list_help">Mostra todos os acordes da música, na ordem em que aparecem, cada um uma vez. Se você escolheu uma montagem tocando no acorde no palco (Usar esta), aparece a escolhida; se não, a mais fácil. No topo: antes da letra, na primeira página. No fim: depois da letra, na última página.</string>
     <string name="chord_shape_none">Não encontrei como montar %1$s neste instrumento.</string>
     <string name="chord_shape_previous">Variação anterior</string>
     <string name="chord_shape_next">Próxima variação</string>
