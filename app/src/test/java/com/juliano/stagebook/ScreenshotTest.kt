@@ -474,7 +474,7 @@ class ScreenshotTest {
     fun shareCodePhone() = shoot("jornada_compartilhar_2_codigo") {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
-                androidx.compose.material3.Text("Código do setlist", style = MaterialTheme.typography.headlineSmall)
+                androidx.compose.material3.Text("Para receber, digite", style = MaterialTheme.typography.headlineSmall)
                 com.juliano.stagebook.ui.share.CodeBox(
                     com.juliano.stagebook.ui.share.CloudUi.Sent(
                         "47-violao-lua", "Show de sábado", 12, 0,
