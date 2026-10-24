@@ -382,6 +382,8 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="mixer_output_one">Saída %1$d</string>
     <string name="mixer_output_pair">Saídas %1$d-%2$d</string>
     <string name="mixer_eq">EQ</string>
+    <string name="mixer_edit">Editar o canal</string>
+    <string name="mixer_done">Pronto</string>
     <string name="mixer_center">Centralizar</string>
     <string name="mixer_stereo">Par estéreo</string>
     <string name="mixer_norm_help">Volume: todas as músicas no mesmo volume percebido. Pico: o mesmo pico em todas (bom para click e guia). Medido uma vez por backing track.</string>
