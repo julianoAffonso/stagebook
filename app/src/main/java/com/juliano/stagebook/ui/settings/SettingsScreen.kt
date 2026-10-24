@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.model.ChordListPlace
+import com.juliano.stagebook.data.model.Instrument
 import com.juliano.stagebook.ui.stage.family
 import com.juliano.stagebook.data.model.StageFont
 import androidx.compose.ui.unit.TextUnit
@@ -171,6 +173,9 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onChordColor = viewModel::setChordColor,
                 onFontFamily = viewModel::setFontFamily,
                 onChordFont = viewModel::setChordFont,
+                onInstrument = viewModel::setInstrument,
+                onChordList = viewModel::setChordList,
+                onChordTap = viewModel::setChordTap,
                 onNormalize = viewModel::normalizeSections,
                 onPairPedal = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
                 onPedalAction = viewModel::setPedalAction,
@@ -221,6 +226,9 @@ data class SettingsActions(
     val onChordColor: (Int) -> Unit = {},
     val onFontFamily: (StageFont) -> Unit = {},
     val onChordFont: (StageFont) -> Unit = {},
+    val onInstrument: (Instrument) -> Unit = {},
+    val onChordList: (ChordListPlace) -> Unit = {},
+    val onChordTap: (Boolean) -> Unit = {},
     val onNormalize: () -> Unit = {},
     val onPairPedal: () -> Unit = {},
     val onPedalAction: (Int, PedalAction) -> Unit = { _, _ -> },
@@ -493,11 +501,51 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
             Text(stringResource(R.string.settings_font_family), style = MaterialTheme.typography.bodyLarge)
             FontPicker(look.chordFont, actions.onChordFont)
+            Text(stringResource(R.string.settings_instrument), style = MaterialTheme.typography.bodyLarge)
+            InstrumentPicker(look.instrument, actions.onInstrument)
+            Text(stringResource(R.string.settings_instrument_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
+            Text(stringResource(R.string.settings_chord_list), style = MaterialTheme.typography.bodyLarge)
+            val places = listOf(
+                ChordListPlace.NONE to R.string.settings_chord_list_none,
+                ChordListPlace.TOP to R.string.settings_chord_list_top,
+                ChordListPlace.BOTTOM to R.string.settings_chord_list_bottom,
+            )
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                places.forEachIndexed { i, (p, label) ->
+                    SegmentedButton(
+                        selected = look.chordList == p,
+                        onClick = { actions.onChordList(p) },
+                        shape = SegmentedButtonDefaults.itemShape(i, places.size, baseShape = CircleShape),
+                    ) { Text(stringResource(label)) }
+                }
+            }
             // perfil só letra: nada de cifra na tela (nem prévia dos acordes)
             Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
                 StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
             }
             LegibilityWarnings(look)
+        }
+    }
+}
+
+/** O instrumento dos desenhos de acorde (violão e guitarra mostram os mesmos). */
+@Composable
+private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Unit) {
+    val names = mapOf(
+        Instrument.VIOLAO to R.string.instrument_violao,
+        Instrument.GUITARRA to R.string.instrument_guitarra,
+        Instrument.UKULELE to R.string.instrument_ukulele,
+        Instrument.CAVAQUINHO to R.string.instrument_cavaquinho,
+        Instrument.TECLADO to R.string.instrument_teclado,
+    )
+    Instrument.entries.forEach { i ->
+        Row(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).selectable(i == selected, role = Role.RadioButton) { onSelect(i) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = i == selected, onClick = null, modifier = Modifier.padding(Spacing.s))
+            Text(stringResource(names.getValue(i)), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

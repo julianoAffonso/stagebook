@@ -71,16 +71,24 @@ object Voicings {
         val lo = fretted.minOfOrNull { f[it] } ?: 0
         val hi = fretted.maxOfOrNull { f[it] } ?: 0
         if (hi - lo > 3) return null
-        // pestana: a menor casa em várias cordas, sem corda solta no meio, conta como um dedo só
-        val atLo = fretted.filter { f[it] == lo }
-        val barre = atLo.size >= 2 && (atLo.first()..atLo.last()).none { f[it] == 0 }
-        val fingers = if (barre) 1 + fretted.count { f[it] > lo } else fretted.size
+        // pestana só quando faltam dedos (mais de 4 notas apertadas): a menor casa em várias cordas, sem corda solta
+        // no meio, vira um dedo só
+        val fingers = if (fretted.size <= 4) fretted.size else if (needsBarre(f)) 1 + fretted.count { f[it] > lo } else fretted.size
         if (fingers > 4) return null
         val muted = n - sounding.size
         val open = sounding.count { f[it] == 0 }
         val noFifth = if ((notes.root + 7) % 12 in notes.tones && (notes.root + 7) % 12 !in pcs) 0.5 else 0.0
         // abertura dos dedos (da menor à maior casa) pesa: x50232 é tocável, mas ninguém monta D assim
         return lo * 3.0 + muted * 2.0 + fingers + (hi - lo) - open * 0.5 + noFifth
+    }
+
+    /** A forma precisa de pestana? Mais de 4 notas apertadas e a menor casa em várias cordas, sem solta no meio. */
+    fun needsBarre(f: IntArray): Boolean {
+        val fretted = f.indices.filter { f[it] > 0 }
+        if (fretted.size <= 4) return false
+        val lo = fretted.minOf { f[it] }
+        val atLo = fretted.filter { f[it] == lo }
+        return atLo.size >= 2 && (atLo.first()..atLo.last()).none { f[it] == 0 }
     }
 
     /** Teclado: as notas do acorde (MIDI), em posição fundamental e nas inversões. */

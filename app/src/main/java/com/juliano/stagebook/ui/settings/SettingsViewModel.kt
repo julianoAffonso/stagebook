@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.model.Instrument
+import com.juliano.stagebook.data.model.ChordListPlace
 import com.juliano.stagebook.data.model.StageFont
 import android.content.Context
 import android.content.Intent
@@ -145,6 +147,9 @@ class SettingsViewModel @Inject constructor(
     fun setTranslateSections(on: Boolean) = repository.updateLook { it.copy(translateSections = on) }
     fun setFontFamily(f: StageFont) = repository.updateLook { it.copy(font = f) }
     fun setChordFont(f: StageFont) = repository.updateLook { it.copy(chordFont = f) }
+    fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
+    fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
+    fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }

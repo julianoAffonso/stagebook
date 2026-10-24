@@ -37,6 +37,12 @@ class VoicingsTest {
         assertEquals("2010", first("F", Instrument.UKULELE))
     }
 
+    @Test fun `pestana só quando faltam dedos`() {
+        assertEquals(true, Voicings.needsBarre(intArrayOf(1, 3, 3, 2, 1, 1)))     // F
+        assertEquals(false, Voicings.needsBarre(intArrayOf(0, 2, 3, 2)))         // G no ukulele: três dedos
+        assertEquals(false, Voicings.needsBarre(intArrayOf(-1, 0, 2, 2, 2, 0)))  // A
+    }
+
     @Test fun `cavaquinho tem formas e teclado tem inversões`() {
         assertTrue(Voicings.shapes("G", Instrument.CAVAQUINHO).isNotEmpty())
         val keys = Voicings.keys("C")

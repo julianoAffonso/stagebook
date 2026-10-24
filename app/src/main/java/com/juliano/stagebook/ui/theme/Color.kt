@@ -71,6 +71,10 @@ internal val LightColors = lightColorScheme(
 )
 
 /** Opções de cor do palco que o vocalista escolhe (são dados da biblioteca, em ARGB). */
+/** Teclas do teclado no desenho do acorde (como num piano, nos dois temas). */
+val PianoWhite = Color(0xFFF5F5F5)
+val PianoBlack = Color(0xFF1A1A1A)
+
 object StagePalette {
     val text = listOf(0xFFFFFFFF, 0xFFFFEB3B, 0xFFE0E0E0, 0xFF80DEEA, 0xFFA5D6A7, 0xFF000000).map { it.toInt() }
     val background = listOf(0xFF000000, 0xFF121212, 0xFF0D1B2A, 0xFF102A1A, 0xFFFFFFFF, 0xFFFFF8E1).map { it.toInt() }
