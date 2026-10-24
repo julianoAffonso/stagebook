@@ -382,14 +382,15 @@ fun StageScreen(
         }
             // tom e capo da música (ícone + valor, o texto inteiro só para leitores de tela); no celular vão
             // para a linha do artista, senão o título encurta
-            if (!song.missing && metaInline) SongKeyBadges(song.text, fg)
+            if (!song.missing && metaInline && look.chords) SongKeyBadges(song.text, fg)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
                 }
             }
         }
-        val hasKey = remember(song.text) { Chords.key(song.text).isNotEmpty() || Chords.capo(song.text) > 0 }
+        // tom e capo são de cifra: no perfil só letra não aparecem
+        val hasKey = look.chords && remember(song.text) { Chords.key(song.text).isNotEmpty() || Chords.capo(song.text) > 0 }
         if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -400,7 +401,7 @@ fun StageScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (!song.missing) SongKeyBadges(song.text, fg)
+                if (!song.missing && hasKey) SongKeyBadges(song.text, fg)
             }
         }
 
