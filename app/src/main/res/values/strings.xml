@@ -213,9 +213,11 @@
     <string name="section_interlude">Interlúdio</string>
     <string name="section_outro">Fim</string>
     <string name="settings_show_sections">Mostrar os títulos das seções</string>
-    <string name="settings_normalize">Padronizar seções da biblioteca</string>
-    <string name="settings_normalize_ok">Padronizar</string>
-    <string name="settings_normalize_confirm">Padronizar as seções de todas as músicas (em português)?\n\nTítulos que já existem viram \"[Refrão]\", \"[Verso 2]\"…\nLetra sem títulos: o app identifica cada parte pela repetição (a estrofe que se repete é o refrão).\n\nAs palavras da letra não mudam.</string>
+    <string name="settings_normalize">Marcar seções nas letras sem títulos</string>
+    <string name="settings_normalize_ok">Marcar</string>
+    <string name="settings_normalize_confirm">Marcar as seções nas músicas que não têm nenhum título?
+
+O app identifica cada parte pela repetição (a estrofe que se repete é o refrão). Títulos que já existem não mudam, e as palavras da letra também não.</string>
     <plurals name="settings_unidentified">
         <item quantity="one">%d sem repetição ficou como estava.</item>
         <item quantity="other">%d sem repetição ficaram como estavam.</item>
@@ -252,8 +254,8 @@
     <string name="settings_sections_look">Títulos de seção</string>
     <string name="settings_sections_shown">títulos visíveis</string>
     <string name="settings_sections_hidden">títulos escondidos</string>
-    <string name="settings_normalize_card">Padronizar a biblioteca</string>
-    <string name="settings_normalize_help">Reescreve os títulos de seção de todas as músicas e identifica as partes das letras que não têm títulos (a estrofe que se repete é o refrão).</string>
+    <string name="settings_normalize_card">Marcar seções</string>
+    <string name="settings_normalize_help">Nas letras sem nenhum título de seção, identifica as partes pela repetição (a estrofe que se repete é o refrão). Títulos que já existem ficam como estão: o palco mostra na língua do app.</string>
     <string name="settings_screen_on_short">Fica ligada com o app aberto</string>
     <string name="settings_screen_off_short">Apaga normalmente</string>
     <string name="settings_pair_pedal">Parear pedal</string>
