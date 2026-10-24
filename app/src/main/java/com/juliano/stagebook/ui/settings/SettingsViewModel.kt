@@ -151,6 +151,7 @@ class SettingsViewModel @Inject constructor(
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
     fun setSites(chords: Boolean, sites: List<ImportSite>) =
         repository.updateLook { if (chords) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
+    fun setPlayerMode(on: Boolean) = repository.updateLook { it.copy(playerMode = on) }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
     fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }

@@ -114,6 +114,8 @@ data class Look(
     val instrument: Instrument = Instrument.VIOLAO,   // desenhos de acorde (popup e lista)
     val chordList: ChordListPlace = ChordListPlace.NONE,
     val chordTap: Boolean = true,
+    // modo player (faixas, USB interface, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço
+    val playerMode: Boolean = false,
     // importação: os sites de cada tipo; o primeiro de cada lista é o padrão (onde o importador abre)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
     val chordSites: List<ImportSite> = ImportSites.CHORDS,   // tocar num acorde no palco mostra o desenho (desligado: o toque vira a página)
