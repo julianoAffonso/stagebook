@@ -513,4 +513,33 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="other">%1$d selecionadas</item>
     </plurals>
     <string name="songs_select_cancel">Sair da seleção</string>
+    <!-- banda na rede local (Ajustes → Banda e o pedido de entrada) -->
+    <string name="settings_band">Banda</string>
+    <plurals name="settings_band_short">
+        <item quantity="one">%1$d aparelho na banda</item>
+        <item quantity="other">%1$d aparelhos na banda</item>
+    </plurals>
+    <string name="settings_band_none">Ninguém da banda ainda</string>
+    <string name="band_this_device">Este aparelho</string>
+    <string name="band_rename">Mudar o nome</string>
+    <string name="band_help">É o nome que a banda vê. Para alguém entrar: os dois no mesmo Wi-Fi (do lugar ou o ponto de acesso de um celular), Ajustes → Banda aberto nos dois, e um toca em Pedir para entrar; o outro toca em Autorizar. Fica guardado até alguém remover.</string>
+    <string name="band_nearby">Na rede agora</string>
+    <string name="band_no_wifi">Conecte no Wi-Fi do lugar (ou no ponto de acesso de um celular) para achar a banda.</string>
+    <string name="band_searching">Procurando… Abra Ajustes → Banda no outro aparelho também.</string>
+    <string name="band_is_member">Da banda</string>
+    <string name="band_join">Pedir para entrar</string>
+    <string name="band_waiting">Esperando o outro aparelho autorizar…</string>
+    <string name="band_denied">Não autorizado</string>
+    <string name="band_failed">Não deu para falar com ele. Tente de novo.</string>
+    <string name="band_members">Da banda</string>
+    <string name="band_members_none">Ninguém ainda. Quem for autorizado aparece aqui.</string>
+    <string name="band_remove">Remover %1$s da banda</string>
+    <string name="band_remove_short">Remover</string>
+    <string name="band_remove_confirm">Remover \"%1$s\" da banda? Para voltar, ele precisa pedir para entrar de novo.</string>
+    <string name="band_name_title">Como a banda vai ver este aparelho?</string>
+    <string name="band_name_hint">Ex.: Meu tablet</string>
+    <string name="band_request_title">%1$s quer entrar na banda</string>
+    <string name="band_request_text">Autorizado, ele passa a receber e mandar setlists e músicas para você sem as 3 palavras, aqui na rede e pela internet. Dá para remover depois em Ajustes → Banda.</string>
+    <string name="band_allow">Autorizar</string>
+    <string name="band_deny">Não autorizar</string>
 </resources>
