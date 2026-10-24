@@ -287,11 +287,13 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_pedal_unused">não usado no palco</string>
     <string name="settings_pedal_next_song">vai para a próxima música</string>
     <string name="settings_pedal_previous_song">volta para a música anterior</string>
+    <string name="settings_pedal_play_pause">dá play/pause no backing track</string>
     <string name="settings_pedal_command">O que este botão faz</string>
     <string name="settings_pedal_cmd_next">Avançar a página</string>
     <string name="settings_pedal_cmd_previous">Voltar a página</string>
     <string name="settings_pedal_cmd_next_song">Próxima música</string>
     <string name="settings_pedal_cmd_previous_song">Música anterior</string>
+    <string name="settings_pedal_cmd_play_pause">Play/pause do backing track</string>
     <string name="settings_pedal_cmd_none">Nada (ignorar)</string>
     <string name="settings_pedal_keys">Botões configurados</string>
     <string name="settings_language">Língua</string>

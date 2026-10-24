@@ -690,6 +690,7 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
                                 PedalAction.PREVIOUS -> R.string.settings_pedal_previous
                                 PedalAction.NEXT_SONG -> R.string.settings_pedal_next_song
                                 PedalAction.PREVIOUS_SONG -> R.string.settings_pedal_previous_song
+                                PedalAction.PLAY_PAUSE -> R.string.settings_pedal_play_pause
                                 PedalAction.NONE -> R.string.settings_pedal_unused
                             },
                         ),
@@ -787,6 +788,7 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
         PedalAction.PREVIOUS -> R.string.settings_pedal_cmd_previous
         PedalAction.NEXT_SONG -> R.string.settings_pedal_cmd_next_song
         PedalAction.PREVIOUS_SONG -> R.string.settings_pedal_cmd_previous_song
+        PedalAction.PLAY_PAUSE -> R.string.settings_pedal_cmd_play_pause
         PedalAction.NONE -> R.string.settings_pedal_cmd_none
     },
 )

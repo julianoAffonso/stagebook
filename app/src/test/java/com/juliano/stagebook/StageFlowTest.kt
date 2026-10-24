@@ -256,6 +256,46 @@ class StageFlowTest {
         assertEquals(1, swipeStage(1) { swipeUp(startY = centerY + height / 4f, endY = centerY - height / 4f) })
     }
 
+    // pedal Play/pause: só dá play com o modo player ligado e a música com backing track; nunca vira a página
+    private fun pressPlayPause(look: Look, track: String): Pair<Int, Int> {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false, id = "1", track = track)), look = look)
+        var page by mutableIntStateOf(0)
+        var toggles = 0
+        val pedal = PedalInput()
+        compose.setContent {
+            StagebookTheme {
+                CompositionLocalProvider(LocalPedalInput provides pedal) {
+                    StageScreen(state, 0, page, { _, p -> page = p }, onTogglePlay = { toggles++ })
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.runOnUiThread {
+            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, 0))
+            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, 0))
+        }
+        compose.waitForIdle()
+        return toggles to page
+    }
+
+    @Test fun `pedal Play-pause dá play no backing track com o modo player`() {
+        assertEquals(1 to 0, pressPlayPause(Look(fontSp = 34f, playerMode = true), "1.ogg"))
+    }
+
+    @Test fun `pedal Play-pause não faz nada sem o modo player`() {
+        assertEquals(0 to 0, pressPlayPause(Look(fontSp = 34f, playerMode = false), "1.ogg"))
+    }
+
+    @Test fun `pedal Play-pause não faz nada na música sem backing track`() {
+        assertEquals(0 to 0, pressPlayPause(Look(fontSp = 34f, playerMode = true), ""))
+    }
+
+    @Test fun `tecla de mídia play-pause vira Play-pause e pode ser trocada nos ajustes`() {
+        assertEquals(com.juliano.stagebook.domain.PedalAction.PLAY_PAUSE, com.juliano.stagebook.domain.PedalAction.of(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
+        val custom = com.juliano.stagebook.domain.PedalAction.assign(emptyMap(), KeyEvent.KEYCODE_B, com.juliano.stagebook.domain.PedalAction.PLAY_PAUSE)
+        assertEquals(com.juliano.stagebook.domain.PedalAction.PLAY_PAUSE, com.juliano.stagebook.domain.PedalAction.of(KeyEvent.KEYCODE_B, custom))
+    }
+
     @Test
     fun `pedal com o pé apoiado (tecla repetida) vira só uma página`() {
         val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))

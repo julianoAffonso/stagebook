@@ -14,6 +14,7 @@ enum class PedalAction {
     @SerialName("previous") PREVIOUS,
     @SerialName("nextSong") NEXT_SONG,
     @SerialName("previousSong") PREVIOUS_SONG,
+    @SerialName("playPause") PLAY_PAUSE,   // play/pause do backing track (só com o modo player e a música com backing track)
     @SerialName("none") NONE;
 
     companion object {
@@ -27,6 +28,8 @@ enum class PedalAction {
 
             KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_MEDIA_PREVIOUS, KeyEvent.KEYCODE_P, KeyEvent.KEYCODE_DEL -> PREVIOUS
+
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> PLAY_PAUSE
 
             else -> NONE
         }
