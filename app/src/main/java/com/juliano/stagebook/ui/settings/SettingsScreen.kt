@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.ui.stage.family
+import com.juliano.stagebook.data.model.StageFont
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.style.LineHeightStyle
 import com.juliano.stagebook.ui.stage.ChordText
@@ -167,6 +169,8 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onChords = viewModel::setChords,
                 onChordScale = viewModel::setChordScale,
                 onChordColor = viewModel::setChordColor,
+                onFontFamily = viewModel::setFontFamily,
+                onChordFont = viewModel::setChordFont,
                 onNormalize = viewModel::normalizeSections,
                 onPairPedal = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
                 onPedalAction = viewModel::setPedalAction,
@@ -215,6 +219,8 @@ data class SettingsActions(
     val onChords: (Boolean) -> Unit = {},
     val onChordScale: (Float) -> Unit = {},
     val onChordColor: (Int) -> Unit = {},
+    val onFontFamily: (StageFont) -> Unit = {},
+    val onChordFont: (StageFont) -> Unit = {},
     val onNormalize: () -> Unit = {},
     val onPairPedal: () -> Unit = {},
     val onPedalAction: (Int, PedalAction) -> Unit = { _, _ -> },
@@ -418,6 +424,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
         LegibilityWarnings(look)
     }
+    SettingsCard(stringResource(R.string.settings_font_family)) {
+        FontPicker(look.font, actions.onFontFamily)
+    }
 }
 
 /** Prévia do palco com a aparência escolhida (letra, seção e acordes), no tamanho [font]. */
@@ -428,6 +437,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier)
         fontSize = font.sp,
         lineHeight = (font * 1.25f).sp,
         fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
+        fontFamily = look.font.family,
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
     )
     ChordText(
@@ -439,7 +449,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier)
             ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
         ),
         style = style,
-        chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, lineHeight = TextUnit.Unspecified),
+        chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
         modifier = modifier,
     )
 }
@@ -481,11 +491,33 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             )
             Text(stringResource(R.string.settings_chords_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
+            Text(stringResource(R.string.settings_font_family), style = MaterialTheme.typography.bodyLarge)
+            FontPicker(look.chordFont, actions.onChordFont)
         }
         Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
             StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
         }
         LegibilityWarnings(look)
+    }
+}
+
+/** As fontes do palco, cada uma escrita nela mesma (ver a diferença sem ler o nome). */
+@Composable
+private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
+    val names = mapOf(
+        StageFont.DEFAULT to R.string.font_default,
+        StageFont.CONDENSED to R.string.font_condensed,
+        StageFont.SERIF to R.string.font_serif,
+        StageFont.MONO to R.string.font_mono,
+    )
+    StageFont.entries.forEach { f ->
+        Row(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).selectable(f == selected, role = Role.RadioButton) { onSelect(f) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = f == selected, onClick = null, modifier = Modifier.padding(Spacing.s))
+            Text(stringResource(names.getValue(f)), style = MaterialTheme.typography.titleMedium.copy(fontFamily = f.family))
+        }
     }
 }
 

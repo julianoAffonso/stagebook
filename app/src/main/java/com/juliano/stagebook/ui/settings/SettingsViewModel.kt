@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.model.StageFont
 import android.content.Context
 import android.content.Intent
 import android.hardware.input.InputManager
@@ -142,6 +143,8 @@ class SettingsViewModel @Inject constructor(
     fun setSectionColor(argb: Int) = repository.updateLook { it.copy(sectionColor = argb) }
     fun setShowSections(on: Boolean) = repository.updateLook { it.copy(showSections = on) }
     fun setTranslateSections(on: Boolean) = repository.updateLook { it.copy(translateSections = on) }
+    fun setFontFamily(f: StageFont) = repository.updateLook { it.copy(font = f) }
+    fun setChordFont(f: StageFont) = repository.updateLook { it.copy(chordFont = f) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
