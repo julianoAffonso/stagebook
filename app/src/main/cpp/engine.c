@@ -27,7 +27,7 @@
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
 
-#define TAG "previous-app"
+#define TAG "stagebook"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 // Diagnóstico (resumo a cada 5 s, pacotes de entrada): 1 para religar.
 #define DIAG 0
@@ -616,6 +616,56 @@ out:
     return NULL;
 }
 
+
+// ---- saída do aparelho (AAudio): sem interface USB, toca pelo Android ----
+// Caminho à parte: a USB acima não muda. Mesma mistura (mix_custom), mesmo fade e mesma posição; as duas
+// primeiras saídas do roteamento vão para os dois lados do aparelho. O simulador (sem AAudio) não compila isto.
+#if __has_include(<aaudio/AAudio.h>)
+#include <aaudio/AAudio.h>
+#define ENGINE_HAS_DEVICE 1
+static AAudioStream *g_dev = NULL;
+static volatile int g_dev_running = 0;
+
+static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *data, int32_t nf) {
+    float *o = (float *)data;
+    int ch = AAudioStream_getChannelCount(st);
+    pthread_mutex_lock(&g_mx);
+    int mon = g_meter_on;
+    for (int f = 0; f < nf; f++) {
+        float lane[LANES_MAX] = {0};
+        int want_play = g_playing;
+        if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES;
+        if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES;
+        if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1;
+        if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
+        float outv[LANES_MAX];
+        mix_custom(lane, outv);
+        for (int c = 0; c < ch; c++) {
+            float v = c < LANES_MAX ? outv[c] : 0;
+            if (mon && c < OUT_CH && fabsf(v) > g_pk[c]) g_pk[c] = fabsf(v);
+            o[f * ch + c] = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
+        }
+    }
+    pthread_mutex_unlock(&g_mx);
+    return AAUDIO_CALLBACK_RESULT_CONTINUE;
+}
+
+// fone tirado, Bluetooth caiu...: o fluxo morre; o vigia do app vê isRunning() falso e abre de novo
+static void dev_error(AAudioStream *st, void *ud, aaudio_result_t err) {
+    snprintf(g_status, sizeof g_status, "saída do aparelho caiu: %s", AAudio_convertResultToText(err));
+    g_dev_running = 0;
+}
+
+static void dev_close(void) {
+    g_playing = 0; g_meter_on = 0;
+    usleep(20000);   // o fade de 5 ms termina antes de fechar: sem estalo
+    if (g_dev) { AAudioStream_requestStop(g_dev); AAudioStream_close(g_dev); g_dev = NULL; }
+    g_dev_running = 0;
+    g_dec_stop = 1;
+    pthread_join(g_dec_thr, NULL);
+}
+#endif
+
 // ---- JNI ----
 #define FN(name) Java_com_juliano_stagebook_player_Engine_##name
 
@@ -633,6 +683,9 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
 }
 
 JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
+#ifdef ENGINE_HAS_DEVICE
+    if (g_dev) { dev_close(); return; }
+#endif
     if (!g_usb_running && g_fd < 0) return;
     g_playing = 0; g_meter_on = 0;
     g_usb_stop = 1;
@@ -640,6 +693,37 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
     g_dec_stop = 1;
     pthread_join(g_dec_thr, NULL);
     g_fd = -1;
+}
+
+// Abre a saída do aparelho (48 kHz, estéreo, float). Falso se o Android não abriu ou não deu 48 kHz.
+JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
+#ifdef ENGINE_HAS_DEVICE
+    if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
+    AAudioStreamBuilder *b = NULL;
+    if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
+    AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
+    AAudioStreamBuilder_setChannelCount(b, 2);
+    AAudioStreamBuilder_setFormat(b, AAUDIO_FORMAT_PCM_FLOAT);
+    AAudioStreamBuilder_setUsage(b, AAUDIO_USAGE_MEDIA);
+    AAudioStreamBuilder_setContentType(b, AAUDIO_CONTENT_TYPE_MUSIC);
+    AAudioStreamBuilder_setDataCallback(b, dev_cb, NULL);
+    AAudioStreamBuilder_setErrorCallback(b, dev_error, NULL);
+    aaudio_result_t r = AAudioStreamBuilder_openStream(b, &g_dev);
+    AAudioStreamBuilder_delete(b);
+    if (r != AAUDIO_OK || AAudioStream_getSampleRate(g_dev) != OUT_RATE) {
+        snprintf(g_status, sizeof g_status, "saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
+        if (g_dev) { AAudioStream_close(g_dev); g_dev = NULL; }
+        return JNI_FALSE;
+    }
+    g_dec_stop = 0;
+    pthread_create(&g_dec_thr, NULL, dec_main, NULL);
+    if (AAudioStream_requestStart(g_dev) != AAUDIO_OK) { dev_close(); return JNI_FALSE; }
+    g_dev_running = 1;
+    snprintf(g_status, sizeof g_status, "saída do aparelho ativa");
+    return JNI_TRUE;
+#else
+    return JNI_FALSE;
+#endif
 }
 
 JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
@@ -731,7 +815,12 @@ JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloat
 // canais da fonte guardados (para a tela montar o mixer): até LANES_MAX
 JNIEXPORT jint JNICALL FN(lanes)(JNIEnv *e, jclass c) { return g_lanes; }
 
-JNIEXPORT jboolean JNICALL FN(isRunning)(JNIEnv *e, jclass c) { return g_usb_running ? JNI_TRUE : JNI_FALSE; }
+JNIEXPORT jboolean JNICALL FN(isRunning)(JNIEnv *e, jclass c) {
+#ifdef ENGINE_HAS_DEVICE
+    if (g_dev) return g_dev_running ? JNI_TRUE : JNI_FALSE;
+#endif
+    return g_usb_running ? JNI_TRUE : JNI_FALSE;
+}
 
 JNIEXPORT jstring JNICALL FN(status)(JNIEnv *e, jclass c) { return (*e)->NewStringUTF(e, g_status); }
 

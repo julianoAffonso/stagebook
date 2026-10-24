@@ -44,6 +44,8 @@ class StageViewModel @Inject constructor(
     val playerUi: StateFlow<PlayerUi> = player.ui
 
     fun togglePlay() = player.toggle()
+    fun needsBatteryAsk() = player.needsBatteryAsk()
+    fun batteryAsked() = player.batteryAsked()
 
     /** Música na tela: o player anota o backing track dela (e para o da anterior). */
     fun showSong(track: String) = player.open(track.takeIf { it.isNotEmpty() }?.let(tracks::file))
