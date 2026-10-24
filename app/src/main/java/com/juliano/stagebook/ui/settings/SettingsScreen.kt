@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.widthIn
 import com.juliano.stagebook.ui.components.MixerStrip
 import com.juliano.stagebook.ui.components.HelpTip
 import com.juliano.stagebook.ui.components.MixerChannelEditor
+import com.juliano.stagebook.ui.components.label
 import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.ui.components.OptionDropdown
 import com.juliano.stagebook.domain.Voicings
@@ -934,6 +935,12 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
         )
         SwitchRow(stringResource(R.string.mixer_monitor), actions.monitoring, actions.onMonitoring)
+        // de qual saída é o roteamento mostrado (a em uso ou a última usada)
+        Text(
+            pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        HelpTip(stringResource(R.string.mixer_routes_help))
         val groups = mixer.groups()
         // celular: um canal por linha, fader deitado; tablet: faixas estreitas lado a lado, fader de pé (como numa mesa)
         BoxWithConstraints {
@@ -949,6 +956,8 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
                                 pair = g.count() == 2,
                                 onChange = { s -> onMixer(mixer.withStrip(g.first) { s }) },
                                 onEdit = { editing = g.first },
+                                output = mixer.outputOf(g.first),
+                                outputs = mixer.output,
                                 meters = { levels().meters },
                                 showMeters = actions.monitoring,
                                 modifier = Modifier.weight(1f),
@@ -966,7 +975,10 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
                 strip = mixer.strip(g.first),
                 pair = g.count() == 2,
                 canPair = g.first % 2 == 0 && g.first + 1 < mixer.channels,
+                output = mixer.outputOf(g.first),
+                outputs = mixer.output,
                 onChange = { s -> onMixer(mixer.withStrip(g.first) { s }) },
+                onOutput = { o -> onMixer(mixer.withOutput(g.first, o)) },
                 onDismiss = { editing = -1 },
             )
         }

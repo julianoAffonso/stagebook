@@ -12,6 +12,7 @@ import com.juliano.stagebook.domain.Measure
 import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.domain.Mixer
 import com.juliano.stagebook.domain.NormMode
+import com.juliano.stagebook.domain.OutputInfo
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -190,6 +191,11 @@ class StagePlayer @Inject constructor(
 
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
+        // outra saída conectada: os Ajustes passam a mostrar o roteamento dela, e o motor a usá-lo
+        val out = OutputInfo(PlayerService.outputKey, PlayerService.outputName, PlayerService.outputCount)
+        if (PlayerService.connected && out.key.isNotEmpty() && out != mixer.output) {
+            repository.updateLook { it.copy(mixer = it.mixer.copy(output = out)) }
+        }
         if (PlayerService.connected) {
             startIfConnected()
         } else if (_ui.value.playing) {

@@ -57,7 +57,8 @@ class MixerTest {
     @Test fun `backing num lado e click no outro - separados - mudo e saída escolhida`() {
         val cfg = MixerConfig(channels = 4)
             .withStrip(0) { it.copy(name = "Backing", stereo = true) }
-            .withStrip(2) { it.copy(name = "Click", output = 6, stereo = true) }
+            .withStrip(2) { it.copy(name = "Click", stereo = true) }
+            .withOutput(2, 6)
             .withStrip(3) { it.copy(on = false) }   // dentro do par: segue o canal 3
         val p = Mixer.plan(cfg, 4)
         assertEquals(1f, route(p, 6, 2)); assertEquals(1f, route(p, 7, 3))
@@ -65,6 +66,16 @@ class MixerTest {
         val muted = Mixer.plan(cfg.withStrip(2) { it.copy(on = false) }, 4)
         assertEquals(0f, muted.gains[2]); assertEquals(0f, muted.gains[3])
         assertEquals(0f, Mixer.plan(cfg.withStrip(0) { it.copy(gainDb = MixerConfig.MIN_DB) }, 4).gains[0])
+    }
+
+    @Test fun `cada interface guarda o seu roteamento`() {
+        val usb = MixerConfig(channels = 2, output = com.juliano.stagebook.domain.OutputInfo("usb:1234:5678", "Interface USB", 10)).withOutput(1, 6)
+        assertEquals(1f, route(Mixer.plan(usb, 2), 6, 1))
+        // na saída do aparelho, o canal 2 continua na saída 2 (direita): o que foi escolhido para a interface USB não vale ali
+        val device = usb.copy(output = com.juliano.stagebook.domain.OutputInfo())
+        assertEquals(1f, route(Mixer.plan(device, 2), 1, 1))
+        assertEquals(6, usb.outputOf(1))
+        assertEquals(1, device.outputOf(1))
     }
 
     @Test fun `arquivo com menos canais que o mixer usa só os que tem`() {

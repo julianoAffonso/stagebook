@@ -383,7 +383,16 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="mixer_norm_none">Não</string>
     <string name="mixer_norm_volume">Volume</string>
     <string name="mixer_norm_peak">Pico</string>
-    <string name="mixer_output">Saída</string>
+    <string name="mixer_output_in">Saída em: %1$s</string>
+    <string name="mixer_out_device">saída do aparelho</string>
+    <string name="mixer_out_left">Esquerda</string>
+    <string name="mixer_out_right">Direita</string>
+    <string name="mixer_out_left_right">Esquerda e direita</string>
+    <plurals name="mixer_now_output">
+        <item quantity="one">Roteamento de: %1$s (%2$d saída)</item>
+        <item quantity="other">Roteamento de: %1$s (%2$d saídas)</item>
+    </plurals>
+    <string name="mixer_routes_help">A saída de cada canal fica guardada para cada interface. Ao ligar outra interface (ou tocar sem interface, na saída do aparelho), o app usa o roteamento guardado para ela; sem escolha, cada canal sai na saída de mesmo número.</string>
     <string name="mixer_output_one">Saída %1$d</string>
     <string name="mixer_output_pair">Saídas %1$d-%2$d</string>
     <string name="mixer_eq">EQ</string>

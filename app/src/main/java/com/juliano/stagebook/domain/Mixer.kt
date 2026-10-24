@@ -20,9 +20,17 @@ data class MixChannel(
     val norm: NormMode = NormMode.NONE,
     val eq: Boolean = false,
     val center: Boolean = false,   // divide igual para os dois lados, ignorando o lado em que veio gravado
-    val output: Int = -1,          // primeira saída (0 = saída 1); -1 = a de mesmo número do canal
     val stereo: Boolean = false,
 )
+
+/** Uma saída de áudio: a do aparelho ou uma interface USB ([key] = "usb:vid:pid"), com o nome e quantas saídas tem. */
+@Immutable
+@Serializable
+data class OutputInfo(val key: String = DEVICE, val name: String = "", val count: Int = 2) {
+    companion object {
+        const val DEVICE = "device"
+    }
+}
 
 /**
  * Mixer do app (vale para todos os backing tracks): um canal por canal do arquivo. Sem configuração, cada canal vai
@@ -35,8 +43,21 @@ data class MixerConfig(
     val strips: List<MixChannel> = List(MAX) { MixChannel() },
     val eqOn: Boolean = false,
     val eqDb: List<Float> = List(EQ_BANDS) { 0f },
+    // a saída em uso (ou a última usada): é a que os Ajustes mostram e editam
+    val output: OutputInfo = OutputInfo(),
+    // roteamento guardado por saída (chave da OutputInfo): a primeira saída de cada canal; -1 = a de mesmo número
+    val routes: Map<String, List<Int>> = emptyMap(),
 ) {
     fun strip(i: Int): MixChannel = strips.getOrElse(i) { MixChannel() }
+
+    /** Primeira saída (0 = saída 1) do canal [i] na saída [key]; sem escolha, a de mesmo número. */
+    fun outputOf(i: Int, key: String = output.key): Int = routes[key]?.getOrNull(i)?.takeIf { it >= 0 } ?: i
+
+    /** Escolhe a saída do canal [i] na saída em uso; as das outras interfaces ficam como estão. */
+    fun withOutput(i: Int, out: Int): MixerConfig {
+        val now = routes[output.key].orEmpty()
+        return copy(routes = routes + (output.key to List(MAX) { if (it == i) out else now.getOrElse(it) { -1 } }))
+    }
 
     fun withStrip(i: Int, change: (MixChannel) -> MixChannel): MixerConfig =
         copy(strips = List(MAX) { if (it == i) change(strip(it)) else strip(it) })
@@ -102,7 +123,7 @@ object Mixer {
     fun mask(group: IntRange): Int = group.fold(0) { m, c -> m or (1 shl c) }
 
     /** A mistura para um arquivo com [lanes] canais; [measures] por canal do mixer (chave: o primeiro canal). */
-    fun plan(cfg: MixerConfig, lanes: Int, measures: Map<Int, Measure> = emptyMap()): MixPlan {
+    fun plan(cfg: MixerConfig, lanes: Int, measures: Map<Int, Measure> = emptyMap(), key: String = cfg.output.key): MixPlan {
         val n = MixerConfig.MAX
         val gains = FloatArray(n) { 1f }
         val norms = FloatArray(n) { 1f }
@@ -112,7 +133,7 @@ object Mixer {
             val s = cfg.strip(g.first)
             val gain = if (!s.on || s.gainDb <= MixerConfig.MIN_DB) 0f else lin(s.gainDb)
             val norm = lin(normDb(s.norm, measures[g.first]))
-            val base = (if (s.output >= 0) s.output else g.first).coerceIn(0, n - 1)
+            val base = cfg.outputOf(g.first, key).coerceIn(0, n - 1)
             for ((k, c) in g.withIndex()) {
                 gains[c] = gain
                 norms[c] = norm

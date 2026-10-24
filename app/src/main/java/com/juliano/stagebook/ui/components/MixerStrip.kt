@@ -32,6 +32,7 @@ import com.juliano.stagebook.domain.Meters
 import com.juliano.stagebook.domain.MixChannel
 import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.domain.NormMode
+import com.juliano.stagebook.domain.OutputInfo
 import com.juliano.stagebook.ui.theme.Spacing
 import kotlin.math.roundToInt
 
@@ -49,6 +50,8 @@ fun MixerStrip(
     onEdit: () -> Unit,
     modifier: Modifier = Modifier,
     upright: Boolean = false,
+    output: Int = first,                                         // primeira saída do canal na saída em uso
+    outputs: OutputInfo = OutputInfo(),                          // a saída em uso (aparelho ou interface USB)
     meters: () -> Meters = { Meters.silent(MixerConfig.MAX) },   // lido só no desenho: medidor ao lado do fader
     showMeters: Boolean = false,                                  // chave "Monitorar"
 ) {
@@ -61,7 +64,7 @@ fun MixerStrip(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Header(first, strip, pair, onEdit, Modifier.fillMaxWidth(), centered = true)
+                Header(first, strip, pair, output, outputs, onEdit, Modifier.fillMaxWidth(), centered = true)
                 MuteButton(strip, onChange)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                     VerticalFader(strip.gainDb, setGain, valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, origin = MixerConfig.MIN_DB)
@@ -72,7 +75,7 @@ fun MixerStrip(
         } else {
             Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.m, vertical = Spacing.s)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Header(first, strip, pair, onEdit, Modifier.weight(1f), centered = false)
+                    Header(first, strip, pair, output, outputs, onEdit, Modifier.weight(1f), centered = false)
                     MuteButton(strip, onChange)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -95,11 +98,12 @@ fun MixerStrip(
 
 // nome do canal e o resumo (normalizar, saída, EQ, centralizar); um toque abre a edição
 @Composable
-private fun Header(first: Int, strip: MixChannel, pair: Boolean, onEdit: () -> Unit, modifier: Modifier, centered: Boolean) {
+private fun Header(
+    first: Int, strip: MixChannel, pair: Boolean, output: Int, outputs: OutputInfo, onEdit: () -> Unit, modifier: Modifier, centered: Boolean,
+) {
     val title = channelTitle(first, pair)
-    val output = if (strip.output >= 0) strip.output else first
     val summary = listOfNotNull(
-        if (pair) stringResource(R.string.mixer_output_pair, output + 1, output + 2) else stringResource(R.string.mixer_output_one, output + 1),
+        outputName(output, pair, outputs),
         if (strip.norm != NormMode.NONE) normName(strip.norm) else null,
         if (strip.eq) stringResource(R.string.mixer_eq) else null,
         if (strip.center) stringResource(R.string.mixer_center_short) else null,
@@ -138,25 +142,37 @@ fun MixerChannelEditor(
     strip: MixChannel,
     pair: Boolean,
     canPair: Boolean,
+    output: Int,
+    outputs: OutputInfo,
     onChange: (MixChannel) -> Unit,
+    onOutput: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(channelTitle(first, pair)) },
-        text = { MixerChannelForm(first, strip, pair, canPair, onChange) },
+        text = { MixerChannelForm(first, strip, pair, canPair, output, outputs, onChange, onOutput) },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.mixer_done)) } },
     )
 }
 
 /** O que a edição de um canal mostra (separado do diálogo para o preview e os prints). */
 @Composable
-fun MixerChannelForm(first: Int, strip: MixChannel, pair: Boolean, canPair: Boolean, onChange: (MixChannel) -> Unit) {
+fun MixerChannelForm(
+    first: Int,
+    strip: MixChannel,
+    pair: Boolean,
+    canPair: Boolean,
+    output: Int,
+    outputs: OutputInfo,
+    onChange: (MixChannel) -> Unit,
+    onOutput: (Int) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         NameField(strip, channelTitle(first, pair), onChange, Modifier.fillMaxWidth())
         NormDropdown(strip, onChange, Modifier.fillMaxWidth())
         HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
-        OutputDropdown(first, strip, pair, onChange, Modifier.fillMaxWidth())
+        OutputDropdown(output, pair, outputs, onOutput, Modifier.fillMaxWidth())
         OptionSwitch(stringResource(R.string.mixer_eq_switch), strip.eq) { onChange(strip.copy(eq = it)) }
         OptionSwitch(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center) {
             onChange(strip.copy(center = it))
@@ -207,15 +223,28 @@ private fun NormDropdown(strip: MixChannel, onChange: (MixChannel) -> Unit, modi
     stringResource(R.string.mixer_norm), NormMode.entries, strip.norm, { onChange(strip.copy(norm = it)) }, { normName(it) }, modifier,
 )
 
+// as saídas que a saída em uso tem (no aparelho: esquerda e direita); a escolhida aparece mesmo se esta não tiver
 @Composable
-private fun OutputDropdown(first: Int, strip: MixChannel, pair: Boolean, onChange: (MixChannel) -> Unit, modifier: Modifier) =
+private fun OutputDropdown(output: Int, pair: Boolean, outputs: OutputInfo, onOutput: (Int) -> Unit, modifier: Modifier) =
     OptionDropdown(
-        stringResource(R.string.mixer_output), (0 until MixerConfig.MAX step if (pair) 2 else 1).toList(),
-        if (strip.output >= 0) strip.output else first,
-        { onChange(strip.copy(output = it)) },
-        { if (pair) stringResource(R.string.mixer_output_pair, it + 1, it + 2) else stringResource(R.string.mixer_output_one, it + 1) },
-        modifier,
+        stringResource(R.string.mixer_output_in, outputs.label()),
+        (0 until maxOf(outputs.count, output + 1) step if (pair) 2 else 1).toList(),
+        output, onOutput, { outputName(it, pair, outputs) }, modifier,
     )
+
+/** Nome de uma saída: "Saída 7"/"Saídas 7-8" na interface; "Esquerda"/"Direita"/"Esquerda e direita" no aparelho. */
+@Composable
+fun outputName(out: Int, pair: Boolean, outputs: OutputInfo): String = when {
+    outputs.key == OutputInfo.DEVICE && pair && out == 0 -> stringResource(R.string.mixer_out_left_right)
+    outputs.key == OutputInfo.DEVICE && !pair && out == 0 -> stringResource(R.string.mixer_out_left)
+    outputs.key == OutputInfo.DEVICE && !pair && out == 1 -> stringResource(R.string.mixer_out_right)
+    pair -> stringResource(R.string.mixer_output_pair, out + 1, out + 2)
+    else -> stringResource(R.string.mixer_output_one, out + 1)
+}
+
+/** Nome da saída para a tela: o da interface, ou "saída do aparelho". */
+@Composable
+fun OutputInfo.label(): String = if (key == OutputInfo.DEVICE || name.isEmpty()) stringResource(R.string.mixer_out_device) else name
 
 @Composable
 private fun normName(m: NormMode) = stringResource(
@@ -230,7 +259,7 @@ private fun normName(m: NormMode) = stringResource(
 private fun MixerStripSample() = Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
     MixerStrip(0, MixChannel(name = "Backing", stereo = true, eq = true, norm = NormMode.VOLUME, gainDb = -3f), pair = true, onChange = {}, onEdit = {})
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        MixerStrip(2, MixChannel(name = "Click", norm = NormMode.PEAK, output = 6), pair = false, onChange = {}, onEdit = {}, Modifier.weight(1f), upright = true)
+        MixerStrip(2, MixChannel(name = "Click", norm = NormMode.PEAK), pair = false, onChange = {}, onEdit = {}, Modifier.weight(1f), upright = true, output = 6)
         MixerStrip(3, MixChannel(name = "Guia", on = false), pair = false, onChange = {}, onEdit = {}, Modifier.weight(1f), upright = true)
     }
 }

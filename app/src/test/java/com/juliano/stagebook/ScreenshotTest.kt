@@ -373,9 +373,13 @@ class ScreenshotTest {
     // ---- mixer (Ajustes → Player): arquivo de 4 canais, backing em par estéreo e click mono na saída 7 ----
     private val mixerLook = Look(
         playerMode = true,
-        mixer = com.juliano.stagebook.domain.MixerConfig(channels = 4, eqOn = true, eqDb = listOf(3f, 0f, -2f, 1.5f, 0f))
+        mixer = com.juliano.stagebook.domain.MixerConfig(
+            channels = 4, eqOn = true, eqDb = listOf(3f, 0f, -2f, 1.5f, 0f),
+            output = com.juliano.stagebook.domain.OutputInfo("usb:1234:5678", "Interface USB", 10),
+        )
             .withStrip(0) { it.copy(name = "Backing", stereo = true, eq = true, norm = com.juliano.stagebook.domain.NormMode.VOLUME, gainDb = -3f) }
-            .withStrip(2) { it.copy(name = "Click", norm = com.juliano.stagebook.domain.NormMode.PEAK, output = 6, center = true) }
+            .withStrip(2) { it.copy(name = "Click", norm = com.juliano.stagebook.domain.NormMode.PEAK, center = true) }
+            .withOutput(2, 6)
             .withStrip(3) { it.copy(name = "Guia", on = false) },
     )
 
@@ -414,7 +418,7 @@ class ScreenshotTest {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
-                        com.juliano.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, onChange = {})
+                        com.juliano.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, output = mixerLook.mixer.outputOf(2), outputs = mixerLook.mixer.output, onChange = {}, onOutput = {})
                     }
                 }
             }
@@ -429,7 +433,7 @@ class ScreenshotTest {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
                 androidx.compose.material3.Text("Canal 3", style = MaterialTheme.typography.headlineSmall)
-                com.juliano.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, onChange = {})
+                com.juliano.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, output = mixerLook.mixer.outputOf(2), outputs = mixerLook.mixer.output, onChange = {}, onOutput = {})
             }
         }
     }

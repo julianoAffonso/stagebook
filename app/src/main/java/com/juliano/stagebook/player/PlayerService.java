@@ -54,6 +54,9 @@ public class PlayerService extends Service {
     static volatile boolean running;
     static volatile boolean connected;
     static volatile String status = "";
+    // a saída conectada (para o roteamento guardado por saída): "device" ou "usb:vid:pid", nome e quantas saídas
+    static volatile String outputKey = "", outputName = "";
+    static volatile int outputCount;
     // tocando pela saída do aparelho (sem interface USB). Se a USB já esteve conectada e caiu, não cai para o
     // aparelho no meio do show: espera a USB voltar (o click iria para o alto-falante).
     boolean deviceOut, hadUsb;
@@ -220,6 +223,9 @@ public class PlayerService extends Service {
         connecting = false;
         if (!ok) { setStatus(getString(R.string.player_device_failed)); return; }
         deviceOut = true;
+        outputKey = "device";
+        outputName = "";
+        outputCount = 2;
         connected = true;
         setStatus(getString(R.string.player_device_out));
     }
@@ -230,6 +236,9 @@ public class PlayerService extends Service {
         if (err != null) { Log.w(TAG, err); setStatus(getString(R.string.player_usb_failed)); return; }
         link = l;
         hadUsb = true;
+        outputKey = String.format(java.util.Locale.ROOT, "usb:%04x:%04x", l.dev.getVendorId(), l.dev.getProductId());
+        outputName = l.name();
+        outputCount = l.channels;
         connected = true;
         connectedAt = SystemClock.elapsedRealtime();
         main.removeCallbacks(fbCheck);
