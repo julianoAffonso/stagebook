@@ -59,11 +59,19 @@ data class Look(
     val midiBtName: String = "",
     // pedal MIDI pelo USB: desligado, o app não abre nada no USB (fica livre para a interface de áudio da FLOW)
     val midiUsb: Boolean = true,
+    // cifras (etapa 3): perfil "letra e cifra" (false = só letra), tamanho do acorde em relação à letra e cor
+    val chords: Boolean = true,
+    val chordScale: Float = 0.8f,
+    val chordColor: Int = 0xFFFFC107.toInt(),
+    // seções reconhecidas na língua do app (a letra guardada não muda); false = como estão escritas
+    val translateSections: Boolean = true,
 ) {
     companion object {
         const val MIN_FONT = 16f
         const val MAX_FONT = 72f
         const val MAX_STAGE_FONT = 120f   // com zoom no palco pode passar do máximo dos ajustes
+        const val MIN_CHORD_SCALE = 0.5f
+        const val MAX_CHORD_SCALE = 1.2f
     }
 }
 

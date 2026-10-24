@@ -219,6 +219,40 @@ class ScreenshotTest {
 
     @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
+    // cifra inventada (nada de letra de verdade): acordes em cima, linha só de acordes, seção ChordPro e comentário
+    private val chordSong = """
+        {key: G}
+        {capo: 2}
+        [Intro]
+        [G] [D] [Em] [C]
+
+        [Verso 1]
+        [G]Saio cedo pela [D]rua sem saber
+        [Em]Onde a estrada vai [C]dar
+        [G]Levo o violão e [D]um papel
+        [Em]Pra cantar o que [C]sobrar
+
+        {start_of_chorus}
+        [C]Oh, [G]oh, [D]canta comigo
+        [C]Até o [D]sol voltar[G]
+        {end_of_chorus}
+        {c: Solo de sax}
+        [Am7] [D7/F#] [G7M]
+    """.trimIndent()
+
+    @Test fun stageChordsTablet() = shoot("tablet_6_palco_cifra") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageChordsPhone() = shoot("celular_7_palco_cifra") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(chords = false)), 0, 0, { _, _ -> }, onBack = {})
+    }
+
     @Test fun stageTabletOneColumn() = shoot("tablet_6_palco_1coluna") {
         StageScreen(stage.copy(look = stage.look.copy(columns = com.juliano.stagebook.data.model.StageColumns.ONE)), 0, 0, { _, _ -> })
     }

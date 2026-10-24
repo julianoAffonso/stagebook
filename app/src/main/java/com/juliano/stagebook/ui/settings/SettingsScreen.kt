@@ -97,7 +97,9 @@ import com.juliano.stagebook.ui.components.LightPreview
 import com.juliano.stagebook.ui.components.ScreenHeader
 import com.juliano.stagebook.ui.components.SettingsCard
 import com.juliano.stagebook.ui.components.SongListItem
+import com.juliano.stagebook.ui.stage.ChordLook
 import com.juliano.stagebook.ui.stage.lyricsAnnotated
+import com.juliano.stagebook.ui.stage.rememberSectionNames
 import com.juliano.stagebook.ui.theme.StagebookTheme
 import com.juliano.stagebook.ui.theme.Sizes
 import com.juliano.stagebook.ui.theme.Spacing
@@ -372,7 +374,13 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview),
         ) {
             Text(
-                lyricsAnnotated(stringResource(R.string.settings_preview_text), SectionLang.PT, Color(look.sectionColor), look.showSections),
+                lyricsAnnotated(
+                    stringResource(R.string.settings_preview_text),
+                    rememberSectionNames(look.translateSections),
+                    Color(look.sectionColor),
+                    look.showSections,
+                    ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
+                ),
                 style = TextStyle(
                     color = Color(look.fg),
                     fontSize = font.sp,

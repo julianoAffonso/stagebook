@@ -56,6 +56,13 @@ object Sections {
         }
     }
 
+    /** [name] (o nome da seção na língua do app) com o número e a repetição do título original. */
+    fun label(h: Header, name: String): String = buildString {
+        append(name)
+        if (h.number.isNotEmpty()) append(' ').append(h.number)
+        if (h.repeat.isNotEmpty()) append("  ").append(h.repeat)
+    }
+
     fun parse(text: String): List<Line> = text.split('\n').map { Line(it, detect(it)) }
 
     /** Reescreve os títulos de seção no formato "[Refrão]", "[Verso 2]" (botão "Padronizar"). */

@@ -14,6 +14,7 @@ import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
+import com.juliano.stagebook.ui.stage.joinLines
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import com.juliano.stagebook.data.model.Look
@@ -313,8 +314,9 @@ class StageFlowTest {
     fun `alturas medidas numa passada são as mesmas medidas linha a linha`() {
         // letra inventada com títulos de seção (cor e tamanho próprios), linhas vazias e uma linha longa
         val text = "[Verso 1]\nprimeira linha curta\numa linha bem mais comprida que as outras para ocupar a largura toda da coluna e quebrar\n\n" +
-            "[Refrão]\nrefrão aqui\n\n\nfim"
-        val lines = com.juliano.stagebook.ui.stage.stageLines(text, com.juliano.stagebook.data.model.SectionLang.PT, androidx.compose.ui.graphics.Color.Cyan, true).map { it.text }
+            "[Refrão]\n[G]refrão [D]aqui com acordes em [Em]cima\n[C] [G]\n\n\nfim"
+        val chords = com.juliano.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow)
+        val lines = com.juliano.stagebook.ui.stage.stageLines(text, com.juliano.stagebook.ui.stage.SectionNames(null), androidx.compose.ui.graphics.Color.Cyan, true, chords).map { it.text }
         compose.setContent {
             val measurer = rememberTextMeasurer()
             val style = TextStyle(
@@ -325,9 +327,12 @@ class StageFlowTest {
                     androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
                 ),
             )
+            assertTrue("a linha com acordes tem de estar no teste", lines.any { it.getStringAnnotations(0, it.length).isNotEmpty() })
             for (width in listOf(1800, 600)) {
                 val one = lines.map { l ->
-                    measurer.measure(if (l.isEmpty()) AnnotatedString(" ") else l, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = width)).size.height
+                    // sozinha, do mesmo jeito que o palco monta a linha (linha com acordes tem altura maior)
+                    val alone = joinLines(listOf(l))
+                    measurer.measure(alone, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = width)).size.height
                 }
                 val batch = com.juliano.stagebook.ui.stage.lineHeights(measurer, lines, style, width)
                 assertEquals("largura $width", one, batch.map { it.height })
