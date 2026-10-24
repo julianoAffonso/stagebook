@@ -80,7 +80,7 @@ fun HomeScreen(
         Box(m) {
             tabs.SaveableStateProvider(if (tab == HomeTab.SETTINGS) "${HomeTab.SETTINGS}$settingsVisit" else tab.name) {
                 when (tab) {
-                    HomeTab.SONGS -> SongsRoute(onOpenSong, onEditSong, onImport)
+                    HomeTab.SONGS -> SongsRoute(onOpenSong, onEditSong, onImport, onScan = onScanSetlist, onReceiveCode = onReceiveCode)
                     HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode)
                     HomeTab.SETTINGS -> SettingsRoute()
                 }

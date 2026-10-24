@@ -37,7 +37,6 @@
     <string name="songs_title">Músicas</string>
     <string name="songs_search">Buscar música ou artista</string>
     <string name="songs_new">Nova música</string>
-    <string name="songs_import">Importar</string>
     <string name="songs_empty_title">Nenhuma música ainda</string>
     <string name="songs_empty_message">Crie uma, importe da internet ou traga a biblioteca em Ajustes.</string>
     <string name="songs_not_found">Nada encontrado</string>
@@ -87,7 +86,7 @@
 
     <!-- QR -->
     <string name="qr_description">QR code do setlist</string>
-    <string name="qr_hint">Quem recebe: Setlists → Receber → Ler QR. O app avisa se alguma música não estiver na biblioteca de quem lê.</string>
+    <string name="qr_hint">Quem recebe: Importar → Ler QR. O app avisa se alguma música não estiver na biblioteca de quem lê.</string>
     <plurals name="qr_count">
         <item quantity="one">%d música no QR</item>
         <item quantity="other">%d músicas no QR</item>
@@ -166,7 +165,7 @@
     <string name="settings_site_add">Adicionar site</string>
     <string name="settings_site_add_ok">Adicionar</string>
     <string name="settings_site_remove">Tirar %1$s</string>
-    <string name="import_needs_internet">Importar precisa de internet</string>
+    <string name="import_needs_internet">Sem internet: no Importar, só o Ler QR funciona agora</string>
     <string name="import_personal_use">Uso pessoal: o Stagebook não guarda nem envia músicas; o que você importa fica neste aparelho.</string>
     <string name="settings_chord_shapes">Desenhos dos acordes</string>
     <string name="settings_instrument">Instrumento</string>
@@ -413,7 +412,9 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="help_how">Como funciona</string>
     <!-- ler o QR de um setlist (de outro aparelho) -->
     <string name="sets_scan">Ler QR</string>
-    <string name="sets_receive">Receber</string>
+    <string name="import_menu">Importar</string>
+    <string name="import_from_sites">Da internet (sites)</string>
+    <string name="import_from_sites_offline">Da internet (sem internet)</string>
     <string name="sets_type_code">Digitar código</string>
     <string name="sets_type_code_offline">Digitar código (sem internet)</string>
     <string name="sets_code_hint">Ex.: 47-violao-lua</string>
@@ -499,13 +500,13 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="one">%1$d música grande demais não foi.</item>
         <item quantity="other">%1$d músicas grandes demais não foram.</item>
     </plurals>
-    <string name="share_sent_hint">Vale por 12 horas. Quem recebe: Setlists → Receber → Digitar código, ou Ler QR apontando para este QR.</string>
+    <string name="share_sent_hint">Vale por 12 horas. Quem recebe: Importar → Digitar código, ou Ler QR apontando para este QR.</string>
     <string name="share_send_code">Mandar por mensagem</string>
-    <string name="share_message_songs">Músicas no Stagebook: código %1$s (vale por 12 horas). No app: Setlists → Receber → Digitar código.</string>
+    <string name="share_message_songs">Músicas no Stagebook: código %1$s (vale por 12 horas). No app: Importar → Digitar código.</string>
     <string name="share_copy">Copiar o código</string>
     <string name="share_copied">Código copiado</string>
-    <string name="share_code_qr">QR do código: tire uma foto ou leia em Setlists → Receber → Ler QR</string>
-    <string name="share_message">Setlist \"%1$s\" no Stagebook: código %2$s (vale por 12 horas). No app: Setlists → Receber → Digitar código.</string>
+    <string name="share_code_qr">QR do código: tire uma foto ou leia em Importar → Ler QR</string>
+    <string name="share_message">Setlist \"%1$s\" no Stagebook: código %2$s (vale por 12 horas). No app: Importar → Digitar código.</string>
     <!-- seleção na aba Músicas (compartilhar várias) -->
     <plurals name="songs_selected">
         <item quantity="one">%1$d selecionada</item>

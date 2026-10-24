@@ -2,6 +2,7 @@ package com.juliano.stagebook.ui.songs
 
 import com.juliano.stagebook.ui.share.rememberCodeActions
 import com.juliano.stagebook.ui.share.ShareSheet
+import com.juliano.stagebook.ui.share.ImportButton
 import com.juliano.stagebook.ui.share.CodeActions
 import com.juliano.stagebook.ui.share.CloudDialog
 import com.juliano.stagebook.ui.share.CloudUi
@@ -60,6 +61,8 @@ fun SongsRoute(
     onEditSong: (String?) -> Unit,
     onImport: (String) -> Unit,
     viewModel: SongsViewModel = hiltViewModel(),
+    onScan: () -> Unit = {},
+    onReceiveCode: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val online by viewModel.online.collectAsStateWithLifecycle()
@@ -80,6 +83,8 @@ fun SongsRoute(
         onShareSongs = viewModel::shareSongs,
         onDismissCloud = viewModel::dismissCloud,
         codeActions = rememberCodeActions(),
+        onScan = onScan,
+        onReceiveCode = onReceiveCode,
     )
 }
 
@@ -100,6 +105,8 @@ fun SongsScreen(
     onDismissCloud: () -> Unit = {},
     codeActions: CodeActions = CodeActions({}, { _, _ -> }),
     initialSelection: List<String> = emptyList(),   // prints e testes
+    onScan: () -> Unit = {},
+    onReceiveCode: (String) -> Unit = {},
 ) {
     val wide = wideLists()
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
@@ -129,15 +136,8 @@ fun SongsScreen(
                 }
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
-                // importar só com internet: sem ela o botão fica indisponível, com a nuvem cortada no lugar do globo
-                ActionButton(
-                    stringResource(R.string.songs_import),
-                    onImport,
-                    Modifier.weight(1f),
-                    icon = if (online) AppIcons.Public else AppIcons.CloudOff,
-                    tone = ButtonTone.Tonal,
-                    enabled = online,
-                )
+                // importar dos sites (com internet), ler o QR ou digitar o código: um botão, um menu
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport)
             }
             AnimatedVisibility(!online) {
                 Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {

@@ -501,6 +501,21 @@ class ScreenshotTest {
         }
     }
 
+    // o menu Importar aberto na aba Músicas: sites, QR e código
+    @Test @Config(qualifiers = PHONE)
+    fun importMenuPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SONGS, {}) { com.juliano.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it) }
+                }
+            }
+        }
+        compose.onAllNodesWithText("Importar")[0].performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_importar_menu.png")
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun songsReceivedPhone() = shoot("jornada_musicas_2_recebidas") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
