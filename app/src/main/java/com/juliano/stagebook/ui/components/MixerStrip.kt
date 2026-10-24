@@ -151,7 +151,7 @@ fun MixerChannelForm(first: Int, strip: MixChannel, pair: Boolean, canPair: Bool
                 FilterChip(strip.stereo, { onChange(strip.copy(stereo = !strip.stereo)) }, { Text(stringResource(R.string.mixer_stereo)) })
             }
         }
-        Text(stringResource(R.string.mixer_norm_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
     }
 }
 

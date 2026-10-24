@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.widthIn
 import com.juliano.stagebook.ui.components.MixerStrip
+import com.juliano.stagebook.ui.components.HelpTip
 import com.juliano.stagebook.ui.components.MixerChannelEditor
 import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.ui.components.OptionDropdown
@@ -434,7 +435,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         ) {
             StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds())
         }
-        Text(stringResource(R.string.settings_font_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_font_help))
     }
     SettingsCard(stringResource(R.string.settings_columns)) {
         val options = listOf(
@@ -452,7 +453,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 ) { Text(stringResource(label)) }
             }
         }
-        Text(stringResource(R.string.settings_columns_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_columns_help))
     }
     SettingsCard(stringResource(R.string.settings_colors)) {
         Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
@@ -516,7 +517,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     var scale by remember(look.chordScale) { mutableFloatStateOf(look.chordScale) }
     SettingsCard(stringResource(R.string.settings_chords)) {
         SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
-        Text(stringResource(R.string.settings_chords_show_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_chords_show_help))
         if (look.chords) {
             Text(stringResource(R.string.settings_chords_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
@@ -540,7 +541,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     if (look.chords) {
         SettingsCard(stringResource(R.string.settings_chord_shapes)) {
             InstrumentPicker(look.instrument, actions.onInstrument)
-            Text(stringResource(R.string.settings_instrument_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HelpTip(stringResource(R.string.settings_instrument_help))
             SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
             Text(stringResource(R.string.settings_chord_list), style = MaterialTheme.typography.bodyLarge)
             val places = listOf(
@@ -557,7 +558,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                     ) { Text(stringResource(label)) }
                 }
             }
-            Text(stringResource(R.string.settings_chord_list_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HelpTip(stringResource(R.string.settings_chord_list_help))
             // exemplo: o G no instrumento escolhido, como aparece no palco
             ChordDiagram(
                 "G",
@@ -610,16 +611,16 @@ private const val PREVIEW_FONT = 30f
 private fun SectionsDetail(look: Look, actions: SettingsActions) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     SettingsCard(stringResource(R.string.settings_sections_look)) {
-        Text(stringResource(R.string.settings_sections_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_sections_help))
         Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
-        Text(stringResource(R.string.settings_translate_sections_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_translate_sections_help))
         LegibilityWarnings(look)
     }
     SettingsCard(stringResource(R.string.settings_normalize_card)) {
-        Text(stringResource(R.string.settings_normalize_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_normalize_help))
         ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, tone = ButtonTone.Tonal)
     }
     if (confirming) {
@@ -715,7 +716,7 @@ private fun MidiCard(midi: MidiState, look: Look, actions: SettingsActions) {
             return@SettingsCard
         }
         SwitchRow(stringResource(R.string.settings_midi_usb_switch), look.midiUsb, actions.onMidiUsb)
-        Text(stringResource(R.string.settings_midi_usb_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_midi_usb_help))
         if (midi.connected.isEmpty()) {
             Text(stringResource(R.string.settings_midi_none), style = MaterialTheme.typography.bodyLarge)
         } else {
@@ -749,7 +750,7 @@ private fun MidiCard(midi: MidiState, look: Look, actions: SettingsActions) {
             midi.searched && !midi.scanning && midi.found.isEmpty() ->
                 Text(stringResource(R.string.settings_midi_found_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
-        Text(stringResource(R.string.settings_midi_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_midi_help))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             Text(stringResource(R.string.settings_midi_location), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -838,7 +839,7 @@ private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List
                 }
             }
         }
-        Text(stringResource(R.string.settings_sites_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_sites_help))
         ActionButton(stringResource(R.string.settings_site_add), { adding = true }, icon = AppIcons.Add, tone = ButtonTone.Tonal)
     }
     if (adding) {
@@ -875,7 +876,7 @@ private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
 private fun PlayerDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_player)) {
         SwitchRow(stringResource(R.string.settings_player_mode), look.playerMode, actions.onPlayerMode)
-        Text(stringResource(R.string.settings_player_mode_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_player_mode_help))
         UsbRequirements()
     }
     if (look.playerMode) {
@@ -888,37 +889,18 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
 private fun eqLabel(hz: Int) =
     if (hz < 1000) stringResource(R.string.eq_hz, hz) else stringResource(R.string.eq_khz, (hz / 1000f).toString().removeSuffix(".0"))
 
-// requisitos da saída USB: escondidos, discretos; o ícone de informação abre e fecha
+// requisitos da saída USB: escondidos, no mesmo balão das outras explicações
 @Composable
-private fun UsbRequirements() {
-    var open by rememberSaveable { mutableStateOf(false) }
-    Column {
-        Row(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { open = !open }.padding(vertical = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Icon(AppIcons.Info, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                stringResource(R.string.settings_player_requirements), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
-            )
-            Icon(if (open) AppIcons.ArrowUp else AppIcons.ArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        AnimatedVisibility(open) {
-            Text(
-                stringResource(R.string.settings_player_requirements_text), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 26.dp, top = Spacing.xs),
-            )
-        }
-    }
-}
+private fun UsbRequirements() = HelpTip(
+    stringResource(R.string.settings_player_requirements_text),
+    label = stringResource(R.string.settings_player_requirements),
+)
 
 @Composable
 private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // canal em edição (o primeiro do par); -1 = nenhum
     SettingsCard(stringResource(R.string.mixer_title)) {
-        Text(stringResource(R.string.mixer_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.mixer_help))
         OptionDropdown(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
@@ -964,7 +946,7 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
 private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
     SettingsCard(stringResource(R.string.eq_title)) {
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn) { onMixer(mixer.copy(eqOn = it)) }
-        Text(stringResource(R.string.eq_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.eq_help))
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
@@ -1015,7 +997,7 @@ private fun languageLabel(l: AppLanguage): String = stringResource(
 private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_language)) {
         OptionDropdown(stringResource(R.string.settings_language), Languages.available, selected, actions.onLanguage, nameOf = { languageLabel(it) })
-        Text(stringResource(R.string.settings_language_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_language_help))
     }
 }
 
@@ -1023,7 +1005,7 @@ private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
 private fun ScreenDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_screen)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
-        Text(stringResource(R.string.settings_keep_screen_on_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_keep_screen_on_help))
     }
 }
 
@@ -1039,7 +1021,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             ActionButton(stringResource(R.string.settings_import_file), actions.onImport, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
             ActionButton(stringResource(R.string.settings_export_file), actions.onExport, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
         }
-        Text(stringResource(R.string.settings_import_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_import_help))
     }
 }
 
@@ -1078,7 +1060,7 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 tone = ButtonTone.Tonal,
             )
         }
-        Text(stringResource(R.string.settings_update_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HelpTip(stringResource(R.string.settings_update_help))
     }
 }
 
