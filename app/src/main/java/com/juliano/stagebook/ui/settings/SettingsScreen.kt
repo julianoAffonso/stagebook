@@ -541,6 +541,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                     ) { Text(stringResource(label)) }
                 }
             }
+            Text(stringResource(R.string.settings_chord_list_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             // exemplo: o G no instrumento escolhido, como aparece no palco
             ChordDiagram(
                 "G",
