@@ -45,6 +45,7 @@ import com.juliano.stagebook.ui.components.MenuAction
 import com.juliano.stagebook.ui.components.OverflowMenu
 import com.juliano.stagebook.ui.components.ScreenHeader
 import com.juliano.stagebook.ui.components.SongListItem
+import com.juliano.stagebook.ui.share.ImportButton
 import com.juliano.stagebook.ui.components.TextInputDialog
 import com.juliano.stagebook.ui.theme.StagebookTheme
 import com.juliano.stagebook.ui.theme.Spacing
@@ -89,8 +90,7 @@ fun SetlistsScreen(
     online: Boolean = false,
     onReceiveCode: (String) -> Unit = {},
 ) {
-    var receiving by rememberSaveable { mutableStateOf(false) }   // menu Receber aberto
-    var typingCode by rememberSaveable { mutableStateOf(false) }
+
     var creating by rememberSaveable { mutableStateOf(false) }
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
@@ -101,26 +101,10 @@ fun SetlistsScreen(
                 subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             )
-            // novo setlist ou receber um (QR ou código)
+            // novo setlist ou importar um (QR ou código)
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
-                // Receber: ler o QR (sempre) ou digitar o código (só com internet)
-                Box(Modifier.weight(1f)) {
-                    ActionButton(stringResource(R.string.sets_receive), onClick = { receiving = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
-                    DropdownMenu(expanded = receiving, onDismissRequest = { receiving = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sets_scan)) },
-                            onClick = { receiving = false; onScan() },
-                            leadingIcon = { Icon(AppIcons.QrCode, null) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
-                            onClick = { receiving = false; typingCode = true },
-                            leadingIcon = { Icon(AppIcons.Public, null) },
-                            enabled = online,
-                        )
-                    }
-                }
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f))
             }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
@@ -162,15 +146,6 @@ fun SetlistsScreen(
     renaming?.let { id ->
         val name = uiState.sets.firstOrNull { it.id == id }?.name.orEmpty()
         TextInputDialog(stringResource(R.string.sets_rename), name, stringResource(R.string.sets_name), { onRename(id, it) }, { renaming = null })
-    }
-    if (typingCode) {
-        TextInputDialog(
-            stringResource(R.string.sets_type_code),
-            "",
-            stringResource(R.string.sets_code_hint),
-            onConfirm = { typingCode = false; if (it.isNotBlank()) onReceiveCode(it.trim()) },
-            onDismiss = { typingCode = false },
-        )
     }
     if (creating) {
         TextInputDialog(

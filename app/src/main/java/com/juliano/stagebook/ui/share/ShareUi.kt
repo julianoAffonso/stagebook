@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,9 +48,52 @@ import com.juliano.stagebook.R
 import com.juliano.stagebook.ui.components.ActionButton
 import com.juliano.stagebook.ui.components.AppIcons
 import com.juliano.stagebook.ui.components.ButtonTone
+import com.juliano.stagebook.ui.components.TextInputDialog
 import com.juliano.stagebook.ui.theme.Spacing
 
 // Compartilhar (setlist ou músicas avulsas): a folha com os jeitos de enviar e o diálogo do código da internet.
+
+/**
+ * Importar (nas abas Músicas e Setlists), um botão só com menu: dos sites ([onSites], só na aba Músicas e só com
+ * internet), ler o QR (sempre) ou digitar o código (só com internet). O que chegar pelo QR ou código — setlist ou músicas
+ * avulsas — abre a conferência certa, seja qual for a aba.
+ */
+@Composable
+fun ImportButton(online: Boolean, onScan: () -> Unit, onCode: (String) -> Unit, modifier: Modifier = Modifier, onSites: (() -> Unit)? = null) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    var typing by rememberSaveable { mutableStateOf(false) }
+    Box(modifier) {
+        ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            onSites?.let { sites ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (online) R.string.import_from_sites else R.string.import_from_sites_offline)) },
+                    onClick = { open = false; sites() },
+                    leadingIcon = { Icon(if (online) AppIcons.Public else AppIcons.CloudOff, null) },
+                    enabled = online,
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.sets_scan)) },
+                onClick = { open = false; onScan() },
+                leadingIcon = { Icon(AppIcons.QrCode, null) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
+                onClick = { open = false; typing = true },
+                leadingIcon = { Icon(AppIcons.Edit, null) },
+                enabled = online,
+            )
+        }
+    }
+    if (typing) {
+        TextInputDialog(
+            stringResource(R.string.sets_type_code), "", stringResource(R.string.sets_code_hint),
+            onConfirm = { typing = false; if (it.isNotBlank()) onCode(it.trim()) },
+            onDismiss = { typing = false },
+        )
+    }
+}
 
 /** O que fazer com o código pronto: copiar ou mandar por um app de mensagem do aparelho (WhatsApp, e-mail, SMS…). */
 class CodeActions(val copy: (code: String) -> Unit, val share: (name: String, code: String) -> Unit)
