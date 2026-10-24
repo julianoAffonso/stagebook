@@ -14,7 +14,7 @@ Letras, cifras e faixas de acompanhamento num app só, para tocar ao vivo no And
 - Setlist por QR code entre aparelhos.
 
 ## A caminho
-- Cifras (formato do another app e acordes acima da letra) e perfil "só letra / letra e cifra".
+- Cifras (ChordPro e acordes acima da letra) e perfil "só letra / letra e cifra".
 - Player nativo por música: OGG multicanal, MP3, WAV; USB interface por USB e interfaces multicanal.
 - Português, español, italiano e English.
 
