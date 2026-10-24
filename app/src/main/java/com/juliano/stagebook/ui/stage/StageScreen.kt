@@ -238,9 +238,11 @@ fun StageScreen(
     var editOffer by remember(index) { mutableStateOf<EditOffer?>(null) }
     LaunchedEffect(editOffer) { if (editOffer != null) { delay(EDIT_OFFER_MS); editOffer = null } }
     val haptics = LocalHapticFeedback.current
+    // as linhas da página como estão na tela (linha com acordes que quebra vira pedaços): o índice do toque é nelas
+    var pageLines by remember(sourced) { mutableStateOf(sourced) }
     fun editAt(line: Int?) {
         if (song.missing) return
-        onEdit(song.id, line?.let { lineStart(song.text, sourced[it].source) } ?: -1)
+        onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.let { lineStart(song.text, it) } ?: -1)
     }
     fun styleFor(z: Float) = TextStyle(
         color = fg,
@@ -514,8 +516,13 @@ fun StageScreen(
             SideEffect { fitZoom = if (look.columns == StageColumns.AUTO) fitOne else fit }
             val style = styleFor(minOf(layoutZoom, fit))
             val columnWidth = if (columns == 2) halfWidth else width
-            val sheets = remember(lines, style, columnWidth, height, columns) {
-                val measured = if (style == styleOne && columnWidth == width) oneLines.value else measureLines(style, columnWidth)
+            // linha com acordes que quebra nesta largura: um pedaço por linha da tela, e só os com acorde
+            // guardam o espaço de cima (senão a 2ª parte ganhava um vão sem acorde nenhum)
+            val fitted = remember(sourced, style, columnWidth) { splitWrappedChordLines(measurer, sourced, style, columnWidth) }
+            val shownLines = remember(fitted) { if (fitted === sourced) lines else fitted.map { it.text } }
+            SideEffect { pageLines = fitted }
+            val sheets = remember(shownLines, style, columnWidth, height, columns) {
+                val measured = if (shownLines === lines && style == styleOne && columnWidth == width) oneLines.value else lineHeights(measurer, shownLines, style, columnWidth)
                 Pagination.sheets(measured, height, columns)
             }
             SideEffect { pageCount = sheets.size; pageCountFor = index }
@@ -525,7 +532,7 @@ fun StageScreen(
             val shown = PageContent(
                 index,
                 shownAt,
-                sheets[shownAt].map { range -> joinLines(if (range.isEmpty()) emptyList() else lines.subList(range.first, range.last + 1)) },
+                sheets[shownAt].map { range -> joinLines(if (range.isEmpty()) emptyList() else shownLines.subList(range.first, range.last + 1)) },
                 sheets[shownAt].map { range -> if (range.isEmpty()) -1 else range.first },
                 style,
                 columns,
@@ -669,6 +676,33 @@ internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, s
         val last = r.getLineForOffset(end)
         Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty())
     }
+}
+
+/**
+ * Linhas com acordes que quebram na largura [width] viram um pedaço por linha da tela (medidas numa passada
+ * só, como o resto). Pedaço sem acorde perde o espaço de cima e vira uma linha comum. Sem quebra, devolve a
+ * mesma lista (o palco reaproveita a medição já feita).
+ */
+internal fun splitWrappedChordLines(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int): List<StageLine> {
+    val chordAt = lines.indices.filter { lines[it].text.isChordLine() }
+    if (chordAt.isEmpty()) return lines
+    val subset = chordAt.map { lines[it].text }
+    val starts = IntArray(subset.size)
+    val r = measurer.measure(joinLines(subset, starts), style, constraints = Constraints(maxWidth = width))
+    val pieces = HashMap<Int, List<AnnotatedString>>()
+    subset.forEachIndexed { k, l ->
+        val s = starts[k]
+        val e = s + l.length
+        val first = r.getLineForOffset(s)
+        val last = r.getLineForOffset(maxOf(e - 1, s))
+        if (first == last) return@forEachIndexed
+        pieces[chordAt[k]] = (first..last).map { ln ->
+            val p = l.subSequence(maxOf(r.getLineStart(ln), s) - s, minOf(r.getLineEnd(ln), e) - s)
+            if (p.getStringAnnotations(CHORD_TAG, 0, p.length).isEmpty()) AnnotatedString(p.text.trimEnd()) else p
+        }
+    }
+    if (pieces.isEmpty()) return lines
+    return lines.flatMapIndexed { i, l -> pieces[i]?.map { StageLine(it, l.source) } ?: listOf(l) }
 }
 
 internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style: TextStyle): List<Int> {
