@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- só a pasta do APK baixado para atualizar o app fica visível ao instalador do Android -->
+<paths>
+    <cache-path name="atualizacao" path="atualizacao/" />
+</paths>

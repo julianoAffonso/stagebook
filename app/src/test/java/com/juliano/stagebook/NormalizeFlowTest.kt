@@ -1,0 +1,67 @@
+package com.juliano.stagebook
+
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.test.core.app.ApplicationProvider
+import com.juliano.stagebook.data.LibraryRepository
+import com.juliano.stagebook.data.model.Song
+import com.juliano.stagebook.ui.settings.SettingsActions
+import com.juliano.stagebook.ui.settings.SettingsMessage
+import com.juliano.stagebook.ui.settings.SettingsScreen
+import com.juliano.stagebook.ui.settings.SettingsSection
+import com.juliano.stagebook.ui.settings.SettingsUiState
+import com.juliano.stagebook.ui.settings.SettingsViewModel
+import com.juliano.stagebook.ui.theme.StagebookTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/** "Padronizar seções da biblioteca": do botão até a letra gravada. */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], application = android.app.Application::class)
+class NormalizeFlowTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test
+    fun `botão e confirmação chamam o padronizar`() {
+        var calls = 0
+        compose.setContent {
+            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.SECTIONS) }
+        }
+        compose.onNodeWithText("Padronizar seções da biblioteca").performScrollTo().performClick()
+        compose.onNodeWithText("Padronizar").performClick()
+        compose.waitForIdle()
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun `padronizar reescreve as letras e avisa quantas mudaram`() = runBlocking {
+        Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())   // o trabalho saiu da thread principal
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        repo.saveSong(Song(title = "A", text = "Chorus:\nlinha\n\nVerse 2\noutra"))
+        repo.saveSong(Song(title = "B", text = "[Refrão]\nsem mudança"))
+        repo.saveSong(Song(title = "C", text = "um\ndois\n\nrefrão aqui\nde novo\n\ntrês\nquatro\n\nrefrão aqui\nde novo"))
+        repo.saveSong(Song(title = "D", text = "nada\nse\n\nrepete\naqui"))
+        val vm = SettingsViewModel(repo, context, com.juliano.stagebook.data.AppUpdater(context), com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)))
+        vm.normalizeSections()
+        assertEquals(SettingsMessage.Normalized(2, 1), withTimeout(5_000) { vm.messages.first() })
+        assertEquals("[Refrão]\nlinha\n\n[Verso 2]\noutra", repo.findSong("A", "")!!.text)
+        Dispatchers.resetMain()
+        assertEquals("[Verso 1]\num\ndois\n\n[Refrão]\nrefrão aqui\nde novo\n\n[Verso 2]\ntrês\nquatro\n\n[Refrão]\nrefrão aqui\nde novo", repo.findSong("C", "")!!.text)
+    }
+}

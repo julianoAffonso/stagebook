@@ -1,0 +1,110 @@
+package com.juliano.stagebook.ui.setlists
+
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.juliano.stagebook.data.LibraryRepository
+import com.juliano.stagebook.domain.QrEncoder
+import com.juliano.stagebook.domain.QrPayload
+import com.juliano.stagebook.navigation.SetlistDetail
+import com.juliano.stagebook.ui.songs.subtitle
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import kotlinx.coroutines.Job
+
+/** `key` é estável ao reordenar (a mesma música pode aparecer duas vezes em setlists antigos). */
+@Immutable
+data class SetItemUi(val key: String, val songId: String, val title: String, val subtitle: String, val missing: Boolean)
+
+@Immutable
+data class SetlistDetailUiState(
+    val loading: Boolean = true,
+    val exists: Boolean = true,
+    val name: String = "",
+    val items: List<SetItemUi> = emptyList(),
+)
+
+/** QR pronto: a imagem e quantas músicas vão nele (as removidas da biblioteca não vão). */
+@Immutable
+data class QrUi(val image: ImageBitmap, val name: String, val count: Int, val missing: Int)
+
+@HiltViewModel
+class SetlistDetailViewModel @Inject constructor(
+    private val repository: LibraryRepository,
+    savedStateHandle: SavedStateHandle,
+) : ViewModel() {
+    val setId = savedStateHandle.toRoute<SetlistDetail>().setId
+
+    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
+        val set = lib.setlist(setId)
+        val seen = HashMap<String, Int>()
+        SetlistDetailUiState(
+            loading = !loaded,
+            exists = set != null,
+            name = set?.name.orEmpty(),
+            items = set?.items.orEmpty().map { id ->
+                val n = seen.merge(id, 1, Int::plus)!!
+                val song = lib.song(id)
+                SetItemUi(if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.subtitle().orEmpty(), song == null)
+            },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
+
+    private val _qr = MutableStateFlow<QrUi?>(null)
+    val qr: StateFlow<QrUi?> = _qr.asStateFlow()
+
+    fun move(from: Int, to: Int) = repository.moveItem(setId, from, to)
+
+    fun remove(index: Int, songId: String) = repository.removeItem(setId, index, songId)
+
+    /** Aviso do limite do QR: [LimitNotice.Songs] (não cabe para transmitir) ou [LimitNotice.Name] (nome longo demais). */
+    enum class LimitNotice { Songs, Name }
+
+    private val _limit = MutableStateFlow<LimitNotice?>(null)
+    val limit: StateFlow<LimitNotice?> = _limit.asStateFlow()
+
+    fun dismissLimit() { _limit.value = null }
+
+    fun rename(name: String) {
+        if (name.isBlank()) return
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return
+        // o nome também vai no QR: um nome novo que faria o setlist passar do limite não é gravado
+        if (QrPayload.fits(set, lib) && !QrPayload.fits(set, lib, name = name)) { _limit.value = LimitNotice.Name; return }
+        repository.renameSetlist(setId, name)
+    }
+
+    fun delete() = repository.deleteSetlist(setId)
+
+    fun showQr() {
+        if (qrJob?.isActive == true || _qr.value != null) return   // toque duplo: um QR só
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return
+        // setlist antigo que já passou do limite: avisa em vez de gerar um QR que a câmera não lê
+        if (!QrPayload.fits(set, lib)) { _limit.value = LimitNotice.Songs; return }
+        val payload = QrPayload.build(set, lib)
+        val count = QrPayload.entries(set, lib).size
+        qrJob = viewModelScope.launch {
+            // setlist enorme pode não caber num QR: não pode derrubar o app
+            val image = withContext(Dispatchers.Default) { runCatching { QrEncoder.encode(payload, 900).asImageBitmap() }.getOrNull() }
+            if (image != null) _qr.value = QrUi(image, set.name, count, set.items.size - count)
+        }
+    }
+
+    private var qrJob: Job? = null
+
+    fun hideQr() { _qr.value = null }
+}

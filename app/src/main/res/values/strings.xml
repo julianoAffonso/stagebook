@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Stagebook</string>
+
+    <!-- ações comuns -->
+    <string name="action_back">Voltar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_clear">Limpar</string>
+    <string name="action_close">Fechar</string>
+    <string name="action_delete">Apagar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_ok">OK</string>
+    <string name="action_save">Salvar</string>
+    <string name="action_stage">Palco</string>
+
+    <!-- abas -->
+    <string name="nav_expand">Mostrar os nomes das abas</string>
+    <string name="nav_collapse">Esconder os nomes das abas</string>
+    <string name="tab_songs">Músicas</string>
+    <string name="tab_setlists">Setlists</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <plurals name="settings_pedal_reset">
+        <item quantity="one">Voltar ao padrão (%1$d botão mudado)</item>
+        <item quantity="other">Voltar ao padrão (%1$d botões mudados)</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d música</item>
+        <item quantity="other">%d músicas</item>
+    </plurals>
+    <plurals name="set_count">
+        <item quantity="one">%d setlist</item>
+        <item quantity="other">%d setlists</item>
+    </plurals>
+
+    <!-- músicas -->
+    <string name="songs_title">Músicas</string>
+    <string name="songs_search">Buscar música ou artista</string>
+    <string name="songs_new">Nova música</string>
+    <string name="songs_import">Importar</string>
+    <string name="songs_empty_title">Nenhuma música ainda</string>
+    <string name="songs_empty_message">Crie uma, importe da internet ou traga a biblioteca em Ajustes.</string>
+    <string name="songs_not_found">Nada encontrado</string>
+    <string name="songs_delete_confirm">Apagar \"%1$s\"? Ela também sai dos setlists.</string>
+
+    <!-- editor -->
+    <string name="editor_new">Nova música</string>
+    <string name="editor_edit">Editar música</string>
+    <string name="editor_imported_new">Música importada: revise e salve</string>
+    <string name="editor_imported_update">Letra nova importada: revise e salve</string>
+    <string name="editor_title">Título (é o nome usado no setlist)</string>
+    <string name="editor_author">Artista</string>
+    <string name="editor_year">Ano</string>
+    <string name="editor_lyrics">Letra</string>
+    <string name="editor_auto_meta">Deixou artista ou ano em branco? Ao salvar, o app completa sozinho pela internet.</string>
+    <string name="editor_delete">Excluir música</string>
+    <string name="editor_sections">Seção:</string>
+    <string name="editor_discard_confirm">Sair sem salvar? O que foi digitado (ou importado) se perde.</string>
+    <string name="editor_discard">Sair sem salvar</string>
+    <string name="editor_error_title_empty">Coloque o título.</string>
+    <string name="editor_error_title_taken">Já existe essa música (mesmo título e artista).</string>
+
+    <!-- setlists -->
+    <string name="sets_title">Setlists</string>
+    <string name="sets_new">Novo setlist</string>
+    <string name="sets_name">Nome do setlist</string>
+    <string name="sets_name_hint">Vazio = dia e hora de agora</string>
+    <string name="sets_empty_title">Nenhum setlist ainda</string>
+    <string name="sets_empty_message">Monte o primeiro show e passe as músicas com o pedal.</string>
+    <string name="sets_delete_confirm">Apagar o setlist \"%1$s\"? As músicas continuam na biblioteca.</string>
+    <string name="action_more">Mais opções</string>
+    <string name="sets_rename">Renomear</string>
+    <string name="sets_delete">Excluir setlist</string>
+    <string name="sets_add_songs">Músicas</string>
+    <string name="qr_limit_title">Limite do QR</string>
+    <string name="qr_limit_message">O setlist chegou ao limite de músicas que podem ser transmitidas pelo QR. Para continuar, crie um novo setlist.</string>
+    <string name="qr_limit_name">Com esse nome o setlist passa do limite que pode ser transmitido pelo QR. Use um nome mais curto ou crie um novo setlist.</string>
+    <string name="sets_send_qr">Enviar QR</string>
+    <string name="set_empty_title">Setlist vazio</string>
+    <string name="set_empty_message">Toque em \"Músicas\" para escolher o que entra no show.</string>
+    <string name="set_item_missing">(música removida)</string>
+    <string name="set_reorder">Arrastar para mudar a ordem</string>
+
+    <!-- escolher músicas -->
+    <string name="pick_title">Adicionar ao setlist</string>
+    <string name="pick_in_set">Já está no setlist</string>
+    <string name="pick_add_short">Adicionar (%1$d)</string>
+
+    <!-- QR -->
+    <string name="qr_description">QR code do setlist</string>
+    <string name="qr_hint">No the previous app: aba \"Setlist do vocalista\" → Ler QR. Ele avisa se alguma música não for encontrada no another app.</string>
+    <plurals name="qr_count">
+        <item quantity="one">%d música no QR</item>
+        <item quantity="other">%d músicas no QR</item>
+    </plurals>
+    <plurals name="qr_missing">
+        <item quantity="one">%d música removida da biblioteca não vai no QR.</item>
+        <item quantity="other">%d músicas removidas da biblioteca não vão no QR.</item>
+    </plurals>
+
+    <!-- importar -->
+    <string name="import_address_hint">Música e artista, ou endereço do site</string>
+    <string name="import_go">Buscar</string>
+    <string name="import_this">Importar esta letra</string>
+    <string name="import_busy">Buscando artista e ano…</string>
+    <string name="import_not_found">Não achei a letra nesta página. Abra a página da música ou selecione a letra com o dedo e toque em Importar.</string>
+    <string name="import_unreadable">Não consegui ler esta página.</string>
+
+    <!-- palco -->
+    <string name="stage_exit_confirm">Sair do palco?</string>
+    <string name="stage_exit">Sair</string>
+    <string name="stage_next">Próxima: %1$s</string>
+    <string name="stage_end">Fim do setlist</string>
+    <string name="stage_edit">Editar a letra nesta página</string>
+    <string name="stage_edit_line">Editar esta linha</string>
+    <string name="stage_zoom">Zoom desta música: %1$d%%</string>
+    <string name="stage_zoom_reset">Padrão</string>
+    <string name="set_remove">Tirar</string>
+    <string name="set_remove_confirm">Tirar \"%1$s\" deste setlist? A música continua na biblioteca.</string>
+    <string name="set_tap_to_play">%1$s · toque numa para abrir o palco</string>
+    <string name="stage_empty_title">Nada para tocar</string>
+    <string name="stage_empty_message">Este setlist foi apagado ou está vazio. Volte e escolha outro.</string>
+
+    <!-- ajustes -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_appearance">Letra no palco</string>
+    <string name="settings_preview_text">Wild horses couldn\'t drag me away\nWild, wild horses…</string>
+    <string name="settings_font_value">%1$d</string>
+    <string name="settings_font_size">Tamanho da letra: %1$d</string>
+    <string name="settings_text_color">Cor da letra</string>
+    <string name="settings_background">Cor do fundo</string>
+    <string name="settings_bold">Letra em negrito</string>
+    <string name="settings_update">Atualizar o app</string>
+    <string name="settings_update_installed">Versão %1$s</string>
+    <string name="settings_update_new_short">nova versão</string>
+    <string name="settings_update_check">Procurar atualização</string>
+    <string name="settings_update_checking">Procurando…</string>
+    <string name="settings_update_latest">Você já tem a versão mais nova.</string>
+    <string name="settings_update_available">Nova versão disponível: %1$s</string>
+    <string name="settings_update_download">Baixar e instalar</string>
+    <string name="settings_update_downloading">Baixando… %1$d%%</string>
+    <string name="settings_update_ready">Baixada. Toque em Instalar na tela do Android.</string>
+    <string name="settings_update_install">Instalar</string>
+    <string name="settings_update_offline">Não deu para ver a versão publicada. Confira a internet e tente de novo.</string>
+    <string name="settings_update_failed">O download não terminou. Confira a internet e tente de novo.</string>
+    <string name="settings_update_help">O Android sempre pede para confirmar a instalação. Na primeira vez, ele pede para liberar \"instalar apps desta fonte\" para o Stagebook: libere e volte aqui. Músicas, setlists e ajustes continuam.</string>
+    <string name="settings_sections">Seções da letra</string>
+    <string name="settings_sections_help">Linhas como [Refrão], Verso 2:, Ponte, Intro, Solo, Final… viram títulos em destaque no palco, sempre em português: [Chorus] aparece como REFRÃO, [Verse 2] como VERSO 2.</string>
+    <string name="settings_section_color">Cor do título da seção</string>
+    <string name="settings_show_sections">Mostrar os títulos das seções</string>
+    <string name="settings_normalize">Padronizar seções da biblioteca</string>
+    <string name="settings_normalize_ok">Padronizar</string>
+    <string name="settings_normalize_confirm">Padronizar as seções de todas as músicas (em português)?\n\nTítulos que já existem viram \"[Refrão]\", \"[Verso 2]\"…\nLetra sem títulos: o app identifica cada parte pela repetição (a estrofe que se repete é o refrão).\n\nAs palavras da letra não mudam.</string>
+    <plurals name="settings_unidentified">
+        <item quantity="one">%d sem repetição ficou como estava.</item>
+        <item quantity="other">%d sem repetição ficaram como estavam.</item>
+    </plurals>
+    <plurals name="settings_normalized">
+        <item quantity="one">%d música ajustada.</item>
+        <item quantity="other">%d músicas ajustadas.</item>
+    </plurals>
+    <string name="settings_screen">Tela</string>
+    <string name="settings_keep_screen_on">Manter a tela ligada com o app aberto</string>
+    <string name="settings_keep_screen_on_help">Para o show: o tablet não apaga sozinho enquanto o Stagebook estiver na frente. Fora do app, apaga normalmente. O palco fica sempre aceso.</string>
+    <string name="settings_pedal">Pedal</string>
+    <string name="settings_pedal_yours">Seu pedal</string>
+    <string name="settings_pedal_none">Nenhum pedal reconhecido ainda. Ligue o pedal e aperte um botão: o nome dele aparece aqui e fica guardado.</string>
+    <string name="settings_pedal_none_short">Nenhum pedal reconhecido ainda</string>
+    <string name="settings_pedal_connected">Conectado agora</string>
+    <string name="settings_pedal_disconnected">Desconectado. Ligue o pedal ou pareie de novo.</string>
+    <string name="settings_pedal_connected_short">conectado</string>
+    <string name="settings_pedal_disconnected_short">desconectado</string>
+    <string name="settings_pedal_test_card">Teste de botão</string>
+    <string name="settings_pedal_from_device">Veio de: %1$s</string>
+    <string name="settings_pedal_from_device_builtin">Veio do próprio aparelho (não é o pedal)</string>
+    <string name="settings_font_card">Tamanho da letra</string>
+    <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
+    <string name="settings_colors">Cores</string>
+    <string name="settings_columns">Colunas no palco</string>
+    <string name="settings_columns_auto">Automático</string>
+    <string name="settings_columns_one">1</string>
+    <string name="settings_columns_two">2</string>
+    <string name="settings_columns_one_short">1 coluna</string>
+    <string name="settings_columns_two_short">2 colunas</string>
+    <string name="settings_columns_help">Automático escolhe para cada música: 2 colunas quando a letra não cabe numa página e as frases são curtas o bastante para meia tela; frases longas ficam em 1 coluna. Com 2 colunas, leia a da esquerda e depois a da direita; o pedal vira as duas juntas.</string>
+    <string name="settings_bold_short">negrito</string>
+    <string name="settings_sections_look">Títulos de seção</string>
+    <string name="settings_sections_shown">títulos visíveis</string>
+    <string name="settings_sections_hidden">títulos escondidos</string>
+    <string name="settings_normalize_card">Padronizar a biblioteca</string>
+    <string name="settings_normalize_help">Reescreve os títulos de seção de todas as músicas e identifica as partes das letras que não têm títulos (a estrofe que se repete é o refrão).</string>
+    <string name="settings_screen_on_short">Fica ligada com o app aberto</string>
+    <string name="settings_screen_off_short">Apaga normalmente</string>
+    <string name="settings_pair_pedal">Parear pedal</string>
+    <string name="settings_pedal_test">Aperte um botão do pedal para ver se ele está conectado.</string>
+    <string name="settings_pedal_last">Último botão: %1$s · %2$s</string>
+    <string name="settings_pedal_next">avança a página</string>
+    <string name="settings_pedal_previous">volta a página</string>
+    <string name="settings_pedal_unused">não usado no palco</string>
+    <string name="settings_pedal_next_song">vai para a próxima música</string>
+    <string name="settings_pedal_previous_song">volta para a música anterior</string>
+    <string name="settings_pedal_command">O que este botão faz</string>
+    <string name="settings_pedal_cmd_next">Avançar a página</string>
+    <string name="settings_pedal_cmd_previous">Voltar a página</string>
+    <string name="settings_pedal_cmd_next_song">Próxima música</string>
+    <string name="settings_pedal_cmd_previous_song">Música anterior</string>
+    <string name="settings_pedal_cmd_none">Nada (ignorar)</string>
+    <string name="settings_pedal_keys">Botões configurados</string>
+    <string name="pedal_key_code">Tecla %1$d</string>
+    <string name="settings_pedal_keys_none">Nenhum botão mudado: os botões seguem o padrão (avançar e voltar a página). Para mudar, aperte o botão e escolha o que ele faz em Teste de botão.</string>
+    <string name="settings_pedal_key_reset">Voltar %1$s ao padrão</string>
+    <string name="midi_cc">MIDI CC %1$d (canal %2$d)</string>
+    <string name="midi_note">MIDI nota %1$d (canal %2$d)</string>
+    <string name="midi_program">MIDI programa %1$d (canal %2$d)</string>
+    <string name="settings_midi">Pedal MIDI</string>
+    <string name="settings_midi_unsupported">Este aparelho não tem suporte a MIDI.</string>
+    <string name="settings_midi_none">Nenhum aparelho MIDI conectado. Pedal USB: ligue o cabo (no tablet, com um adaptador USB OTG). Pedal Bluetooth: procure abaixo.</string>
+    <string name="settings_midi_usb_switch">Pedal MIDI pelo USB</string>
+    <string name="settings_midi_usb_help">Desligado, o Stagebook não usa nada ligado no USB (deixa livre para uma interface de áudio, como a da USB interface).</string>
+    <string name="settings_midi_connected">Conectado: %1$s (%2$s)</string>
+    <string name="settings_midi_usb">USB</string>
+    <string name="settings_midi_bt">Bluetooth</string>
+    <string name="settings_midi_saved">Pedal Bluetooth guardado: %1$s</string>
+    <string name="settings_midi_waiting">Desligado ou fora do alcance. O app conecta sozinho quando ele ligar.</string>
+    <string name="settings_midi_forget">Esquecer este pedal</string>
+    <string name="settings_midi_scan">Procurar pedal MIDI Bluetooth</string>
+    <string name="settings_midi_scanning">Procurando…</string>
+    <string name="settings_midi_choose">Tocar para usar este pedal</string>
+    <string name="settings_midi_bt_off">Ligue o Bluetooth do aparelho para procurar.</string>
+    <string name="settings_midi_found_none">Nenhum pedal MIDI achado. Confira se ele está ligado, perto e no modo MIDI Bluetooth.</string>
+    <string name="settings_midi_help">Depois de conectar, aperte um botão do pedal e escolha o que ele faz em Teste de botão.</string>
+    <string name="settings_midi_location">Nesta versão do Android, a localização do aparelho precisa estar ligada para a procura achar o pedal.</string>
+    <string name="settings_library">Biblioteca</string>
+    <string name="settings_import_file">Importar</string>
+    <string name="settings_export_file">Salvar cópia</string>
+    <string name="settings_import_help">Importar: música com o mesmo título é atualizada; as outras entram novas.</string>
+    <string name="settings_imported">Importado. Novas: %1$d · atualizadas: %2$d</string>
+    <plurals name="settings_import_confirm">
+        <item quantity="one">%1$d música que já está aqui vai ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>
+        <item quantity="other">%1$d músicas que já estão aqui vão ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>
+    </plurals>
+    <string name="settings_import_failed">Esse arquivo não é uma biblioteca do Stagebook.</string>
+    <string name="settings_exported">Cópia salva.</string>
+    <string name="settings_export_failed">Não consegui salvar a cópia.</string>
+    <string name="settings_version">Stagebook %1$s</string>
+    <string name="update_offer_title">Nova versão do Stagebook</string>
+    <string name="update_offer_message">A versão %1$s está disponível. Deseja atualizar agora? Músicas, setlists e ajustes continuam.</string>
+    <string name="update_offer_update">Atualizar</string>
+    <string name="update_offer_later">Agora não</string>
+    <string name="update_offer_retry">Tentar de novo</string>
+    <string name="update_offer_ready">Baixada. Toque em Instalar e confirme na tela do Android.</string>
+    <string name="sync_title">Músicas atualizadas</string>
+    <plurals name="sync_added">
+        <item quantity="one">%d nova</item>
+        <item quantity="other">%d novas</item>
+    </plurals>
+    <plurals name="sync_updated">
+        <item quantity="one">%d com a letra atualizada</item>
+        <item quantity="other">%d com a letra atualizada</item>
+    </plurals>
+    <plurals name="sync_sections">
+        <item quantity="one">%d com as seções mudadas</item>
+        <item quantity="other">%d com as seções mudadas</item>
+    </plurals>
+    <plurals name="sync_protected">
+        <item quantity="one">%d em que você tem a sua versão (veja os detalhes)</item>
+        <item quantity="other">%d em que você tem a sua versão (veja os detalhes)</item>
+    </plurals>
+    <plurals name="sync_meta">
+        <item quantity="one">%d com título, artista ou ano atualizado</item>
+        <item quantity="other">%d com título, artista ou ano atualizado</item>
+    </plurals>
+    <string name="sync_kept">Suas edições, seções e zooms foram mantidos.</string>
+    <string name="sync_see_details">Ver detalhes</string>
+    <string name="sync_details_title">Última atualização das músicas</string>
+    <string name="sync_details_open">Ver a última atualização das músicas</string>
+    <string name="sync_details_when">Em %1$s</string>
+    <string name="sync_updating">Há uma atualização nova chegando: esta lista ainda é a anterior. Ela muda sozinha quando a nova for aplicada.</string>
+    <string name="sync_check_up_to_date">Última verificação: %1$s · as músicas já estavam em dia</string>
+    <string name="sync_check_nothing">Última verificação: %1$s · atualização aplicada, nenhuma música para revisar</string>
+    <plurals name="sync_check_changed">
+        <item quantity="one">Última verificação: %2$s · %1$d música para revisar</item>
+        <item quantity="other">Última verificação: %2$s · %1$d músicas para revisar</item>
+    </plurals>
+    <string name="sync_details_intro">Em cada música, escolha com qual versão quer ficar: a atualizada ou a atual. Nas que mudaram já vale a atualizada; nas que você tinha mudado, vale a sua até você escolher.</string>
+    <string name="sync_details_rebuilt">Esta atualização foi antes de o app guardar os detalhes: a lista pode não estar completa.</string>
+    <string name="sync_details_empty_title">Nenhuma música mudou</string>
+    <string name="sync_details_empty_message">Quando uma atualização trouxer ou mudar músicas, elas aparecem aqui.</string>
+    <string name="sync_details_changed">Músicas que mudaram</string>
+    <string name="sync_details_protected">Você tem uma versão sua</string>
+    <string name="sync_kind_protected">Sua versão é diferente</string>
+    <string name="sync_details_added">Músicas novas</string>
+    <string name="sync_kind_updated">Letra mudou</string>
+    <string name="sync_kind_sections">Seções mudaram</string>
+    <string name="sync_kind_meta">Dados mudaram</string>
+    <string name="sync_kind_meta_protected">Seus dados são diferentes</string>
+    <string name="sync_meta_title">Título</string>
+    <string name="sync_meta_author">Artista</string>
+    <string name="sync_meta_year">Ano</string>
+    <string name="sync_meta_empty">(vazio)</string>
+    <string name="sync_kind_added">Nova</string>
+    <plurals name="sync_more_lines">
+        <item quantity="one">e mais %1$d linha</item>
+        <item quantity="other">e mais %1$d linhas</item>
+    </plurals>
+    <string name="sync_keep_new">Aceitar a atualizada</string>
+    <string name="sync_keep_mine">Manter a atual</string>
+    <string name="sync_keep_added">Aceitar</string>
+    <string name="sync_remove_added">Remover</string>
+    <string name="sync_chose_new">Você aceitou a atualizada</string>
+    <string name="sync_chose_mine">Você manteve a atual</string>
+    <string name="sync_chose_removed">Removida da biblioteca</string>
+    <string name="sync_keep_mine_confirm">Manter a versão atual de \"%1$s\" (a que você tinha antes da atualização)? As próximas atualizações não trocam de novo.</string>
+    <string name="sync_remove_confirm">Remover \"%1$s\" da biblioteca? Ela também sai dos setlists.</string>
+    <string name="sync_accept_all">Aceitar todas</string>
+    <string name="sync_keep_all">Manter todas</string>
+    <string name="sync_remove_all">Remover todas</string>
+    <plurals name="sync_keep_all_confirm">
+        <item quantity="one">Voltar %d música para a versão que você tinha antes da atualização?</item>
+        <item quantity="other">Voltar %d músicas para a versão que você tinha antes da atualização?</item>
+    </plurals>
+    <plurals name="sync_accept_all_confirm">
+        <item quantity="one">Trocar %d música em que você tem a sua versão pela atualizada?</item>
+        <item quantity="other">Trocar %d músicas em que você tem a sua versão pela atualizada?</item>
+    </plurals>
+    <plurals name="sync_remove_all_confirm">
+        <item quantity="one">Remover %d música nova da biblioteca? Ela também sai dos setlists.</item>
+        <item quantity="other">Remover %d músicas novas da biblioteca? Elas também saem dos setlists.</item>
+    </plurals>
+    <string name="sync_undo_refused">A letra foi editada depois da atualização: não voltei à atual para não perder a sua edição.</string>
+</resources>
