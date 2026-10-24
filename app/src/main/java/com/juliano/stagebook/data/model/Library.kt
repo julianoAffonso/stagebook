@@ -34,6 +34,14 @@ enum class SectionLang {
 }
 
 @Serializable
+/** Fonte do palco: só as que vêm no Android (nada para baixar; o Fire não tem o Google Play Services). */
+enum class StageFont {
+    @SerialName("default") DEFAULT,
+    @SerialName("condensed") CONDENSED,
+    @SerialName("serif") SERIF,
+    @SerialName("mono") MONO,
+}
+
 enum class StageColumns {
     @SerialName("auto") AUTO,   // 2 colunas no tablet deitado, 1 no resto
     @SerialName("one") ONE,
@@ -65,6 +73,8 @@ data class Look(
     val chordColor: Int = 0xFFFFC107.toInt(),
     // seções reconhecidas na língua do app (a letra guardada não muda); false = como estão escritas
     val translateSections: Boolean = true,
+    val font: StageFont = StageFont.DEFAULT,        // fonte da letra
+    val chordFont: StageFont = StageFont.DEFAULT,   // fonte dos acordes
 ) {
     companion object {
         const val MIN_FONT = 16f

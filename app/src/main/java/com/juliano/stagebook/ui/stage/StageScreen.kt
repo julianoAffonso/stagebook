@@ -244,6 +244,7 @@ fun StageScreen(
         fontSize = (look.fontSp * z).sp,
         lineHeight = (look.fontSp * z * 1.25f).sp,
         fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
+        fontFamily = look.font.family,
         // sem cortar o respiro da primeira/última linha: a linha medida sozinha tem a mesma altura
         // que dentro do texto, e a soma das linhas é a altura real da página
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
@@ -519,7 +520,7 @@ fun StageScreen(
                 style,
                 columns,
                 // acorde: negrito, na cor e no tamanho dele, acompanhando o zoom da letra
-                style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, lineHeight = TextUnit.Unspecified),
+                style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
             )
             SideEffect { hit.show(shown, columnWidth, gutter) }
             AnimatedContent(
