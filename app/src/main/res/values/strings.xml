@@ -365,6 +365,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="player_no_track">Não deu para abrir o backing track</string>
     <!-- mixer do player (Ajustes → Player) -->
     <string name="mixer_title">Mixer</string>
+    <string name="mixer_monitor">Monitorar (medidores ao vivo)</string>
     <string name="mixer_help">Vale para todos os backing tracks: cada canal do arquivo vira um canal aqui. Toque no nome do canal para escolher a saída, normalizar, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem a saída 1 (esquerda) e a 2 (direita) do aparelho.</string>
     <string name="mixer_channels">Canais nos backing tracks</string>
     <string name="mixer_channel">Canal %1$d</string>

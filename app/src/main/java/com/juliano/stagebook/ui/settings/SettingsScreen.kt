@@ -182,9 +182,11 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     }
     var section by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
     // medidores do mixer: só com o modo player ligado, a seção Player aberta e a tela visível
+    // chave "Monitorar": começa desligada e não fica salva (como no Backing)
+    var monitoring by remember { mutableStateOf(false) }
     val levels = remember { mutableStateOf(MixerLevels.SILENT) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val metering = uiState.look.playerMode && section == SettingsSection.PLAYER
+    val metering = monitoring && uiState.look.playerMode && section == SettingsSection.PLAYER
     LaunchedEffect(metering) {
         if (metering) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { StagePlayer.liveLevels().collect { levels.value = it } }
         levels.value = MixerLevels.SILENT
@@ -222,6 +224,8 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onPlayerMode = viewModel::setPlayerMode,
                 onMixer = viewModel::setMixer,
                 mixerLevels = { levels.value },
+                monitoring = monitoring,
+                onMonitoring = { monitoring = it },
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -280,6 +284,8 @@ data class SettingsActions(
     val onPlayerMode: (Boolean) -> Unit = {},
     val onMixer: (MixerConfig) -> Unit = {},
     val mixerLevels: () -> MixerLevels = { MixerLevels.SILENT },   // lido só no desenho dos medidores
+    val monitoring: Boolean = false,
+    val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onImport: () -> Unit = {},
@@ -897,8 +903,8 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
         UsbRequirements()
     }
     if (look.playerMode) {
-        MixerCard(look.mixer, actions.onMixer, actions.mixerLevels)
-        EqCard(look.mixer, actions.onMixer, actions.mixerLevels)
+        MixerCard(look.mixer, actions)
+        EqCard(look.mixer, actions)
     }
 }
 
@@ -914,7 +920,9 @@ private fun UsbRequirements() = HelpTip(
 )
 
 @Composable
-private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels) {
+private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
+    val onMixer = actions.onMixer
+    val levels = actions.mixerLevels
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // canal em edição (o primeiro do par); -1 = nenhum
     SettingsCard(stringResource(R.string.mixer_title)) {
         HelpTip(stringResource(R.string.mixer_help))
@@ -922,6 +930,7 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
         )
+        SwitchRow(stringResource(R.string.mixer_monitor), actions.monitoring, actions.onMonitoring)
         val groups = mixer.groups()
         // celular: um canal por linha, fader deitado; tablet: faixas estreitas lado a lado, fader de pé (como numa mesa)
         BoxWithConstraints {
@@ -938,6 +947,7 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels
                                 onChange = { s -> onMixer(mixer.withStrip(g.first) { s }) },
                                 onEdit = { editing = g.first },
                                 meters = { levels().meters },
+                                showMeters = actions.monitoring,
                                 modifier = Modifier.weight(1f),
                                 upright = upright,
                             )
@@ -961,7 +971,9 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels
 }
 
 @Composable
-private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels) {
+private fun EqCard(mixer: MixerConfig, actions: SettingsActions) {
+    val onMixer = actions.onMixer
+    val levels = actions.mixerLevels
     SettingsCard(stringResource(R.string.eq_title)) {
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn) { onMixer(mixer.copy(eqOn = it)) }
         HelpTip(stringResource(R.string.eq_help))
@@ -977,7 +989,7 @@ private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: (
         Box(Modifier.fillMaxWidth()) {
             SpectrumView(
                 { levels().spectrumDb.mapIndexed { b, v -> if (v <= Spectrum.FLOOR_DB) v else v + response[b] } },
-                active = { levels().live },
+                active = { actions.monitoring && levels().live },
                 modifier = Modifier.matchParentSize().padding(vertical = Spacing.l),
             )
             Row(Modifier.fillMaxWidth()) {

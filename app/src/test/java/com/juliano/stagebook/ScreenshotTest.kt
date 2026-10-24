@@ -381,7 +381,7 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE_LONGO)
     fun mixerPhone() = shoot("jornada_mixer_1_celular") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }), it, section = SettingsSection.PLAYER) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -426,7 +426,7 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = TABLET_LONGO)
     fun mixerTablet() = shoot("jornada_mixer_2_tablet") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }), it, section = SettingsSection.PLAYER) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
     }
 
     @Test @Config(qualifiers = PHONE)
