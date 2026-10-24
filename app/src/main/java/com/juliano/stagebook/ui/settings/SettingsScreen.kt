@@ -1,5 +1,9 @@
 package com.juliano.stagebook.ui.settings
 
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.style.LineHeightStyle
+import com.juliano.stagebook.ui.stage.ChordText
+import com.juliano.stagebook.domain.Contrast
 import com.juliano.stagebook.data.Languages
 import com.juliano.stagebook.data.AppLanguage
 import androidx.compose.ui.semantics.Role
@@ -159,6 +163,10 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onBold = viewModel::setBold,
                 onSectionColor = viewModel::setSectionColor,
                 onShowSections = viewModel::setShowSections,
+                onTranslateSections = viewModel::setTranslateSections,
+                onChords = viewModel::setChords,
+                onChordScale = viewModel::setChordScale,
+                onChordColor = viewModel::setChordColor,
                 onNormalize = viewModel::normalizeSections,
                 onPairPedal = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
                 onPedalAction = viewModel::setPedalAction,
@@ -203,6 +211,10 @@ data class SettingsActions(
     val onBold: (Boolean) -> Unit = {},
     val onSectionColor: (Int) -> Unit = {},
     val onShowSections: (Boolean) -> Unit = {},
+    val onTranslateSections: (Boolean) -> Unit = {},
+    val onChords: (Boolean) -> Unit = {},
+    val onChordScale: (Float) -> Unit = {},
+    val onChordColor: (Int) -> Unit = {},
     val onNormalize: () -> Unit = {},
     val onPairPedal: () -> Unit = {},
     val onPedalAction: (Int, PedalAction) -> Unit = { _, _ -> },
@@ -224,6 +236,7 @@ data class SettingsActions(
 /** Seções dos ajustes: lista à esquerda no tablet, uma tela por seção no celular. */
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
+    CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
@@ -329,6 +342,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState): String = when (s) 
         } +
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
     SettingsSection.SECTIONS -> stringResource(if (ui.look.showSections) R.string.settings_sections_shown else R.string.settings_sections_hidden)
+    SettingsSection.CHORDS -> if (ui.look.chords) stringResource(R.string.settings_chords_on_short, (ui.look.chordScale * 100).roundToInt()) else stringResource(R.string.settings_chords_off_short)
     SettingsSection.PEDAL -> if (ui.look.pedalName.isEmpty()) stringResource(R.string.settings_pedal_none_short)
     else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
@@ -345,6 +359,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
         when (section) {
             SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions)
             SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
+            SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
@@ -373,22 +388,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview),
         ) {
-            Text(
-                lyricsAnnotated(
-                    stringResource(R.string.settings_preview_text),
-                    rememberSectionNames(look.translateSections),
-                    Color(look.sectionColor),
-                    look.showSections,
-                    ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
-                ),
-                style = TextStyle(
-                    color = Color(look.fg),
-                    fontSize = font.sp,
-                    lineHeight = (font * 1.25f).sp,
-                    fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-                ),
-                modifier = Modifier.padding(Spacing.m).clipToBounds(),
-            )
+            StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds())
         }
         Text(stringResource(R.string.settings_font_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -416,8 +416,81 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
         SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
+        LegibilityWarnings(look)
     }
 }
+
+/** Prévia do palco com a aparência escolhida (letra, seção e acordes), no tamanho [font]. */
+@Composable
+private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier) {
+    val style = TextStyle(
+        color = Color(look.fg),
+        fontSize = font.sp,
+        lineHeight = (font * 1.25f).sp,
+        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
+        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+    )
+    ChordText(
+        lyricsAnnotated(
+            stringResource(R.string.settings_preview_text),
+            rememberSectionNames(look.translateSections),
+            Color(look.sectionColor),
+            look.showSections,
+            ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
+        ),
+        style = style,
+        chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, lineHeight = TextUnit.Unspecified),
+        modifier = modifier,
+    )
+}
+
+/**
+ * Avisa quando uma cor do palco vai sumir no fundo (igual ou parecida demais, contraste abaixo de
+ * [Contrast.LEGIBLE]): letra, títulos de seção e acordes (só se aparecem). Só avisa; a escolha é do usuário.
+ */
+@Composable
+private fun LegibilityWarnings(look: Look) {
+    val problems = buildList {
+        if (!Contrast.legible(look.fg, look.bg)) add(R.string.settings_illegible_lyrics)
+        if (look.showSections && !Contrast.legible(look.sectionColor, look.bg)) add(R.string.settings_illegible_sections)
+        if (look.chords && !Contrast.legible(look.chordColor, look.bg)) add(R.string.settings_illegible_chords)
+    }
+    problems.forEach { msg ->
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+            Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Text(stringResource(msg), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun ChordsDetail(look: Look, actions: SettingsActions) {
+    // o tamanho muda ao vivo na prévia e só grava ao soltar o controle
+    var scale by remember(look.chordScale) { mutableFloatStateOf(look.chordScale) }
+    SettingsCard(stringResource(R.string.settings_chords)) {
+        SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
+        Text(stringResource(R.string.settings_chords_show_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (look.chords) {
+            Text(stringResource(R.string.settings_chords_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = scale,
+                onValueChange = { scale = it },
+                onValueChangeFinished = { actions.onChordScale(scale) },
+                valueRange = Look.MIN_CHORD_SCALE..Look.MAX_CHORD_SCALE,
+                steps = ((Look.MAX_CHORD_SCALE - Look.MIN_CHORD_SCALE) * 10).roundToInt() - 1,
+            )
+            Text(stringResource(R.string.settings_chords_color), style = MaterialTheme.typography.bodyLarge)
+            ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
+        }
+        Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
+            StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
+        }
+        LegibilityWarnings(look)
+    }
+}
+
+/** A prévia dos acordes não passa deste tamanho (a letra grande não caberia na caixa). */
+private const val PREVIEW_FONT = 30f
 
 @Composable
 private fun SectionsDetail(look: Look, actions: SettingsActions) {
@@ -427,6 +500,9 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
         Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
+        SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
+        Text(stringResource(R.string.settings_translate_sections_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LegibilityWarnings(look)
     }
     SettingsCard(stringResource(R.string.settings_normalize_card)) {
         Text(stringResource(R.string.settings_normalize_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

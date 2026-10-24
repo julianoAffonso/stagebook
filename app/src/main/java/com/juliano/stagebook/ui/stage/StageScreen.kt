@@ -1,8 +1,6 @@
 package com.juliano.stagebook.ui.stage
 
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.draw.drawWithContent
 import android.text.format.DateFormat
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedContent
@@ -548,22 +546,12 @@ fun StageScreen(
             ) { content ->
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(with(LocalDensity.current) { gutter.toDp() })) {
                     content.columns.forEachIndexed { column, text ->
-                        // acordes desenhados no espaço em cima da letra, na posição da letra marcada (ver chordLine)
-                        val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
-                        var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
-                        Text(
+                        ChordText(
                             text,
                             style = content.style,
-                            modifier = Modifier.weight(1f).fillMaxHeight().drawWithContent {
-                                drawContent()
-                                val l = laid ?: return@drawWithContent
-                                chordsAt.forEach { a ->
-                                    if (a.start >= l.layoutInput.text.length) return@forEach
-                                    val line = l.getLineForOffset(a.start)
-                                    drawText(measurer, a.item, Offset(l.getHorizontalPosition(a.start, true), l.getLineTop(line)), content.chordStyle)
-                                }
-                            },
-                            onTextLayout = { laid = it; hit.laidOut(content, column, it) },
+                            chordStyle = content.chordStyle,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            onTextLayout = { hit.laidOut(content, column, it) },
                         )
                     }
                     // última folha com só a coluna da esquerda: a da direita fica vazia, não estica a outra

@@ -124,7 +124,7 @@
     <!-- ajustes -->
     <string name="settings_title">Ajustes</string>
     <string name="settings_appearance">Letra no palco</string>
-    <string name="settings_preview_text">Wild horses couldn\'t drag me away\nWild, wild horses…</string>
+    <string name="settings_preview_text">[Refrão]\n[G]Uma linha de e[D]xemplo\n[Em]Pra ver como [C]fica</string>
     <string name="settings_font_value">%1$d</string>
     <string name="settings_font_size">Tamanho da letra: %1$d</string>
     <string name="settings_text_color">Cor da letra</string>
@@ -147,6 +147,18 @@
     <string name="settings_sections">Seções da letra</string>
     <string name="settings_sections_help">Linhas como [Refrão], Verso 2:, Ponte, Intro, Solo, Final… viram títulos em destaque no palco, sempre em português: [Chorus] aparece como REFRÃO, [Verse 2] como VERSO 2.</string>
     <string name="settings_section_color">Cor do título da seção</string>
+    <string name="settings_chords">Cifras</string>
+    <string name="settings_chords_on_short">Letra e cifra · acordes %1$d%%</string>
+    <string name="settings_chords_off_short">Só letra</string>
+    <string name="settings_chords_show">Mostrar acordes</string>
+    <string name="settings_chords_show_help">Desligado, o palco mostra só a letra, mesmo nas músicas com cifra.</string>
+    <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
+    <string name="settings_chords_color">Cor dos acordes</string>
+    <string name="settings_translate_sections">Nomes de seção na língua do app</string>
+    <string name="settings_translate_sections_help">Refrão, Chorus e {start_of_chorus} aparecem todos como Refrão. A letra guardada não muda. Desligado, aparece como está escrito.</string>
+    <string name="settings_illegible_lyrics">A letra vai ficar ilegível neste fundo</string>
+    <string name="settings_illegible_sections">Os títulos de seção vão ficar ilegíveis neste fundo</string>
+    <string name="settings_illegible_chords">Os acordes vão ficar ilegíveis neste fundo</string>
     <string name="section_intro">Intro</string>
     <string name="section_verse">Verso</string>
     <string name="section_pre_chorus">Pré-refrão</string>

@@ -141,6 +141,10 @@ class SettingsViewModel @Inject constructor(
     fun setBold(on: Boolean) = repository.updateLook { it.copy(bold = on) }
     fun setSectionColor(argb: Int) = repository.updateLook { it.copy(sectionColor = argb) }
     fun setShowSections(on: Boolean) = repository.updateLook { it.copy(showSections = on) }
+    fun setTranslateSections(on: Boolean) = repository.updateLook { it.copy(translateSections = on) }
+    fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }
+    fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
+    fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }
     fun setKeepScreenOn(on: Boolean) = repository.updateLook { it.copy(keepScreenOn = on) }
 
