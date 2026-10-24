@@ -75,7 +75,6 @@
     <string name="qr_limit_title">Limite do QR</string>
     <string name="qr_limit_message">O setlist chegou ao limite de músicas que podem ser transmitidas pelo QR. Para continuar, crie um novo setlist.</string>
     <string name="qr_limit_name">Com esse nome o setlist passa do limite que pode ser transmitido pelo QR. Use um nome mais curto ou crie um novo setlist.</string>
-    <string name="sets_send_qr">Enviar QR</string>
     <string name="set_empty_title">Setlist vazio</string>
     <string name="set_empty_message">Toque em \"Músicas\" para escolher o que entra no show.</string>
     <string name="set_item_missing">(música removida)</string>
@@ -88,7 +87,7 @@
 
     <!-- QR -->
     <string name="qr_description">QR code do setlist</string>
-    <string name="qr_hint">No the previous app: aba \"Setlist do vocalista\" → Ler QR. Ele avisa se alguma música não for encontrada no another app.</string>
+    <string name="qr_hint">Quem recebe: Setlists → Receber → Ler QR. O app avisa se alguma música não estiver na biblioteca de quem lê.</string>
     <plurals name="qr_count">
         <item quantity="one">%d música no QR</item>
         <item quantity="other">%d músicas no QR</item>
@@ -412,14 +411,24 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="eq_khz">%1$s kHz</string>
     <string name="eq_reset">Zerar</string>
     <string name="help_how">Como funciona</string>
-    <!-- ler o QR de um setlist (Letras ou Stagebook) -->
+    <!-- ler o QR de um setlist (de outro aparelho) -->
     <string name="sets_scan">Ler QR</string>
+    <string name="sets_receive">Receber</string>
+    <string name="sets_type_code">Digitar código</string>
+    <string name="sets_type_code_offline">Digitar código (sem internet)</string>
+    <string name="sets_code_hint">Ex.: 47-violao-lua</string>
+    <string name="scan_code_title">Setlist pelo código</string>
+    <string name="scan_code_loading">Buscando o setlist…</string>
+    <string name="scan_code_not_found">Não achei nada com esse código. Confira o código (vale por 12 horas depois de enviado).</string>
+    <string name="scan_code_offline">Sem internet ou o serviço não respondeu. Tente de novo daqui a pouco.</string>
+    <string name="scan_code_retry">Tentar de novo</string>
+    <string name="scan_carried_row">Veio junto com o setlist: entra na sua biblioteca.</string>
     <string name="scan_title">Ler QR do setlist</string>
-    <string name="scan_hint">Aponte a câmera para o QR do setlist, do previous app ou de outro Stagebook.</string>
+    <string name="scan_hint">Aponte a câmera para o QR do setlist (ou do código) que está na tela do outro aparelho.</string>
     <string name="scan_no_camera">Sem a câmera não dá para ler o QR.</string>
     <string name="scan_allow_camera">Permitir a câmera</string>
     <string name="scan_incomplete">O QR veio incompleto. Aproxime e leia de novo.</string>
-    <string name="scan_not_setlist">Este QR não é de um setlist. Aponte para o QR do previous app ou do Stagebook.</string>
+    <string name="scan_not_setlist">Este QR não é de um setlist. Aponte para o QR do setlist ou do código.</string>
     <string name="scan_name">Nome do setlist</string>
     <plurals name="scan_found">
         <item quantity="one">%1$d de %2$d música está na sua biblioteca</item>
@@ -429,6 +438,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="scan_which">Qual destas?</string>
     <string name="scan_leave_out">Deixar de fora</string>
     <string name="scan_again">Ler de novo</string>
+    <string name="scan_fetch_again">Buscar de novo</string>
     <string name="scan_create">Criar setlist</string>
     <plurals name="scan_missing_title">
         <item quantity="one">%1$d música vai ficar de fora</item>
@@ -448,4 +458,34 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="queue_skip">Pular</string>
     <string name="queue_stop">Parar</string>
     <string name="scan_create_other">Criar outro</string>
+    <!-- compartilhar o setlist (QR, internet; a banda na rede local entra quando existir) -->
+    <string name="share_title">Compartilhar</string>
+    <string name="share_qr">QR na tela</string>
+    <string name="share_qr_hint">Quem está do lado lê com a câmera. Só os títulos.</string>
+    <string name="share_internet">Código pela internet</string>
+    <string name="share_internet_hint">Gera um código para mandar por mensagem. Vale por 12 horas.</string>
+    <plurals name="share_with_songs">
+        <item quantity="one">Levar a música (%1$d)</item>
+        <item quantity="other">Levar as músicas (%1$d)</item>
+    </plurals>
+    <string name="share_with_songs_hint">Quem recebe só usa as que não tem; as dele não mudam.</string>
+    <string name="share_offline">Sem internet agora: só o QR. O código pela internet aparece quando a internet voltar.</string>
+    <string name="share_sending">Enviando…</string>
+    <string name="share_sent">Código do setlist</string>
+    <string name="share_failed">Não deu para enviar</string>
+    <string name="share_failed_text">O serviço não respondeu. Confira a internet e tente de novo, ou use o QR.</string>
+    <plurals name="share_sent_songs">
+        <item quantity="one">%1$d música foi junto.</item>
+        <item quantity="other">%1$d músicas foram junto.</item>
+    </plurals>
+    <plurals name="share_skipped">
+        <item quantity="one">%1$d música grande demais não foi.</item>
+        <item quantity="other">%1$d músicas grandes demais não foram.</item>
+    </plurals>
+    <string name="share_sent_hint">Vale por 12 horas. Quem recebe: Setlists → Receber → Digitar código, ou Ler QR apontando para este QR.</string>
+    <string name="share_send_code">Mandar por mensagem</string>
+    <string name="share_copy">Copiar o código</string>
+    <string name="share_copied">Código copiado</string>
+    <string name="share_code_qr">QR do código: tire uma foto ou leia em Setlists → Receber → Ler QR</string>
+    <string name="share_message">Setlist \"%1$s\" no Stagebook: código %2$s (vale por 12 horas). No app: Setlists → Receber → Digitar código.</string>
 </resources>

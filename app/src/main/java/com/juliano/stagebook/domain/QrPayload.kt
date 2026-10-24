@@ -8,23 +8,21 @@ import java.util.zip.Deflater
 import java.util.zip.Inflater
 
 /**
- * Conteúdo do QR lido pelo the previous app. Desde 23/10/2026 (pedido do usuário, sem convivência com o
- * antigo LETRAS2) o QR leva os bytes `L3` + deflate (sem cabeçalho zlib) do texto UTF-8:
+ * Conteúdo do QR do setlist: os bytes `L3` + deflate (sem cabeçalho zlib) do texto UTF-8:
  * ```
- * LETRAS3
+ * <cabeçalho do formato>
  * <quantidade de músicas>
  * <nome do setlist>
  * <título>[\t<artista>]
  * …
  * ```
- * Só nome, títulos e, quando o título se repete na biblioteca, o artista: cada tablet tem as próprias
- * músicas; a chave é o título, e o artista só desempata títulos iguais ("It's My Life" do Bon Jovi e do
- * Talk Talk) — o Backing faz igual. Medido nas 194 músicas: 28 bytes por música com o artista sempre,
- * 16 sem o desnecessário, e o deflate tira mais ~30%. A quantidade deixa o leitor conferir que recebeu
- * tudo; quem lê é obrigado a avisar, antes de criar o setlist, cada título que não achou no another app.
+ * Só nome, títulos e, quando o título se repete na biblioteca, o artista: cada aparelho tem as próprias músicas; a chave é
+ * o título, e o artista só desempata títulos iguais ("It's My Life" do Bon Jovi e do Talk Talk). Medido em 194 músicas:
+ * 28 bytes por música com o artista sempre, 16 sem o desnecessário, e o deflate tira mais ~30%. A quantidade deixa quem
+ * lê conferir que recebeu tudo; quem lê é obrigado a avisar, antes de criar o setlist, cada título que não achou.
  */
 object QrPayload {
-    const val HEADER = "LETRAS3"
+    const val HEADER = "LETRAS3"   // cabeçalho do formato: fixo (QRs já gerados com ele continuam valendo)
     private val PACKED_MARK = byteArrayOf('L'.code.toByte(), '3'.code.toByte())
 
     /**
@@ -79,7 +77,7 @@ object QrPayload {
 
     private const val MAX_TEXT = 64 * 1024   // um setlist nunca chega perto; protege de dado estranho
 
-    /** Texto do QR compactado (`L3` + deflate), ou null se os bytes não forem desse formato (o mesmo do Backing). */
+    /** Texto do QR compactado (`L3` + deflate), ou null se os bytes não forem desse formato. */
     fun unpack(bytes: ByteArray?): String? {
         if (bytes == null || bytes.size <= PACKED_MARK.size || bytes[0] != PACKED_MARK[0] || bytes[1] != PACKED_MARK[1]) return null
         val inflater = Inflater(true)
@@ -101,7 +99,7 @@ object QrPayload {
         }
     }
 
-    /** Leitura do texto já descompactado (referência para o leitor): null se não for um QR do previous app ou se faltar título. */
+    /** Leitura do texto já descompactado (referência para o leitor): null se não for um QR de setlist ou se faltar título. */
     fun parse(payload: String): Parsed? {
         val lines = payload.replace("\r", "").split('\n')
         if (lines.size < 3 || lines[0] != HEADER) return null

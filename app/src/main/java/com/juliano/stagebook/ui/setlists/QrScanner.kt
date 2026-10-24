@@ -28,7 +28,7 @@ import com.juliano.stagebook.domain.QrPayload
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Câmera lendo QR (decodificação no aparelho, com ZXing; sem serviço do Google). O mesmo leitor do the previous app. */
+/** Câmera lendo QR (decodificação no aparelho, com ZXing; sem serviço do Google). */
 @Composable
 fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -89,7 +89,7 @@ private class QrAnalyzer(private val onText: (String) -> Unit) : ImageAnalysis.A
             val source = PlanarYUVLuminanceSource(data, plane.rowStride, it.height, 0, 0, it.width, it.height, false)
             try {
                 val result = reader.decode(BinaryBitmap(HybridBinarizer(source)), hints)
-                // QR compactado (Letras ou Stagebook): os bytes crus vêm nos segmentos binários, não no texto
+                // QR compactado: os bytes crus vêm nos segmentos binários, não no texto
                 @Suppress("UNCHECKED_CAST")
                 val bytes = (result.resultMetadata?.get(ResultMetadataType.BYTE_SEGMENTS) as? List<ByteArray>)
                     ?.fold(ByteArray(0)) { acc, b -> acc + b }

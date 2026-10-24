@@ -11,7 +11,7 @@ object QrEncoder {
     private const val BLACK = 0xFF000000.toInt()
     private const val WHITE = 0xFFFFFFFF.toInt()
 
-    /** Bytes no QR em modo binário: um caractere ISO-8859-1 por byte, sem ECI (o Backing lê os bytes crus). */
+    /** Bytes no QR em modo binário: um caractere ISO-8859-1 por byte, sem ECI (o leitor usa os bytes crus). */
     fun encode(bytes: ByteArray, size: Int): Bitmap = encode(String(bytes, Charsets.ISO_8859_1), size, "ISO-8859-1")
 
     private fun encode(payload: String, size: Int, charset: String): Bitmap {

@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.setlists
 
+import com.juliano.stagebook.domain.ShareCode
+import com.juliano.stagebook.data.Connectivity
+import com.juliano.stagebook.data.SetlistCloud
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -41,12 +44,44 @@ data class SetlistDetailUiState(
 @Immutable
 data class QrUi(val image: ImageBitmap, val name: String, val count: Int, val missing: Int)
 
+/** Envio pela internet: enviando, enviado (com o código) ou falhou. */
+sealed interface CloudUi {
+    data object Sending : CloudUi
+    data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null) : CloudUi
+    data object Failed : CloudUi
+}
+
 @HiltViewModel
 class SetlistDetailViewModel @Inject constructor(
     private val repository: LibraryRepository,
     savedStateHandle: SavedStateHandle,
+    private val setlistCloud: SetlistCloud,
+    connectivity: Connectivity,
 ) : ViewModel() {
     val setId = savedStateHandle.toRoute<SetlistDetail>().setId
+
+    /** Com internet agora? O "Código pela internet" só aparece com ela (só observa com a tela aberta). */
+    val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    private val _cloud = MutableStateFlow<CloudUi?>(null)
+    val cloud: StateFlow<CloudUi?> = _cloud.asStateFlow()
+
+    /** Envia o setlist pela internet (com as músicas, se [withSongs]); o código aparece num diálogo. */
+    fun sendInternet(withSongs: Boolean) {
+        if (_cloud.value == CloudUi.Sending) return
+        _cloud.value = CloudUi.Sending
+        viewModelScope.launch {
+            val name = repository.library.value.setlist(setId)?.name.orEmpty()
+            val sent = setlistCloud.send(setId, withSongs)
+            // o QR do código: quem está do lado tira foto ou lê pelo "Ler QR"
+            val qr = sent?.let { s ->
+                withContext(Dispatchers.Default) { runCatching { QrEncoder.encode(ShareCode.qrText(s.code).toByteArray(), 600).asImageBitmap() }.getOrNull() }
+            }
+            _cloud.value = sent?.let { CloudUi.Sent(it.code, name, it.songs, it.skipped, qr) } ?: CloudUi.Failed
+        }
+    }
+
+    fun dismissCloud() { _cloud.value = null }
 
     val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
         val set = lib.setlist(setId)

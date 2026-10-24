@@ -34,7 +34,7 @@ class ScanSetlistTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
-        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo)), ids)
+        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to ""))), ids)
     }
 
     @Test fun `QR com todas as músicas cria o setlist na ordem do QR`() {
@@ -66,6 +66,27 @@ class ScanSetlistTest {
         val other = vm.create()!!
         assertNotEquals(old, other)
         assertEquals("show (2)", repo.library.value.setlist(other)!!.name)
+    }
+
+    @Test fun `pela internet - a que falta vem junto e entra na biblioteca - a daqui não muda`() {
+        val (repo, vm, ids) = setup()
+        val before = repo.song(ids[1])!!.text
+        vm.review(
+            qr("Show", "Noite Clara", "Música Nova"),
+            listOf(
+                com.juliano.stagebook.data.SetlistCloud.SharedSong("Noite Clara", "Banda", text = "[G]outra versão"),
+                com.juliano.stagebook.data.SetlistCloud.SharedSong("Música Nova", "Outra Banda", "2001", "[C]linha nova"),
+            ),
+        )
+        val review = vm.ui.value as ScanUi.Review
+        assertTrue(review.missing.isEmpty())
+        assertTrue(review.rows[1].carried)
+        val id = vm.create()!!
+        val items = repo.library.value.setlist(id)!!.items
+        assertEquals(2, items.size)
+        assertEquals(ids[1], items[0])
+        assertEquals("[C]linha nova", repo.song(items[1])!!.text)
+        assertEquals(before, repo.song(ids[1])!!.text)
     }
 
     @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {

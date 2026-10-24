@@ -47,7 +47,8 @@ fun StagebookNavHost(
                 onImport = { entry.ifResumed { nav.navigate(Importer(it)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
                 onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
-                onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist) } },
+                onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },
+                onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
             )
         }
         composable<SongEditor> {

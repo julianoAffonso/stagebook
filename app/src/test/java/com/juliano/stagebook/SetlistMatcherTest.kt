@@ -33,7 +33,7 @@ class SetlistMatcherTest {
         assertEquals(QrMatch.Missing, SetlistMatcher.match(QrPayload.Entry("Outra Coisa", ""), lib))
     }
 
-    @Test fun `QR do previous app e do Stagebook - compactar e ler de volta`() {
+    @Test fun `QR do setlist - compactar e ler de volta`() {
         val text = listOf(QrPayload.HEADER, "2", "Show de sábado", "Canção do Mar", "Noite Clara\tBanda C").joinToString("\n")
         val back = QrPayload.unpack(QrPayload.pack(text))
         assertEquals(text, back)

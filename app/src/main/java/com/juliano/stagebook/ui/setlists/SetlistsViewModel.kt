@@ -3,6 +3,7 @@ package com.juliano.stagebook.ui.setlists
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.juliano.stagebook.data.Connectivity
 import com.juliano.stagebook.data.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.juliano.stagebook.domain.QrPayload
@@ -24,7 +25,10 @@ data class SetlistRowUi(val id: String, val name: String, val count: Int)
 data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList())
 
 @HiltViewModel
-class SetlistsViewModel @Inject constructor(private val repository: LibraryRepository) : ViewModel() {
+class SetlistsViewModel @Inject constructor(private val repository: LibraryRepository, connectivity: Connectivity) : ViewModel() {
+    /** "Digitar código" só com internet (só observa com a aba aberta). */
+    val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
         SetlistsUiState(!loaded, lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistsUiState())

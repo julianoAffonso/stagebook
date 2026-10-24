@@ -27,7 +27,7 @@ import com.juliano.stagebook.ui.theme.Sizes
 import com.juliano.stagebook.ui.theme.Spacing
 
 /**
- * Fader vertical de mesa (o mesmo do the previous app): arrastar ou tocar no ponto; a faixa acesa vai de [origin]
+ * Fader vertical de mesa: arrastar ou tocar no ponto; a faixa acesa vai de [origin]
  * (0 no equalizador, o fim de baixo no volume) até o valor; a marca fina fica no 0 dB. `onValueChange` recebe o valor contínuo; quem chama arredonda o passo.
  * Com `enabled = false` (travado), não responde ao toque e fica apagado. `height` é a altura mínima:
  * com `Modifier.fillMaxHeight()` o fader cresce até o espaço que tiver.

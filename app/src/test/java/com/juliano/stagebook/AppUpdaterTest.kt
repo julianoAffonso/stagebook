@@ -91,7 +91,7 @@ class AppUpdaterTest {
         assertEquals(UpdateState.Offline, vm.waitUpdate { it == UpdateState.Offline })
     }
 
-    @Test fun `arquivo baixado que não é o previous app não é instalado`() = runBlocking {
+    @Test fun `arquivo baixado que não é o app não é instalado`() = runBlocking {
         apk = ByteArray(200_000) { it.toByte() }   // página de erro, arquivo cortado…
         val vm = vm(updater())
         vm.downloadUpdate()

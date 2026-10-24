@@ -9,10 +9,10 @@ local.properties
 # chaves de assinatura nunca vão para o git (o código é público)
 *.jks
 *.keystore
-# memórias e skills herdadas do previous app e do Backing, completas (têm dados pessoais): só neste Mac
+# memórias e skills herdadas dos apps anteriores, completas (têm dados pessoais): só neste Mac
 .claude/local/
 
-# carga de letras gerada do another app (direitos autorais: fora do git)
+# letras de teste com direitos autorais: fora do git
 /carga/
 .claude/auditoria-pendente
 !.claude/settings.json
