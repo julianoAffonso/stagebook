@@ -157,6 +157,7 @@
     <string name="settings_site_remove">Tirar %1$s</string>
     <string name="import_needs_internet">Importar precisa de internet</string>
     <string name="import_personal_use">Uso pessoal: o Stagebook não guarda nem envia músicas; o que você importa fica neste aparelho.</string>
+    <string name="settings_chord_shapes">Desenhos dos acordes</string>
     <string name="settings_instrument">Instrumento</string>
     <string name="settings_instrument_help">Os desenhos dos acordes (tocar num acorde no palco e a lista de acordes) são deste instrumento.</string>
     <string name="instrument_violao">Violão</string>

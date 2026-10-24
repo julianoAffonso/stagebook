@@ -228,6 +228,14 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.CHORDS) }
     }
 
+    // tela inteira de Ajustes → Cifras (alta, sem rolar): instrumento, desenho ao tocar e lista de acordes
+    @Test @Config(qualifiers = "w412dp-h2200dp-port-xxhdpi")
+    fun settingsPhoneChordsFull() = shoot("celular_5_ajustes_cifras_inteira") {
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(settings.copy(look = settings.look.copy(chordList = com.juliano.stagebook.data.model.ChordListPlace.TOP)), SettingsActions(), it, section = SettingsSection.CHORDS)
+        }
+    }
+
     // acorde preto no fundo preto: o aviso de ilegível aparece
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneChordsIllegible() = shoot("celular_5_ajustes_cifras_ilegivel") {

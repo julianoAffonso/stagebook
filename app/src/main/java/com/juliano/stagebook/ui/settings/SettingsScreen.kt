@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.domain.Voicings
+import com.juliano.stagebook.ui.components.ChordDiagram
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
@@ -512,6 +514,16 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
             Text(stringResource(R.string.settings_font_family), style = MaterialTheme.typography.bodyLarge)
             FontPicker(look.chordFont, actions.onChordFont)
+            // a prévia logo depois do que ela mostra (tamanho, cor, fonte)
+            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
+                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
+            }
+            LegibilityWarnings(look)
+        }
+    }
+    // os desenhos dos acordes num cartão próprio (só no perfil letra e cifra), com um exemplo do instrumento
+    if (look.chords) {
+        SettingsCard(stringResource(R.string.settings_chord_shapes)) {
             Text(stringResource(R.string.settings_instrument), style = MaterialTheme.typography.bodyLarge)
             InstrumentPicker(look.instrument, actions.onInstrument)
             Text(stringResource(R.string.settings_instrument_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -531,11 +543,15 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                     ) { Text(stringResource(label)) }
                 }
             }
-            // perfil só letra: nada de cifra na tela (nem prévia dos acordes)
-            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
-            }
-            LegibilityWarnings(look)
+            // exemplo: o G no instrumento escolhido, como aparece no palco
+            ChordDiagram(
+                "G",
+                look.instrument,
+                remember(look.instrument) { Voicings.shapes("G", look.instrument, max = 1).firstOrNull() },
+                remember { Voicings.keys("G").firstOrNull() },
+                MaterialTheme.colorScheme.onSurface,
+                Modifier.align(Alignment.CenterHorizontally),
+            )
         }
     }
 }
