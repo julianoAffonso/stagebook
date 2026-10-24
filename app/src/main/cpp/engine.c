@@ -181,6 +181,7 @@ static inline float eq_run(int ch, float x) {
 // Só leem o sinal: nunca mudam o que vai para a mesa.
 static volatile int g_meter_on = 0;
 static float g_pk[OUT_CH];                // pico de cada canal na saída (ganhos aplicados, antes do corte), com g_mx
+static float g_lpk[LANES_MAX];            // pico de cada canal do arquivo depois do fader, normalização e EQ (o medidor do mixer), com g_mx
 // Espectro do backing: FFT no decoder (fora do laço USB), em mono, antes do EQ e dos ganhos.
 // SP_BINS faixas logarítmicas de SP_LO a SP_HI Hz (a tela usa as mesmas bordas). Uma FFT de SP_N pontos
 // a cada SP_HOP quadros. O decoder anda até 1 s na frente da saída: cada bloco guarda o quadro (desde o
@@ -322,6 +323,7 @@ static inline void mix_custom(const float *lane, float *out) {
         for (int c = 0; c < g_lanes; c++) if (g_ch_eq & (1 << c)) s[c] *= g_lim;
         g_lim += (1.0f - g_lim) * LIM_REL;
     }
+    if (g_meter_on) for (int c = 0; c < g_lanes; c++) if (fabsf(s[c]) > g_lpk[c]) g_lpk[c] = fabsf(s[c]);
     for (int o = 0; o < LANES_MAX; o++) {
         float a = 0;
         for (int c = 0; c < g_lanes; c++) a += g_route[o][c] * s[c];
@@ -409,10 +411,18 @@ static void *dec_main(void *arg) {
         int fft = 0;
         float spk[SP_BINS];
         if (g_meter_on) {
+            // o espectro é dos canais que passam pelo EQ (a média deles); sem nenhum marcado, dos canais 1/2
+            int mask = g_ch_eq, cnt = 0;
+            for (int c = 0; c < g_lanes; c++) if (mask & (1 << c)) cnt++;
             for (int i = 0; i < n; i++) {
-                // backing (1/2) como na mistura padrão: fonte mono = o mesmo canal dos dois lados
                 float *d = &g_dec_out[i * LANES_MAX];
-                g_sp_in[g_sp_pos] = 0.5f * (d[0] + (g_lanes > 1 ? d[1] : d[0]));
+                if (cnt == 0) {
+                    g_sp_in[g_sp_pos] = 0.5f * (d[0] + (g_lanes > 1 ? d[1] : d[0]));   // fonte mono: o mesmo canal dos dois lados
+                } else {
+                    float a = 0;
+                    for (int c = 0; c < g_lanes; c++) if (mask & (1 << c)) a += d[c];
+                    g_sp_in[g_sp_pos] = a / cnt;
+                }
                 g_sp_pos = (g_sp_pos + 1) % SP_N;
             }
             g_sp_new += n;
@@ -834,6 +844,7 @@ JNIEXPORT void JNICALL FN(setMeter)(JNIEnv *e, jclass c, jboolean on) {
     memset(g_sp_in, 0, sizeof g_sp_in); g_sp_pos = 0; g_sp_new = 0;
     pthread_mutex_lock(&g_mx);
     memset(g_pk, 0, sizeof g_pk);
+    memset(g_lpk, 0, sizeof g_lpk);
     mb_reset_locked();
     g_mb_read = g_consumed;
     g_meter_on = 1;
@@ -856,10 +867,24 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     }
     g_mb_read = cur;
     pthread_mutex_unlock(&g_mx);
-    float gb = g_ch_gain[0] * g_ch_norm[0];   // o espectro é do canal 1 (antes dos ganhos)
+    int first = 0;                            // o espectro vem antes dos ganhos: usa os do 1º canal com EQ (ou o 1)
+    while (first < LANES_MAX - 1 && g_ch_eq && !(g_ch_eq & (1 << first))) first++;
+    float gb = g_ch_gain[first] * g_ch_norm[first];
     for (int b = 0; b < SP_BINS; b++) out[OUT_CH + b] *= gb;
     jfloatArray a = (*e)->NewFloatArray(e, OUT_CH + SP_BINS);
     if (a) (*e)->SetFloatArrayRegion(e, a, 0, OUT_CH + SP_BINS, out);
+    return a;
+}
+
+// picos de cada canal do arquivo desde a leitura anterior (lineares, depois do fader, normalização e EQ), para os
+// medidores do mixer. Zera depois de ler.
+JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
+    float out[LANES_MAX];
+    pthread_mutex_lock(&g_mx);
+    for (int i = 0; i < LANES_MAX; i++) { out[i] = g_lpk[i]; g_lpk[i] = 0; }
+    pthread_mutex_unlock(&g_mx);
+    jfloatArray a = (*e)->NewFloatArray(e, LANES_MAX);
+    if (a) (*e)->SetFloatArrayRegion(e, a, 0, LANES_MAX, out);
     return a;
 }
 

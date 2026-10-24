@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.juliano.stagebook.R
+import com.juliano.stagebook.domain.Meters
 import com.juliano.stagebook.domain.MixChannel
 import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.domain.NormMode
@@ -48,7 +49,9 @@ fun MixerStrip(
     onEdit: () -> Unit,
     modifier: Modifier = Modifier,
     upright: Boolean = false,
+    meters: () -> Meters = { Meters.silent(MixerConfig.MAX) },   // lido só no desenho: medidor ao lado do fader
 ) {
+    val lanes = if (pair) listOf(first, first + 1) else listOf(first)   // unidos: medidor duplo (esquerda e direita)
     val setGain = { db: Float -> onChange(strip.copy(gainDb = (db * 2).roundToInt() / 2f)) }
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         if (upright) {
@@ -59,7 +62,10 @@ fun MixerStrip(
             ) {
                 Header(first, strip, pair, onEdit, Modifier.fillMaxWidth(), centered = true)
                 MuteButton(strip, onChange)
-                VerticalFader(strip.gainDb, setGain, valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, origin = MixerConfig.MIN_DB)
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    VerticalFader(strip.gainDb, setGain, valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, origin = MixerConfig.MIN_DB)
+                    lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }) }
+                }
                 GainText(strip)
             }
         } else {
@@ -74,6 +80,10 @@ fun MixerStrip(
                         valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, modifier = Modifier.weight(1f),
                     )
                     GainText(strip, Modifier.widthIn(min = 72.dp))
+                }
+                // celular: o medidor deitado logo abaixo do fader (um por lado nos unidos)
+                Column(Modifier.fillMaxWidth().padding(end = 80.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }, vertical = false) }
                 }
             }
         }

@@ -15,6 +15,7 @@ object Spacing {
 object Sizes {
     val touch = 48.dp           // alvo mínimo de toque
     val fader = 200.dp          // altura do fader de pé (mixer e EQ no tablet)
+    val meter = 8.dp            // largura da barra dos medidores ao vivo
     val button = 56.dp          // botões principais (dedo no palco, tablet longe)
     val row = 72.dp             // linha de música
     val swipeTrigger = 56.dp    // linha aberta pelo arraste: só o botão do ícone (24) + margem (16) de cada lado

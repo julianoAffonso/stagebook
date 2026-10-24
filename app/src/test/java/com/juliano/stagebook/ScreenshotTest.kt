@@ -369,9 +369,19 @@ class ScreenshotTest {
             .withStrip(3) { it.copy(name = "Guia", on = false) },
     )
 
+    // tocando: medidores dos canais (o 2º lado do backing um pouco abaixo, o click batendo no pico) e o espectro
+    private val mixerLevels = com.juliano.stagebook.domain.MixerLevels(
+        com.juliano.stagebook.domain.Meters(
+            listOf(-9f, -11f, -4f, -48f, -48f, -48f, -48f, -48f),
+            listOf(-6f, -8f, -1.5f, -48f, -48f, -48f, -48f, -48f),
+        ),
+        List(com.juliano.stagebook.domain.Spectrum.BINS) { b -> -20f - b * 0.7f + 6f * kotlin.math.cos(b / 5f) },
+        live = true,
+    )
+
     @Test @Config(qualifiers = PHONE_LONGO)
     fun mixerPhone() = shoot("jornada_mixer_1_celular") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }), it, section = SettingsSection.PLAYER) }
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -416,7 +426,7 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = TABLET_LONGO)
     fun mixerTablet() = shoot("jornada_mixer_2_tablet") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }), it, section = SettingsSection.PLAYER) }
     }
 
     @Test @Config(qualifiers = PHONE)
