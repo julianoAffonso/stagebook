@@ -376,7 +376,7 @@ class ScreenshotTest {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
             }
         }
-        compose.onNodeWithContentDescription("Tocar a faixa").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Tocar o backing track").performTouchInput { longClick() }
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/jornada_faixa_4_menu.png")
     }

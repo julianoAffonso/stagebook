@@ -79,9 +79,9 @@ class StageChordTapTest {
         compose.setContent {
             StagebookTheme { StageScreen(StageUiState(loading = false, songs = withTrack, look = Look(fontSp = 34f, playerMode = true)), 0, 0, { _, _ -> }) }
         }
-        compose.onNodeWithContentDescription("Tocar a faixa").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Tocar o backing track").performTouchInput { longClick() }
         compose.waitForIdle()
-        compose.onNodeWithText("Trocar a faixa").assertExists()
+        compose.onNodeWithText("Trocar o backing track").assertExists()
         assertEquals(0, compose.onAllNodesWithText("Editar esta linha").fetchSemanticsNodes().size)
     }
 }
