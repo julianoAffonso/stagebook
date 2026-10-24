@@ -180,11 +180,14 @@ fun SongEditorScreen(
                                 lyrics = insertSection(shown, kind)
                                 onText(lyrics.text)
                             })
-                            ChordBar(
-                                chords = remember(uiState.text) { usedChords(uiState.text) },
-                                onPick = { chord -> lyrics = insertChord(shown, chord); onText(lyrics.text) },
-                                onNew = { newChord = true },
-                            )
+                            // perfil só letra: nada de cifra no editor (a letra guardada não muda)
+                            if (look.chords) {
+                                ChordBar(
+                                    chords = remember(uiState.text) { usedChords(uiState.text) },
+                                    onPick = { chord -> lyrics = insertChord(shown, chord); onText(lyrics.text) },
+                                    onNew = { newChord = true },
+                                )
+                            }
                         }
                     }
                     Column(
@@ -228,7 +231,7 @@ fun SongEditorScreen(
                             )
                         }
                         Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
+                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
                         if (previewing) {
                             EditorPreview(uiState.text, look)
                             return@Column

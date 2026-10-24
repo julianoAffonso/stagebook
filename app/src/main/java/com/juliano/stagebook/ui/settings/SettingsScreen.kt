@@ -493,11 +493,12 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
             Text(stringResource(R.string.settings_font_family), style = MaterialTheme.typography.bodyLarge)
             FontPicker(look.chordFont, actions.onChordFont)
+            // perfil só letra: nada de cifra na tela (nem prévia dos acordes)
+            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
+                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
+            }
+            LegibilityWarnings(look)
         }
-        Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-            StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
-        }
-        LegibilityWarnings(look)
     }
 }
 
