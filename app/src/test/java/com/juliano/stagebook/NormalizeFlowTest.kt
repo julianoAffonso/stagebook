@@ -36,31 +36,34 @@ class NormalizeFlowTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun `botão e confirmação chamam o padronizar`() {
+    fun `botão e confirmação chamam o marcar seções`() {
         var calls = 0
         compose.setContent {
             StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.SECTIONS) }
         }
-        compose.onNodeWithText("Padronizar seções da biblioteca").performScrollTo().performClick()
-        compose.onNodeWithText("Padronizar").performClick()
+        compose.onNodeWithText("Marcar seções nas letras sem títulos").performScrollTo().performClick()
+        compose.onNodeWithText("Marcar").performClick()
         compose.waitForIdle()
         assertEquals(1, calls)
     }
 
     @Test
-    fun `padronizar reescreve as letras e avisa quantas mudaram`() = runBlocking {
+    fun `marcar seções só mexe em letra sem títulos e avisa quantas mudaram`() = runBlocking {
         Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())   // o trabalho saiu da thread principal
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.saveSong(Song(title = "A", text = "Chorus:\nlinha\n\nVerse 2\noutra"))
         repo.saveSong(Song(title = "B", text = "[Refrão]\nsem mudança"))
+        repo.saveSong(Song(title = "E", text = "{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num"))
         repo.saveSong(Song(title = "C", text = "um\ndois\n\nrefrão aqui\nde novo\n\ntrês\nquatro\n\nrefrão aqui\nde novo"))
         repo.saveSong(Song(title = "D", text = "nada\nse\n\nrepete\naqui"))
         val vm = SettingsViewModel(repo, context, com.juliano.stagebook.data.AppUpdater(context), com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)))
         vm.normalizeSections()
-        assertEquals(SettingsMessage.Normalized(2, 1), withTimeout(5_000) { vm.messages.first() })
-        assertEquals("[Refrão]\nlinha\n\n[Verso 2]\noutra", repo.findSong("A", "")!!.text)
+        assertEquals(SettingsMessage.Normalized(1, 1), withTimeout(5_000) { vm.messages.first() })
+        // títulos que já existem ficam como estão (o palco mostra na língua do app)
+        assertEquals("Chorus:\nlinha\n\nVerse 2\noutra", repo.findSong("A", "")!!.text)
+        assertEquals("{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num", repo.findSong("E", "")!!.text)
         Dispatchers.resetMain()
         assertEquals("[Verso 1]\num\ndois\n\n[Refrão]\nrefrão aqui\nde novo\n\n[Verso 2]\ntrês\nquatro\n\n[Refrão]\nrefrão aqui\nde novo", repo.findSong("C", "")!!.text)
     }

@@ -191,9 +191,11 @@ class LibraryRepository @Inject constructor(
         val before = _library.value.songs.associate { it.id to it.text }
         var unidentified = 0
         val updated = withContext(Dispatchers.Default) {
+            // títulos que já existem ficam como estão (o palco mostra na língua do app); só a letra sem nenhum
+            // título ganha as seções, identificadas pela repetição
             before.mapValues { (_, text) ->
-                val hasHeaders = text.lines().any { Sections.detect(it) != null }
-                if (hasHeaders) Sections.normalize(text, lang)
+                val hasHeaders = text.lines().any { Sections.detect(it) != null || SECTION_DIRECTIVE.matches(it) }
+                if (hasHeaders) text
                 else SectionGuesser.guess(text, lang) ?: text.also { if (it.isNotBlank()) unidentified++ }
             }
         }
@@ -229,3 +231,6 @@ class LibraryRepository @Inject constructor(
 }
 
 private const val TAG = "stagebook"
+
+/** Seção do ChordPro (`{start_of_chorus}`, `{soc}`…): a música já tem títulos. */
+private val SECTION_DIRECTIVE = Regex("""^\s*\{\s*(start_of_\w+|so[cvb])\s*(:.*)?}\s*$""", RegexOption.IGNORE_CASE)
