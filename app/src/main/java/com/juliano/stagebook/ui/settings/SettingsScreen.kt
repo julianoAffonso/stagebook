@@ -1,8 +1,12 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.ui.components.VerticalFader
+import androidx.compose.foundation.layout.size
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.widthIn
 import com.juliano.stagebook.ui.components.MixerStrip
+import com.juliano.stagebook.ui.components.MixerChannelEditor
 import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.ui.components.OptionDropdown
 import com.juliano.stagebook.domain.Voicings
@@ -83,6 +87,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -871,9 +876,7 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_player)) {
         SwitchRow(stringResource(R.string.settings_player_mode), look.playerMode, actions.onPlayerMode)
         Text(stringResource(R.string.settings_player_mode_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    SettingsCard(stringResource(R.string.settings_player_requirements)) {
-        Text(stringResource(R.string.settings_player_requirements_text), style = MaterialTheme.typography.bodyMedium)
+        UsbRequirements()
     }
     if (look.playerMode) {
         MixerCard(look.mixer, actions.onMixer)
@@ -882,27 +885,61 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
 }
 
 @Composable
+private fun eqLabel(hz: Int) =
+    if (hz < 1000) stringResource(R.string.eq_hz, hz) else stringResource(R.string.eq_khz, (hz / 1000f).toString().removeSuffix(".0"))
+
+// requisitos da saída USB: escondidos, discretos; o ícone de informação abre e fecha
+@Composable
+private fun UsbRequirements() {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Column {
+        Row(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { open = !open }.padding(vertical = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        ) {
+            Icon(AppIcons.Info, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.settings_player_requirements), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
+            )
+            Icon(if (open) AppIcons.ArrowUp else AppIcons.ArrowDown, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        AnimatedVisibility(open) {
+            Text(
+                stringResource(R.string.settings_player_requirements_text), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 26.dp, top = Spacing.xs),
+            )
+        }
+    }
+}
+
+@Composable
 private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
+    var editing by rememberSaveable { mutableIntStateOf(-1) }   // canal em edição (o primeiro do par); -1 = nenhum
     SettingsCard(stringResource(R.string.mixer_title)) {
         Text(stringResource(R.string.mixer_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OptionDropdown(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
         )
-        // canais lado a lado como num mixer: 1 coluna no celular, 2 ou 3 no tablet
+        val groups = mixer.groups()
+        // celular: um canal por linha, fader deitado; tablet: faixas estreitas lado a lado, fader de pé (como numa mesa)
         BoxWithConstraints {
-            val columns = when { maxWidth >= 1000.dp -> 3; maxWidth >= 600.dp -> 2; else -> 1 }
+            val upright = maxWidth >= 600.dp
+            val columns = if (upright) (maxWidth / 150.dp).toInt().coerceIn(4, MixerConfig.MAX) else 1
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                mixer.groups().chunked(columns).forEach { row ->
+                groups.chunked(columns).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                         row.forEach { g ->
                             MixerStrip(
                                 first = g.first,
                                 strip = mixer.strip(g.first),
                                 pair = g.count() == 2,
-                                canPair = g.first % 2 == 0 && g.first + 1 < mixer.channels,
                                 onChange = { s -> onMixer(mixer.withStrip(g.first) { s }) },
+                                onEdit = { editing = g.first },
                                 modifier = Modifier.weight(1f),
+                                upright = upright,
                             )
                         }
                         repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
@@ -910,7 +947,16 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
                 }
             }
         }
-        Text(stringResource(R.string.mixer_norm_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        groups.firstOrNull { it.first == editing }?.let { g ->
+            MixerChannelEditor(
+                first = g.first,
+                strip = mixer.strip(g.first),
+                pair = g.count() == 2,
+                canPair = g.first % 2 == 0 && g.first + 1 < mixer.channels,
+                onChange = { s -> onMixer(mixer.withStrip(g.first) { s }) },
+                onDismiss = { editing = -1 },
+            )
+        }
     }
 }
 
@@ -919,24 +965,34 @@ private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
     SettingsCard(stringResource(R.string.eq_title)) {
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn) { onMixer(mixer.copy(eqOn = it)) }
         Text(stringResource(R.string.eq_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
-            val db = mixer.eqDb.getOrElse(i) { 0f }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Text(
-                    if (hz < 1000) stringResource(R.string.eq_hz, hz) else stringResource(R.string.eq_khz, (hz / 1000f).toString().removeSuffix(".0")),
-                    style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 64.dp),
-                )
-                Slider(
-                    value = db,
-                    onValueChange = { v ->
-                        val eq = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }
-                        onMixer(mixer.copy(eqDb = eq))
-                    },
-                    valueRange = -MixerConfig.EQ_RANGE_DB..MixerConfig.EQ_RANGE_DB,
-                    enabled = mixer.eqOn,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 72.dp))
+        val setBand = { i: Int, v: Float ->
+            onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
+        }
+        val range = -MixerConfig.EQ_RANGE_DB..MixerConfig.EQ_RANGE_DB
+        BoxWithConstraints {
+            if (maxWidth >= 600.dp) {
+                // tablet: faders de pé lado a lado, como um equalizador gráfico
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
+                        val db = mixer.eqDb.getOrElse(i) { 0f }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
+                            VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
+                            Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
+                        val db = mixer.eqDb.getOrElse(i) { 0f }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                            Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 64.dp))
+                            Slider(db, { setBand(i, it) }, Modifier.weight(1f), enabled = mixer.eqOn, valueRange = range)
+                            Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 72.dp))
+                        }
+                    }
+                }
             }
         }
         ActionButton(stringResource(R.string.eq_reset), onClick = { onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { 0f })) },

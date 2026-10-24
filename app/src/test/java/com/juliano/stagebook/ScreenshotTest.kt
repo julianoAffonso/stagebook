@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -369,6 +370,16 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE_LONGO)
     fun mixerPhone() = shoot("jornada_mixer_1_celular") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun mixerEditPhone() = shoot("jornada_mixer_3_editar_canal") {
+        androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
+                androidx.compose.material3.Text("Canal 3", style = MaterialTheme.typography.headlineSmall)
+                com.juliano.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, onChange = {})
+            }
+        }
     }
 
     @Test @Config(qualifiers = TABLET_LONGO)
