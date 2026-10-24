@@ -1,5 +1,16 @@
 package com.juliano.stagebook.ui.setlists
 
+import android.widget.Toast
+import android.content.ClipboardManager
+import android.content.ClipData
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Switch
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
@@ -85,9 +96,26 @@ fun SetlistDetailRoute(
             viewModel::dismissLimit,
         )
     }
+    val online by viewModel.online.collectAsStateWithLifecycle()
+    val cloud by viewModel.cloud.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val shareText = stringResource(R.string.share_message)
     SetlistDetailScreen(
         uiState = uiState,
         qr = qr,
+        online = online,
+        cloud = cloud,
+        onSendInternet = viewModel::sendInternet,
+        onDismissCloud = viewModel::dismissCloud,
+        // o código vai por qualquer app de mensagem do aparelho (WhatsApp, e-mail, SMS…)
+        onCopyCode = { code ->
+            context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", code))
+            Toast.makeText(context, R.string.share_copied, Toast.LENGTH_SHORT).show()
+        },
+        onShareCode = { name, code ->
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shareText.format(name, code))
+            runCatching { context.startActivity(Intent.createChooser(send, null)) }
+        },
         onBack = onBack,
         onRename = viewModel::rename,
         onPlay = { start -> onPlay(viewModel.setId, start) },
@@ -116,9 +144,16 @@ fun SetlistDetailScreen(
     onRemove: (Int, String) -> Unit,
     onDeleteSetlist: () -> Unit,
     modifier: Modifier = Modifier,
+    online: Boolean = false,
+    cloud: CloudUi? = null,
+    onSendInternet: (withSongs: Boolean) -> Unit = {},
+    onDismissCloud: () -> Unit = {},
+    onShareCode: (name: String, code: String) -> Unit = { _, _ -> },
+    onCopyCode: (code: String) -> Unit = {},
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
+    var sharing by rememberSaveable { mutableStateOf(false) }   // a folha "Compartilhar" aberta
     var deleting by rememberSaveable { mutableStateOf(false) }
     var removing by rememberSaveable { mutableStateOf<Int?>(null) }   // posição da música a tirar (confirma antes)
     // cópia local: a lista muda na hora durante o arrasto; a ordem é gravada uma vez, ao soltar (gravar a
@@ -160,7 +195,7 @@ fun SetlistDetailScreen(
                         ),
                     )
                 }
-                SetActions(items.isNotEmpty(), onAddSongs, onShowQr, Modifier.padding(bottom = Spacing.m))
+                SetActions(items.isNotEmpty(), onAddSongs, { sharing = true }, Modifier.padding(bottom = Spacing.m))
                 Crossfade(targetState = uiState.loading, label = "set") { loading ->
                     when {
                         loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -228,14 +263,124 @@ fun SetlistDetailScreen(
         } ?: run { removing = null }
     }
     if (qr != null) QrDialog(qr, onHideQr)
+    if (sharing) {
+        ShareSheet(
+            songs = uiState.items.count { !it.missing },
+            online = online,
+            onQr = { sharing = false; onShowQr() },
+            onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
+            onDismiss = { sharing = false },
+        )
+    }
+    cloud?.let { CloudDialog(it, onDismissCloud, onShareCode, onCopyCode) }
 }
 
-/** Músicas e Enviar QR lado a lado (o palco abre tocando numa música da lista). */
+/** Músicas e Compartilhar lado a lado (o palco abre tocando numa música da lista). */
 @Composable
-private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShowQr: () -> Unit, modifier: Modifier = Modifier) {
+private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
         ActionButton(stringResource(R.string.sets_add_songs), onAddSongs, Modifier.weight(1f), icon = AppIcons.Add, tone = ButtonTone.Tonal)
-        ActionButton(stringResource(R.string.sets_send_qr), onShowQr, Modifier.weight(1f), icon = AppIcons.QrCode, tone = ButtonTone.Tonal, enabled = hasSongs)
+        ActionButton(stringResource(R.string.share_title), onShare, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal, enabled = hasSongs)
+    }
+}
+
+/** A folha "Compartilhar": cada jeito de enviar só aparece quando dá para usar (QR sempre; internet só com internet). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShareSheet(songs: Int, online: Boolean, onQr: () -> Unit, onInternet: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l))
+    }
+}
+
+/** O conteúdo da folha (separado para o preview e os prints). */
+@Composable
+fun ShareOptions(songs: Int, online: Boolean, onQr: () -> Unit, onInternet: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    var withSongs by rememberSaveable { mutableStateOf(true) }
+    Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
+        ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), onQr)
+        if (online) {
+            ShareOption(AppIcons.Public, stringResource(R.string.share_internet), stringResource(R.string.share_internet_hint)) { onInternet(withSongs) }
+            Row(Modifier.fillMaxWidth().padding(top = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(pluralStringResource(R.plurals.share_with_songs, songs, songs), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.share_with_songs_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(withSongs, { withSongs = it })
+            }
+        } else {
+            Text(stringResource(R.string.share_offline), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ShareOption(icon: ImageVector, title: String, hint: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = Spacing.s, horizontal = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+// enviando, o código pronto (com "Mandar por mensagem") ou o erro
+@Composable
+private fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, String) -> Unit, onCopyCode: (String) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { if (cloud != CloudUi.Sending) onDismiss() },
+        title = {
+            Text(
+                stringResource(
+                    when (cloud) {
+                        CloudUi.Sending -> R.string.share_sending
+                        is CloudUi.Sent -> R.string.share_sent
+                        CloudUi.Failed -> R.string.share_failed
+                    },
+                ),
+            )
+        },
+        text = {
+            when (cloud) {
+                CloudUi.Sending -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                CloudUi.Failed -> Text(stringResource(R.string.share_failed_text), style = MaterialTheme.typography.bodyLarge)
+                is CloudUi.Sent -> CodeBox(cloud, onCopy = { onCopyCode(cloud.code) })
+            }
+        },
+        confirmButton = {
+            if (cloud is CloudUi.Sent) TextButton(onClick = { onShareCode(cloud.name, cloud.code) }) { Text(stringResource(R.string.share_send_code)) }
+            else if (cloud == CloudUi.Failed) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        },
+        dismissButton = { if (cloud is CloudUi.Sent) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+    )
+}
+
+/** O código grande (para ditar), o QR dele (para foto ou "Ler QR"), Copiar, e o que foi junto. */
+@Composable
+fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        sent.qr?.let { img ->
+            Image(
+                bitmap = img,
+                contentDescription = stringResource(R.string.share_code_qr),
+                modifier = Modifier.widthIn(max = 260.dp).fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small).background(Color.White),
+            )
+        }
+        SelectionContainer {
+            Text(sent.code, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+        }
+        ActionButton(stringResource(R.string.share_copy), onCopy, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
+        Text(pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs), style = MaterialTheme.typography.bodyMedium)
+        if (sent.skipped > 0) {
+            Text(pluralStringResource(R.plurals.share_skipped, sent.skipped, sent.skipped), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        Text(stringResource(R.string.share_sent_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

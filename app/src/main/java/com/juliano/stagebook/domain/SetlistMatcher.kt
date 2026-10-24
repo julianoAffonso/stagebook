@@ -12,7 +12,7 @@ sealed interface QrMatch {
 }
 
 /**
- * Casa cada música do QR com a biblioteca pela chave do título (a regra do previous app e do Backing); o artista desempata
+ * Casa cada música do QR com a biblioteca pela chave do título (a mesma regra da biblioteca); o artista desempata
  * títulos iguais ("It's My Life" do Bon Jovi e do Talk Talk). Sem título igual, sugere as parecidas — nunca escolhe
  * sozinha uma música diferente.
  */

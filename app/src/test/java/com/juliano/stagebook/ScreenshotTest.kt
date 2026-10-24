@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -456,6 +457,39 @@ class ScreenshotTest {
                 listOf(com.juliano.stagebook.data.ImportQueue.Item("Música que não tenho", "", 1), com.juliano.stagebook.data.ImportQueue.Item("Outra que falta", "", 3)), 3,
             ),
             queueSite = { "Cifra Club" },
+        )
+    }
+
+    // ---- compartilhar: a folha (com e sem internet) e o código pronto ----
+    @Test @Config(qualifiers = PHONE)
+    fun shareSheetPhone() = shoot("jornada_compartilhar_1_folha") {
+        androidx.compose.foundation.layout.Column {
+            com.juliano.stagebook.ui.setlists.ShareOptions(12, online = true, onQr = {}, onInternet = {})
+            androidx.compose.material3.HorizontalDivider(androidx.compose.ui.Modifier.padding(vertical = com.juliano.stagebook.ui.theme.Spacing.l))
+            com.juliano.stagebook.ui.setlists.ShareOptions(12, online = false, onQr = {}, onInternet = {})
+        }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun shareCodePhone() = shoot("jornada_compartilhar_2_codigo") {
+        androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
+                androidx.compose.material3.Text("Código do setlist", style = MaterialTheme.typography.headlineSmall)
+                com.juliano.stagebook.ui.setlists.CodeBox(
+                    com.juliano.stagebook.ui.setlists.CloudUi.Sent(
+                        "47-violao-lua", "Show de sábado", 12, 0,
+                        com.juliano.stagebook.domain.QrEncoder.encode(com.juliano.stagebook.domain.ShareCode.qrText("47-violao-lua").toByteArray(), 600).asImageBitmap(),
+                    ),
+                )
+            }
+        }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun receiveCodeReviewPhone() = shoot("jornada_compartilhar_3_receber") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
+            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
         )
     }
 

@@ -20,9 +20,9 @@ data class SetlistDetail(val setId: String)
 @Serializable
 data class PickSongs(val setId: String)
 
-/** Ler o QR de um setlist (Letras ou Stagebook) e conferir antes de criar. */
+/** Ler o QR de um setlist, ou buscar pelo [code] da internet, e conferir antes de criar. */
 @Serializable
-data object ScanSetlist
+data class ScanSetlist(val code: String = "")
 
 @Serializable
 data class Stage(

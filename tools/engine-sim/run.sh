@@ -1,7 +1,7 @@
 #!/bin/bash
 # Simula o motor de áudio no Mac com uma interface USB falsa (8 saídas) e compara com a versão validada na mesa.
 #   tools/engine-sim/run.sh <backing 44,1 kHz .ogg> <backing 48 kHz .ogg> [pasta para os .wav da mesa]
-# Faixas reais (com direitos autorais: nunca no git): ~/Desktop/previous-app-faixas; a 48 kHz é bohemian-rhapsody-2.
+# Faixas reais (com direitos autorais: nunca no git), uma de 44,1 kHz e uma de 48 kHz.
 # Precisa: clang, python3, um JDK (jni.h).
 # Não substitui o teste na mesa: prova que o som gerado é o mesmo e testa quedas, vazamento e consumo.
 set -euo pipefail
@@ -14,7 +14,7 @@ trap '[ -n "${KEEP:-}" ] && echo "arquivos em $WORK" || rm -rf "$WORK"' EXIT
 JDK=$(/usr/libexec/java_home)
 
 mkdir -p "$WORK/validado" "$WORK/atual"
-cp "$HERE/reference/engine.c" "$WORK/validado/engine.c"   # o motor validado na mesa (the previous app, 23/10/2026)
+cp "$HERE/reference/engine.c" "$WORK/validado/engine.c"   # o motor validado na mesa (23/10/2026)
 cp "$ROOT/app/src/main/cpp/engine.c" "$WORK/atual/engine.c"
 STB="$ROOT/app/src/main/cpp/third_party"
 

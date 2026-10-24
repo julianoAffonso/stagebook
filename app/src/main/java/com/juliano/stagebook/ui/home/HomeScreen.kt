@@ -58,6 +58,7 @@ fun HomeScreen(
     onOpenSetlist: (String) -> Unit,
     onPlaySetlist: (String) -> Unit,
     onScanSetlist: () -> Unit = {},
+    onReceiveCode: (String) -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.SONGS) }
     // voltar numa aba que não é a primeira volta para Músicas (em vez de fechar o app)
@@ -80,7 +81,7 @@ fun HomeScreen(
             tabs.SaveableStateProvider(if (tab == HomeTab.SETTINGS) "${HomeTab.SETTINGS}$settingsVisit" else tab.name) {
                 when (tab) {
                     HomeTab.SONGS -> SongsRoute(onOpenSong, onEditSong, onImport)
-                    HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist)
+                    HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode)
                     HomeTab.SETTINGS -> SettingsRoute()
                 }
             }

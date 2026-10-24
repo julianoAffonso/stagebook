@@ -1,4 +1,4 @@
-// Motor do the previous app: decodifica OGG (stb_vorbis), reamostra para 48 kHz e envia
+// Motor de referência (validado na mesa): decodifica OGG (stb_vorbis), reamostra para 48 kHz e envia
 // 4 canais direto para a interface USB Audio Class 2 via usbfs (sem o mixer do Android).
 // O fluxo USB fica sempre ativo (silêncio quando pausado): a USB interface repete o último
 // trecho recebido quando o fluxo para, o que vira um apito contínuo.
@@ -21,7 +21,7 @@
 #define STB_VORBIS_HEADER_ONLY
 #include "stb_vorbis.c"
 
-#define TAG "previous-app"
+#define TAG "stagebook"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 // Diagnóstico (resumo a cada 5 s, pacotes de entrada): 1 para religar.
 #define DIAG 0
@@ -518,7 +518,7 @@ out:
 }
 
 // ---- JNI ----
-#define FN(name) Java_com_juliano_previous-app_Engine_##name
+#define FN(name) Java_com_juliano_stagebook_player_Engine_##name
 
 JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint maxpkt, jint ch, jint subslot,
                                      jint intf, jint alt, jint in_ep, jint in_maxpkt, jint in_fb) {

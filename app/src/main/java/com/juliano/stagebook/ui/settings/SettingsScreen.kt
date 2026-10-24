@@ -183,7 +183,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     }
     var section by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
     // medidores do mixer: só com o modo player ligado, a seção Player aberta e a tela visível
-    // chave "Monitorar": começa desligada e não fica salva (como no Backing)
+    // chave "Monitorar": começa desligada e não fica salva
     var monitoring by remember { mutableStateOf(false) }
     val levels = remember { mutableStateOf(MixerLevels.SILENT) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle

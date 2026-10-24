@@ -214,7 +214,7 @@ class StagePlayer @Inject constructor(
         /** Modo player desligado nos Ajustes: se o player chegou a subir, desliga tudo. */
         fun turnOff() { instance?.shutdown() }
 
-        private const val METER_MS = 66L          // ~15 leituras por segundo, como no Backing
+        private const val METER_MS = 66L          // ~15 leituras por segundo
         private const val METER_IDLE_MS = 500L    // player desligado: só confere se ligou
 
         /**

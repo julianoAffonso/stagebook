@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import androidx.compose.material3.CircularProgressIndicator
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -61,7 +62,7 @@ fun ScanSetlistRoute(
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { camera = it }
-    LaunchedEffect(Unit) { if (!camera) ask.launch(Manifest.permission.CAMERA) }
+    LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
     ScanSetlistScreen(
         ui = ui,
         cameraAllowed = camera,
@@ -75,11 +76,13 @@ fun ScanSetlistRoute(
         onCreateAndImport = { replace -> if (viewModel.createAndImport(replace)) onImport() },
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier) },
+        byCode = viewModel.code.isNotEmpty(),
+        onRetry = viewModel::fetch,
     )
 }
 
 /**
- * Ler o QR de um setlist (Letras ou Stagebook) e conferir antes de criar. [camera] é a câmera de verdade no app e
+ * Ler o QR de um setlist e conferir antes de criar. [camera] é a câmera de verdade no app e
  * um quadro vazio nos testes e prints.
  */
 @Composable
@@ -96,13 +99,19 @@ fun ScanSetlistScreen(
     onBack: () -> Unit,
     onCreateAndImport: (replaceId: String?) -> Unit = {},
     camera: @Composable (onText: (String) -> Unit, modifier: Modifier) -> Unit = { _, m -> Box(m) },
+    byCode: Boolean = false,
+    onRetry: () -> Unit = {},
 ) {
     CenteredContent(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
-            ScreenHeader(stringResource(R.string.scan_title), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
+            ScreenHeader(
+                stringResource(if (byCode) R.string.scan_code_title else R.string.scan_title),
+                Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack,
+            )
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
-                is ScanUi.Review -> Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport)
+                is ScanUi.Fetching -> Fetching(ui, onRetry)
+                is ScanUi.Review -> Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode)
             }
         }
     }
@@ -147,6 +156,7 @@ private fun Review(
     existing: (String) -> String?,
     onCreate: (replaceId: String?) -> Unit,
     onCreateAndImport: (replaceId: String?) -> Unit,
+    byCode: Boolean,
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -157,9 +167,9 @@ private fun Review(
     fun go() { importing = false; if (ui.missing.isNotEmpty()) confirmMissing = true else goName() }
     // importar as que faltam: o setlist é criado com as achadas e o importador abre buscando a primeira que falta
     fun goImport() { importing = true; goName() }
-    val toImport = ui.rows.count { it.chosen == null && it.candidates.isEmpty() }
+    val toImport = ui.rows.count { it.chosen == null && !it.carried && it.candidates.isEmpty() }
 
-    val found = ui.rows.count { it.chosen != null }
+    val found = ui.rows.count { it.chosen != null || it.carried }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         OutlinedTextField(ui.name, onName, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.scan_name)) }, singleLine = true)
         Text(
@@ -181,7 +191,10 @@ private fun Review(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(bottom = Spacing.m)) {
-            ActionButton(stringResource(R.string.scan_again), onScanAgain, Modifier.weight(1f), icon = AppIcons.QrCode, tone = ButtonTone.Tonal)
+            ActionButton(
+                stringResource(if (byCode) R.string.scan_fetch_again else R.string.scan_again), onScanAgain, Modifier.weight(1f),
+                icon = if (byCode) AppIcons.Public else AppIcons.QrCode, tone = ButtonTone.Tonal,
+            )
             ActionButton(stringResource(R.string.scan_create), { go() }, Modifier.weight(1f), icon = AppIcons.Check, enabled = ui.name.isNotBlank() && found > 0)
         }
     }
@@ -205,6 +218,25 @@ private fun Review(
     }
 }
 
+@Composable
+private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally) {
+        when (ui.problem) {
+            null -> {
+                CircularProgressIndicator()
+                Text(stringResource(R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
+            }
+            else -> {
+                Text(
+                    stringResource(if (ui.problem == CodeProblem.NOT_FOUND) R.string.scan_code_not_found else R.string.scan_code_offline),
+                    style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
+                )
+                ActionButton(stringResource(R.string.scan_code_retry), onRetry, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
+            }
+        }
+    }
+}
+
 // uma música do QR: achada (✓), com dúvida (escolher ou deixar de fora) ou que não está na biblioteca (aviso)
 @Composable
 private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
@@ -213,6 +245,7 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 val (icon, tint) = when {
                     row.found -> AppIcons.Check to MaterialTheme.colorScheme.primary
+                    row.carried -> AppIcons.Download to MaterialTheme.colorScheme.primary
                     row.candidates.isEmpty() -> AppIcons.Warning to MaterialTheme.colorScheme.error
                     else -> AppIcons.Info to MaterialTheme.colorScheme.tertiary
                 }
@@ -224,6 +257,7 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
             }
             when {
                 row.found -> Unit
+                row.carried -> Text(stringResource(R.string.scan_carried_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 row.candidates.isEmpty() -> Text(
                     stringResource(R.string.scan_missing_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error,
                 )
