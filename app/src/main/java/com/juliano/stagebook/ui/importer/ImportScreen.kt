@@ -67,6 +67,8 @@ fun ImportRoute(onClose: () -> Unit, onOpenEditor: (String?) -> Unit, viewModel:
     ImportScreen(
         uiState = uiState,
         initialQuery = viewModel.initialQuery,
+        home = viewModel.home,
+        urlFor = viewModel::urlFor,
         onClose = onClose,
         onExtracted = viewModel::onExtracted,
         onProblemShown = viewModel::problemShown,
@@ -83,6 +85,8 @@ fun ImportScreen(
     onExtracted: (String?) -> Unit,
     onProblemShown: () -> Unit,
     modifier: Modifier = Modifier,
+    home: String = ImportViewModel.HOME,
+    urlFor: (String) -> String = { ImportViewModel.urlFor(it) },
 ) {
     val context = LocalContext.current
     var address by rememberSaveable { mutableStateOf(initialQuery) }
@@ -106,7 +110,7 @@ fun ImportScreen(
         }
     LaunchedEffect(Unit) {
         withFrameNanos { }   // deixa a tela aparecer antes
-        webView = newWebView().also { it.loadUrl(if (initialQuery.isBlank()) ImportViewModel.HOME else ImportViewModel.urlFor(initialQuery)) }
+        webView = newWebView().also { it.loadUrl(if (initialQuery.isBlank()) home else urlFor(initialQuery)) }
     }
     // sites de letra têm anúncios e scripts: com o app em segundo plano ou a tela apagada, param
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -169,7 +173,7 @@ fun ImportScreen(
                         placeholder = { Text(stringResource(R.string.import_address_hint)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                        keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(ImportViewModel.urlFor(address)) }),
+                        keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(urlFor(address)) }),
                         shape = MaterialTheme.shapes.medium,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -179,11 +183,20 @@ fun ImportScreen(
                         ),
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { webView?.loadUrl(ImportViewModel.urlFor(address)) }) {
+                    IconButton(onClick = { webView?.loadUrl(urlFor(address)) }) {
                         Icon(AppIcons.Search, stringResource(R.string.import_go))
                     }
                 }
                 PageProgress { progress }
+                // uso pessoal: o app não guarda nem distribui músicas (aviso curto, dá para fechar)
+                var notice by rememberSaveable { mutableStateOf(true) }
+                AnimatedVisibility(notice) {
+                    Row(Modifier.fillMaxWidth().padding(start = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        Icon(AppIcons.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.import_personal_use), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { notice = false }) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                    }
+                }
                 webView?.let { w -> AndroidView(factory = { w }, modifier = Modifier.fillMaxWidth().weight(1f)) }
                     ?: Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }

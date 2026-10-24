@@ -58,6 +58,26 @@ enum class ChordListPlace {
     @SerialName("bottom") BOTTOM,
 }
 
+/** Site de importação (letra ou cifra). */
+@Immutable
+@Serializable
+data class ImportSite(val name: String, val url: String)
+
+/** Os sites que já vêm no app; o usuário escolhe o padrão, tira e acrescenta outros. */
+object ImportSites {
+    val LYRICS = listOf(
+        ImportSite("Letras", "https://www.letras.mus.br/"),
+        ImportSite("Vagalume", "https://www.vagalume.com.br/"),
+        ImportSite("Genius", "https://genius.com/"),
+    )
+    val CHORDS = listOf(
+        ImportSite("Cifra Club", "https://www.cifraclub.com.br/"),
+        ImportSite("Cifras", "https://www.cifras.com.br/"),
+        ImportSite("Ultimate Guitar", "https://www.ultimate-guitar.com/"),
+        ImportSite("LaCuerda", "https://acordes.lacuerda.net/"),
+    )
+}
+
 enum class StageColumns {
     @SerialName("auto") AUTO,   // 2 colunas no tablet deitado, 1 no resto
     @SerialName("one") ONE,
@@ -93,7 +113,10 @@ data class Look(
     val chordFont: StageFont = StageFont.DEFAULT,   // fonte dos acordes
     val instrument: Instrument = Instrument.VIOLAO,   // desenhos de acorde (popup e lista)
     val chordList: ChordListPlace = ChordListPlace.NONE,
-    val chordTap: Boolean = true,   // tocar num acorde no palco mostra o desenho (desligado: o toque vira a página)
+    val chordTap: Boolean = true,
+    // importação: os sites de cada tipo; o primeiro de cada lista é o padrão (onde o importador abre)
+    val lyricSites: List<ImportSite> = ImportSites.LYRICS,
+    val chordSites: List<ImportSite> = ImportSites.CHORDS,   // tocar num acorde no palco mostra o desenho (desligado: o toque vira a página)
 ) {
     companion object {
         const val MIN_FONT = 16f

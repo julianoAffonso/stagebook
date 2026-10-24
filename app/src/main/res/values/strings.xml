@@ -148,6 +148,15 @@
     <string name="settings_sections_help">Linhas como [Refrão], Verso 2:, Ponte, Intro, Solo, Final… viram títulos em destaque no palco, sempre em português: [Chorus] aparece como REFRÃO, [Verse 2] como VERSO 2.</string>
     <string name="settings_section_color">Cor do título da seção</string>
     <string name="settings_chords">Cifras</string>
+    <string name="settings_import_sites">Importação</string>
+    <string name="settings_lyric_sites">Sites de letra</string>
+    <string name="settings_chord_sites">Sites de cifra</string>
+    <string name="settings_sites_help">O marcado é onde o importador abre. Uma busca digitada no importador procura no Google.</string>
+    <string name="settings_site_add">Adicionar site</string>
+    <string name="settings_site_add_ok">Adicionar</string>
+    <string name="settings_site_remove">Tirar %1$s</string>
+    <string name="import_needs_internet">Importar precisa de internet</string>
+    <string name="import_personal_use">Uso pessoal: o Stagebook não guarda nem envia músicas; o que você importa fica neste aparelho.</string>
     <string name="settings_instrument">Instrumento</string>
     <string name="settings_instrument_help">Os desenhos dos acordes (tocar num acorde no palco e a lista de acordes) são deste instrumento.</string>
     <string name="instrument_violao">Violão</string>
