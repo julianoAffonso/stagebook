@@ -36,12 +36,12 @@ class LibraryRepositoryTest {
     @Test
     fun `gravação falhando (disco) não derruba o app e a música continua na memória`() {
         val r = repo()
-        File(dir, "letras.json.tmp").apply { deleteRecursively(); mkdirs() }   // não dá para criar o temporário
+        File(dir, "stagebook.json.tmp").apply { deleteRecursively(); mkdirs() }   // não dá para criar o temporário
         r.saveSong(Song(title = "Hazard", text = "letra"))
         waitWrites()
         assertEquals(emptyList<Throwable>(), crashes)
         assertTrue(r.findSong("Hazard", "") != null)
-        File(dir, "letras.json.tmp").deleteRecursively()
+        File(dir, "stagebook.json.tmp").deleteRecursively()
     }
 
     @Test

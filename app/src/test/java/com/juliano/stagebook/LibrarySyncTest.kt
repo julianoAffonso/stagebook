@@ -270,7 +270,7 @@ class LibrarySyncTest {
         val r = repo()
         r.saveSong(Song(title = "Minha", text = "m"))
         Thread.sleep(400)
-        val tmp = File(context.filesDir, "letras.json.tmp").apply { deleteRecursively(); mkdirs() }   // disco recusando
+        val tmp = File(context.filesDir, "stagebook.json.tmp").apply { deleteRecursively(); mkdirs() }   // disco recusando
         val s = sync(r)
         s.onEnter().await()
         assertEquals(listOf("Minha"), r.library.value.songs.map { it.title })
@@ -286,7 +286,7 @@ class LibrarySyncTest {
         val r = repo()
         r.saveSong(Song(title = "Minha", text = "m"))
         Thread.sleep(400)
-        val tmp = File(context.filesDir, "letras.json.tmp").apply { deleteRecursively(); mkdirs() }   // disco recusando
+        val tmp = File(context.filesDir, "stagebook.json.tmp").apply { deleteRecursively(); mkdirs() }   // disco recusando
         val s = sync(r)
         s.onEnter().await()
         assertEquals(1, r.library.value.songs.size)
