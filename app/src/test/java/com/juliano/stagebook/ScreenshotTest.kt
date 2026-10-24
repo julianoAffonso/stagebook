@@ -229,6 +229,16 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PEDAL) }
     }
 
+    // pedal com o botão que dá play/pause no backing track (modo player ligado)
+    @Test @Config(qualifiers = "w412dp-h2200dp-port-xxhdpi")
+    fun settingsPhonePedalPlay() = shoot("jornada_pedal_play_pause") {
+        val st = settings.copy(
+            look = settings.look.copy(playerMode = true, pedalKeys = settings.look.pedalKeys + (android.view.KeyEvent.KEYCODE_B to PedalAction.PLAY_PAUSE)),
+            lastKey = PedalKeyUi("B", PedalAction.PLAY_PAUSE, "PageFlip Firefly", android.view.KeyEvent.KEYCODE_B),
+        )
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(st, SettingsActions(), it, section = SettingsSection.PEDAL) }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneChords() = shoot("celular_5_ajustes_cifras") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.CHORDS) }

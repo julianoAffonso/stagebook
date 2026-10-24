@@ -447,6 +447,7 @@ fun StageScreen(
                 PedalAction.PREVIOUS -> previous()
                 PedalAction.NEXT_SONG -> goSong(true)
                 PedalAction.PREVIOUS_SONG -> goSong(false)
+                PedalAction.PLAY_PAUSE -> if (look.playerMode && !song.missing && song.track.isNotEmpty()) onTogglePlay()
                 PedalAction.NONE -> Unit
             }
         }
