@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.ui.res.pluralStringResource
 import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.ui.components.AppIcons
 import com.juliano.stagebook.R
@@ -79,7 +80,7 @@ fun ChordStrip(
         if (hiddenCount > 0) {
             Box(Modifier.size(STRIP_ITEM_WIDTH, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(AppIcons.Undo, stringResource(R.string.stage_chords_restore, hiddenCount), Modifier.size(18.dp), tint = color.copy(alpha = 0.6f))
+                    Icon(AppIcons.Undo, pluralStringResource(R.plurals.stage_chords_restore, hiddenCount, hiddenCount), Modifier.size(18.dp), tint = color.copy(alpha = 0.6f))
                     Text("$hiddenCount", style = MaterialTheme.typography.labelLarge, color = color.copy(alpha = 0.6f))
                 }
             }
