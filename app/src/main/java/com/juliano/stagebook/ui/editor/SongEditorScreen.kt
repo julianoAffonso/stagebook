@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.editor
 
+import com.juliano.stagebook.domain.LyricsView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
@@ -131,14 +132,21 @@ fun SongEditorScreen(
                 return@Crossfade
             }
             // aberta do palco: cursor no fim da linha segurada, já com o teclado
-            var lyrics by remember { mutableStateOf(TextFieldValue(uiState.text, TextRange(lineEnd(uiState.text, cursor)))) }
+            // perfil só letra: o campo mostra a letra sem a cifra, e cada mudança volta para a música com a cifra
+            // no lugar (LyricsView): quem só canta não apaga os acordes de ninguém
+            val fieldText = remember(uiState.text, look.chords) { if (look.chords) uiState.text else LyricsView.view(uiState.text) }
+            var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, cursor)))) }
             // o texto vem sempre do estado; a seleção e o cursor ficam aqui
-            val shown = if (lyrics.text == uiState.text) lyrics else lyrics.copy(text = uiState.text)
+            val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
+            fun edit(v: TextFieldValue) {
+                lyrics = v
+                if (v.text != fieldText) onText(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text))
+            }
             var editingLyrics by remember { mutableStateOf(false) }
             // acorde novo: entra onde estava o cursor da letra
             if (newChord) {
                 ChordDialog(
-                    onDone = { chord -> newChord = false; lyrics = insertChord(shown, chord); onText(lyrics.text) },
+                    onDone = { chord -> newChord = false; edit(insertChord(shown, chord)) },
                     onDismiss = { newChord = false },
                 )
             }
@@ -177,14 +185,13 @@ fun SongEditorScreen(
                     AnimatedVisibility(editingLyrics && !previewing) {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             SectionBar(onPick = { kind ->
-                                lyrics = insertSection(shown, kind)
-                                onText(lyrics.text)
+                                edit(insertSection(shown, kind))
                             })
                             // perfil só letra: nada de cifra no editor (a letra guardada não muda)
                             if (look.chords) {
                                 ChordBar(
                                     chords = remember(uiState.text) { usedChords(uiState.text) },
-                                    onPick = { chord -> lyrics = insertChord(shown, chord); onText(lyrics.text) },
+                                    onPick = { chord -> edit(insertChord(shown, chord)) },
                                     onNew = { newChord = true },
                                 )
                             }
@@ -240,7 +247,7 @@ fun SongEditorScreen(
                         if (cursor >= 0) LaunchedEffect(Unit) { focus.requestFocus() }
                         OutlinedTextField(
                             value = shown,
-                            onValueChange = { lyrics = it; if (it.text != uiState.text) onText(it.text) },
+                            onValueChange = ::edit,
                             label = { Text(stringResource(R.string.editor_lyrics)) },
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             textStyle = MaterialTheme.typography.bodyLarge,
