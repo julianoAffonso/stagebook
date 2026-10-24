@@ -25,7 +25,7 @@ final class Engine {
     static native float[] analyzeMask(String path, int mask);
     static native boolean isRunning();
     static native String status();
-    // relógio da USB interface pela entrada: 1 travado, 0 esperando, -1 sem entrada
+    // relógio da interface pela entrada: 1 travado, 0 esperando, -1 sem entrada
     static native int feedback();
     // medidores ao vivo (só leem o sinal): desligado, o motor faz o mesmo de antes
     static native void setMeter(boolean on);

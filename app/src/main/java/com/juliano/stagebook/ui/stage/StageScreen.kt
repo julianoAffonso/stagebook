@@ -143,7 +143,7 @@ fun StageRoute(
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val playing by viewModel.playing.collectAsStateWithLifecycle()
+    val playerUi by viewModel.playerUi.collectAsStateWithLifecycle()
     var index by rememberSaveable { mutableIntStateOf(viewModel.start) }
     // escolher a faixa da música (OGG, MP3 ou WAV): copiada para o app ao voltar do seletor do Android
     val scope = rememberCoroutineScope()
@@ -158,6 +158,12 @@ fun StageRoute(
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
     KeepScreenOn()
+    // a música na tela diz ao player qual backing track tocar; o aviso da saída aparece uma vez
+    val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
+    LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
+    LaunchedEffect(playerUi.message) {
+        if (playerUi.message.isNotEmpty()) Toast.makeText(context, playerUi.message, Toast.LENGTH_LONG).show()
+    }
     if (!uiState.loading && uiState.songs.isNotEmpty()) {
         StageScreen(
             uiState = uiState,
@@ -168,7 +174,7 @@ fun StageRoute(
             onEdit = onEditSong,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
-            playing = playing,
+            playing = playerUi.playing || playerUi.waiting,
             onTogglePlay = viewModel::togglePlay,
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
             onRemoveTrack = viewModel::removeTrack,

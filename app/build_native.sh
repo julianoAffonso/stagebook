@@ -1,5 +1,5 @@
 #!/bin/bash
-# Motor de áudio nativo: o mesmo comando do the previous app validado na USB interface (só o alvo é Android 9, API 28, para
+# Motor de áudio nativo: o mesmo comando do motor validado (só o alvo é Android 9, API 28, para
 # o Fire HD 10 e aparelhos simples). Não trocar por CMake/ndk-build: as opções padrão deles mudam o código gerado
 # de um motor de tempo real. A prova de que o som é o mesmo é o simulador (tools/engine-sim), não o hash do .so.
 #   build_native.sh <pasta de saída>   -> <pasta>/<abi>/libstagebook_audio.so

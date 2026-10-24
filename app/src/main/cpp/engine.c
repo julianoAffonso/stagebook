@@ -1,6 +1,6 @@
-// Motor do Stagebook (vindo do the previous app validado na USB interface): decodifica OGG (stb_vorbis), MP3/WAV (dr_mp3/dr_wav), reamostra para 48 kHz e envia
-// 4 canais direto para a interface USB Audio Class 2 via usbfs (sem o mixer do Android).
-// O fluxo USB fica sempre ativo (silêncio quando pausado): a USB interface repete o último
+// Motor do Stagebook: decodifica OGG (stb_vorbis), MP3/WAV (dr_mp3/dr_wav), reamostra para 48 kHz e envia
+// os canais da faixa direto para a interface USB Audio Class 2 via usbfs (sem o mixer do Android).
+// O fluxo USB fica sempre ativo (silêncio quando pausado): a interface repete o último
 // trecho recebido quando o fluxo para, o que vira um apito contínuo.
 #include <jni.h>
 #include <errno.h>
@@ -38,7 +38,7 @@
 // canais da fonte guardados no ring (Stagebook): até 8, cada um como veio; a mistura padrão remonta os 4 de antes
 #define LANES_MAX 8
 // 32 URBs x 8 pacotes = 32 ms na fila do USB. Com 8 (8 ms), o TCL ocupado (another app tocando no
-// alto-falante) atrasava a reposição em 10-16 ms e a USB interface ficava sem áudio: solavanco (19/10/2026).
+// alto-falante) atrasava a reposição em 10-16 ms e a interface ficava sem áudio: solavanco (19/10/2026).
 #define NURBS 32
 #define PKTS_PER_URB 8
 #define TAIL_URBS 500                 // ~500 ms de silêncio antes de soltar o endpoint
@@ -260,7 +260,7 @@ static volatile int g_usb_stop = 0, g_usb_running = 0, g_dec_stop = 0;
 static long st_underrun = 0, st_pkt_err = 0, st_urb_err = 0;
 static int st_ring_min = RING_FRAMES;
 static double st_gap_max = 0;
-// Feedback implícito: a entrada da USB interface chega no ritmo do relógio dela. Comparamos o
+// Feedback implícito: a entrada da interface chega no ritmo do relógio dela. Comparamos o
 // total de quadros que ela produziu com o total que enviamos; se a saída se adianta
 // (ou atrasa) mais de FB_HI quadros, os pacotes passam a levar 5 (ou 7) quadros em vez
 // de 6 até a diferença voltar a FB_LO. Nenhum quadro de música é descartado.
@@ -294,7 +294,7 @@ static double now_s(void) {
 // ---- mistura por canal (Stagebook, 24/10/2026) ----
 // A única mistura do Stagebook (decisão do usuário: num app público, supor "1-2 backing, 3-4 click" é um risco).
 // O app manda a configuração de cada backing track (setMix); sem ela, cada canal vai para a saída de mesmo número,
-// com ganho 1 — nada é adivinhado. Com a configuração equivalente à antiga, o som é idêntico ao validado na USB interface
+// com ganho 1 — nada é adivinhado. Com a configuração equivalente à antiga, o som é idêntico ao validado na mesa
 // (simulador). Protegida por g_mx.
 static float g_ch_gain[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // fader × liga/desliga de cada canal da fonte
 static float g_ch_norm[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // normalização de cada canal
@@ -774,7 +774,7 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     return a;
 }
 
-// relógio da USB interface (feedback pela entrada): 1 travado, 0 esperando, -1 sem entrada. Só leitura.
+// relógio da interface (feedback pela entrada): 1 travado, 0 esperando, -1 sem entrada. Só leitura.
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
 
 // ---- normalização ----

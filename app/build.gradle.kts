@@ -61,7 +61,7 @@ android {
     // capturas de tela das telas (Robolectric + Roborazzi): ./gradlew recordRoborazziDebug
     testOptions { unitTests.isIncludeAndroidResources = true }
 
-    // motor de áudio (player): vem pronto do build_native.sh, o mesmo comando do Backing validado na USB interface
+    // motor de áudio (player): vem pronto do build_native.sh, o mesmo comando do motor validado
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("native").get().asFile)
     // mesmo efeito do android:extractNativeLibs="true" da versão validada
     packaging { jniLibs { useLegacyPackaging = true } }
