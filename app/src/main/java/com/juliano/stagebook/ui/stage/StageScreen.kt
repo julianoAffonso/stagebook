@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.draw.drawWithContent
 import android.text.format.DateFormat
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedContent
@@ -79,7 +82,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.juliano.stagebook.R
 import com.juliano.stagebook.data.model.Look
-import com.juliano.stagebook.data.model.SectionLang
 import com.juliano.stagebook.data.model.StageColumns
 import com.juliano.stagebook.domain.PageSlots
 import com.juliano.stagebook.domain.Pagination
@@ -225,7 +227,9 @@ fun StageScreen(
     }
     // maior zoom em que a palavra mais longa ainda cabe na largura (calculado com a largura real, abaixo)
     var fitZoom by remember(index) { mutableFloatStateOf(Float.MAX_VALUE) }
-    val sourced = remember(song.text, look) { stageLines(song.text, SectionLang.PT, Color(look.sectionColor), look.showSections) }
+    val sectionNames = rememberSectionNames(look.translateSections)
+    val chordLook = remember(look.chords, look.chordScale, look.chordColor) { ChordLook(look.chords, look.chordScale, Color(look.chordColor)) }
+    val sourced = remember(song.text, look, sectionNames) { stageLines(song.text, sectionNames, Color(look.sectionColor), look.showSections, chordLook) }
     val lines = remember(sourced) { sourced.map { it.text } }
     // segurar uma linha mostra um botão para editá-la (não abre direto: no show o polegar apoiado
     // na tela não pode tirar a letra da frente); some sozinho e ao virar a página
@@ -516,6 +520,8 @@ fun StageScreen(
                 sheets[shownAt].map { range -> if (range.isEmpty()) -1 else range.first },
                 style,
                 columns,
+                // acorde: negrito, na cor e no tamanho dele, acompanhando o zoom da letra
+                style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, lineHeight = TextUnit.Unspecified),
             )
             SideEffect { hit.show(shown, columnWidth, gutter) }
             AnimatedContent(
@@ -542,11 +548,22 @@ fun StageScreen(
             ) { content ->
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(with(LocalDensity.current) { gutter.toDp() })) {
                     content.columns.forEachIndexed { column, text ->
+                        // acordes desenhados no espaço em cima da letra, na posição da letra marcada (ver chordLine)
+                        val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
+                        var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
                         Text(
                             text,
                             style = content.style,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            onTextLayout = { hit.laidOut(content, column, it) },
+                            modifier = Modifier.weight(1f).fillMaxHeight().drawWithContent {
+                                drawContent()
+                                val l = laid ?: return@drawWithContent
+                                chordsAt.forEach { a ->
+                                    if (a.start >= l.layoutInput.text.length) return@forEach
+                                    val line = l.getLineForOffset(a.start)
+                                    drawText(measurer, a.item, Offset(l.getHorizontalPosition(a.start, true), l.getLineTop(line)), content.chordStyle)
+                                }
+                            },
+                            onTextLayout = { laid = it; hit.laidOut(content, column, it) },
                         )
                     }
                     // última folha com só a coluna da esquerda: a da direita fica vazia, não estica a outra
@@ -645,13 +662,7 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
 internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, style: TextStyle, width: Int): List<Pagination.Line> {
     if (lines.isEmpty()) return emptyList()
     val starts = IntArray(lines.size)
-    val all = buildAnnotatedString {
-        lines.forEachIndexed { i, l ->
-            if (i > 0) append('\n')
-            starts[i] = length
-            if (l.isEmpty()) append(' ') else append(l)
-        }
-    }
+    val all = joinLines(lines, starts)
     val r = measurer.measure(all, style, constraints = Constraints(maxWidth = width))
     return lines.mapIndexed { i, l ->
         val end = starts[i] + maxOf(l.length, 1) - 1
@@ -690,6 +701,7 @@ private data class PageContent(
     val starts: List<Int>,
     val style: TextStyle,
     val sheetColumns: Int,
+    val chordStyle: TextStyle,
 )
 
 /** Botão "editar esta linha" oferecido onde o dedo segurou; `line` é o índice em `lines`. */
@@ -722,8 +734,9 @@ private class PageHit {
         if (start < 0 || p.y > layout.size.height) return null
         // só a altura importa: a linha inteira é a mesma, em qualquer ponto dela
         val offset = layout.getLineStart(layout.getLineForVerticalPosition(p.y))
-        val text = layout.layoutInput.text.text
-        return start + (0 until minOf(offset, text.length)).count { text[it] == '\n' }
+        val text = layout.layoutInput.text
+        val line = text.getStringAnnotations(LINE_TAG, offset, minOf(offset + 1, text.length)).firstOrNull()?.item?.toInt() ?: return null
+        return start + line
     }
 }
 
