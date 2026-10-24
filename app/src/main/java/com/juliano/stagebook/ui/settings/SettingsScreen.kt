@@ -1,5 +1,12 @@
 package com.juliano.stagebook.ui.settings
 
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.Lifecycle
+import com.juliano.stagebook.ui.components.SpectrumView
+import com.juliano.stagebook.player.StagePlayer
+import com.juliano.stagebook.domain.Spectrum
+import com.juliano.stagebook.domain.MixerLevels
 import com.juliano.stagebook.ui.components.VerticalFader
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
@@ -174,6 +181,14 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
         if (r.values.all { it }) viewModel.scanMidi()
     }
     var section by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
+    // medidores do mixer: só com o modo player ligado, a seção Player aberta e a tela visível
+    val levels = remember { mutableStateOf(MixerLevels.SILENT) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val metering = uiState.look.playerMode && section == SettingsSection.PLAYER
+    LaunchedEffect(metering) {
+        if (metering) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { StagePlayer.liveLevels().collect { levels.value = it } }
+        levels.value = MixerLevels.SILENT
+    }
     Box(Modifier.fillMaxSize()) {
         SettingsScreen(
             section = section,
@@ -206,6 +221,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onSites = viewModel::setSites,
                 onPlayerMode = viewModel::setPlayerMode,
                 onMixer = viewModel::setMixer,
+                mixerLevels = { levels.value },
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -263,6 +279,7 @@ data class SettingsActions(
     val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onPlayerMode: (Boolean) -> Unit = {},
     val onMixer: (MixerConfig) -> Unit = {},
+    val mixerLevels: () -> MixerLevels = { MixerLevels.SILENT },   // lido só no desenho dos medidores
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onImport: () -> Unit = {},
@@ -880,8 +897,8 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
         UsbRequirements()
     }
     if (look.playerMode) {
-        MixerCard(look.mixer, actions.onMixer)
-        EqCard(look.mixer, actions.onMixer)
+        MixerCard(look.mixer, actions.onMixer, actions.mixerLevels)
+        EqCard(look.mixer, actions.onMixer, actions.mixerLevels)
     }
 }
 
@@ -897,7 +914,7 @@ private fun UsbRequirements() = HelpTip(
 )
 
 @Composable
-private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
+private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels) {
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // canal em edição (o primeiro do par); -1 = nenhum
     SettingsCard(stringResource(R.string.mixer_title)) {
         HelpTip(stringResource(R.string.mixer_help))
@@ -920,6 +937,7 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
                                 pair = g.count() == 2,
                                 onChange = { s -> onMixer(mixer.withStrip(g.first) { s }) },
                                 onEdit = { editing = g.first },
+                                meters = { levels().meters },
                                 modifier = Modifier.weight(1f),
                                 upright = upright,
                             )
@@ -943,7 +961,7 @@ private fun MixerCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
 }
 
 @Composable
-private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
+private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels) {
     SettingsCard(stringResource(R.string.eq_title)) {
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn) { onMixer(mixer.copy(eqOn = it)) }
         HelpTip(stringResource(R.string.eq_help))
@@ -953,14 +971,29 @@ private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit) {
         val range = -MixerConfig.EQ_RANGE_DB..MixerConfig.EQ_RANGE_DB
         BoxWithConstraints {
             if (maxWidth >= 600.dp) {
-                // tablet: faders de pé lado a lado, como um equalizador gráfico
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
-                        val db = mixer.eqDb.getOrElse(i) { 0f }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
-                            VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
-                            Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
+                // tablet: faders de pé lado a lado, como um equalizador gráfico, com o espectro ao vivo por trás (já
+                // com a curva do EQ somada: o motor mede antes do EQ). Cada fader no centro da sua quinta parte.
+                val response = remember(mixer.eqDb, mixer.eqOn) {
+                    if (mixer.eqOn) Spectrum.eqResponseDb(mixer.eqDb) else FloatArray(Spectrum.BINS)
+                }
+                Box(Modifier.fillMaxWidth()) {
+                    SpectrumView(
+                        { levels().spectrumDb.mapIndexed { b, v -> if (v <= Spectrum.FLOOR_DB) v else v + response[b] } },
+                        active = { levels().live },
+                        modifier = Modifier.matchParentSize().padding(vertical = Spacing.l),
+                    )
+                    Row(Modifier.fillMaxWidth()) {
+                        MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
+                            val db = mixer.eqDb.getOrElse(i) { 0f }
+                            Column(
+                                Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            ) {
+                                Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
+                                VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
+                                Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
                 }

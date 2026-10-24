@@ -13,6 +13,13 @@ import com.juliano.stagebook.domain.MixerConfig
 import com.juliano.stagebook.domain.Mixer
 import com.juliano.stagebook.domain.NormMode
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import com.juliano.stagebook.domain.MeterBallistics
+import com.juliano.stagebook.domain.Meters
+import com.juliano.stagebook.domain.MixerLevels
+import com.juliano.stagebook.domain.Spectrum
 import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -200,6 +207,43 @@ class StagePlayer @Inject constructor(
 
         /** Modo player desligado nos Ajustes: se o player chegou a subir, desliga tudo. */
         fun turnOff() { instance?.shutdown() }
+
+        private const val METER_MS = 66L          // ~15 leituras por segundo, como no Backing
+        private const val METER_IDLE_MS = 500L    // player desligado: só confere se ligou
+
+        /**
+         * Medidores ao vivo para os Ajustes (canais e espectro). O motor só mede enquanto alguém coleta e o player está
+         * ligado; ao parar de coletar, a medição desliga. Nada disso carrega o motor com o player desligado.
+         */
+        fun liveLevels(): Flow<MixerLevels> = flow {
+            val meters = MeterBallistics(MixerConfig.MAX)
+            val spectrum = MeterBallistics(Spectrum.BINS, Spectrum.FLOOR_DB)
+            var wasLive = true
+            try {
+                while (true) {
+                    if (PlayerService.running) {
+                        Engine.setMeter(true)
+                        val lanes = Engine.lanePeaks()
+                        val p = Engine.peaks()
+                        if (lanes != null && p != null && p.size >= PEAK_OUTS + Spectrum.BINS) {
+                            val db = FloatArray(MixerConfig.MAX) { Meters.toDb(lanes[it]) }
+                            val sp = FloatArray(Spectrum.BINS) { Meters.toDb(p[PEAK_OUTS + it], Spectrum.FLOOR_DB) }
+                            emit(MixerLevels(meters.update(db, METER_MS), spectrum.update(sp, METER_MS).levelDb, live = true))
+                            wasLive = true
+                        }
+                        delay(METER_MS)
+                    } else {
+                        if (wasLive) emit(MixerLevels.SILENT)
+                        wasLive = false
+                        delay(METER_IDLE_MS)
+                    }
+                }
+            } finally {
+                if (PlayerService.running) Engine.setMeter(false)
+            }
+        }.flowOn(Dispatchers.Default)
+
+        private const val PEAK_OUTS = 4   // peaks() do motor: 4 saídas e depois o espectro
 
         /** O serviço mudou de estado (conectou, caiu, desligou): chamado na thread principal. */
         @JvmStatic

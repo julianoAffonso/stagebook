@@ -63,6 +63,14 @@ data class MixerConfig(
     }
 }
 
+/** Medidores ao vivo do mixer: cada canal do arquivo (já com a balística) e o espectro dos canais com EQ. */
+@Immutable
+data class MixerLevels(val meters: Meters, val spectrumDb: List<Float>, val live: Boolean) {
+    companion object {
+        val SILENT = MixerLevels(Meters.silent(MixerConfig.MAX), List(Spectrum.BINS) { Spectrum.FLOOR_DB }, live = false)
+    }
+}
+
 /** Medição de um canal ou par num backing track: volume (LUFS) e pico (linear, 1 = 0 dBFS). */
 data class Measure(val lufs: Float, val peak: Float)
 

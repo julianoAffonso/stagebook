@@ -33,6 +33,8 @@ final class Engine {
     static native void setMeter(boolean on);
     // picos lineares desde a leitura anterior: {canal 1, 2, 3, 4, faixas 80, 250, 1k, 3,5k, 10k do backing}
     static native float[] peaks();
+    // picos de cada canal do arquivo (depois do fader, normalização e EQ) desde a última leitura: medidores do mixer
+    static native float[] lanePeaks();
 
     private Engine() {}
 }
