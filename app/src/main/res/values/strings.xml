@@ -415,12 +415,12 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="import_menu">Importar</string>
     <string name="import_from_sites">Da internet (sites)</string>
     <string name="import_from_sites_offline">Da internet (sem internet)</string>
-    <string name="sets_type_code">Digitar código</string>
-    <string name="sets_type_code_offline">Digitar código (sem internet)</string>
-    <string name="sets_code_hint">Ex.: 47-violao-lua</string>
-    <string name="scan_code_title">Setlist pelo código</string>
+    <string name="sets_type_code">Digitar as 3 palavras</string>
+    <string name="sets_type_code_offline">Digitar as 3 palavras (sem internet)</string>
+    <string name="sets_code_hint">As 3 palavras do outro aparelho, ex.: 47 violao lua</string>
+    <string name="scan_code_title">Recebendo as 3 palavras</string>
     <string name="scan_code_loading">Buscando o setlist…</string>
-    <string name="scan_code_not_found">Não achei nada com esse código. Confira o código (vale por 12 horas depois de enviado).</string>
+    <string name="scan_code_not_found">Nada chegou com essas palavras. Confira as 3 palavras (valem por 12 horas depois do envio).</string>
     <string name="scan_code_offline">Sem internet ou o serviço não respondeu. Tente de novo daqui a pouco.</string>
     <string name="scan_code_retry">Tentar de novo</string>
     <string name="scan_songs_title">Músicas recebidas</string>
@@ -441,11 +441,11 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     </plurals>
     <string name="scan_carried_row">Veio junto com o setlist: entra na sua biblioteca.</string>
     <string name="scan_title">Ler QR do setlist</string>
-    <string name="scan_hint">Aponte a câmera para o QR do setlist (ou do código) que está na tela do outro aparelho.</string>
+    <string name="scan_hint">Aponte a câmera para o QR que está na tela do outro aparelho.</string>
     <string name="scan_no_camera">Sem a câmera não dá para ler o QR.</string>
     <string name="scan_allow_camera">Permitir a câmera</string>
     <string name="scan_incomplete">O QR veio incompleto. Aproxime e leia de novo.</string>
-    <string name="scan_not_setlist">Este QR não é de um setlist. Aponte para o QR do setlist ou do código.</string>
+    <string name="scan_not_setlist">Este QR não é do Stagebook. Aponte para o QR do setlist ou das palavras de envio.</string>
     <string name="scan_name">Nome do setlist</string>
     <plurals name="scan_found">
         <item quantity="one">%1$d de %2$d música está na sua biblioteca</item>
@@ -479,17 +479,17 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="share_title">Compartilhar</string>
     <string name="share_qr">QR na tela</string>
     <string name="share_qr_hint">Quem está do lado lê com a câmera. Só os títulos.</string>
-    <string name="share_internet">Código pela internet</string>
-    <string name="share_internet_hint">Gera um código para mandar por mensagem. Vale por 12 horas.</string>
+    <string name="share_internet">Enviar pela internet</string>
+    <string name="share_internet_hint">Aparecem 3 palavras (e um QR) para quem vai receber. Valem por 12 horas.</string>
     <plurals name="share_with_songs">
         <item quantity="one">Levar a música (%1$d)</item>
         <item quantity="other">Levar as músicas (%1$d)</item>
     </plurals>
     <string name="share_with_songs_hint">Quem recebe só usa as que não tem; as dele não mudam.</string>
-    <string name="share_offline_songs">Sem internet agora. O código pela internet aparece quando a internet voltar.</string>
-    <string name="share_offline">Sem internet agora: só o QR. O código pela internet aparece quando a internet voltar.</string>
+    <string name="share_offline_songs">Sem internet agora. O envio pela internet aparece quando a internet voltar.</string>
+    <string name="share_offline">Sem internet agora: só o QR. O envio pela internet aparece quando a internet voltar.</string>
     <string name="share_sending">Enviando…</string>
-    <string name="share_sent">Código do setlist</string>
+    <string name="share_sent">Para receber, digite</string>
     <string name="share_failed">Não deu para enviar</string>
     <string name="share_failed_text">O serviço não respondeu. Confira a internet e tente de novo, ou use o QR.</string>
     <plurals name="share_sent_songs">
@@ -500,13 +500,13 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="one">%1$d música grande demais não foi.</item>
         <item quantity="other">%1$d músicas grandes demais não foram.</item>
     </plurals>
-    <string name="share_sent_hint">Vale por 12 horas. Quem recebe: Importar → Digitar código, ou Ler QR apontando para este QR.</string>
+    <string name="share_sent_hint">No outro aparelho: Importar → Digitar as 3 palavras. Ou Importar → Ler QR apontando para este QR. Valem por 12 horas.</string>
     <string name="share_send_code">Mandar por mensagem</string>
-    <string name="share_message_songs">Músicas no Stagebook: código %1$s (vale por 12 horas). No app: Importar → Digitar código.</string>
-    <string name="share_copy">Copiar o código</string>
-    <string name="share_copied">Código copiado</string>
-    <string name="share_code_qr">QR do código: tire uma foto ou leia em Importar → Ler QR</string>
-    <string name="share_message">Setlist \"%1$s\" no Stagebook: código %2$s (vale por 12 horas). No app: Importar → Digitar código.</string>
+    <string name="share_message_songs">Músicas no Stagebook. Para receber: Importar → Digitar as 3 palavras → %1$s (vale por 12 horas).</string>
+    <string name="share_copy">Copiar as palavras</string>
+    <string name="share_copied">Palavras copiadas</string>
+    <string name="share_code_qr">QR das palavras: tire uma foto ou leia em Importar → Ler QR</string>
+    <string name="share_message">Setlist \"%1$s\" no Stagebook. Para receber: Importar → Digitar as 3 palavras → %2$s (vale por 12 horas).</string>
     <!-- seleção na aba Músicas (compartilhar várias) -->
     <plurals name="songs_selected">
         <item quantity="one">%1$d selecionada</item>

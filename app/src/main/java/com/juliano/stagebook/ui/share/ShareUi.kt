@@ -45,6 +45,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.juliano.stagebook.R
+import com.juliano.stagebook.domain.ShareCode
 import com.juliano.stagebook.ui.components.ActionButton
 import com.juliano.stagebook.ui.components.AppIcons
 import com.juliano.stagebook.ui.components.ButtonTone
@@ -196,11 +197,11 @@ fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, Str
             when (cloud) {
                 CloudUi.Sending -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 CloudUi.Failed -> Text(stringResource(R.string.share_failed_text), style = MaterialTheme.typography.bodyLarge)
-                is CloudUi.Sent -> CodeBox(cloud, onCopy = { onCopyCode(cloud.code) })
+                is CloudUi.Sent -> CodeBox(cloud, onCopy = { onCopyCode(ShareCode.display(cloud.code)) })
             }
         },
         confirmButton = {
-            if (cloud is CloudUi.Sent) TextButton(onClick = { onShareCode(cloud.name, cloud.code) }) { Text(stringResource(R.string.share_send_code)) }
+            if (cloud is CloudUi.Sent) TextButton(onClick = { onShareCode(cloud.name, ShareCode.display(cloud.code)) }) { Text(stringResource(R.string.share_send_code)) }
             else if (cloud == CloudUi.Failed) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
         },
         dismissButton = { if (cloud is CloudUi.Sent) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
@@ -219,7 +220,7 @@ fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
             )
         }
         SelectionContainer {
-            Text(sent.code, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+            Text(ShareCode.display(sent.code), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
         }
         ActionButton(stringResource(R.string.share_copy), onCopy, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
         Text(pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs), style = MaterialTheme.typography.bodyMedium)
