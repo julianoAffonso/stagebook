@@ -60,7 +60,21 @@ android {
 
     // capturas de tela das telas (Robolectric + Roborazzi): ./gradlew recordRoborazziDebug
     testOptions { unitTests.isIncludeAndroidResources = true }
+
+    // motor de áudio (player): vem pronto do build_native.sh, o mesmo comando do Backing validado na USB interface
+    sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("native").get().asFile)
+    // mesmo efeito do android:extractNativeLibs="true" da versão validada
+    packaging { jniLibs { useLegacyPackaging = true } }
 }
+
+// arm64 = TCL e celulares; armeabi-v7a = Fire HD 10 (Fire OS 32 bits); x86_64 = emulador
+val buildNative by tasks.registering(Exec::class) {
+    val native = layout.buildDirectory.dir("native").get().asFile
+    inputs.files("src/main/cpp/engine.c", "src/main/cpp/third_party/stb_vorbis.c", "build_native.sh")
+    outputs.dir(native)
+    commandLine("./build_native.sh", native.absolutePath)
+}
+tasks.named("preBuild") { dependsOn(buildNative) }
 
 tasks.withType<Test>().configureEach {
     javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
