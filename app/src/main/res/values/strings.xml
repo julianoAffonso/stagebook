@@ -173,7 +173,10 @@
     <string name="stage_chord_hide">Esconder %1$s da lista</string>
     <string name="stage_chord_hide_confirm">Esconder %1$s da lista de acordes desta música?</string>
     <string name="stage_chord_hide_ok">Esconder</string>
-    <string name="stage_chords_restore">Mostrar de novo os %1$d acordes escondidos</string>
+    <plurals name="stage_chords_restore">
+        <item quantity="one">Mostrar de novo o acorde escondido</item>
+        <item quantity="other">Mostrar de novo os %1$d acordes escondidos</item>
+    </plurals>
     <string name="settings_chord_list_help">Mostra todos os acordes da música, na ordem em que aparecem, cada um uma vez. O × de um acorde no palco tira ele da lista daquela música (o ↺ devolve). Se você escolheu uma montagem tocando no acorde no palco (Usar esta), aparece a escolhida; se não, a mais fácil. No topo: antes da letra, na primeira página. No fim: depois da letra, na última página.</string>
     <string name="chord_shape_none">Não encontrei como montar %1$s neste instrumento.</string>
     <string name="chord_shape_previous">Variação anterior</string>
