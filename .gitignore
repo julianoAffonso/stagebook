@@ -1,0 +1,18 @@
+build/
+.gradle/
+.kotlin/
+local.properties
+*.iml
+.idea/
+# letras (conteúdo com direitos autorais) nunca vão para o git: chegam ao app por importação
+*.json
+# chaves de assinatura nunca vão para o git (o código é público)
+*.jks
+*.keystore
+# memórias e skills herdadas do previous app e do Backing, completas (têm dados pessoais): só neste Mac
+.claude/local/
+
+# carga de letras gerada do another app (direitos autorais: fora do git)
+/carga/
+.claude/auditoria-pendente
+!.claude/settings.json

@@ -1,0 +1,718 @@
+package com.juliano.stagebook.ui.settings
+
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import com.juliano.stagebook.domain.MidiCode
+import com.juliano.stagebook.data.MidiState
+import com.juliano.stagebook.data.MidiFound
+import android.os.Build
+import android.content.Intent
+import android.provider.Settings
+import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.juliano.stagebook.R
+import com.juliano.stagebook.ui.installApk
+import com.juliano.stagebook.data.model.Look
+import com.juliano.stagebook.data.model.SectionLang
+import com.juliano.stagebook.data.model.StageColumns
+import com.juliano.stagebook.domain.PedalAction
+import com.juliano.stagebook.ui.PedalHandler
+import com.juliano.stagebook.ui.components.ActionButton
+import com.juliano.stagebook.ui.components.AppIcons
+import com.juliano.stagebook.ui.components.ButtonTone
+import com.juliano.stagebook.ui.components.CenteredContent
+import com.juliano.stagebook.ui.components.ColorSwatchRow
+import com.juliano.stagebook.ui.components.ConfirmDialog
+import com.juliano.stagebook.ui.components.DarkPreview
+import com.juliano.stagebook.ui.components.LightPreview
+import com.juliano.stagebook.ui.components.ScreenHeader
+import com.juliano.stagebook.ui.components.SettingsCard
+import com.juliano.stagebook.ui.components.SongListItem
+import com.juliano.stagebook.ui.stage.lyricsAnnotated
+import com.juliano.stagebook.ui.theme.StagebookTheme
+import com.juliano.stagebook.ui.theme.Sizes
+import com.juliano.stagebook.ui.theme.Spacing
+import com.juliano.stagebook.ui.theme.StagePalette
+import kotlin.math.roundToInt
+
+@Composable
+fun SettingsRoute(onSyncDetails: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    val snackbar = remember { SnackbarHostState() }
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::importFrom) }
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportTo) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { m ->
+            val r = resources
+            snackbar.showSnackbar(
+                when (m) {
+                    is SettingsMessage.Normalized -> r.getQuantityString(R.plurals.settings_normalized, m.count, m.count) +
+                        if (m.unidentified > 0) " " + r.getQuantityString(R.plurals.settings_unidentified, m.unidentified, m.unidentified) else ""
+                    is SettingsMessage.Imported -> r.getString(R.string.settings_imported, m.added, m.replaced)
+                    SettingsMessage.ImportFailed -> r.getString(R.string.settings_import_failed)
+                    SettingsMessage.Exported -> r.getString(R.string.settings_exported)
+                    SettingsMessage.ExportFailed -> r.getString(R.string.settings_export_failed)
+                },
+            )
+        }
+    }
+    // teste do pedal: enquanto os ajustes estão abertos, qualquer botão aparece no cartão do pedal
+    PedalHandler { p ->
+        val ignored = p.code in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE)
+        if (ignored) return@PedalHandler false
+        if (p.down) viewModel.onKey(p)
+        true
+    }
+
+    // instalar: na primeira vez o Android precisa liberar "instalar apps desta fonte" para o Stagebook
+    val install: () -> Unit = { context.installApk(viewModel.canInstall(), viewModel.installIntent()) }
+    LaunchedEffect(viewModel) { viewModel.install.collect { install() } }
+
+    // pedal MIDI Bluetooth: a procura pede a permissão do Bluetooth (ou da localização, no Android 9 a 11)
+    val midiPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.all { it }) viewModel.scanMidi()
+    }
+    var section by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
+    Box(Modifier.fillMaxSize()) {
+        SettingsScreen(
+            section = section,
+            onSection = { section = it },
+            uiState = uiState,
+            actions = SettingsActions(
+                onFont = viewModel::setFont,
+                onTextColor = viewModel::setTextColor,
+                onBackground = viewModel::setBackground,
+                onBold = viewModel::setBold,
+                onSectionColor = viewModel::setSectionColor,
+                onShowSections = viewModel::setShowSections,
+                onNormalize = viewModel::normalizeSections,
+                onPairPedal = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
+                onPedalAction = viewModel::setPedalAction,
+                onResetPedalKeys = viewModel::resetPedalKeys,
+                onMidiScan = { if (viewModel.hasMidiPermissions()) viewModel.scanMidi() else midiPermissions.launch(viewModel.midiPermissions()) },
+                onMidiChoose = viewModel::chooseMidi,
+                onMidiForget = viewModel::forgetMidi,
+                onMidiUsb = viewModel::setMidiUsb,
+                onKeepScreenOn = viewModel::setKeepScreenOn,
+                onColumns = viewModel::setColumns,
+                onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                onExport = { exporter.launch("stagebook-biblioteca.json") },
+                onSyncDetails = onSyncDetails,
+                onCheckUpdate = viewModel::checkUpdate,
+                onDownloadUpdate = viewModel::downloadUpdate,
+                onInstallUpdate = install,
+            ),
+        )
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+    val pending by viewModel.pendingImport.collectAsStateWithLifecycle()
+    pending?.let { p ->
+        ConfirmDialog(
+            pluralStringResource(R.plurals.settings_import_confirm, p.lyricsChanged, p.lyricsChanged, p.added),
+            stringResource(R.string.settings_import_file),
+            onConfirm = viewModel::confirmImport,
+            onDismiss = viewModel::cancelImport,
+        )
+    }
+}
+
+/** Todas as interações da tela de ajustes (fica um parâmetro só em vez de onze). */
+data class SettingsActions(
+    val onFont: (Float) -> Unit = {},
+    val onTextColor: (Int) -> Unit = {},
+    val onBackground: (Int) -> Unit = {},
+    val onBold: (Boolean) -> Unit = {},
+    val onSectionColor: (Int) -> Unit = {},
+    val onShowSections: (Boolean) -> Unit = {},
+    val onNormalize: () -> Unit = {},
+    val onPairPedal: () -> Unit = {},
+    val onPedalAction: (Int, PedalAction) -> Unit = { _, _ -> },
+    val onResetPedalKeys: () -> Unit = {},
+    val onMidiScan: () -> Unit = {},
+    val onMidiChoose: (MidiFound) -> Unit = {},
+    val onMidiForget: () -> Unit = {},
+    val onMidiUsb: (Boolean) -> Unit = {},
+    val onKeepScreenOn: (Boolean) -> Unit = {},
+    val onColumns: (StageColumns) -> Unit = {},
+    val onImport: () -> Unit = {},
+    val onExport: () -> Unit = {},
+    val onSyncDetails: () -> Unit = {},
+    val onCheckUpdate: () -> Unit = {},
+    val onDownloadUpdate: () -> Unit = {},
+    val onInstallUpdate: () -> Unit = {},
+)
+
+/** Seções dos ajustes: lista à esquerda no tablet, uma tela por seção no celular. */
+enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
+    LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
+    SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
+    PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
+    SCREEN(R.string.settings_screen, AppIcons.Brightness),
+    LIBRARY(R.string.settings_library, AppIcons.Folder),
+    UPDATE(R.string.settings_update, AppIcons.Download),
+}
+
+@Composable
+fun SettingsScreen(
+    uiState: SettingsUiState,
+    actions: SettingsActions,
+    modifier: Modifier = Modifier,
+    section: SettingsSection? = null,
+    onSection: (SettingsSection?) -> Unit = {},
+) {
+    Crossfade(uiState.loading, modifier.fillMaxSize(), label = "settings") { loading ->
+        if (loading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            return@Crossfade
+        }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            if (maxWidth >= Sizes.contentMax) {
+                // tablet deitado: lista fixa à esquerda, seção aberta à direita
+                val open = section ?: SettingsSection.LYRICS
+                Row(Modifier.fillMaxSize()) {
+                    SectionList(uiState, open, onSection, Modifier.width(Sizes.settingsList).fillMaxHeight())
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(horizontal = Spacing.m),
+                    ) {
+                        // cabeçalho fixo; só o conteúdo rola
+                        ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            SectionDetail(open, uiState, actions)
+                            Spacer(Modifier.height(Spacing.l))
+                        }
+                    }
+                }
+            } else {
+                BackHandler(enabled = section != null) { onSection(null) }
+                Crossfade(section, label = "section") { open ->
+                    if (open == null) {
+                        SectionList(uiState, null, onSection, Modifier.fillMaxSize())
+                    } else {
+                        CenteredContent(Modifier.fillMaxSize()) {
+                            Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
+                                ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = { onSection(null) })
+                                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                                    SectionDetail(open, uiState, actions)
+                                    Spacer(Modifier.height(Spacing.l))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, onSection: (SettingsSection) -> Unit, modifier: Modifier = Modifier) {
+    CenteredContent(modifier) {
+        Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
+            ScreenHeader(stringResource(R.string.settings_title), Modifier.padding(top = Spacing.s, bottom = Spacing.s))
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                SettingsSection.entries.forEach { s ->
+                    SongListItem(
+                        title = stringResource(s.title),
+                        subtitle = summary(s, uiState),
+                        onClick = { onSection(s) },
+                        containerColor = if (s == selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                        leading = {
+                            Icon(s.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        },
+                        trailing = if (selected == null) ({
+                            Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }) else null,
+                    )
+                }
+                Text(
+                    stringResource(R.string.settings_version, uiState.version),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = Spacing.m),
+                )
+            }
+        }
+    }
+}
+
+/** Resumo de cada seção na lista (o que está valendo agora). */
+@Composable
+private fun summary(s: SettingsSection, ui: SettingsUiState): String = when (s) {
+    SettingsSection.LYRICS -> stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
+        when (ui.look.columns) {
+            StageColumns.AUTO -> ""
+            StageColumns.ONE -> " · " + stringResource(R.string.settings_columns_one_short)
+            StageColumns.TWO -> " · " + stringResource(R.string.settings_columns_two_short)
+        } +
+        if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
+    SettingsSection.SECTIONS -> stringResource(if (ui.look.showSections) R.string.settings_sections_shown else R.string.settings_sections_hidden)
+    SettingsSection.PEDAL -> if (ui.look.pedalName.isEmpty()) stringResource(R.string.settings_pedal_none_short)
+    else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
+    SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
+    SettingsSection.UPDATE -> stringResource(R.string.settings_update_installed, ui.version) +
+        if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
+    SettingsSection.LIBRARY -> pluralStringResource(R.plurals.song_count, ui.songCount, ui.songCount) + " · " +
+        pluralStringResource(R.plurals.set_count, ui.setCount, ui.setCount)
+}
+
+@Composable
+private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        when (section) {
+            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions)
+            SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
+            SettingsSection.PEDAL -> PedalDetail(uiState, actions)
+            SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
+            SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
+            SettingsSection.UPDATE -> UpdateDetail(uiState, actions)
+        }
+    }
+}
+
+@Composable
+private fun LyricsDetail(look: Look, actions: SettingsActions) {
+    // o tamanho muda ao vivo na prévia e só grava ao soltar o controle
+    var font by remember(look.fontSp) { mutableFloatStateOf(look.fontSp) }
+    SettingsCard(stringResource(R.string.settings_font_card)) {
+        // controle em cima e prévia de altura fixa embaixo: mudar o tamanho não mexe na tela
+        Text(stringResource(R.string.settings_font_value, font.roundToInt()), style = MaterialTheme.typography.headlineSmall)
+        Slider(
+            value = font,
+            onValueChange = { font = it },
+            onValueChangeFinished = { actions.onFont(font) },
+            valueRange = Look.MIN_FONT..Look.MAX_FONT,
+            steps = (Look.MAX_FONT - Look.MIN_FONT).toInt() - 1,
+        )
+        Surface(
+            color = Color(look.bg),
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview),
+        ) {
+            Text(
+                lyricsAnnotated(stringResource(R.string.settings_preview_text), SectionLang.PT, Color(look.sectionColor), look.showSections),
+                style = TextStyle(
+                    color = Color(look.fg),
+                    fontSize = font.sp,
+                    lineHeight = (font * 1.25f).sp,
+                    fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
+                ),
+                modifier = Modifier.padding(Spacing.m).clipToBounds(),
+            )
+        }
+        Text(stringResource(R.string.settings_font_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    SettingsCard(stringResource(R.string.settings_columns)) {
+        val options = listOf(
+            StageColumns.AUTO to R.string.settings_columns_auto,
+            StageColumns.ONE to R.string.settings_columns_one,
+            StageColumns.TWO to R.string.settings_columns_two,
+        )
+        // pontas em pílula, como os botões do resto do app (Material 3 Expressive)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            options.forEachIndexed { i, (c, label) ->
+                SegmentedButton(
+                    selected = look.columns == c,
+                    onClick = { actions.onColumns(c) },
+                    shape = SegmentedButtonDefaults.itemShape(i, options.size, baseShape = CircleShape),
+                ) { Text(stringResource(label)) }
+            }
+        }
+        Text(stringResource(R.string.settings_columns_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    SettingsCard(stringResource(R.string.settings_colors)) {
+        Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
+        ColorSwatchRow(StagePalette.text, look.fg, actions.onTextColor)
+        Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
+        ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
+        SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
+    }
+}
+
+@Composable
+private fun SectionsDetail(look: Look, actions: SettingsActions) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    SettingsCard(stringResource(R.string.settings_sections_look)) {
+        Text(stringResource(R.string.settings_sections_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
+        ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
+        SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
+    }
+    SettingsCard(stringResource(R.string.settings_normalize_card)) {
+        Text(stringResource(R.string.settings_normalize_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, tone = ButtonTone.Tonal)
+    }
+    if (confirming) {
+        ConfirmDialog(
+            message = stringResource(R.string.settings_normalize_confirm),
+            confirmLabel = stringResource(R.string.settings_normalize_ok),
+            onConfirm = actions.onNormalize,
+            onDismiss = { confirming = false },
+            destructive = false,
+        )
+    }
+}
+
+@Composable
+private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
+    val name = uiState.look.pedalName
+    SettingsCard(stringResource(R.string.settings_pedal_yours)) {
+        if (name.isEmpty()) {
+            Text(stringResource(R.string.settings_pedal_none), style = MaterialTheme.typography.bodyLarge)
+        } else {
+            Text(name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                stringResource(if (uiState.pedalConnected) R.string.settings_pedal_connected else R.string.settings_pedal_disconnected),
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (uiState.pedalConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
+        }
+        ActionButton(stringResource(R.string.settings_pair_pedal), actions.onPairPedal, icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal)
+    }
+    SettingsCard(stringResource(R.string.settings_pedal_test_card)) {
+        val key = uiState.lastKey
+        // como no another app: o botão apertado por último pode ser ligado a outro comando do palco
+        if (key != null) PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    if (key == null) stringResource(R.string.settings_pedal_test)
+                    else stringResource(
+                        R.string.settings_pedal_last,
+                        pedalKeyName(key),
+                        stringResource(
+                            when (key.action) {
+                                PedalAction.NEXT -> R.string.settings_pedal_next
+                                PedalAction.PREVIOUS -> R.string.settings_pedal_previous
+                                PedalAction.NEXT_SONG -> R.string.settings_pedal_next_song
+                                PedalAction.PREVIOUS_SONG -> R.string.settings_pedal_previous_song
+                                PedalAction.NONE -> R.string.settings_pedal_unused
+                            },
+                        ),
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (key == null || key.action == PedalAction.NONE) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
+                )
+                if (key != null) {
+                    Text(
+                        if (key.device.isEmpty()) stringResource(R.string.settings_pedal_from_device_builtin) else stringResource(R.string.settings_pedal_from_device, key.device),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+    PedalKeysCard(uiState.look.pedalKeys, actions)
+    MidiCard(uiState.midi, uiState.look, actions)
+}
+
+@Composable
+private fun pedalKeyName(key: PedalKeyUi): String = if (MidiCode.isMidi(key.keyCode)) pedalKeyName(key.keyCode) else key.name
+
+/** Nome do botão: a tecla como o Android chama (PAGE_DOWN) ou a mensagem MIDI. */
+@Composable
+private fun pedalKeyName(code: Int): String {
+    if (!MidiCode.isMidi(code)) {
+        // tecla sem nome conhecido pelo Android: vem só o número
+        val name = KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_")
+        return name.toIntOrNull()?.let { stringResource(R.string.pedal_key_code, it) } ?: name
+    }
+    val n = MidiCode.number(code)
+    val ch = MidiCode.channel(code)
+    return when (MidiCode.kind(code)) {
+        MidiCode.Kind.CC -> stringResource(R.string.midi_cc, n, ch)
+        MidiCode.Kind.NOTE -> stringResource(R.string.midi_note, n, ch)
+        MidiCode.Kind.PROGRAM -> stringResource(R.string.midi_program, n, ch)
+    }
+}
+
+@Composable
+private fun MidiCard(midi: MidiState, look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_midi)) {
+        if (!midi.supported) {
+            Text(stringResource(R.string.settings_midi_unsupported), style = MaterialTheme.typography.bodyLarge)
+            return@SettingsCard
+        }
+        SwitchRow(stringResource(R.string.settings_midi_usb_switch), look.midiUsb, actions.onMidiUsb)
+        Text(stringResource(R.string.settings_midi_usb_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (midi.connected.isEmpty()) {
+            Text(stringResource(R.string.settings_midi_none), style = MaterialTheme.typography.bodyLarge)
+        } else {
+            midi.connected.forEach { d ->
+                Text(
+                    stringResource(R.string.settings_midi_connected, d.name, stringResource(if (d.bluetooth) R.string.settings_midi_bt else R.string.settings_midi_usb)),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        if (look.midiBtAddress.isNotEmpty()) {
+            val on = midi.connected.any { it.bluetooth }
+            Text(stringResource(R.string.settings_midi_saved, look.midiBtName), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            if (!on) Text(stringResource(R.string.settings_midi_waiting), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = actions.onMidiForget) { Text(stringResource(R.string.settings_midi_forget)) }
+        }
+        ActionButton(
+            stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_midi_scan),
+            actions.onMidiScan,
+            icon = AppIcons.Bluetooth,
+            tone = ButtonTone.Tonal,
+            enabled = !midi.scanning,
+        )
+        if (midi.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
+        midi.found.forEach { f ->
+            SongListItem(title = f.name, subtitle = stringResource(R.string.settings_midi_choose), onClick = { actions.onMidiChoose(f) })
+        }
+        when {
+            midi.bluetoothOff -> Text(stringResource(R.string.settings_midi_bt_off), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            midi.searched && !midi.scanning && midi.found.isEmpty() ->
+                Text(stringResource(R.string.settings_midi_found_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
+        Text(stringResource(R.string.settings_midi_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            Text(stringResource(R.string.settings_midi_location), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun pedalActionLabel(a: PedalAction): String = stringResource(
+    when (a) {
+        PedalAction.NEXT -> R.string.settings_pedal_cmd_next
+        PedalAction.PREVIOUS -> R.string.settings_pedal_cmd_previous
+        PedalAction.NEXT_SONG -> R.string.settings_pedal_cmd_next_song
+        PedalAction.PREVIOUS_SONG -> R.string.settings_pedal_cmd_previous_song
+        PedalAction.NONE -> R.string.settings_pedal_cmd_none
+    },
+)
+
+/** Os botões ligados a outro comando, sempre à vista: tocar troca o comando, ✕ volta aquele botão ao padrão. */
+@Composable
+private fun PedalKeysCard(keys: Map<Int, PedalAction>, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_pedal_keys)) {
+        if (keys.isEmpty()) {
+            Text(stringResource(R.string.settings_pedal_keys_none), style = MaterialTheme.typography.bodyLarge)
+            return@SettingsCard
+        }
+        keys.forEach { (code, action) ->
+            PedalKeyRow(pedalKeyName(code), action, { actions.onPedalAction(code, it) }, { actions.onPedalAction(code, PedalAction.default(code)) })
+        }
+        TextButton(onClick = actions.onResetPedalKeys) {
+            Text(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size))
+        }
+    }
+}
+
+@Composable
+private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, onRemove: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { open = true }.padding(start = Spacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        ) {
+            // nome em cima, comando embaixo: o nome do MIDI é longo e quebrava a linha no celular
+            Column(Modifier.weight(1f).padding(vertical = Spacing.xs)) {
+                Text(name, style = MaterialTheme.typography.bodyLarge)
+                Text(pedalActionLabel(action), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            PedalAction.entries.forEach { a ->
+                DropdownMenuItem(text = { Text(pedalActionLabel(a)) }, onClick = { onSelect(a); open = false })
+            }
+        }
+    }
+}
+
+/** Escolha do comando do botão (lista que abre, cabe também no celular). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val label: @Composable (PedalAction) -> String = { pedalActionLabel(it) }
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
+        TextField(
+            value = label(selected),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.settings_pedal_command)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            shape = MaterialTheme.shapes.small,
+            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            PedalAction.entries.forEach { a ->
+                DropdownMenuItem(
+                    text = { Text(label(a)) },
+                    onClick = { onSelect(a); open = false },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScreenDetail(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_screen)) {
+        SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
+        Text(stringResource(R.string.settings_keep_screen_on_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_library)) {
+        Text(
+            pluralStringResource(R.plurals.song_count, uiState.songCount, uiState.songCount) + " · " +
+                pluralStringResource(R.plurals.set_count, uiState.setCount, uiState.setCount),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            ActionButton(stringResource(R.string.settings_import_file), actions.onImport, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.settings_export_file), actions.onExport, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+        }
+        Text(stringResource(R.string.settings_import_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // discreto: só para quem quer saber o que a atualização do Drive mudou (e desfazer)
+        TextButton(onClick = actions.onSyncDetails) { Text(stringResource(R.string.sync_details_open)) }
+    }
+}
+
+@Composable
+private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
+    val up = uiState.update
+    SettingsCard(stringResource(R.string.settings_update)) {
+        Text(stringResource(R.string.settings_update_installed, uiState.version), style = MaterialTheme.typography.bodyLarge)
+        val status = when (up) {
+            UpdateState.UpToDate -> stringResource(R.string.settings_update_latest)
+            is UpdateState.Available -> stringResource(R.string.settings_update_available, up.versionName)
+            is UpdateState.Downloading -> stringResource(R.string.settings_update_downloading, up.percent)
+            UpdateState.Ready -> stringResource(R.string.settings_update_ready)
+            UpdateState.Offline -> stringResource(R.string.settings_update_offline)
+            UpdateState.DownloadFailed -> stringResource(R.string.settings_update_failed)
+            UpdateState.Idle, UpdateState.Checking -> null
+        }
+        status?.let {
+            val error = up == UpdateState.Offline || up == UpdateState.DownloadFailed
+            Text(it, style = MaterialTheme.typography.bodyLarge, color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+        }
+        if (up is UpdateState.Downloading) {
+            LinearProgressIndicator(progress = { up.percent / 100f }, modifier = Modifier.fillMaxWidth())
+        }
+        when (up) {
+            is UpdateState.Available, UpdateState.DownloadFailed ->
+                ActionButton(stringResource(R.string.settings_update_download), actions.onDownloadUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
+            UpdateState.Ready ->
+                ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
+            is UpdateState.Downloading -> Unit
+            else -> ActionButton(
+                stringResource(if (up == UpdateState.Checking) R.string.settings_update_checking else R.string.settings_update_check),
+                actions.onCheckUpdate,
+                Modifier.fillMaxWidth(),
+                enabled = up != UpdateState.Checking,
+                tone = ButtonTone.Tonal,
+            )
+        }
+        Text(stringResource(R.string.settings_update_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+private val previewState = SettingsUiState(
+    loading = false,
+    look = Look(pedalName = "PageFlip Firefly"),
+    songCount = 42,
+    setCount = 3,
+    lastKey = PedalKeyUi("PAGE_DOWN", PedalAction.NEXT, "PageFlip Firefly"),
+    version = "0.2",
+    pedalConnected = true,
+)
+
+@LightPreview
+@Composable
+private fun SettingsLightPreview() = StagebookTheme(darkTheme = false) { SettingsScreen(previewState, SettingsActions()) }
+
+@DarkPreview
+@Composable
+private fun SettingsDarkPreview() = StagebookTheme(darkTheme = true) { SettingsScreen(previewState, SettingsActions(), section = SettingsSection.PEDAL) }
