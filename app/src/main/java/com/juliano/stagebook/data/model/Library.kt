@@ -42,6 +42,22 @@ enum class StageFont {
     @SerialName("mono") MONO,
 }
 
+/** Instrumento dos desenhos de acorde. Violão e guitarra têm a mesma afinação (mesmos desenhos). */
+enum class Instrument(val chordPro: String) {
+    @SerialName("violao") VIOLAO("guitar"),
+    @SerialName("guitarra") GUITARRA("guitar"),
+    @SerialName("ukulele") UKULELE("ukulele"),
+    @SerialName("cavaquinho") CAVAQUINHO("cavaquinho"),
+    @SerialName("teclado") TECLADO("keyboard"),
+}
+
+/** Onde aparece a lista com os desenhos dos acordes da música. */
+enum class ChordListPlace {
+    @SerialName("none") NONE,
+    @SerialName("top") TOP,
+    @SerialName("bottom") BOTTOM,
+}
+
 enum class StageColumns {
     @SerialName("auto") AUTO,   // 2 colunas no tablet deitado, 1 no resto
     @SerialName("one") ONE,
@@ -75,6 +91,8 @@ data class Look(
     val translateSections: Boolean = true,
     val font: StageFont = StageFont.DEFAULT,        // fonte da letra
     val chordFont: StageFont = StageFont.DEFAULT,   // fonte dos acordes
+    val instrument: Instrument = Instrument.VIOLAO,   // desenhos de acorde (popup e lista)
+    val chordList: ChordListPlace = ChordListPlace.NONE,
 ) {
     companion object {
         const val MIN_FONT = 16f
