@@ -1,5 +1,8 @@
 package com.juliano.stagebook
 
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -346,6 +349,36 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stagePlayerPlayingPhone() = shoot("celular_11_player_tocando") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true)
+    }
+
+    // ---- jornada: ligar uma faixa a uma música (celular) ----
+    @Test @Config(qualifiers = PHONE)
+    fun journeyTrack1Settings() = shoot("jornada_faixa_1_ajustes_player") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.PLAYER) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun journeyTrack2NoTrack() = shoot("jornada_faixa_2_palco_sem_faixa") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun journeyTrack3WithTrack() = shoot("jornada_faixa_3_palco_com_faixa") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    /** Toque longo no play: o menu de trocar ou tirar a faixa (abre em outra janela). */
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun journeyTrack4Menu() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+            }
+        }
+        compose.onNodeWithContentDescription("Tocar a faixa").performTouchInput { longClick() }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/jornada_faixa_4_menu.png")
     }
 
     @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
