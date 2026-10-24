@@ -385,8 +385,11 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="mixer_norm_about">Sobre a normalização</string>
     <string name="mixer_edit">Editar o canal</string>
     <string name="mixer_done">Pronto</string>
-    <string name="mixer_center">Centralizar</string>
-    <string name="mixer_stereo">Par estéreo</string>
+    <string name="mixer_eq_switch">Passar pelo equalizador</string>
+    <string name="mixer_center_one">Tocar no meio (igual na esquerda e na direita)</string>
+    <string name="mixer_center_pair">Juntar os dois lados em mono</string>
+    <string name="mixer_center_short">Mono</string>
+    <string name="mixer_join">Unir com o canal %1$d (estéreo)</string>
     <string name="mixer_norm_help">Volume: todas as músicas no mesmo volume percebido. Pico: o mesmo pico em todas (bom para click e guia). Medido uma vez por backing track.</string>
     <string name="eq_title">Equalizador</string>
     <string name="eq_on">Equalizador ligado</string>

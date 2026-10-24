@@ -9,18 +9,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,7 +89,7 @@ private fun Header(first: Int, strip: MixChannel, pair: Boolean, onEdit: () -> U
         if (pair) stringResource(R.string.mixer_output_pair, output + 1, output + 2) else stringResource(R.string.mixer_output_one, output + 1),
         if (strip.norm != NormMode.NONE) normName(strip.norm) else null,
         if (strip.eq) stringResource(R.string.mixer_eq) else null,
-        if (strip.center) stringResource(R.string.mixer_center) else null,
+        if (strip.center) stringResource(R.string.mixer_center_short) else null,
     ).joinToString(" · ")
     Row(
         modifier.clip(MaterialTheme.shapes.small).clickable(onClickLabel = stringResource(R.string.mixer_edit), onClick = onEdit).padding(Spacing.xs),
@@ -144,16 +143,24 @@ fun MixerChannelForm(first: Int, strip: MixChannel, pair: Boolean, canPair: Bool
         NameField(strip, channelTitle(first, pair), onChange, Modifier.fillMaxWidth())
         NormDropdown(strip, onChange, Modifier.fillMaxWidth())
         OutputDropdown(first, strip, pair, onChange, Modifier.fillMaxWidth())
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            FilterChip(strip.eq, { onChange(strip.copy(eq = !strip.eq)) }, { Text(stringResource(R.string.mixer_eq)) })
-            FilterChip(strip.center, { onChange(strip.copy(center = !strip.center)) }, { Text(stringResource(R.string.mixer_center)) })
-            if (canPair) {
-                FilterChip(strip.stereo, { onChange(strip.copy(stereo = !strip.stereo)) }, { Text(stringResource(R.string.mixer_stereo)) })
-            }
+        OptionSwitch(stringResource(R.string.mixer_eq_switch), strip.eq) { onChange(strip.copy(eq = it)) }
+        OptionSwitch(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center) {
+            onChange(strip.copy(center = it))
+        }
+        // une este canal físico com o seguinte num par estéreo (no par, separa de novo)
+        if (canPair) {
+            OptionSwitch(stringResource(R.string.mixer_join, first + 2), strip.stereo) { onChange(strip.copy(stereo = it)) }
         }
         HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
     }
 }
+
+@Composable
+private fun OptionSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) =
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
 
 @Composable
 private fun NameField(strip: MixChannel, title: String, onChange: (MixChannel) -> Unit, modifier: Modifier) = OutlinedTextField(
