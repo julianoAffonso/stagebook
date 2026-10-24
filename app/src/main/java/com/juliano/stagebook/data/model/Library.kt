@@ -103,7 +103,7 @@ data class Look(
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)
     val midiBtAddress: String = "",   // pedal MIDI Bluetooth escolhido em Ajustes (o app reconecta sozinho)
     val midiBtName: String = "",
-    // pedal MIDI pelo USB: desligado, o app não abre nada no USB (fica livre para a interface de áudio da FLOW)
+    // pedal MIDI pelo USB: desligado, o app não abre nada no USB (fica livre para a interface de áudio USB)
     val midiUsb: Boolean = true,
     // cifras (etapa 3): perfil "letra e cifra" (false = só letra), tamanho do acorde em relação à letra e cor
     val chords: Boolean = true,
@@ -116,7 +116,7 @@ data class Look(
     val instrument: Instrument = Instrument.VIOLAO,   // desenhos de acorde (popup e lista)
     val chordList: ChordListPlace = ChordListPlace.NONE,
     val chordTap: Boolean = true,
-    // modo player (faixas, USB interface, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço
+    // modo player (faixas, saída USB, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço
     val playerMode: Boolean = false,
     // importação: os sites de cada tipo; o primeiro de cada lista é o padrão (onde o importador abre)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,

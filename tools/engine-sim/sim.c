@@ -1,6 +1,6 @@
 // Simulador do motor (engine.c) no Mac, sem o tablet e sem a mesa.
 //
-// Uma USB interface falsa responde aos ioctl do usbfs no ritmo real (cada URB = 8 pacotes de 125 µs)
+// Uma interface USB falsa (8 saídas) responde aos ioctl do usbfs no ritmo real (cada URB = 8 pacotes de 125 µs)
 // e devolve a entrada no relógio da mesa. O mesmo programa compila com o engine.c validado (tag
 // audio-validado) e com o atual, para comparar os dois. Ver run.sh.
 #include <errno.h>
@@ -86,7 +86,7 @@ void sim_free(void *p) {
     free(p);
 }
 
-// ---- USB interface falsa ----
+// ---- interface USB falsa ----
 #define QMAX 64
 typedef struct { struct usbdevfs_urb *u; double due; int st; } qent;
 static pthread_mutex_t dev_mx = PTHREAD_MUTEX_INITIALIZER;
@@ -281,7 +281,7 @@ static void reset_metrics(void) { pthread_mutex_lock(&dev_mx); iso_gaps = 0; wor
 #define MAX_STARVE 0.025
 
 
-// ---- mesa emulada: o que chega em cada canal da USB interface ----
+// ---- mesa emulada: o que chega em cada saída da interface ----
 // canais 1/2 da faixa (backing) entram no BT/USB; canais 3/4 (metrônomo) no 7/8
 static const char *CH_NAME[4] = {"BT/USB L", "BT/USB R", "7/8 L", "7/8 R"};
 typedef struct { double rms[4], peak[4]; long clip[4]; } meters;
@@ -558,7 +558,7 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof path, "%s/lufs-%s.txt", outdir, ENGINE_NAME);
     FILE *f = fopen(path, "w"); fprintf(f, "%.6f %.6f %.6f\n", mv[0], mv[1], mv[2]); fclose(f);
 
-    // 9) mesa emulada: o que cada canal da USB interface recebe
+    // 9) mesa emulada: o que cada saída da interface recebe
     printf("[9] mesa emulada: medidores por canal (trecho de 1:00 da faixa 44,1 kHz)\n");
     meters src = source_meters(ogg, 60000, 1.5);
     E_START();

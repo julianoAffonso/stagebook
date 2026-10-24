@@ -866,6 +866,9 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
         SwitchRow(stringResource(R.string.settings_player_mode), look.playerMode, actions.onPlayerMode)
         Text(stringResource(R.string.settings_player_mode_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+    SettingsCard(stringResource(R.string.settings_player_requirements)) {
+        Text(stringResource(R.string.settings_player_requirements_text), style = MaterialTheme.typography.bodyMedium)
+    }
 }
 
 @Composable

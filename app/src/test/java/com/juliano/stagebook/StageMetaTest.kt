@@ -38,7 +38,7 @@ class StageMetaTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val id = repo.saveSong(Song(title = "Música", author = "Banda", year = "1985", text = "linha"))
-        val vm = StageViewModel(repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)), StageGate(), com.juliano.stagebook.data.TrackStore(context))
+        val vm = StageViewModel(repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)), StageGate(), com.juliano.stagebook.data.TrackStore(context), com.juliano.stagebook.player.StagePlayer(context))
         assertEquals("Banda · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().meta)
         repo.updateSong(id) { it.copy(author = "Banda ao vivo") }
         assertEquals("Banda ao vivo · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.single().meta.startsWith("Banda ao vivo") } }.songs.single().meta)

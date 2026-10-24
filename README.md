@@ -3,7 +3,7 @@
 Letras, cifras e faixas de acompanhamento num app só, para tocar ao vivo no Android.
 
 > Em construção: este repositório nasceu em 24/10/2026 juntando dois apps de uso pessoal (letras com
-> setlist e pedal, e um player de faixas para a USB interface). O roteiro está em
+> setlist e pedal, e um player de faixas). O roteiro está em
 > `.claude/memoria/roteiro.md`.
 
 ## O que já faz
@@ -15,7 +15,13 @@ Letras, cifras e faixas de acompanhamento num app só, para tocar ao vivo no And
 
 ## A caminho
 - Cifras (ChordPro e acordes acima da letra) e perfil "só letra / letra e cifra".
-- Player nativo por música: OGG multicanal, MP3, WAV; USB interface por USB e interfaces multicanal.
+- Player nativo por música: OGG multicanal, MP3, WAV; qualquer interface de áudio USB (multicanal) ou a saída do aparelho.
+
+## Pré-requisitos do player (saída USB)
+- Interface de áudio USB **"class compliant"** (USB Audio Class 2.0): funciona no computador sem instalar driver.
+- Que aceite **48 kHz**.
+- Celular ou tablet com **USB OTG** e o cabo ou adaptador certo para ligar a interface.
+- Ainda não funcionam: interfaces só USB Audio 1.0, ou só de 44,1 kHz.
 - Português, español, italiano e English.
 
 ## Build

@@ -159,7 +159,7 @@
     <string name="settings_player_on_short">Ligado</string>
     <string name="settings_player_off_short">Desligado</string>
     <string name="settings_player_mode">Modo player (Backing track)</string>
-    <string name="settings_player_mode_help">Toca o backing track de cada música (OGG, MP3 ou WAV, com quantos canais tiver) na USB interface ou na saída do aparelho. Desligado, o app é só letra e cifra e nada do player fica carregado.</string>
+    <string name="settings_player_mode_help">Toca o backing track de cada música (OGG, MP3 ou WAV, com quantos canais tiver) numa interface de áudio USB ou na saída do aparelho. Desligado, o app é só letra e cifra e nada do player fica carregado.</string>
     <string name="settings_import_sites">Importação</string>
     <string name="settings_lyric_sites">Sites de letra</string>
     <string name="settings_chord_sites">Sites de cifra</string>
@@ -311,7 +311,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_midi_unsupported">Este aparelho não tem suporte a MIDI.</string>
     <string name="settings_midi_none">Nenhum aparelho MIDI conectado. Pedal USB: ligue o cabo (no tablet, com um adaptador USB OTG). Pedal Bluetooth: procure abaixo.</string>
     <string name="settings_midi_usb_switch">Pedal MIDI pelo USB</string>
-    <string name="settings_midi_usb_help">Desligado, o Stagebook não usa nada ligado no USB (deixa livre para uma interface de áudio, como a da USB interface).</string>
+    <string name="settings_midi_usb_help">Desligado, o Stagebook não usa nada ligado no USB (deixa livre para uma interface de áudio USB).</string>
     <string name="settings_midi_connected">Conectado: %1$s (%2$s)</string>
     <string name="settings_midi_usb">USB</string>
     <string name="settings_midi_bt">Bluetooth</string>
@@ -344,4 +344,17 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="update_offer_later">Agora não</string>
     <string name="update_offer_retry">Tentar de novo</string>
     <string name="update_offer_ready">Baixada. Toque em Instalar e confirme na tela do Android.</string>
+    <!-- player: avisos de saída, iguais para qualquer interface de áudio USB -->
+    <string name="player_channel">Player</string>
+    <string name="settings_player_requirements">O que a saída USB precisa</string>
+    <string name="settings_player_requirements_text">• Interface de áudio USB \"class compliant\" (USB Audio Class 2.0: funciona no computador sem instalar driver).\n• Que aceite 48 kHz.\n• Celular ou tablet com USB OTG e o cabo ou adaptador certo para ligar a interface.\n\nInterfaces só USB Audio 1.0, ou só de 44,1 kHz, ainda não funcionam.</string>
+    <string name="player_starting">Iniciando o player…</string>
+    <string name="player_turn_off">Desligar</string>
+    <string name="player_usb_none">Saída USB não detectada</string>
+    <string name="player_usb_permission">Aguardando a permissão para a saída USB…</string>
+    <string name="player_usb_connecting">Conectando à saída USB…</string>
+    <string name="player_usb_ready">Saída USB: %1$s</string>
+    <string name="player_usb_failed">A saída USB não respondeu. Tire e ponha o cabo.</string>
+    <string name="player_usb_denied">Permissão da saída USB negada</string>
+    <string name="player_no_track">Não deu para abrir o backing track</string>
 </resources>

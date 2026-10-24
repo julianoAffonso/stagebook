@@ -1,6 +1,7 @@
 package com.juliano.stagebook.ui.stage
 
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.juliano.stagebook.player.PlayerUi
+import com.juliano.stagebook.player.StagePlayer
 import com.juliano.stagebook.data.TrackStore
 import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.domain.Voicings
@@ -37,12 +38,15 @@ class StageViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val stageGate: StageGate,
     private val tracks: TrackStore,
+    private val player: StagePlayer,
 ) : ViewModel() {
-    /** Tocando agora? (o som entra com o serviço do player, etapa 4c; por ora só o estado do botão) */
-    private val _playing = MutableStateFlow(false)
-    val playing: StateFlow<Boolean> = _playing
+    /** Tocando (ou esperando a saída USB para tocar) e o aviso do player. */
+    val playerUi: StateFlow<PlayerUi> = player.ui
 
-    fun togglePlay() { _playing.value = !_playing.value }
+    fun togglePlay() = player.toggle()
+
+    /** Música na tela: o player anota o backing track dela (e para o da anterior). */
+    fun showSong(track: String) = player.open(track.takeIf { it.isNotEmpty() }?.let(tracks::file))
 
     /** Liga a faixa escolhida à música (copiada para o app); a anterior é apagada. Falso se o arquivo não serve. */
     suspend fun attachTrack(songId: String, uri: android.net.Uri): Boolean {
@@ -56,12 +60,15 @@ class StageViewModel @Inject constructor(
     fun removeTrack(songId: String) {
         val old = repository.song(songId)?.track.orEmpty()
         repository.updateSong(songId) { it.copy(track = "") }
+        player.open(null)
         tracks.remove(old)
-        _playing.value = false
     }
 
     init { stageGate.enter() }   // segura a sincronia com o Drive enquanto o palco está aberto
-    override fun onCleared() = stageGate.leave()
+    override fun onCleared() {
+        player.pause()   // sair do palco para o backing track
+        stageGate.leave()
+    }
     private val route = savedStateHandle.toRoute<Stage>()
     /** Música em que o palco abre (posição no setlist). */
     val start: Int = route.start
