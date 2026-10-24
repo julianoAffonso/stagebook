@@ -252,8 +252,8 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_columns_help">Automático escolhe para cada música: 2 colunas quando a letra não cabe numa página e as frases são curtas o bastante para meia tela; frases longas ficam em 1 coluna. Com 2 colunas, leia a da esquerda e depois a da direita; o pedal vira as duas juntas.</string>
     <string name="settings_bold_short">negrito</string>
     <string name="settings_sections_look">Títulos de seção</string>
-    <string name="settings_sections_shown">títulos visíveis</string>
-    <string name="settings_sections_hidden">títulos escondidos</string>
+    <string name="settings_sections_shown">Títulos visíveis</string>
+    <string name="settings_sections_hidden">Títulos escondidos</string>
     <string name="settings_normalize_card">Marcar seções</string>
     <string name="settings_normalize_help">Nas letras sem nenhum título de seção, identifica as partes pela repetição (a estrofe que se repete é o refrão). Títulos que já existem ficam como estão: o palco mostra na língua do app.</string>
     <string name="settings_screen_on_short">Fica ligada com o app aberto</string>
