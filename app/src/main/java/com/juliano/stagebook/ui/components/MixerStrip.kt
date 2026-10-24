@@ -142,6 +142,7 @@ fun MixerChannelForm(first: Int, strip: MixChannel, pair: Boolean, canPair: Bool
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         NameField(strip, channelTitle(first, pair), onChange, Modifier.fillMaxWidth())
         NormDropdown(strip, onChange, Modifier.fillMaxWidth())
+        HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
         OutputDropdown(first, strip, pair, onChange, Modifier.fillMaxWidth())
         OptionSwitch(stringResource(R.string.mixer_eq_switch), strip.eq) { onChange(strip.copy(eq = it)) }
         OptionSwitch(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center) {
@@ -151,7 +152,6 @@ fun MixerChannelForm(first: Int, strip: MixChannel, pair: Boolean, canPair: Bool
         if (canPair) {
             OptionSwitch(stringResource(R.string.mixer_join, first + 2), strip.stereo) { onChange(strip.copy(stereo = it)) }
         }
-        HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
     }
 }
 

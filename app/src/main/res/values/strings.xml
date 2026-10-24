@@ -390,7 +390,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="mixer_center_pair">Juntar os dois lados em mono</string>
     <string name="mixer_center_short">Mono</string>
     <string name="mixer_join">Unir com o canal %1$d (estéreo)</string>
-    <string name="mixer_norm_help">Volume: todas as músicas no mesmo volume percebido. Pico: o mesmo pico em todas (bom para click e guia). Medido uma vez por backing track.</string>
+    <string name="mixer_norm_help">Iguala o volume deste canal entre as músicas, sem você mexer no fader a cada uma.\n• Não: toca como veio gravado.\n• Volume: todas no mesmo volume percebido (LUFS), sem passar de -1 dB de pico. Bom para o backing.\n• Pico: todas com o mesmo pico (-6 dB). Bom para click e guia.\nO app mede cada backing track uma vez, antes do play.</string>
     <string name="eq_title">Equalizador</string>
     <string name="eq_on">Equalizador ligado</string>
     <string name="eq_help">Uma curva só, aplicada em cada canal marcado com EQ, cada um separado. Um limitador segura os picos.</string>
