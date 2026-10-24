@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.ui.components.OptionDropdown
 import com.juliano.stagebook.domain.Voicings
 import com.juliano.stagebook.ui.components.ChordDiagram
 import androidx.compose.ui.text.input.KeyboardType
@@ -443,10 +444,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
         SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
-        LegibilityWarnings(look)
-    }
-    SettingsCard(stringResource(R.string.settings_font_family)) {
+        // a fonte da letra no mesmo cartão (combo, escrita na própria fonte)
         FontPicker(look.font, actions.onFontFamily)
+        LegibilityWarnings(look)
     }
 }
 
@@ -512,7 +512,6 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             )
             Text(stringResource(R.string.settings_chords_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
-            Text(stringResource(R.string.settings_font_family), style = MaterialTheme.typography.bodyLarge)
             FontPicker(look.chordFont, actions.onChordFont)
             // a prévia logo depois do que ela mostra (tamanho, cor, fonte)
             Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
@@ -524,7 +523,6 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     // os desenhos dos acordes num cartão próprio (só no perfil letra e cifra), com um exemplo do instrumento
     if (look.chords) {
         SettingsCard(stringResource(R.string.settings_chord_shapes)) {
-            Text(stringResource(R.string.settings_instrument), style = MaterialTheme.typography.bodyLarge)
             InstrumentPicker(look.instrument, actions.onInstrument)
             Text(stringResource(R.string.settings_instrument_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
@@ -556,7 +554,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     }
 }
 
-/** O instrumento dos desenhos de acorde (violão e guitarra mostram os mesmos). */
+/** O instrumento dos desenhos de acorde, num combo (violão e guitarra mostram os mesmos). */
 @Composable
 private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Unit) {
     val names = mapOf(
@@ -566,18 +564,10 @@ private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Uni
         Instrument.CAVAQUINHO to R.string.instrument_cavaquinho,
         Instrument.TECLADO to R.string.instrument_teclado,
     )
-    Instrument.entries.forEach { i ->
-        Row(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).selectable(i == selected, role = Role.RadioButton) { onSelect(i) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(selected = i == selected, onClick = null, modifier = Modifier.padding(Spacing.s))
-            Text(stringResource(names.getValue(i)), style = MaterialTheme.typography.bodyLarge)
-        }
-    }
+    OptionDropdown(stringResource(R.string.settings_instrument), Instrument.entries, selected, onSelect, nameOf = { stringResource(names.getValue(it)) })
 }
 
-/** As fontes do palco, cada uma escrita nela mesma (ver a diferença sem ler o nome). */
+/** A fonte do palco num combo: o campo e cada opção escritos na própria fonte. */
 @Composable
 private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
     val names = mapOf(
@@ -586,15 +576,14 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
         StageFont.SERIF to R.string.font_serif,
         StageFont.MONO to R.string.font_mono,
     )
-    StageFont.entries.forEach { f ->
-        Row(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).selectable(f == selected, role = Role.RadioButton) { onSelect(f) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(selected = f == selected, onClick = null, modifier = Modifier.padding(Spacing.s))
-            Text(stringResource(names.getValue(f)), style = MaterialTheme.typography.titleMedium.copy(fontFamily = f.family))
-        }
-    }
+    OptionDropdown(
+        stringResource(R.string.settings_font_family),
+        StageFont.entries,
+        selected,
+        onSelect,
+        nameOf = { stringResource(names.getValue(it)) },
+        styleOf = { MaterialTheme.typography.titleMedium.copy(fontFamily = it.family) },
+    )
 }
 
 /** A prévia dos acordes não passa deste tamanho (a letra grande não caberia na caixa). */
@@ -802,35 +791,10 @@ private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalActio
     }
 }
 
-/** Escolha do comando do botão (lista que abre, cabe também no celular). */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Escolha do comando do botão (combo, cabe também no celular). */
 @Composable
-private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val label: @Composable (PedalAction) -> String = { pedalActionLabel(it) }
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
-        TextField(
-            value = label(selected),
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(stringResource(R.string.settings_pedal_command)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
-            shape = MaterialTheme.shapes.small,
-            colors = ExposedDropdownMenuDefaults.textFieldColors(),
-            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-        )
-        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            PedalAction.entries.forEach { a ->
-                DropdownMenuItem(
-                    text = { Text(label(a)) },
-                    onClick = { onSelect(a); open = false },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                )
-            }
-        }
-    }
-}
+private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> Unit) =
+    OptionDropdown(stringResource(R.string.settings_pedal_command), PedalAction.entries, selected, onSelect, nameOf = { pedalActionLabel(it) })
 
 /** Sites de importação: o primeiro de cada lista é o padrão (onde o importador abre); dá para tirar e acrescentar. */
 @Composable
@@ -903,15 +867,7 @@ private fun languageLabel(l: AppLanguage): String = stringResource(
 @Composable
 private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_language)) {
-        Languages.available.forEach { l ->
-            Row(
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).selectable(l == selected, role = Role.RadioButton) { actions.onLanguage(l) },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = l == selected, onClick = null, modifier = Modifier.padding(Spacing.s))
-                Text(languageLabel(l), style = MaterialTheme.typography.bodyLarge)
-            }
-        }
+        OptionDropdown(stringResource(R.string.settings_language), Languages.available, selected, actions.onLanguage, nameOf = { languageLabel(it) })
         Text(stringResource(R.string.settings_language_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
