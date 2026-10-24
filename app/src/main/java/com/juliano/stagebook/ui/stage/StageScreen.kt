@@ -1,5 +1,14 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.material3.AlertDialog
+import androidx.core.net.toUri
+import androidx.core.content.ContextCompat
+import android.provider.Settings
+import android.os.Build
+import android.content.pm.PackageManager
+import android.content.Intent
+import android.annotation.SuppressLint
+import android.Manifest
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.geometry.Rect
@@ -161,6 +170,38 @@ fun StageRoute(
     // a música na tela diz ao player qual backing track tocar; o aviso da saída aparece uma vez
     val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
     LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
+    // 1º play: avisa e pede para sair da economia de bateria (uma vez) e, no Android 13+, a notificação do player
+    var askBattery by rememberSaveable { mutableStateOf(false) }
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.togglePlay() }
+    fun onPlay() {
+        val starting = !(playerUi.playing || playerUi.waiting)
+        when {
+            starting && viewModel.needsBatteryAsk() -> askBattery = true
+            starting && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED ->
+                notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            else -> viewModel.togglePlay()
+        }
+    }
+    if (askBattery) {
+        fun answer(allow: Boolean) {
+            askBattery = false
+            viewModel.batteryAsked()
+            if (allow) {
+                @SuppressLint("BatteryLife")   // app de palco: tocar com a tela apagada é a função, com aviso antes
+                val ask = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${context.packageName}".toUri())
+                runCatching { context.startActivity(ask) }
+            }
+            onPlay()
+        }
+        AlertDialog(
+            onDismissRequest = { answer(false) },
+            title = { Text(stringResource(R.string.player_battery_title)) },
+            text = { Text(stringResource(R.string.player_battery_text)) },
+            confirmButton = { TextButton(onClick = { answer(true) }) { Text(stringResource(R.string.player_battery_ok)) } },
+            dismissButton = { TextButton(onClick = { answer(false) }) { Text(stringResource(R.string.player_battery_later)) } },
+        )
+    }
     LaunchedEffect(playerUi.message) {
         if (playerUi.message.isNotEmpty()) Toast.makeText(context, playerUi.message, Toast.LENGTH_LONG).show()
     }
@@ -175,7 +216,7 @@ fun StageRoute(
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
             playing = playerUi.playing || playerUi.waiting,
-            onTogglePlay = viewModel::togglePlay,
+            onTogglePlay = ::onPlay,
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
             onRemoveTrack = viewModel::removeTrack,
             onHiddenChords = viewModel::setHiddenChords,

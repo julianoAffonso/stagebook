@@ -12,7 +12,7 @@ STB=third_party
 build() {   # <abi> <compilador>
     mkdir -p "$OUT/$1"
     "$BIN/$2" -shared -fPIC -O2 -Wall -Wno-unused-but-set-variable -I$STB -o "$OUT/$1/libstagebook_audio.so" \
-        engine.c $STB/stb_vorbis.c -llog -lm
+        engine.c $STB/stb_vorbis.c -llog -lm -laaudio
 }
 build arm64-v8a aarch64-linux-android28-clang
 build armeabi-v7a armv7a-linux-androideabi28-clang

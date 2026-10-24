@@ -22,6 +22,7 @@ Letras, cifras e faixas de acompanhamento num app só, para tocar ao vivo no And
 - Que aceite **48 kHz**.
 - Celular ou tablet com **USB OTG** e o cabo ou adaptador certo para ligar a interface.
 - Ainda não funcionam: interfaces só USB Audio 1.0, ou só de 44,1 kHz.
+- Sem interface USB, o player toca na saída do próprio aparelho (fone, Bluetooth ou alto-falante).
 - Português, español, italiano e English.
 
 ## Build

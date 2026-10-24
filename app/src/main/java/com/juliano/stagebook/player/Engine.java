@@ -7,6 +7,8 @@ final class Engine {
     static native boolean start(int fd, int ep, int maxPacket, int channels, int subslot, int intf, int alt,
                                 int inEp, int inMaxPacket, int inFrameBytes);
     static native void stop();
+    // sem interface USB: toca pela saída do aparelho (AAudio, 48 kHz estéreo); falso se o Android não abriu
+    static native boolean startDevice();
     static native long load(String path);
     static native void play();
     static native void pause();

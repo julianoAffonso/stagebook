@@ -2,6 +2,8 @@ package com.juliano.stagebook.player
 
 import android.content.Context
 import android.content.Intent
+import android.os.PowerManager
+import androidx.core.content.edit
 import androidx.compose.runtime.Immutable
 import androidx.core.content.ContextCompat
 import com.juliano.stagebook.R
@@ -38,8 +40,8 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
     private val _ui = MutableStateFlow(PlayerUi())
     val ui: StateFlow<PlayerUi> = _ui
 
-    private var wanted: File? = null    // backing track da música aberta
-    private var loaded: File? = null    // o que está no motor
+    @Volatile private var wanted: File? = null    // backing track da música aberta
+    @Volatile private var loaded: File? = null    // o que está no motor
     private var durationMs = -1L
     private var endWatch: Job? = null
 
@@ -52,6 +54,16 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
         if (_ui.value.playing || _ui.value.waiting) pause()
         if (PlayerService.running) scope.launch { load() }
     }
+
+    /** Pedir para sair da economia de bateria (tocar com a tela apagada)? Só uma vez, e só se ainda não saiu. */
+    fun needsBatteryAsk(): Boolean {
+        val pm = context.getSystemService(PowerManager::class.java)
+        return !prefs.getBoolean(KEY_BATTERY_ASKED, false) && !pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    fun batteryAsked() = prefs.edit { putBoolean(KEY_BATTERY_ASKED, true) }
+
+    private val prefs get() = context.getSharedPreferences("player", Context.MODE_PRIVATE)
 
     fun toggle() = if (_ui.value.playing || _ui.value.waiting) pause() else play()
 
@@ -96,9 +108,11 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
         durationMs >= 0
     }
 
-    // Toca só com a saída USB pronta; sem ela, o play fica esperando (o serviço avisa quando conectar).
+    // Toca só com a saída pronta (USB ou do aparelho); sem ela, o play fica esperando (o serviço avisa quando
+    // conectar). Também retoma depois de uma reconexão: parar o motor zera o play dele, mas não a posição.
     private fun startIfConnected() {
-        if (!_ui.value.waiting || !PlayerService.connected || loaded == null || loaded != wanted) return
+        val ui = _ui.value
+        if (!(ui.waiting || ui.playing) || !PlayerService.connected || loaded == null || loaded != wanted) return
         Engine.play()
         PlayerService.playing(true)
         _ui.update { it.copy(playing = true, waiting = false) }
@@ -115,8 +129,7 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
     }
 
     private fun serviceChanged() {
-        val s = PlayerService.status
-        _ui.update { it.copy(message = if (PlayerService.connected) "" else s) }
+        _ui.update { it.copy(message = PlayerService.status) }
         if (PlayerService.connected) {
             startIfConnected()
         } else if (_ui.value.playing) {
@@ -127,9 +140,13 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
 
     companion object {
         const val END_POLL_MS = 250L
+        private const val KEY_BATTERY_ASKED = "batteryAsked"
         const val END_MARGIN_MS = 300L   // o fim real chega quando o último pacote sai; antes disso, já é fim
 
         @Volatile private var instance: StagePlayer? = null
+
+        /** Modo player desligado nos Ajustes: se o player chegou a subir, desliga tudo. */
+        fun turnOff() { instance?.shutdown() }
 
         /** O serviço mudou de estado (conectou, caiu, desligou): chamado na thread principal. */
         @JvmStatic

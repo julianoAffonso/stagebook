@@ -350,11 +350,17 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_player_requirements_text">• Interface de áudio USB \"class compliant\" (USB Audio Class 2.0: funciona no computador sem instalar driver).\n• Que aceite 48 kHz.\n• Celular ou tablet com USB OTG e o cabo ou adaptador certo para ligar a interface.\n\nInterfaces só USB Audio 1.0, ou só de 44,1 kHz, ainda não funcionam.</string>
     <string name="player_starting">Iniciando o player…</string>
     <string name="player_turn_off">Desligar</string>
-    <string name="player_usb_none">Saída USB não detectada</string>
     <string name="player_usb_permission">Aguardando a permissão para a saída USB…</string>
     <string name="player_usb_connecting">Conectando à saída USB…</string>
     <string name="player_usb_ready">Saída USB: %1$s</string>
     <string name="player_usb_failed">A saída USB não respondeu. Tire e ponha o cabo.</string>
     <string name="player_usb_denied">Permissão da saída USB negada</string>
+    <string name="player_usb_lost">Saída USB desconectada: esperando ela voltar</string>
+    <string name="player_device_out">Saída USB não detectada: tocando na saída do aparelho</string>
+    <string name="player_device_failed">A saída do aparelho não abriu</string>
+    <string name="player_battery_title">Tocar com a tela apagada</string>
+    <string name="player_battery_text">Para o backing track não parar com a tela apagada, o Android precisa liberar o Stagebook da economia de bateria. Na próxima tela, toque em Permitir.</string>
+    <string name="player_battery_ok">Continuar</string>
+    <string name="player_battery_later">Agora não</string>
     <string name="player_no_track">Não deu para abrir o backing track</string>
 </resources>

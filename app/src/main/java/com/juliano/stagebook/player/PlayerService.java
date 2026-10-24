@@ -54,6 +54,9 @@ public class PlayerService extends Service {
     static volatile boolean running;
     static volatile boolean connected;
     static volatile String status = "";
+    // tocando pela saída do aparelho (sem interface USB). Se a USB já esteve conectada e caiu, não cai para o
+    // aparelho no meio do show: espera a USB voltar (o click iria para o alto-falante).
+    boolean deviceOut, hadUsb;
 
     final Handler main = new Handler(Looper.getMainLooper());
     UsbManager um;
@@ -91,7 +94,11 @@ public class PlayerService extends Service {
         @Override
         public void run() {
             if (!running) return;
-            if (link != null && !Engine.isRunning()) {
+            if (deviceOut && !Engine.isRunning()) {
+                Log.w(TAG, "saída do aparelho caiu (" + Engine.status() + "): abrindo de novo");
+                releaseUsb();
+                connectUsb();
+            } else if (link != null && !Engine.isRunning()) {
                 Log.w(TAG, "fluxo USB caiu (" + Engine.status() + "): reconectando");
                 releaseUsb();
                 connectUsb();
@@ -150,8 +157,10 @@ public class PlayerService extends Service {
     int usbGen;               // muda a cada desligamento: uma conexão que termina depois dele é descartada
     boolean connecting;
 
+    // fecha a saída atual (USB ou do aparelho)
     void releaseUsb() {
         link = null;
+        deviceOut = false;
         connected = false;
         connecting = false;
         usbGen++;
@@ -164,7 +173,11 @@ public class PlayerService extends Service {
     void connectUsb() {
         if (link != null || connecting) return;
         UsbDevice d = UsbLink.find(um);
-        if (d == null) { setStatus(getString(R.string.player_usb_none)); return; }
+        if (d == null) {
+            if (hadUsb) setStatus(getString(R.string.player_usb_lost));
+            else useDevice();
+            return;
+        }
         if (!um.hasPermission(d)) {
             Intent it = new Intent(ACTION_USB_PERM).setPackage(getPackageName());
             int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
@@ -172,6 +185,7 @@ public class PlayerService extends Service {
             setStatus(getString(R.string.player_usb_permission));
             return;
         }
+        if (deviceOut) releaseUsb();   // a interface USB chegou: sai do aparelho e vai para ela
         connecting = true;
         int gen = usbGen;
         setStatus(getString(R.string.player_usb_connecting));
@@ -190,11 +204,32 @@ public class PlayerService extends Service {
         });
     }
 
+    // Sem interface USB: abre a saída do aparelho, também fora da tela.
+    void useDevice() {
+        if (deviceOut || connecting) return;
+        connecting = true;
+        int gen = usbGen;
+        usbOps.execute(() -> {
+            boolean ok = Engine.startDevice();
+            if (!ok) Log.w(TAG, Engine.status());
+            main.post(() -> { if (gen == usbGen) deviceReady(ok); });
+        });
+    }
+
+    void deviceReady(boolean ok) {
+        connecting = false;
+        if (!ok) { setStatus(getString(R.string.player_device_failed)); return; }
+        deviceOut = true;
+        connected = true;
+        setStatus(getString(R.string.player_device_out));
+    }
+
     // De volta na tela, com a conexão aberta (ou o erro dela).
     void usbReady(UsbLink l, String err) {
         connecting = false;
         if (err != null) { Log.w(TAG, err); setStatus(getString(R.string.player_usb_failed)); return; }
         link = l;
+        hadUsb = true;
         connected = true;
         connectedAt = SystemClock.elapsedRealtime();
         main.removeCallbacks(fbCheck);
@@ -208,7 +243,7 @@ public class PlayerService extends Service {
         public void onReceive(Context c, Intent i) {
             if (ACTION_USB_PERM.equals(i.getAction())) {
                 if (i.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) connectUsb();
-                else setStatus(getString(R.string.player_usb_denied));
+                else { setStatus(getString(R.string.player_usb_denied)); if (!hadUsb) useDevice(); }
             } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(i.getAction())) {
                 UsbDevice d = IntentCompat.getParcelableExtra(i, UsbManager.EXTRA_DEVICE, UsbDevice.class);
                 if (d != null && UsbLink.isAudioOut(d) && link == null) {
@@ -221,7 +256,7 @@ public class PlayerService extends Service {
                     releaseUsb();
                     fbRetries = 0;   // cabo novo: novas tentativas de pegar o relógio
                     holdWake(false);
-                    setStatus(getString(R.string.player_usb_none));
+                    setStatus(getString(R.string.player_usb_lost));
                 }
             }
         }
