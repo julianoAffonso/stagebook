@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onAllNodesWithText
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.juliano.stagebook.data.model.Look
 import com.juliano.stagebook.domain.PedalAction
@@ -370,6 +372,20 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE_LONGO)
     fun mixerPhone() = shoot("jornada_mixer_1_celular") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun helpTipOpenPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+                }
+            }
+        }
+        compose.onAllNodesWithText("Como funciona")[0].performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_4_explicacao.png")
     }
 
     @Test @Config(qualifiers = PHONE)
