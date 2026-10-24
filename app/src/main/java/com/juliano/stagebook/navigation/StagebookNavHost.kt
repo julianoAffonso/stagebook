@@ -15,11 +15,8 @@ import com.juliano.stagebook.ui.importer.ImportRoute
 import com.juliano.stagebook.ui.setlists.PickSongsRoute
 import com.juliano.stagebook.ui.setlists.SetlistDetailRoute
 import com.juliano.stagebook.ui.stage.StageRoute
-import com.juliano.stagebook.ui.sync.SyncDetailsRoute
 import com.juliano.stagebook.ui.AppUpdateDialog
-import com.juliano.stagebook.ui.SyncNoticeDialog
 import com.juliano.stagebook.data.UpdateOffer
-import com.juliano.stagebook.data.SyncNotice
 
 // Voltar e abrir outra tela só valem com a tela ainda na frente: um toque duplo em Salvar/OK/Voltar
 // desempilhava duas telas (a segunda era a Home, e o app ficava em branco), e um toque duplo no play
@@ -28,23 +25,14 @@ private inline fun NavBackStackEntry.ifResumed(go: () -> Unit) {
     if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) go()
 }
 
-/**
- * [notice]: o que a sincronia com o Drive mudou; [updateOffer]: versão nova do app. Os dois avisam por
- * cima de qualquer tela, nunca do palco, um de cada vez (a versão nova do app primeiro).
- */
+/** [updateOffer]: versão nova do app; avisa por cima de qualquer tela, nunca do palco. */
 @Composable
 fun StagebookNavHost(
-    notice: SyncNotice? = null,
-    onDismissNotice: () -> Unit = {},
     updateOffer: UpdateOffer? = null,
     updateActions: AppUpdateActions = AppUpdateActions(),
 ) {
     val nav = rememberNavController()
-    // a versão nova do app vem antes (as músicas esperam a decisão sobre ela)
-    when {
-        updateOffer != null -> AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
-        notice != null -> SyncNoticeDialog(notice, onDismissNotice, onDetails = { onDismissNotice(); nav.navigate(SyncReport) })
-    }
+    if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
     NavHost(
         navController = nav,
         startDestination = Home,
@@ -58,7 +46,6 @@ fun StagebookNavHost(
                 onImport = { entry.ifResumed { nav.navigate(Importer(it)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
                 onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
-                onSyncDetails = { entry.ifResumed { nav.navigate(SyncReport) } },
             )
         }
         composable<SongEditor> { SongEditorRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
@@ -75,12 +62,6 @@ fun StagebookNavHost(
             StageRoute(
                 onEditSong = { id, cursor -> entry.ifResumed { nav.navigate(SongEditor(songId = id, cursor = cursor)) } },
                 onBack = dropUnlessResumed { nav.popBackStack() },
-            )
-        }
-        composable<SyncReport> { entry ->
-            SyncDetailsRoute(
-                onBack = dropUnlessResumed { nav.popBackStack() },
-                onOpenSong = { entry.ifResumed { nav.navigate(Stage(songId = it)) } },
             )
         }
         composable<Importer> {

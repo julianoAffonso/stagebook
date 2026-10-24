@@ -62,7 +62,7 @@ class AppUpdateOffer @Inject constructor(
 
     /** "Agora não": a mesma versão só volta a ser oferecida amanhã. */
     fun decline() {
-        order.defer(code, remember = true)   // as músicas seguem na versão atual
+        order.defer(code, remember = true)
         _offer.value = null
     }
 
@@ -71,12 +71,10 @@ class AppUpdateOffer @Inject constructor(
         _offer.value = UpdateOffer.Downloading(0)
         _offer.value = try {
             val apk = updater.download { _offer.value = UpdateOffer.Downloading(it) }
-            // o instalador encerra o app: antes, termina uma gravação das músicas em andamento
-            withTimeoutOrNull(60_000) { order.awaitSyncIdle() }
             UpdateOffer.Ready(apk)
         } catch (e: IOException) {
             Log.w("stagebook", "versão nova não baixou", e)
-            order.defer(code, remember = false)   // não deu: as músicas não ficam esperando
+            order.defer(code, remember = false)
             UpdateOffer.Failed
         }
     }

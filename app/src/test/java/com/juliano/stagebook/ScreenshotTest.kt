@@ -121,27 +121,6 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
-    /** Entrada no app depois da sincronia com o Drive: o aviso do que mudou (é outra janela). */
-    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    @Test fun syncTablet() {
-        compose.setContent {
-            StagebookTheme {
-                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
-                com.juliano.stagebook.ui.SyncNoticeDialog(com.juliano.stagebook.data.SyncNotice(added = 12, updated = 3, sections = 1, mine = 2, meta = 1), onDismiss = {}, onDetails = {})
-            }
-        }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_sincronia.png")
-    }
-
-    @Test fun syncDetailsTablet() = shoot("tablet_6_sincronia_detalhes") {
-        com.juliano.stagebook.ui.sync.SyncDetailsScreen(com.juliano.stagebook.ui.sync.syncPreviewState, com.juliano.stagebook.ui.sync.SyncDetailsActions())
-    }
-
-    @Test @Config(qualifiers = PHONE)
-    fun syncDetailsPhone() = shoot("celular_6_sincronia_detalhes") {
-        com.juliano.stagebook.ui.sync.SyncDetailsScreen(com.juliano.stagebook.ui.sync.syncPreviewState, com.juliano.stagebook.ui.sync.SyncDetailsActions())
-    }
-
     /** Versão nova do app oferecida ao abrir (outra janela). */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun updateOfferTablet() {

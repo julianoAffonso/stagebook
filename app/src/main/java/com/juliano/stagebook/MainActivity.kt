@@ -10,7 +10,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.data.AppUpdateOffer
 import com.juliano.stagebook.data.AppUpdater
-import com.juliano.stagebook.data.LibrarySync
 import com.juliano.stagebook.data.MidiPedal
 import com.juliano.stagebook.data.UpdateOffer
 import com.juliano.stagebook.navigation.AppUpdateActions
@@ -39,7 +38,6 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var repository: LibraryRepository
-    @Inject lateinit var sync: LibrarySync
     @Inject lateinit var updateOffer: AppUpdateOffer
     @Inject lateinit var updater: AppUpdater
     @Inject lateinit var midi: MidiPedal
@@ -68,7 +66,6 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             StagebookTheme {
-                val notice by sync.notice.collectAsStateWithLifecycle()
                 val offer by updateOffer.offer.collectAsStateWithLifecycle()
                 val updateActions = remember {
                     AppUpdateActions(
@@ -80,16 +77,13 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(notice, sync::dismissNotice, offer, updateActions) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions) }
             }
         }
     }
 
-    // músicas do Drive depois de instalar/atualizar: baixa em silêncio, aplica fora do palco e avisa
-    // ao abrir o app ou sair do palco (ver LibrarySync)
     override fun onStart() {
         super.onStart()
-        sync.onEnter()
         updateOffer.onEnter()   // versão nova do app: procura em segundo plano e pergunta fora do palco
     }
 

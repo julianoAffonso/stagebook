@@ -16,15 +16,6 @@ data class Song(
     val year: String = "",
     val text: String = "",
     val zoom: Float = 1f,   // zoom desta música no palco (pinça), sobre o tamanho padrão dos ajustes
-    // impressão digital da letra como veio do Drive (sincronia): letra diferente dela foi editada aqui
-    // e a sincronia não troca; vazio = origem desconhecida, também não troca
-    val driveHash: String = "",
-    // marca da versão da atualização que o usuário recusou ("Manter a atual"): essa mesma versão não é
-    // oferecida de novo; uma versão diferente, sim
-    val declinedHash: String = "",
-    // o mesmo para título, artista e ano: marca dos dados como vieram do Drive, e a dos recusados
-    val driveMeta: String = "",
-    val declinedMeta: String = "",
 )
 
 @Immutable
