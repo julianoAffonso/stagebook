@@ -183,7 +183,7 @@ fun SongEditorScreen(
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
                     AnimatedVisibility(editingLyrics && !previewing) {
-                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Column(Modifier.padding(bottom = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             SectionBar(onPick = { kind ->
                                 edit(insertSection(shown, kind))
                             })
@@ -345,7 +345,8 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         Spacer(Modifier.weight(1f))
         Icon(AppIcons.Capo, stringResource(R.string.editor_capo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
-        Text(if (capo == 0) "–" else capo.toString(), style = MaterialTheme.typography.titleMedium)
+        // sem capo: 0 apagado (um "–" parecia um terceiro botão de menos)
+        Text(capo.toString(), style = MaterialTheme.typography.titleMedium, color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
         IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
     }
 }

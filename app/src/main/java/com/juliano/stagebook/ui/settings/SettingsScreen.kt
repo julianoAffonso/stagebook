@@ -262,7 +262,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
-    LANGUAGE(R.string.settings_language, AppIcons.Language),
+    LANGUAGE(R.string.settings_language, AppIcons.Translate),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
     UPDATE(R.string.settings_update, AppIcons.Download),
