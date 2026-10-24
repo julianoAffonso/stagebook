@@ -121,13 +121,12 @@ static void src_close(src_t *s) {
 
 static src_t g_src = {0};
 #define ENGINE_HAS_SRC 1   // o simulador lê a faixa por aqui (OGG, MP3 ou WAV)
+#define ENGINE_HAS_MIX 1   // a mistura é só por canal (setMix): o simulador manda a configuração equivalente
 static int g_src_rate = 0, g_src_ch = 0;
 static long g_src_len = 0;            // duração em quadros da fonte
 static int g_eof = 0;
 
 static volatile int g_playing = 0;
-static volatile float g_gain_backing = 1.0f, g_gain_click = 1.0f;
-static volatile float g_norm_backing = 1.0f, g_norm_click = 1.0f;   // ganho de normalização da música atual
 
 // Equalizador do backing (canais 1/2): 5 biquads em série (RBJ), protegidos por g_mx.
 #define EQ_BANDS 5
@@ -176,14 +175,6 @@ static inline float eq_run(int ch, float x) {
     return x;
 }
 
-// par do backing (L/R) já com EQ e ganhos: ganho único para os dois lados, para não deslocar a imagem
-static inline void lim_run(float *s) {
-    float p = fabsf(s[0]);
-    if (fabsf(s[1]) > p) p = fabsf(s[1]);
-    if (p * g_lim > LIM_CEIL) g_lim = LIM_CEIL / p;
-    s[0] *= g_lim; s[1] *= g_lim;
-    g_lim += (1.0f - g_lim) * LIM_REL;
-}
 
 // Medidores ao vivo (20/10/2026), só com a chave "Monitorar ao vivo" da tela. Desligada, o laço USB e
 // o decoder fazem o mesmo de antes: leem g_meter_on uma vez por URB / por bloco e pulam a medição.
@@ -301,13 +292,16 @@ static double now_s(void) {
 }
 
 // ---- mistura por canal (Stagebook, 24/10/2026) ----
-// Só com g_mix_custom (o usuário mexeu no mixer: par separado, roteamento, EQ em outro canal, mais de 4 canais).
-// Desligada, a saída roda o código validado na USB interface, sem tocar nisto. Protegida por g_mx.
-static int g_mix_custom = 0;
-static float g_ch_gain[LANES_MAX];         // fader × liga/desliga de cada canal da fonte
-static float g_ch_norm[LANES_MAX];         // normalização de cada canal
+// A única mistura do Stagebook (decisão do usuário: num app público, supor "1-2 backing, 3-4 click" é um risco).
+// O app manda a configuração de cada backing track (setMix); sem ela, cada canal vai para a saída de mesmo número,
+// com ganho 1 — nada é adivinhado. Com a configuração equivalente à antiga, o som é idêntico ao validado na USB interface
+// (simulador). Protegida por g_mx.
+static float g_ch_gain[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // fader × liga/desliga de cada canal da fonte
+static float g_ch_norm[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // normalização de cada canal
 static int g_ch_eq = 0;                     // bits: canais que passam pelo EQ (cada um separado)
-static float g_route[LANES_MAX][LANES_MAX]; // [saída][canal da fonte]: quanto do canal vai para a saída
+static float g_route[LANES_MAX][LANES_MAX] = {   // [saída][canal da fonte]: quanto do canal vai para a saída
+    {1}, {0, 1}, {0, 0, 1}, {0, 0, 0, 1}, {0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1},
+};
 
 // canais da fonte → saídas: ganho e normalização por canal, EQ nos marcados (limitador junto em todos eles,
 // para não deslocar a imagem, como no par do backing) e soma pela matriz de roteamento
@@ -354,13 +348,6 @@ static int ring_pop_locked(float *fr) {
     return 1;
 }
 
-// mapeia o quadro da fonte para 4 canais: 4ch = identidade; 2ch = backing; 1ch = backing (a mistura padrão,
-// validada na USB interface; no Stagebook roda na saída, sobre os canais da fonte guardados no ring)
-static void map_src(const float *in, float *out) {
-    if (g_src_ch >= 4) { out[0] = in[0]; out[1] = in[1]; out[2] = in[2]; out[3] = in[3]; }
-    else if (g_src_ch == 2) { out[0] = in[0]; out[1] = in[1]; out[2] = out[3] = 0; }
-    else { out[0] = out[1] = in[0]; out[2] = out[3] = 0; }
-}
 
 static void resampler_reset_locked(void)   /* com g_vmx */ {
     g_frac = 0.0; g_hist_fill = 0; memset(g_hist, 0, sizeof g_hist);
@@ -495,30 +482,19 @@ static void *usb_main(void *arg) {
             g_tot_out += nf; st_out_frames += nf; \
             if (nf * frame_bytes > g_maxpkt) nf = g_maxpkt / frame_bytes; \
             for (int f = 0; f < nf; f++) { \
-                float lane[LANES_MAX] = {0}, fr[OUT_CH] = {0, 0, 0, 0}; \
+                float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail; \
                 if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
                 if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
-                if (g_fade > 0) { if (ring_pop_locked(lane)) { g_consumed++; map_src(lane, fr); } else if (want_play && !g_eof) st_underrun++; } \
+                if (g_fade > 0) { if (ring_pop_locked(lane)) g_consumed++; else if (want_play && !g_eof) st_underrun++; } \
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
-                if (g_mix_custom) { \
-                    float outv[LANES_MAX]; \
-                    mix_custom(lane, outv); \
-                    for (int c = 0; c < g_dev_ch; c++) { \
-                        float s = c < LANES_MAX ? outv[c] : 0; \
-                        if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
-                        put_sample(b + off + c * g_subslot, s); \
-                    } \
-                } else { \
-                float gb = g_gain_backing * g_norm_backing * g_fade, gc = g_gain_click * g_norm_click * g_fade; \
-                float sb[2] = {fr[0] * gb, fr[1] * gb}; \
-                if (g_eq_on) { sb[0] = eq_run(0, fr[0]) * gb; sb[1] = eq_run(1, fr[1]) * gb; lim_run(sb); } \
+                float outv[LANES_MAX]; \
+                mix_custom(lane, outv); \
                 for (int c = 0; c < g_dev_ch; c++) { \
-                    float s = c < 2 ? sb[c] : (c < 4 ? fr[c] * gc : 0); \
+                    float s = c < LANES_MAX ? outv[c] : 0; \
                     if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
                     put_sample(b + off + c * g_subslot, s); \
-                } \
                 } \
                 off += frame_bytes; \
             } \
@@ -723,9 +699,6 @@ JNIEXPORT jlong JNICALL FN(position)(JNIEnv *e, jclass c) {
     return p;
 }
 
-JNIEXPORT void JNICALL FN(setGains)(JNIEnv *e, jclass c, jfloat backing, jfloat click) {
-    g_gain_backing = backing; g_gain_click = click;
-}
 
 JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray jg) {
     float g[EQ_BANDS] = {0};
@@ -737,13 +710,10 @@ JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray j
     pthread_mutex_unlock(&g_mx);
 }
 
-JNIEXPORT void JNICALL FN(setNorm)(JNIEnv *e, jclass c, jfloat backing, jfloat click) {
-    g_norm_backing = backing; g_norm_click = click;
-}
 
-// Mistura por canal: custom=false volta para a mistura validada (setGains/setNorm). gains/norms por canal da fonte,
-// eqMask com os canais que passam pelo EQ, route[saída * LANES_MAX + canal] (LANES_MAX × LANES_MAX).
-JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jboolean custom, jfloatArray jgain, jfloatArray jnorm, jint eqMask, jfloatArray jroute) {
+// Mistura: gains/norms por canal da fonte, eqMask com os canais que passam pelo EQ (cada um separado),
+// route[saída * LANES_MAX + canal] (LANES_MAX × LANES_MAX).
+JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloatArray jnorm, jint eqMask, jfloatArray jroute) {
     float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[LANES_MAX * LANES_MAX] = {0};
     if (jgain) (*e)->GetFloatArrayRegion(e, jgain, 0, LANES_MAX, gain);
     if (jnorm) (*e)->GetFloatArrayRegion(e, jnorm, 0, LANES_MAX, norm);
@@ -755,7 +725,6 @@ JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jboolean custom, jfloatAr
     // EQ ligando em outro canal: começa do zero (estado velho de outro canal estalaria)
     if (g_ch_eq != (int)eqMask) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; }
     g_ch_eq = (int)eqMask;
-    g_mix_custom = custom ? 1 : 0;
     pthread_mutex_unlock(&g_mx);
 }
 
@@ -798,7 +767,7 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     }
     g_mb_read = cur;
     pthread_mutex_unlock(&g_mx);
-    float gb = g_gain_backing * g_norm_backing;
+    float gb = g_ch_gain[0] * g_ch_norm[0];   // o espectro é do canal 1 (antes dos ganhos)
     for (int b = 0; b < SP_BINS; b++) out[OUT_CH + b] *= gb;
     jfloatArray a = (*e)->NewFloatArray(e, OUT_CH + SP_BINS);
     if (a) (*e)->SetFloatArrayRegion(e, a, 0, OUT_CH + SP_BINS, out);
