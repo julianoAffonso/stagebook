@@ -35,6 +35,8 @@
 
 #define OUT_RATE 48000
 #define OUT_CH 4
+// canais da fonte guardados no ring (Stagebook): até 8, cada um como veio; a mistura padrão remonta os 4 de antes
+#define LANES_MAX 8
 // 32 URBs x 8 pacotes = 32 ms na fila do USB. Com 8 (8 ms), o TCL ocupado (another app tocando no
 // alto-falante) atrasava a reposição em 10-16 ms e a USB interface ficava sem áudio: solavanco (19/10/2026).
 #define NURBS 32
@@ -50,7 +52,7 @@
 // Ordem: g_vmx antes de g_mx. A thread USB só pega g_mx.
 static pthread_mutex_t g_vmx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_mx = PTHREAD_MUTEX_INITIALIZER;
-static float g_ring[RING_FRAMES * OUT_CH];
+static float g_ring[RING_FRAMES * LANES_MAX];
 static int g_ring_r = 0, g_ring_w = 0, g_ring_n = 0;
 
 // ---- fonte de áudio: OGG (stb_vorbis, exatamente as chamadas da versão validada), MP3 ou WAV ----
@@ -132,7 +134,7 @@ static volatile float g_norm_backing = 1.0f, g_norm_click = 1.0f;   // ganho de 
 static const double EQ_FREQ[EQ_BANDS] = {80, 250, 1000, 3500, 10000};
 typedef struct { float b0, b1, b2, a1, a2; } eq_coef;
 static eq_coef g_eq[EQ_BANDS];
-static float g_eq_z[EQ_BANDS][2][2];      // estado [banda][canal][z1,z2]
+static float g_eq_z[EQ_BANDS][LANES_MAX][2];      // estado [banda][canal][z1,z2]
 static int g_eq_on = 0;
 // Limitador do backing com o EQ ligado (19/10/2026): o reforço não abaixa mais o volume todo; só os
 // picos que passariam de LIM_CEIL são segurados, na hora (sem estourar), e o ganho volta em ~150 ms.
@@ -257,7 +259,8 @@ static long g_consumed = 0;           // quadros de saída tocados desde o seek
 static float g_fade = 0.0f;           // 0..1, rampa para evitar estalo
 
 // reamostrador (Catmull-Rom) — histórico de 4 quadros da fonte
-static float g_hist[4][OUT_CH];
+static float g_hist[4][LANES_MAX];
+static int g_lanes = 4;               // canais da fonte no ring (até LANES_MAX), definido ao carregar
 static double g_frac = 0.0;
 static int g_hist_fill = 0;
 
@@ -297,26 +300,62 @@ static double now_s(void) {
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
+// ---- mistura por canal (Stagebook, 24/10/2026) ----
+// Só com g_mix_custom (o usuário mexeu no mixer: par separado, roteamento, EQ em outro canal, mais de 4 canais).
+// Desligada, a saída roda o código validado na USB interface, sem tocar nisto. Protegida por g_mx.
+static int g_mix_custom = 0;
+static float g_ch_gain[LANES_MAX];         // fader × liga/desliga de cada canal da fonte
+static float g_ch_norm[LANES_MAX];         // normalização de cada canal
+static int g_ch_eq = 0;                     // bits: canais que passam pelo EQ (cada um separado)
+static float g_route[LANES_MAX][LANES_MAX]; // [saída][canal da fonte]: quanto do canal vai para a saída
+
+// canais da fonte → saídas: ganho e normalização por canal, EQ nos marcados (limitador junto em todos eles,
+// para não deslocar a imagem, como no par do backing) e soma pela matriz de roteamento
+static inline void mix_custom(const float *lane, float *out) {
+    float s[LANES_MAX];
+    float p = 0;
+    for (int c = 0; c < g_lanes; c++) {
+        float g = g_ch_gain[c] * g_ch_norm[c] * g_fade;
+        if (g_eq_on && (g_ch_eq & (1 << c))) {
+            s[c] = eq_run(c, lane[c]) * g;
+            if (fabsf(s[c]) > p) p = fabsf(s[c]);
+        } else {
+            s[c] = lane[c] * g;
+        }
+    }
+    if (g_eq_on && g_ch_eq) {
+        if (p * g_lim > LIM_CEIL) g_lim = LIM_CEIL / p;
+        for (int c = 0; c < g_lanes; c++) if (g_ch_eq & (1 << c)) s[c] *= g_lim;
+        g_lim += (1.0f - g_lim) * LIM_REL;
+    }
+    for (int o = 0; o < LANES_MAX; o++) {
+        float a = 0;
+        for (int c = 0; c < g_lanes; c++) a += g_route[o][c] * s[c];
+        out[o] = a;
+    }
+}
+
 // ---- ring (protegido por g_mx) ----
 static void ring_clear_locked(void) { g_ring_r = g_ring_w = g_ring_n = 0; }
 
 static int ring_space_locked(void) { return RING_FRAMES - g_ring_n; }
 
 static void ring_push_locked(const float *fr) {
-    memcpy(&g_ring[g_ring_w * OUT_CH], fr, sizeof(float) * OUT_CH);
+    memcpy(&g_ring[g_ring_w * LANES_MAX], fr, sizeof(float) * LANES_MAX);
     g_ring_w = (g_ring_w + 1) % RING_FRAMES;
     g_ring_n++;
 }
 
 static int ring_pop_locked(float *fr) {
     if (g_ring_n == 0) return 0;
-    memcpy(fr, &g_ring[g_ring_r * OUT_CH], sizeof(float) * OUT_CH);
+    memcpy(fr, &g_ring[g_ring_r * LANES_MAX], sizeof(float) * LANES_MAX);
     g_ring_r = (g_ring_r + 1) % RING_FRAMES;
     g_ring_n--;
     return 1;
 }
 
-// mapeia o quadro da fonte para 4 canais: 4ch = identidade; 2ch = backing; 1ch = backing
+// mapeia o quadro da fonte para 4 canais: 4ch = identidade; 2ch = backing; 1ch = backing (a mistura padrão,
+// validada na USB interface; no Stagebook roda na saída, sobre os canais da fonte guardados no ring)
 static void map_src(const float *in, float *out) {
     if (g_src_ch >= 4) { out[0] = in[0]; out[1] = in[1]; out[2] = in[2]; out[3] = in[3]; }
     else if (g_src_ch == 2) { out[0] = in[0]; out[1] = in[1]; out[2] = out[3] = 0; }
@@ -330,7 +369,7 @@ static void resampler_reset_locked(void)   /* com g_vmx */ {
 
 // ---- thread do decoder ----
 // decodifica e reamostra com g_vmx (sem travar a USB) e só pega g_mx para copiar no ring
-static float g_dec_out[4096 * OUT_CH];   // só a thread do decoder usa
+static float g_dec_out[4096 * LANES_MAX];   // só a thread do decoder usa
 
 static void *dec_main(void *arg) {
     float buf[1024 * 8];
@@ -354,22 +393,23 @@ static void *dec_main(void *arg) {
             continue;
         }
 
-        int n = 0, cap = (int)(sizeof g_dec_out / sizeof(float) / OUT_CH);
+        int n = 0, cap = (int)(sizeof g_dec_out / sizeof(float) / LANES_MAX);
         double step = (double)g_src_rate / OUT_RATE;
         for (int i = 0; i < got; i++) {
             // empurra o quadro novo no histórico
-            memmove(g_hist[0], g_hist[1], sizeof(float) * OUT_CH * 3);
-            map_src(&buf[i * g_src_ch], g_hist[3]);
+            memmove(g_hist[0], g_hist[1], sizeof(float) * LANES_MAX * 3);
+            // os canais da fonte como vieram (a mistura é na saída)
+            for (int c = 0; c < g_lanes; c++) g_hist[3][c] = buf[i * g_src_ch + c];
             if (g_hist_fill < 4) { g_hist_fill++; if (g_hist_fill < 4) continue; }
             if (g_src_rate == OUT_RATE) {
-                if (n < cap) memcpy(&g_dec_out[n++ * OUT_CH], g_hist[2], sizeof(float) * OUT_CH);
+                if (n < cap) memcpy(&g_dec_out[n++ * LANES_MAX], g_hist[2], sizeof(float) * LANES_MAX);
                 continue;
             }
             // gera saídas enquanto a posição fracionária estiver entre hist[1] e hist[2]
             while (g_frac < 1.0) {
-                float t = (float)g_frac, *out = &g_dec_out[n * OUT_CH];
+                float t = (float)g_frac, *out = &g_dec_out[n * LANES_MAX];
                 if (n < cap) {
-                    for (int c = 0; c < OUT_CH; c++) {
+                    for (int c = 0; c < g_lanes; c++) {
                         float p0 = g_hist[0][c], p1 = g_hist[1][c], p2 = g_hist[2][c], p3 = g_hist[3][c];
                         out[c] = p1 + 0.5f * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
                     }
@@ -383,14 +423,16 @@ static void *dec_main(void *arg) {
         float spk[SP_BINS];
         if (g_meter_on) {
             for (int i = 0; i < n; i++) {
-                g_sp_in[g_sp_pos] = 0.5f * (g_dec_out[i * OUT_CH] + g_dec_out[i * OUT_CH + 1]);
+                // backing (1/2) como na mistura padrão: fonte mono = o mesmo canal dos dois lados
+                float *d = &g_dec_out[i * LANES_MAX];
+                g_sp_in[g_sp_pos] = 0.5f * (d[0] + (g_lanes > 1 ? d[1] : d[0]));
                 g_sp_pos = (g_sp_pos + 1) % SP_N;
             }
             g_sp_new += n;
             if (g_sp_new >= SP_HOP) { sp_run(spk); g_sp_new = 0; fft = 1; }
         }
         pthread_mutex_lock(&g_mx);
-        for (int i = 0; i < n && ring_space_locked() > 0; i++) ring_push_locked(&g_dec_out[i * OUT_CH]);
+        for (int i = 0; i < n && ring_space_locked() > 0; i++) ring_push_locked(&g_dec_out[i * LANES_MAX]);
         if (fft) {
             g_mb[g_mb_w].end = g_consumed + g_ring_n;   // quadro (desde o seek) em que este bloco acaba de tocar
             memcpy(g_mb[g_mb_w].pk, spk, sizeof spk);
@@ -453,13 +495,22 @@ static void *usb_main(void *arg) {
             g_tot_out += nf; st_out_frames += nf; \
             if (nf * frame_bytes > g_maxpkt) nf = g_maxpkt / frame_bytes; \
             for (int f = 0; f < nf; f++) { \
-                float fr[OUT_CH] = {0, 0, 0, 0}; \
+                float lane[LANES_MAX] = {0}, fr[OUT_CH] = {0, 0, 0, 0}; \
                 int want_play = g_playing && !tail; \
                 if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
                 if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
-                if (g_fade > 0) { if (ring_pop_locked(fr)) g_consumed++; else if (want_play && !g_eof) st_underrun++; } \
+                if (g_fade > 0) { if (ring_pop_locked(lane)) { g_consumed++; map_src(lane, fr); } else if (want_play && !g_eof) st_underrun++; } \
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
+                if (g_mix_custom) { \
+                    float outv[LANES_MAX]; \
+                    mix_custom(lane, outv); \
+                    for (int c = 0; c < g_dev_ch; c++) { \
+                        float s = c < LANES_MAX ? outv[c] : 0; \
+                        if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
+                        put_sample(b + off + c * g_subslot, s); \
+                    } \
+                } else { \
                 float gb = g_gain_backing * g_norm_backing * g_fade, gc = g_gain_click * g_norm_click * g_fade; \
                 float sb[2] = {fr[0] * gb, fr[1] * gb}; \
                 if (g_eq_on) { sb[0] = eq_run(0, fr[0]) * gb; sb[1] = eq_run(1, fr[1]) * gb; lim_run(sb); } \
@@ -467,6 +518,7 @@ static void *usb_main(void *arg) {
                     float s = c < 2 ? sb[c] : (c < 4 ? fr[c] * gc : 0); \
                     if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
                     put_sample(b + off + c * g_subslot, s); \
+                } \
                 } \
                 off += frame_bytes; \
             } \
@@ -632,6 +684,7 @@ JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
     long dur_ms = -1;
     if (src_ok(&v)) {
         g_src_rate = rate; g_src_ch = ch;
+        g_lanes = ch < LANES_MAX ? ch : LANES_MAX;
         g_src_len = len;
         dur_ms = g_src_len * 1000L / g_src_rate;
         LOGI("load %s: %d Hz, %d ch, %ld ms", path, g_src_rate, g_src_ch, dur_ms);
@@ -687,6 +740,27 @@ JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray j
 JNIEXPORT void JNICALL FN(setNorm)(JNIEnv *e, jclass c, jfloat backing, jfloat click) {
     g_norm_backing = backing; g_norm_click = click;
 }
+
+// Mistura por canal: custom=false volta para a mistura validada (setGains/setNorm). gains/norms por canal da fonte,
+// eqMask com os canais que passam pelo EQ, route[saída * LANES_MAX + canal] (LANES_MAX × LANES_MAX).
+JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jboolean custom, jfloatArray jgain, jfloatArray jnorm, jint eqMask, jfloatArray jroute) {
+    float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[LANES_MAX * LANES_MAX] = {0};
+    if (jgain) (*e)->GetFloatArrayRegion(e, jgain, 0, LANES_MAX, gain);
+    if (jnorm) (*e)->GetFloatArrayRegion(e, jnorm, 0, LANES_MAX, norm);
+    if (jroute) (*e)->GetFloatArrayRegion(e, jroute, 0, LANES_MAX * LANES_MAX, route);
+    pthread_mutex_lock(&g_mx);
+    memcpy(g_ch_gain, gain, sizeof gain);
+    memcpy(g_ch_norm, norm, sizeof norm);
+    memcpy(g_route, route, sizeof route);
+    // EQ ligando em outro canal: começa do zero (estado velho de outro canal estalaria)
+    if (g_ch_eq != (int)eqMask) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; }
+    g_ch_eq = (int)eqMask;
+    g_mix_custom = custom ? 1 : 0;
+    pthread_mutex_unlock(&g_mx);
+}
+
+// canais da fonte guardados (para a tela montar o mixer): até LANES_MAX
+JNIEXPORT jint JNICALL FN(lanes)(JNIEnv *e, jclass c) { return g_lanes; }
 
 JNIEXPORT jboolean JNICALL FN(isRunning)(JNIEnv *e, jclass c) { return g_usb_running ? JNI_TRUE : JNI_FALSE; }
 
@@ -756,6 +830,66 @@ static void kweight_init(biquad *shelf, biquad *hp, double fs) {
     K = tan(M_PI * f0 / fs);
     a0 = 1.0 + K / Q + K * K;
     *hp = (biquad){1.0, -2.0, 1.0, 2.0 * (K * K - 1.0) / a0, (1.0 - K / Q + K * K) / a0, 0, 0};
+}
+
+// Volume de um conjunto de canais (bits em mask): {lufs, pico}. É a mesma medição do backing acima (K-weighting,
+// blocos de 400 ms, portões de -70 e -10), só que nos canais escolhidos — cada canal ou par do mixer por canal.
+JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath, jint mask) {
+    const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
+    int err = 0, ch = 0, fs = 0;
+    long len = 0;
+    src_t v = src_open(path, &err, &fs, &ch, &len);
+    (*e)->ReleaseStringUTFChars(e, jpath, path);
+    if (!src_ok(&v)) return NULL;
+    biquad sh[LANES_MAX], hp[LANES_MAX];
+    for (int i = 0; i < LANES_MAX; i++) kweight_init(&sh[i], &hp[i], fs);
+    int seg = fs / 10;
+    size_t cap = 4096, nseg = 0;
+    double *segs = malloc(cap * sizeof(double));
+    double acc = 0, peak = 0;
+    int inseg = 0;
+    float buf[4096 * 8];
+    int got;
+    while ((got = src_read(&v, ch, buf, 4096)) > 0) {
+        for (int i = 0; i < got; i++) {
+            float *fr = &buf[i * ch];
+            for (int k = 0; k < ch && k < LANES_MAX; k++) {
+                if (!(mask & (1 << k))) continue;
+                double x = fr[k];
+                if (fabs(x) > peak) peak = fabs(x);
+                double y = bq(&hp[k], bq(&sh[k], x));
+                acc += y * y;
+            }
+            if (++inseg == seg) {
+                if (nseg == cap) { cap *= 2; segs = realloc(segs, cap * sizeof(double)); }
+                segs[nseg++] = acc / seg;
+                acc = 0; inseg = 0;
+            }
+        }
+    }
+    src_close(&v);
+    double sumAbs = 0; long nAbs = 0;
+    for (size_t i = 0; i + 3 < nseg; i++) {
+        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
+        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
+    }
+    float lufs = -70.0f;
+    if (nAbs > 0) {
+        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
+        long n = 0;
+        for (size_t i = 0; i + 3 < nseg; i++) {
+            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
+            if (z <= 0) continue;
+            double l = -0.691 + 10 * log10(z);
+            if (l > -70.0 && l > rel) { sum += z; n++; }
+        }
+        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
+    }
+    free(segs);
+    float out[2] = {lufs, (float)peak};
+    jfloatArray arr = (*e)->NewFloatArray(e, 2);
+    (*e)->SetFloatArrayRegion(e, arr, 0, 2, out);
+    return arr;
 }
 
 JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {

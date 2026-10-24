@@ -245,7 +245,20 @@ static JNIEnv *env = (JNIEnv *)&envp;
 #else
 #define E_START() FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, 0x81, 7 * IN_FB, IN_FB)
 #endif
-static jlong e_load(const char *p) { return FN(load)(env, NULL, (jstring)p); }
+
+// SIM_CUSTOM: cada ajuste de fader/normalização vai também para a mistura por canal, configurada igual à padrão
+// (1-2 backing com EQ, 3-4 metrônomo, roteamento direto): o som tem de sair idêntico ao da mistura validada
+static float s_gb = 1, s_gc = 1, s_nb = 1, s_nc = 1;
+static void sim_mix(void) {
+#ifdef SIM_CUSTOM
+    float g[8] = {s_gb, s_gb, s_gc, s_gc}, n[8] = {s_nb, s_nb, s_nc, s_nc}, r[64] = {0};
+    for (int o = 0; o < 4; o++) r[o * 8 + o] = 1.0f;
+    FN(setMix)(env, NULL, 1, (jfloatArray)g, (jfloatArray)n, 0x3, (jfloatArray)r);
+#endif
+}
+static void set_gains(float gb, float gc) { s_gb = gb; s_gc = gc; FN(setGains)(env, NULL, gb, gc); sim_mix(); }
+static void set_norm(float nb, float nc) { s_nb = nb; s_nc = nc; FN(setNorm)(env, NULL, nb, nc); sim_mix(); }
+static jlong e_load(const char *p) { jlong d = FN(load)(env, NULL, (jstring)p); sim_mix(); return d; }
 static void sleep_s(double s) { struct timespec t = {(time_t)s, (long)((s - (time_t)s) * 1e9)}; nanosleep(&t, NULL); }
 static void reset_metrics(void) { pthread_mutex_lock(&dev_mx); iso_gaps = 0; worst_starve = 0; pthread_mutex_unlock(&dev_mx); }
 
@@ -325,8 +338,8 @@ static void check(int ok, const char *what, const char *detail);
 
 // toca 1,5 s a partir de 1:00 com os ajustes dados e mede a saída
 static meters scene(float gb, float gc, float nb, float nc, int eq_on, float *eq) {
-    FN(setGains)(env, NULL, gb, gc);
-    FN(setNorm)(env, NULL, nb, nc);
+    set_gains(gb, gc);
+    set_norm(nb, nc);
     FN(setEq)(env, NULL, eq_on, (jfloatArray)eq);
     FN(seek)(env, NULL, 60000);
     FN(play)(env, NULL);
@@ -410,7 +423,7 @@ int main(int argc, char **argv) {
     printf("[1] tocar faixa 44,1 kHz (reamostrada), buscar para 1:00 e trocar para a faixa 48 kHz\n");
     E_START();
     jlong dur = e_load(ogg);
-    FN(setGains)(env, NULL, 1.0f, 1.0f);
+    set_gains(1.0f, 1.0f);
     capturing = 1;
     FN(play)(env, NULL);
     sleep_s(3.0);
