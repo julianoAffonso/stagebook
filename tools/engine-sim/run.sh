@@ -26,11 +26,10 @@ build() {   # <nome> [pasta do engine.c] [opções]
 build validado
 build atual
 build medidor atual -DSIM_METER   # o atual com os medidores ao vivo ligados
-build canal atual -DSIM_CUSTOM    # o atual com a mistura por canal configurada igual à padrão
 
 status=0
 # REF_OGG/REF_OGG48: o motor validado toca estas (OGG) enquanto o atual toca as dadas (ex.: o mesmo áudio em WAV)
-for v in validado atual medidor canal; do
+for v in validado atual medidor; do
     if [ $v = validado ] && [ -n "${REF_OGG:-}" ]; then
         "$WORK/sim-$v" "$REF_OGG" "$REF_OGG48" "$WORK" ${3:+"$3"} || true
     else

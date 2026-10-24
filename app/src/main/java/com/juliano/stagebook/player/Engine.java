@@ -12,15 +12,13 @@ final class Engine {
     static native void pause();
     static native void seek(long ms);
     static native long position();
-    static native void setGains(float backing, float click);
-    static native void setNorm(float backing, float click);
     // equalizador do backing: 5 bandas (80, 250, 1k, 3,5k, 10k Hz), ganhos em dB
     static native void setEq(boolean on, float[] gainsDb);
     // {lufs do backing (1/2), pico do backing, pico do click (3/4)} ou null
     static native float[] analyze(String path);
-    // mistura por canal (Stagebook): custom=false = a mistura validada (setGains/setNorm/setEq de sempre).
-    // gains/norms por canal da fonte (8), eqMask = canais com EQ, route[saída * 8 + canal]
-    static native void setMix(boolean custom, float[] gains, float[] norms, int eqMask, float[] route);
+    // a mistura (só por canal): gains/norms por canal da fonte (8), eqMask = canais com EQ (cada um separado),
+    // route[saída * 8 + canal]; sem chamar, cada canal vai para a saída de mesmo número com ganho 1
+    static native void setMix(float[] gains, float[] norms, int eqMask, float[] route);
     // canais da fonte da faixa carregada (até 8)
     static native int lanes();
     // {lufs, pico} dos canais em mask (cada canal ou par do mixer)

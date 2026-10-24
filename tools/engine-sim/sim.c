@@ -246,18 +246,31 @@ static JNIEnv *env = (JNIEnv *)&envp;
 #define E_START() FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, 0x81, 7 * IN_FB, IN_FB)
 #endif
 
-// SIM_CUSTOM: cada ajuste de fader/normalização vai também para a mistura por canal, configurada igual à padrão
-// (1-2 backing com EQ, 3-4 metrônomo, roteamento direto): o som tem de sair idêntico ao da mistura validada
+// Fader e normalização do backing (1/2) e do metrônomo (3/4). No motor validado, pelos dois faders de antes; no do
+// Stagebook (só mistura por canal), pela configuração equivalente: 1-2 backing com EQ, 3-4 metrônomo, roteamento
+// direto. O som tem de sair idêntico.
 static float s_gb = 1, s_gc = 1, s_nb = 1, s_nc = 1;
 static void sim_mix(void) {
-#ifdef SIM_CUSTOM
+#ifdef ENGINE_HAS_MIX
     float g[8] = {s_gb, s_gb, s_gc, s_gc}, n[8] = {s_nb, s_nb, s_nc, s_nc}, r[64] = {0};
     for (int o = 0; o < 4; o++) r[o * 8 + o] = 1.0f;
-    FN(setMix)(env, NULL, 1, (jfloatArray)g, (jfloatArray)n, 0x3, (jfloatArray)r);
+    FN(setMix)(env, NULL, (jfloatArray)g, (jfloatArray)n, 0x3, (jfloatArray)r);
 #endif
 }
-static void set_gains(float gb, float gc) { s_gb = gb; s_gc = gc; FN(setGains)(env, NULL, gb, gc); sim_mix(); }
-static void set_norm(float nb, float nc) { s_nb = nb; s_nc = nc; FN(setNorm)(env, NULL, nb, nc); sim_mix(); }
+static void set_gains(float gb, float gc) {
+    s_gb = gb; s_gc = gc;
+#ifndef ENGINE_HAS_MIX
+    FN(setGains)(env, NULL, gb, gc);
+#endif
+    sim_mix();
+}
+static void set_norm(float nb, float nc) {
+    s_nb = nb; s_nc = nc;
+#ifndef ENGINE_HAS_MIX
+    FN(setNorm)(env, NULL, nb, nc);
+#endif
+    sim_mix();
+}
 static jlong e_load(const char *p) { jlong d = FN(load)(env, NULL, (jstring)p); sim_mix(); return d; }
 static void sleep_s(double s) { struct timespec t = {(time_t)s, (long)((s - (time_t)s) * 1e9)}; nanosleep(&t, NULL); }
 static void reset_metrics(void) { pthread_mutex_lock(&dev_mx); iso_gaps = 0; worst_starve = 0; pthread_mutex_unlock(&dev_mx); }
