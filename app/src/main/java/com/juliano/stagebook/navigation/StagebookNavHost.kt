@@ -50,7 +50,14 @@ fun StagebookNavHost(
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist) } },
             )
         }
-        composable<SongEditor> { SongEditorRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
+        composable<SongEditor> {
+            SongEditorRoute(
+                onDone = dropUnlessResumed { nav.popBackStack() },
+                // fila de importação: salva, abre a próxima música no importador; acabou, abre o setlist
+                onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
+                onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
+            )
+        }
         composable<SetlistDetail> { entry ->
             SetlistDetailRoute(
                 onBack = dropUnlessResumed { nav.popBackStack() },
@@ -64,6 +71,8 @@ fun StagebookNavHost(
                 // criado: abre o setlist no lugar do leitor (voltar leva para a lista)
                 onDone = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<ScanSetlist> { inclusive = true } } },
                 onBack = dropUnlessResumed { nav.popBackStack() },
+                // as que faltam: o importador abre em fila no lugar do leitor
+                onImport = { nav.navigate(Importer(queued = true)) { popUpTo<ScanSetlist> { inclusive = true } } },
             )
         }
         composable<PickSongs> { PickSongsRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
@@ -78,6 +87,8 @@ fun StagebookNavHost(
                 onClose = dropUnlessResumed { nav.popBackStack() },
                 // o editor substitui o navegador: salvar ou cancelar volta para a lista
                 onOpenEditor = { id -> nav.navigate(SongEditor(songId = id, fromImport = true)) { popUpTo<Importer> { inclusive = true } } },
+                onOpenEditorQueued = { id -> nav.navigate(SongEditor(songId = id, fromImport = true)) },
+                onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
             )
         }
     }

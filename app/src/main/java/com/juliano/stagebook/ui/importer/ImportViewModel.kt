@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.importer
 
+import androidx.core.net.toUri
 import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.domain.ChordImport
 import android.net.Uri
@@ -9,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.juliano.stagebook.data.ImportDraft
+import com.juliano.stagebook.data.ImportQueue
 import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.data.MusicBrainz
 import com.juliano.stagebook.domain.LyricsCleaner
@@ -37,8 +39,25 @@ class ImportViewModel @Inject constructor(
     private val musicBrainz: MusicBrainz,
     private val draft: ImportDraft,
     savedStateHandle: SavedStateHandle,
+    private val queue: ImportQueue,
 ) : ViewModel() {
-    val initialQuery = savedStateHandle.toRoute<Importer>().query
+    private val route = savedStateHandle.toRoute<Importer>()
+    val initialQuery = route.query
+
+    // importação avulsa: uma fila que ficou para trás (saiu no meio) não pode pegar esta música
+    init { if (!route.queued) queue.stop() }
+
+    /** Importação em lote para um setlist (null = importação avulsa). */
+    val queueState: StateFlow<ImportQueue.State?> = if (route.queued) queue.state else MutableStateFlow(null)
+    fun queueSearch(): String? = if (route.queued) queue.searchUrl() else null
+    fun queueSiteName(): String = queue.state.value?.let { queue.sites().getOrNull(it.site)?.name }.orEmpty()
+    fun queueHost(): String = queue.state.value?.let { queue.sites().getOrNull(it.site)?.url }
+        ?.let { it.toUri().host.orEmpty().removePrefix("www.") }.orEmpty()
+
+    /** Não achou neste site: passa para o próximo da lista; null = não há mais sites. */
+    fun queueFailover(): String? = queue.nextSite()?.let { queue.tryNextSite(); queue.searchUrl() }
+    fun queueSkip(): String? { queue.skip(); return queue.searchUrl() }
+    fun queueStop() = queue.stop()
 
     /** Onde o importador abre: o site padrão do perfil (cifra ou letra), e o que a busca procura. */
     private val look get() = repository.library.value.look

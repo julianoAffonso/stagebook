@@ -438,5 +438,14 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="scan_name_taken">Já existe um setlist com esse nome</string>
     <string name="scan_name_taken_text">Trocar as músicas do setlist \"%1$s\" pelas do QR, ou criar outro?</string>
     <string name="scan_replace">Substituir</string>
+    <plurals name="scan_import_missing">
+        <item quantity="one">Importar a que falta (%1$d)</item>
+        <item quantity="other">Importar as que faltam (%1$d)</item>
+    </plurals>
+    <string name="queue_title">Para \"%1$s\": %2$d de %3$d · %4$s</string>
+    <string name="queue_searching">Buscando em %1$s. Abra a página da música e toque em Importar.</string>
+    <string name="queue_none">Não achei em nenhum site da lista (Ajustes → Importação).</string>
+    <string name="queue_skip">Pular</string>
+    <string name="queue_stop">Parar</string>
     <string name="scan_create_other">Criar outro</string>
 </resources>

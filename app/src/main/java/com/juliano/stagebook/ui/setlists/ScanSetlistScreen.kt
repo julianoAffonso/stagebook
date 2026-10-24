@@ -49,7 +49,12 @@ import com.juliano.stagebook.ui.components.ScreenHeader
 import com.juliano.stagebook.ui.theme.Spacing
 
 @Composable
-fun ScanSetlistRoute(onDone: (setId: String) -> Unit, onBack: () -> Unit, viewModel: ScanSetlistViewModel = hiltViewModel()) {
+fun ScanSetlistRoute(
+    onDone: (setId: String) -> Unit,
+    onBack: () -> Unit,
+    onImport: () -> Unit = {},
+    viewModel: ScanSetlistViewModel = hiltViewModel(),
+) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var camera by rememberSaveable {
@@ -67,6 +72,7 @@ fun ScanSetlistRoute(onDone: (setId: String) -> Unit, onBack: () -> Unit, viewMo
         onScanAgain = viewModel::scanAgain,
         existing = viewModel::existing,
         onCreate = { replace -> viewModel.create(replace)?.let(onDone) },
+        onCreateAndImport = { replace -> if (viewModel.createAndImport(replace)) onImport() },
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier) },
     )
@@ -88,6 +94,7 @@ fun ScanSetlistScreen(
     existing: (String) -> String?,
     onCreate: (replaceId: String?) -> Unit,
     onBack: () -> Unit,
+    onCreateAndImport: (replaceId: String?) -> Unit = {},
     camera: @Composable (onText: (String) -> Unit, modifier: Modifier) -> Unit = { _, m -> Box(m) },
 ) {
     CenteredContent(Modifier.fillMaxSize()) {
@@ -95,7 +102,7 @@ fun ScanSetlistScreen(
             ScreenHeader(stringResource(R.string.scan_title), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
-                is ScanUi.Review -> Review(ui, onName, onChoose, onScanAgain, existing, onCreate)
+                is ScanUi.Review -> Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport)
             }
         }
     }
@@ -139,12 +146,18 @@ private fun Review(
     onScanAgain: () -> Unit,
     existing: (String) -> String?,
     onCreate: (replaceId: String?) -> Unit,
+    onCreateAndImport: (replaceId: String?) -> Unit,
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
+    var importing by rememberSaveable { mutableStateOf(false) }   // o nome repetido veio de "Importar as que faltam"
+    fun finish(replace: String?) = if (importing) onCreateAndImport(replace) else onCreate(replace)
     // primeiro avisa o que fica de fora; depois, se o nome já existe, pergunta se troca ou cria outro
-    fun goName() { existing(ui.name.trim())?.let { nameTaken = it } ?: onCreate(null) }
-    fun go() { if (ui.missing.isNotEmpty()) confirmMissing = true else goName() }
+    fun goName() { existing(ui.name.trim())?.let { nameTaken = it } ?: finish(null) }
+    fun go() { importing = false; if (ui.missing.isNotEmpty()) confirmMissing = true else goName() }
+    // importar as que faltam: o setlist é criado com as achadas e o importador abre buscando a primeira que falta
+    fun goImport() { importing = true; goName() }
+    val toImport = ui.rows.count { it.chosen == null && it.candidates.isEmpty() }
 
     val found = ui.rows.count { it.chosen != null }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -160,6 +173,12 @@ private fun Review(
             contentPadding = PaddingValues(bottom = Spacing.s),
         ) {
             itemsIndexed(ui.rows) { i, row -> RowItem(row) { onChoose(i, it) } }
+        }
+        if (toImport > 0) {
+            ActionButton(
+                pluralStringResource(R.plurals.scan_import_missing, toImport, toImport), { goImport() },
+                Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal, enabled = ui.name.isNotBlank(),
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(bottom = Spacing.m)) {
             ActionButton(stringResource(R.string.scan_again), onScanAgain, Modifier.weight(1f), icon = AppIcons.QrCode, tone = ButtonTone.Tonal)
@@ -180,8 +199,8 @@ private fun Review(
             onDismissRequest = { nameTaken = null },
             title = { Text(stringResource(R.string.scan_name_taken)) },
             text = { Text(stringResource(R.string.scan_name_taken_text, ui.name.trim()), style = MaterialTheme.typography.bodyLarge) },
-            confirmButton = { TextButton(onClick = { nameTaken = null; onCreate(id) }) { Text(stringResource(R.string.scan_replace)) } },
-            dismissButton = { TextButton(onClick = { nameTaken = null; onCreate(null) }) { Text(stringResource(R.string.scan_create_other)) } },
+            confirmButton = { TextButton(onClick = { nameTaken = null; finish(id) }) { Text(stringResource(R.string.scan_replace)) } },
+            dismissButton = { TextButton(onClick = { nameTaken = null; finish(null) }) { Text(stringResource(R.string.scan_create_other)) } },
         )
     }
 }
