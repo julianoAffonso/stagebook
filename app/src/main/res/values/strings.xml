@@ -148,6 +148,9 @@
     <string name="settings_sections_help">Linhas como [Refrão], Verso 2:, Ponte, Intro, Solo, Final… viram títulos em destaque no palco, sempre em português: [Chorus] aparece como REFRÃO, [Verse 2] como VERSO 2.</string>
     <string name="settings_section_color">Cor do título da seção</string>
     <string name="settings_chords">Cifras</string>
+    <string name="stage_key_desc">Tom: %1$s</string>
+    <string name="stage_capo_desc">Capotraste na %1$dª casa</string>
+    <string name="stage_capo_sounds_desc">Capotraste na %1$dª casa, soa em %2$s</string>
     <string name="settings_font_family">Fonte</string>
     <string name="font_default">Padrão</string>
     <string name="font_condensed">Condensada</string>
