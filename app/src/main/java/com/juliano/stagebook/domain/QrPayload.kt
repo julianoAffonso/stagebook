@@ -2,7 +2,10 @@ package com.juliano.stagebook.domain
 
 import com.juliano.stagebook.data.model.Library
 import com.juliano.stagebook.data.model.Setlist
+import java.io.ByteArrayOutputStream
+import java.util.zip.DataFormatException
 import java.util.zip.Deflater
+import java.util.zip.Inflater
 
 /**
  * Conteúdo do QR lido pelo the previous app. Desde 23/10/2026 (pedido do usuário, sem convivência com o
@@ -72,6 +75,30 @@ object QrPayload {
     fun fits(set: Setlist, library: Library, name: String = set.name, extraIds: List<String> = emptyList()): Boolean {
         val extra = extraIds.mapNotNull { id -> library.song(id)?.let { Entry(clean(it.title), clean(it.author)) } }
         return pack(text(set, library, name, extra)).size <= MAX_BYTES
+    }
+
+    private const val MAX_TEXT = 64 * 1024   // um setlist nunca chega perto; protege de dado estranho
+
+    /** Texto do QR compactado (`L3` + deflate), ou null se os bytes não forem desse formato (o mesmo do Backing). */
+    fun unpack(bytes: ByteArray?): String? {
+        if (bytes == null || bytes.size <= PACKED_MARK.size || bytes[0] != PACKED_MARK[0] || bytes[1] != PACKED_MARK[1]) return null
+        val inflater = Inflater(true)
+        return try {
+            inflater.setInput(bytes, PACKED_MARK.size, bytes.size - PACKED_MARK.size)
+            val out = ByteArrayOutputStream()
+            val buf = ByteArray(4096)
+            while (!inflater.finished()) {
+                val n = inflater.inflate(buf)
+                if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) return null   // cortado
+                out.write(buf, 0, n)
+                if (out.size() > MAX_TEXT) return null
+            }
+            out.toString(Charsets.UTF_8.name())
+        } catch (_: DataFormatException) {
+            null
+        } finally {
+            inflater.end()
+        }
     }
 
     /** Leitura do texto já descompactado (referência para o leitor): null se não for um QR do previous app ou se faltar título. */

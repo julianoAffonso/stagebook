@@ -428,6 +428,35 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_5_sobre_normalizar.png")
     }
 
+    // ---- ler o QR de um setlist: conferência (achadas, com dúvida, que faltam) ----
+    private val scanReview = com.juliano.stagebook.ui.setlists.ScanUi.Review(
+        "Show de sábado",
+        listOf(
+            com.juliano.stagebook.ui.setlists.ScanRow("Canção de teste", "", true, listOf(com.juliano.stagebook.ui.setlists.SongRef("1", "Canção de teste", "Banda Fictícia")), "1"),
+            com.juliano.stagebook.ui.setlists.ScanRow("Noite clara", "", false, listOf(
+                com.juliano.stagebook.ui.setlists.SongRef("2", "Noite Clara", "Banda A"), com.juliano.stagebook.ui.setlists.SongRef("3", "Noite Clara", "Banda B"),
+            ), null),
+            com.juliano.stagebook.ui.setlists.ScanRow("Estrada longa", "", true, listOf(com.juliano.stagebook.ui.setlists.SongRef("4", "Estrada Longa", "Banda C")), "4"),
+            com.juliano.stagebook.ui.setlists.ScanRow("Música que não tenho", "", false, emptyList(), null),
+        ),
+    )
+
+    @Test @Config(qualifiers = PHONE)
+    fun scanReviewPhone() = shoot("jornada_qr_2_conferir") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
+            com.juliano.stagebook.ui.setlists.ScanUi.Scanning(com.juliano.stagebook.ui.setlists.ScanProblem.INCOMPLETE), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},
+        )
+    }
+
+    @Test fun scanReviewTablet() = shoot("jornada_qr_3_conferir_tablet") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun mixerEditPhone() = shoot("jornada_mixer_3_editar_canal") {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {

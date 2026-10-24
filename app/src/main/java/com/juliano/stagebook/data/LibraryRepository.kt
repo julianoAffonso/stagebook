@@ -174,6 +174,9 @@ class LibraryRepository @Inject constructor(
         s.copy(items = s.items + songIds.filterNot { it in s.items }.distinct())
     }
 
+    /** Troca as músicas do setlist (o QR lido por cima de um setlist com o mesmo nome). */
+    fun setSetlistItems(setId: String, songIds: List<String>) = updateSet(setId) { it.copy(items = songIds.distinct()) }
+
     fun qrPayload(setId: String): ByteArray? = _library.value.setlist(setId)?.let { QrPayload.build(it, _library.value) }
 
     // ---- aparência ----

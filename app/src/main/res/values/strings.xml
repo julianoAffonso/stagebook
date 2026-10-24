@@ -412,4 +412,31 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="eq_khz">%1$s kHz</string>
     <string name="eq_reset">Zerar</string>
     <string name="help_how">Como funciona</string>
+    <!-- ler o QR de um setlist (Letras ou Stagebook) -->
+    <string name="sets_scan">Ler QR</string>
+    <string name="scan_title">Ler QR do setlist</string>
+    <string name="scan_hint">Aponte a câmera para o QR do setlist, do previous app ou de outro Stagebook.</string>
+    <string name="scan_no_camera">Sem a câmera não dá para ler o QR.</string>
+    <string name="scan_allow_camera">Permitir a câmera</string>
+    <string name="scan_incomplete">O QR veio incompleto. Aproxime e leia de novo.</string>
+    <string name="scan_not_setlist">Este QR não é de um setlist. Aponte para o QR do previous app ou do Stagebook.</string>
+    <string name="scan_name">Nome do setlist</string>
+    <plurals name="scan_found">
+        <item quantity="one">%1$d de %2$d música está na sua biblioteca</item>
+        <item quantity="other">%1$d de %2$d músicas estão na sua biblioteca</item>
+    </plurals>
+    <string name="scan_missing_row">Não está na sua biblioteca: vai ficar de fora.</string>
+    <string name="scan_which">Qual destas?</string>
+    <string name="scan_leave_out">Deixar de fora</string>
+    <string name="scan_again">Ler de novo</string>
+    <string name="scan_create">Criar setlist</string>
+    <plurals name="scan_missing_title">
+        <item quantity="one">%1$d música vai ficar de fora</item>
+        <item quantity="other">%1$d músicas vão ficar de fora</item>
+    </plurals>
+    <string name="scan_create_anyway">Criar assim</string>
+    <string name="scan_name_taken">Já existe um setlist com esse nome</string>
+    <string name="scan_name_taken_text">Trocar as músicas do setlist \"%1$s\" pelas do QR, ou criar outro?</string>
+    <string name="scan_replace">Substituir</string>
+    <string name="scan_create_other">Criar outro</string>
 </resources>

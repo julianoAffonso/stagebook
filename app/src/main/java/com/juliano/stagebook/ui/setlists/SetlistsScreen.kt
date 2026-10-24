@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import com.juliano.stagebook.ui.components.ButtonTone
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,7 @@ import com.juliano.stagebook.ui.theme.Spacing
 fun SetlistsRoute(
     onOpen: (String) -> Unit,
     onPlay: (String) -> Unit,
+    onScan: () -> Unit = {},
     viewModel: SetlistsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,6 +63,7 @@ fun SetlistsRoute(
         onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onOpen(viewModel.create(name)) },
         onOpen = onOpen,
         onPlay = onPlay,
+        onScan = onScan,
         onDelete = viewModel::delete,
         onRename = viewModel::rename,
     )
@@ -75,6 +78,7 @@ fun SetlistsScreen(
     onDelete: (String) -> Unit,
     onRename: (String, String) -> Unit,
     modifier: Modifier = Modifier,
+    onScan: () -> Unit = {},
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
@@ -86,12 +90,11 @@ fun SetlistsScreen(
                 subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             )
-            ActionButton(
-                stringResource(R.string.sets_new),
-                onClick = { creating = true },
-                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.m),
-                icon = AppIcons.Add,
-            )
+            // novo setlist ou ler o QR de um (do previous app ou de outro Stagebook)
+            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
+                ActionButton(stringResource(R.string.sets_scan), onClick = onScan, modifier = Modifier.weight(1f), icon = AppIcons.QrCode, tone = ButtonTone.Tonal)
+            }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }

@@ -127,6 +127,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.reorderable)
     implementation(libs.zxing.core)
+    // leitor de QR do setlist (Letras ou Stagebook): CameraX + ZXing, sem serviço do Google
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
