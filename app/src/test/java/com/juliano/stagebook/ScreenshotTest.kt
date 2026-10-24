@@ -185,6 +185,11 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PEDAL) }
     }
 
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneLanguage() = shoot("celular_5_ajustes_lingua") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LANGUAGE) }
+    }
+
     // pedal MIDI: um USB ligado e um Bluetooth guardado fora do alcance; teste de botão com uma mensagem MIDI
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneMidi() = shoot("celular_5_ajustes_pedal_midi") {

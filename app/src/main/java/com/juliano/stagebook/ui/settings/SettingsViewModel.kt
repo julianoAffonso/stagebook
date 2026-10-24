@@ -16,6 +16,8 @@ import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.data.model.Look
 import com.juliano.stagebook.data.model.SectionLang
 import com.juliano.stagebook.data.model.StageColumns
+import com.juliano.stagebook.data.AppLanguage
+import com.juliano.stagebook.data.Languages
 import com.juliano.stagebook.data.MidiFound
 import com.juliano.stagebook.data.MidiPedal
 import com.juliano.stagebook.data.MidiState
@@ -55,6 +57,7 @@ data class SettingsUiState(
     val pedalConnected: Boolean = false,
     val update: UpdateState = UpdateState.Idle,
     val midi: MidiState = MidiState(),
+    val language: AppLanguage = AppLanguage.SYSTEM,
 )
 
 /** Ajustes → Atualizar o app. */
@@ -87,6 +90,8 @@ class SettingsViewModel @Inject constructor(
     private val midi: MidiPedal,
 ) : ViewModel() {
     private val lastKey = MutableStateFlow<PedalKeyUi?>(null)
+    // trocar a língua recria a tela (e este ViewModel junto não precisa ouvir mudanças)
+    private val language = Languages.get(context)
     // aparelhos de entrada ligados agora (o pedal aparece aqui quando está conectado)
     private val inputManager = context.getSystemService(InputManager::class.java)
     private val devices = MutableStateFlow(connectedDevices())
@@ -125,7 +130,7 @@ class SettingsViewModel @Inject constructor(
             SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, shown, version, lib.look.pedalName in connected, up)
         },
         midi.state,
-    ) { s, m -> s.copy(midi = m) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+    ) { s, m -> s.copy(midi = m, language = language) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     private val _messages = Channel<SettingsMessage>(Channel.BUFFERED)
     val messages = _messages.receiveAsFlow()
