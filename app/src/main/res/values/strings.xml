@@ -325,6 +325,8 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_midi_choose">Tocar para usar este pedal</string>
     <string name="settings_midi_bt_off">Ligue o Bluetooth do aparelho para procurar.</string>
     <string name="settings_midi_found_none">Nenhum pedal MIDI achado. Confira se ele está ligado, perto e no modo MIDI Bluetooth.</string>
+    <string name="settings_midi_usb_about">Sobre o pedal pelo USB</string>
+    <string name="settings_midi_after">Depois de conectar</string>
     <string name="settings_midi_help">Depois de conectar, aperte um botão do pedal e escolha o que ele faz em Teste de botão.</string>
     <string name="settings_midi_location">Nesta versão do Android, a localização do aparelho precisa estar ligada para a procura achar o pedal.</string>
     <string name="settings_library">Biblioteca</string>

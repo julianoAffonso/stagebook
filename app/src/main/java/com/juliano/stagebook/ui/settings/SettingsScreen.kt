@@ -713,7 +713,8 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
 }
 
 @Composable
-private fun pedalKeyName(key: PedalKeyUi): String = if (MidiCode.isMidi(key.keyCode)) pedalKeyName(key.keyCode) else key.name
+// o mesmo nome no "Último botão" e na lista de botões configurados
+private fun pedalKeyName(key: PedalKeyUi): String = if (key.keyCode != 0) pedalKeyName(key.keyCode) else key.name
 
 /** Nome do botão: a tecla como o Android chama (PAGE_DOWN) ou a mensagem MIDI. */
 @Composable
@@ -740,7 +741,7 @@ private fun MidiCard(midi: MidiState, look: Look, actions: SettingsActions) {
             return@SettingsCard
         }
         SwitchRow(stringResource(R.string.settings_midi_usb_switch), look.midiUsb, actions.onMidiUsb)
-        HelpTip(stringResource(R.string.settings_midi_usb_help))
+        HelpTip(stringResource(R.string.settings_midi_usb_help), label = stringResource(R.string.settings_midi_usb_about))
         if (midi.connected.isEmpty()) {
             Text(stringResource(R.string.settings_midi_none), style = MaterialTheme.typography.bodyLarge)
         } else {
@@ -774,7 +775,7 @@ private fun MidiCard(midi: MidiState, look: Look, actions: SettingsActions) {
             midi.searched && !midi.scanning && midi.found.isEmpty() ->
                 Text(stringResource(R.string.settings_midi_found_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
-        HelpTip(stringResource(R.string.settings_midi_help))
+        HelpTip(stringResource(R.string.settings_midi_help), label = stringResource(R.string.settings_midi_after))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             Text(stringResource(R.string.settings_midi_location), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
