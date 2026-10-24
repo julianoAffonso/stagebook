@@ -1,5 +1,11 @@
 package com.juliano.stagebook.ui.editor
 
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import com.juliano.stagebook.data.model.Look
+import com.juliano.stagebook.domain.Chords
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -102,6 +108,17 @@ class SongEditorViewModel @Inject constructor(
     fun onYear(v: String) = update(year = v.filter(Char::isDigit).take(4))
     fun onText(v: String) = update(text = v)
 
+    /** Aparência do palco (prévia do editor). */
+    val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
+
+    /** Sobe ou desce [semitones] meios-tons: reescreve os acordes e o tom guardado (a cifra em cima vira ChordPro antes). */
+    fun transpose(semitones: Int) = update(text = Chords.transpose(Chords.fromChordsOverLyrics(uiState.text), semitones))
+
+    /** Capotraste: os desenhos dos acordes ficam iguais (muda o tom que soa). 0 tira a diretiva. */
+    fun setCapo(capo: Int) = update(text = Chords.setDirective(uiState.text, "capo", capo.coerceIn(0, 12).takeIf { it > 0 }?.toString().orEmpty()))
+
+    fun setKey(key: String) = update(text = Chords.setDirective(uiState.text, "key", key.trim()))
+
     fun save() {
         if (finished) return
         val s = uiState
@@ -111,7 +128,7 @@ class SongEditorViewModel @Inject constructor(
         if (other != null && other.id != route.songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return }
         // parte da música gravada para não perder o que o editor não mostra (ex.: zoom do palco)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = route.songId.orEmpty(), title = title, author = s.author.trim(), year = s.year.trim(), text = s.text))
+        val id = repository.saveSong(base.copy(id = route.songId.orEmpty(), title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // a cifra é guardada em ChordPro
         metadata.completeLater(id)   // artista ou ano em branco: o MusicBrainz completa sozinho
         finished = true
         done.trySend(Unit)
