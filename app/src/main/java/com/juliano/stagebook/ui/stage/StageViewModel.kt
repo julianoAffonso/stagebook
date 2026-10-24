@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.stage
 
+import com.juliano.stagebook.domain.Voicings
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -51,6 +52,13 @@ class StageViewModel @Inject constructor(
             look = lib.look,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
+
+    /** Variação do acorde escolhida no palco: vai na música como {define} do ChordPro (troca a anterior). */
+    fun saveShape(songId: String, chord: String, define: String) {
+        if (songId.isEmpty()) return
+        val instrument = repository.library.value.look.instrument
+        repository.updateSong(songId) { it.copy(text = Voicings.saveDefine(it.text, instrument, chord, define)) }
+    }
 
     /** Zoom da pinça, gravado na música (vale em qualquer setlist, como no another app). */
     fun setZoom(songId: String, zoom: Float) {

@@ -93,6 +93,7 @@ data class Look(
     val chordFont: StageFont = StageFont.DEFAULT,   // fonte dos acordes
     val instrument: Instrument = Instrument.VIOLAO,   // desenhos de acorde (popup e lista)
     val chordList: ChordListPlace = ChordListPlace.NONE,
+    val chordTap: Boolean = true,   // tocar num acorde no palco mostra o desenho (desligado: o toque vira a página)
 ) {
     companion object {
         const val MIN_FONT = 16f

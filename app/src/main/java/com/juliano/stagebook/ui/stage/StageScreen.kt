@@ -140,6 +140,7 @@ fun StageRoute(
             onZoom = viewModel::setZoom,
             onEdit = onEditSong,
             onBack = onBack,
+            onSaveShape = viewModel::saveShape,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -167,8 +168,11 @@ fun StageScreen(
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
     onBack: (() -> Unit)? = null,
+    onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
 ) {
     val look = uiState.look
+    // acorde tocado no palco: o desenho dele (só no perfil letra e cifra)
+    var shownChord by remember { mutableStateOf<String?>(null) }
     val fg = Color(look.fg)
     // sair do palco (seta ou gesto de voltar) pergunta antes: um toque sem querer no show não tira a letra
     // da tela (pedido do usuário, 23/10)
@@ -186,6 +190,15 @@ fun StageScreen(
         }
     }
     val song = uiState.songs[index]
+    shownChord?.let { chord ->
+        ChordShapePopup(
+            chord = chord,
+            instrument = look.instrument,
+            songText = song.text,
+            onSave = { define -> onSaveShape(song.id, chord, define) },
+            onDismiss = { shownChord = null },
+        )
+    }
     // zoom ao vivo durante a pinça; grava na música quando a mão para
     val minZoom = Look.MIN_FONT / look.fontSp
     val maxZoom = Look.MAX_STAGE_FONT / look.fontSp
@@ -320,6 +333,7 @@ fun StageScreen(
                 }
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
+            chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
         ),
     )
 
@@ -475,7 +489,7 @@ fun StageScreen(
                             settle = dragScope.launch { animate(from, 0f, animationSpec = tween(180)) { v, _ -> dragX = v } }
                         }
                         // com o botão de editar aberto, tocar fora só o fecha (não vira a página)
-                        if (!pinched && !moved && !held && !taken && !latest.dismiss()) {
+                        if (!pinched && !moved && !held && !taken && !latest.dismiss() && !latest.chord(down.position)) {
                             if (down.position.x > size.width / 2f) latest.next() else latest.previous()
                         }
                     }
@@ -540,7 +554,8 @@ fun StageScreen(
                 // acorde: negrito, na cor e no tamanho dele, acompanhando o zoom da letra
                 style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
             )
-            SideEffect { hit.show(shown, columnWidth, gutter) }
+            val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
+            SideEffect { hit.show(shown, columnWidth, gutter, chordPx) }
             AnimatedContent(
                 modifier = Modifier.graphicsLayer {
                     // enquanto a pinça não para, a página atual só escala (a partir do canto de cima)
@@ -723,6 +738,7 @@ private class GestureTargets(
     val maxZoom: Float,
     val hold: (Offset) -> Unit,
     val dismiss: () -> Boolean,   // fecha o botão de editar; true se ele estava aberto
+    val chord: (Offset) -> Boolean,   // tocou num acorde: abre o desenho; true se abriu
 )
 
 /** `starts`: índice em `lines` da 1ª linha de cada coluna (-1 = coluna vazia). */
@@ -748,16 +764,54 @@ private class PageHit {
     private var gutter = 0
     private val layouts = arrayOfNulls<TextLayoutResult>(2)
 
-    fun show(c: PageContent, columnWidth: Int, gutter: Int) {
+    private var chordPx = 0f
+
+    fun show(c: PageContent, columnWidth: Int, gutter: Int, chordPx: Float) {
         if (c != content) { content = c; layouts.fill(null) }
         this.columnWidth = columnWidth
         this.gutter = gutter
+        this.chordPx = chordPx
     }
 
     fun laidOut(c: PageContent, column: Int, r: TextLayoutResult) { if (c == content && column < layouts.size) layouts[column] = r }
 
     /** Índice em `lines` da 1ª linha da página na tela. */
     fun firstLine(): Int? = content?.starts?.firstOrNull { it >= 0 }
+
+    /**
+     * O acorde no ponto `p`, ou null: os desenhados em cima da letra (marca [CHORD_TAG], na faixa de cima da linha)
+     * e os das linhas só de acordes (a palavra tocada, se for acorde).
+     */
+    fun chordAt(p: Offset): String? {
+        val c = content ?: return null
+        val column = if (c.columns.size > 1 && p.x >= columnWidth + gutter / 2f) 1 else 0
+        val layout = layouts[column] ?: return null
+        val x = p.x - if (column == 1) columnWidth + gutter else 0
+        if (p.y < 0 || p.y > layout.size.height) return null
+        val line = layout.getLineForVerticalPosition(p.y)
+        val text = layout.layoutInput.text
+        val top = layout.getLineTop(line)
+        val band = chordPx * 1.5f
+        if (p.y <= top + band) {
+            val tolerance = chordPx * 0.3f
+            text.getStringAnnotations(CHORD_TAG, layout.getLineStart(line), layout.getLineEnd(line)).forEach { a ->
+                val x0 = layout.getHorizontalPosition(a.start, true)
+                if (x >= x0 - tolerance && x <= x0 + a.item.length * chordPx * 0.7f + tolerance) return a.item
+            }
+        }
+        // linha só de acordes: a palavra embaixo do dedo
+        val lineText = text.text.substring(layout.getLineStart(line), layout.getLineEnd(line))
+        if (Chords.isChordLine(lineText)) {
+            val o = layout.getOffsetForPosition(Offset(x, p.y))
+            val s = text.text
+            var a = o.coerceIn(0, s.length)
+            var b = a
+            while (a > 0 && !s[a - 1].isWhitespace()) a--
+            while (b < s.length && !s[b].isWhitespace()) b++
+            s.substring(a, b).takeIf(Chords::isChord)?.let { return it }
+        }
+        return null
+    }
 
     /** Índice em `lines` da linha no ponto `p`, ou null fora do texto. */
     fun lineAt(p: Offset): Int? {
