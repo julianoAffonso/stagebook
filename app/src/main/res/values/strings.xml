@@ -417,7 +417,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="import_from_sites_offline">Da internet (sem internet)</string>
     <string name="sets_type_code">Digitar as 3 palavras</string>
     <string name="sets_type_code_offline">Digitar as 3 palavras (sem internet)</string>
-    <string name="sets_code_hint">As 3 palavras do outro aparelho, ex.: 47 violao lua</string>
+    <string name="sets_code_hint">As 3 palavras com hífen, ex.: 47-violao-lua</string>
     <string name="scan_code_title">Recebendo as 3 palavras</string>
     <string name="scan_code_loading">Buscando o setlist…</string>
     <string name="scan_code_not_found">Nada chegou com essas palavras. Confira as 3 palavras (valem por 12 horas depois do envio).</string>

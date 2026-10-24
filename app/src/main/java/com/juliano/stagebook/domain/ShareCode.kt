@@ -38,8 +38,8 @@ object ShareCode {
 
     private val random = SecureRandom()
 
-    /** Como o código aparece para a pessoa: as 3 palavras separadas por espaço ("47 violao lua"). */
-    fun display(code: String) = code.replace('-', ' ')
+    /** Como o código aparece para a pessoa: as 3 palavras com hífen ("47-violao-lua"; espaço some ou dobra ao digitar). */
+    fun display(code: String) = code
 
     /** O código dentro de um QR (para quem está do lado tirar foto ou ler pelo "Ler QR"). */
     const val QR_PREFIX = "stagebook:"
