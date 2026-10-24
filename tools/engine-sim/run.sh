@@ -28,8 +28,13 @@ build atual
 build medidor atual -DSIM_METER   # o atual com os medidores ao vivo ligados
 
 status=0
+# REF_OGG/REF_OGG48: o motor validado toca estas (OGG) enquanto o atual toca as dadas (ex.: o mesmo áudio em WAV)
 for v in validado atual medidor; do
-    "$WORK/sim-$v" "$OGG" "$OGG48" "$WORK" ${3:+"$3"} || { [ $v != validado ] && status=1; }
+    if [ $v = validado ] && [ -n "${REF_OGG:-}" ]; then
+        "$WORK/sim-$v" "$REF_OGG" "$REF_OGG48" "$WORK" ${3:+"$3"} || true
+    else
+        "$WORK/sim-$v" "$OGG" "$OGG48" "$WORK" ${3:+"$3"} || { [ $v != validado ] && status=1; }
+    fi
     echo
 done
 echo "comparação do som gerado (validado x atual e x atual com medidores)"

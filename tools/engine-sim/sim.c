@@ -286,6 +286,22 @@ static void show(const char *label, meters m) {
 
 // o que está gravado na faixa nesse trecho (sem passar pelo motor)
 static meters source_meters(const char *path, long at_ms, double secs) {
+#ifdef ENGINE_HAS_SRC
+    // motor do Stagebook: lê pela mesma camada de fonte do motor (OGG, MP3 ou WAV)
+    int err = 0, rate = 0, ch = 0;
+    long len = 0;
+    src_t s = src_open(path, &err, &rate, &ch, &len);
+    src_seek(&s, (unsigned)(at_ms * rate / 1000));
+    long n = (long)(secs * rate);
+    float *b = malloc(sizeof(float) * ch * n), *q4 = calloc(n * 4, sizeof(float));
+    long got = 0;
+    while (got < n) { int k = src_read(&s, ch, b + got * ch, (int)((n - got) > 4096 ? 4096 : (n - got))); if (k <= 0) break; got += k; }
+    n = got;
+    for (long i = 0; i < n; i++) for (int c = 0; c < 4 && c < ch; c++) q4[i * 4 + c] = b[i * ch + c];
+    meters m = meter(q4, n);
+    free(b); free(q4); src_close(&s);
+    return m;
+#else
     int err;
     stb_vorbis *v = stb_vorbis_open_filename(path, &err, NULL);
     stb_vorbis_info inf = stb_vorbis_get_info(v);
@@ -297,6 +313,7 @@ static meters source_meters(const char *path, long at_ms, double secs) {
     meters m = meter(q4, n);
     free(b); free(q4); stb_vorbis_close(v);
     return m;
+#endif
 }
 
 static float EQ_FLAT[5] = {0, 0, 0, 0, 0};

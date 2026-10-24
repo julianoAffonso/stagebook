@@ -1,4 +1,4 @@
-// Motor do the previous app: decodifica OGG (stb_vorbis), reamostra para 48 kHz e envia
+// Motor do Stagebook (vindo do the previous app validado na USB interface): decodifica OGG (stb_vorbis), MP3/WAV (dr_mp3/dr_wav), reamostra para 48 kHz e envia
 // 4 canais direto para a interface USB Audio Class 2 via usbfs (sem o mixer do Android).
 // O fluxo USB fica sempre ativo (silêncio quando pausado): a USB interface repete o último
 // trecho recebido quando o fluxo para, o que vira um apito contínuo.
@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -20,6 +21,11 @@
 
 #define STB_VORBIS_HEADER_ONLY
 #include "stb_vorbis.c"
+// MP3 e WAV (Stagebook, autorizado pelo usuário em 24/10): decodificadores de arquivo único, domínio público
+#define DR_MP3_IMPLEMENTATION
+#include "dr_mp3.h"
+#define DR_WAV_IMPLEMENTATION
+#include "dr_wav.h"
 
 #define TAG "previous-app"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
@@ -47,7 +53,72 @@ static pthread_mutex_t g_mx = PTHREAD_MUTEX_INITIALIZER;
 static float g_ring[RING_FRAMES * OUT_CH];
 static int g_ring_r = 0, g_ring_w = 0, g_ring_n = 0;
 
-static stb_vorbis *g_vorb = NULL;
+// ---- fonte de áudio: OGG (stb_vorbis, exatamente as chamadas da versão validada), MP3 ou WAV ----
+typedef struct { stb_vorbis *v; drmp3 *mp3; drwav *wav; } src_t;
+
+static int src_ok(const src_t *s) { return s->v || s->mp3 || s->wav; }
+
+static int ends_with(const char *p, const char *ext) {
+    size_t n = strlen(p), m = strlen(ext);
+    return n >= m && strcasecmp(p + n - m, ext) == 0;
+}
+
+// abre pelo tipo do arquivo; OGG primeiro, como sempre (rate, canais e duração em quadros da fonte)
+static src_t src_open(const char *path, int *err, int *rate, int *ch, long *len) {
+    src_t s = {0};
+    if (ends_with(path, ".mp3")) {
+        s.mp3 = malloc(sizeof(drmp3));
+        if (s.mp3 && drmp3_init_file(s.mp3, path, NULL)) {
+            *rate = (int)s.mp3->sampleRate; *ch = (int)s.mp3->channels;
+            *len = (long)drmp3_get_pcm_frame_count(s.mp3);   // percorre o arquivo: fora do g_vmx
+            drmp3_seek_to_pcm_frame(s.mp3, 0);
+        } else { free(s.mp3); s.mp3 = NULL; *err = -2; }
+    } else if (ends_with(path, ".wav")) {
+        s.wav = malloc(sizeof(drwav));
+        if (s.wav && drwav_init_file(s.wav, path, NULL)) {
+            *rate = (int)s.wav->sampleRate; *ch = (int)s.wav->channels; *len = (long)s.wav->totalPCMFrameCount;
+        } else { free(s.wav); s.wav = NULL; *err = -3; }
+    } else {
+        s.v = stb_vorbis_open_filename(path, err, NULL);
+        if (s.v) {
+            stb_vorbis_info inf = stb_vorbis_get_info(s.v);
+            *rate = inf.sample_rate; *ch = inf.channels;
+            *len = stb_vorbis_stream_length_in_samples(s.v);
+        }
+    }
+    // até 8 canais (os buffers de decodificação cabem 8)
+    if (src_ok(&s) && *ch > 8) {
+        if (s.v) stb_vorbis_close(s.v);
+        if (s.mp3) { drmp3_uninit(s.mp3); free(s.mp3); }
+        if (s.wav) { drwav_uninit(s.wav); free(s.wav); }
+        memset(&s, 0, sizeof s); *err = -4;
+    }
+    return s;
+}
+
+// quadros lidos (0 = fim): mesmo contrato do stb_vorbis_get_samples_float_interleaved
+static int src_read(src_t *s, int ch, float *buf, int frames) {
+    if (s->v) return stb_vorbis_get_samples_float_interleaved(s->v, ch, buf, frames * ch);
+    if (s->mp3) return (int)drmp3_read_pcm_frames_f32(s->mp3, (drmp3_uint64)frames, buf);
+    if (s->wav) return (int)drwav_read_pcm_frames_f32(s->wav, (drwav_uint64)frames, buf);
+    return 0;
+}
+
+static void src_seek(src_t *s, unsigned int frame) {
+    if (s->v) stb_vorbis_seek_frame(s->v, frame);
+    if (s->mp3) drmp3_seek_to_pcm_frame(s->mp3, frame);
+    if (s->wav) drwav_seek_to_pcm_frame(s->wav, frame);
+}
+
+static void src_close(src_t *s) {
+    if (s->v) stb_vorbis_close(s->v);
+    if (s->mp3) { drmp3_uninit(s->mp3); free(s->mp3); }
+    if (s->wav) { drwav_uninit(s->wav); free(s->wav); }
+    memset(s, 0, sizeof *s);
+}
+
+static src_t g_src = {0};
+#define ENGINE_HAS_SRC 1   // o simulador lê a faixa por aqui (OGG, MP3 ou WAV)
 static int g_src_rate = 0, g_src_ch = 0;
 static long g_src_len = 0;            // duração em quadros da fonte
 static int g_eof = 0;
@@ -268,7 +339,7 @@ static void *dec_main(void *arg) {
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
         pthread_mutex_lock(&g_mx);
-        int active = g_vorb && g_playing && !g_eof;
+        int active = src_ok(&g_src) && g_playing && !g_eof;
         int work = active && ring_space_locked() > 2048;
         pthread_mutex_unlock(&g_mx);
         // tocando, o ring (250 ms) só esvazia 2048 quadros em ~43 ms: 5 ms de folga sobra;
@@ -276,7 +347,7 @@ static void *dec_main(void *arg) {
         if (!work) { pthread_mutex_unlock(&g_vmx); usleep(active ? 5000 : 20000); continue; }
 
         int want = 512;
-        int got = stb_vorbis_get_samples_float_interleaved(g_vorb, g_src_ch, buf, want * g_src_ch);
+        int got = src_read(&g_src, g_src_ch, buf, want);
         if (got <= 0) {
             pthread_mutex_lock(&g_mx); g_eof = 1; pthread_mutex_unlock(&g_mx);
             pthread_mutex_unlock(&g_vmx);
@@ -545,8 +616,9 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
 
 JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
     const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
-    int err = 0;
-    stb_vorbis *v = stb_vorbis_open_filename(path, &err, NULL);
+    int err = 0, rate = 0, ch = 0;
+    long len = 0;
+    src_t v = src_open(path, &err, &rate, &ch, &len);   // lê o disco: antes do g_vmx, a música atual segue tocando
     pthread_mutex_lock(&g_vmx);
     pthread_mutex_lock(&g_mx);
     g_playing = 0; g_fade = 0; g_eof = 0;
@@ -554,14 +626,13 @@ JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
     g_base_ms = 0; g_consumed = 0;
     mb_reset_locked();
     pthread_mutex_unlock(&g_mx);
-    if (g_vorb) stb_vorbis_close(g_vorb);
-    g_vorb = v;
+    src_close(&g_src);
+    g_src = v;
     resampler_reset_locked();
     long dur_ms = -1;
-    if (v) {
-        stb_vorbis_info inf = stb_vorbis_get_info(v);
-        g_src_rate = inf.sample_rate; g_src_ch = inf.channels;
-        g_src_len = stb_vorbis_stream_length_in_samples(v);
+    if (src_ok(&v)) {
+        g_src_rate = rate; g_src_ch = ch;
+        g_src_len = len;
         dur_ms = g_src_len * 1000L / g_src_rate;
         LOGI("load %s: %d Hz, %d ch, %ld ms", path, g_src_rate, g_src_ch, dur_ms);
     } else {
@@ -577,11 +648,11 @@ JNIEXPORT void JNICALL FN(pause)(JNIEnv *e, jclass c) { g_playing = 0; }
 
 JNIEXPORT void JNICALL FN(seek)(JNIEnv *e, jclass c, jlong ms) {
     pthread_mutex_lock(&g_vmx);
-    if (g_vorb) {
+    if (src_ok(&g_src)) {
         if (ms < 0) ms = 0;
         unsigned int frame = (unsigned int)((double)ms * g_src_rate / 1000.0);
         if (g_src_len > 0 && frame >= (unsigned)g_src_len) frame = g_src_len - 1;
-        stb_vorbis_seek_frame(g_vorb, frame);   // lê o disco: só com g_vmx, a USB segue tocando
+        src_seek(&g_src, frame);   // lê o disco: só com g_vmx, a USB segue tocando
         resampler_reset_locked();
         pthread_mutex_lock(&g_mx);
         ring_clear_locked();
@@ -689,13 +760,11 @@ static void kweight_init(biquad *shelf, biquad *hp, double fs) {
 
 JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
     const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
-    int err = 0;
-    stb_vorbis *v = stb_vorbis_open_filename(path, &err, NULL);
+    int err = 0, ch = 0, fs = 0;
+    long len = 0;
+    src_t v = src_open(path, &err, &fs, &ch, &len);   // recusa mais de 8 canais (buf abaixo cabe até 8)
     (*e)->ReleaseStringUTFChars(e, jpath, path);
-    if (!v) return NULL;
-    stb_vorbis_info inf = stb_vorbis_get_info(v);
-    int ch = inf.channels, fs = inf.sample_rate;
-    if (ch > 8) { stb_vorbis_close(v); return NULL; }   // buf abaixo cabe até 8 canais
+    if (!src_ok(&v)) return NULL;
     int nb = ch >= 2 ? 2 : 1;                 // canais do backing
     biquad sh[2], hp[2];
     for (int i = 0; i < 2; i++) kweight_init(&sh[i], &hp[i], fs);
@@ -707,7 +776,7 @@ JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
     int inseg = 0;
     float buf[4096 * 8];
     int got;
-    while ((got = stb_vorbis_get_samples_float_interleaved(v, ch, buf, 4096 * ch)) > 0) {
+    while ((got = src_read(&v, ch, buf, 4096)) > 0) {
         for (int i = 0; i < got; i++) {
             float *fr = &buf[i * ch];
             for (int k = 0; k < nb; k++) {
@@ -724,7 +793,7 @@ JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
             }
         }
     }
-    stb_vorbis_close(v);
+    src_close(&v);
 
     // blocos de 400 ms (4 segmentos) com 75% de sobreposição
     double sumAbs = 0; long nAbs = 0;
