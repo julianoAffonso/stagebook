@@ -16,6 +16,8 @@ data class Song(
     val year: String = "",
     val text: String = "",
     val zoom: Float = 1f,   // zoom desta música no palco (pinça), sobre o tamanho padrão dos ajustes
+    // faixa de Backing track copiada para o app (nome em filesDir/tracks); só deste aparelho: fora da exportação/QR
+    val track: String = "",
 )
 
 @Immutable
