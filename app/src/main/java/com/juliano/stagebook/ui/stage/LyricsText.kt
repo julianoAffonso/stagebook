@@ -200,5 +200,8 @@ fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): Annotated
     }
 }
 
+/** Linha de letra com acordes (com o espaço deles em cima)? */
+fun AnnotatedString.isChordLine(): Boolean = chordLineHeight() != null
+
 private fun AnnotatedString.chordLineHeight(): Float? =
     getStringAnnotations(CHORD_LINE_TAG, 0, length).firstOrNull()?.item?.toFloat()

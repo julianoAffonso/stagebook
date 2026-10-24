@@ -14,6 +14,7 @@ import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
+import com.juliano.stagebook.ui.stage.isChordLine
 import com.juliano.stagebook.ui.stage.joinLines
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -338,6 +339,29 @@ class StageFlowTest {
                 assertEquals("largura $width", one, batch.map { it.height })
                 assertEquals(lines.map { it.isEmpty() }, batch.map { it.blank })
             }
+        }
+        compose.waitForIdle()
+    }
+
+    // o Robolectric comum não quebra linha de texto: este precisa do desenho nativo (como as capturas)
+    @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun `linha com acordes que quebra vira pedaços e só os com acorde guardam o espaço`() {
+        val chords = com.juliano.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow)
+        val sourced = com.juliano.stagebook.ui.stage.stageLines(
+            "[G]uma linha comprida com acorde só no começo e que vai quebrar",
+            com.juliano.stagebook.ui.stage.SectionNames(null), androidx.compose.ui.graphics.Color.Cyan, true, chords,
+        )
+        compose.setContent {
+            val measurer = rememberTextMeasurer()
+            val style = TextStyle(fontSize = 34.sp, lineHeight = 42.5.sp)
+            val wide = com.juliano.stagebook.ui.stage.splitWrappedChordLines(measurer, sourced, style, 5000)
+            assertTrue("sem quebra, a mesma lista", wide === sourced)
+            val narrow = com.juliano.stagebook.ui.stage.splitWrappedChordLines(measurer, sourced, style, 400)
+            assertTrue("quebrou em pedaços: ${narrow.size}", narrow.size > 1)
+            assertTrue(narrow.first().text.isChordLine())
+            assertTrue(narrow.drop(1).none { it.text.isChordLine() })
+            assertEquals(setOf(0), narrow.map { it.source }.toSet())   // todos apontam para a mesma linha da letra
+            assertEquals(sourced.single().text.text.replace(" ", ""), narrow.joinToString("") { it.text.text }.replace(" ", ""))
         }
         compose.waitForIdle()
     }
