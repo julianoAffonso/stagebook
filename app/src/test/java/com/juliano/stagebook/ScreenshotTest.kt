@@ -186,6 +186,18 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneChords() = shoot("celular_5_ajustes_cifras") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.CHORDS) }
+    }
+
+    // acorde preto no fundo preto: o aviso de ilegível aparece
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneChordsIllegible() = shoot("celular_5_ajustes_cifras_ilegivel") {
+        val dark = settings.copy(look = settings.look.copy(chordColor = 0xFF000000.toInt()))
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(dark, SettingsActions(), it, section = SettingsSection.CHORDS) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
     fun settingsPhoneLanguage() = shoot("celular_5_ajustes_lingua") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LANGUAGE) }
     }
