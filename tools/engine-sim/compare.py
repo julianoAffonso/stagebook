@@ -50,7 +50,8 @@ if __name__ == "__main__":
     ok = True
     a = open(f"{d}/lufs-validado.txt").read().split()
     # "medidor": o motor atual com os medidores ao vivo ligados
-    for v in ("atual", "medidor"):
+    # "canal": a mistura por canal configurada igual à padrão
+    for v in ("atual", "medidor", "canal"):
         ok &= compare(f"[{v}] 44,1 kHz 4 canais", f"{d}/saida-validado.f32", f"{d}/saida-{v}.f32",
                       [("depois de buscar 1:00", 48000 * 3)])
         ok &= compare(f"[{v}] 48 kHz", f"{d}/saida48-validado.f32", f"{d}/saida48-{v}.f32", [("início", 0)])
