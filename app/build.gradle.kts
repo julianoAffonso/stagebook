@@ -70,7 +70,7 @@ android {
 // arm64 = TCL e celulares; armeabi-v7a = Fire HD 10 (Fire OS 32 bits); x86_64 = emulador
 val buildNative by tasks.registering(Exec::class) {
     val native = layout.buildDirectory.dir("native").get().asFile
-    inputs.files("src/main/cpp/engine.c", "src/main/cpp/third_party/stb_vorbis.c", "build_native.sh")
+    inputs.files("src/main/cpp/engine.c", "src/main/cpp/third_party/stb_vorbis.c", "src/main/cpp/third_party/dr_mp3.h", "src/main/cpp/third_party/dr_wav.h", "build_native.sh")
     outputs.dir(native)
     commandLine("./build_native.sh", native.absolutePath)
 }
