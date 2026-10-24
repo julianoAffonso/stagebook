@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import com.juliano.stagebook.ui.share.CloudUi
 import com.juliano.stagebook.domain.ShareCode
 import com.juliano.stagebook.data.Connectivity
 import com.juliano.stagebook.data.SetlistCloud
@@ -43,13 +44,6 @@ data class SetlistDetailUiState(
 /** QR pronto: a imagem e quantas músicas vão nele (as removidas da biblioteca não vão). */
 @Immutable
 data class QrUi(val image: ImageBitmap, val name: String, val count: Int, val missing: Int)
-
-/** Envio pela internet: enviando, enviado (com o código) ou falhou. */
-sealed interface CloudUi {
-    data object Sending : CloudUi
-    data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null) : CloudUi
-    data object Failed : CloudUi
-}
 
 @HiltViewModel
 class SetlistDetailViewModel @Inject constructor(

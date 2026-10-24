@@ -1,0 +1,188 @@
+package com.juliano.stagebook.ui.share
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.juliano.stagebook.R
+import com.juliano.stagebook.ui.components.ActionButton
+import com.juliano.stagebook.ui.components.AppIcons
+import com.juliano.stagebook.ui.components.ButtonTone
+import com.juliano.stagebook.ui.theme.Spacing
+
+// Compartilhar (setlist ou músicas avulsas): a folha com os jeitos de enviar e o diálogo do código da internet.
+
+/** O que fazer com o código pronto: copiar ou mandar por um app de mensagem do aparelho (WhatsApp, e-mail, SMS…). */
+class CodeActions(val copy: (code: String) -> Unit, val share: (name: String, code: String) -> Unit)
+
+@Composable
+fun rememberCodeActions(): CodeActions {
+    val context = LocalContext.current
+    val text = stringResource(R.string.share_message)
+    val textSongs = stringResource(R.string.share_message_songs)
+    return remember(context, text, textSongs) {
+        CodeActions(
+            copy = { code ->
+                context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", code))
+                Toast.makeText(context, R.string.share_copied, Toast.LENGTH_SHORT).show()
+            },
+            share = { name, code ->
+                val msg = if (name.isEmpty()) textSongs.format(code) else text.format(name, code)
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg)
+                runCatching { context.startActivity(Intent.createChooser(send, null)) }
+            },
+        )
+    }
+}
+
+/** Envio pela internet: enviando, enviado (com o código) ou falhou. */
+@Immutable
+sealed interface CloudUi {
+    data object Sending : CloudUi
+    data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null) : CloudUi
+    data object Failed : CloudUi
+}
+
+/** A folha "Compartilhar": cada jeito de enviar só aparece quando dá para usar (QR sempre; internet só com internet). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShareSheet(songs: Int, online: Boolean, onQr: (() -> Unit)?, onInternet: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l))
+    }
+}
+
+/** O conteúdo da folha (separado para o preview e os prints). */
+@Composable
+fun ShareOptions(songs: Int, online: Boolean, onQr: (() -> Unit)?, onInternet: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    var withSongs by rememberSaveable { mutableStateOf(true) }
+    Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
+        // QR na tela: só no setlist (leva só os títulos; músicas avulsas não cabem num QR)
+        onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), it) }
+        if (online) {
+            ShareOption(AppIcons.Public, stringResource(R.string.share_internet), stringResource(R.string.share_internet_hint)) { onInternet(withSongs) }
+            // no setlist dá para mandar só os títulos; músicas avulsas sempre vão inteiras
+            if (onQr != null) {
+                Row(Modifier.fillMaxWidth().padding(top = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(pluralStringResource(R.plurals.share_with_songs, songs, songs), style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.share_with_songs_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(withSongs, { withSongs = it })
+                }
+            }
+        } else {
+            Text(stringResource(if (onQr != null) R.string.share_offline else R.string.share_offline_songs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ShareOption(icon: ImageVector, title: String, hint: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = Spacing.s, horizontal = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+// enviando, o código pronto (com "Mandar por mensagem") ou o erro
+@Composable
+fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, String) -> Unit, onCopyCode: (String) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { if (cloud != CloudUi.Sending) onDismiss() },
+        title = {
+            Text(
+                stringResource(
+                    when (cloud) {
+                        CloudUi.Sending -> R.string.share_sending
+                        is CloudUi.Sent -> R.string.share_sent
+                        CloudUi.Failed -> R.string.share_failed
+                    },
+                ),
+            )
+        },
+        text = {
+            when (cloud) {
+                CloudUi.Sending -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                CloudUi.Failed -> Text(stringResource(R.string.share_failed_text), style = MaterialTheme.typography.bodyLarge)
+                is CloudUi.Sent -> CodeBox(cloud, onCopy = { onCopyCode(cloud.code) })
+            }
+        },
+        confirmButton = {
+            if (cloud is CloudUi.Sent) TextButton(onClick = { onShareCode(cloud.name, cloud.code) }) { Text(stringResource(R.string.share_send_code)) }
+            else if (cloud == CloudUi.Failed) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        },
+        dismissButton = { if (cloud is CloudUi.Sent) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+    )
+}
+
+/** O código grande (para ditar), o QR dele (para foto ou "Ler QR"), Copiar, e o que foi junto. */
+@Composable
+fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        sent.qr?.let { img ->
+            Image(
+                bitmap = img,
+                contentDescription = stringResource(R.string.share_code_qr),
+                modifier = Modifier.widthIn(max = 260.dp).fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small).background(Color.White),
+            )
+        }
+        SelectionContainer {
+            Text(sent.code, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+        }
+        ActionButton(stringResource(R.string.share_copy), onCopy, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
+        Text(pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs), style = MaterialTheme.typography.bodyMedium)
+        if (sent.skipped > 0) {
+            Text(pluralStringResource(R.plurals.share_skipped, sent.skipped, sent.skipped), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        Text(stringResource(R.string.share_sent_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+

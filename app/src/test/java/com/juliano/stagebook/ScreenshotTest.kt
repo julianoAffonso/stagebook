@@ -464,9 +464,9 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun shareSheetPhone() = shoot("jornada_compartilhar_1_folha") {
         androidx.compose.foundation.layout.Column {
-            com.juliano.stagebook.ui.setlists.ShareOptions(12, online = true, onQr = {}, onInternet = {})
+            com.juliano.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {})
             androidx.compose.material3.HorizontalDivider(androidx.compose.ui.Modifier.padding(vertical = com.juliano.stagebook.ui.theme.Spacing.l))
-            com.juliano.stagebook.ui.setlists.ShareOptions(12, online = false, onQr = {}, onInternet = {})
+            com.juliano.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {})
         }
     }
 
@@ -475,8 +475,8 @@ class ScreenshotTest {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
                 androidx.compose.material3.Text("Código do setlist", style = MaterialTheme.typography.headlineSmall)
-                com.juliano.stagebook.ui.setlists.CodeBox(
-                    com.juliano.stagebook.ui.setlists.CloudUi.Sent(
+                com.juliano.stagebook.ui.share.CodeBox(
+                    com.juliano.stagebook.ui.share.CloudUi.Sent(
                         "47-violao-lua", "Show de sábado", 12, 0,
                         com.juliano.stagebook.domain.QrEncoder.encode(com.juliano.stagebook.domain.ShareCode.qrText("47-violao-lua").toByteArray(), 600).asImageBitmap(),
                     ),
@@ -489,6 +489,25 @@ class ScreenshotTest {
     fun receiveCodeReviewPhone() = shoot("jornada_compartilhar_3_receber") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
             scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
+        )
+    }
+
+    // ---- músicas avulsas: seleção na aba Músicas e quem recebe ----
+    @Test @Config(qualifiers = PHONE)
+    fun songsSelectPhone() = shoot("jornada_musicas_1_selecao") {
+        HomeScaffold(HomeTab.SONGS, {}) {
+            com.juliano.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
+        }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun songsReceivedPhone() = shoot("jornada_musicas_2_recebidas") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
+            scanReview.copy(
+                name = "", songsOnly = true,
+                rows = scanReview.rows.mapIndexed { i, r -> if (i == 1 || i == 3) r.copy(carried = true) else r },
+            ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
         )
     }
