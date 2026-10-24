@@ -288,6 +288,31 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
+    // lista de acordes no topo, com o C numa variação escolhida (pestana na 3ª): a lista mostra a escolhida
+    private val chordSongDefined = "{define-guitar: C base-fret 3 frets x 1 3 3 3 1}\n" + chordSong
+
+    @Test fun stageChordListTopTablet() = shoot("tablet_6_palco_acordes_topo") {
+        StageScreen(
+            stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSongDefined, false)), look = stage.look.copy(chordList = com.juliano.stagebook.data.model.ChordListPlace.TOP)),
+            0, 0, { _, _ -> }, onBack = {},
+        )
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageChordListTopPhone() = shoot("celular_7_palco_acordes_topo") {
+        StageScreen(
+            stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSongDefined, false)), look = stage.look.copy(chordList = com.juliano.stagebook.data.model.ChordListPlace.TOP)),
+            0, 0, { _, _ -> }, onBack = {},
+        )
+    }
+
+    @Test fun stageChordListBottomTablet() = shoot("tablet_7_palco_acordes_fim") {
+        StageScreen(
+            stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSongDefined, false)), look = stage.look.copy(chordList = com.juliano.stagebook.data.model.ChordListPlace.BOTTOM)),
+            0, -1, { _, _ -> }, onBack = {},
+        )
+    }
+
     @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(chords = false)), 0, 0, { _, _ -> }, onBack = {})
     }

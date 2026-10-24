@@ -66,6 +66,11 @@ class ChordsTest {
         assertEquals("G", Chords.soundingKey("G", 0))
     }
 
+    @Test fun `diretiva com hífen no nome (define-guitar) é diretiva`() {
+        assertTrue(Chords.isDirective("{define-guitar: C base-fret 3 frets x 1 3 3 3 1}"))
+        assertEquals("", Chords.stripChords("{define-guitar: C base-fret 1 frets x 3 2 0 1 0}"))
+    }
+
     @Test fun `diretivas gravam, trocam e saem`() {
         var t = "[G]oi"
         t = Chords.setDirective(t, "capo", "3")

@@ -17,7 +17,7 @@ object Chords {
     // nota, acidente, o resto do acorde (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) e o baixo
     private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,)*)(?:/([A-G])([#b♯♭]?))?""")
     private val bracket = Regex("""\[([^\[\]]*)]""")
-    private val directive = Regex("""^\s*\{\s*([A-Za-z_]+)\s*(?::\s*(.*?))?\s*}\s*$""")
+    private val directive = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*}\s*$""")
     // marcas que podem estar numa linha de acordes sem fazer dela uma linha de letra
     private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?""", RegexOption.IGNORE_CASE)
 

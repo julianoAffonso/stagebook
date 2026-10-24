@@ -22,6 +22,14 @@ const val CHORD_TAG = "chord"
 /** Marca a linha de letra com acordes; o valor é a altura da linha (em em) com o espaço dos acordes. */
 private const val CHORD_LINE_TAG = "chordline"
 
+/** Marca o espaço da lista de acordes da música (topo ou fim); o palco desenha os acordes por cima dele. */
+const val CHORD_LIST_TAG = "chordlist"
+
+/** Uma linha vazia de [heightEm] de altura, reservada para a lista de acordes (entra na paginação como as outras). */
+fun chordListLine(heightEm: Float): AnnotatedString = buildAnnotatedString {
+    withAnnotation(CHORD_LINE_TAG, heightEm.toString()) { withAnnotation(CHORD_LIST_TAG, "") { append(' ') } }
+}
+
 /** Altura da linha da letra, em relação à fonte (a mesma do estilo do palco). */
 private const val LYRIC_LINE = 1.25f
 
@@ -68,7 +76,7 @@ private val sectionDirectives = mapOf(
     "start_of_verse" to Sections.Kind.VERSE, "sov" to Sections.Kind.VERSE,
     "start_of_bridge" to Sections.Kind.BRIDGE, "sob" to Sections.Kind.BRIDGE,
 )
-private val directiveName = Regex("""^\s*\{\s*([A-Za-z_]+)\s*(?::\s*(.*?))?\s*}\s*$""")
+private val directiveName = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*}\s*$""")
 
 fun stageLines(text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook): List<StageLine> {
     val out = ArrayList<StageLine>()
