@@ -52,4 +52,10 @@ class LetrasCompatTest {
         assertEquals("Show de sábado", read?.name)
         assertEquals(listOf("Canção A", "Canção B"), read?.songs?.map { it.title })
     }
+
+    @Test fun `a faixa do aparelho não vai na exportação`() {
+        val lib = com.juliano.stagebook.data.model.Library(songs = listOf(com.juliano.stagebook.data.model.Song(id = "a", title = "T", text = "x", track = "a-1.ogg")))
+        val out = LibraryCodec.encodeSongs(lib.songs.map { it.copy(track = "") })
+        assertEquals("", LibraryCodec.decodeSongs(out).single().track)
+    }
 }

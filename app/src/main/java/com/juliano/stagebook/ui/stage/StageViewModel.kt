@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.stage
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.juliano.stagebook.data.TrackStore
 import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.domain.Voicings
 import androidx.compose.runtime.Immutable
@@ -20,7 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @Immutable
-data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f)
+data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "")
 
 @Immutable
 data class StageUiState(
@@ -34,7 +36,30 @@ class StageViewModel @Inject constructor(
     private val repository: LibraryRepository,
     savedStateHandle: SavedStateHandle,
     private val stageGate: StageGate,
+    private val tracks: TrackStore,
 ) : ViewModel() {
+    /** Tocando agora? (o som entra com o serviço do player, etapa 4c; por ora só o estado do botão) */
+    private val _playing = MutableStateFlow(false)
+    val playing: StateFlow<Boolean> = _playing
+
+    fun togglePlay() { _playing.value = !_playing.value }
+
+    /** Liga a faixa escolhida à música (copiada para o app); a anterior é apagada. Falso se o arquivo não serve. */
+    suspend fun attachTrack(songId: String, uri: android.net.Uri): Boolean {
+        val name = tracks.copy(songId, uri) ?: return false
+        val old = repository.song(songId)?.track.orEmpty()
+        repository.updateSong(songId) { it.copy(track = name) }
+        if (old != name) tracks.remove(old)
+        return true
+    }
+
+    fun removeTrack(songId: String) {
+        val old = repository.song(songId)?.track.orEmpty()
+        repository.updateSong(songId) { it.copy(track = "") }
+        tracks.remove(old)
+        _playing.value = false
+    }
+
     init { stageGate.enter() }   // segura a sincronia com o Drive enquanto o palco está aberto
     override fun onCleared() = stageGate.leave()
     private val route = savedStateHandle.toRoute<Stage>()
@@ -48,7 +73,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f)
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty())
             },
             look = lib.look,
         )

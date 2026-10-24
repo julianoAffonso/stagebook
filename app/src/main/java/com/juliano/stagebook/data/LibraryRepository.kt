@@ -227,7 +227,8 @@ class LibraryRepository @Inject constructor(
         return result
     }
 
-    fun exportSongs(): String = LibraryCodec.encodeSongs(_library.value.songs)
+    // a faixa é um arquivo deste aparelho: não vai para outro
+    fun exportSongs(): String = LibraryCodec.encodeSongs(_library.value.songs.map { it.copy(track = "") })
 }
 
 private const val TAG = "stagebook"

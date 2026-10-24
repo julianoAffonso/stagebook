@@ -1,5 +1,14 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.ui.draw.clip
+import com.juliano.stagebook.data.TrackStore
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.widget.Toast
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.IntOffset
 import com.juliano.stagebook.data.model.ChordListPlace
@@ -131,7 +140,19 @@ fun StageRoute(
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val playing by viewModel.playing.collectAsStateWithLifecycle()
     var index by rememberSaveable { mutableIntStateOf(viewModel.start) }
+    // escolher a faixa da música (OGG, MP3 ou WAV): copiada para o app ao voltar do seletor do Android
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var pickingFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val id = pickingFor
+        pickingFor = null
+        if (uri != null && id != null) scope.launch {
+            if (!viewModel.attachTrack(id, uri)) Toast.makeText(context, R.string.stage_track_bad, Toast.LENGTH_LONG).show()
+        }
+    }
     var page by rememberSaveable { mutableIntStateOf(0) }
     KeepScreenOn()
     if (!uiState.loading && uiState.songs.isNotEmpty()) {
@@ -144,6 +165,10 @@ fun StageRoute(
             onEdit = onEditSong,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
+            playing = playing,
+            onTogglePlay = viewModel::togglePlay,
+            onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
+            onRemoveTrack = viewModel::removeTrack,
             onHiddenChords = viewModel::setHiddenChords,
         )
     } else {
@@ -174,6 +199,10 @@ fun StageScreen(
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
+    playing: Boolean = false,
+    onTogglePlay: () -> Unit = {},
+    onPickTrack: (songId: String) -> Unit = {},
+    onRemoveTrack: (songId: String) -> Unit = {},
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -414,6 +443,10 @@ fun StageScreen(
             // tom e capo da música (ícone + valor, o texto inteiro só para leitores de tela); no celular vão
             // para a linha do artista, senão o título encurta
             if (!song.missing && metaInline && look.chords) SongKeyBadges(song.text, fg)
+            // a música tem Backing track (modo player); no celular vai para a linha do artista
+            if (metaInline && look.playerMode && song.track.isNotEmpty()) {
+                Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), tint = fg.copy(alpha = 0.6f))
+            }
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -422,7 +455,8 @@ fun StageScreen(
         }
         // tom e capo são de cifra: no perfil só letra não aparecem
         val hasKey = look.chords && remember(song.text) { Chords.key(song.text).isNotEmpty() || Chords.capo(song.text) > 0 }
-        if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
+        val hasTrack = look.playerMode && song.track.isNotEmpty()
+        if (!metaInline && (song.meta.isNotEmpty() || ((hasKey || hasTrack) && !song.missing))) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
@@ -433,6 +467,9 @@ fun StageScreen(
                     modifier = Modifier.weight(1f),
                 )
                 if (!song.missing && hasKey) SongKeyBadges(song.text, fg)
+                if (hasTrack) {
+                    Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), Modifier.padding(start = Spacing.m), tint = fg.copy(alpha = 0.6f))
+                }
             }
         }
 
@@ -643,6 +680,18 @@ fun StageScreen(
                     // última folha com só a coluna da esquerda: a da direita fica vazia, não estica a outra
                     repeat(content.sheetColumns - content.columns.size) { Box(Modifier.weight(1f)) }
                 }
+            }
+            // player (só no modo player): play/pause transparente no canto de baixo à direita, por cima da letra
+            if (look.playerMode && !song.missing) {
+                TrackButton(
+                    hasTrack = song.track.isNotEmpty(),
+                    playing = playing,
+                    fg = fg,
+                    onClick = { if (song.track.isEmpty()) onPickTrack(song.id) else onTogglePlay() },
+                    onChange = { onPickTrack(song.id) },
+                    onRemove = { onRemoveTrack(song.id) },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
+                )
             }
             ZoomBadge(
                 visible = zoomTouched,
@@ -877,6 +926,44 @@ private class PageHit {
         val text = layout.layoutInput.text
         val line = text.getStringAnnotations(LINE_TAG, offset, minOf(offset + 1, text.length)).firstOrNull()?.item?.toInt() ?: return null
         return start + line
+    }
+}
+
+/**
+ * Play/pause da faixa: círculo translúcido, para não esconder a letra. Sem faixa, o toque escolhe o arquivo; com
+ * faixa, o toque longo oferece trocar ou tirar a faixa.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TrackButton(
+    hasTrack: Boolean,
+    playing: Boolean,
+    fg: Color,
+    onClick: () -> Unit,
+    onChange: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box(modifier) {
+        Box(
+            Modifier
+                .size(Sizes.touch + Spacing.m)
+                .clip(CircleShape)
+                .background(fg.copy(alpha = 0.12f))
+                .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                when { !hasTrack -> AppIcons.QueueMusic; playing -> AppIcons.Pause; else -> AppIcons.Play },
+                stringResource(when { !hasTrack -> R.string.stage_track_pick; playing -> R.string.stage_pause; else -> R.string.stage_play }),
+                tint = fg.copy(alpha = if (hasTrack) 0.85f else 0.5f),
+            )
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; onRemove() })
+        }
     }
 }
 

@@ -332,6 +332,22 @@ class ScreenshotTest {
         )
     }
 
+    // modo player: sem faixa (o botão escolhe o arquivo), com faixa parada e tocando (ícone de Backing track no topo)
+    private val playerLook = Look(fontSp = 34f, playerMode = true)
+
+    @Test fun stagePlayerNoTrackTablet() = shoot("tablet_11_player_sem_faixa") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    @Test fun stagePlayerTrackTablet() = shoot("tablet_11_player_com_faixa") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stagePlayerPlayingPhone() = shoot("celular_11_player_tocando") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true)
+    }
+
     @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(chords = false)), 0, 0, { _, _ -> }, onBack = {})
     }
