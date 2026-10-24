@@ -18,6 +18,9 @@
     <uses-feature android:name="android.software.midi" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <!-- ler o QR do setlist (Letras ou outro Stagebook): pedida só ao abrir o leitor -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <!-- player (modo player): tocar com a tela apagada, na interface de áudio USB -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />

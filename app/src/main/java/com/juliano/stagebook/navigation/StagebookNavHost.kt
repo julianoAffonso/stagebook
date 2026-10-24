@@ -1,5 +1,6 @@
 package com.juliano.stagebook.navigation
 
+import com.juliano.stagebook.ui.setlists.ScanSetlistRoute
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
@@ -46,6 +47,7 @@ fun StagebookNavHost(
                 onImport = { entry.ifResumed { nav.navigate(Importer(it)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
                 onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
+                onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist) } },
             )
         }
         composable<SongEditor> { SongEditorRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
@@ -55,6 +57,13 @@ fun StagebookNavHost(
                 onPlay = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start)) } },
                 onAddSongs = { entry.ifResumed { nav.navigate(PickSongs(it)) } },
                 onEditSong = { entry.ifResumed { nav.navigate(SongEditor(songId = it)) } },
+            )
+        }
+        composable<ScanSetlist> {
+            ScanSetlistRoute(
+                // criado: abre o setlist no lugar do leitor (voltar leva para a lista)
+                onDone = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<ScanSetlist> { inclusive = true } } },
+                onBack = dropUnlessResumed { nav.popBackStack() },
             )
         }
         composable<PickSongs> { PickSongsRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
