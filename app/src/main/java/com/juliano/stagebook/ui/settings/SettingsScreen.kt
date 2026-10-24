@@ -1,5 +1,11 @@
 package com.juliano.stagebook.ui.settings
 
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
+import com.juliano.stagebook.domain.ImportSiteRules
+import com.juliano.stagebook.data.model.ImportSite
 import com.juliano.stagebook.data.model.ChordListPlace
 import com.juliano.stagebook.data.model.Instrument
 import com.juliano.stagebook.ui.stage.family
@@ -184,6 +190,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onMidiChoose = viewModel::chooseMidi,
                 onMidiForget = viewModel::forgetMidi,
                 onMidiUsb = viewModel::setMidiUsb,
+                onSites = viewModel::setSites,
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -238,6 +245,7 @@ data class SettingsActions(
     val onMidiForget: () -> Unit = {},
     val onMidiUsb: (Boolean) -> Unit = {},
     val onLanguage: (AppLanguage) -> Unit = {},
+    val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onImport: () -> Unit = {},
@@ -255,6 +263,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
     LANGUAGE(R.string.settings_language, AppIcons.Language),
+    IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
     UPDATE(R.string.settings_update, AppIcons.Download),
 }
@@ -361,6 +370,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState): String = when (s) 
     else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
     SettingsSection.LANGUAGE -> languageLabel(ui.language)
+    SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
     SettingsSection.UPDATE -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
     SettingsSection.LIBRARY -> pluralStringResource(R.plurals.song_count, ui.songCount, ui.songCount) + " · " +
@@ -377,6 +387,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
+            SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.UPDATE -> UpdateDetail(uiState, actions)
         }
@@ -803,6 +814,63 @@ private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> 
             }
         }
     }
+}
+
+/** Sites de importação: o primeiro de cada lista é o padrão (onde o importador abre); dá para tirar e acrescentar. */
+@Composable
+private fun ImportSitesDetail(look: Look, actions: SettingsActions) {
+    SiteListCard(stringResource(R.string.settings_lyric_sites), look.lyricSites) { actions.onSites(false, it) }
+    // cifra só no perfil letra e cifra
+    if (look.chords) SiteListCard(stringResource(R.string.settings_chord_sites), look.chordSites) { actions.onSites(true, it) }
+}
+
+@Composable
+private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List<ImportSite>) -> Unit) {
+    var adding by rememberSaveable { mutableStateOf(false) }
+    SettingsCard(title) {
+        sites.forEachIndexed { i, site ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // o padrão é o primeiro: escolher outro o põe no topo
+                RadioButton(selected = i == 0, onClick = { onChange(listOf(site) + (sites - site)) })
+                Column(Modifier.weight(1f)) {
+                    Text(site.name, style = MaterialTheme.typography.bodyLarge)
+                    Text(site.url.removePrefix("https://").removePrefix("www.").trimEnd('/'), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (sites.size > 1) {
+                    IconButton(onClick = { onChange(sites - site) }) { Icon(AppIcons.Close, stringResource(R.string.settings_site_remove, site.name)) }
+                }
+            }
+        }
+        Text(stringResource(R.string.settings_sites_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ActionButton(stringResource(R.string.settings_site_add), { adding = true }, icon = AppIcons.Add, tone = ButtonTone.Tonal)
+    }
+    if (adding) {
+        SiteDialog(onDone = { s -> adding = false; if (sites.none { it.url == s.url }) onChange(sites + s) }, onDismiss = { adding = false })
+    }
+}
+
+/** Acrescentar um site: endereço (o nome sai do domínio se ficar em branco). */
+@Composable
+private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
+    var address by rememberSaveable { mutableStateOf("") }
+    val url = ImportSiteRules.normalize(address)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_site_add)) },
+        text = {
+            OutlinedTextField(
+                value = address,
+                onValueChange = { address = it.trim() },
+                singleLine = true,
+                placeholder = { Text("www.site.com") },
+                isError = address.isNotEmpty() && url == null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                shape = MaterialTheme.shapes.small,
+            )
+        },
+        confirmButton = { TextButton(onClick = { url?.let { onDone(ImportSite(ImportSiteRules.nameOf(it), it)) } }, enabled = url != null) { Text(stringResource(R.string.settings_site_add_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable

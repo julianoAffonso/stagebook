@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.model.ImportSite
 import com.juliano.stagebook.data.model.Instrument
 import com.juliano.stagebook.data.model.ChordListPlace
 import com.juliano.stagebook.data.model.StageFont
@@ -148,6 +149,8 @@ class SettingsViewModel @Inject constructor(
     fun setFontFamily(f: StageFont) = repository.updateLook { it.copy(font = f) }
     fun setChordFont(f: StageFont) = repository.updateLook { it.copy(chordFont = f) }
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
+    fun setSites(chords: Boolean, sites: List<ImportSite>) =
+        repository.updateLook { if (chords) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
     fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }

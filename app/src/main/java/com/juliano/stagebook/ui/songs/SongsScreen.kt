@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.songs
 
+import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,10 +54,12 @@ fun SongsRoute(
     viewModel: SongsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val online by viewModel.online.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
     SongsScreen(
         uiState = uiState,
+        online = online,
         query = query,
         onQueryChange = { query = it },
         onNewSong = { onEditSong(null) },
@@ -78,6 +82,7 @@ fun SongsScreen(
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
+    online: Boolean = true,
 ) {
     val wide = wideLists()
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
@@ -91,7 +96,21 @@ fun SongsScreen(
             SearchField(query, onQueryChange, stringResource(R.string.songs_search))
             Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
-                ActionButton(stringResource(R.string.songs_import), onImport, Modifier.weight(1f), icon = AppIcons.Public, tone = ButtonTone.Tonal)
+                // importar só com internet: sem ela o botão fica indisponível, com a nuvem cortada no lugar do globo
+                ActionButton(
+                    stringResource(R.string.songs_import),
+                    onImport,
+                    Modifier.weight(1f),
+                    icon = if (online) AppIcons.Public else AppIcons.CloudOff,
+                    tone = ButtonTone.Tonal,
+                    enabled = online,
+                )
+            }
+            AnimatedVisibility(!online) {
+                Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(AppIcons.CloudOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.import_needs_internet), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             Crossfade(targetState = uiState.loading, label = "songs") { loading ->
                 when {

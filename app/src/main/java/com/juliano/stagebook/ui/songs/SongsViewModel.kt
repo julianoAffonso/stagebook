@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.songs
 
+import com.juliano.stagebook.data.Connectivity
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,7 +33,10 @@ fun typingDelay(q: String): Long = if (q.isEmpty()) 0L else 150L
 fun Song.subtitle(): String = listOf(author, year).filter { it.isNotBlank() }.joinToString(" · ") { it.trim() }
 
 @HiltViewModel
-class SongsViewModel @Inject constructor(private val repository: LibraryRepository) : ViewModel() {
+class SongsViewModel @Inject constructor(private val repository: LibraryRepository, connectivity: Connectivity) : ViewModel() {
+    /** Importar precisa de internet: o botão fica indisponível sem ela (só observa com a tela aberta). */
+    val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
 

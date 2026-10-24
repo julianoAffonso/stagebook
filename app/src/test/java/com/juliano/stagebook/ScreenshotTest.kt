@@ -80,6 +80,17 @@ class ScreenshotTest {
 
     @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
+    // sem internet: Importar indisponível, com a nuvem cortada e o aviso
+    @Test @Config(qualifiers = PHONE)
+    fun homeSongsOfflinePhone() = shoot("celular_1_musicas_sem_internet") {
+        HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, online = false) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneImportSites() = shoot("celular_5_ajustes_importacao") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.IMPORT) }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun homeSongsPhone() = shoot("celular_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 

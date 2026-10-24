@@ -40,6 +40,11 @@ class ImportViewModel @Inject constructor(
 ) : ViewModel() {
     val initialQuery = savedStateHandle.toRoute<Importer>().query
 
+    /** Onde o importador abre: o site padrão do perfil (cifra ou letra), e o que a busca procura. */
+    private val look get() = repository.library.value.look
+    val home: String get() = (if (look.chords) look.chordSites else look.lyricSites).firstOrNull()?.url ?: HOME
+    fun urlFor(q: String): String = urlFor(q, if (look.chords) "cifra" else "letra")
+
     private val _uiState = MutableStateFlow(ImportUiState())
     val uiState: StateFlow<ImportUiState> = _uiState.asStateFlow()
 
@@ -93,13 +98,13 @@ class ImportViewModel @Inject constructor(
     companion object {
         private const val LOOKUP_TIMEOUT_MS = 8_000L
 
-        /** Endereço, domínio ou busca no Google por "letra <texto>". */
-        fun urlFor(q: String): String {
+        /** Endereço, domínio ou busca no Google por "<palavra> <texto>" (letra ou cifra, conforme o perfil). */
+        fun urlFor(q: String, word: String = "letra"): String {
             val s = q.trim()
             return when {
                 s.matches(Regex("(?i)^https?://.*")) -> s
                 s.matches(Regex("(?i)^[\\w.-]+\\.[a-z]{2,}(/.*)?$")) -> "https://$s"
-                else -> "https://www.google.com/search?q=" + Uri.encode("letra $s")
+                else -> "https://www.google.com/search?q=" + Uri.encode("$word $s")
             }
         }
 
