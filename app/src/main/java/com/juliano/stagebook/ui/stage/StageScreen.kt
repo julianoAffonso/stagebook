@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.juliano.stagebook.domain.Chords
 import androidx.compose.ui.unit.TextUnit
 import android.text.format.DateFormat
 import android.view.KeyEvent
@@ -375,21 +378,28 @@ fun StageScreen(
                 )
             }
         }
+            // tom e capo da música (ícone + valor, o texto inteiro só para leitores de tela); no celular vão
+            // para a linha do artista, senão o título encurta
+            if (!song.missing && metaInline) SongKeyBadges(song.text, fg)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
                 }
             }
         }
-        if (!metaInline && song.meta.isNotEmpty()) {
-            Text(
-                song.meta,
-                style = MaterialTheme.typography.titleSmall,
-                color = fg.copy(alpha = 0.55f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.s),
-            )
+        val hasKey = remember(song.text) { Chords.key(song.text).isNotEmpty() || Chords.capo(song.text) > 0 }
+        if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
+            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    song.meta,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = fg.copy(alpha = 0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!song.missing) SongKeyBadges(song.text, fg)
+            }
         }
 
         // arrastar na horizontal: a página acompanha o dedo (só deslocamento, sem medir texto de novo) e, ao
@@ -726,6 +736,31 @@ private class PageHit {
         val text = layout.layoutInput.text
         val line = text.getStringAnnotations(LINE_TAG, offset, minOf(offset + 1, text.length)).firstOrNull()?.item?.toInt() ?: return null
         return start + line
+    }
+}
+
+/** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
+@Composable
+private fun SongKeyBadges(text: String, fg: Color) {
+    val key = remember(text) { Chords.key(text) }
+    val capo = remember(text) { Chords.capo(text) }
+    if (key.isEmpty() && capo == 0) return
+    val sounds = Chords.soundingKey(key, capo)
+    val keyDesc = stringResource(R.string.stage_key_desc, key)
+    val capoDesc = if (key.isNotEmpty()) stringResource(R.string.stage_capo_sounds_desc, capo, sounds) else stringResource(R.string.stage_capo_desc, capo)
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        if (key.isNotEmpty()) {
+            Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
+                Icon(AppIcons.MusicNote, null, tint = fg.copy(alpha = 0.6f))
+                Text(key, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+            }
+        }
+        if (capo > 0) {
+            Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
+                Icon(AppIcons.Capo, null, tint = fg.copy(alpha = 0.6f))
+                Text(capo.toString(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+            }
+        }
     }
 }
 
