@@ -99,7 +99,7 @@ import com.juliano.stagebook.ui.theme.StagePalette
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsRoute(onSyncDetails: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -163,7 +163,6 @@ fun SettingsRoute(onSyncDetails: () -> Unit = {}, viewModel: SettingsViewModel =
                 onColumns = viewModel::setColumns,
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 onExport = { exporter.launch("stagebook-biblioteca.json") },
-                onSyncDetails = onSyncDetails,
                 onCheckUpdate = viewModel::checkUpdate,
                 onDownloadUpdate = viewModel::downloadUpdate,
                 onInstallUpdate = install,
@@ -202,7 +201,6 @@ data class SettingsActions(
     val onColumns: (StageColumns) -> Unit = {},
     val onImport: () -> Unit = {},
     val onExport: () -> Unit = {},
-    val onSyncDetails: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
     val onInstallUpdate: () -> Unit = {},
@@ -647,8 +645,6 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             ActionButton(stringResource(R.string.settings_export_file), actions.onExport, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
         }
         Text(stringResource(R.string.settings_import_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        // discreto: só para quem quer saber o que a atualização do Drive mudou (e desfazer)
-        TextButton(onClick = actions.onSyncDetails) { Text(stringResource(R.string.sync_details_open)) }
     }
 }
 

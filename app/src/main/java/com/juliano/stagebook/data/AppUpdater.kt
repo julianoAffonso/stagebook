@@ -23,20 +23,13 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * O que está publicado no Drive (o publicar.sh grava junto com o APK): a versão do app e a marca (sha-256)
- * da biblioteca de músicas. As duas atualizações (app e músicas) leem este mesmo arquivo: nenhuma vê uma
- * coisa enquanto a outra vê outra. [library] vazia = publicado antes de existir a marca.
- */
+/** O que está publicado no último release do GitHub (o publicar.sh grava junto com o APK). */
 @Serializable
-data class PublishedVersion(val versionCode: Long, val versionName: String, val library: String = "")
-
-/** A biblioteca baixada e a marca dos bytes que chegaram (para conferir com a anunciada). */
-class LibraryDownload(val text: String, val sha256: String)
+data class PublishedVersion(val versionCode: Long, val versionName: String)
 
 /**
- * Atualização do app pelos mesmos arquivos fixos do Drive que o publicar.sh mantém: lê a versão
- * publicada, baixa o APK e abre o instalador do Android (ele sempre pede o toque em "Instalar").
+ * Atualização do app pelo último release do GitHub: lê a versão publicada, baixa o APK e abre o
+ * instalador do Android (ele sempre pede o toque em "Instalar").
  */
 @Singleton
 class AppUpdater @Inject constructor(@ApplicationContext private val context: Context) {
@@ -45,7 +38,6 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     // endereços dos arquivos fixos (os testes trocam por um servidor local)
     internal var apkUrl = APK_URL
     internal var versionUrl = VERSION_URL
-    internal var libraryUrl = LIBRARY_URL
 
     // a versão não muda com o app aberto (atualizar reinicia o processo): pergunta ao sistema uma vez só
     val installedCode: Long by lazy {
@@ -70,24 +62,7 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     }
 
     /**
-     * O arquivo de biblioteca publicado (letras-biblioteca.json), ou null sem internet / sem resposta.
-     * [on]: onde baixar (a sincronia passa a sua linha de baixa prioridade).
-     */
-    suspend fun publishedLibrary(on: CoroutineContext = Dispatchers.IO): LibraryDownload? = withContext(on) {
-        if (libraryUrl.isEmpty()) return@withContext null
-        runCatching {
-            get(libraryUrl) { input, _ ->
-                val bytes = input.readBytes()
-                val sha = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-                LibraryDownload(bytes.toString(Charsets.UTF_8), sha)
-            }
-        }
-            .onFailure { Log.w(TAG, "não baixei a biblioteca publicada", it) }
-            .getOrNull()
-    }
-
-    /**
-     * Baixa o APK publicado e confere que é o previous app e mais novo que o instalado. `progress` vai de
+     * Baixa o APK publicado e confere que é o Stagebook e mais novo que o instalado. `progress` vai de
      * 0 a 100. Lança IOException se não baixar ou não conferir.
      */
     suspend fun download(progress: (Int) -> Unit): File = withContext(Dispatchers.IO) {
@@ -150,7 +125,5 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
         const val RELEASES = "https://github.com/julianoAffonso/stagebook/releases/latest/download/"
         const val APK_URL = RELEASES + "stagebook.apk"
         const val VERSION_URL = RELEASES + "stagebook-versao.json"
-        // biblioteca publicada da banda (herdada do previous app): desligada num app público
-        const val LIBRARY_URL = ""
     }
 }

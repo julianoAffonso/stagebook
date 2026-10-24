@@ -29,6 +29,3 @@ data class Stage(
 
 @Serializable
 data class Importer(val query: String = "")
-
-@Serializable
-object SyncReport   // o que a última sincronia com o Drive mudou
