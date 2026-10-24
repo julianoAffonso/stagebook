@@ -1,0 +1,247 @@
+package com.juliano.stagebook.data
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
+import android.util.Log
+import androidx.compose.runtime.Immutable
+import com.juliano.stagebook.domain.BandProtocol
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * A banda na rede local (Wi-Fi do lugar ou o ponto de acesso de um celular; sem internet): anuncia este aparelho, acha os
+ * outros e atende os pedidos de entrada. Só fica ligada quando dá para usar e vale a pena (bateria): app na frente, no
+ * Wi-Fi e (alguém da banda guardado, ou a tela Ajustes → Banda aberta).
+ */
+@Singleton
+class BandLink @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val identity: DeviceIdentity,
+    private val trust: BandTrust,
+) {
+    /** Um aparelho com o Stagebook na mesma rede. */
+    @Immutable
+    data class Peer(val id: String, val name: String, val host: InetAddress, val port: Int)
+
+    /** Alguém pedindo para entrar na banda por este aparelho (o usuário responde Autorizar / Não autorizar). */
+    @Immutable
+    class Request(val id: String, val name: String, internal val answer: CompletableDeferred<Boolean>)
+
+    enum class Join { WAITING, ACCEPTED, DENIED, FAILED }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _peers = MutableStateFlow<List<Peer>>(emptyList())
+    val peers: StateFlow<List<Peer>> = _peers
+
+    private val _requests = MutableStateFlow<List<Request>>(emptyList())
+    val requests: StateFlow<List<Request>> = _requests
+
+    /** Pedidos que este aparelho fez, por id do outro. */
+    private val _joins = MutableStateFlow<Map<String, Join>>(emptyMap())
+    val joins: StateFlow<Map<String, Join>> = _joins
+
+    private val _running = MutableStateFlow(false)
+    val running: StateFlow<Boolean> = _running
+
+    private var foreground = false
+    private var screenOpen = false
+    private var server: ServerSocket? = null
+    private var serverJob: Job? = null
+    private var registration: NsdManager.RegistrationListener? = null
+    private var discovery: NsdManager.DiscoveryListener? = null
+    private var multicast: WifiManager.MulticastLock? = null
+    private val nsd get() = context.getSystemService(NsdManager::class.java)
+
+    /** O app foi para a frente / saiu dela (MainActivity). Na frente, acompanha o Wi-Fi ligar e desligar. */
+    fun setForeground(on: Boolean) {
+        foreground = on
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        if (on && netCallback == null && cm != null) {
+            netCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: android.net.Network, caps: NetworkCapabilities) { _wifi.value = onWifi(); update() }
+                override fun onLost(network: android.net.Network) { _wifi.value = onWifi(); update() }
+            }.also { runCatching { cm.registerDefaultNetworkCallback(it) } }
+        } else if (!on) {
+            netCallback?.let { runCatching { cm?.unregisterNetworkCallback(it) } }
+            netCallback = null
+        }
+        _wifi.value = onWifi()
+        update()
+    }
+
+    private var netCallback: ConnectivityManager.NetworkCallback? = null
+
+    private val _wifi = MutableStateFlow(false)
+    /** No Wi-Fi agora (a tela mostra "conecte no Wi-Fi" sem ele). */
+    val wifi: StateFlow<Boolean> = _wifi
+
+    /** A tela Ajustes → Banda está aberta (para alguém novo achar este aparelho). */
+    fun setScreenOpen(on: Boolean) { screenOpen = on; update() }
+
+    @Synchronized
+    fun update() {
+        val want = foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
+        if (want && !_running.value) start() else if (!want && _running.value) stop()
+    }
+
+    fun onWifi(): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private fun start() {
+        _running.value = true
+        val socket = runCatching { ServerSocket(0) }.getOrElse { Log.w(TAG, "porta: $it"); _running.value = false; return }
+        server = socket
+        serverJob = scope.launch {
+            val session = BandSession(identity.hello())
+            while (isActive) {
+                val client = runCatching { socket.accept() }.getOrNull() ?: break
+                launch {
+                    runCatching {
+                        session.serve(client, trust::isMember, ::ask) { h -> trust.add(h.id, h.name, h.key); update() }
+                    }
+                }
+            }
+        }
+        multicast = context.applicationContext.getSystemService(WifiManager::class.java)?.createMulticastLock("stagebook-band")?.apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+        register(socket.localPort)
+        discover()
+    }
+
+    private fun stop() {
+        _running.value = false
+        registration?.let { runCatching { nsd.unregisterService(it) } }
+        discovery?.let { runCatching { nsd.stopServiceDiscovery(it) } }
+        registration = null
+        discovery = null
+        runCatching { server?.close() }
+        server = null
+        serverJob?.cancel()
+        multicast?.let { if (it.isHeld) it.release() }
+        multicast = null
+        _peers.value = emptyList()
+    }
+
+    private fun register(port: Int) {
+        val info = NsdServiceInfo().apply {
+            serviceName = "Stagebook"
+            serviceType = BandProtocol.SERVICE_TYPE
+            setPort(port)
+            setAttribute(ATTR_ID, identity.id)
+            setAttribute(ATTR_NAME, identity.name.value)
+        }
+        val listener = object : NsdManager.RegistrationListener {
+            override fun onServiceRegistered(info: NsdServiceInfo) = Unit
+            override fun onRegistrationFailed(info: NsdServiceInfo, error: Int) { Log.w(TAG, "anúncio falhou: $error") }
+            override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
+            override fun onUnregistrationFailed(info: NsdServiceInfo, error: Int) = Unit
+        }
+        registration = listener
+        runCatching { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener) }
+    }
+
+    // o NSD do Android resolve um serviço por vez: uma fila simples
+    private val toResolve = ArrayDeque<NsdServiceInfo>()
+    private var resolving = false
+
+    private fun discover() {
+        val listener = object : NsdManager.DiscoveryListener {
+            override fun onDiscoveryStarted(type: String) = Unit
+            override fun onDiscoveryStopped(type: String) = Unit
+            override fun onStartDiscoveryFailed(type: String, error: Int) { Log.w(TAG, "procura falhou: $error") }
+            override fun onStopDiscoveryFailed(type: String, error: Int) = Unit
+            override fun onServiceFound(info: NsdServiceInfo) { synchronized(toResolve) { toResolve.addLast(info) }; resolveNext() }
+            override fun onServiceLost(info: NsdServiceInfo) {
+                // sem o id aqui: some quem tinha esse nome de serviço; o próximo anúncio traz de volta quem continua
+                _peers.update { list -> list.filterNot { names[it.id] == info.serviceName } }
+            }
+        }
+        discovery = listener
+        runCatching { nsd.discoverServices(BandProtocol.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener) }
+    }
+
+    private val names = mutableMapOf<String, String>()   // id → nome do serviço anunciado
+
+    @Suppress("DEPRECATION")   // resolveService: o substituto (registerServiceInfoCallback) é só do Android 14
+    private fun resolveNext() {
+        val next = synchronized(toResolve) { if (resolving) null else toResolve.removeFirstOrNull()?.also { resolving = true } } ?: return
+        runCatching {
+            nsd.resolveService(next, object : NsdManager.ResolveListener {
+                override fun onResolveFailed(info: NsdServiceInfo, error: Int) { done() }
+                override fun onServiceResolved(info: NsdServiceInfo) {
+                    val id = info.attributes[ATTR_ID]?.decodeToString()
+                    val name = info.attributes[ATTR_NAME]?.decodeToString().orEmpty().take(BandProtocol.MAX_NAME)
+                    val host = info.host
+                    if (id != null && id != identity.id && host != null) {
+                        names[id] = info.serviceName
+                        _peers.update { list -> (list.filterNot { it.id == id } + Peer(id, name, host, info.port)).sortedBy { it.name.lowercase() } }
+                    }
+                    done()
+                }
+
+                fun done() { synchronized(toResolve) { resolving = false }; resolveNext() }
+            })
+        }.onFailure { synchronized(toResolve) { resolving = false } }
+    }
+
+    private suspend fun ask(hello: BandProtocol.Hello): Boolean {
+        val req = Request(hello.id, hello.name, CompletableDeferred())
+        _requests.update { it.filterNot { r -> r.id == hello.id } + req }
+        val ok = withTimeoutOrNull(BandSession.ANSWER_TIMEOUT_MS - 5_000L) { req.answer.await() } ?: false
+        _requests.update { it.filterNot { r -> r === req } }
+        return ok
+    }
+
+    /** O usuário respondeu a um pedido de entrada. */
+    fun answer(request: Request, accept: Boolean) { request.answer.complete(accept) }
+
+    /** Pede para entrar na banda pelo aparelho [peer] (o usuário de lá toca Autorizar). */
+    fun requestJoin(peer: Peer) {
+        if (_joins.value[peer.id] == Join.WAITING) return
+        _joins.update { it + (peer.id to Join.WAITING) }
+        scope.launch {
+            val r = runCatching {
+                val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                BandSession(identity.hello()).join(s) { h -> trust.add(h.id, h.name, h.key) }
+            }.getOrDefault(BandSession.JoinResult.FAILED)
+            _joins.update { it + (peer.id to when (r) { BandSession.JoinResult.ACCEPTED -> Join.ACCEPTED; BandSession.JoinResult.DENIED -> Join.DENIED; else -> Join.FAILED }) }
+            update()
+        }
+    }
+
+    /** Tira o aparelho da banda (vale na hora). */
+    fun remove(id: String) { trust.remove(id); _joins.update { it - id }; update() }
+
+    private companion object {
+        const val TAG = "stagebook"
+        const val ATTR_ID = "id"
+        const val ATTR_NAME = "name"
+        const val CONNECT_TIMEOUT_MS = 5_000
+    }
+}
