@@ -7,6 +7,13 @@ import androidx.core.content.edit
 import androidx.compose.runtime.Immutable
 import androidx.core.content.ContextCompat
 import com.juliano.stagebook.R
+import com.juliano.stagebook.data.LibraryRepository
+import com.juliano.stagebook.domain.Measure
+import com.juliano.stagebook.domain.MixerConfig
+import com.juliano.stagebook.domain.Mixer
+import com.juliano.stagebook.domain.NormMode
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +41,10 @@ data class PlayerUi(val playing: Boolean = false, val waiting: Boolean = false, 
  * No fim do backing track, para e volta ao início, esperando o próximo play.
  */
 @Singleton
-class StagePlayer @Inject constructor(@ApplicationContext private val context: Context) {
+class StagePlayer @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val repository: LibraryRepository,
+) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val engine = Mutex()   // load e seek leem o disco: fora da tela e um de cada vez
     private val _ui = MutableStateFlow(PlayerUi())
@@ -45,7 +55,19 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
     private var durationMs = -1L
     private var endWatch: Job? = null
 
-    init { instance = this }
+    @Volatile private var mixer = MixerConfig()
+    private val measures = mutableMapOf<Int, Measure>()   // do backing track carregado, por canal do mixer
+
+    init {
+        instance = this
+        // mudou o mixer nos Ajustes: mede o que faltar e aplica na hora (só com o player ligado)
+        scope.launch {
+            repository.library.map { it.look.mixer }.distinctUntilChanged().collect {
+                mixer = it
+                if (PlayerService.running) engine.withLock { measureAndApply() }
+            }
+        }
+    }
 
     /** Música aberta no palco (null = sem backing track): para o que estiver tocando e anota a nova. */
     fun open(track: File?) {
@@ -105,7 +127,38 @@ class StagePlayer @Inject constructor(@ApplicationContext private val context: C
         if (f == loaded) return@withLock durationMs >= 0
         durationMs = Engine.load(f.absolutePath)
         loaded = f
-        durationMs >= 0
+        measures.clear()
+        if (durationMs < 0) return@withLock false
+        // arquivo com mais canais que o mixer mostra: o mixer passa a mostrar todos
+        val lanes = Engine.lanes()
+        if (lanes > mixer.channels) repository.updateLook { it.copy(mixer = it.mixer.copy(channels = lanes)) }
+        measureAndApply()
+        true
+    }
+
+    // Normalização: mede (ou lê do cache) cada canal do mixer que normaliza, e manda a mistura ao motor.
+    // Com o engine travado: roda antes do play, então a música nunca começa num volume e pula para outro.
+    private fun measureAndApply() {
+        val f = loaded ?: return
+        val lanes = Engine.lanes()
+        val cfg = mixer
+        for (g in cfg.groups(lanes)) {
+            if (cfg.strip(g.first).norm == NormMode.NONE || g.first in measures) continue
+            measure(f, Mixer.mask(g))?.let { measures[g.first] = it }
+        }
+        val p = Mixer.plan(cfg, lanes, measures)
+        Engine.setMix(p.gains, p.norms, p.eqMask, p.route)
+        Engine.setEq(cfg.eqOn, cfg.eqDb.toFloatArray())
+    }
+
+    private fun measure(f: File, mask: Int): Measure? {
+        val prefs = context.getSharedPreferences("norm", Context.MODE_PRIVATE)
+        val key = "${f.name}|${f.length()}|$mask"
+        prefs.getString(key, null)?.split(';')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 }
+            ?.let { return Measure(it[0], it[1]) }
+        val m = Engine.analyzeMask(f.absolutePath, mask) ?: return null
+        prefs.edit { putString(key, "${m[0]};${m[1]}") }
+        return Measure(m[0], m[1])
     }
 
     // Toca só com a saída pronta (USB ou do aparelho); sem ela, o play fica esperando (o serviço avisa quando
