@@ -66,9 +66,11 @@ class ImportChordsTest {
         assertTrue(text, text.contains("[Intro]\n[G] [D]"))
     }
 
-    @Test fun `só letra entra sem acordes`() {
+    @Test fun `só letra entra sem acordes, mas guarda o tom e o capo da página`() {
         val text = import(chords = false)
         assertFalse(text, Chords.hasChords(text))
         assertTrue(text, text.contains("Saio cedo pela rua"))
+        assertEquals("G", Chords.key(text))
+        assertEquals(2, Chords.capo(text))
     }
 }

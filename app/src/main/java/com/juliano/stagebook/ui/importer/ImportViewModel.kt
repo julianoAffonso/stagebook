@@ -74,7 +74,14 @@ class ImportViewModel @Inject constructor(
             val text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
                 ChordImport.toChordPro(chordSource, page.key, page.capo)
             } else {
-                LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+                // só letra: sem acordes, mas o tom e o capo da página ficam guardados (escondidos neste perfil; não se
+                // perdem se o perfil mudar ou se a música for para quem toca)
+                var lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+                val capo = ChordImport.capoOf(page.capo, page.chordText)
+                val key = ChordImport.keyOf(page.key, page.chordText)
+                if (capo > 0) lyrics = Chords.setDirective(lyrics, "capo", capo.toString())
+                if (key.isNotEmpty()) lyrics = Chords.setDirective(lyrics, "key", key)
+                lyrics
             }
             if (text.lines().size < 3) { _uiState.update { it.copy(problem = ImportProblem.NOT_FOUND) }; return }
             _uiState.update { it.copy(busy = true) }

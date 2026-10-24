@@ -8,8 +8,15 @@ object ChordImport {
     private val tabLine = Regex("""^\s*[A-Ga-g][#b]?\s*\|[-0-9hpbr/\\|~x\s]*$""")
     private val trailingSpace = Regex("\\s+$")
     private val manyBlank = Regex("\n{3,}")
-    private val capoText = Regex("""(?i)capotraste\s+na\s+(\d{1,2})""")
-    private val keyText = Regex("""(?i)\btom:\s*([A-G][#b]?m?)\b""")
+    // tom e capo como os sites escrevem nas 4 línguas: "Tom: G", "Key: G", "Tono: G", "Tonalità: G";
+    // "Capotraste na 2ª casa", "Capo 2", "Capo: 2nd fret", "Cejilla en el 2º traste", "Capotasto al 2º tasto"
+    private val capoText = Regex("""(?i)\b(?:capotraste\s+na|capotasto\s+(?:al|sul)|cejilla(?:\s+en(?:\s+el)?)?|capo(?:\s+on)?)\s*:?\s*(\d{1,2})""")
+    private val keyText = Regex("""(?i)\b(?:tom|key|tono|tonalit[àa])\s*:\s*([A-G][#b]?m?)(?![\w#])""")
+
+    /** Tom e capo que a página mostra (para guardar também no perfil só letra). */
+    fun keyOf(vararg texts: String): String = texts.firstNotNullOfOrNull { t -> keyText.find(t)?.groupValues?.get(1)?.takeIf(Chords::isChord) ?: t.trim().takeIf(Chords::isChord) }.orEmpty()
+
+    fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t -> capoText.find(t)?.groupValues?.get(1)?.toIntOrNull() ?: t.trim().toIntOrNull() }?.takeIf { it in 1..12 } ?: 0
 
     /** A página tem cifra? (duas ou mais linhas só de acordes) */
     fun hasChords(text: String): Boolean = text.lineSequence().count(Chords::isChordLine) >= 2
@@ -24,8 +31,8 @@ object ChordImport {
         val lines = text.replace("\r", "").split('\n').map { it.replace(trailingSpace, "") }
             .filterNot { tabLine.matches(it) || keyText.matches(it.trim()) || (capoText.containsMatchIn(it) && it.length < 40) }
         var body = Chords.fromChordsOverLyrics(lines.joinToString("\n")).replace(manyBlank, "\n\n").trim()
-        val k = key.trim().ifEmpty { keyText.find(text)?.groupValues?.get(1).orEmpty() }
-        val c = capoText.find(capo)?.groupValues?.get(1)?.toIntOrNull() ?: capo.trim().toIntOrNull() ?: capoText.find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val k = keyOf(key, text)
+        val c = capoOf(capo, text)
         if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
         if (Chords.isChord(k)) body = Chords.setDirective(body, "key", k)
         return body

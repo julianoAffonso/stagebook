@@ -44,4 +44,18 @@ class ChordImportTest {
         assertEquals("A", Chords.key(cp))
         assertEquals(2, Chords.capo(cp))
     }
+
+    @Test fun `tom e capo nas 4 línguas`() {
+        assertEquals("A", ChordImport.keyOf("Key: A"))
+        assertEquals("Bb", ChordImport.keyOf("Tono: Bb"))
+        assertEquals("F#m", ChordImport.keyOf("Tonalità: F#m"))
+        assertEquals(2, ChordImport.capoOf("Capo 2"))
+        assertEquals(3, ChordImport.capoOf("Capo: 3rd fret"))
+        assertEquals(4, ChordImport.capoOf("Cejilla en el 4º traste"))
+        assertEquals(5, ChordImport.capoOf("Capotasto al 5º tasto"))
+        assertEquals(2, ChordImport.capoOf("Capotraste na 2ª casa"))
+        assertEquals(0, ChordImport.capoOf("sem capo aqui"))
+        // "Tom" no meio da letra não é o tom
+        assertEquals("", ChordImport.keyOf("o Tom chegou cedo"))
+    }
 }
