@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Linhas de texto (letra) com uma nota -->
+<!-- Stagebook: livro aberto (letras) com barras de áudio nas páginas (player). Escolhido pelo usuário em 24/10/2026. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M34,40 L74,40" android:strokeColor="#ECEFF1" android:strokeWidth="6" android:strokeLineCap="round" />
-    <path android:pathData="M34,52 L66,52" android:strokeColor="#ECEFF1" android:strokeWidth="6" android:strokeLineCap="round" />
-    <path android:pathData="M34,64 L58,64" android:strokeColor="#ECEFF1" android:strokeWidth="6" android:strokeLineCap="round" />
-    <path android:pathData="M70,52 L70,70" android:strokeColor="#42A5F5" android:strokeWidth="4" android:strokeLineCap="round" />
-    <path android:pathData="M70,52 L78,55" android:strokeColor="#42A5F5" android:strokeWidth="4" android:strokeLineCap="round" />
-    <path android:pathData="M65,71 A5,4 0 1,0 75,71 A5,4 0 1,0 65,71 Z" android:fillColor="#42A5F5" />
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="56" android:scaleX="1.3" android:scaleY="1.3">
+        <path
+            android:pathData="M30,40 Q42,35 54,41 Q66,35 78,40 L78,72 Q66,67 54,73 Q42,67 30,72 Z M54,41 L54,73"
+            android:strokeColor="#4AF6CD"
+            android:strokeWidth="3"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M38,50 L38,60 M44,46 L44,63 M64,49 L64,61 M70,45 L70,64"
+            android:strokeColor="#4AF6CD"
+            android:strokeWidth="3"
+            android:strokeLineCap="round" />
+    </group>
 </vector>
