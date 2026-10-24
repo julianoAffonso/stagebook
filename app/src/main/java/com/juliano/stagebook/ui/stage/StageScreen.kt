@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.clip
 import com.juliano.stagebook.data.TrackStore
 import androidx.compose.material3.DropdownMenuItem
@@ -296,6 +299,8 @@ fun StageScreen(
     var editOffer by remember(index) { mutableStateOf<EditOffer?>(null) }
     LaunchedEffect(editOffer) { if (editOffer != null) { delay(EDIT_OFFER_MS); editOffer = null } }
     val haptics = LocalHapticFeedback.current
+    // onde está o botão da faixa (o toque longo nele não oferece editar a linha)
+    var trackButton by remember { mutableStateOf<Rect?>(null) }
     // as linhas da página como estão na tela (linha com acordes que quebra vira pedaços): o índice do toque é nelas
     var pageLines by remember(sourced) { mutableStateOf(sourced) }
     fun editAt(line: Int?) {
@@ -372,6 +377,8 @@ fun StageScreen(
             minZoom = minZoom,
             maxZoom = maxZoom,
             hold = { p ->
+                // toque longo no botão da faixa é dele (trocar/tirar), não "editar esta linha"
+                if (trackButton?.contains(p) == true) return@GestureTargets
                 val line = hit.lineAt(p)
                 if (!song.missing && line != null) {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -690,7 +697,7 @@ fun StageScreen(
                     onClick = { if (song.track.isEmpty()) onPickTrack(song.id) else onTogglePlay() },
                     onChange = { onPickTrack(song.id) },
                     onRemove = { onRemoveTrack(song.id) },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
                 )
             }
             ZoomBadge(

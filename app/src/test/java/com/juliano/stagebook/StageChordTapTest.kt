@@ -1,5 +1,7 @@
 package com.juliano.stagebook
 
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -70,5 +72,16 @@ class StageChordTapTest {
         show(Look(fontSp = 34f, chords = false))
         tapFirstChord()
         assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
+    }
+
+    @Test fun `toque longo no botão da faixa abre o menu dela e não oferece editar a linha`() {
+        val withTrack = listOf(StageSong("Teste", "", "[G]Primeira linha de letra comprida\n[D]Segunda linha", false, id = "s1", track = "s1.ogg"))
+        compose.setContent {
+            StagebookTheme { StageScreen(StageUiState(loading = false, songs = withTrack, look = Look(fontSp = 34f, playerMode = true)), 0, 0, { _, _ -> }) }
+        }
+        compose.onNodeWithContentDescription("Tocar a faixa").performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithText("Trocar a faixa").assertExists()
+        assertEquals(0, compose.onAllNodesWithText("Editar esta linha").fetchSemanticsNodes().size)
     }
 }
