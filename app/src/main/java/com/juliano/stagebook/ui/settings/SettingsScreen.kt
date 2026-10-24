@@ -1,5 +1,11 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.Languages
+import com.juliano.stagebook.data.AppLanguage
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
+import android.app.Activity
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.IconButton
@@ -159,6 +165,12 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onMidiChoose = viewModel::chooseMidi,
                 onMidiForget = viewModel::forgetMidi,
                 onMidiUsb = viewModel::setMidiUsb,
+                onLanguage = { lang ->
+                    if (lang != uiState.language) {
+                        Languages.set(context, lang)
+                        (context as? Activity)?.recreate()   // as telas voltam já na língua nova
+                    }
+                },
                 onKeepScreenOn = viewModel::setKeepScreenOn,
                 onColumns = viewModel::setColumns,
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
@@ -197,6 +209,7 @@ data class SettingsActions(
     val onMidiChoose: (MidiFound) -> Unit = {},
     val onMidiForget: () -> Unit = {},
     val onMidiUsb: (Boolean) -> Unit = {},
+    val onLanguage: (AppLanguage) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onImport: () -> Unit = {},
@@ -212,6 +225,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
+    LANGUAGE(R.string.settings_language, AppIcons.Language),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
     UPDATE(R.string.settings_update, AppIcons.Download),
 }
@@ -316,6 +330,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState): String = when (s) 
     SettingsSection.PEDAL -> if (ui.look.pedalName.isEmpty()) stringResource(R.string.settings_pedal_none_short)
     else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
+    SettingsSection.LANGUAGE -> languageLabel(ui.language)
     SettingsSection.UPDATE -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
     SettingsSection.LIBRARY -> pluralStringResource(R.plurals.song_count, ui.songCount, ui.songCount) + " · " +
@@ -330,6 +345,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
+            SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.UPDATE -> UpdateDetail(uiState, actions)
         }
@@ -621,6 +637,33 @@ private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> 
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun languageLabel(l: AppLanguage): String = stringResource(
+    when (l) {
+        AppLanguage.SYSTEM -> R.string.language_system
+        AppLanguage.PT -> R.string.language_pt
+        AppLanguage.ES -> R.string.language_es
+        AppLanguage.IT -> R.string.language_it
+        AppLanguage.EN -> R.string.language_en
+    },
+)
+
+@Composable
+private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_language)) {
+        Languages.available.forEach { l ->
+            Row(
+                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).selectable(l == selected, role = Role.RadioButton) { actions.onLanguage(l) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = l == selected, onClick = null, modifier = Modifier.padding(Spacing.s))
+                Text(languageLabel(l), style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        Text(stringResource(R.string.settings_language_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

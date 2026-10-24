@@ -206,6 +206,13 @@
     <string name="settings_pedal_cmd_previous_song">Música anterior</string>
     <string name="settings_pedal_cmd_none">Nada (ignorar)</string>
     <string name="settings_pedal_keys">Botões configurados</string>
+    <string name="settings_language">Língua</string>
+    <string name="settings_language_help">As outras línguas (español, italiano, English) chegam antes do lançamento.</string>
+    <string name="language_system">Automática (a do aparelho)</string>
+    <string name="language_pt" translatable="false">Português</string>
+    <string name="language_es" translatable="false">Español</string>
+    <string name="language_it" translatable="false">Italiano</string>
+    <string name="language_en" translatable="false">English</string>
     <string name="pedal_key_code">Tecla %1$d</string>
     <string name="settings_pedal_keys_none">Nenhum botão mudado: os botões seguem o padrão (avançar e voltar a página). Para mudar, aperte o botão e escolha o que ele faz em Teste de botão.</string>
     <string name="settings_pedal_key_reset">Voltar %1$s ao padrão</string>

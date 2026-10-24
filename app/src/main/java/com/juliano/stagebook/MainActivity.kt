@@ -1,6 +1,7 @@
 package com.juliano.stagebook
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -10,6 +11,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.data.AppUpdateOffer
 import com.juliano.stagebook.data.AppUpdater
+import com.juliano.stagebook.data.Languages
 import com.juliano.stagebook.data.MidiPedal
 import com.juliano.stagebook.data.UpdateOffer
 import com.juliano.stagebook.navigation.AppUpdateActions
@@ -42,6 +44,9 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var updater: AppUpdater
     @Inject lateinit var midi: MidiPedal
     private val pedal = PedalInput()
+
+    // língua escolhida nos ajustes (trocar recria a Activity)
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Languages.wrap(newBase))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
