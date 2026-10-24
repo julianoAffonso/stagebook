@@ -50,6 +50,7 @@ fun MixerStrip(
     modifier: Modifier = Modifier,
     upright: Boolean = false,
     meters: () -> Meters = { Meters.silent(MixerConfig.MAX) },   // lido só no desenho: medidor ao lado do fader
+    showMeters: Boolean = false,                                  // chave "Monitorar"
 ) {
     val lanes = if (pair) listOf(first, first + 1) else listOf(first)   // unidos: medidor duplo (esquerda e direita)
     val setGain = { db: Float -> onChange(strip.copy(gainDb = (db * 2).roundToInt() / 2f)) }
@@ -64,7 +65,7 @@ fun MixerStrip(
                 MuteButton(strip, onChange)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                     VerticalFader(strip.gainDb, setGain, valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, origin = MixerConfig.MIN_DB)
-                    lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }) }
+                    if (showMeters) lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }) }
                 }
                 GainText(strip)
             }
@@ -82,8 +83,10 @@ fun MixerStrip(
                     GainText(strip, Modifier.widthIn(min = 72.dp))
                 }
                 // celular: o medidor deitado logo abaixo do fader (um por lado nos unidos)
-                Column(Modifier.fillMaxWidth().padding(end = 80.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }, vertical = false) }
+                if (showMeters) {
+                    Column(Modifier.fillMaxWidth().padding(end = 80.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }, vertical = false) }
+                    }
                 }
             }
         }
