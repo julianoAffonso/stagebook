@@ -389,6 +389,22 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
+    fun normTipOpenPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
+                        com.juliano.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, onChange = {})
+                    }
+                }
+            }
+        }
+        compose.onAllNodesWithText("Sobre a normalização")[0].performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_5_sobre_normalizar.png")
+    }
+
+    @Test @Config(qualifiers = PHONE)
     fun mixerEditPhone() = shoot("jornada_mixer_3_editar_canal") {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(com.juliano.stagebook.ui.theme.Spacing.l)) {
