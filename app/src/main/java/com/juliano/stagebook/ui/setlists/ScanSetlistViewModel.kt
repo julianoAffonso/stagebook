@@ -2,6 +2,7 @@ package com.juliano.stagebook.ui.setlists
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
+import com.juliano.stagebook.data.ImportQueue
 import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.domain.QrMatch
 import com.juliano.stagebook.domain.QrPayload
@@ -42,7 +43,10 @@ sealed interface ScanUi {
  * em silêncio.
  */
 @HiltViewModel
-class ScanSetlistViewModel @Inject constructor(private val repository: LibraryRepository) : ViewModel() {
+class ScanSetlistViewModel @Inject constructor(
+    private val repository: LibraryRepository,
+    private val importQueue: ImportQueue,
+) : ViewModel() {
     private val _ui = MutableStateFlow<ScanUi>(ScanUi.Scanning())
     val ui: StateFlow<ScanUi> = _ui
 
@@ -87,6 +91,20 @@ class ScanSetlistViewModel @Inject constructor(private val repository: LibraryRe
         val id = replaceId ?: repository.createSetlist(uniqueName(ui.name.trim()))
         repository.setSetlistItems(id, ids)
         return id
+    }
+
+    /**
+     * Cria o setlist com as achadas e começa a importar as que faltam, uma a uma, no lugar delas (fila guiada no
+     * importador). As que ficaram com dúvida e sem escolha continuam de fora.
+     */
+    fun createAndImport(replaceId: String? = null): Boolean {
+        val ui = _ui.value as? ScanUi.Review ?: return false
+        val id = create(replaceId) ?: return false
+        val name = repository.library.value.setlist(id)?.name ?: ui.name
+        val missing = ui.rows.withIndex().filter { (_, r) -> r.chosen == null && r.candidates.isEmpty() }
+            .map { (i, r) -> ImportQueue.Item(r.title, r.artist, i) }
+        importQueue.start(id, name, ui.rows.map { it.chosen }, missing)
+        return missing.isNotEmpty()
     }
 
     // "Criar outro" com o nome já usado: "Show (2)", "Show (3)"…

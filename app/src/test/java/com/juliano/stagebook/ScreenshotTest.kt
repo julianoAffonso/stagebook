@@ -446,6 +446,19 @@ class ScreenshotTest {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
     }
 
+    // fila: importando as que faltam para o setlist, buscando no 1º site da lista (no Google, restrito ao site)
+    @Test @Config(qualifiers = PHONE)
+    fun importQueuePhone() = shoot("jornada_qr_4_importar_fila") {
+        ImportScreen(
+            ImportUiState(), "", {}, {}, {},
+            queue = com.juliano.stagebook.data.ImportQueue.State(
+                "x", "Show de sábado", listOf("1", null, "4", null),
+                listOf(com.juliano.stagebook.data.ImportQueue.Item("Música que não tenho", "", 1), com.juliano.stagebook.data.ImportQueue.Item("Outra que falta", "", 3)), 3,
+            ),
+            queueSite = { "Cifra Club" },
+        )
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(

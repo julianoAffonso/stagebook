@@ -32,4 +32,4 @@ data class Stage(
 )
 
 @Serializable
-data class Importer(val query: String = "")
+data class Importer(val query: String = "", val queued: Boolean = false)   // queued: importando em lote para um setlist

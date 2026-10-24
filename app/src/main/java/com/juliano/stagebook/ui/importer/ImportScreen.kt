@@ -1,5 +1,9 @@
 package com.juliano.stagebook.ui.importer
 
+import androidx.core.net.toUri
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberUpdatedState
+import com.juliano.stagebook.data.ImportQueue
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.view.ViewGroup
@@ -61,17 +65,34 @@ import com.juliano.stagebook.ui.components.ScreenInsets
 import com.juliano.stagebook.ui.theme.Spacing
 
 @Composable
-fun ImportRoute(onClose: () -> Unit, onOpenEditor: (String?) -> Unit, viewModel: ImportViewModel = hiltViewModel()) {
+fun ImportRoute(
+    onClose: () -> Unit,
+    onOpenEditor: (String?) -> Unit,
+    viewModel: ImportViewModel = hiltViewModel(),
+    onSetlistReady: (String) -> Unit = { onClose() },
+    onOpenEditorQueued: (String?) -> Unit = onOpenEditor,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(viewModel) { viewModel.openEditor.collect { onOpenEditor(it) } }
+    val queue by viewModel.queueState.collectAsStateWithLifecycle()
+    // na fila, o importador fica embaixo do editor (cancelar volta para a mesma música)
+    LaunchedEffect(viewModel) { viewModel.openEditor.collect { if (viewModel.queueState.value != null) onOpenEditorQueued(it) else onOpenEditor(it) } }
     ImportScreen(
         uiState = uiState,
         initialQuery = viewModel.initialQuery,
         home = viewModel.home,
         urlFor = viewModel::urlFor,
-        onClose = onClose,
+        // sair no meio da fila: para a fila e abre o setlist com o que já entrou
+        onClose = { viewModel.queueState.value?.let { q -> viewModel.queueStop(); onSetlistReady(q.setId) } ?: onClose() },
         onExtracted = viewModel::onExtracted,
         onProblemShown = viewModel::problemShown,
+        queue = queue,
+        startUrl = viewModel.queueSearch(),
+        queueSite = viewModel::queueSiteName,
+        queueHost = viewModel::queueHost,
+        onQueueFailover = viewModel::queueFailover,
+        onQueueSkip = viewModel::queueSkip,
+        onQueueStop = { setId -> viewModel.queueStop(); onSetlistReady(setId) },
+        onQueueDone = onSetlistReady,
     )
 }
 
@@ -87,7 +108,21 @@ fun ImportScreen(
     modifier: Modifier = Modifier,
     home: String = ImportViewModel.HOME,
     urlFor: (String) -> String = { ImportViewModel.urlFor(it) },
+    // importação em lote para um setlist (fila): a busca da música da vez e o failover entre os sites da lista
+    queue: ImportQueue.State? = null,
+    startUrl: String? = null,
+    queueSite: () -> String = { "" },
+    queueHost: () -> String = { "" },
+    onQueueFailover: () -> String? = { null },
+    onQueueSkip: () -> String? = { null },
+    onQueueStop: (setId: String) -> Unit = {},
+    onQueueDone: (setId: String) -> Unit = {},
 ) {
+    val latestQueue by rememberUpdatedState(queue)
+    // só a busca que a fila abriu decide o failover (uma busca que o usuário digitou não)
+    var queueQuery by remember { mutableStateOf(startUrl?.let { it.toUri().getQueryParameter("q") }) }
+    fun loadQueue(view: WebView?, url: String) { queueQuery = url.toUri().getQueryParameter("q"); view?.loadUrl(url) }
+    var exhausted by rememberSaveable { mutableStateOf(false) }   // nenhum site da lista tem a música da vez
     val context = LocalContext.current
     var address by rememberSaveable { mutableStateOf(initialQuery) }
     var progress by remember { mutableIntStateOf(0) }
@@ -102,6 +137,17 @@ fun ImportScreen(
             settings.domStorageEnabled = true
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) { address = url }
+                // fila: a busca no Google restrita ao site não trouxe nada do site → tenta o próximo da lista sozinho
+                override fun onPageFinished(view: WebView, url: String) {
+                    if (latestQueue == null || !isGoogleSearch(url) || url.toUri().getQueryParameter("q") != queueQuery) return
+                    val host = queueHost()
+                    if (host.isEmpty()) return
+                    view.evaluateJavascript(resultsScript(host)) { n ->
+                        if (n?.trim('"') != "0") return@evaluateJavascript
+                        val next = onQueueFailover()
+                        if (next != null) loadQueue(view, next) else exhausted = true
+                    }
+                }
                 override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) { canGoBack = view.canGoBack() }
             }
             webChromeClient = object : WebChromeClient() {
@@ -110,7 +156,7 @@ fun ImportScreen(
         }
     LaunchedEffect(Unit) {
         withFrameNanos { }   // deixa a tela aparecer antes
-        webView = newWebView().also { it.loadUrl(if (initialQuery.isBlank()) home else urlFor(initialQuery)) }
+        webView = newWebView().also { it.loadUrl(startUrl ?: if (initialQuery.isBlank()) home else urlFor(initialQuery)) }
     }
     // sites de letra têm anúncios e scripts: com o app em segundo plano ou a tela apagada, param
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -188,6 +234,17 @@ fun ImportScreen(
                     }
                 }
                 PageProgress { progress }
+                queue?.let { q ->
+                    QueueBar(
+                        q, queueSite(), exhausted,
+                        onSkip = {
+                            exhausted = false
+                            val next = onQueueSkip()
+                            if (next != null) loadQueue(webView, next) else onQueueDone(q.setId)
+                        },
+                        onStop = { onQueueStop(q.setId) },
+                    )
+                }
                 // uso pessoal: o app não guarda nem distribui músicas (aviso curto, dá para fechar)
                 var notice by rememberSaveable { mutableStateOf(true) }
                 AnimatedVisibility(notice) {
@@ -213,3 +270,42 @@ private fun PageProgress(progress: () -> Int) {
         LinearProgressIndicator(progress = { p / 100f }, modifier = Modifier.fillMaxWidth())
     }
 }
+
+// a faixa da fila: para qual setlist, qual música (2 de 5), em qual site está buscando; Pular e Parar
+@Composable
+private fun QueueBar(q: ImportQueue.State, site: String, exhausted: Boolean, onSkip: () -> Unit, onStop: () -> Unit) {
+    val item = q.current ?: return
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(
+                stringResource(R.string.queue_title, q.setName, q.position, q.total, item.title),
+                style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                if (exhausted) stringResource(R.string.queue_none) else stringResource(R.string.queue_searching, site),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (exhausted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                TextButton(onClick = onSkip) { Text(stringResource(R.string.queue_skip)) }
+                TextButton(onClick = onStop) { Text(stringResource(R.string.queue_stop)) }
+            }
+        }
+    }
+}
+
+private fun isGoogleSearch(url: String): Boolean = url.toUri().let { it.host.orEmpty().contains("google.") && it.path == "/search" }
+
+// quantos resultados da busca levam ao site (direto ou pelo /url?q= do Google); só leitura, nada é clicado
+private fun resultsScript(host: String) = """
+    (function(h){
+      return Array.from(document.querySelectorAll('a[href]')).filter(function(a){
+        try {
+          var u = new URL(a.href);
+          if (u.host.indexOf('google') < 0) return u.host === h || u.host.endsWith('.' + h);
+          var q = u.searchParams.get('q') || u.searchParams.get('url') || '';
+          return u.pathname === '/url' && q.indexOf(h) >= 0;
+        } catch (e) { return false; }
+      }).length;
+    })(${'"'}$host${'"'})
+""".trimIndent()

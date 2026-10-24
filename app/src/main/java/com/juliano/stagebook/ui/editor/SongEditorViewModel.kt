@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.editor
 
+import com.juliano.stagebook.data.ImportQueue
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,12 +45,20 @@ data class SongEditorUiState(
     val canDelete get() = mode == EditorMode.EDIT || mode == EditorMode.IMPORTED_UPDATE
 }
 
+/** Como o editor sai: fechar, ou (importando em lote para um setlist) abrir a próxima música ou o setlist pronto. */
+sealed interface EditorExit {
+    data object Close : EditorExit
+    data object NextImport : EditorExit
+    data class SetlistReady(val setId: String) : EditorExit
+}
+
 @HiltViewModel
 class SongEditorViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val metadata: SongMetadata,
     importDraft: ImportDraft,
     private val savedStateHandle: SavedStateHandle,
+    private val importQueue: ImportQueue,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SongEditor>()
     private val draft = if (route.fromImport) importDraft.take() else null
@@ -60,7 +69,7 @@ class SongEditorViewModel @Inject constructor(
     var uiState by mutableStateOf(SongEditorUiState())
         private set
 
-    private val done = Channel<Unit>(Channel.BUFFERED)
+    private val done = Channel<EditorExit>(Channel.BUFFERED)
     private var finished = false   // toque duplo em Salvar/Apagar: só o primeiro vale
     val onDone = done.receiveAsFlow()
 
@@ -131,14 +140,21 @@ class SongEditorViewModel @Inject constructor(
         val id = repository.saveSong(base.copy(id = route.songId.orEmpty(), title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // a cifra é guardada em ChordPro
         metadata.completeLater(id)   // artista ou ano em branco: o MusicBrainz completa sozinho
         finished = true
-        done.trySend(Unit)
+        // importando em lote para um setlist: a música entra no lugar dela e a fila anda
+        val queue = importQueue.state.value
+        if (route.fromImport && queue != null) {
+            importQueue.saved(id)
+            done.trySend(if (importQueue.state.value != null) EditorExit.NextImport else EditorExit.SetlistReady(queue.setId))
+        } else {
+            done.trySend(EditorExit.Close)
+        }
     }
 
     fun delete() {
         if (finished) return
         finished = true
         route.songId?.let(repository::deleteSong)
-        done.trySend(Unit)
+        done.trySend(EditorExit.Close)
     }
 
     private companion object {

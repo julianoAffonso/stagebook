@@ -80,8 +80,21 @@ import com.juliano.stagebook.ui.theme.StagebookTheme
 import com.juliano.stagebook.ui.theme.Spacing
 
 @Composable
-fun SongEditorRoute(onDone: () -> Unit, viewModel: SongEditorViewModel = hiltViewModel()) {
-    LaunchedEffect(viewModel) { viewModel.onDone.collect { onDone() } }
+fun SongEditorRoute(
+    onDone: () -> Unit,
+    viewModel: SongEditorViewModel = hiltViewModel(),
+    onNextImport: () -> Unit = onDone,
+    onSetlistReady: (String) -> Unit = { onDone() },
+) {
+    LaunchedEffect(viewModel) {
+        viewModel.onDone.collect { e ->
+            when (e) {
+                EditorExit.Close -> onDone()
+                EditorExit.NextImport -> onNextImport()
+                is EditorExit.SetlistReady -> onSetlistReady(e.setId)
+            }
+        }
+    }
     SongEditorScreen(
         uiState = viewModel.uiState,
         onTitle = viewModel::onTitle,
