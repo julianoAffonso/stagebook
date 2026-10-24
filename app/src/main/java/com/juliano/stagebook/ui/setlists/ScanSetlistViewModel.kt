@@ -53,8 +53,9 @@ sealed interface ScanUi {
     /** Buscando pelo código da internet, ou o que deu errado. */
     data class Fetching(val problem: CodeProblem? = null) : ScanUi
 
+    /** [songsOnly]: vieram músicas avulsas (sem nome de setlist): só entram na biblioteca, nenhum setlist é criado. */
     @Immutable
-    data class Review(val name: String, val rows: List<ScanRow>) : ScanUi {
+    data class Review(val name: String, val rows: List<ScanRow>, val songsOnly: Boolean = false) : ScanUi {
         /** As que vão ficar de fora: sem escolha e sem ter vindo junto. */
         val missing: List<ScanRow> get() = rows.filter { it.chosen == null && !it.carried }
     }
@@ -112,21 +113,24 @@ class ScanSetlistViewModel @Inject constructor(
         val parsed = QrPayload.parse(text) ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND); return }
         val library = repository.library.value.songs
         val came = mutableMapOf<Int, SetlistCloud.SharedSong>()
+        val songsOnly = parsed.name.isEmpty()
+        fun came(e: QrPayload.Entry) = songs.firstOrNull { s ->
+            TextKey.of(s.title) == TextKey.of(e.title) && SongMatch.sameArtistKey(TextKey.of(s.author), TextKey.of(e.artist))
+        }
         val rows = parsed.songs.mapIndexed { i, e ->
-            when (val m = SetlistMatcher.match(e, library)) {
-                is QrMatch.Found -> ScanRow(e.title, e.artist, true, listOf(m.song.ref()), m.song.id)
-                is QrMatch.Similar -> ScanRow(e.title, e.artist, false, m.candidates.map { it.ref() }, null)
-                QrMatch.Missing -> {
-                    val c = songs.firstOrNull { s ->
-                        TextKey.of(s.title) == TextKey.of(e.title) && SongMatch.sameArtistKey(TextKey.of(s.author), TextKey.of(e.artist))
-                    }
-                    if (c != null) came[i] = c
-                    ScanRow(e.title, e.artist, false, emptyList(), null, carried = c != null)
-                }
+            val m = SetlistMatcher.match(e, library)
+            // músicas avulsas: a parecida não é a mesma — a que veio entra como nova (no setlist, o usuário escolhe)
+            val c = if (m is QrMatch.Missing || (songsOnly && m is QrMatch.Similar)) came(e) else null
+            if (c != null) came[i] = c
+            when {
+                m is QrMatch.Found -> ScanRow(e.title, e.artist, true, listOf(m.song.ref()), m.song.id)
+                c != null -> ScanRow(e.title, e.artist, false, emptyList(), null, carried = true)
+                m is QrMatch.Similar -> ScanRow(e.title, e.artist, false, m.candidates.map { it.ref() }, null)
+                else -> ScanRow(e.title, e.artist, false, emptyList(), null)
             }
         }
         carried = came
-        _ui.value = ScanUi.Review(parsed.name, rows)
+        _ui.value = ScanUi.Review(parsed.name, rows, songsOnly)
     }
 
     private fun Song.ref() = SongRef(id, title, author)
@@ -139,6 +143,12 @@ class ScanSetlistViewModel @Inject constructor(
     }
 
     fun scanAgain() { if (code.isEmpty()) _ui.value = ScanUi.Scanning() else fetch() }
+
+    /** Músicas avulsas: as que vieram e não estão aqui entram na biblioteca; devolve quantas. */
+    fun addSongs(): Int {
+        carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = s.text)) }
+        return carried.size
+    }
 
     /** Já existe um setlist com esse nome (sem ligar para acento e caixa)? */
     fun existing(name: String): String? = repository.library.value.sets.firstOrNull { TextKey.of(it.name) == TextKey.of(name) }?.id

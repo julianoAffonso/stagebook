@@ -1,5 +1,13 @@
 package com.juliano.stagebook.ui.songs
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.graphics.asImageBitmap
+import com.juliano.stagebook.domain.ShareCode
+import com.juliano.stagebook.domain.QrEncoder
+import com.juliano.stagebook.ui.share.CloudUi
+import com.juliano.stagebook.data.SetlistCloud
 import com.juliano.stagebook.data.Connectivity
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -33,7 +41,29 @@ fun typingDelay(q: String): Long = if (q.isEmpty()) 0L else 150L
 fun Song.subtitle(): String = listOf(author, year).filter { it.isNotBlank() }.joinToString(" · ") { it.trim() }
 
 @HiltViewModel
-class SongsViewModel @Inject constructor(private val repository: LibraryRepository, connectivity: Connectivity) : ViewModel() {
+class SongsViewModel @Inject constructor(
+    private val repository: LibraryRepository,
+    connectivity: Connectivity,
+    private val setlistCloud: SetlistCloud,
+) : ViewModel() {
+    private val _cloud = MutableStateFlow<CloudUi?>(null)
+    val cloud: StateFlow<CloudUi?> = _cloud
+
+    /** Manda as músicas escolhidas pela internet (sem setlist); o código aparece num diálogo. */
+    fun shareSongs(ids: List<String>) {
+        if (_cloud.value == CloudUi.Sending || ids.isEmpty()) return
+        _cloud.value = CloudUi.Sending
+        viewModelScope.launch {
+            val sent = setlistCloud.sendSongs(ids)
+            val qr = sent?.let { s ->
+                withContext(Dispatchers.Default) { runCatching { QrEncoder.encode(ShareCode.qrText(s.code).toByteArray(), 600).asImageBitmap() }.getOrNull() }
+            }
+            _cloud.value = sent?.let { CloudUi.Sent(it.code, "", it.songs, it.skipped, qr) } ?: CloudUi.Failed
+        }
+    }
+
+    fun dismissCloud() { _cloud.value = null }
+
     /** Importar precisa de internet: o botão fica indisponível sem ela (só observa com a tela aberta). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 

@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import android.widget.Toast
 import androidx.compose.material3.CircularProgressIndicator
 import android.Manifest
 import android.content.pm.PackageManager
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,7 @@ fun ScanSetlistRoute(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     var camera by rememberSaveable {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
@@ -74,6 +77,11 @@ fun ScanSetlistRoute(
         existing = viewModel::existing,
         onCreate = { replace -> viewModel.create(replace)?.let(onDone) },
         onCreateAndImport = { replace -> if (viewModel.createAndImport(replace)) onImport() },
+        onAddSongs = {
+            val n = viewModel.addSongs()
+            Toast.makeText(context, resources.getQuantityString(R.plurals.songs_added, n, n), Toast.LENGTH_SHORT).show()
+            onBack()
+        },
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier) },
         byCode = viewModel.code.isNotEmpty(),
@@ -101,17 +109,24 @@ fun ScanSetlistScreen(
     camera: @Composable (onText: (String) -> Unit, modifier: Modifier) -> Unit = { _, m -> Box(m) },
     byCode: Boolean = false,
     onRetry: () -> Unit = {},
+    onAddSongs: () -> Unit = {},
 ) {
     CenteredContent(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             ScreenHeader(
-                stringResource(if (byCode) R.string.scan_code_title else R.string.scan_title),
+                stringResource(
+                    when {
+                        (ui as? ScanUi.Review)?.songsOnly == true -> R.string.scan_songs_title
+                        byCode -> R.string.scan_code_title
+                        else -> R.string.scan_title
+                    },
+                ),
                 Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack,
             )
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
                 is ScanUi.Fetching -> Fetching(ui, onRetry)
-                is ScanUi.Review -> Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode)
+                is ScanUi.Review -> if (ui.songsOnly) SongsReview(ui, onAddSongs) else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode)
             }
         }
     }
@@ -214,6 +229,40 @@ private fun Review(
             text = { Text(stringResource(R.string.scan_name_taken_text, ui.name.trim()), style = MaterialTheme.typography.bodyLarge) },
             confirmButton = { TextButton(onClick = { nameTaken = null; finish(id) }) { Text(stringResource(R.string.scan_replace)) } },
             dismissButton = { TextButton(onClick = { nameTaken = null; finish(null) }) { Text(stringResource(R.string.scan_create_other)) } },
+        )
+    }
+}
+
+// músicas avulsas recebidas: as novas entram na biblioteca; as que já estão aqui ficam como estão
+@Composable
+private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit) {
+    val new = ui.rows.count { it.carried }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Text(
+            pluralStringResource(R.plurals.scan_songs_summary, ui.rows.size, ui.rows.size, new),
+            style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+        )
+        LazyColumn(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.s)) {
+            itemsIndexed(ui.rows) { _, row ->
+                Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        val (icon, tint, note) = when {
+                            row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
+                            row.found -> Triple(AppIcons.Check, MaterialTheme.colorScheme.onSurfaceVariant, R.string.scan_song_have)
+                            else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
+                        }
+                        Icon(icon, null, Modifier.size(20.dp), tint = tint)
+                        Column(Modifier.weight(1f)) {
+                            Text(row.title, style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
+                        }
+                    }
+                }
+            }
+        }
+        ActionButton(
+            pluralStringResource(R.plurals.scan_songs_add, new, new), onAdd,
+            Modifier.fillMaxWidth().padding(bottom = Spacing.m), icon = AppIcons.Check, enabled = new > 0,
         )
     }
 }

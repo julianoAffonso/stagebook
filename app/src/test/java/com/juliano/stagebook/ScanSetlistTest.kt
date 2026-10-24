@@ -89,6 +89,25 @@ class ScanSetlistTest {
         assertEquals(before, repo.song(ids[1])!!.text)
     }
 
+    @Test fun `músicas avulsas - só as novas entram na biblioteca e nenhum setlist é criado`() {
+        val (repo, vm, ids) = setup()
+        val sets = repo.library.value.sets.size
+        val before = repo.song(ids[0])!!.text
+        vm.review(
+            qr("", "Canção do Mar", "Música Nova"),
+            listOf(
+                com.juliano.stagebook.data.SetlistCloud.SharedSong("Canção do Mar", "Banda", text = "[G]outra versão"),
+                com.juliano.stagebook.data.SetlistCloud.SharedSong("Música Nova", "Outra", text = "[C]nova"),
+            ),
+        )
+        val review = vm.ui.value as ScanUi.Review
+        assertTrue(review.songsOnly)
+        assertEquals(1, vm.addSongs())
+        assertEquals(sets, repo.library.value.sets.size)
+        assertEquals(before, repo.song(ids[0])!!.text)
+        assertTrue(repo.library.value.songs.any { it.title == "Música Nova" && it.text == "[C]nova" })
+    }
+
     @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {
         val (_, vm, _) = setup()
         vm.onText(listOf(QrPayload.HEADER, "3", "Show", "A").joinToString("\n"))

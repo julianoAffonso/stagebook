@@ -1,5 +1,13 @@
 package com.juliano.stagebook.ui.songs
 
+import com.juliano.stagebook.ui.share.rememberCodeActions
+import com.juliano.stagebook.ui.share.ShareSheet
+import com.juliano.stagebook.ui.share.CodeActions
+import com.juliano.stagebook.ui.share.CloudDialog
+import com.juliano.stagebook.ui.share.CloudUi
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Checkbox
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Text
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -68,6 +76,10 @@ fun SongsRoute(
         onOpen = { query = ""; onOpenSong(it) },
         onEdit = onEditSong,
         onDelete = viewModel::delete,
+        cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
+        onShareSongs = viewModel::shareSongs,
+        onDismissCloud = viewModel::dismissCloud,
+        codeActions = rememberCodeActions(),
     )
 }
 
@@ -83,9 +95,20 @@ fun SongsScreen(
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     online: Boolean = true,
+    cloud: CloudUi? = null,
+    onShareSongs: (List<String>) -> Unit = {},
+    onDismissCloud: () -> Unit = {},
+    codeActions: CodeActions = CodeActions({}, { _, _ -> }),
+    initialSelection: List<String> = emptyList(),   // prints e testes
 ) {
     val wide = wideLists()
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    // seleção para compartilhar várias: segurar uma música (ou ⋮ → Compartilhar) começa; voltar ou ✕ termina
+    var selected by rememberSaveable { mutableStateOf(initialSelection) }
+    var sharing by rememberSaveable { mutableStateOf(false) }
+    val selecting = selected.isNotEmpty()
+    fun toggle(id: String) { selected = if (id in selected) selected - id else selected + id }
+    BackHandler(enabled = selecting) { selected = emptyList() }
     CenteredContent(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             ScreenHeader(
@@ -94,7 +117,17 @@ fun SongsScreen(
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             )
             SearchField(query, onQueryChange, stringResource(R.string.songs_search))
-            Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            if (selecting) {
+                // barra da seleção no lugar de Nova/Importar: quantas, Compartilhar e sair
+                Row(Modifier.padding(vertical = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    IconButton(onClick = { selected = emptyList() }) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
+                    Text(
+                        pluralStringResource(R.plurals.songs_selected, selected.size, selected.size),
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
+                    )
+                    ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Upload)
+                }
+            } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
                 // importar só com internet: sem ela o botão fica indisponível, com a nuvem cortada no lugar do globo
                 ActionButton(
@@ -125,7 +158,9 @@ fun SongsScreen(
                             SongListItem(
                                 title = song.title,
                                 subtitle = song.subtitle,
-                                onClick = { onOpen(song.id) },
+                                onClick = { if (selecting) toggle(song.id) else onOpen(song.id) },
+                                onLongClick = { toggle(song.id) },
+                                leading = if (selecting) { { Checkbox(song.id in selected, { toggle(song.id) }) } } else null,
                                 // só o sumiço ao apagar: entrar e deslocar animavam dezenas de linhas a cada letra da busca
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
                                 titleStyle = MaterialTheme.typography.titleLarge,
@@ -137,6 +172,7 @@ fun SongsScreen(
                                         OverflowMenu(
                                             listOf(
                                                 MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEdit(song.id) }),
+                                                MenuAction(stringResource(R.string.share_title), AppIcons.Upload, { selected = listOf(song.id); sharing = true }),
                                                 MenuAction(stringResource(R.string.action_delete), AppIcons.Delete, { pendingDelete = song.id }, danger = true),
                                             ),
                                         )
@@ -149,6 +185,14 @@ fun SongsScreen(
             }
         }
     }
+    if (sharing) {
+        ShareSheet(
+            songs = selected.size, online = online, onQr = null,
+            onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
+            onDismiss = { sharing = false },
+        )
+    }
+    cloud?.let { CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
     pendingDelete?.let { id ->
         val title = uiState.songs.firstOrNull { it.id == id }?.title.orEmpty()
         ConfirmDialog(
