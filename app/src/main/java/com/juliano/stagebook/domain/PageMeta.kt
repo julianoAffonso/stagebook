@@ -8,6 +8,9 @@ data class PageData(
     val title: String = "",
     val artist: String = "",
     val text: String = "",
+    val chordText: String = "",   // cifra com os acordes em cima (Cifra Club)
+    val key: String = "",
+    val capo: String = "",
     val site: String = "",
     val ldName: String = "",
     val ldArtist: String = "",

@@ -28,9 +28,12 @@ class ChordsTest {
     @Test fun `linha só de acordes, rótulo e seção`() {
         val cifra = "[Intro] G  D  Em  C\n\n[Refrão]\nG     D\nOh oh oh\nIntro: G D (2x)"
         val out = Chords.fromChordsOverLyrics(cifra).split('\n')
-        assertEquals("[Refrão]", out[2])
-        assertEquals("[G]Oh oh [D]oh", out[3])
-        assertEquals("Intro: [G] [D] (2x)", out[4])
+        // "[Intro] G D…" vira o título e, embaixo, os acordes
+        assertEquals("[Intro]", out[0])
+        assertEquals("[G] [D] [Em] [C]", out[1])
+        assertEquals("[Refrão]", out[3])
+        assertEquals("[G]Oh oh [D]oh", out[4])
+        assertEquals("Intro: [G] [D] (2x)", out[5])
     }
 
     @Test fun `acorde depois do fim da letra fica no fim`() {

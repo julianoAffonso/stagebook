@@ -53,13 +53,16 @@ object Chords {
 
     // ---- acordes na linha de cima → ChordPro ----
 
-    /** Linha só de acordes (e marcas como `|`, `(2x)`), com pelo menos um acorde. Aceita rótulo antes: `Intro: G D`. */
+    /** Linha só de acordes (e marcas como `|`, `(2x)`), com pelo menos um acorde. Aceita rótulo antes: `Intro: G D`, `[Intro] G D`. */
     fun isChordLine(line: String): Boolean {
         val tokens = line.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
-        val body = if (tokens.size > 1 && tokens[0].endsWith(":") && !isChord(tokens[0].dropLast(1))) tokens.drop(1) else tokens
+        val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
         return body.any(::isChord) && body.all { isChord(it) || chordLineExtras.matches(it) }
     }
+
+    private fun isLabel(t: String) =
+        (t.endsWith(":") && !isChord(t.dropLast(1))) || (t.startsWith("[") && t.endsWith("]") && !isChord(t.drop(1).dropLast(1)))
 
     /**
      * Converte cifra com os acordes na linha de cima (Cifra Club, texto colado) para ChordPro: cada acorde
@@ -73,6 +76,14 @@ object Chords {
         while (i < lines.size) {
             val line = lines[i]
             if (!isChordLine(line)) { out += line; i++; continue }
+            // "[Intro] G D" (rótulo de seção na frente): o título numa linha e os acordes na de baixo
+            val first = line.trim().substringBefore(' ')
+            if (first.startsWith("[") && Sections.detect(first) != null && line.trim().length > first.length) {
+                out += first
+                out += chordsOnly(line.trim().removePrefix(first))
+                i++
+                continue
+            }
             val next = lines.getOrNull(i + 1)
             val lyric = next != null && next.isNotBlank() && !isChordLine(next) && !isDirective(next) && Sections.detect(next) == null
             out += if (lyric) merge(line, next!!) else chordsOnly(line)

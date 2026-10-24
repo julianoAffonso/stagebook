@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.importer
 
+import com.juliano.stagebook.domain.Chords
+import com.juliano.stagebook.domain.ChordImport
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
@@ -62,7 +64,13 @@ class ImportViewModel @Inject constructor(
         run {
             val page = runCatching { json.decodeFromString<PageData>(json.decodeFromString<String>(raw.orEmpty())) }.getOrNull()
             if (page == null) { _uiState.update { it.copy(problem = ImportProblem.UNREADABLE) }; return }
-            val text = LyricsCleaner.clean(page.text)
+            // perfil letra e cifra + página com cifra: entra em ChordPro (com tom e capo); senão, só a letra
+            val chordSource = page.chordText.ifBlank { page.text }
+            val text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
+                ChordImport.toChordPro(chordSource, page.key, page.capo)
+            } else {
+                LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+            }
             if (text.lines().size < 3) { _uiState.update { it.copy(problem = ImportProblem.NOT_FOUND) }; return }
             _uiState.update { it.copy(busy = true) }
             val meta = PageMeta.pick(page)
