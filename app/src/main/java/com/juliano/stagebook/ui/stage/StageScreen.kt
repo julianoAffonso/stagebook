@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.stage
 
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
+import com.juliano.stagebook.data.model.ChordListPlace
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.juliano.stagebook.domain.Chords
@@ -255,7 +258,8 @@ fun StageScreen(
     var pageLines by remember(sourced) { mutableStateOf(sourced) }
     fun editAt(line: Int?) {
         if (song.missing) return
-        onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.let { lineStart(song.text, it) } ?: -1)
+        // a lista de acordes (fonte -1) não é linha da letra: abre no começo
+        onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }?.let { lineStart(song.text, it) } ?: -1)
     }
     fun styleFor(z: Float) = TextStyle(
         color = fg,
@@ -533,7 +537,25 @@ fun StageScreen(
             val columnWidth = if (columns == 2) halfWidth else width
             // linha com acordes que quebra nesta largura: um pedaço por linha da tela, e só os com acorde
             // guardam o espaço de cima (senão a 2ª parte ganhava um vão sem acorde nenhum)
-            val fitted = remember(sourced, style, columnWidth) { splitWrappedChordLines(measurer, sourced, style, columnWidth) }
+            // lista de acordes da música no topo ou no fim (só no perfil letra e cifra): um espaço reservado no texto,
+            // com a altura das fileiras de desenhos nesta largura, para a paginação contar com ela
+            val density = LocalDensity.current
+            val stripChordCount = remember(song.text) { stripChords(song.text).size }
+            val stripPlace = if (look.chords && stripChordCount > 0) look.chordList else ChordListPlace.NONE
+            val stripEm = with(density) {
+                val perRow = maxOf(1, columnWidth / STRIP_ITEM_WIDTH.roundToPx())
+                val rows = (stripChordCount + perRow - 1) / perRow
+                (rows * STRIP_ITEM_HEIGHT.toPx() + Spacing.m.toPx()) / style.fontSize.toPx()
+            }
+            val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
+                val split = splitWrappedChordLines(measurer, sourced, style, columnWidth)
+                val strip = StageLine(chordListLine(stripEm), -1)
+                when (stripPlace) {
+                    ChordListPlace.TOP -> listOf(strip) + split
+                    ChordListPlace.BOTTOM -> split + strip
+                    ChordListPlace.NONE -> split
+                }
+            }
             val shownLines = remember(fitted) { if (fitted === sourced) lines else fitted.map { it.text } }
             SideEffect { pageLines = fitted }
             val sheets = remember(shownLines, style, columnWidth, height, columns) {
@@ -580,13 +602,23 @@ fun StageScreen(
             ) { content ->
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(with(LocalDensity.current) { gutter.toDp() })) {
                     content.columns.forEachIndexed { column, text ->
-                        ChordText(
-                            text,
-                            style = content.style,
-                            chordStyle = content.chordStyle,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            onTextLayout = { hit.laidOut(content, column, it) },
-                        )
+                        val strip = remember(text) { text.getStringAnnotations(CHORD_LIST_TAG, 0, text.length).firstOrNull() }
+                        var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
+                        Box(Modifier.weight(1f).fillMaxHeight()) {
+                            ChordText(
+                                text,
+                                style = content.style,
+                                chordStyle = content.chordStyle,
+                                modifier = Modifier.fillMaxSize(),
+                                onTextLayout = { laid = it; hit.laidOut(content, column, it) },
+                            )
+                            // a lista de acordes, por cima do espaço reservado para ela
+                            val l = laid
+                            if (strip != null && l != null && strip.start < l.layoutInput.text.length) {
+                                val top = l.getLineTop(l.getLineForOffset(strip.start)).roundToInt()
+                                ChordStrip(song.text, look.instrument, Color(look.chordColor), Modifier.offset { IntOffset(0, top) })
+                            }
+                        }
                     }
                     // última folha com só a coluna da esquerda: a da direita fica vazia, não estica a outra
                     repeat(content.sheetColumns - content.columns.size) { Box(Modifier.weight(1f)) }

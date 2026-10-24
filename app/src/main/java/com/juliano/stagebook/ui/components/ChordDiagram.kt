@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,9 +42,14 @@ fun ChordDiagram(
     modifier: Modifier = Modifier,
     width: Dp = 160.dp,
     accent: Color = MaterialTheme.colorScheme.primary,
+    compact: Boolean = false,   // lista de acordes do palco: menor, com a mesma largura para todos
 ) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(chord, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = color)
+    Column(
+        if (compact) modifier.width(STRIP_WIDTH) else modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
+    ) {
+        Text(chord, style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold), color = color, maxLines = 1)
         if (instrument == Instrument.TECLADO) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width)
     }
 }
@@ -113,6 +119,7 @@ private fun Keyboard(keys: List<Int>, accent: Color, width: Dp) {
 }
 
 private val BLACK = setOf(1, 3, 6, 8, 10)
+private val STRIP_WIDTH = 76.dp
 
 @LightPreview
 @androidx.compose.runtime.Composable
