@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.stage
 
+import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.domain.Voicings
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
@@ -58,6 +59,11 @@ class StageViewModel @Inject constructor(
         if (songId.isEmpty()) return
         val instrument = repository.library.value.look.instrument
         repository.updateSong(songId) { it.copy(text = Voicings.saveDefine(it.text, instrument, chord, define)) }
+    }
+
+    /** Acordes tirados da lista de acordes desta música (o × no palco); vazio devolve todos. */
+    fun setHiddenChords(songId: String, hidden: Set<String>) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.setHiddenChords(it.text, hidden)) }
     }
 
     /** Zoom da pinça, gravado na música (vale em qualquer setlist, como no another app). */

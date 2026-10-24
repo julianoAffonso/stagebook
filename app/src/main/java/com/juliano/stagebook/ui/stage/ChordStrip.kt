@@ -1,5 +1,19 @@
 package com.juliano.stagebook.ui.stage
 
+import com.juliano.stagebook.domain.Chords
+import com.juliano.stagebook.ui.components.AppIcons
+import com.juliano.stagebook.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -18,8 +32,11 @@ import com.juliano.stagebook.ui.editor.usedChords
 val STRIP_ITEM_WIDTH: Dp = 76.dp
 val STRIP_ITEM_HEIGHT: Dp = 94.dp   // nome (≈20) + desenho (56 × 1,15) + folga
 
-/** Os acordes da música, na ordem em que aparecem (a lista de acordes do palco). */
-fun stripChords(text: String): List<String> = usedChords(text, max = 24)
+/** Os acordes da música, na ordem em que aparecem, menos os que o usuário escondeu da lista (todos, sem limite). */
+fun stripChords(text: String): List<String> {
+    val hidden = Chords.hiddenChords(text)
+    return usedChords(text, max = Int.MAX_VALUE).filterNot { it in hidden }
+}
 
 /**
  * Os desenhos dos acordes da música (topo ou fim do palco), na forma guardada na música ({define}) ou na mais fácil.
@@ -27,7 +44,15 @@ fun stripChords(text: String): List<String> = usedChords(text, max = 24)
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChordStrip(text: String, instrument: Instrument, color: Color, modifier: Modifier = Modifier) {
+fun ChordStrip(
+    text: String,
+    instrument: Instrument,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onHide: (String) -> Unit = {},
+    onRestore: () -> Unit = {},
+) {
+    val hiddenCount = remember(text) { Chords.hiddenChords(text).size }
     val items = remember(text, instrument) {
         stripChords(text).map { c ->
             Triple(
@@ -39,7 +64,25 @@ fun ChordStrip(text: String, instrument: Instrument, color: Color, modifier: Mod
     }
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(0.dp)) {
         items.forEach { (c, shape, keys) ->
-            ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.TECLADO) 46.dp else 56.dp, compact = true)
+            Box {
+                ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.TECLADO) 46.dp else 56.dp, compact = true)
+                // × discreto: tira o acorde da lista desta música (o palco pede confirmação)
+                Box(
+                    Modifier.align(Alignment.TopEnd).size(28.dp).clip(CircleShape).clickable { onHide(c) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(AppIcons.Close, stringResource(R.string.stage_chord_hide, c), Modifier.size(14.dp), tint = color.copy(alpha = 0.45f))
+                }
+            }
+        }
+        // acordes escondidos: um toque devolve todos (sem confirmação, não tira nada da tela)
+        if (hiddenCount > 0) {
+            Box(Modifier.size(STRIP_ITEM_WIDTH, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(AppIcons.Undo, stringResource(R.string.stage_chords_restore, hiddenCount), Modifier.size(18.dp), tint = color.copy(alpha = 0.6f))
+                    Text("$hiddenCount", style = MaterialTheme.typography.labelLarge, color = color.copy(alpha = 0.6f))
+                }
+            }
         }
     }
 }

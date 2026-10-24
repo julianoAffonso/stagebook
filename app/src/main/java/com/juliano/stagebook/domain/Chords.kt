@@ -49,6 +49,14 @@ object Chords {
 
     fun key(text: String): String = directive(text, "key").orEmpty()
 
+    // acordes que o usuário tirou da lista de acordes do palco (extensão do ChordPro: diretivas x_ são dos apps)
+    private const val HIDE = "x_hide_chords"
+
+    fun hiddenChords(text: String): Set<String> =
+        directive(text, HIDE).orEmpty().split(Regex("\\s+")).filter { it.isNotEmpty() }.toSet()
+
+    fun setHiddenChords(text: String, chords: Set<String>): String = setDirective(text, HIDE, chords.joinToString(" "))
+
     fun capo(text: String): Int = directive(text, "capo")?.toIntOrNull()?.coerceIn(0, 12) ?: 0
 
     // ---- acordes na linha de cima → ChordPro ----
