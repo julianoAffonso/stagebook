@@ -969,43 +969,28 @@ private fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: (
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
         val range = -MixerConfig.EQ_RANGE_DB..MixerConfig.EQ_RANGE_DB
-        BoxWithConstraints {
-            if (maxWidth >= 600.dp) {
-                // tablet: faders de pé lado a lado, como um equalizador gráfico, com o espectro ao vivo por trás (já
-                // com a curva do EQ somada: o motor mede antes do EQ). Cada fader no centro da sua quinta parte.
-                val response = remember(mixer.eqDb, mixer.eqOn) {
-                    if (mixer.eqOn) Spectrum.eqResponseDb(mixer.eqDb) else FloatArray(Spectrum.BINS)
-                }
-                Box(Modifier.fillMaxWidth()) {
-                    SpectrumView(
-                        { levels().spectrumDb.mapIndexed { b, v -> if (v <= Spectrum.FLOOR_DB) v else v + response[b] } },
-                        active = { levels().live },
-                        modifier = Modifier.matchParentSize().padding(vertical = Spacing.l),
-                    )
-                    Row(Modifier.fillMaxWidth()) {
-                        MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
-                            val db = mixer.eqDb.getOrElse(i) { 0f }
-                            Column(
-                                Modifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            ) {
-                                Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
-                                VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
-                                Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-                    }
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
-                        val db = mixer.eqDb.getOrElse(i) { 0f }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                            Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 64.dp))
-                            Slider(db, { setBand(i, it) }, Modifier.weight(1f), enabled = mixer.eqOn, valueRange = range)
-                            Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 72.dp))
-                        }
+        // faders de pé lado a lado (celular e tablet), como um equalizador gráfico, com o espectro ao vivo por trás (já
+        // com a curva do EQ somada: o motor mede antes do EQ). Cada fader no centro da sua quinta parte.
+        val response = remember(mixer.eqDb, mixer.eqOn) {
+            if (mixer.eqOn) Spectrum.eqResponseDb(mixer.eqDb) else FloatArray(Spectrum.BINS)
+        }
+        Box(Modifier.fillMaxWidth()) {
+            SpectrumView(
+                { levels().spectrumDb.mapIndexed { b, v -> if (v <= Spectrum.FLOOR_DB) v else v + response[b] } },
+                active = { levels().live },
+                modifier = Modifier.matchParentSize().padding(vertical = Spacing.l),
+            )
+            Row(Modifier.fillMaxWidth()) {
+                MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
+                    val db = mixer.eqDb.getOrElse(i) { 0f }
+                    Column(
+                        Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
+                        VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
+                        Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
