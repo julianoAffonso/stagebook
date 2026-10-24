@@ -144,6 +144,7 @@ fun StageRoute(
             onEdit = onEditSong,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
+            onHiddenChords = viewModel::setHiddenChords,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -172,7 +173,10 @@ fun StageScreen(
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
+    onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
 ) {
+    // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
+    var hidingChord by remember { mutableStateOf<String?>(null) }
     val look = uiState.look
     // acorde tocado no palco: o desenho dele (só no perfil letra e cifra)
     var shownChord by remember { mutableStateOf<String?>(null) }
@@ -193,6 +197,15 @@ fun StageScreen(
         }
     }
     val song = uiState.songs[index]
+    hidingChord?.let { chord ->
+        ConfirmDialog(
+            stringResource(R.string.stage_chord_hide_confirm, chord),
+            stringResource(R.string.stage_chord_hide_ok),
+            onConfirm = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + chord) },
+            onDismiss = { hidingChord = null },
+            destructive = false,
+        )
+    }
     shownChord?.let { chord ->
         ChordShapePopup(
             chord = chord,
@@ -616,7 +629,14 @@ fun StageScreen(
                             val l = laid
                             if (strip != null && l != null && strip.start < l.layoutInput.text.length) {
                                 val top = l.getLineTop(l.getLineForOffset(strip.start)).roundToInt()
-                                ChordStrip(song.text, look.instrument, Color(look.chordColor), Modifier.offset { IntOffset(0, top) })
+                                ChordStrip(
+                                    song.text,
+                                    look.instrument,
+                                    Color(look.chordColor),
+                                    Modifier.offset { IntOffset(0, top) },
+                                    onHide = { hidingChord = it },
+                                    onRestore = { onHiddenChords(song.id, emptySet()) },
+                                )
                             }
                         }
                     }

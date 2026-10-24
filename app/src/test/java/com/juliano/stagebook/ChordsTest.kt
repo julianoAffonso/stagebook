@@ -74,6 +74,15 @@ class ChordsTest {
         assertEquals("", Chords.stripChords("{define-guitar: C base-fret 1 frets x 3 2 0 1 0}"))
     }
 
+    @Test fun `acordes escondidos da lista vão e voltam pela diretiva x_hide_chords`() {
+        var t = "[G]a [D]b [C]c"
+        t = Chords.setHiddenChords(t, setOf("G", "D"))
+        assertEquals(setOf("G", "D"), Chords.hiddenChords(t))
+        assertEquals(listOf("C"), com.juliano.stagebook.ui.stage.stripChords(t))
+        assertEquals("[G]a [D]b [C]c", Chords.setHiddenChords(t, emptySet()))
+        assertTrue(Chords.isDirective(t.lines().first()))   // o palco não mostra a linha
+    }
+
     @Test fun `diretivas gravam, trocam e saem`() {
         var t = "[G]oi"
         t = Chords.setDirective(t, "capo", "3")
