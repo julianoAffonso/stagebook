@@ -151,6 +151,8 @@ class SettingsViewModel @Inject constructor(
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
     fun setSites(chords: Boolean, sites: List<ImportSite>) =
         repository.updateLook { if (chords) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
+    fun setMixer(mixer: com.juliano.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
+
     fun setPlayerMode(on: Boolean) {
         repository.updateLook { it.copy(playerMode = on) }
         if (!on) com.juliano.stagebook.player.StagePlayer.turnOff()   // desligado, nada do player fica rodando

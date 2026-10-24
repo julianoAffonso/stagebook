@@ -363,4 +363,32 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="player_battery_ok">Continuar</string>
     <string name="player_battery_later">Agora não</string>
     <string name="player_no_track">Não deu para abrir o backing track</string>
+    <!-- mixer do player (Ajustes → Player) -->
+    <string name="mixer_title">Mixer</string>
+    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui; sem mexer, cada um vai para a saída de mesmo número. Na saída do aparelho, a saída 1 é a esquerda e a 2 é a direita.</string>
+    <string name="mixer_channels">Canais nos backing tracks</string>
+    <string name="mixer_channel">Canal %1$d</string>
+    <string name="mixer_pair">Canais %1$d e %2$d</string>
+    <string name="mixer_name">Nome</string>
+    <string name="mixer_mute">Desligar o canal</string>
+    <string name="mixer_unmute">Ligar o canal</string>
+    <string name="mixer_db">%1$+.1f dB</string>
+    <string name="mixer_db_mute">mudo</string>
+    <string name="mixer_norm">Normalizar</string>
+    <string name="mixer_norm_none">Não</string>
+    <string name="mixer_norm_volume">Volume</string>
+    <string name="mixer_norm_peak">Pico</string>
+    <string name="mixer_output">Saída</string>
+    <string name="mixer_output_one">Saída %1$d</string>
+    <string name="mixer_output_pair">Saídas %1$d-%2$d</string>
+    <string name="mixer_eq">EQ</string>
+    <string name="mixer_center">Centralizar</string>
+    <string name="mixer_stereo">Par estéreo</string>
+    <string name="mixer_norm_help">Volume: todas as músicas no mesmo volume percebido. Pico: o mesmo pico em todas (bom para click e guia). Medido uma vez por backing track.</string>
+    <string name="eq_title">Equalizador</string>
+    <string name="eq_on">Equalizador ligado</string>
+    <string name="eq_help">Uma curva só, aplicada em cada canal marcado com EQ, cada um separado. Um limitador segura os picos.</string>
+    <string name="eq_hz">%1$d Hz</string>
+    <string name="eq_khz">%1$s kHz</string>
+    <string name="eq_reset">Zerar</string>
 </resources>

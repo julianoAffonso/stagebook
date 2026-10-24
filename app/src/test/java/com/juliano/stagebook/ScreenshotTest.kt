@@ -357,6 +357,25 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.PLAYER) }
     }
 
+    // ---- mixer (Ajustes → Player): arquivo de 4 canais, backing em par estéreo e click mono na saída 7 ----
+    private val mixerLook = Look(
+        playerMode = true,
+        mixer = com.juliano.stagebook.domain.MixerConfig(channels = 4, eqOn = true, eqDb = listOf(3f, 0f, -2f, 1.5f, 0f))
+            .withStrip(0) { it.copy(name = "Backing", stereo = true, eq = true, norm = com.juliano.stagebook.domain.NormMode.VOLUME, gainDb = -3f) }
+            .withStrip(2) { it.copy(name = "Click", norm = com.juliano.stagebook.domain.NormMode.PEAK, output = 6, center = true) }
+            .withStrip(3) { it.copy(name = "Guia", on = false) },
+    )
+
+    @Test @Config(qualifiers = PHONE_LONGO)
+    fun mixerPhone() = shoot("jornada_mixer_1_celular") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+    }
+
+    @Test @Config(qualifiers = TABLET_LONGO)
+    fun mixerTablet() = shoot("jornada_mixer_2_tablet") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack2NoTrack() = shoot("jornada_faixa_2_palco_sem_faixa") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
@@ -406,3 +425,5 @@ class ScreenshotTest {
 private const val TABLET = "w1280dp-h800dp-land-hdpi"
 private const val TABLET_EM_PE = "w800dp-h1280dp-port-hdpi"
 private const val PHONE = "w412dp-h915dp-port-xxhdpi"
+private const val PHONE_LONGO = "w412dp-h3000dp-port-xxhdpi"     // a tela inteira, sem rolar
+private const val TABLET_LONGO = "w1280dp-h2000dp-port-hdpi"

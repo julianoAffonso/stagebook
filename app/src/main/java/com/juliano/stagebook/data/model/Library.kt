@@ -118,6 +118,8 @@ data class Look(
     val chordTap: Boolean = true,
     // modo player (faixas, saída USB, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço
     val playerMode: Boolean = false,
+    // mixer do player (Ajustes → Player): do app, vale para todos os backing tracks; por música só a medição
+    val mixer: com.juliano.stagebook.domain.MixerConfig = com.juliano.stagebook.domain.MixerConfig(),
     // importação: os sites de cada tipo; o primeiro de cada lista é o padrão (onde o importador abre)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
     val chordSites: List<ImportSite> = ImportSites.CHORDS,   // tocar num acorde no palco mostra o desenho (desligado: o toque vira a página)

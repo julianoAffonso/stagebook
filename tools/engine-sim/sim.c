@@ -592,7 +592,7 @@ int main(int argc, char **argv) {
     check(fabs(db(e0.rms[2]) - db(a0.rms[2])) < SAME_DB && fabs(db(e0.rms[0]) - db(a0.rms[0])) > 0.1
           && e0.clip[0] <= a0.clip[0], "EQ só no BT/USB, e o reforço não aumenta o clip", "");
 
-    // normalização com os ganhos que o Normalizer.java calcularia para esta faixa
+    // normalização com os ganhos que o Normalizer.java do Backing calculava para esta faixa
     float *an = (float *)FN(analyze)(env, NULL, (jstring)ogg);
     float lufs = an[0], pkb = an[1], pkc = an[2];
     double gbn = fmin(-16 - lufs, -1 - db(pkb)); gbn = fmax(-24, fmin(15, gbn));
