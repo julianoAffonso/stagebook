@@ -117,6 +117,11 @@ class ScreenshotTest {
     }
 
     /** Editando a letra: a faixa de atalhos das seções aparece no topo. */
+    @Test @Config(qualifiers = PHONE)
+    fun editorChordsPhone() = shoot("celular_4_editor_cifra") {
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+    }
+
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
