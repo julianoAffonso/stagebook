@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var band: BandLink
     @Inject lateinit var stageGate: StageGate
     @Inject lateinit var bandInternet: BandInternet
+    @Inject lateinit var conduct: com.juliano.stagebook.data.BandConduct   // criado aqui: quem acompanha já responde
     private val pedal = PedalInput()
 
     // língua escolhida nos ajustes (trocar recria a Activity)
@@ -89,7 +90,7 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong) }
                 // "Fulano quer entrar na banda": em qualquer tela, um de cada vez
                 // no palco, nada aparece por cima: o show nunca é interrompido
                 val requests by band.requests.collectAsStateWithLifecycle()
