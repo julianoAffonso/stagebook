@@ -1,0 +1,26 @@
+# A cada push: compila, roda os testes e o lint. Nada é publicado nem assinado aqui.
+name: Verificar
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # a versão vem do nº de commits
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "ndk;27.2.12479018"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew assembleDebug testDebugUnitTest lintDebug
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios
+          path: app/build/reports/

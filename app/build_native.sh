@@ -6,8 +6,9 @@
 set -euo pipefail
 OUT=$1
 cd "$(dirname "$0")/src/main/cpp"
-SDK=$HOME/Library/Android/sdk
-BIN=$SDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/darwin-x86_64/bin
+SDK=${ANDROID_HOME:-$HOME/Library/Android/sdk}
+HOST=$([ "$(uname)" = Darwin ] && echo darwin-x86_64 || echo linux-x86_64)   # Mac aqui, Linux na verificação do GitHub
+BIN=$SDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/$HOST/bin
 STB=third_party
 build() {   # <abi> <compilador>
     mkdir -p "$OUT/$1"
