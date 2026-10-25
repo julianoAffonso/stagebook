@@ -2,6 +2,7 @@
 name: Verificar
 on:
   push:
+    paths-ignore: [".claude/**", "**.md"]   # só memória/textos: não gasta minutos
   pull_request:
 jobs:
   check:
