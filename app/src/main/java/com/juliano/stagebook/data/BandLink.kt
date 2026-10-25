@@ -129,20 +129,21 @@ class BandLink @Inject constructor(
         peers.filter { it.id in ids }
     }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
-    /** Manda um setlist ou músicas para todos da banda na rede agora; devolve para quantos chegou. */
-    suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Int = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
+    /** Manda um setlist ou músicas para todos da banda na rede agora; devolve os ids de quem recebeu. */
+    suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Set<String> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
         val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
         onlineMembers.value.map { peer ->
             this@io.async {
-                val member = trust.member(peer.id) ?: return@async false
-                val theirs = BandCrypto.publicKey(member.key) ?: return@async false
+                val member = trust.member(peer.id) ?: return@async null
+                val theirs = BandCrypto.publicKey(member.key) ?: return@async null
                 val key = BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
-                runCatching {
+                val ok = runCatching {
                     val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
                     BandSession(identity.hello()).send(s, peer.id, ShareCode.encrypt(key, plain))
                 }.getOrDefault(false)
+                if (ok) peer.id else null
             }
-        }.count { it.await() }
+        }.mapNotNull { it.await() }.toSet()
     }
 
     /** Uma música pedida à banda (título e artista, como no QR). */

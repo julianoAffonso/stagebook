@@ -1,5 +1,7 @@
 package com.juliano.stagebook.data
 
+import com.juliano.stagebook.domain.BandProtocol
+import com.juliano.stagebook.domain.BandCrypto
 import com.juliano.stagebook.domain.QrPayload
 import com.juliano.stagebook.domain.ShareCode
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +25,7 @@ import javax.inject.Singleton
  * Quem recebe digita o código; o app busca no canal, decifra e abre a mesma conferência do QR.
  */
 @Singleton
-class SetlistCloud @Inject constructor(private val repository: LibraryRepository) {
+class SetlistCloud @Inject constructor(private val repository: LibraryRepository, private val identity: DeviceIdentity) {
     /** Música que vai junto com o setlist (o texto em ChordPro, com a cifra: quem recebe mostra conforme o perfil dele). */
     @Serializable
     data class SharedSong(val title: String, val author: String = "", val year: String = "", val text: String = "")
@@ -32,7 +34,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     data class Sent(val code: String, val songs: Int, val skipped: Int)
 
     sealed interface Received {
-        data class Ok(val text: String, val songs: List<SharedSong> = emptyList()) : Received
+        /** [from]: quem enviou (o aparelho dele), para virar "da banda" ao aceitar. */
+        data class Ok(val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null) : Received
         data object NotFound : Received   // código errado ou já passou das 12 h
         data object Offline : Received
     }
@@ -73,6 +76,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val keys = ShareCode.keys(code)
         var sent = 0
         var skipped = 0
+        // quem envia vai junto (cifrado): quem aceitar guarda este aparelho como "da banda"
+        if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello()))))) return@withContext null
         for (song in songs) {
             val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song)))
             when {
@@ -119,8 +124,83 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
         val text = plain.asReversed().firstNotNullOfOrNull { QrPayload.unpack(it) }
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
-        if (text == null) Received.NotFound else Received.Ok(text, songs)
+        val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
+        if (text == null) Received.NotFound else Received.Ok(text, songs, from)
     }
+
+    // identidade conferida: o id tem de ser o da chave (ninguém se passa por outro aparelho)
+    private fun hello(text: String): BandProtocol.Hello? = runCatching { json.decodeFromString<BandProtocol.Hello>(text) }.getOrNull()
+        ?.takeIf { BandCrypto.publicKey(it.key) != null && BandCrypto.idOf(it.key) == it.id && it.name.length <= BandProtocol.MAX_NAME }
+
+    /** Quem recebeu pelas palavras e aceitou devolve um "ok" com a identidade dele, no mesmo canal (vira da banda dos dois lados). */
+    suspend fun ack(input: String): Boolean = withContext(Dispatchers.IO) {
+        val code = ShareCode.normalize(input) ?: return@withContext false
+        val keys = ShareCode.keys(code)
+        post(keys.topic, ShareCode.encrypt(keys.key, pack(ACK_MARK, json.encodeToString(identity.hello()))))
+    }
+
+    /** Os "ok" que chegaram para um envio meu (quem aceitou); vazio sem internet. */
+    suspend fun acks(code: String): List<BandProtocol.Hello> = withContext(Dispatchers.IO) {
+        val keys = ShareCode.keys(code)
+        val lines = get("$SERVER/${keys.topic}/json?poll=1&since=all") ?: return@withContext emptyList()
+        messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }.mapNotNull { unpack(ACK_MARK, it) }.mapNotNull(::hello)
+            .filter { it.id != identity.id }.distinctBy { it.id }
+    }
+
+    // ---- caixa de entrada de cada par da banda, pela internet ----
+
+    /** Um pedaço de um pacote (até ~2 KB por mensagem: o ntfy aceita 4 KB e a cifra/Base64 aumentam). */
+    @Serializable
+    private data class Chunk(val p: String, val i: Int, val n: Int, val d: String)
+
+    @Serializable
+    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList())
+
+    /** Canal da caixa de entrada de [recipientId] para o par: sai da chave do par (só os dois sabem qual é). */
+    fun pairTopic(pairKey: ByteArray, recipientId: String): String =
+        "sb" + java.security.MessageDigest.getInstance("SHA-256").apply { update(pairKey); update("inbox|$recipientId".toByteArray()) }
+            .digest().copyOf(16).joinToString("") { "%02x".format(it) }
+
+    /** Manda um pacote para a caixa de um aparelho da banda; true se todos os pedaços foram. */
+    suspend fun sendToPair(pairKey: ByteArray, recipientId: String, list: ByteArray, songs: List<SharedSong>): Boolean = withContext(Dispatchers.IO) {
+        val whole = pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
+        val id = java.util.UUID.randomUUID().toString().take(8)
+        val parts = whole.toList().chunked(CHUNK).map { it.toByteArray() }
+        val topic = pairTopic(pairKey, recipientId)
+        parts.withIndex().all { (i, part) ->
+            val chunk = Chunk(id, i, parts.size, java.util.Base64.getEncoder().encodeToString(part))
+            post(topic, ShareCode.encrypt(pairKey, json.encodeToString(chunk).toByteArray()))
+        }
+    }
+
+    /** O que chegou na minha caixa vinda de um par: os pacotes completos e o id da última mensagem lida. */
+    suspend fun fetchPair(pairKey: ByteArray, since: String?): Pair<List<Pair<String, List<SharedSong>>>, String?>? = withContext(Dispatchers.IO) {
+        val lines = get("$SERVER/${pairTopic(pairKey, identity.id)}/json?poll=1&since=${since ?: "12h"}") ?: return@withContext null
+        val msgs = messagesWithIds(lines)
+        val chunks = msgs.mapNotNull { (_, m) -> ShareCode.decrypt(pairKey, m)?.let { runCatching { json.decodeFromString<Chunk>(it.decodeToString()) }.getOrNull() } }
+        val packages = chunks.groupBy { it.p }.values.mapNotNull { parts ->
+            val n = parts.first().n
+            val ordered = parts.distinctBy { it.i }.sortedBy { it.i }
+            if (ordered.size != n) return@mapNotNull null
+            val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
+            val pkg = unpack(PAIR_MARK, bytes)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
+            val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
+            text to pkg.songs
+        }
+        packages to (msgs.lastOrNull()?.first ?: since)
+    }
+
+    private fun get(url: String): List<String>? = runCatching {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.connectTimeout = TIMEOUT_MS
+        c.readTimeout = TIMEOUT_MS
+        c.setRequestProperty("User-Agent", USER_AGENT)
+        try {
+            if (c.responseCode != 200) null else c.inputStream.bufferedReader().readLines()
+        } finally {
+            c.disconnect()
+        }
+    }.getOrNull()
 
     companion object {
         private const val SERVER = "https://ntfy.sh"
@@ -129,6 +209,20 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         private const val USER_AGENT = "StagebookApp/0.2 (setlist da banda)"
         private val json = Json { ignoreUnknownKeys = true }
         private val SONG_MARK = byteArrayOf('S'.code.toByte(), '1'.code.toByte())
+        private val ID_MARK = byteArrayOf('I'.code.toByte(), '1'.code.toByte())     // quem enviou (identidade)
+        private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" de quem aceitou
+        private val PAIR_MARK = byteArrayOf('P'.code.toByte(), '1'.code.toByte())   // pacote da caixa de um par
+        private const val CHUNK = 2_000
+
+        /** As mensagens com o id de cada uma (para continuar de onde parou). */
+        fun messagesWithIds(lines: List<String>): List<Pair<String, String>> = lines.mapNotNull { l ->
+            runCatching {
+                val o = json.parseToJsonElement(l).jsonObject
+                if (o["event"]?.jsonPrimitive?.content != "message") return@runCatching null
+                val id = o["id"]?.jsonPrimitive?.content ?: return@runCatching null
+                id to (o["message"]?.jsonPrimitive?.content ?: return@runCatching null)
+            }.getOrNull()
+        }
 
         /** [mark] + deflate do texto (o mesmo jeito do pacote do QR, com outra marca para as músicas). */
         fun pack(mark: ByteArray, text: String): ByteArray {

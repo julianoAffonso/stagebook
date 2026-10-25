@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.songs
 
+import kotlinx.coroutines.flow.update
+import com.juliano.stagebook.data.BandInternet
+import com.juliano.stagebook.data.BandTrust
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.channels.Channel
 import com.juliano.stagebook.data.BandLink
@@ -46,10 +49,14 @@ fun Song.subtitle(): String = listOf(author, year).filter { it.isNotBlank() }.jo
 @HiltViewModel
 class SongsViewModel @Inject constructor(
     private val repository: LibraryRepository,
-    connectivity: Connectivity,
+    private val connectivity: Connectivity,
     private val setlistCloud: SetlistCloud,
     private val bandLink: BandLink,
+    private val bandTrust: BandTrust,
+    private val bandInternet: BandInternet,
 ) : ViewModel() {
+    private val internet = connectivity.online
+    private fun connectivityNow() = connectivity.isOnline()
     private val _cloud = MutableStateFlow<CloudUi?>(null)
     val cloud: StateFlow<CloudUi?> = _cloud
 
@@ -62,14 +69,34 @@ class SongsViewModel @Inject constructor(
             val qr = sent?.let { s ->
                 withContext(Dispatchers.Default) { runCatching { QrEncoder.encode(ShareCode.qrText(s.code).toByteArray(), 600).asImageBitmap() }.getOrNull() }
             }
+            sent?.let { bandInternet.remember(it.code); watchJoins(it.code) }
             _cloud.value = sent?.let { CloudUi.Sent(it.code, "", it.songs, it.skipped, qr) } ?: CloudUi.Failed
         }
     }
 
-    fun dismissCloud() { _cloud.value = null }
+    fun dismissCloud() { _cloud.value = null; joinsJob?.cancel() }
 
-    /** Quantos da banda estão na rede agora ("Banda na rede (N)" só aparece com alguém). */
-    val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    private var joinsJob: kotlinx.coroutines.Job? = null
+
+    // com o diálogo das palavras aberto: confere de tempos em tempos quem aceitou (vira da banda); fechou, para
+    private fun watchJoins(code: String) {
+        joinsJob?.cancel()
+        joinsJob = viewModelScope.launch {
+            repeat(JOIN_CHECKS) {
+                kotlinx.coroutines.delay(JOIN_EVERY_MS)
+                val names = bandInternet.checkAcks(code)
+                if (names.isNotEmpty()) _cloud.update { c -> (c as? CloudUi.Sent)?.let { it.copy(joined = it.joined + names) } ?: c }
+            }
+        }
+    }
+
+    /**
+     * Para quantos da banda dá para mandar agora ("Mandar para a banda (N)"): todos, se alguém está no Wi-Fi ou há
+     * internet; 0 = a opção não aparece.
+     */
+    val bandOnline: StateFlow<Int> = combine(bandTrust.members, bandLink.onlineMembers, internet) { members, lan, net ->
+        if (members.isNotEmpty() && (lan.isNotEmpty() || net)) members.size else 0
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private val bandSent = Channel<Int>(Channel.BUFFERED)
     /** Para quantos aparelhos da banda chegou o último envio (0 = ninguém recebeu). */
@@ -82,7 +109,10 @@ class SongsViewModel @Inject constructor(
     fun sendBand(ids: List<String>) {
         viewModelScope.launch {
             val pkg = setlistCloud.songsPackage(ids) ?: return@launch
-            bandSent.send(bandLink.send(pkg.first, pkg.second))
+            // perto (Wi-Fi) na hora; os outros pela internet, na caixa de cada par
+            val lan = bandLink.send(pkg.first, pkg.second)
+            val net = if (connectivityNow()) bandInternet.sendToBand(pkg.first, pkg.second, lan) else 0
+            bandSent.send(lan.size + net)
         }
     }
 
@@ -105,4 +135,9 @@ class SongsViewModel @Inject constructor(
     fun onQueryChange(q: String) { query.value = q }
 
     fun delete(id: String) = repository.deleteSong(id)
+
+    private companion object {
+        const val JOIN_EVERY_MS = 15_000L
+        const val JOIN_CHECKS = 40   // 10 min no máximo
+    }
 }

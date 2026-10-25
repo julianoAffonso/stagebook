@@ -479,6 +479,7 @@ class ScreenshotTest {
                     com.juliano.stagebook.ui.share.CloudUi.Sent(
                         "47-violao-lua", "Show de sábado", 12, 0,
                         com.juliano.stagebook.domain.QrEncoder.encode(com.juliano.stagebook.domain.ShareCode.qrText("47-violao-lua").toByteArray(), 600).asImageBitmap(),
+                        joined = listOf("Celular da Ana"),
                     ),
                 )
             }
