@@ -73,6 +73,14 @@ fun HomeScreen(
     var tab by rememberSaveable { mutableStateOf(HomeTab.SONGS) }
     // o que a banda mandou: aviso no topo das abas (o mais novo ainda não dispensado), número no ícone e a lista
     val inbox by inboxVm.items.collectAsStateWithLifecycle()
+    val hasBand by inboxVm.hasBand.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val onSync: (() -> Unit)? = if (hasBand) {
+        {
+            inboxVm.syncNow()
+            android.widget.Toast.makeText(context, R.string.import_syncing, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    } else null
     val banner = inbox.lastOrNull { !it.seen }
     var listOpen by rememberSaveable { mutableStateOf(false) }
     val badges = mapOf(
@@ -107,9 +115,9 @@ fun HomeScreen(
                     when (tab) {
                         HomeTab.SONGS -> SongsRoute(
                             onOpenSong, onEditSong, onImport, onScan = onScanSetlist, onReceiveCode = onReceiveCode,
-                            received = inbox.size, onReceived = { listOpen = true },
+                            received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                         )
-                        HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, received = inbox.size, onReceived = { listOpen = true })
+                        HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
                         HomeTab.SETTINGS -> SettingsRoute()
                     }
                 }

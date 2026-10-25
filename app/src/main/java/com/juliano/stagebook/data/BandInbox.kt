@@ -43,8 +43,17 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
     private val _items = MutableStateFlow(load())
     val items: StateFlow<List<Item>> = _items
 
+    /**
+     * Guarda o que chegou. O mesmo envio chegando duas vezes (pelo Wi-Fi e pela internet) não repete; o mesmo setlist da
+     * mesma pessoa substitui o antigo (ela corrigiu e mandou de novo: não vale conferir a versão velha).
+     */
     fun add(fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>) {
-        _items.update { (it + Item(UUID.randomUUID().toString(), fromId, fromName, text, songs)).takeLast(MAX) }
+        val item = Item(UUID.randomUUID().toString(), fromId, fromName, text, songs)
+        _items.update { list ->
+            if (list.any { it.fromId == fromId && it.text == text && it.songs == songs }) return@update list
+            val kept = if (item.setName.isEmpty()) list else list.filterNot { it.fromId == fromId && it.setName == item.setName }
+            (kept + item).takeLast(MAX)
+        }
         save()
     }
 

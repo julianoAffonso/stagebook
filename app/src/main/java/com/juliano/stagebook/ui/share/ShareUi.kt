@@ -69,12 +69,20 @@ fun ImportButton(
     onSites: (() -> Unit)? = null,
     received: Int = 0,               // o que a banda mandou e não foi conferido
     onReceived: () -> Unit = {},
+    onSync: (() -> Unit)? = null,    // "Sincronizar com a banda" (só com alguém da banda)
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
         ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            onSync?.let { sync ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.import_sync_band)) },
+                    onClick = { open = false; sync() },
+                    leadingIcon = { Icon(AppIcons.Sync, null) },
+                )
+            }
             if (received > 0) {
                 DropdownMenuItem(
                     text = { Text(pluralStringResource(R.plurals.import_received, received, received)) },

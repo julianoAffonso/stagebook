@@ -35,7 +35,7 @@ class ScanSetlistTest {
     private fun bandInternet(repo: LibraryRepository) = com.juliano.stagebook.data.BandInternet(
         context, com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)),
         com.juliano.stagebook.data.BandTrust(context), com.juliano.stagebook.data.DeviceIdentity(context),
-        com.juliano.stagebook.data.BandInbox(context), com.juliano.stagebook.data.Connectivity(context),
+        com.juliano.stagebook.data.BandInbox(context), com.juliano.stagebook.data.Connectivity(context), bandLink(repo),
     )
 
     private fun qr(name: String, vararg titles: String) =
@@ -173,6 +173,19 @@ class ScanSetlistTest {
         assertNotEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ab, ida))  // a caixa de cada um é separada
         val lines = listOf("""{"id":"x1","event":"message","message":"m"}""", """{"id":"x2","event":"keepalive"}""")
         assertEquals(listOf("x1" to "m"), com.juliano.stagebook.data.SetlistCloud.messagesWithIds(lines))
+    }
+
+    @Test fun `caixa - o mesmo envio não repete e o mesmo setlist da mesma pessoa substitui o antigo`() {
+        val box = com.juliano.stagebook.data.BandInbox(context)
+        box.items.value.forEach { box.remove(it.id) }
+        val v1 = qr("Show", "A")
+        box.add("ana", "Ana", v1, emptyList())
+        box.add("ana", "Ana", v1, emptyList())          // chegou pelo Wi-Fi e pela internet
+        assertEquals(1, box.items.value.size)
+        box.add("ana", "Ana", qr("Show", "A", "B"), emptyList())   // corrigiu e mandou de novo
+        assertEquals(listOf("2"), box.items.value.map { it.text.split('\n')[1] })
+        box.add("beto", "Beto", qr("Show", "C"), emptyList())     // outra pessoa, mesmo nome: os dois ficam
+        assertEquals(2, box.items.value.size)
     }
 
     @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {
