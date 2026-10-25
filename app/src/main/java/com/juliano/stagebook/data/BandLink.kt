@@ -32,8 +32,11 @@ import javax.inject.Singleton
 
 /**
  * A banda na rede local (Wi-Fi do lugar ou o ponto de acesso de um celular; sem internet): anuncia este aparelho, acha os
- * outros e atende os pedidos de entrada. Só fica ligada quando dá para usar e vale a pena (bateria): app na frente, no
- * Wi-Fi e (alguém da banda guardado, ou a tela Ajustes → Banda aberta).
+ * outros e atende os pedidos de entrada. Gasta o mínimo do tablet (pedido do usuário, 25/10):
+ * - **anúncio + servidor** (quase nada: o Android responde e o servidor fica parado esperando): app na frente, rede local
+ *   e (alguém da banda guardado, ou uma tela que procura aberta);
+ * - **procura + multicast lock** (o que gasta: perguntas na rede e o Wi-Fi acordando para cada pacote): só enquanto uma
+ *   tela precisa dela ([setScreenOpen]) e **nunca no palco**.
  */
 @Singleton
 class BandLink @Inject constructor(
@@ -54,6 +57,9 @@ class BandLink @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // entrou no palco: a procura para na hora; saiu, volta se a tela ainda precisar
+    init { scope.launch { stage.onStage.collect { update() } } }
+
     private val _peers = MutableStateFlow<List<Peer>>(emptyList())
     val peers: StateFlow<List<Peer>> = _peers
 
@@ -65,6 +71,7 @@ class BandLink @Inject constructor(
     val joins: StateFlow<Map<String, Join>> = _joins
 
     private val _running = MutableStateFlow(false)
+    /** Anunciado na rede (o servidor esperando). A procura dos outros é à parte e mais curta. */
     val running: StateFlow<Boolean> = _running
 
     private var foreground = false
@@ -106,6 +113,7 @@ class BandLink @Inject constructor(
     fun update() {
         val want = foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
         if (want && !_running.value) start() else if (!want && _running.value) stop()
+        updateSearch()
     }
 
     /**
@@ -126,6 +134,32 @@ class BandLink @Inject constructor(
         }
     }.getOrDefault(false)
 
+    private var searching = false
+
+    // a procura liga e desliga sozinha, sem mexer no anúncio: tela que precisa aberta e fora do palco
+    private fun updateSearch() {
+        val want = _running.value && screenOpen && !stage.onStage.value
+        if (want && !searching) startSearch() else if (!want && searching) stopSearch()
+    }
+
+    private fun startSearch() {
+        searching = true
+        multicast = context.applicationContext.getSystemService(WifiManager::class.java)?.createMulticastLock("stagebook-band")?.apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+        discover()
+    }
+
+    private fun stopSearch() {
+        searching = false
+        discovery?.let { runCatching { nsd.stopServiceDiscovery(it) } }
+        discovery = null
+        multicast?.let { if (it.isHeld) it.release() }
+        multicast = null
+        synchronized(toResolve) { toResolve.clear() }
+    }
+
     private fun start() {
         _running.value = true
         val socket = runCatching { ServerSocket(0) }.getOrElse { Log.w(TAG, "porta: $it"); _running.value = false; return }
@@ -141,25 +175,17 @@ class BandLink @Inject constructor(
                 }
             }
         }
-        multicast = context.applicationContext.getSystemService(WifiManager::class.java)?.createMulticastLock("stagebook-band")?.apply {
-            setReferenceCounted(false)
-            acquire()
-        }
         register(socket.localPort)
-        discover()
     }
 
     private fun stop() {
+        stopSearch()
         _running.value = false
         registration?.let { runCatching { nsd.unregisterService(it) } }
-        discovery?.let { runCatching { nsd.stopServiceDiscovery(it) } }
         registration = null
-        discovery = null
         runCatching { server?.close() }
         server = null
         serverJob?.cancel()
-        multicast?.let { if (it.isHeld) it.release() }
-        multicast = null
         _peers.value = emptyList()
     }
 
