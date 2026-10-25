@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.setlists
 
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SegmentedButton
 import com.juliano.stagebook.domain.SongMerge
 import androidx.compose.runtime.DisposableEffect
 import android.widget.Toast
@@ -158,8 +161,8 @@ fun ScanSetlistScreen(
                         if (missing) onBandSearch(true)
                         onDispose { if (missing) onBandSearch(false) }
                     }
-                    if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords)
-                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords)
+                    if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords, onUseIncoming)
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming)
                     comparing?.let { i ->
                         ChangesDialog(
                             changes(i), useIncoming = ui.rows.getOrNull(i)?.useIncoming == true,
@@ -218,6 +221,7 @@ private fun Review(
     onAskBand: () -> Unit = {},
     onCompare: (Int) -> Unit = {},
     onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
+    onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -243,7 +247,7 @@ private fun Review(
             verticalArrangement = Arrangement.spacedBy(Spacing.s),
             contentPadding = PaddingValues(bottom = Spacing.s),
         ) {
-            itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }, { onWantChords(i, it) }) }
+            itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }, { onWantChords(i, it) }, { onUseIncoming(i, it) }) }
         }
         // antes dos sites: pedir à banda na rede (só aparece com alguém da banda por perto)
         if (toImport > 0 && band > 0) {
@@ -288,7 +292,13 @@ private fun Review(
 
 // músicas avulsas recebidas: as novas entram na biblioteca; as que já estão aqui ficam como estão
 @Composable
-private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -> Unit, onWantChords: (Int, Boolean) -> Unit = { _, _ -> }) {
+private fun SongsReview(
+    ui: ScanUi.Review,
+    onAdd: () -> Unit,
+    onCompare: (Int) -> Unit,
+    onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
+    onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
+) {
     val new = ui.rows.count { it.carried }
     val updates = ui.rows.count { it.useIncoming }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -301,11 +311,9 @@ private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -
                 Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                         val (icon, tint, note) = when {
-                            row.wantChords -> Triple(AppIcons.Public, MaterialTheme.colorScheme.tertiary, R.string.scan_song_declined)
-                            row.carried && row.lyricsOnly -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
+                            row.wantChords || (row.carried && row.lyricsOnly) -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
                             row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
-                            row.differs && row.useIncoming -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_version_theirs)
-                            row.differs -> Triple(AppIcons.Info, MaterialTheme.colorScheme.tertiary, R.string.scan_version_mine)
+                            row.differs -> Triple(AppIcons.Info, MaterialTheme.colorScheme.tertiary, R.string.scan_version_other)
                             row.found -> Triple(AppIcons.Check, MaterialTheme.colorScheme.onSurfaceVariant, R.string.scan_song_have)
                             else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
                         }
@@ -313,9 +321,13 @@ private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             Text(row.title, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
-                            if (row.differs) RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes)) { onCompare(i) }
-                            if (row.carried && row.lyricsOnly) RowAction(AppIcons.Close, stringResource(R.string.scan_dont_add)) { onWantChords(i, true) }
-                            if (row.wantChords) RowAction(AppIcons.Check, stringResource(R.string.scan_accept_lyrics)) { onWantChords(i, false) }
+                            if (row.differs) {
+                                TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(i, it) }
+                                RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes)) { onCompare(i) }
+                            }
+                            if ((row.carried && row.lyricsOnly) || row.wantChords) {
+                                TwoChoices(stringResource(R.string.scan_add_lyrics), stringResource(R.string.scan_dont_add), second = row.wantChords) { onWantChords(i, it) }
+                            }
                         }
                     }
                 }
@@ -349,7 +361,13 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
 
 // uma música do QR: achada (✓), com dúvida (escolher ou deixar de fora) ou que não está na biblioteca (aviso)
 @Composable
-private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> Unit = {}, onWantChords: (Boolean) -> Unit = {}) {
+private fun RowItem(
+    row: ScanRow,
+    onChoose: (String?) -> Unit,
+    onCompare: () -> Unit = {},
+    onWantChords: (Boolean) -> Unit = {},
+    onUseIncoming: (Boolean) -> Unit = {},
+) {
     Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -368,22 +386,18 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> 
                 }
             }
             when {
+                // já tenho outra versão: Fica a minha | Usar a recebida, e o que muda
                 row.found && row.differs -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(
-                        stringResource(if (row.useIncoming) R.string.scan_version_theirs else R.string.scan_version_mine),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary,
-                    )
+                    Text(stringResource(R.string.scan_version_other), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
+                    TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(it) }
                     RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes), onCompare)
                 }
                 row.found -> Unit
                 // perfil letra e cifra: a que veio só com a letra pode ser recusada e ir buscar com cifra nos sites
-                row.wantChords -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(stringResource(R.string.scan_want_chords_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
-                    RowAction(AppIcons.Check, stringResource(R.string.scan_accept_lyrics)) { onWantChords(false) }
-                }
-                row.carried && row.lyricsOnly -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                // veio só com a letra (perfil letra e cifra): as duas opções lado a lado, a escolhida marcada
+                row.wantChords || (row.carried && row.lyricsOnly) -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(stringResource(R.string.scan_lyrics_only_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
-                    RowAction(AppIcons.Public, stringResource(R.string.scan_search_chords)) { onWantChords(true) }
+                    TwoChoices(stringResource(R.string.scan_accept_lyrics), stringResource(R.string.scan_search_chords), second = row.wantChords) { onWantChords(it) }
                 }
                 row.carried -> Text(
                     stringResource(
@@ -444,5 +458,20 @@ private fun RowAction(icon: androidx.compose.ui.graphics.vector.ImageVector, tex
     androidx.compose.material3.FilledTonalButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.m, vertical = Spacing.xs)) {
         Icon(icon, null, Modifier.size(18.dp))
         Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = Spacing.s))
+    }
+}
+
+/** Duas opções lado a lado, a escolhida marcada ([second] = a da direita): mostra o que vai acontecer, sem adivinhar. */
+@Composable
+private fun TwoChoices(first: String, secondLabel: String, second: Boolean, onChoose: (Boolean) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        listOf(first to false, secondLabel to true).forEachIndexed { i, (label, value) ->
+            SegmentedButton(
+                selected = second == value,
+                onClick = { onChoose(value) },
+                shape = SegmentedButtonDefaults.itemShape(i, 2),
+                label = { Text(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+            )
+        }
     }
 }

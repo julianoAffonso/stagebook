@@ -454,21 +454,19 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="other">A banda tinha %1$d de %2$d músicas que faltavam</item>
     </plurals>
     <string name="scan_band_none">Ninguém da banda tinha as que faltam. Dá para importar dos sites.</string>
-    <string name="scan_version_mine">Você tem outra versão: fica a sua</string>
-    <string name="scan_version_theirs">Vai usar a recebida (a sua cifra fica)</string>
     <string name="scan_see_changes">Ver o que muda</string>
     <string name="scan_changes_title">O que muda na letra</string>
     <string name="scan_changes_chords_only">A letra é a mesma; só a cifra é diferente.</string>
     <string name="scan_changes_keep_chords">− sai da sua · + entra da recebida. Se a recebida vier só com a letra, os seus acordes ficam.</string>
     <string name="scan_use_theirs">Usar a recebida</string>
-    <string name="scan_keep_mine">Manter a minha</string>
+    <string name="scan_version_other">Você tem outra versão desta música.</string>
+    <string name="scan_add_lyrics">Adicionar só a letra</string>
+    <string name="scan_keep_mine">Fica a minha</string>
     <string name="scan_update_chosen">Atualizar as escolhidas</string>
-    <string name="scan_lyrics_only_row">Veio só com a letra (sem cifra). Aceite assim ou busque com cifra nos sites.</string>
+    <string name="scan_lyrics_only_row">Veio só com a letra (sem cifra).</string>
     <string name="scan_search_chords">Buscar com cifra</string>
-    <string name="scan_want_chords_row">Vai buscar com cifra nos sites (Importar as que faltam).</string>
-    <string name="scan_accept_lyrics">Aceitar só a letra</string>
+    <string name="scan_accept_lyrics">Só a letra</string>
     <string name="scan_dont_add">Não adicionar</string>
-    <string name="scan_song_declined">Não entra: importe com cifra em Importar → Da internet</string>
     <string name="scan_song_new_lyrics_only">Nova, só com a letra (sem cifra)</string>
     <string name="scan_carried_row">Veio junto com o setlist: entra na sua biblioteca.</string>
     <string name="scan_title">Ler QR do setlist</string>
