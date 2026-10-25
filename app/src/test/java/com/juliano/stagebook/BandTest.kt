@@ -147,6 +147,19 @@ class BandTest {
         assertNull(ask(member = false))
     }
 
+    @Test fun `versões diferentes do protocolo - o pedido responde versão e nada é gravado`() {
+        val a = Device("Tablet da Ana")
+        val b = Device("Celular do Beto")
+        val newer = b.hello.copy(v = BandProtocol.VERSION + 1, app = "9.9")
+        val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        val t = thread { runBlocking { BandSession(a.hello).serve(server.accept(), { false }, { true }, { a.trusted += it }) } }
+        val r = BandSession(newer).join(Socket(InetAddress.getLoopbackAddress(), server.localPort)) { b.trusted += it }
+        t.join(5_000)
+        server.close()
+        assertEquals(BandSession.JoinResult.VERSION, r)
+        assertTrue(a.trusted.isEmpty() && b.trusted.isEmpty())
+    }
+
     @Test fun `hello com id que não é da chave é recusado`() {
         val a = Device("Tablet da Ana")
         val fake = BandProtocol.Hello("0".repeat(32), "Falso", a.pub)

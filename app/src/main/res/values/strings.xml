@@ -351,7 +351,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_export_failed">Não consegui salvar a cópia.</string>
     <string name="settings_version">Stagebook %1$s</string>
     <string name="update_offer_title">Nova versão do Stagebook</string>
-    <string name="update_offer_message">A versão %1$s está disponível. Deseja atualizar agora? Músicas, setlists e ajustes continuam.</string>
+    <string name="update_offer_message">A versão %1$s está disponível. Deseja atualizar agora? Músicas, setlists e ajustes continuam.\n\nToquem com todos da banda na mesma versão: em versões diferentes, envios, sincronia e o virar de página entre os aparelhos podem não funcionar.</string>
     <string name="update_offer_update">Atualizar</string>
     <string name="update_offer_later">Agora não</string>
     <string name="update_offer_retry">Tentar de novo</string>
@@ -485,6 +485,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="scan_hint">Aponte a câmera para o QR que está na tela do outro aparelho.</string>
     <string name="scan_no_camera">Sem a câmera não dá para ler o QR.</string>
     <string name="scan_allow_camera">Permitir a câmera</string>
+    <string name="scan_newer">Isto veio de uma versão mais nova do Stagebook. Atualize o app (Ajustes → Sobre) para receber.</string>
     <string name="scan_incomplete">O QR veio incompleto. Aproxime e leia de novo.</string>
     <string name="scan_not_setlist">Este QR não é do Stagebook. Aponte para o QR do setlist ou das palavras de envio.</string>
     <string name="scan_name">Nome do setlist</string>
@@ -582,6 +583,8 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="band_join">Pedir para entrar</string>
     <string name="band_waiting">Esperando o outro aparelho autorizar…</string>
     <string name="band_denied">Não autorizado</string>
+    <string name="band_other_version">Outra versão do app (%1$s). Atualizem os dois para a mesma versão.</string>
+    <string name="band_version_join">Vocês estão em versões diferentes do app. Atualizem os dois e tentem de novo.</string>
     <string name="band_busy">Está no palco agora. Peça de novo depois do show.</string>
     <string name="band_failed">Não deu para falar com ele. Tente de novo.</string>
     <string name="band_members">Da banda</string>
@@ -601,6 +604,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="one">%1$s enviou %2$d música</item>
         <item quantity="other">%1$s enviou %2$d músicas</item>
     </plurals>
+    <string name="inbox_newer">%1$s mandou algo de uma versão mais nova do Stagebook: atualize o app para conferir</string>
     <string name="inbox_open">Conferir</string>
     <string name="inbox_later">Agora não</string>
     <string name="inbox_title">Recebidos da banda</string>

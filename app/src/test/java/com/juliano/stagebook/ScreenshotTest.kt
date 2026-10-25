@@ -535,6 +535,7 @@ class ScreenshotTest {
             com.juliano.stagebook.ui.band.NearbyUi("1", "Celular da Ana", member = true),
             com.juliano.stagebook.ui.band.NearbyUi("2", "Teclado do Caio", member = false, join = com.juliano.stagebook.data.BandLink.Join.WAITING),
             com.juliano.stagebook.ui.band.NearbyUi("3", "Baixo", member = false),
+            com.juliano.stagebook.ui.band.NearbyUi("4", "Bateria", member = true, otherVersion = "0.2.90"),
         ),
         members = listOf(com.juliano.stagebook.ui.band.MemberUi("1", "Celular da Ana", 0)),
     )

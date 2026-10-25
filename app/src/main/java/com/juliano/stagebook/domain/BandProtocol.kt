@@ -7,7 +7,9 @@ import java.io.BufferedReader
 import java.io.Writer
 
 /**
- * A conversa entre dois aparelhos na rede local: uma linha JSON por mensagem. Os dois começam com [Hello] (quem é: id,
+ * A conversa entre dois aparelhos na rede local: uma linha JSON por mensagem. **Versão:** os dois mandam [VERSION] no
+ * [Hello]; diferente, quem recebe responde [Kind.VERSION] e ninguém tenta adivinhar o formato do outro (a tela pede para
+ * atualizar). Toda mudança de formato aumenta [VERSION]. Os dois começam com [Hello] (quem é: id,
  * nome e chave pública). Sem confiança, quem chega pede [Kind.JOIN] e o outro responde [Kind.ACCEPTED] ou [Kind.DENIED]
  * (o usuário decide, como no Bluetooth). Com confiança, [Kind.PACKAGE] leva um setlist ou músicas cifrados com a chave do
  * par; quem recebe responde [Kind.OK].
@@ -16,8 +18,9 @@ object BandProtocol {
     const val SERVICE_TYPE = "_stagebook._tcp."
     const val VERSION = 1
 
+    /** Quem é o aparelho: id, nome, chave pública, a versão do protocolo ([v]) e a do app ([app], para a tela). */
     @Serializable
-    data class Hello(val id: String, val name: String, val key: String, val v: Int = VERSION)
+    data class Hello(val id: String, val name: String, val key: String, val v: Int = VERSION, val app: String = "")
 
     object Kind {
         const val JOIN = "join"
@@ -28,7 +31,8 @@ object BandProtocol {
         const val OK = "ok"
         const val ASK = "ask"         // "quem tem estas músicas?" (lista cifrada); a resposta vem em ANSWER, também cifrada
         const val ANSWER = "answer"
-        const val CODE_ACK = "code_ack"   // o "ok" das 3 palavras entregue na rede local (ainda não somos da banda um do outro)
+        const val CODE_ACK = "code_ack"
+        const val VERSION = "version"   // estamos em versões diferentes do protocolo: atualizem para a mesma   // o "ok" das 3 palavras entregue na rede local (ainda não somos da banda um do outro)
     }
 
     @Serializable

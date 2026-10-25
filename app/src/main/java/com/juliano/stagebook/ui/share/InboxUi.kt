@@ -55,7 +55,8 @@ class InboxViewModel @Inject constructor(
 
 @Composable
 private fun itemText(item: BandInbox.Item) =
-    if (item.setName.isEmpty()) pluralStringResource(R.plurals.inbox_songs, item.songCount, item.fromName, item.songCount)
+    if (item.newer) stringResource(R.string.inbox_newer, item.fromName)
+    else if (item.setName.isEmpty()) pluralStringResource(R.plurals.inbox_songs, item.songCount, item.fromName, item.songCount)
     else stringResource(R.string.inbox_setlist, item.fromName, item.setName)
 
 /** O aviso de novidade, como e-mail novo: "Ana enviou o setlist Show de sábado" → Conferir / Agora não. */

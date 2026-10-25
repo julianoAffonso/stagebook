@@ -54,18 +54,18 @@ class BandLink @Inject constructor(
 ) {
     /** O que vai num pacote da banda: a lista (no formato do QR, em Base64) e as músicas. */
     @kotlinx.serialization.Serializable
-    private data class Package(val list: String, val songs: List<SetlistCloud.SharedSong> = emptyList())
+    private data class Package(val list: String, val songs: List<SetlistCloud.SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
 
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
     /** Um aparelho com o Stagebook na mesma rede. */
     @Immutable
-    data class Peer(val id: String, val name: String, val host: InetAddress, val port: Int)
+    data class Peer(val id: String, val name: String, val host: InetAddress, val port: Int, val v: Int = BandProtocol.VERSION, val app: String = "")
 
     /** Alguém pedindo para entrar na banda por este aparelho (o usuário responde Autorizar / Não autorizar). */
     @Immutable
     class Request(val id: String, val name: String, internal val answer: CompletableDeferred<Boolean>)
 
-    enum class Join { WAITING, ACCEPTED, DENIED, BUSY, FAILED }
+    enum class Join { WAITING, ACCEPTED, DENIED, BUSY, VERSION, FAILED }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -126,7 +126,7 @@ class BandLink @Inject constructor(
     /** Quem é da banda e está na rede agora (para "Banda na rede (N)"). */
     val onlineMembers: StateFlow<List<Peer>> = kotlinx.coroutines.flow.combine(_peers, trust.members) { peers, members ->
         val ids = members.map { it.id }.toSet()
-        peers.filter { it.id in ids }
+        peers.filter { it.id in ids && it.v == BandProtocol.VERSION }   // outra versão não recebe: fica na fila
     }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
     /** Quem confere um "ok" das 3 palavras que chegou pela rede (a [BandInternet], que guarda os meus envios). */
@@ -323,6 +323,8 @@ class BandLink @Inject constructor(
             setPort(port)
             setAttribute(ATTR_ID, identity.id)
             setAttribute(ATTR_NAME, identity.name.value)
+            setAttribute(ATTR_V, BandProtocol.VERSION.toString())
+            setAttribute(ATTR_APP, identity.appVersion)
         }
         val listener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(info: NsdServiceInfo) = Unit
@@ -368,7 +370,9 @@ class BandLink @Inject constructor(
                     val host = info.host
                     if (id != null && id != identity.id && host != null) {
                         names[id] = info.serviceName
-                        _peers.update { list -> (list.filterNot { it.id == id } + Peer(id, name, host, info.port)).sortedBy { it.name.lowercase() } }
+                        val v = info.attributes[ATTR_V]?.decodeToString()?.toIntOrNull() ?: BandProtocol.VERSION
+                        val app = info.attributes[ATTR_APP]?.decodeToString().orEmpty().take(20)
+                        _peers.update { list -> (list.filterNot { it.id == id } + Peer(id, name, host, info.port, v, app)).sortedBy { it.name.lowercase() } }
                     }
                     done()
                 }
@@ -398,7 +402,7 @@ class BandLink @Inject constructor(
                 val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
                 BandSession(identity.hello()).join(s) { h -> trust.add(h.id, h.name, h.key) }
             }.getOrDefault(BandSession.JoinResult.FAILED)
-            _joins.update { it + (peer.id to when (r) { BandSession.JoinResult.ACCEPTED -> Join.ACCEPTED; BandSession.JoinResult.DENIED -> Join.DENIED; BandSession.JoinResult.BUSY -> Join.BUSY; else -> Join.FAILED }) }
+            _joins.update { it + (peer.id to when (r) { BandSession.JoinResult.ACCEPTED -> Join.ACCEPTED; BandSession.JoinResult.DENIED -> Join.DENIED; BandSession.JoinResult.BUSY -> Join.BUSY; BandSession.JoinResult.VERSION -> Join.VERSION; else -> Join.FAILED }) }
             update()
         }
     }
@@ -410,6 +414,8 @@ class BandLink @Inject constructor(
         const val TAG = "stagebook"
         const val ATTR_ID = "id"
         const val ATTR_NAME = "name"
+        const val ATTR_V = "v"
+        const val ATTR_APP = "app"
         const val CONNECT_TIMEOUT_MS = 5_000
         const val BURST_MS = 30_000L
         const val MAX_ASK = 200   // um setlist nunca passa disso; protege de pedido estranho

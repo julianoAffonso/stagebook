@@ -199,7 +199,13 @@ private fun Scanning(
         }
         ui.problem?.let { p ->
             Text(
-                stringResource(if (p == ScanProblem.INCOMPLETE) R.string.scan_incomplete else R.string.scan_not_setlist),
+                stringResource(
+                    when (p) {
+                        ScanProblem.INCOMPLETE -> R.string.scan_incomplete
+                        ScanProblem.NEWER -> R.string.scan_newer
+                        ScanProblem.NOT_SETLIST -> R.string.scan_not_setlist
+                    },
+                ),
                 style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
             )
         }
@@ -361,7 +367,13 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
             }
             else -> {
                 Text(
-                    stringResource(if (ui.problem == CodeProblem.NOT_FOUND) R.string.scan_code_not_found else R.string.scan_code_offline),
+                    stringResource(
+                        when (ui.problem) {
+                            CodeProblem.NOT_FOUND -> R.string.scan_code_not_found
+                            CodeProblem.NEWER -> R.string.scan_newer
+                            CodeProblem.OFFLINE -> R.string.scan_code_offline
+                        },
+                    ),
                     style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
                 )
                 ActionButton(stringResource(R.string.scan_code_retry), onRetry, icon = AppIcons.Undo, tone = ButtonTone.Tonal)

@@ -38,6 +38,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         data class Ok(val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null) : Received
         data object NotFound : Received   // código errado ou já passou das 12 h
         data object Offline : Received
+        /** Veio de uma versão mais nova do Stagebook (formato que este app ainda não conhece): atualizar para receber. */
+        data class Newer(val app: String) : Received
     }
 
     /**
@@ -125,7 +127,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val text = plain.asReversed().firstNotNullOfOrNull { QrPayload.unpack(it) }
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
         val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
-        if (text == null) Received.NotFound else Received.Ok(text, songs, from)
+        when {
+            from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)
+            text == null -> Received.NotFound
+            else -> Received.Ok(text, songs, from)
+        }
     }
 
     // identidade conferida: o id tem de ser o da chave (ninguém se passa por outro aparelho)
@@ -160,7 +166,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     class PairFetch(val packages: List<Triple<String, String, List<SharedSong>>>, val receipts: List<String>, val welcome: Boolean, val last: String?)
 
     @Serializable
-    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList())
+    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
 
     /** Canal da caixa de entrada de [recipientId] para o par: sai da chave do par (só os dois sabem qual é). */
     fun pairTopic(pairKey: ByteArray, recipientId: String): String =
@@ -200,6 +206,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             if (ordered.size != n) return@mapNotNull null
             val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
             val pkg = unpack(PAIR_MARK, bytes)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
+            if (pkg.v > BandProtocol.VERSION) return@mapNotNull Triple(pid, NEWER, emptyList())   // a caixa avisa "atualize"
             val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
             Triple(pid, text, pkg.songs)
         }
@@ -240,6 +247,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" de quem aceitou
         private val PAIR_MARK = byteArrayOf('P'.code.toByte(), '1'.code.toByte())   // pacote da caixa de um par
         private const val CHUNK = 2_000
+        /** Marca, na caixa, de um envio de versão mais nova (não dá para ler: a conferência pede para atualizar). */
+        const val NEWER = "\u0000newer"
 
         /** As mensagens com o id de cada uma (para continuar de onde parou). */
         fun messagesWithIds(lines: List<String>): List<Pair<String, String>> = lines.mapNotNull { l ->
