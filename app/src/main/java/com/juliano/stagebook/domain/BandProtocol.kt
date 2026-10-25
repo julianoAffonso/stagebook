@@ -16,7 +16,7 @@ import java.io.Writer
  */
 object BandProtocol {
     const val SERVICE_TYPE = "_stagebook._tcp."
-    const val VERSION = 1
+    const val VERSION = 2   // 2: "Quem conduz" (Kind.CONDUCT)
 
     /** Quem é o aparelho: id, nome, chave pública, a versão do protocolo ([v]) e a do app ([app], para a tela). */
     @Serializable
@@ -31,8 +31,9 @@ object BandProtocol {
         const val OK = "ok"
         const val ASK = "ask"         // "quem tem estas músicas?" (lista cifrada); a resposta vem em ANSWER, também cifrada
         const val ANSWER = "answer"
-        const val CODE_ACK = "code_ack"
-        const val VERSION = "version"   // estamos em versões diferentes do protocolo: atualizem para a mesma   // o "ok" das 3 palavras entregue na rede local (ainda não somos da banda um do outro)
+        const val CODE_ACK = "code_ack" // o "ok" das 3 palavras entregue na rede local (ainda não somos da banda um do outro)
+        const val VERSION = "version"   // estamos em versões diferentes do protocolo: atualizem para a mesma
+        const val CONDUCT = "conduct"   // "Quem conduz": setlist e música da vez (Conduct.Msg cifrada); a resposta vem em ANSWER
     }
 
     @Serializable
