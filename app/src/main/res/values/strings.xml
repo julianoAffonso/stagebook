@@ -137,6 +137,21 @@
     <string name="about_open_source_text">O Stagebook é gratuito e o código é aberto: qualquer um pode ver como funciona e ajudar.</string>
     <string name="about_see_code">Ver o código</string>
     <string name="conduct_start">Conduzir a banda</string>
+    <string name="conduct_conducting">Conduzindo · %1$s</string>
+    <string name="conduct_following">Acompanhando %1$s</string>
+    <string name="conduct_gone">%1$s sumiu: sem notícia há 10 minutos</string>
+    <string name="conduct_missing_here">Você não tem "%1$s"</string>
+    <string name="conduct_missing_now">Sem esta música: %1$s</string>
+    <plurals name="conduct_no_answer">
+        <item quantity="one">%1$d da banda não respondeu</item>
+        <item quantity="other">%1$d da banda não responderam</item>
+    </plurals>
+    <string name="conduct_see_lacks">Ver faltas</string>
+    <string name="conduct_search">Procurar a banda</string>
+    <string name="conduct_end">Encerrar</string>
+    <string name="conduct_leave">Sair</string>
+    <string name="conduct_lacks_title">Músicas que faltam</string>
+    <string name="conduct_lack_line">%1$s: %2$s</string>
     <string name="about_support">Apoie o Stagebook</string>
     <string name="about_support_text">O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café? Qualquer valor ajuda a manter o app e a trazer novidades.</string>
     <string name="about_donate">Pagar um café</string>

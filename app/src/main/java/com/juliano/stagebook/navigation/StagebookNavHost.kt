@@ -49,7 +49,10 @@ fun StagebookNavHost(
         }
     }
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
+    // a faixa do "Quem conduz" fica embaixo de qualquer tela (o palco inclusive) enquanto o modo estiver ligado
+    androidx.compose.foundation.layout.Column {
     NavHost(
+        modifier = androidx.compose.ui.Modifier.weight(1f),
         navController = nav,
         startDestination = Home,
         enterTransition = { fadeIn() },
@@ -108,6 +111,8 @@ fun StagebookNavHost(
                 onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
             )
         }
+    }
+    com.juliano.stagebook.ui.band.ConductRoute()
     }
 }
 
