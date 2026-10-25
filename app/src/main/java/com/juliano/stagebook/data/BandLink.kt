@@ -69,9 +69,6 @@ class BandLink @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // entrou no palco: a procura para na hora; saiu, volta se a tela ainda precisar
-    init { scope.launch { stage.onStage.collect { update() } } }
-
     private val _peers = MutableStateFlow<List<Peer>>(emptyList())
     val peers: StateFlow<List<Peer>> = _peers
 
@@ -421,4 +418,8 @@ class BandLink @Inject constructor(
         const val MAX_ASK = 200   // um setlist nunca passa disso; protege de pedido estranho
         val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // nomes da interface do ponto de acesso nos Androids
     }
+
+    // entrou no palco: a procura para na hora; saiu, volta se a tela ainda precisar. Fica depois de todos os campos:
+    // a coleta roda em outra linha de execução e pode chamar update() antes de o resto da classe existir
+    init { scope.launch { stage.onStage.collect { update() } } }
 }
