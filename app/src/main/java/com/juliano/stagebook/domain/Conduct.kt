@@ -51,5 +51,11 @@ object Conduct {
         return msg.missing.filter { title in it.titles }.map { it.who }
     }
 
+    /** O que quem acompanha responde: as músicas do setlist que não estão aqui (lista vazia = tem todas). */
+    fun lackFor(me: String, msg: Msg, library: List<Song>): Lack = Lack(me, missing(msg.songs, library))
+
+    /** As faltas que valem o alerta (quem tem tudo fica de fora), na ordem dos nomes. */
+    fun lacks(replies: Collection<Lack>): List<Lack> = replies.filter { it.titles.isNotEmpty() }.sortedBy { it.who }
+
     const val MAX_SONGS = 200
 }

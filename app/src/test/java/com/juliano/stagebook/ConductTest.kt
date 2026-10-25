@@ -44,4 +44,11 @@ class ConductTest {
         assertNull(Conduct.decode(Conduct.encode(msg.copy(type = "apagar"))))
         assertNull(Conduct.decode("lixo"))
     }
+
+    @Test fun `quem acompanha responde as que faltam - e o alerta só traz quem tem falta`() {
+        val msg = Conduct.Msg(Conduct.CHECK, songs = listOf(Conduct.Item("Asa Branca"), Conduct.Item("Evidências")))
+        assertEquals(Conduct.Lack("Baixo", listOf("Evidências")), Conduct.lackFor("Baixo", msg, library))
+        val lacks = Conduct.lacks(listOf(Conduct.Lack("Teclado", listOf("A")), Conduct.Lack("Bateria", emptyList()), Conduct.Lack("Baixo", listOf("B"))))
+        assertEquals(listOf("Baixo", "Teclado"), lacks.map { it.who })
+    }
 }
