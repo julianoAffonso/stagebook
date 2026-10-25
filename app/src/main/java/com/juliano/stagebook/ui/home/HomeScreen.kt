@@ -4,7 +4,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
 import androidx.compose.foundation.layout.Column
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.juliano.stagebook.ui.share.InboxViewModel
 import com.juliano.stagebook.ui.share.InboxDialog
 import com.juliano.stagebook.ui.share.InboxBanner
