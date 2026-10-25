@@ -147,6 +147,28 @@ class BandTest {
         assertNull(ask(member = false))
     }
 
+    @Test fun `quem conduz - quem acompanha responde o que falta - e quem não é da banda não recebe`() {
+        val a = Device("Tablet da Ana")
+        val b = Device("Celular do Beto")
+        fun conduct(member: Boolean, onStage: Boolean): String? {
+            val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+            val t = thread {
+                runBlocking {
+                    BandSession(a.hello).serve(server.accept(), { member }, { error("não pergunta nada") }, {},
+                        busy = { onStage }, onConduct = { _, body -> "falta:$body" })
+                }
+            }
+            val r = BandSession(b.hello).ask(Socket(InetAddress.getLoopbackAddress(), server.localPort), a.id, "setlist", BandProtocol.Kind.CONDUCT)
+            t.join(5_000)
+            server.close()
+            return r
+        }
+        assertEquals("falta:setlist", conduct(member = true, onStage = false))
+        // no palco quem acompanha continua respondendo: é ali que ele está de propósito
+        assertEquals("falta:setlist", conduct(member = true, onStage = true))
+        assertNull(conduct(member = false, onStage = false))
+    }
+
     @Test fun `versões diferentes do protocolo - o pedido responde versão e nada é gravado`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")

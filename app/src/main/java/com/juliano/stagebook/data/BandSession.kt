@@ -26,6 +26,7 @@ class BandSession(private val me: Hello) {
         onPackage: (Hello, String) -> Boolean = { _, _ -> false },
         onAsk: (Hello, String) -> String? = { _, _ -> null },
         onCodeAck: (Hello, String) -> Boolean = { _, _ -> false },
+        onConduct: (Hello, String) -> String? = { _, _ -> null },
     ) {
         socket.use { s ->
             s.soTimeout = ANSWER_TIMEOUT_MS
@@ -49,8 +50,9 @@ class BandSession(private val me: Hello) {
                 return
             }
             // alguém da banda pergunta quem tem as músicas que faltam: responde sozinho, sem perguntar nada a ninguém
-            if (msg.kind == Kind.ASK) {
-                val answer = if (isMember(them.id)) onAsk(them, msg.body) else null
+            // ASK: quem tem as músicas; CONDUCT: "Quem conduz" (a resposta diz o que falta aqui). Os dois respondem sozinhos
+            if (msg.kind == Kind.ASK || msg.kind == Kind.CONDUCT) {
+                val answer = if (!isMember(them.id)) null else if (msg.kind == Kind.ASK) onAsk(them, msg.body) else onConduct(them, msg.body)
                 BandProtocol.write(out, if (answer != null) Message(Kind.ANSWER, answer) else Message(Kind.DENIED))
                 return
             }
@@ -99,7 +101,7 @@ class BandSession(private val me: Hello) {
     }.getOrDefault(false)
 
     /** Pergunta a [expectedId] quem tem as músicas (pedido já cifrado); a resposta (cifrada) ou null. */
-    fun ask(socket: Socket, expectedId: String, body: String): String? = runCatching {
+    fun ask(socket: Socket, expectedId: String, body: String, kind: String = Kind.ASK): String? = runCatching {
         socket.use { s ->
             s.soTimeout = SEND_TIMEOUT_MS
             val input = s.getInputStream().bufferedReader()
@@ -107,7 +109,7 @@ class BandSession(private val me: Hello) {
             BandProtocol.write(out, me)
             val them = BandProtocol.readHello(input) ?: return null
             if (them.id != expectedId || them.v != me.v) return null
-            BandProtocol.write(out, Message(Kind.ASK, body))
+            BandProtocol.write(out, Message(kind, body))
             BandProtocol.readMessage(input)?.takeIf { it.kind == Kind.ANSWER }?.body
         }
     }.getOrNull()

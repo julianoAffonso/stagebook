@@ -204,6 +204,37 @@ class BandLink @Inject constructor(
             .values.map { versions -> versions.maxBy { if (com.juliano.stagebook.domain.Chords.hasChords(it.text)) 1 else 0 } }
     }
 
+    /** Quem acompanha recebe a mensagem de quem conduz e devolve o que falta aqui (null = não está acompanhando). */
+    @Volatile var conductHandler: ((BandProtocol.Hello, com.juliano.stagebook.domain.Conduct.Msg) -> com.juliano.stagebook.domain.Conduct.Lack?)? = null
+
+    /**
+     * "Quem conduz": manda [msg] aos da banda online, ao mesmo tempo, e junta o que falta para cada um (id → falta; quem
+     * não respondeu fica de fora do mapa e a tela trata como "não respondeu").
+     */
+    suspend fun conduct(msg: com.juliano.stagebook.domain.Conduct.Msg): Map<String, com.juliano.stagebook.domain.Conduct.Lack> =
+        kotlinx.coroutines.withContext(Dispatchers.IO) io@{
+            val plain = com.juliano.stagebook.domain.Conduct.encode(msg).toByteArray()
+            onlineMembers.value.map { peer ->
+                this@io.async {
+                    val key = pairKeyWith(peer.id) ?: return@async null
+                    runCatching {
+                        val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                        val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain), BandProtocol.Kind.CONDUCT)
+                            ?: return@async null
+                        val bytes = ShareCode.decrypt(key, body) ?: return@async null
+                        peer.id to json.decodeFromString(com.juliano.stagebook.domain.Conduct.Lack.serializer(), bytes.decodeToString())
+                    }.getOrNull()
+                }
+            }.mapNotNull { it.await() }.toMap()
+        }
+
+    private fun onConduct(from: BandProtocol.Hello, body: String): String? {
+        val key = pairKeyWith(from.id) ?: return null
+        val msg = ShareCode.decrypt(key, body)?.let { com.juliano.stagebook.domain.Conduct.decode(it.decodeToString()) } ?: return null
+        val lack = conductHandler?.invoke(from, msg) ?: return null
+        return ShareCode.encrypt(key, json.encodeToString(com.juliano.stagebook.domain.Conduct.Lack.serializer(), lack).toByteArray())
+    }
+
     // alguém da banda perguntou: responde com as que estão aqui (mesma regra do QR: título, e o artista desempata)
     private fun answer(from: BandProtocol.Hello, body: String): String? {
         val key = pairKeyWith(from.id) ?: return null
@@ -293,7 +324,7 @@ class BandLink @Inject constructor(
                         session.serve(
                             client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
                             busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
-                            onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false },
+                            onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false }, onConduct = ::onConduct,
                         )
                     }
                 }
