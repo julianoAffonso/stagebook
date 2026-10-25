@@ -170,6 +170,7 @@ fun StageRoute(
     // a música na tela diz ao player qual backing track tocar; o aviso da saída aparece uma vez
     val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
     LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
+    LaunchedEffect(index, uiState.loading) { if (!uiState.loading) viewModel.songShown(index) }
     // 1º play: avisa e pede para sair da economia de bateria (uma vez) e, no Android 13+, a notificação do player
     var askBattery by rememberSaveable { mutableStateOf(false) }
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.togglePlay() }

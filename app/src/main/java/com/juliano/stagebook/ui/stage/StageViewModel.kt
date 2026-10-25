@@ -39,7 +39,11 @@ class StageViewModel @Inject constructor(
     private val stageGate: StageGate,
     private val tracks: TrackStore,
     private val player: StagePlayer,
+    private val conduct: com.juliano.stagebook.data.BandConduct,
 ) : ViewModel() {
+    /** Música na tela (posição no setlist): conduzindo este setlist, a banda abre a mesma. */
+    fun songShown(index: Int) { route.setId?.let { conduct.open(it, index) } }
+
     /** Tocando (ou esperando a saída USB para tocar) e o aviso do player. */
     val playerUi: StateFlow<PlayerUi> = player.ui
 
@@ -70,6 +74,9 @@ class StageViewModel @Inject constructor(
     override fun onCleared() {
         player.pause()   // sair do palco para o backing track
         stageGate.leave()
+        // saiu do palco do setlist que conduzia: a banda volta a ser cada um por si
+        val role = conduct.role.value
+        if (role is com.juliano.stagebook.data.BandConduct.Role.Conducting && role.setId == route.setId) conduct.end()
     }
     private val route = savedStateHandle.toRoute<Stage>()
     /** Música em que o palco abre (posição no setlist). */

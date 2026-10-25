@@ -148,10 +148,16 @@ class BandLink @Inject constructor(
      * Procura a banda por pouco tempo (ao abrir o app com algo pendente: envios sem recibo, "ok" sem confirmação), para
      * acertar com quem estiver no mesmo Wi-Fi. Nunca no palco (a procura já respeita isso).
      */
-    fun burst(ms: Long = BURST_MS) {
-        setScreenOpen(true)
-        scope.launch { kotlinx.coroutines.delay(ms); setScreenOpen(false) }
+    fun burst(ms: Long = BURST_MS, evenOnStage: Boolean = false) {
+        if (evenOnStage) { onStageSearch++; update() } else setScreenOpen(true)
+        scope.launch {
+            kotlinx.coroutines.delay(ms)
+            if (evenOnStage) { onStageSearch = (onStageSearch - 1).coerceAtLeast(0); update() } else setScreenOpen(false)
+        }
     }
+
+    // só o "Quem conduz" procura no palco, e sempre por pouco tempo (burst): achar quem voltou para o Wi-Fi
+    @Volatile private var onStageSearch = 0
 
     /** Manda um setlist ou músicas para todos da banda na rede agora; devolve os ids de quem recebeu. */
     suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Set<String> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
@@ -289,7 +295,7 @@ class BandLink @Inject constructor(
 
     // a procura liga e desliga sozinha, sem mexer no anúncio: tela que precisa aberta e fora do palco
     private fun updateSearch() {
-        val want = _running.value && screenOpen && !stage.onStage.value
+        val want = _running.value && ((screenOpen && !stage.onStage.value) || onStageSearch > 0)
         if (want && !searching) startSearch() else if (!want && searching) stopSearch()
     }
 

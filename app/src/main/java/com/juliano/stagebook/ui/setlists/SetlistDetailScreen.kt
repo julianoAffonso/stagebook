@@ -117,6 +117,7 @@ fun SetlistDetailRoute(
         onBack = onBack,
         onRename = viewModel::rename,
         onPlay = { start -> onPlay(viewModel.setId, start) },
+        onConduct = { viewModel.conductBand(); onPlay(viewModel.setId, 0) },
         onAddSongs = { onAddSongs(viewModel.setId) },
         onShowQr = viewModel::showQr,
         onHideQr = viewModel::hideQr,
@@ -151,6 +152,7 @@ fun SetlistDetailScreen(
     band: Int = 0,
     onSendBand: (withSongs: Boolean) -> Unit = {},
     onBandSearch: (Boolean) -> Unit = {},
+    onConduct: () -> Unit = {},
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -191,6 +193,10 @@ fun SetlistDetailScreen(
                     // renomear e apagar no ⋮ (padrão do Google): o nome do setlist não corta no celular
                     OverflowMenu(
                         listOf(
+                            // só com alguém da banda: manda o setlist e abre o palco; a banda acompanha as trocas de música
+                            *listOfNotNull(
+                                MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { band > 0 && items.isNotEmpty() },
+                            ).toTypedArray(),
                             MenuAction(stringResource(R.string.sets_rename), AppIcons.Edit, { renaming = true }),
                             MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
                         ),
