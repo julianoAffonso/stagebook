@@ -4,6 +4,10 @@ import com.juliano.stagebook.ui.setlists.ScanSetlistRoute
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavDestination.Companion.hasRoute
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavBackStackEntry
@@ -31,8 +35,19 @@ private inline fun NavBackStackEntry.ifResumed(go: () -> Unit) {
 fun StagebookNavHost(
     updateOffer: UpdateOffer? = null,
     updateActions: AppUpdateActions = AppUpdateActions(),
+    followSongs: Flow<String> = emptyFlow(),
 ) {
     val nav = rememberNavController()
+    // "Quem conduz" trocou de música: o palco de quem acompanha abre nela (no lugar do palco aberto, sem empilhar). Editando
+    // ou importando, não arranca a pessoa da tela: a faixa "Acompanhando" mostra a música da vez
+    LaunchedEffect(followSongs) {
+        followSongs.collect { id ->
+            val here = nav.currentBackStackEntry?.destination ?: return@collect
+            if (here.hasRoute<Home>() || here.hasRoute<Stage>()) {
+                nav.navigate(Stage(songId = id)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
+            }
+        }
+    }
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
     NavHost(
         navController = nav,
