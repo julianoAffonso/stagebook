@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 /** Um aparelho na rede agora: se já é da banda e, se este aparelho pediu para entrar por ele, como está o pedido. */
 @Immutable
-data class NearbyUi(val id: String, val name: String, val member: Boolean, val join: BandLink.Join? = null)
+data class NearbyUi(val id: String, val name: String, val member: Boolean, val join: BandLink.Join? = null, val otherVersion: String? = null)
 
 @Immutable
 data class MemberUi(val id: String, val name: String, val since: Long)
@@ -54,7 +54,10 @@ class BandViewModel @Inject constructor(
             nameConfirmed = identity.nameConfirmed,
             wifi = wifi,
             searching = running,
-            nearby = peers.map { NearbyUi(it.id, it.name, it.id in ids, joins[it.id]) },
+            nearby = peers.map {
+                val other = if (it.v != com.juliano.stagebook.domain.BandProtocol.VERSION) it.app.ifEmpty { "?" } else null
+                NearbyUi(it.id, it.name, it.id in ids, joins[it.id], other)
+            },
             members = members.map { MemberUi(it.id, it.name, it.since) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BandUi())

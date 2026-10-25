@@ -5,6 +5,7 @@ import com.juliano.stagebook.domain.QrPayload
 import com.juliano.stagebook.domain.SetlistMatcher
 import com.juliano.stagebook.domain.QrMatch
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -40,6 +41,14 @@ class SetlistMatcherTest {
         val parsed = QrPayload.parse(back!!)!!
         assertEquals("Show de sábado", parsed.name)
         assertEquals(listOf(QrPayload.Entry("Canção do Mar", ""), QrPayload.Entry("Noite Clara", "Banda C")), parsed.songs)
+    }
+
+    @Test fun `QR puro do formato atual continua valendo e um formato mais novo pede atualização`() {
+        val atual = listOf(QrPayload.HEADER, "1", "Show", "A").joinToString("\n")
+        assertTrue(QrPayload.parse(atual) != null)
+        assertFalse(QrPayload.isNewer(atual))
+        assertTrue(QrPayload.isNewer(listOf("LETRAS4", "1", "Show", "A").joinToString("\n")))
+        assertFalse(QrPayload.isNewer("LETRAS2\n1\nShow\nA"))
     }
 
     @Test fun `QR cortado ou de outra coisa não vira setlist`() {

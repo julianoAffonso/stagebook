@@ -82,6 +82,7 @@ sealed interface SettingsMessage {
     data class Normalized(val count: Int, val unidentified: Int) : SettingsMessage
     data class Imported(val added: Int, val replaced: Int) : SettingsMessage
     data object ImportFailed : SettingsMessage
+    data object ImportNewer : SettingsMessage   // arquivo de uma versão mais nova do Stagebook: atualizar
     data object Exported : SettingsMessage
     data object ExportFailed : SettingsMessage
 }
@@ -232,13 +233,15 @@ class SettingsViewModel @Inject constructor(
     val pendingImport: StateFlow<PendingImport?> = _pendingImport.asStateFlow()
 
     fun importFrom(uri: Uri) = viewModelScope.launch {
-        val preview = runCatching {
+        val result = runCatching {
             val json = withContext(Dispatchers.IO) {
                 context.contentResolver.openInputStream(uri)!!.use { it.readBytes().toString(Charsets.UTF_8) }
             }
             json to withContext(Dispatchers.Default) { repository.previewImport(json) }
-        }.getOrNull()
+        }
+        val preview = result.getOrNull()
         when {
+            result.exceptionOrNull() is com.juliano.stagebook.data.LibraryCodec.NewerFileException -> _messages.send(SettingsMessage.ImportNewer)
             preview == null -> _messages.send(SettingsMessage.ImportFailed)
             // um arquivo antigo trocaria letras editadas depois dele: pergunta antes
             preview.second.lyricsChanged > 0 -> _pendingImport.value = PendingImport(preview.first, preview.second.added, preview.second.lyricsChanged)

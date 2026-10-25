@@ -35,6 +35,8 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         /** Nome do setlist; vazio = músicas avulsas. */
         val setName: String get() = text.split('\n').getOrNull(2).orEmpty()
         val songCount: Int get() = text.split('\n').getOrNull(1)?.trim()?.toIntOrNull() ?: songs.size
+        /** Veio de uma versão mais nova do Stagebook: só dá para conferir depois de atualizar. */
+        val newer: Boolean get() = text == SetlistCloud.NEWER
     }
 
     private val prefs = context.getSharedPreferences("inbox", Context.MODE_PRIVATE)

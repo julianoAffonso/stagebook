@@ -99,6 +99,10 @@ object QrPayload {
         }
     }
 
+    /** QR de setlist de um formato mais novo que este app (o número do cabeçalho maior): pede para atualizar. */
+    fun isNewer(text: String): Boolean =
+        Regex("^LETRAS(\\d+)\n").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { it > HEADER.removePrefix("LETRAS").toInt() } == true
+
     /** Leitura do texto já descompactado (referência para o leitor): null se não for um QR de setlist ou se faltar título. */
     fun parse(payload: String): Parsed? {
         val lines = payload.replace("\r", "").split('\n')

@@ -45,7 +45,14 @@ object LibraryCodec {
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     fun decode(input: InputStream, newId: () -> String): Library = withIds(json.decodeFromStream(Library.serializer(), input), newId)
 
-    fun decodeSongs(text: String): List<Song> = json.decodeFromString<SongsFile>(text).songs
+    /** Versão do arquivo de músicas que este app entende; um arquivo mais novo é recusado com aviso (não adivinha). */
+    const val SONGS_FILE_VERSION = 1
+
+    class NewerFileException : IllegalStateException("arquivo de uma versão mais nova do Stagebook")
+
+    fun decodeSongs(text: String): List<Song> = json.decodeFromString<SongsFile>(text).also {
+        if (it.version > SONGS_FILE_VERSION) throw NewerFileException()
+    }.songs
 
     fun encodeSongs(songs: List<Song>): String =
         json.encodeToString(SongsFile.serializer(), SongsFile(songs = songs.sortedBy { TextKey.of(it.title) }))

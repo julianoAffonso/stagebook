@@ -166,6 +166,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                         if (m.unidentified > 0) " " + r.getQuantityString(R.plurals.settings_unidentified, m.unidentified, m.unidentified) else ""
                     is SettingsMessage.Imported -> r.getString(R.string.settings_imported, m.added, m.replaced)
                     SettingsMessage.ImportFailed -> r.getString(R.string.settings_import_failed)
+                    SettingsMessage.ImportNewer -> r.getString(R.string.scan_newer)
                     SettingsMessage.Exported -> r.getString(R.string.settings_exported)
                     SettingsMessage.ExportFailed -> r.getString(R.string.settings_export_failed)
                 },

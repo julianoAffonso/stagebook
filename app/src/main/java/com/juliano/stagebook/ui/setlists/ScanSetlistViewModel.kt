@@ -56,9 +56,9 @@ data class ScanRow(
     val useIncoming: Boolean = false,
 )
 
-enum class ScanProblem { NOT_SETLIST, INCOMPLETE }
+enum class ScanProblem { NOT_SETLIST, INCOMPLETE, NEWER }
 
-enum class CodeProblem { NOT_FOUND, OFFLINE }
+enum class CodeProblem { NOT_FOUND, OFFLINE, NEWER }
 
 sealed interface ScanUi {
     /** Câmera aberta; [problem] = o último QR lido não serviu. */
@@ -191,7 +191,9 @@ class ScanSetlistViewModel @Inject constructor(
 
     init {
         when {
-            route.inbox.isNotEmpty() -> inbox.get(route.inbox)?.let { review(it.text, it.songs) } ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND) }
+            route.inbox.isNotEmpty() -> inbox.get(route.inbox)?.let {
+                if (it.newer) _ui.value = ScanUi.Fetching(CodeProblem.NEWER) else review(it.text, it.songs)
+            } ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND) }
             code.isNotEmpty() -> fetch()
         }
     }
@@ -204,6 +206,7 @@ class ScanSetlistViewModel @Inject constructor(
                 is SetlistCloud.Received.Ok -> { sender = r.from; review(r.text, r.songs) }
                 SetlistCloud.Received.NotFound -> _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND)
                 SetlistCloud.Received.Offline -> _ui.value = ScanUi.Fetching(CodeProblem.OFFLINE)
+                is SetlistCloud.Received.Newer -> _ui.value = ScanUi.Fetching(CodeProblem.NEWER)
             }
         }
     }
@@ -214,8 +217,14 @@ class ScanSetlistViewModel @Inject constructor(
         // QR de um código da internet (foto do diálogo de quem enviou): busca pelo código
         ShareCode.fromQr(text)?.let { code = it; fetch(); return }
         if (QrPayload.parse(text) == null) {
-            // começa como QR de setlist mas não fecha a conta: leitura cortada, ler de novo
-            _ui.value = ScanUi.Scanning(if (text.startsWith(QrPayload.HEADER)) ScanProblem.INCOMPLETE else ScanProblem.NOT_SETLIST)
+            // começa como QR de setlist mas não fecha a conta: leitura cortada, ler de novo; de formato mais novo: atualizar
+            _ui.value = ScanUi.Scanning(
+                when {
+                    QrPayload.isNewer(text) -> ScanProblem.NEWER
+                    text.startsWith(QrPayload.HEADER) -> ScanProblem.INCOMPLETE
+                    else -> ScanProblem.NOT_SETLIST
+                },
+            )
             return
         }
         review(text, emptyList())

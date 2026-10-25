@@ -48,7 +48,12 @@ class DeviceIdentity @Inject constructor(@ApplicationContext private val context
         _name.value = n
     }
 
-    fun hello() = BandProtocol.Hello(id, _name.value, publicKey)
+    fun hello() = BandProtocol.Hello(id, _name.value, publicKey, app = appVersion)
+
+    /** A versão do app (aparece para a banda quando as versões são diferentes). */
+    val appVersion: String by lazy {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty().substringBefore(' ')
+    }
 
     /** Já foi confirmado pelo usuário (Ajustes → Banda pergunta uma vez "Como a banda vai ver este aparelho?"). */
     val nameConfirmed: Boolean get() = prefs.contains(KEY_NAME)

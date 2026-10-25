@@ -11,7 +11,7 @@ import java.net.Socket
  * locais. Quem recebe a conexão chama [serve]; quem pede para entrar chama [join].
  */
 class BandSession(private val me: Hello) {
-    enum class JoinResult { ACCEPTED, DENIED, BUSY, FAILED }
+    enum class JoinResult { ACCEPTED, DENIED, BUSY, VERSION, FAILED }
 
     /**
      * Recebe uma conexão: troca os [Hello] e, se o outro pede para entrar, pergunta ao usuário ([ask]); autorizado, grava
@@ -34,6 +34,8 @@ class BandSession(private val me: Hello) {
             val them = BandProtocol.readHello(input) ?: return
             if (them.id == me.id) return
             BandProtocol.write(out, me)
+            // versões diferentes do protocolo: não tenta ler o resto (o formato pode ter mudado); os dois veem "atualizem"
+            if (them.v != me.v) { BandProtocol.write(out, Message(Kind.VERSION)); return }
             val msg = BandProtocol.readMessage(input) ?: return
             // setlist ou músicas de alguém da banda (de outro, nem lê): guardado na caixa de entrada, sem perguntar nada
             if (msg.kind == Kind.PACKAGE) {
@@ -69,11 +71,13 @@ class BandSession(private val me: Hello) {
             val out = s.getOutputStream().bufferedWriter()
             BandProtocol.write(out, me)
             val them = BandProtocol.readHello(input) ?: return JoinResult.FAILED
+            if (them.v != me.v) return JoinResult.VERSION
             BandProtocol.write(out, Message(Kind.JOIN))
             when (BandProtocol.readMessage(input)?.kind) {
                 Kind.ACCEPTED -> { onTrusted(them); JoinResult.ACCEPTED }
                 Kind.DENIED -> JoinResult.DENIED
                 Kind.BUSY -> JoinResult.BUSY
+                Kind.VERSION -> JoinResult.VERSION   // o outro está em outra versão
                 else -> JoinResult.FAILED
             }
         }
@@ -88,6 +92,7 @@ class BandSession(private val me: Hello) {
             BandProtocol.write(out, me)
             val them = BandProtocol.readHello(input) ?: return false
             if (them.id != expectedId) return false   // outro aparelho no mesmo endereço: não manda
+            if (them.v != me.v) return false   // outra versão: fica na fila até atualizarem
             BandProtocol.write(out, Message(kind, body))
             BandProtocol.readMessage(input)?.kind == Kind.OK
         }
@@ -101,7 +106,7 @@ class BandSession(private val me: Hello) {
             val out = s.getOutputStream().bufferedWriter()
             BandProtocol.write(out, me)
             val them = BandProtocol.readHello(input) ?: return null
-            if (them.id != expectedId) return null
+            if (them.id != expectedId || them.v != me.v) return null
             BandProtocol.write(out, Message(Kind.ASK, body))
             BandProtocol.readMessage(input)?.takeIf { it.kind == Kind.ANSWER }?.body
         }

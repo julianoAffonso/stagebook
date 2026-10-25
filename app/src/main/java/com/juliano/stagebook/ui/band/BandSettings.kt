@@ -95,6 +95,10 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(peer.name, style = MaterialTheme.typography.bodyLarge)
         when {
+            // outra versão do app: nada funciona entre os dois até atualizarem para a mesma
+            peer.otherVersion != null -> Text(
+                stringResource(R.string.band_other_version, peer.otherVersion), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+            )
             peer.member -> Text(stringResource(R.string.band_is_member), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             peer.join == BandLink.Join.WAITING -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -107,6 +111,7 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
                             when (j) {
                                 BandLink.Join.DENIED -> R.string.band_denied
                                 BandLink.Join.BUSY -> R.string.band_busy
+                                BandLink.Join.VERSION -> R.string.band_version_join
                                 else -> R.string.band_failed
                             },
                         ),
