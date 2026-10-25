@@ -1,0 +1,40 @@
+name: "Problema / Bug"
+description: "Algo não funcionou como deveria · Something didn't work as expected"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: "O que aconteceu? · What happened?"
+      description: "Conte o que você fez e o que apareceu na tela · Tell us what you did and what you saw"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "O que você esperava? · What did you expect?"
+  - type: input
+    id: version
+    attributes:
+      label: "Versão do app · App version"
+      description: "Ajustes → Sobre · Settings → About"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: "Aparelho e Android · Device and Android version"
+      placeholder: "ex.: Galaxy Tab S9, Android 15"
+  - type: dropdown
+    id: when
+    attributes:
+      label: "Onde? · Where?"
+      options:
+        - "Palco · Stage"
+        - "Músicas · Songs"
+        - "Setlists"
+        - "Banda · Band"
+        - "Player / backing track"
+        - "Pedal"
+        - "Importação · Import"
+        - "Outro · Other"

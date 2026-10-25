@@ -1,0 +1,14 @@
+name: "Ideia / Sugestão"
+description: "Uma ideia para o Stagebook · An idea for Stagebook"
+labels: ["ideia"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: "Qual é a ideia? · What's the idea?"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: "Como ela ajudaria no ensaio ou no show? · How would it help at rehearsals or gigs?"
