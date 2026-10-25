@@ -9,7 +9,8 @@ import java.io.Writer
 /**
  * A conversa entre dois aparelhos na rede local: uma linha JSON por mensagem. Os dois começam com [Hello] (quem é: id,
  * nome e chave pública). Sem confiança, quem chega pede [Kind.JOIN] e o outro responde [Kind.ACCEPTED] ou [Kind.DENIED]
- * (o usuário decide, como no Bluetooth). Com confiança, as mensagens seguintes vão cifradas com a chave do par.
+ * (o usuário decide, como no Bluetooth). Com confiança, [Kind.PACKAGE] leva um setlist ou músicas cifrados com a chave do
+ * par; quem recebe responde [Kind.OK].
  */
 object BandProtocol {
     const val SERVICE_TYPE = "_stagebook._tcp."
@@ -23,6 +24,8 @@ object BandProtocol {
         const val ACCEPTED = "accepted"
         const val DENIED = "denied"
         const val BUSY = "busy"   // o outro está no palco: nada interrompe o show; pedir de novo depois
+        const val PACKAGE = "package"   // setlist ou músicas, cifrado com a chave do par (só entre aparelhos da banda)
+        const val OK = "ok"
     }
 
     @Serializable

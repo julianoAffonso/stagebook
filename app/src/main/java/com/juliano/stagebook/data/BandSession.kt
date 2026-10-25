@@ -23,6 +23,7 @@ class BandSession(private val me: Hello) {
         ask: suspend (Hello) -> Boolean,
         onTrusted: (Hello) -> Unit,
         busy: () -> Boolean = { false },
+        onPackage: (Hello, String) -> Boolean = { _, _ -> false },
     ) {
         socket.use { s ->
             s.soTimeout = ANSWER_TIMEOUT_MS
@@ -32,6 +33,12 @@ class BandSession(private val me: Hello) {
             if (them.id == me.id) return
             BandProtocol.write(out, me)
             val msg = BandProtocol.readMessage(input) ?: return
+            // setlist ou músicas de alguém da banda (de outro, nem lê): guardado na caixa de entrada, sem perguntar nada
+            if (msg.kind == Kind.PACKAGE) {
+                val ok = isMember(them.id) && onPackage(them, msg.body)
+                BandProtocol.write(out, Message(if (ok) Kind.OK else Kind.DENIED))
+                return
+            }
             if (msg.kind != Kind.JOIN) return
             // no palco: não pergunta nada (o show não é interrompido); quem pediu tenta de novo depois
             if (!isMember(them.id) && busy()) { BandProtocol.write(out, Message(Kind.BUSY)); return }
@@ -59,7 +66,22 @@ class BandSession(private val me: Hello) {
         }
     }.getOrDefault(JoinResult.FAILED)
 
+    /** Manda um pacote (já cifrado com a chave do par) para [expectedId]; true se ele guardou. */
+    fun send(socket: Socket, expectedId: String, body: String): Boolean = runCatching {
+        socket.use { s ->
+            s.soTimeout = SEND_TIMEOUT_MS
+            val input = s.getInputStream().bufferedReader()
+            val out = s.getOutputStream().bufferedWriter()
+            BandProtocol.write(out, me)
+            val them = BandProtocol.readHello(input) ?: return false
+            if (them.id != expectedId) return false   // outro aparelho no mesmo endereço: não manda
+            BandProtocol.write(out, Message(Kind.PACKAGE, body))
+            BandProtocol.readMessage(input)?.kind == Kind.OK
+        }
+    }.getOrDefault(false)
+
     companion object {
+        const val SEND_TIMEOUT_MS = 15_000
         const val ANSWER_TIMEOUT_MS = 90_000   // o outro tem 1 min e meio para tocar em Autorizar
     }
 }

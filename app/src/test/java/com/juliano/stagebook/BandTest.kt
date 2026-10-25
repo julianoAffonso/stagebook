@@ -9,6 +9,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -97,6 +98,34 @@ class BandTest {
         assertEquals(BandSession.JoinResult.BUSY, r)
         assertEquals(0, asked)
         assertFalse(a.trusted.isNotEmpty() || b.trusted.isNotEmpty())
+    }
+
+    // b manda um pacote para a; [bIsMember]: a tem b na banda
+    private fun sendPackage(a: Device, b: Device, bIsMember: Boolean): Pair<Boolean, String?> {
+        val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        var got: String? = null
+        val t = thread {
+            runBlocking {
+                BandSession(a.hello).serve(server.accept(), { bIsMember && it == b.id }, { false }, {}, onPackage = { _, body -> got = body; true })
+            }
+        }
+        val key = BandCrypto.pairKey(b.keys.private, b.id, a.keys.public, a.id)
+        val ok = BandSession(b.hello).send(Socket(InetAddress.getLoopbackAddress(), server.localPort), a.id, ShareCode.encrypt(key, "setlist".toByteArray()))
+        t.join(5_000)
+        server.close()
+        return ok to got?.let { body -> ShareCode.decrypt(BandCrypto.pairKey(a.keys.private, a.id, b.keys.public, b.id), body)?.decodeToString() }
+    }
+
+    @Test fun `quem é da banda entrega o pacote e o outro abre com a chave do par`() {
+        val (ok, text) = sendPackage(Device("Tablet da Ana"), Device("Celular do Beto"), bIsMember = true)
+        assertTrue(ok)
+        assertEquals("setlist", text)
+    }
+
+    @Test fun `quem não é da banda não entrega nada`() {
+        val (ok, text) = sendPackage(Device("Tablet da Ana"), Device("Estranho"), bIsMember = false)
+        assertFalse(ok)
+        assertNull(text)
     }
 
     @Test fun `hello com id que não é da chave é recusado`() {
