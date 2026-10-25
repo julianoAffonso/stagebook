@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import com.juliano.stagebook.domain.SongMerge
 import androidx.compose.runtime.DisposableEffect
 import android.widget.Toast
 import androidx.compose.material3.CircularProgressIndicator
@@ -97,6 +98,8 @@ fun ScanSetlistRoute(
         asking = viewModel.asking.collectAsStateWithLifecycle().value,
         onAskBand = viewModel::askBand,
         onBandSearch = viewModel::bandSearch,
+        changes = viewModel::changes,
+        onUseIncoming = viewModel::useIncoming,
         onRetry = viewModel::fetch,
     )
 }
@@ -127,7 +130,10 @@ fun ScanSetlistScreen(
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
     onBandSearch: (Boolean) -> Unit = {},
+    changes: (Int) -> List<SongMerge.Change> = { emptyList() },
+    onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
+    var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // linha com "Ver o que muda" aberto
     CenteredContent(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             ScreenHeader(
@@ -150,8 +156,15 @@ fun ScanSetlistScreen(
                         if (missing) onBandSearch(true)
                         onDispose { if (missing) onBandSearch(false) }
                     }
-                    if (ui.songsOnly) SongsReview(ui, onAddSongs)
-                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand)
+                    if (ui.songsOnly) SongsReview(ui, onAddSongs) { comparing = it }
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand) { comparing = it }
+                    comparing?.let { i ->
+                        ChangesDialog(
+                            changes(i), useIncoming = ui.rows.getOrNull(i)?.useIncoming == true,
+                            onChoose = { use -> onUseIncoming(i, use); comparing = null },
+                            onDismiss = { comparing = null },
+                        )
+                    }
                 }
             }
         }
@@ -201,6 +214,7 @@ private fun Review(
     band: Int = 0,
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
+    onCompare: (Int) -> Unit = {},
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -226,7 +240,7 @@ private fun Review(
             verticalArrangement = Arrangement.spacedBy(Spacing.s),
             contentPadding = PaddingValues(bottom = Spacing.s),
         ) {
-            itemsIndexed(ui.rows) { i, row -> RowItem(row) { onChoose(i, it) } }
+            itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }) }
         }
         // antes dos sites: pedir à banda na rede (só aparece com alguém da banda por perto)
         if (toImport > 0 && band > 0) {
@@ -271,19 +285,23 @@ private fun Review(
 
 // músicas avulsas recebidas: as novas entram na biblioteca; as que já estão aqui ficam como estão
 @Composable
-private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit) {
+private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -> Unit) {
     val new = ui.rows.count { it.carried }
+    val updates = ui.rows.count { it.useIncoming }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         Text(
-            pluralStringResource(R.plurals.scan_songs_summary, ui.rows.size, ui.rows.size, new),
+            pluralStringResource(R.plurals.scan_songs_received, ui.rows.size, ui.rows.size) + " · " + pluralStringResource(R.plurals.scan_songs_new, new, new),
             style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
         )
         LazyColumn(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.s)) {
-            itemsIndexed(ui.rows) { _, row ->
+            itemsIndexed(ui.rows) { i, row ->
                 Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                         val (icon, tint, note) = when {
+                            row.carried && row.lyricsOnly -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
                             row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
+                            row.differs && row.useIncoming -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_version_theirs)
+                            row.differs -> Triple(AppIcons.Info, MaterialTheme.colorScheme.tertiary, R.string.scan_version_mine)
                             row.found -> Triple(AppIcons.Check, MaterialTheme.colorScheme.onSurfaceVariant, R.string.scan_song_have)
                             else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
                         }
@@ -292,13 +310,14 @@ private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit) {
                             Text(row.title, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
                         }
+                        if (row.differs) TextButton(onClick = { onCompare(i) }) { Text(stringResource(R.string.scan_see_changes)) }
                     }
                 }
             }
         }
         ActionButton(
-            pluralStringResource(R.plurals.scan_songs_add, new, new), onAdd,
-            Modifier.fillMaxWidth().padding(bottom = Spacing.m), icon = AppIcons.Check, enabled = new > 0,
+            if (new > 0) pluralStringResource(R.plurals.scan_songs_add, new, new) else stringResource(R.string.scan_update_chosen), onAdd,
+            Modifier.fillMaxWidth().padding(bottom = Spacing.m), icon = AppIcons.Check, enabled = new > 0 || updates > 0,
         )
     }
 }
@@ -324,7 +343,7 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
 
 // uma música do QR: achada (✓), com dúvida (escolher ou deixar de fora) ou que não está na biblioteca (aviso)
 @Composable
-private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
+private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> Unit = {}) {
     Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -341,9 +360,22 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
                 }
             }
             when {
+                row.found && row.differs -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(if (row.useIncoming) R.string.scan_version_theirs else R.string.scan_version_mine),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onCompare) { Text(stringResource(R.string.scan_see_changes)) }
+                }
                 row.found -> Unit
                 row.carried -> Text(
-                    stringResource(if (row.fromBand) R.string.scan_band_row else R.string.scan_carried_row),
+                    stringResource(
+                        when {
+                            row.lyricsOnly -> R.string.scan_lyrics_only_row
+                            row.fromBand -> R.string.scan_band_row
+                            else -> R.string.scan_carried_row
+                        },
+                    ),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary,
                 )
                 row.candidates.isEmpty() -> Text(
@@ -360,4 +392,31 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
             }
         }
     }
+}
+
+// "Ver o que muda": as linhas da letra que saem (a minha) e entram (a recebida); a minha cifra fica de qualquer jeito
+@Composable
+private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean, onChoose: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.scan_changes_title)) },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                if (changes.isEmpty()) item { Text(stringResource(R.string.scan_changes_chords_only), style = MaterialTheme.typography.bodyMedium) }
+                itemsIndexed(changes) { _, c ->
+                    val added = c.kind == SongMerge.Kind.ADDED
+                    Text(
+                        (if (added) "+ " else "− ") + c.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (added) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    )
+                }
+                item {
+                    Text(stringResource(R.string.scan_changes_keep_chords), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onChoose(true) }) { Text(stringResource(R.string.scan_use_theirs)) } },
+        dismissButton = { TextButton(onClick = { onChoose(false) }) { Text(stringResource(R.string.scan_keep_mine)) } },
+    )
 }

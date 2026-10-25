@@ -174,7 +174,9 @@ class BandLink @Inject constructor(
                 }.getOrDefault(emptyList())
             }
         }.flatMap { it.await() }
-        answers.distinctBy { com.juliano.stagebook.domain.TextKey.of(it.title) + "|" + com.juliano.stagebook.domain.TextKey.of(it.author) }
+        // mais de um aparelho tem a mesma música: fica a versão com cifra (no perfil só letra ela fica guardada, escondida)
+        answers.groupBy { com.juliano.stagebook.domain.TextKey.of(it.title) + "|" + com.juliano.stagebook.domain.TextKey.of(it.author) }
+            .values.map { versions -> versions.maxBy { if (com.juliano.stagebook.domain.Chords.hasChords(it.text)) 1 else 0 } }
     }
 
     // alguém da banda perguntou: responde com as que estão aqui (mesma regra do QR: título, e o artista desempata)

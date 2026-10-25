@@ -424,9 +424,13 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="scan_code_offline">Sem internet ou o serviço não respondeu. Tente de novo daqui a pouco.</string>
     <string name="scan_code_retry">Tentar de novo</string>
     <string name="scan_songs_title">Músicas recebidas</string>
-    <plurals name="scan_songs_summary">
-        <item quantity="one">%1$d música recebida · %2$d nova</item>
-        <item quantity="other">%1$d músicas recebidas · %2$d novas</item>
+    <plurals name="scan_songs_received">
+        <item quantity="one">%1$d música recebida</item>
+        <item quantity="other">%1$d músicas recebidas</item>
+    </plurals>
+    <plurals name="scan_songs_new">
+        <item quantity="one">%1$d nova</item>
+        <item quantity="other">%1$d novas</item>
     </plurals>
     <string name="scan_song_new">Nova: entra na sua biblioteca</string>
     <string name="scan_song_have">Você já tem: fica a sua</string>
@@ -450,6 +454,17 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="other">A banda tinha %1$d de %2$d músicas que faltavam</item>
     </plurals>
     <string name="scan_band_none">Ninguém da banda tinha as que faltam. Dá para importar dos sites.</string>
+    <string name="scan_version_mine">Você tem outra versão: fica a sua</string>
+    <string name="scan_version_theirs">Vai usar a recebida (a sua cifra fica)</string>
+    <string name="scan_see_changes">Ver o que muda</string>
+    <string name="scan_changes_title">O que muda na letra</string>
+    <string name="scan_changes_chords_only">A letra é a mesma; só a cifra é diferente.</string>
+    <string name="scan_changes_keep_chords">− sai da sua · + entra da recebida. Se a recebida vier só com a letra, os seus acordes ficam.</string>
+    <string name="scan_use_theirs">Usar a recebida</string>
+    <string name="scan_keep_mine">Manter a minha</string>
+    <string name="scan_update_chosen">Atualizar as escolhidas</string>
+    <string name="scan_lyrics_only_row">Veio só com a letra (sem cifra): entra na sua biblioteca.</string>
+    <string name="scan_song_new_lyrics_only">Nova, só com a letra (sem cifra)</string>
     <string name="scan_carried_row">Veio junto com o setlist: entra na sua biblioteca.</string>
     <string name="scan_title">Ler QR do setlist</string>
     <string name="scan_hint">Aponte a câmera para o QR que está na tela do outro aparelho.</string>
