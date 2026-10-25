@@ -6,7 +6,7 @@ object AppLinks {
     const val REPOSITORY = "https://github.com/julianoAffonso/stagebook"
 
     /**
-     * Botão de doação (PayPal). Vazio = o botão não aparece; o usuário cola aqui o link do botão quando criar. Só
+     * Botão de apoio (Buy Me a Coffee: https://buymeacoffee.com/<usuário>). Vazio = o botão não aparece. Só
      * endereço https.
      */
     const val DONATE = ""

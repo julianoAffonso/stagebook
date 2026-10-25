@@ -137,8 +137,8 @@
     <string name="about_open_source_text">O Stagebook é gratuito e o código é aberto: qualquer um pode ver como funciona e ajudar.</string>
     <string name="about_see_code">Ver o código</string>
     <string name="about_support">Apoie o Stagebook</string>
-    <string name="about_support_text">O Stagebook é gratuito, sem propaganda. Se ele ajuda nos seus shows, uma doação de qualquer valor ajuda a manter o app e a trazer novidades.</string>
-    <string name="about_donate">Fazer uma doação</string>
+    <string name="about_support_text">O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café? Qualquer valor ajuda a manter o app e a trazer novidades.</string>
+    <string name="about_donate">Pagar um café</string>
     <string name="settings_update_installed">Versão %1$s</string>
     <string name="settings_update_new_short">nova versão</string>
     <string name="settings_update_check">Procurar atualização</string>
