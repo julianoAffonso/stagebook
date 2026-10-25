@@ -527,6 +527,27 @@ class ScreenshotTest {
         )
     }
 
+    // ---- banda na rede local: Ajustes → Banda (na rede: um da banda, um pedido esperando, um novo) ----
+    private val bandSample = com.juliano.stagebook.ui.band.BandUi(
+        name = "Meu tablet", wifi = true, searching = true,
+        nearby = listOf(
+            com.juliano.stagebook.ui.band.NearbyUi("1", "Celular da Ana", member = true),
+            com.juliano.stagebook.ui.band.NearbyUi("2", "Teclado do Caio", member = false, join = com.juliano.stagebook.data.BandLink.Join.WAITING),
+            com.juliano.stagebook.ui.band.NearbyUi("3", "Baixo", member = false),
+        ),
+        members = listOf(com.juliano.stagebook.ui.band.MemberUi("1", "Celular da Ana", 0)),
+    )
+
+    @Test @Config(qualifiers = "w412dp-h1600dp-port-xxhdpi")
+    fun bandPhone() = shoot("jornada_banda_1_ajustes") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it, section = SettingsSection.BAND) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun bandListPhone() = shoot("jornada_banda_2_lista_ajustes") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it) }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(

@@ -1,5 +1,10 @@
 package com.juliano.stagebook.ui.settings
 
+import androidx.compose.runtime.DisposableEffect
+import com.juliano.stagebook.ui.band.BandViewModel
+import com.juliano.stagebook.ui.band.BandUi
+import com.juliano.stagebook.ui.band.BandDetail
+import com.juliano.stagebook.ui.band.BandActions
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
@@ -183,6 +188,15 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     }
     var section by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
     // medidores do mixer: só com o modo player ligado, a seção Player aberta e a tela visível
+    // banda: a procura na rede fica ligada enquanto Ajustes → Banda está aberto (para alguém novo achar este aparelho)
+    val bandVm: BandViewModel = hiltViewModel()
+    val band by bandVm.ui.collectAsStateWithLifecycle()
+    val bandActions = remember(bandVm) { bandVm.actions() }
+    DisposableEffect(section == SettingsSection.BAND) {
+        val open = section == SettingsSection.BAND
+        bandVm.screenOpen(open)
+        onDispose { if (open) bandVm.screenOpen(false) }
+    }
     // chave "Monitorar": começa desligada e não fica salva
     var monitoring by remember { mutableStateOf(false) }
     val levels = remember { mutableStateOf(MixerLevels.SILENT) }
@@ -227,6 +241,8 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 mixerLevels = { levels.value },
                 monitoring = monitoring,
                 onMonitoring = { monitoring = it },
+                band = band,
+                bandActions = bandActions,
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -286,6 +302,9 @@ data class SettingsActions(
     val onMixer: (MixerConfig) -> Unit = {},
     val mixerLevels: () -> MixerLevels = { MixerLevels.SILENT },   // lido só no desenho dos medidores
     val monitoring: Boolean = false,
+    // Ajustes → Banda: o estado da banda (BandViewModel) e o que a tela faz
+    val band: BandUi = BandUi(),
+    val bandActions: BandActions = BandActions(),
     val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
@@ -303,6 +322,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     PLAYER(R.string.settings_player, AppIcons.Play),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
+    BAND(R.string.settings_band, AppIcons.Group),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
     LANGUAGE(R.string.settings_language, AppIcons.Translate),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
@@ -328,7 +348,7 @@ fun SettingsScreen(
                 // tablet deitado: lista fixa à esquerda, seção aberta à direita
                 val open = section ?: SettingsSection.LYRICS
                 Row(Modifier.fillMaxSize()) {
-                    SectionList(uiState, open, onSection, Modifier.width(Sizes.settingsList).fillMaxHeight())
+                    SectionList(uiState, open, onSection, Modifier.width(Sizes.settingsList).fillMaxHeight(), band = actions.band)
                     Column(
                         Modifier
                             .weight(1f)
@@ -347,7 +367,7 @@ fun SettingsScreen(
                 BackHandler(enabled = section != null) { onSection(null) }
                 Crossfade(section, label = "section") { open ->
                     if (open == null) {
-                        SectionList(uiState, null, onSection, Modifier.fillMaxSize())
+                        SectionList(uiState, null, onSection, Modifier.fillMaxSize(), band = actions.band)
                     } else {
                         CenteredContent(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
@@ -366,7 +386,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, onSection: (SettingsSection) -> Unit, modifier: Modifier = Modifier) {
+private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, onSection: (SettingsSection) -> Unit, modifier: Modifier = Modifier, band: BandUi = BandUi()) {
     CenteredContent(modifier) {
         Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(R.string.settings_title), Modifier.padding(top = Spacing.s, bottom = Spacing.s))
@@ -374,7 +394,7 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
                 SettingsSection.entries.forEach { s ->
                     SongListItem(
                         title = stringResource(s.title),
-                        subtitle = summary(s, uiState),
+                        subtitle = summary(s, uiState, band),
                         onClick = { onSection(s) },
                         containerColor = if (s == selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
                         leading = {
@@ -398,7 +418,9 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
 
 /** Resumo de cada seção na lista (o que está valendo agora). */
 @Composable
-private fun summary(s: SettingsSection, ui: SettingsUiState): String = when (s) {
+private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): String = when (s) {
+    SettingsSection.BAND -> if (band.members.isEmpty()) stringResource(R.string.settings_band_none)
+    else pluralStringResource(R.plurals.settings_band_short, band.members.size, band.members.size)
     SettingsSection.LYRICS -> stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
         when (ui.look.columns) {
             StageColumns.AUTO -> ""
@@ -428,6 +450,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
             SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
+            SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
             SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
