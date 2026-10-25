@@ -597,8 +597,8 @@ class ScreenshotTest {
             scanReview.copy(
                 rows = listOf(
                     com.juliano.stagebook.ui.setlists.ScanRow("Canção de teste", "", true, emptyList(), "1"),
-                    com.juliano.stagebook.ui.setlists.ScanRow("Música do vocalista", "", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
-                    com.juliano.stagebook.ui.setlists.ScanRow("Outra só letra", "", false, emptyList(), null, wantChords = true),
+                    com.juliano.stagebook.ui.setlists.ScanRow("Canção de exemplo", "", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
+                    com.juliano.stagebook.ui.setlists.ScanRow("Outra canção", "", false, emptyList(), null, wantChords = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Celular da Ana",
