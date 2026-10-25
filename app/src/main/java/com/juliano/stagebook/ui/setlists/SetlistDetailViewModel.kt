@@ -61,7 +61,16 @@ class SetlistDetailViewModel @Inject constructor(
     private val bandLink: BandLink,
     private val bandTrust: BandTrust,
     private val bandInternet: BandInternet,
+    private val conduct: com.juliano.stagebook.data.BandConduct,
 ) : ViewModel() {
+    /** "Conduzir a banda": manda o setlist (cada um diz o que falta) e quem conduz vai para o palco. */
+    fun conductBand() {
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return
+        val songs = set.items.mapNotNull(lib::song).map { com.juliano.stagebook.domain.Conduct.Item(it.title, it.author) }
+        conduct.start(setId, set.name, songs)
+    }
+
     private val internet = connectivity.online
     private fun connectivityNow() = connectivity.isOnline()
     val setId = savedStateHandle.toRoute<SetlistDetail>().setId

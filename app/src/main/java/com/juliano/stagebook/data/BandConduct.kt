@@ -3,7 +3,11 @@ package com.juliano.stagebook.data
 import androidx.compose.runtime.Immutable
 import com.juliano.stagebook.domain.BandProtocol
 import com.juliano.stagebook.domain.Conduct
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -29,7 +33,7 @@ class BandConduct @Inject constructor(
 
         /** [noAnswer]: da banda online, quem não respondeu (outra versão, fora do app). */
         @Immutable
-        data class Conducting(val msg: Conduct.Msg, val noAnswer: Int = 0) : Role
+        data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0) : Role
 
         /** [songId]: a música da vez aqui (null = falta aqui). */
         @Immutable
@@ -44,22 +48,45 @@ class BandConduct @Inject constructor(
     val openSong: SharedFlow<String> = _openSong
 
     @Volatile private var leftFrom: String? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var searchedAt = -1   // a música em que a falha de entrega já ligou a procura (uma vez por música)
 
-    init { link.conductHandler = ::onMessage }
-
-    /** Liga com o setlist: pergunta a todos o que falta (o alerta aparece antes da primeira música). */
-    suspend fun start(set: String, songs: List<Conduct.Item>, index: Int = 0) =
-        send(Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index))
-
-    suspend fun open(index: Int) {
-        val now = (_role.value as? Role.Conducting)?.msg ?: return
-        send(now.copy(type = Conduct.OPEN, index = index))
+    init {
+        link.conductHandler = ::onMessage
+        // conduzindo: alguém da banda voltou para o Wi-Fi (achado numa procura curta) → recebe a música da vez, sem toque
+        scope.launch {
+            var before = emptySet<String>()
+            link.onlineMembers.collect { peers ->
+                val ids = peers.map { it.id }.toSet()
+                val conducting = _role.value as? Role.Conducting
+                if (conducting != null && (ids - before).isNotEmpty()) send(conducting.setId, conducting.msg.copy(type = Conduct.OPEN))
+                before = ids
+            }
+        }
     }
 
-    suspend fun end() {
+    /** Liga com o setlist: pergunta a todos o que falta (o alerta aparece antes da primeira música) e procura a banda. */
+    fun start(setId: String, set: String, songs: List<Conduct.Item>, index: Int = 0) {
+        searchedAt = -1
+        _role.value = Role.Conducting(setId, Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index))
+        link.burst(evenOnStage = true)
+        scope.launch { send(setId, (_role.value as Role.Conducting).msg) }
+    }
+
+    /** Quem conduz mudou de música no palco do setlist [setId]. */
+    fun open(setId: String, index: Int) {
+        val now = _role.value as? Role.Conducting ?: return
+        if (now.setId != setId || (now.msg.index == index && now.msg.type == Conduct.OPEN)) return
+        scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, index = index)) }
+    }
+
+    /** "Procurar a banda": 30 s de procura no palco; quem aparecer recebe a música da vez. */
+    fun search() = link.burst(evenOnStage = true)
+
+    fun end() {
         val now = (_role.value as? Role.Conducting)?.msg ?: return
         _role.value = Role.None
-        link.conduct(now.copy(type = Conduct.END, missing = emptyList()))
+        scope.launch { link.conduct(now.copy(type = Conduct.END, missing = emptyList())) }
     }
 
     /** Quem acompanha: para de seguir (volta se quem conduz começar de novo com [start]). */
@@ -68,14 +95,18 @@ class BandConduct @Inject constructor(
         _role.value = Role.None
     }
 
-    private suspend fun send(msg: Conduct.Msg) {
-        val online = link.onlineMembers.value.size
-        _role.value = Role.Conducting(msg)
+    private suspend fun send(setId: String, msg: Conduct.Msg) {
+        val members = link.onlineMembers.value.size
+        _role.value = Role.Conducting(setId, msg)
         val replies = link.conduct(msg)
+        if (_role.value !is Role.Conducting) return   // encerrado enquanto mandava
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
-        _role.value = Role.Conducting(withLacks, noAnswer = (online - replies.size).coerceAtLeast(0))
+        val noAnswer = (members - replies.size).coerceAtLeast(0)
+        _role.value = Role.Conducting(setId, withLacks, noAnswer)
         // as faltas mudaram: manda de novo para todos verem o mesmo alerta
         if (withLacks.missing != msg.missing) link.conduct(withLacks)
+        // alguém não recebeu: uma procura curta por música (pode ter trocado de endereço no Wi-Fi)
+        if (noAnswer > 0 && searchedAt != msg.index) { searchedAt = msg.index; link.burst(evenOnStage = true) }
     }
 
     // quem acompanha: chega pela rede (outra linha de execução); responde o que falta aqui
