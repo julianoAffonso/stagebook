@@ -1,5 +1,7 @@
 package com.juliano.stagebook
 
+import com.juliano.stagebook.ui.band.BandRequestDialog
+import com.juliano.stagebook.data.BandLink
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
@@ -43,6 +45,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var updateOffer: AppUpdateOffer
     @Inject lateinit var updater: AppUpdater
     @Inject lateinit var midi: MidiPedal
+    @Inject lateinit var band: BandLink
     private val pedal = PedalInput()
 
     // língua escolhida nos ajustes (trocar recria a Activity)
@@ -83,6 +86,9 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions) }
+                // "Fulano quer entrar na banda": em qualquer tela, um de cada vez
+                val requests by band.requests.collectAsStateWithLifecycle()
+                requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
             }
         }
     }
@@ -90,6 +96,12 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         updateOffer.onEnter()   // versão nova do app: procura em segundo plano e pergunta fora do palco
+        band.setForeground(true)   // banda na rede: só com o app na frente
+    }
+
+    override fun onStop() {
+        band.setForeground(false)
+        super.onStop()
     }
 
     // app sempre em tela cheia (show): barras do sistema escondidas; um deslize da borda as mostra
