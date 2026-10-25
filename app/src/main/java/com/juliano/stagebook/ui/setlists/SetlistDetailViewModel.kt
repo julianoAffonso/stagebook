@@ -1,5 +1,9 @@
 package com.juliano.stagebook.ui.setlists
 
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.channels.Channel
+import com.juliano.stagebook.data.BandLink
 import com.juliano.stagebook.ui.share.CloudUi
 import com.juliano.stagebook.domain.ShareCode
 import com.juliano.stagebook.data.Connectivity
@@ -51,6 +55,7 @@ class SetlistDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val setlistCloud: SetlistCloud,
     connectivity: Connectivity,
+    private val bandLink: BandLink,
 ) : ViewModel() {
     val setId = savedStateHandle.toRoute<SetlistDetail>().setId
 
@@ -76,6 +81,24 @@ class SetlistDetailViewModel @Inject constructor(
     }
 
     fun dismissCloud() { _cloud.value = null }
+
+    /** Quantos da banda estão na rede agora ("Banda na rede (N)" só aparece com alguém). */
+    val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    private val bandSent = Channel<Int>(Channel.BUFFERED)
+    /** Para quantos aparelhos da banda chegou o último envio (0 = ninguém recebeu). */
+    val bandResult = bandSent.receiveAsFlow()
+
+    /** A folha Compartilhar abriu/fechou: liga/desliga a procura da banda. */
+    fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
+
+    /** Manda o setlist (com as músicas, se [withSongs]) para todos da banda na rede agora. */
+    fun sendBand(withSongs: Boolean) {
+        viewModelScope.launch {
+            val pkg = setlistCloud.setlistPackage(setId, withSongs) ?: return@launch
+            bandSent.send(bandLink.send(pkg.first, pkg.second))
+        }
+    }
 
     val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
         val set = lib.setlist(setId)

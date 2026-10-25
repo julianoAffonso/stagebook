@@ -22,7 +22,7 @@ data class PickSongs(val setId: String)
 
 /** Ler o QR de um setlist, ou buscar pelo [code] da internet, e conferir antes de criar. */
 @Serializable
-data class ScanSetlist(val code: String = "")
+data class ScanSetlist(val code: String = "", val inbox: String = "")   // inbox: o que a banda mandou (caixa de entrada)
 
 @Serializable
 data class Stage(

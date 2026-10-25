@@ -1,5 +1,8 @@
 package com.juliano.stagebook.ui.songs
 
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.channels.Channel
+import com.juliano.stagebook.data.BandLink
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +48,7 @@ class SongsViewModel @Inject constructor(
     private val repository: LibraryRepository,
     connectivity: Connectivity,
     private val setlistCloud: SetlistCloud,
+    private val bandLink: BandLink,
 ) : ViewModel() {
     private val _cloud = MutableStateFlow<CloudUi?>(null)
     val cloud: StateFlow<CloudUi?> = _cloud
@@ -63,6 +67,24 @@ class SongsViewModel @Inject constructor(
     }
 
     fun dismissCloud() { _cloud.value = null }
+
+    /** Quantos da banda estão na rede agora ("Banda na rede (N)" só aparece com alguém). */
+    val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    private val bandSent = Channel<Int>(Channel.BUFFERED)
+    /** Para quantos aparelhos da banda chegou o último envio (0 = ninguém recebeu). */
+    val bandResult = bandSent.receiveAsFlow()
+
+    /** A folha Compartilhar abriu/fechou: liga/desliga a procura da banda. */
+    fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
+
+    /** Manda as músicas escolhidas para todos da banda na rede agora. */
+    fun sendBand(ids: List<String>) {
+        viewModelScope.launch {
+            val pkg = setlistCloud.songsPackage(ids) ?: return@launch
+            bandSent.send(bandLink.send(pkg.first, pkg.second))
+        }
+    }
 
     /** Importar precisa de internet: o botão fica indisponível sem ela (só observa com a tela aberta). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)

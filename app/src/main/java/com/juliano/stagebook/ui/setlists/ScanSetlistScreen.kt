@@ -85,6 +85,7 @@ fun ScanSetlistRoute(
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier) },
         byCode = viewModel.code.isNotEmpty(),
+        fromName = viewModel.fromName,
         onRetry = viewModel::fetch,
     )
 }
@@ -110,11 +111,12 @@ fun ScanSetlistScreen(
     byCode: Boolean = false,
     onRetry: () -> Unit = {},
     onAddSongs: () -> Unit = {},
+    fromName: String = "",   // veio da banda: "Recebido de Ana"
 ) {
     CenteredContent(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             ScreenHeader(
-                stringResource(
+                if (fromName.isNotEmpty()) stringResource(R.string.scan_from, fromName) else stringResource(
                     when {
                         (ui as? ScanUi.Review)?.songsOnly == true -> R.string.scan_songs_title
                         byCode -> R.string.scan_code_title

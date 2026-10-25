@@ -28,6 +28,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -60,12 +61,27 @@ import com.juliano.stagebook.ui.theme.Spacing
  * avulsas — abre a conferência certa, seja qual for a aba.
  */
 @Composable
-fun ImportButton(online: Boolean, onScan: () -> Unit, onCode: (String) -> Unit, modifier: Modifier = Modifier, onSites: (() -> Unit)? = null) {
+fun ImportButton(
+    online: Boolean,
+    onScan: () -> Unit,
+    onCode: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onSites: (() -> Unit)? = null,
+    received: Int = 0,               // o que a banda mandou e não foi conferido
+    onReceived: () -> Unit = {},
+) {
     var open by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
         ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (received > 0) {
+                DropdownMenuItem(
+                    text = { Text(pluralStringResource(R.plurals.import_received, received, received)) },
+                    onClick = { open = false; onReceived() },
+                    leadingIcon = { Icon(AppIcons.Group, null) },
+                )
+            }
             onSites?.let { sites ->
                 DropdownMenuItem(
                     text = { Text(stringResource(if (online) R.string.import_from_sites else R.string.import_from_sites_offline)) },
@@ -93,6 +109,19 @@ fun ImportButton(online: Boolean, onScan: () -> Unit, onCode: (String) -> Unit, 
             onConfirm = { typing = false; if (it.isNotBlank()) onCode(it.trim()) },
             onDismiss = { typing = false },
         )
+    }
+}
+
+/** Mostra para quantos aparelhos da banda chegou o envio (ou que ninguém recebeu). */
+@Composable
+fun BandResultToast(results: kotlinx.coroutines.flow.Flow<Int>) {
+    val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
+    androidx.compose.runtime.LaunchedEffect(results) {
+        results.collect { n ->
+            val msg = if (n > 0) resources.getQuantityString(R.plurals.share_band_sent, n, n) else resources.getString(R.string.share_band_failed)
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
     }
 }
 
@@ -127,37 +156,65 @@ sealed interface CloudUi {
     data object Failed : CloudUi
 }
 
-/** A folha "Compartilhar": cada jeito de enviar só aparece quando dá para usar (QR sempre; internet só com internet). */
+/**
+ * A folha "Compartilhar": cada jeito de enviar só aparece quando dá para usar (QR sempre; banda só com alguém da banda na
+ * rede agora; internet só com internet). Aberta, liga a procura da banda ([onSearch]); fechada, desliga (bateria).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShareSheet(songs: Int, online: Boolean, onQr: (() -> Unit)?, onInternet: (Boolean) -> Unit, onDismiss: () -> Unit) {
+fun ShareSheet(
+    songs: Int,
+    online: Boolean,
+    onQr: (() -> Unit)?,
+    onInternet: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+    band: Int = 0,
+    onBand: (Boolean) -> Unit = {},
+    onSearch: (Boolean) -> Unit = {},
+) {
+    DisposableEffect(Unit) {
+        onSearch(true)
+        onDispose { onSearch(false) }
+    }
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l))
+        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l), band, onBand)
     }
 }
 
-/** O conteúdo da folha (separado para o preview e os prints). */
+/** O conteúdo da folha (separado para o preview e os prints). [band]: quantos da banda estão na rede agora. */
 @Composable
-fun ShareOptions(songs: Int, online: Boolean, onQr: (() -> Unit)?, onInternet: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun ShareOptions(
+    songs: Int,
+    online: Boolean,
+    onQr: (() -> Unit)?,
+    onInternet: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    band: Int = 0,
+    onBand: (Boolean) -> Unit = {},
+) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
+        // banda na rede: chega sozinho para quem é da banda e está neste Wi-Fi (sem palavras, sem QR)
+        if (band > 0) {
+            ShareOption(AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band), stringResource(R.string.share_band_hint)) { onBand(withSongs) }
+        }
         // QR na tela: só no setlist (leva só os títulos; músicas avulsas não cabem num QR)
         onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), it) }
         if (online) {
             ShareOption(AppIcons.Public, stringResource(R.string.share_internet), stringResource(R.string.share_internet_hint)) { onInternet(withSongs) }
-            // no setlist dá para mandar só os títulos; músicas avulsas sempre vão inteiras
-            if (onQr != null) {
-                Row(Modifier.fillMaxWidth().padding(top = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(pluralStringResource(R.plurals.share_with_songs, songs, songs), style = MaterialTheme.typography.bodyLarge)
-                        Text(stringResource(R.string.share_with_songs_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(withSongs, { withSongs = it })
-                }
-            }
         } else {
             Text(stringResource(if (onQr != null) R.string.share_offline else R.string.share_offline_songs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        // no setlist dá para mandar só os títulos (banda e internet); músicas avulsas sempre vão inteiras
+        if (onQr != null && (online || band > 0)) {
+            Row(Modifier.fillMaxWidth().padding(top = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(pluralStringResource(R.plurals.share_with_songs, songs, songs), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.share_with_songs_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(withSongs, { withSongs = it })
+            }
         }
     }
 }

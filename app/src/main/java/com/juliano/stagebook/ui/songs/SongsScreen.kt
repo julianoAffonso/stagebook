@@ -2,6 +2,7 @@ package com.juliano.stagebook.ui.songs
 
 import com.juliano.stagebook.ui.share.rememberCodeActions
 import com.juliano.stagebook.ui.share.ShareSheet
+import com.juliano.stagebook.ui.share.BandResultToast
 import com.juliano.stagebook.ui.share.ImportButton
 import com.juliano.stagebook.ui.share.CodeActions
 import com.juliano.stagebook.ui.share.CloudDialog
@@ -63,9 +64,12 @@ fun SongsRoute(
     viewModel: SongsViewModel = hiltViewModel(),
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
+    received: Int = 0,
+    onReceived: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val online by viewModel.online.collectAsStateWithLifecycle()
+    BandResultToast(viewModel.bandResult)
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
     SongsScreen(
@@ -83,8 +87,13 @@ fun SongsRoute(
         onShareSongs = viewModel::shareSongs,
         onDismissCloud = viewModel::dismissCloud,
         codeActions = rememberCodeActions(),
+        band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
+        onSendBand = viewModel::sendBand,
+        onBandSearch = viewModel::bandSearch,
         onScan = onScan,
         onReceiveCode = onReceiveCode,
+        received = received,
+        onReceived = onReceived,
     )
 }
 
@@ -107,6 +116,11 @@ fun SongsScreen(
     initialSelection: List<String> = emptyList(),   // prints e testes
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
+    band: Int = 0,
+    onSendBand: (List<String>) -> Unit = {},
+    onBandSearch: (Boolean) -> Unit = {},
+    received: Int = 0,
+    onReceived: () -> Unit = {},
 ) {
     val wide = wideLists()
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
@@ -137,7 +151,7 @@ fun SongsScreen(
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
                 // importar dos sites (com internet), ler o QR ou digitar o código: um botão, um menu
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport)
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived)
             }
             AnimatedVisibility(!online) {
                 Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
@@ -190,6 +204,9 @@ fun SongsScreen(
             songs = selected.size, online = online, onQr = null,
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
+            band = band,
+            onBand = { sharing = false; onSendBand(selected); selected = emptyList() },
+            onSearch = onBandSearch,
         )
     }
     cloud?.let { CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }

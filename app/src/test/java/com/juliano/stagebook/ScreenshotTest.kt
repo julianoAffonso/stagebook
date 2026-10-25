@@ -548,6 +548,25 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it) }
     }
 
+    // ---- parte 2: mandar para a banda (folha) e o aviso nas abas com o número no ícone ----
+    @Test @Config(qualifiers = PHONE)
+    fun shareBandPhone() = shoot("jornada_banda_3_compartilhar") {
+        com.juliano.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {}, band = 2)
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun inboxBannerPhone() = shoot("jornada_banda_4_aviso") {
+        HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
+            androidx.compose.foundation.layout.Column(it) {
+                com.juliano.stagebook.ui.share.InboxBanner(
+                    com.juliano.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado"), {}, {},
+                    androidx.compose.ui.Modifier.padding(horizontal = com.juliano.stagebook.ui.theme.Spacing.m).padding(top = com.juliano.stagebook.ui.theme.Spacing.s),
+                )
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, { _, _ -> }, androidx.compose.ui.Modifier.weight(1f))
+            }
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(

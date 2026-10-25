@@ -57,6 +57,8 @@ fun SetlistsRoute(
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     viewModel: SetlistsViewModel = hiltViewModel(),
+    received: Int = 0,
+    onReceived: () -> Unit = {},
 ) {
     val online by viewModel.online.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +74,8 @@ fun SetlistsRoute(
         onScan = onScan,
         online = online,
         onReceiveCode = onReceiveCode,
+        received = received,
+        onReceived = onReceived,
         onDelete = viewModel::delete,
         onRename = viewModel::rename,
     )
@@ -89,6 +93,8 @@ fun SetlistsScreen(
     onScan: () -> Unit = {},
     online: Boolean = false,
     onReceiveCode: (String) -> Unit = {},
+    received: Int = 0,
+    onReceived: () -> Unit = {},
 ) {
 
     var creating by rememberSaveable { mutableStateOf(false) }
@@ -104,7 +110,7 @@ fun SetlistsScreen(
             // novo setlist ou importar um (QR ou código)
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f))
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived)
             }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {

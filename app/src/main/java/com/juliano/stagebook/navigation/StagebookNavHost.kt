@@ -49,6 +49,7 @@ fun StagebookNavHost(
                 onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },
                 onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
+                onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
             )
         }
         composable<SongEditor> {

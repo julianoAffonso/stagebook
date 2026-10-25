@@ -477,6 +477,16 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="scan_create_other">Criar outro</string>
     <!-- compartilhar o setlist (QR, internet; a banda na rede local entra quando existir) -->
     <string name="share_title">Compartilhar</string>
+    <plurals name="share_band">
+        <item quantity="one">Banda na rede (%1$d aparelho)</item>
+        <item quantity="other">Banda na rede (%1$d aparelhos)</item>
+    </plurals>
+    <string name="share_band_hint">Chega sozinho para quem é da banda e está neste Wi-Fi; cada um confere antes de entrar.</string>
+    <plurals name="share_band_sent">
+        <item quantity="one">Enviado para %1$d aparelho da banda</item>
+        <item quantity="other">Enviado para %1$d aparelhos da banda</item>
+    </plurals>
+    <string name="share_band_failed">Ninguém da banda recebeu. Confira se estão no mesmo Wi-Fi com o app aberto.</string>
     <string name="share_qr">QR na tela</string>
     <string name="share_qr_hint">Quem está do lado lê com a câmera. Só os títulos.</string>
     <string name="share_internet">Enviar pela internet</string>
@@ -543,4 +553,19 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="band_request_text">Autorizado, ele passa a receber e mandar setlists e músicas para você sem as 3 palavras, aqui na rede e pela internet. Dá para remover depois em Ajustes → Banda.</string>
     <string name="band_allow">Autorizar</string>
     <string name="band_deny">Não autorizar</string>
+    <!-- caixa de entrada: o que a banda mandou -->
+    <string name="inbox_setlist">%1$s enviou o setlist \"%2$s\"</string>
+    <plurals name="inbox_songs">
+        <item quantity="one">%1$s enviou %2$d música</item>
+        <item quantity="other">%1$s enviou %2$d músicas</item>
+    </plurals>
+    <string name="inbox_open">Conferir</string>
+    <string name="inbox_later">Agora não</string>
+    <string name="inbox_title">Recebidos da banda</string>
+    <string name="inbox_discard">Descartar</string>
+    <plurals name="import_received">
+        <item quantity="one">Recebido da banda (%1$d)</item>
+        <item quantity="other">Recebidos da banda (%1$d)</item>
+    </plurals>
+    <string name="scan_from">Recebido de %1$s</string>
 </resources>
