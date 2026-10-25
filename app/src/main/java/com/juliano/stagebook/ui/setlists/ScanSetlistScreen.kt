@@ -310,13 +310,13 @@ private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -
                             else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
                         }
                         Icon(icon, null, Modifier.size(20.dp), tint = tint)
-                        Column(Modifier.weight(1f)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             Text(row.title, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
+                            if (row.differs) RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes)) { onCompare(i) }
+                            if (row.carried && row.lyricsOnly) RowAction(AppIcons.Close, stringResource(R.string.scan_dont_add)) { onWantChords(i, true) }
+                            if (row.wantChords) RowAction(AppIcons.Check, stringResource(R.string.scan_accept_lyrics)) { onWantChords(i, false) }
                         }
-                        if (row.differs) TextButton(onClick = { onCompare(i) }) { Text(stringResource(R.string.scan_see_changes)) }
-                        if (row.carried && row.lyricsOnly) TextButton(onClick = { onWantChords(i, true) }) { Text(stringResource(R.string.scan_dont_add)) }
-                        if (row.wantChords) TextButton(onClick = { onWantChords(i, false) }) { Text(stringResource(R.string.scan_accept_lyrics)) }
                     }
                 }
             }
@@ -368,22 +368,22 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> 
                 }
             }
             when {
-                row.found && row.differs -> Row(verticalAlignment = Alignment.CenterVertically) {
+                row.found && row.differs -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(
                         stringResource(if (row.useIncoming) R.string.scan_version_theirs else R.string.scan_version_mine),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary,
                     )
-                    TextButton(onClick = onCompare) { Text(stringResource(R.string.scan_see_changes)) }
+                    RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes), onCompare)
                 }
                 row.found -> Unit
                 // perfil letra e cifra: a que veio só com a letra pode ser recusada e ir buscar com cifra nos sites
-                row.wantChords -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.scan_want_chords_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { onWantChords(false) }) { Text(stringResource(R.string.scan_accept_lyrics)) }
+                row.wantChords -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text(stringResource(R.string.scan_want_chords_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
+                    RowAction(AppIcons.Check, stringResource(R.string.scan_accept_lyrics)) { onWantChords(false) }
                 }
-                row.carried && row.lyricsOnly -> Column {
+                row.carried && row.lyricsOnly -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(stringResource(R.string.scan_lyrics_only_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
-                    TextButton(onClick = { onWantChords(true) }) { Text(stringResource(R.string.scan_search_chords)) }
+                    RowAction(AppIcons.Public, stringResource(R.string.scan_search_chords)) { onWantChords(true) }
                 }
                 row.carried -> Text(
                     stringResource(
@@ -436,4 +436,13 @@ private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean,
         confirmButton = { TextButton(onClick = { onChoose(true) }) { Text(stringResource(R.string.scan_use_theirs)) } },
         dismissButton = { TextButton(onClick = { onChoose(false) }) { Text(stringResource(R.string.scan_keep_mine)) } },
     )
+}
+
+// ação dentro de uma linha da conferência: botão pequeno com ícone (texto colorido sozinho não parece clicável)
+@Composable
+private fun RowAction(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
+    androidx.compose.material3.FilledTonalButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.m, vertical = Spacing.xs)) {
+        Icon(icon, null, Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = Spacing.s))
+    }
 }
