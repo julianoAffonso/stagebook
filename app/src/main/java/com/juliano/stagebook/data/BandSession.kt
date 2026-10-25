@@ -25,6 +25,7 @@ class BandSession(private val me: Hello) {
         busy: () -> Boolean = { false },
         onPackage: (Hello, String) -> Boolean = { _, _ -> false },
         onAsk: (Hello, String) -> String? = { _, _ -> null },
+        onCodeAck: (Hello, String) -> Boolean = { _, _ -> false },
     ) {
         socket.use { s ->
             s.soTimeout = ANSWER_TIMEOUT_MS
@@ -38,6 +39,11 @@ class BandSession(private val me: Hello) {
             if (msg.kind == Kind.PACKAGE) {
                 val ok = isMember(them.id) && onPackage(them, msg.body)
                 BandProtocol.write(out, Message(if (ok) Kind.OK else Kind.DENIED))
+                return
+            }
+            // o "ok" das 3 palavras chegando pela rede local: quem aceitou o meu envio vira da banda (conferido pelo código)
+            if (msg.kind == Kind.CODE_ACK) {
+                BandProtocol.write(out, Message(if (onCodeAck(them, msg.body)) Kind.OK else Kind.DENIED))
                 return
             }
             // alguém da banda pergunta quem tem as músicas que faltam: responde sozinho, sem perguntar nada a ninguém
@@ -73,8 +79,8 @@ class BandSession(private val me: Hello) {
         }
     }.getOrDefault(JoinResult.FAILED)
 
-    /** Manda um pacote (já cifrado com a chave do par) para [expectedId]; true se ele guardou. */
-    fun send(socket: Socket, expectedId: String, body: String): Boolean = runCatching {
+    /** Manda um pacote (já cifrado com a chave do par; ou um [kind] CODE_ACK) para [expectedId]; true se ele guardou. */
+    fun send(socket: Socket, expectedId: String, body: String, kind: String = Kind.PACKAGE): Boolean = runCatching {
         socket.use { s ->
             s.soTimeout = SEND_TIMEOUT_MS
             val input = s.getInputStream().bufferedReader()
@@ -82,7 +88,7 @@ class BandSession(private val me: Hello) {
             BandProtocol.write(out, me)
             val them = BandProtocol.readHello(input) ?: return false
             if (them.id != expectedId) return false   // outro aparelho no mesmo endereço: não manda
-            BandProtocol.write(out, Message(Kind.PACKAGE, body))
+            BandProtocol.write(out, Message(kind, body))
             BandProtocol.readMessage(input)?.kind == Kind.OK
         }
     }.getOrDefault(false)

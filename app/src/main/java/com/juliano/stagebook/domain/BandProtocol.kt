@@ -28,6 +28,7 @@ object BandProtocol {
         const val OK = "ok"
         const val ASK = "ask"         // "quem tem estas músicas?" (lista cifrada); a resposta vem em ANSWER, também cifrada
         const val ANSWER = "answer"
+        const val CODE_ACK = "code_ack"   // o "ok" das 3 palavras entregue na rede local (ainda não somos da banda um do outro)
     }
 
     @Serializable

@@ -149,9 +149,15 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     // ---- caixa de entrada de cada par da banda, pela internet ----
 
-    /** Um pedaço de um pacote (até ~2 KB por mensagem: o ntfy aceita 4 KB e a cifra/Base64 aumentam). */
+    /**
+     * Uma mensagem da caixa de um par: um pedaço de pacote ([k] = "pkg"; até ~2 KB, o ntfy aceita 4 KB e a cifra/Base64
+     * aumentam), o recibo de um pacote ("rcpt", [p] = o pacote) ou o "bem-vindo" de quem passou a confiar ("welcome").
+     */
     @Serializable
-    private data class Chunk(val p: String, val i: Int, val n: Int, val d: String)
+    private data class Chunk(val p: String, val i: Int = 0, val n: Int = 1, val d: String = "", val k: String = "pkg")
+
+    /** O que chegou na caixa de um par: pacotes (id, lista, músicas), recibos dos meus envios e se ele me deu as boas-vindas. */
+    class PairFetch(val packages: List<Triple<String, String, List<SharedSong>>>, val receipts: List<String>, val welcome: Boolean, val last: String?)
 
     @Serializable
     private data class Pack(val list: String, val songs: List<SharedSong> = emptyList())
@@ -161,10 +167,9 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         "sb" + java.security.MessageDigest.getInstance("SHA-256").apply { update(pairKey); update("inbox|$recipientId".toByteArray()) }
             .digest().copyOf(16).joinToString("") { "%02x".format(it) }
 
-    /** Manda um pacote para a caixa de um aparelho da banda; true se todos os pedaços foram. */
-    suspend fun sendToPair(pairKey: ByteArray, recipientId: String, list: ByteArray, songs: List<SharedSong>): Boolean = withContext(Dispatchers.IO) {
+    /** Manda um pacote ([id] fixo: o reenvio usa o mesmo) para a caixa de um aparelho da banda; true se todos os pedaços foram. */
+    suspend fun sendToPair(pairKey: ByteArray, recipientId: String, list: ByteArray, songs: List<SharedSong>, id: String): Boolean = withContext(Dispatchers.IO) {
         val whole = pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
-        val id = java.util.UUID.randomUUID().toString().take(8)
         val parts = whole.toList().chunked(CHUNK).map { it.toByteArray() }
         val topic = pairTopic(pairKey, recipientId)
         parts.withIndex().all { (i, part) ->
@@ -173,21 +178,43 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }
     }
 
-    /** O que chegou na minha caixa vinda de um par: os pacotes completos e o id da última mensagem lida. */
-    suspend fun fetchPair(pairKey: ByteArray, since: String?): Pair<List<Pair<String, List<SharedSong>>>, String?>? = withContext(Dispatchers.IO) {
+    /** Recibo de um pacote, na caixa de quem mandou (para ele parar de reenviar). */
+    suspend fun receipt(pairKey: ByteArray, senderId: String, packageId: String) = withContext(Dispatchers.IO) {
+        post(pairTopic(pairKey, senderId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk(packageId, k = "rcpt")).toByteArray()))
+    }
+
+    /** "Agora você é da minha banda", na caixa do outro (o "ok" dele chegou; ele para de repetir). */
+    suspend fun welcome(pairKey: ByteArray, recipientId: String) = withContext(Dispatchers.IO) {
+        post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "welcome")).toByteArray()))
+    }
+
+    /** O que chegou na minha caixa vinda de um par, desde [since] (null = as últimas 12 h); null sem internet. */
+    suspend fun fetchPair(pairKey: ByteArray, since: String?): PairFetch? = withContext(Dispatchers.IO) {
         val lines = get("$SERVER/${pairTopic(pairKey, identity.id)}/json?poll=1&since=${since ?: "12h"}") ?: return@withContext null
         val msgs = messagesWithIds(lines)
-        val chunks = msgs.mapNotNull { (_, m) -> ShareCode.decrypt(pairKey, m)?.let { runCatching { json.decodeFromString<Chunk>(it.decodeToString()) }.getOrNull() } }
-        val packages = chunks.groupBy { it.p }.values.mapNotNull { parts ->
+        val all = msgs.mapNotNull { (_, m) -> ShareCode.decrypt(pairKey, m)?.let { runCatching { json.decodeFromString<Chunk>(it.decodeToString()) }.getOrNull() } }
+        val chunks = all.filter { it.k == "pkg" }
+        val packages = chunks.groupBy { it.p }.entries.mapNotNull { (pid, parts) ->
             val n = parts.first().n
             val ordered = parts.distinctBy { it.i }.sortedBy { it.i }
             if (ordered.size != n) return@mapNotNull null
             val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
             val pkg = unpack(PAIR_MARK, bytes)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
             val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
-            text to pkg.songs
+            Triple(pid, text, pkg.songs)
         }
-        packages to (msgs.lastOrNull()?.first ?: since)
+        PairFetch(packages, all.filter { it.k == "rcpt" }.map { it.p }, all.any { it.k == "welcome" }, msgs.lastOrNull()?.first ?: since)
+    }
+
+    /** O "ok" das palavras cifrado (para entregar também pela rede local, quando os dois se encontram). */
+    fun ackBody(input: String): String? {
+        val code = ShareCode.normalize(input) ?: return null
+        return ShareCode.encrypt(ShareCode.keys(code).key, pack(ACK_MARK, json.encodeToString(identity.hello())))
+    }
+
+    /** Confere um "ok" que chegou pela rede local contra os meus envios ([codes]): a identidade de quem aceitou, ou null. */
+    fun checkAckBody(body: String, codes: List<String>): BandProtocol.Hello? = codes.firstNotNullOfOrNull { code ->
+        ShareCode.decrypt(ShareCode.keys(code).key, body)?.let { unpack(ACK_MARK, it) }?.let(::hello)
     }
 
     private fun get(url: String): List<String>? = runCatching {

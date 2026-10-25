@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.juliano.stagebook.R
 import com.juliano.stagebook.data.BandInbox
 import com.juliano.stagebook.ui.components.AppIcons
@@ -27,13 +28,27 @@ import com.juliano.stagebook.ui.components.LightPreview
 import com.juliano.stagebook.ui.components.PreviewSurface
 import com.juliano.stagebook.ui.theme.Spacing
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 /** O que a banda mandou e ainda não foi conferido (para o aviso nas abas, o número no ícone e a lista). */
 @HiltViewModel
-class InboxViewModel @Inject constructor(private val inbox: BandInbox) : ViewModel() {
+class InboxViewModel @Inject constructor(
+    private val inbox: BandInbox,
+    private val bandInternet: com.juliano.stagebook.data.BandInternet,
+    trust: com.juliano.stagebook.data.BandTrust,
+) : ViewModel() {
     val items: StateFlow<List<BandInbox.Item>> = inbox.items
+
+    /** Tem alguém da banda ("Sincronizar com a banda" só aparece aí). */
+    val hasBand: StateFlow<Boolean> = trust.members.map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), trust.members.value.isNotEmpty())
+
+    /** Sincronizar agora (caixa da internet, reenvios, "ok" pendentes e 30 s de procura no Wi-Fi). */
+    fun syncNow() = bandInternet.syncNow()
     fun later(id: String) = inbox.markSeen(id)
     fun discard(id: String) = inbox.remove(id)
 }

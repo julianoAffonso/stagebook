@@ -66,6 +66,7 @@ fun SongsRoute(
     onReceiveCode: (String) -> Unit = {},
     received: Int = 0,
     onReceived: () -> Unit = {},
+    onSync: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val online by viewModel.online.collectAsStateWithLifecycle()
@@ -94,6 +95,7 @@ fun SongsRoute(
         onReceiveCode = onReceiveCode,
         received = received,
         onReceived = onReceived,
+        onSync = onSync,
     )
 }
 
@@ -121,6 +123,7 @@ fun SongsScreen(
     onBandSearch: (Boolean) -> Unit = {},
     received: Int = 0,
     onReceived: () -> Unit = {},
+    onSync: (() -> Unit)? = null,
 ) {
     val wide = wideLists()
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
@@ -151,7 +154,7 @@ fun SongsScreen(
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
                 // importar dos sites (com internet), ler o QR ou digitar o código: um botão, um menu
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived)
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync)
             }
             AnimatedVisibility(!online) {
                 Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {

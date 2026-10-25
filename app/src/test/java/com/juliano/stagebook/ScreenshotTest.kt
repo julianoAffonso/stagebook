@@ -508,7 +508,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScaffold(HomeTab.SONGS, {}) { com.juliano.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it) }
+                    HomeScaffold(HomeTab.SONGS, {}) { com.juliano.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, received = 2, onSync = {}) }
                 }
             }
         }

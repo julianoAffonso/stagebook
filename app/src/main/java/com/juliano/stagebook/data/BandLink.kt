@@ -129,6 +129,33 @@ class BandLink @Inject constructor(
         peers.filter { it.id in ids }
     }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
+    /** Quem confere um "ok" das 3 palavras que chegou pela rede (a [BandInternet], que guarda os meus envios). */
+    @Volatile var codeAckHandler: ((BandProtocol.Hello, String) -> Boolean)? = null
+
+    /** Manda para um aparelho da rede (pacote cifrado com a chave do par, ou um CODE_ACK); true se ele guardou. */
+    suspend fun sendTo(peer: Peer, body: String, kind: String = BandProtocol.Kind.PACKAGE): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        runCatching {
+            val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+            BandSession(identity.hello()).send(s, peer.id, body, kind)
+        }.getOrDefault(false)
+    }
+
+    /** O pacote (lista + músicas) cifrado para um membro, pronto para [sendTo]. */
+    fun packageFor(memberId: String, list: ByteArray, songs: List<SetlistCloud.SharedSong>): String? {
+        val key = pairKeyWith(memberId) ?: return null
+        val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
+        return ShareCode.encrypt(key, plain)
+    }
+
+    /**
+     * Procura a banda por pouco tempo (ao abrir o app com algo pendente: envios sem recibo, "ok" sem confirmação), para
+     * acertar com quem estiver no mesmo Wi-Fi. Nunca no palco (a procura já respeita isso).
+     */
+    fun burst(ms: Long = BURST_MS) {
+        setScreenOpen(true)
+        scope.launch { kotlinx.coroutines.delay(ms); setScreenOpen(false) }
+    }
+
     /** Manda um setlist ou músicas para todos da banda na rede agora; devolve os ids de quem recebeu. */
     suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Set<String> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
         val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
@@ -269,6 +296,7 @@ class BandLink @Inject constructor(
                         session.serve(
                             client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
                             busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
+                            onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false },
                         )
                     }
                 }
@@ -383,6 +411,7 @@ class BandLink @Inject constructor(
         const val ATTR_ID = "id"
         const val ATTR_NAME = "name"
         const val CONNECT_TIMEOUT_MS = 5_000
+        const val BURST_MS = 30_000L
         const val MAX_ASK = 200   // um setlist nunca passa disso; protege de pedido estranho
         val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // nomes da interface do ponto de acesso nos Androids
     }
