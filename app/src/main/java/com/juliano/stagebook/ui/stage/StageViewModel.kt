@@ -74,9 +74,8 @@ class StageViewModel @Inject constructor(
     override fun onCleared() {
         player.pause()   // sair do palco para o backing track
         stageGate.leave()
-        // saiu do palco do setlist que conduzia: a banda volta a ser cada um por si
-        val role = conduct.role.value
-        if (role is com.juliano.stagebook.data.BandConduct.Role.Conducting && role.setId == route.setId) conduct.end()
+        // sair do palco NÃO encerra o "Quem conduz" (pedido do usuário): no show a pessoa sai para conferir algo e a banda
+        // continua junto; só o "Encerrar" solta todos
     }
     private val route = savedStateHandle.toRoute<Stage>()
     /** Música em que o palco abre (posição no setlist). */
