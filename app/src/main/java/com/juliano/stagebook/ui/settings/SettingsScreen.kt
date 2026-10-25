@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.settings
 
+import androidx.core.net.toUri
+import com.juliano.stagebook.data.AppLinks
 import androidx.compose.runtime.DisposableEffect
 import com.juliano.stagebook.ui.band.BandViewModel
 import com.juliano.stagebook.ui.band.BandUi
@@ -254,6 +256,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 onExport = { exporter.launch("stagebook-biblioteca.json") },
                 onCheckUpdate = viewModel::checkUpdate,
+                onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 onDownloadUpdate = viewModel::downloadUpdate,
                 onInstallUpdate = install,
             ),
@@ -311,6 +314,7 @@ data class SettingsActions(
     val onImport: () -> Unit = {},
     val onExport: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
+    val onOpenLink: (String) -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
     val onInstallUpdate: () -> Unit = {},
 )
@@ -327,7 +331,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     LANGUAGE(R.string.settings_language, AppIcons.Translate),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
-    UPDATE(R.string.settings_update, AppIcons.Download),
+    ABOUT(R.string.settings_about, AppIcons.Info),   // sempre por último: o app, atualizar, privacidade, código, apoio
 }
 
 @Composable
@@ -436,7 +440,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.LANGUAGE -> languageLabel(ui.language)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
-    SettingsSection.UPDATE -> stringResource(R.string.settings_update_installed, ui.version) +
+    SettingsSection.ABOUT -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
     SettingsSection.LIBRARY -> pluralStringResource(R.plurals.song_count, ui.songCount, ui.songCount) + " · " +
         pluralStringResource(R.plurals.set_count, ui.setCount, ui.setCount)
@@ -456,7 +460,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
-            SettingsSection.UPDATE -> UpdateDetail(uiState, actions)
+            SettingsSection.ABOUT -> AboutDetail(uiState, actions)
         }
     }
 }
@@ -1129,6 +1133,29 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
             )
         }
         HelpTip(stringResource(R.string.settings_update_help))
+    }
+}
+
+// Sobre: o app, a atualização (procurar agora), privacidade em poucas linhas, o código aberto e o apoio (doação)
+@Composable
+private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.app_name)) {
+        Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge)
+    }
+    UpdateDetail(uiState, actions)
+    SettingsCard(stringResource(R.string.about_privacy)) {
+        Text(stringResource(R.string.about_privacy_text), style = MaterialTheme.typography.bodyMedium)
+    }
+    SettingsCard(stringResource(R.string.about_open_source)) {
+        Text(stringResource(R.string.about_open_source_text), style = MaterialTheme.typography.bodyMedium)
+        ActionButton(stringResource(R.string.about_see_code), { actions.onOpenLink(AppLinks.REPOSITORY) }, icon = AppIcons.Public, tone = ButtonTone.Tonal)
+    }
+    SettingsCard(stringResource(R.string.about_support)) {
+        Text(stringResource(R.string.about_support_text), style = MaterialTheme.typography.bodyMedium)
+        // o botão só aparece com o link de doação preenchido (AppLinks.DONATE)
+        if (AppLinks.DONATE.startsWith("https://")) {
+            ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Favorite)
+        }
     }
 }
 
