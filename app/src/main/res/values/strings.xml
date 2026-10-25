@@ -146,11 +146,11 @@
         <item quantity="one">%1$d da banda não respondeu</item>
         <item quantity="other">%1$d da banda não responderam</item>
     </plurals>
-    <string name="conduct_see_lacks">Ver faltas</string>
+    <string name="conduct_see_lacks">Ver o que falta</string>
     <string name="conduct_search">Procurar a banda</string>
     <string name="conduct_end">Encerrar</string>
     <string name="conduct_leave">Sair</string>
-    <string name="conduct_lacks_title">Músicas que faltam</string>
+    <string name="conduct_lacks_title">O que falta</string>
     <string name="conduct_lack_line">%1$s: %2$s</string>
     <string name="about_support">Apoie o Stagebook</string>
     <string name="about_support_text">O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café? Qualquer valor ajuda a manter o app e a trazer novidades.</string>
