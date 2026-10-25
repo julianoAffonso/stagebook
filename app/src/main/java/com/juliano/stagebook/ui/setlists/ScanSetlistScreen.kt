@@ -270,12 +270,23 @@ private fun Review(
             ActionButton(stringResource(R.string.scan_create), { go() }, Modifier.weight(1f), icon = AppIcons.Check, enabled = ui.name.isNotBlank() && found > 0)
         }
     }
+    // "Criar setlist" com música faltando: diz o que fica de fora e oferece o caminho certo (importar), contra o toque errado
     if (confirmMissing) {
         AlertDialog(
             onDismissRequest = { confirmMissing = false },
             title = { Text(pluralStringResource(R.plurals.scan_missing_title, ui.missing.size, ui.missing.size)) },
-            text = { Text(ui.missing.joinToString("\n") { "• " + it.title }, style = MaterialTheme.typography.bodyLarge) },
-            confirmButton = { TextButton(onClick = { confirmMissing = false; goName() }) { Text(stringResource(R.string.scan_create_anyway)) } },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    Text(ui.missing.joinToString("\n") { "• " + it.title }, style = MaterialTheme.typography.bodyLarge)
+                    if (toImport > 0) {
+                        ActionButton(
+                            pluralStringResource(R.plurals.scan_import_missing, toImport, toImport),
+                            { confirmMissing = false; goImport() }, Modifier.fillMaxWidth(), icon = AppIcons.Download,
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { confirmMissing = false; goName() }) { Text(stringResource(R.string.scan_create_without)) } },
             dismissButton = { TextButton(onClick = { confirmMissing = false }) { Text(stringResource(R.string.action_back)) } },
         )
     }
