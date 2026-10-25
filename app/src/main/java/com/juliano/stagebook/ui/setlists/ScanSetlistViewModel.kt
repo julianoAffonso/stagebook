@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.channels.Channel
 import com.juliano.stagebook.data.BandLink
+import com.juliano.stagebook.data.BandInternet
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -87,7 +88,10 @@ class ScanSetlistViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val inbox: BandInbox,
     private val bandLink: BandLink,
+    private val bandInternet: BandInternet,
 ) : ViewModel() {
+    // quem mandou pelas 3 palavras: ao aceitar, vira da banda (e recebe o meu "ok")
+    private var sender: com.juliano.stagebook.domain.BandProtocol.Hello? = null
     /** Quantos da banda estão na rede agora ("Pedir à banda" só aparece com alguém e com música faltando). */
     val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
@@ -131,7 +135,10 @@ class ScanSetlistViewModel @Inject constructor(
 
     /** Veio da banda (caixa de entrada): quem mandou, para o título; conferido, sai da caixa. */
     val fromName: String = inbox.get(route.inbox)?.fromName.orEmpty()
-    private fun done() { if (route.inbox.isNotEmpty()) inbox.remove(route.inbox) }
+    private fun done() {
+        if (route.inbox.isNotEmpty()) inbox.remove(route.inbox)
+        if (code.isNotEmpty()) bandInternet.accepted(code, sender)
+    }
 
     private val _ui = MutableStateFlow<ScanUi>(if (code.isEmpty() && route.inbox.isEmpty()) ScanUi.Scanning() else ScanUi.Fetching())
     val ui: StateFlow<ScanUi> = _ui
@@ -194,7 +201,7 @@ class ScanSetlistViewModel @Inject constructor(
         _ui.value = ScanUi.Fetching()
         viewModelScope.launch {
             when (val r = cloud.receive(code)) {
-                is SetlistCloud.Received.Ok -> review(r.text, r.songs)
+                is SetlistCloud.Received.Ok -> { sender = r.from; review(r.text, r.songs) }
                 SetlistCloud.Received.NotFound -> _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND)
                 SetlistCloud.Received.Offline -> _ui.value = ScanUi.Fetching(CodeProblem.OFFLINE)
             }

@@ -1,5 +1,6 @@
 package com.juliano.stagebook
 
+import com.juliano.stagebook.data.BandInternet
 import com.juliano.stagebook.data.StageGate
 import com.juliano.stagebook.ui.band.BandRequestDialog
 import com.juliano.stagebook.data.BandLink
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var midi: MidiPedal
     @Inject lateinit var band: BandLink
     @Inject lateinit var stageGate: StageGate
+    @Inject lateinit var bandInternet: BandInternet
     private val pedal = PedalInput()
 
     // língua escolhida nos ajustes (trocar recria a Activity)
@@ -101,6 +103,7 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         updateOffer.onEnter()   // versão nova do app: procura em segundo plano e pergunta fora do palco
         band.setForeground(true)   // banda na rede: só com o app na frente
+        bandInternet.onAppOpen()   // banda pela internet: confere a caixa uma vez, ao abrir
     }
 
     override fun onStop() {

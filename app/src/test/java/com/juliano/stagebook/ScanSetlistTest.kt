@@ -32,6 +32,12 @@ class ScanSetlistTest {
         com.juliano.stagebook.data.StageGate(), com.juliano.stagebook.data.BandInbox(context), repo,
     )
 
+    private fun bandInternet(repo: LibraryRepository) = com.juliano.stagebook.data.BandInternet(
+        context, com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)),
+        com.juliano.stagebook.data.BandTrust(context), com.juliano.stagebook.data.DeviceIdentity(context),
+        com.juliano.stagebook.data.BandInbox(context), com.juliano.stagebook.data.Connectivity(context),
+    )
+
     private fun qr(name: String, vararg titles: String) =
         (listOf(QrPayload.HEADER, titles.size.toString(), name) + titles).joinToString("\n")
 
@@ -39,7 +45,7 @@ class ScanSetlistTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
-        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context), bandLink(repo)), ids)
+        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo)), ids)
     }
 
     @Test fun `QR com todas as músicas cria o setlist na ordem do QR`() {
@@ -136,8 +142,8 @@ class ScanSetlistTest {
         repo.updateLook { it.copy(chords = true) }
         val queue = com.juliano.stagebook.data.ImportQueue(repo)
         val vm = ScanSetlistViewModel(
-            repo, queue, com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")),
-            com.juliano.stagebook.data.BandInbox(context), bandLink(repo),
+            repo, queue, com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")),
+            com.juliano.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo),
         )
         vm.review(qr("Show", "Noite Clara", "Só Letra"), listOf(com.juliano.stagebook.data.SetlistCloud.SharedSong("Só Letra", "", text = "linha um\nlinha dois")))
         val row = (vm.ui.value as ScanUi.Review).rows[1]
@@ -148,6 +154,25 @@ class ScanSetlistTest {
         assertTrue(repo.library.value.songs.none { it.title == "Só Letra" })
         assertEquals(listOf(ids[1]), repo.library.value.setlist(queue.state.value!!.setId)!!.items)
         queue.stop()
+    }
+
+    @Test fun `caixa pela internet - os dois do par acham o mesmo canal e um terceiro não`() {
+        val (repo, _, _) = setup()
+        val cloud = com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context))
+        val a = com.juliano.stagebook.domain.BandCrypto.newKeyPair()
+        val b = com.juliano.stagebook.domain.BandCrypto.newKeyPair()
+        val c = com.juliano.stagebook.domain.BandCrypto.newKeyPair()
+        val ida = com.juliano.stagebook.domain.BandCrypto.idOf(com.juliano.stagebook.domain.BandCrypto.encode(a.public))
+        val idb = com.juliano.stagebook.domain.BandCrypto.idOf(com.juliano.stagebook.domain.BandCrypto.encode(b.public))
+        val idc = com.juliano.stagebook.domain.BandCrypto.idOf(com.juliano.stagebook.domain.BandCrypto.encode(c.public))
+        val ab = com.juliano.stagebook.domain.BandCrypto.pairKey(a.private, ida, b.public, idb)
+        val ba = com.juliano.stagebook.domain.BandCrypto.pairKey(b.private, idb, a.public, ida)
+        val cb = com.juliano.stagebook.domain.BandCrypto.pairKey(c.private, idc, b.public, idb)
+        assertEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ba, idb))   // a manda para b; b procura na caixa dele
+        assertNotEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(cb, idb))
+        assertNotEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ab, ida))  // a caixa de cada um é separada
+        val lines = listOf("""{"id":"x1","event":"message","message":"m"}""", """{"id":"x2","event":"keepalive"}""")
+        assertEquals(listOf("x1" to "m"), com.juliano.stagebook.data.SetlistCloud.messagesWithIds(lines))
     }
 
     @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {

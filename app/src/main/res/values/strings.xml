@@ -507,15 +507,15 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <!-- compartilhar o setlist (QR, internet; a banda na rede local entra quando existir) -->
     <string name="share_title">Compartilhar</string>
     <plurals name="share_band">
-        <item quantity="one">Banda na rede (%1$d aparelho)</item>
-        <item quantity="other">Banda na rede (%1$d aparelhos)</item>
+        <item quantity="one">Mandar para a banda (%1$d aparelho)</item>
+        <item quantity="other">Mandar para a banda (%1$d aparelhos)</item>
     </plurals>
-    <string name="share_band_hint">Chega sozinho para quem é da banda e está neste Wi-Fi; cada um confere antes de entrar.</string>
+    <string name="share_band_hint">Quem está neste Wi-Fi recebe na hora; os outros, pela internet, quando abrirem o app (em até 12 horas). Cada um confere antes de entrar.</string>
     <plurals name="share_band_sent">
         <item quantity="one">Enviado para %1$d aparelho da banda</item>
         <item quantity="other">Enviado para %1$d aparelhos da banda</item>
     </plurals>
-    <string name="share_band_failed">Ninguém da banda recebeu. Confira se estão no mesmo Wi-Fi com o app aberto.</string>
+    <string name="share_band_failed">Não deu para mandar para a banda. Confira o Wi-Fi ou a internet e tente de novo.</string>
     <string name="share_qr">QR na tela</string>
     <string name="share_qr_hint">Quem está do lado lê com a câmera. Só os títulos.</string>
     <string name="share_internet">Enviar pela internet</string>
@@ -542,6 +542,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="share_sent_hint">No outro aparelho: Importar → Digitar as 3 palavras. Ou Importar → Ler QR apontando para este QR. Valem por 12 horas.</string>
     <string name="share_send_code">Mandar por mensagem</string>
     <string name="share_message_songs">Músicas no Stagebook. Para receber: Importar → Digitar as 3 palavras → %1$s (vale por 12 horas).</string>
+    <string name="share_joined">%1$s aceitou e agora é da banda</string>
     <string name="share_copy">Copiar as palavras</string>
     <string name="share_copied">Palavras copiadas</string>
     <string name="share_code_qr">QR das palavras: tire uma foto ou leia em Importar → Ler QR</string>

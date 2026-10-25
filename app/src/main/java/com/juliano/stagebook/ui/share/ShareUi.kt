@@ -152,7 +152,8 @@ fun rememberCodeActions(): CodeActions {
 @Immutable
 sealed interface CloudUi {
     data object Sending : CloudUi
-    data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null) : CloudUi
+    /** [joined]: quem já aceitou e virou da banda (aparece no diálogo enquanto ele está aberto). */
+    data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null, val joined: List<String> = emptyList()) : CloudUi
     data object Failed : CloudUi
 }
 
@@ -281,6 +282,9 @@ fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
         }
         ActionButton(stringResource(R.string.share_copy), onCopy, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
         Text(pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs), style = MaterialTheme.typography.bodyMedium)
+        sent.joined.forEach { name ->
+            Text(stringResource(R.string.share_joined, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        }
         if (sent.skipped > 0) {
             Text(pluralStringResource(R.plurals.share_skipped, sent.skipped, sent.skipped), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }

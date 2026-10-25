@@ -18,6 +18,14 @@ import javax.inject.Singleton
  */
 @Singleton
 class Connectivity @Inject constructor(@ApplicationContext private val context: Context) {
+    /** Tem internet agora (uma leitura, sem ficar observando). */
+    fun isOnline(): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return true
+        return cm.getNetworkCapabilities(cm.activeNetwork)?.let {
+            it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && it.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } == true
+    }
+
     val online: Flow<Boolean> = callbackFlow {
         val cm = context.getSystemService(ConnectivityManager::class.java)
         if (cm == null) { trySend(true); awaitClose { }; return@callbackFlow }
