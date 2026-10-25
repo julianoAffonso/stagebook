@@ -213,7 +213,7 @@ class ScreenshotTest {
                 settings.copy(update = com.juliano.stagebook.ui.settings.UpdateState.Available("0.3.52 (9f1c2ab)")),
                 SettingsActions(),
                 it,
-                section = com.juliano.stagebook.ui.settings.SettingsSection.UPDATE,
+                section = com.juliano.stagebook.ui.settings.SettingsSection.ABOUT,
             )
         }
     }
