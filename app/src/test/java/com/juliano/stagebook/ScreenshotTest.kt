@@ -606,6 +606,20 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
+    fun scanCreateWarningPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    com.juliano.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
+                }
+            }
+        }
+        compose.onAllNodesWithText("Criar setlist")[0].performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_conferencia_criar_aviso.png")
+    }
+
+    @Test @Config(qualifiers = PHONE)
     fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
             com.juliano.stagebook.ui.setlists.ScanUi.Scanning(com.juliano.stagebook.ui.setlists.ScanProblem.INCOMPLETE), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},

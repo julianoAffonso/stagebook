@@ -490,7 +490,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="one">%1$d música vai ficar de fora</item>
         <item quantity="other">%1$d músicas vão ficar de fora</item>
     </plurals>
-    <string name="scan_create_anyway">Criar assim</string>
+    <string name="scan_create_without">Criar sem elas</string>
     <string name="scan_name_taken">Já existe um setlist com esse nome</string>
     <string name="scan_name_taken_text">Trocar as músicas do setlist \"%1$s\" pelas do QR, ou criar outro?</string>
     <string name="scan_replace">Substituir</string>
