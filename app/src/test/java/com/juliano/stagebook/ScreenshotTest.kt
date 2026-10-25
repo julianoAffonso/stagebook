@@ -592,6 +592,20 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
+    fun scanLyricsOnlyPhone() = shoot("jornada_conferencia_so_letra") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
+            scanReview.copy(
+                rows = listOf(
+                    com.juliano.stagebook.ui.setlists.ScanRow("Canção de teste", "", true, emptyList(), "1"),
+                    com.juliano.stagebook.ui.setlists.ScanRow("Música do vocalista", "", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
+                    com.juliano.stagebook.ui.setlists.ScanRow("Outra só letra", "", false, emptyList(), null, wantChords = true),
+                ),
+            ),
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Celular da Ana",
+        )
+    }
+
+    @Test @Config(qualifiers = PHONE)
     fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
             com.juliano.stagebook.ui.setlists.ScanUi.Scanning(com.juliano.stagebook.ui.setlists.ScanProblem.INCOMPLETE), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},

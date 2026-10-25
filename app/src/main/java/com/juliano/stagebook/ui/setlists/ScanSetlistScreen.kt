@@ -100,6 +100,7 @@ fun ScanSetlistRoute(
         onBandSearch = viewModel::bandSearch,
         changes = viewModel::changes,
         onUseIncoming = viewModel::useIncoming,
+        onWantChords = viewModel::searchWithChords,
         onRetry = viewModel::fetch,
     )
 }
@@ -132,6 +133,7 @@ fun ScanSetlistScreen(
     onBandSearch: (Boolean) -> Unit = {},
     changes: (Int) -> List<SongMerge.Change> = { emptyList() },
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
+    onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // linha com "Ver o que muda" aberto
     CenteredContent(Modifier.fillMaxSize()) {
@@ -156,8 +158,8 @@ fun ScanSetlistScreen(
                         if (missing) onBandSearch(true)
                         onDispose { if (missing) onBandSearch(false) }
                     }
-                    if (ui.songsOnly) SongsReview(ui, onAddSongs) { comparing = it }
-                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand) { comparing = it }
+                    if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords)
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords)
                     comparing?.let { i ->
                         ChangesDialog(
                             changes(i), useIncoming = ui.rows.getOrNull(i)?.useIncoming == true,
@@ -215,6 +217,7 @@ private fun Review(
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
     onCompare: (Int) -> Unit = {},
+    onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -240,7 +243,7 @@ private fun Review(
             verticalArrangement = Arrangement.spacedBy(Spacing.s),
             contentPadding = PaddingValues(bottom = Spacing.s),
         ) {
-            itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }) }
+            itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }, { onWantChords(i, it) }) }
         }
         // antes dos sites: pedir à banda na rede (só aparece com alguém da banda por perto)
         if (toImport > 0 && band > 0) {
@@ -285,7 +288,7 @@ private fun Review(
 
 // músicas avulsas recebidas: as novas entram na biblioteca; as que já estão aqui ficam como estão
 @Composable
-private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -> Unit) {
+private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -> Unit, onWantChords: (Int, Boolean) -> Unit = { _, _ -> }) {
     val new = ui.rows.count { it.carried }
     val updates = ui.rows.count { it.useIncoming }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -298,6 +301,7 @@ private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -
                 Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                         val (icon, tint, note) = when {
+                            row.wantChords -> Triple(AppIcons.Public, MaterialTheme.colorScheme.tertiary, R.string.scan_song_declined)
                             row.carried && row.lyricsOnly -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
                             row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
                             row.differs && row.useIncoming -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_version_theirs)
@@ -311,6 +315,8 @@ private fun SongsReview(ui: ScanUi.Review, onAdd: () -> Unit, onCompare: (Int) -
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
                         }
                         if (row.differs) TextButton(onClick = { onCompare(i) }) { Text(stringResource(R.string.scan_see_changes)) }
+                        if (row.carried && row.lyricsOnly) TextButton(onClick = { onWantChords(i, true) }) { Text(stringResource(R.string.scan_dont_add)) }
+                        if (row.wantChords) TextButton(onClick = { onWantChords(i, false) }) { Text(stringResource(R.string.scan_accept_lyrics)) }
                     }
                 }
             }
@@ -343,12 +349,14 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
 
 // uma música do QR: achada (✓), com dúvida (escolher ou deixar de fora) ou que não está na biblioteca (aviso)
 @Composable
-private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> Unit = {}) {
+private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> Unit = {}, onWantChords: (Boolean) -> Unit = {}) {
     Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 val (icon, tint) = when {
                     row.found -> AppIcons.Check to MaterialTheme.colorScheme.primary
+                    row.wantChords -> AppIcons.Public to MaterialTheme.colorScheme.tertiary
+                    row.carried && row.lyricsOnly -> AppIcons.Download to MaterialTheme.colorScheme.tertiary
                     row.carried -> AppIcons.Download to MaterialTheme.colorScheme.primary
                     row.candidates.isEmpty() -> AppIcons.Warning to MaterialTheme.colorScheme.error
                     else -> AppIcons.Info to MaterialTheme.colorScheme.tertiary
@@ -368,6 +376,15 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit, onCompare: () -> 
                     TextButton(onClick = onCompare) { Text(stringResource(R.string.scan_see_changes)) }
                 }
                 row.found -> Unit
+                // perfil letra e cifra: a que veio só com a letra pode ser recusada e ir buscar com cifra nos sites
+                row.wantChords -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.scan_want_chords_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { onWantChords(false) }) { Text(stringResource(R.string.scan_accept_lyrics)) }
+                }
+                row.carried && row.lyricsOnly -> Column {
+                    Text(stringResource(R.string.scan_lyrics_only_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
+                    TextButton(onClick = { onWantChords(true) }) { Text(stringResource(R.string.scan_search_chords)) }
+                }
                 row.carried -> Text(
                     stringResource(
                         when {

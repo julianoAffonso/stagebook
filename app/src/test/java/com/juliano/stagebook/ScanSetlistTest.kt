@@ -131,6 +131,25 @@ class ScanSetlistTest {
         assertTrue(text.contains("Segunda linha corrigida"))
     }
 
+    @Test fun `modo cifra - recusar a que veio só com a letra manda para a fila de importação`() {
+        val (repo, _, ids) = setup()
+        repo.updateLook { it.copy(chords = true) }
+        val queue = com.juliano.stagebook.data.ImportQueue(repo)
+        val vm = ScanSetlistViewModel(
+            repo, queue, com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")),
+            com.juliano.stagebook.data.BandInbox(context), bandLink(repo),
+        )
+        vm.review(qr("Show", "Noite Clara", "Só Letra"), listOf(com.juliano.stagebook.data.SetlistCloud.SharedSong("Só Letra", "", text = "linha um\nlinha dois")))
+        val row = (vm.ui.value as ScanUi.Review).rows[1]
+        assertTrue(row.carried && row.lyricsOnly)
+        vm.searchWithChords(1, true)
+        assertTrue(vm.createAndImport())
+        assertEquals("Só Letra", queue.state.value!!.current!!.title)
+        assertTrue(repo.library.value.songs.none { it.title == "Só Letra" })
+        assertEquals(listOf(ids[1]), repo.library.value.setlist(queue.state.value!!.setId)!!.items)
+        queue.stop()
+    }
+
     @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {
         val (_, vm, _) = setup()
         vm.onText(listOf(QrPayload.HEADER, "3", "Show", "A").joinToString("\n"))
