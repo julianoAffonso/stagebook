@@ -113,6 +113,24 @@ class ScanSetlistTest {
         assertTrue(repo.library.value.songs.any { it.title == "Música Nova" && it.text == "[C]nova" })
     }
 
+    @Test fun `outra versão - por padrão fica a minha - escolhendo a recebida entra sem perder a minha cifra`() {
+        val (repo, vm, ids) = setup()
+        repo.updateSong(ids[0]) { it.copy(text = "[G]Primeira linha\n[C]Segunda linha") }
+        val incoming = com.juliano.stagebook.data.SetlistCloud.SharedSong("Canção do Mar", "Banda", text = "Primeira linha\nSegunda linha corrigida")
+        vm.review(qr("", "Canção do Mar"), listOf(incoming))
+        assertTrue((vm.ui.value as ScanUi.Review).rows[0].differs)
+        assertEquals(2, vm.changes(0).size)
+        vm.addSongs()
+        assertEquals("[G]Primeira linha\n[C]Segunda linha", repo.song(ids[0])!!.text)   // não escolheu: a minha fica
+
+        vm.review(qr("", "Canção do Mar"), listOf(incoming))
+        vm.useIncoming(0, true)
+        vm.addSongs()
+        val text = repo.song(ids[0])!!.text
+        assertTrue(text.contains("[G]Primeira linha"))
+        assertTrue(text.contains("Segunda linha corrigida"))
+    }
+
     @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {
         val (_, vm, _) = setup()
         vm.onText(listOf(QrPayload.HEADER, "3", "Show", "A").joinToString("\n"))

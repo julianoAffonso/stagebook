@@ -21,6 +21,7 @@ import com.juliano.stagebook.domain.QrPayload
 import com.juliano.stagebook.domain.SetlistMatcher
 import com.juliano.stagebook.domain.ShareCode
 import com.juliano.stagebook.domain.SongMatch
+import com.juliano.stagebook.domain.SongMerge
 import com.juliano.stagebook.domain.TextKey
 import com.juliano.stagebook.navigation.ScanSetlist
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,6 +49,9 @@ data class ScanRow(
     val chosen: String?,
     val carried: Boolean = false,
     val fromBand: Boolean = false,   // a banda tinha (pedida na conferência)
+    val differs: Boolean = false,    // já tenho, mas a que chegou é outra versão: o usuário escolhe
+    val lyricsOnly: Boolean = false, // perfil letra e cifra, mas a que chegou veio sem cifra
+    val useIncoming: Boolean = false,
 )
 
 enum class ScanProblem { NOT_SETLIST, INCOMPLETE }
@@ -111,7 +115,7 @@ class ScanSetlistViewModel @Inject constructor(
                 val rows = now.rows.mapIndexed { i, r ->
                     if (r.chosen != null || r.carried) return@mapIndexed r
                     val s = got.firstOrNull { TextKey.of(it.title) == TextKey.of(r.title) && SongMatch.sameArtistKey(TextKey.of(it.author), TextKey.of(r.artist)) }
-                    if (s == null) r else { came[i] = s; r.copy(carried = true, fromBand = true) }
+                    if (s == null) r else { came[i] = s; r.copy(carried = true, fromBand = true, lyricsOnly = noChords(s)) }
                 }
                 carried = came
                 _ui.value = now.copy(rows = rows)
@@ -133,6 +137,30 @@ class ScanSetlistViewModel @Inject constructor(
 
     // músicas que vieram junto, por linha da conferência
     private var carried: Map<Int, SetlistCloud.SharedSong> = emptyMap()
+    // outra versão de uma música que já tenho, por linha (só usada se o usuário escolher)
+    private var incoming: Map<Int, SetlistCloud.SharedSong> = emptyMap()
+
+    /** O que muda da minha para a recebida, na linha [index] (para "Ver o que muda"). */
+    fun changes(index: Int): List<SongMerge.Change> {
+        val ui = _ui.value as? ScanUi.Review ?: return emptyList()
+        val mine = ui.rows.getOrNull(index)?.chosen?.let(repository::song) ?: return emptyList()
+        val theirs = incoming[index] ?: return emptyList()
+        return SongMerge.changes(mine.text, theirs.text)
+    }
+
+    /** Manter a minha (false) ou usar a recebida (true) na linha [index]. */
+    fun useIncoming(index: Int, use: Boolean) = _ui.update { ui ->
+        if (ui !is ScanUi.Review) ui else ui.copy(rows = ui.rows.mapIndexed { i, r -> if (i == index) r.copy(useIncoming = use) else r })
+    }
+
+    // as recebidas escolhidas entram por cima das minhas, sem apagar a minha cifra
+    private fun applyIncoming(ui: ScanUi.Review) {
+        ui.rows.forEachIndexed { i, r ->
+            val theirs = incoming[i] ?: return@forEachIndexed
+            val id = r.chosen ?: return@forEachIndexed
+            if (r.useIncoming) repository.updateSong(id) { it.copy(text = SongMerge.accept(it.text, theirs.text)) }
+        }
+    }
 
     init {
         when {
@@ -170,6 +198,7 @@ class ScanSetlistViewModel @Inject constructor(
         val parsed = QrPayload.parse(text) ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND); return }
         val library = repository.library.value.songs
         val came = mutableMapOf<Int, SetlistCloud.SharedSong>()
+        val other = mutableMapOf<Int, SetlistCloud.SharedSong>()
         val songsOnly = parsed.name.isEmpty()
         fun came(e: QrPayload.Entry) = songs.firstOrNull { s ->
             TextKey.of(s.title) == TextKey.of(e.title) && SongMatch.sameArtistKey(TextKey.of(s.author), TextKey.of(e.artist))
@@ -180,17 +209,27 @@ class ScanSetlistViewModel @Inject constructor(
             val c = if (m is QrMatch.Missing || (songsOnly && m is QrMatch.Similar)) came(e) else null
             if (c != null) came[i] = c
             when {
-                m is QrMatch.Found -> ScanRow(e.title, e.artist, true, listOf(m.song.ref()), m.song.id)
-                c != null -> ScanRow(e.title, e.artist, false, emptyList(), null, carried = true)
+                m is QrMatch.Found -> {
+                    // já tenho: se veio outra versão junto, a linha pergunta (a minha fica, a não ser que eu escolha)
+                    val theirs = came(e)?.takeIf { !SongMerge.same(it.text, m.song.text) }
+                    if (theirs != null) other[i] = theirs
+                    ScanRow(e.title, e.artist, true, listOf(m.song.ref()), m.song.id, differs = theirs != null)
+                }
+                c != null -> ScanRow(e.title, e.artist, false, emptyList(), null, carried = true, lyricsOnly = noChords(c))
                 m is QrMatch.Similar -> ScanRow(e.title, e.artist, false, m.candidates.map { it.ref() }, null)
                 else -> ScanRow(e.title, e.artist, false, emptyList(), null)
             }
         }
         carried = came
+        incoming = other
         _ui.value = ScanUi.Review(parsed.name, rows, songsOnly)
     }
 
     private fun Song.ref() = SongRef(id, title, author)
+
+    // no perfil letra e cifra, avisa a música que chegou só com a letra (falta a cifra)
+    private fun noChords(s: SetlistCloud.SharedSong) =
+        repository.library.value.look.chords && !com.juliano.stagebook.domain.Chords.hasChords(s.text)
 
     fun setName(name: String) = _ui.update { if (it is ScanUi.Review) it.copy(name = name) else it }
 
@@ -204,6 +243,7 @@ class ScanSetlistViewModel @Inject constructor(
     /** Músicas avulsas: as que vieram e não estão aqui entram na biblioteca; devolve quantas. */
     fun addSongs(): Int {
         carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = s.text)) }
+        (_ui.value as? ScanUi.Review)?.let(::applyIncoming)
         done()
         return carried.size
     }
@@ -222,6 +262,7 @@ class ScanSetlistViewModel @Inject constructor(
         }
         val id = replaceId ?: repository.createSetlist(uniqueName(ui.name.trim()))
         repository.setSetlistItems(id, slots.filterNotNull())
+        applyIncoming(ui)
         done()
         return id to slots
     }
