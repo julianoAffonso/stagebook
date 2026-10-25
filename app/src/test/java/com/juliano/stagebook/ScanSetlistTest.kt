@@ -27,6 +27,11 @@ import org.robolectric.annotation.Config
 class ScanSetlistTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
+    private fun bandLink(repo: LibraryRepository) = com.juliano.stagebook.data.BandLink(
+        context, com.juliano.stagebook.data.DeviceIdentity(context), com.juliano.stagebook.data.BandTrust(context),
+        com.juliano.stagebook.data.StageGate(), com.juliano.stagebook.data.BandInbox(context), repo,
+    )
+
     private fun qr(name: String, vararg titles: String) =
         (listOf(QrPayload.HEADER, titles.size.toString(), name) + titles).joinToString("\n")
 
@@ -34,7 +39,7 @@ class ScanSetlistTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
-        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context)), ids)
+        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context), bandLink(repo)), ids)
     }
 
     @Test fun `QR com todas as músicas cria o setlist na ordem do QR`() {

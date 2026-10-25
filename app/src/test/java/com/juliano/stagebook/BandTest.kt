@@ -128,6 +128,25 @@ class BandTest {
         assertNull(text)
     }
 
+    @Test fun `pedir à banda - quem é da banda responde sozinho - quem não é não recebe resposta`() {
+        val a = Device("Tablet da Ana")
+        val b = Device("Celular do Beto")
+        fun ask(member: Boolean): String? {
+            val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+            val t = thread {
+                runBlocking {
+                    BandSession(a.hello).serve(server.accept(), { member }, { error("não pergunta nada") }, {}, onAsk = { _, body -> "resposta:$body" })
+                }
+            }
+            val r = BandSession(b.hello).ask(Socket(InetAddress.getLoopbackAddress(), server.localPort), a.id, "pedido")
+            t.join(5_000)
+            server.close()
+            return r
+        }
+        assertEquals("resposta:pedido", ask(member = true))
+        assertNull(ask(member = false))
+    }
+
     @Test fun `hello com id que não é da chave é recusado`() {
         val a = Device("Tablet da Ana")
         val fake = BandProtocol.Hello("0".repeat(32), "Falso", a.pub)
