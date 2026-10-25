@@ -1,5 +1,10 @@
 package com.juliano.stagebook.data
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.stateIn
+import com.juliano.stagebook.domain.ShareCode
+import com.juliano.stagebook.domain.QrPayload
+import com.juliano.stagebook.domain.BandCrypto
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -44,7 +49,13 @@ class BandLink @Inject constructor(
     private val identity: DeviceIdentity,
     private val trust: BandTrust,
     private val stage: StageGate,
+    private val inbox: BandInbox,
 ) {
+    /** O que vai num pacote da banda: a lista (no formato do QR, em Base64) e as músicas. */
+    @kotlinx.serialization.Serializable
+    private data class Package(val list: String, val songs: List<SetlistCloud.SharedSong> = emptyList())
+
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
     /** Um aparelho com o Stagebook na mesma rede. */
     @Immutable
     data class Peer(val id: String, val name: String, val host: InetAddress, val port: Int)
@@ -75,7 +86,8 @@ class BandLink @Inject constructor(
     val running: StateFlow<Boolean> = _running
 
     private var foreground = false
-    private var screenOpen = false
+    private var searchUsers = 0   // telas abertas que precisam achar os outros (Ajustes → Banda, folha Compartilhar)
+    private val screenOpen get() = searchUsers > 0
     private var server: ServerSocket? = null
     private var serverJob: Job? = null
     private var registration: NsdManager.RegistrationListener? = null
@@ -106,8 +118,44 @@ class BandLink @Inject constructor(
     /** No Wi-Fi agora (a tela mostra "conecte no Wi-Fi" sem ele). */
     val wifi: StateFlow<Boolean> = _wifi
 
-    /** A tela Ajustes → Banda está aberta (para alguém novo achar este aparelho). */
-    fun setScreenOpen(on: Boolean) { screenOpen = on; update() }
+    /** Uma tela que precisa achar os outros abriu (true) ou fechou (false): Ajustes → Banda, a folha Compartilhar. */
+    @Synchronized
+    fun setScreenOpen(on: Boolean) { searchUsers = (searchUsers + if (on) 1 else -1).coerceAtLeast(0); update() }
+
+    /** Quem é da banda e está na rede agora (para "Banda na rede (N)"). */
+    val onlineMembers: StateFlow<List<Peer>> = kotlinx.coroutines.flow.combine(_peers, trust.members) { peers, members ->
+        val ids = members.map { it.id }.toSet()
+        peers.filter { it.id in ids }
+    }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
+
+    /** Manda um setlist ou músicas para todos da banda na rede agora; devolve para quantos chegou. */
+    suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Int = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
+        val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
+        onlineMembers.value.map { peer ->
+            this@io.async {
+                val member = trust.member(peer.id) ?: return@async false
+                val theirs = BandCrypto.publicKey(member.key) ?: return@async false
+                val key = BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
+                runCatching {
+                    val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                    BandSession(identity.hello()).send(s, peer.id, ShareCode.encrypt(key, plain))
+                }.getOrDefault(false)
+            }
+        }.count { it.await() }
+    }
+
+    // pacote de alguém da banda: decifra com a chave do par e guarda na caixa de entrada
+    private fun receive(from: BandProtocol.Hello, body: String): Boolean {
+        val member = trust.member(from.id) ?: return false
+        val theirs = BandCrypto.publicKey(member.key) ?: return false
+        val key = BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
+        val plain = ShareCode.decrypt(key, body) ?: return false
+        val pkg = runCatching { json.decodeFromString(Package.serializer(), plain.decodeToString()) }.getOrNull() ?: return false
+        val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return false
+        if (QrPayload.parse(text) == null) return false
+        inbox.add(member.id, from.name.ifBlank { member.name }, text, pkg.songs)
+        return true
+    }
 
     @Synchronized
     fun update() {
@@ -170,7 +218,10 @@ class BandLink @Inject constructor(
                 val client = runCatching { socket.accept() }.getOrNull() ?: break
                 launch {
                     runCatching {
-                        session.serve(client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() }, busy = { stage.onStage.value })
+                        session.serve(
+                            client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
+                            busy = { stage.onStage.value }, onPackage = ::receive,
+                        )
                     }
                 }
             }

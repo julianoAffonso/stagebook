@@ -41,33 +41,40 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
      * Envia o setlist (e, com [withSongs], cada música numa mensagem própria, antes do setlist: quem recebe nunca vê o
      * setlist sem as músicas). Devolve o código, ou null se não deu (sem internet, serviço fora, setlist grande demais).
      */
-    suspend fun send(setId: String, withSongs: Boolean): Sent? {
+    /** O pacote de um setlist: a lista (o mesmo do QR) e, com [withSongs], as músicas. Vale para a internet e a banda. */
+    fun setlistPackage(setId: String, withSongs: Boolean): Pair<ByteArray, List<SharedSong>>? {
         val lib = repository.library.value
         val set = lib.setlist(setId) ?: return null
         val packed = repository.qrPayload(setId) ?: return null
-        return sendPackage(packed, if (withSongs) set.items.mapNotNull(lib::song) else emptyList())
+        return packed to if (withSongs) set.items.mapNotNull(lib::song).map { it.shared() } else emptyList()
     }
 
     /**
      * Músicas avulsas (da aba Músicas), sem setlist: a lista vai no mesmo formato do setlist, **sem nome** — é assim que
      * quem recebe sabe que são só músicas para a biblioteca.
      */
-    suspend fun sendSongs(songIds: List<String>): Sent? {
+    fun songsPackage(songIds: List<String>): Pair<ByteArray, List<SharedSong>>? {
         val songs = songIds.mapNotNull(repository.library.value::song)
         if (songs.isEmpty()) return null
         val list = (listOf(QrPayload.HEADER, songs.size.toString(), "") + songs.map { listOf(it.title, it.author).joinToString("\t") { s -> s.replace('\n', ' ').replace('\t', ' ').trim() }.trimEnd('\t') })
             .joinToString("\n")
-        return sendPackage(QrPayload.pack(list), songs)
+        return QrPayload.pack(list) to songs.map { it.shared() }
     }
 
+    private fun com.juliano.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text)
+
+    suspend fun send(setId: String, withSongs: Boolean): Sent? = setlistPackage(setId, withSongs)?.let { (p, s) -> sendPackage(p, s) }
+
+    suspend fun sendSongs(songIds: List<String>): Sent? = songsPackage(songIds)?.let { (p, s) -> sendPackage(p, s) }
+
     // cada música numa mensagem própria e a lista por último: quem recebe nunca vê a lista sem as músicas
-    private suspend fun sendPackage(packed: ByteArray, songs: List<com.juliano.stagebook.data.model.Song>): Sent? = withContext(Dispatchers.IO) {
+    private suspend fun sendPackage(packed: ByteArray, songs: List<SharedSong>): Sent? = withContext(Dispatchers.IO) {
         val code = ShareCode.generate()
         val keys = ShareCode.keys(code)
         var sent = 0
         var skipped = 0
         for (song in songs) {
-            val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(SharedSong(song.title, song.author, song.year, song.text))))
+            val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song)))
             when {
                 body.length > MAX_MESSAGE -> skipped++
                 post(keys.topic, body) -> sent++
