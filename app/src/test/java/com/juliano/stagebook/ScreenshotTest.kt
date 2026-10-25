@@ -207,6 +207,8 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun conductBar() = shoot("banda_conduzir_faixas") { com.juliano.stagebook.ui.band.ConductBarSamplesForTest() }
+
     @Test fun settingsUpdateTablet() = shoot("tablet_5_ajustes_atualizar") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
             SettingsScreen(
