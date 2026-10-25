@@ -21,7 +21,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.net.Inet4Address
 import java.net.InetAddress
+import java.net.NetworkInterface
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -105,11 +107,23 @@ class BandLink @Inject constructor(
         if (want && !_running.value) start() else if (!want && _running.value) stop()
     }
 
+    /**
+     * Tem rede local? No Wi-Fi (ou cabo), ou **criando o ponto de acesso**: o celular que divide a internet no bar fica com
+     * a internet pelo 4G, mas a rede dos outros passa por uma interface dele (wlan/ap/swlan) com endereço local.
+     */
     fun onWifi(): Boolean {
-        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
-        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
-        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+        if (caps != null && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))) return true
+        return hotspotUp()
     }
+
+    private fun hotspotUp(): Boolean = runCatching {
+        NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().any { nif ->
+            nif.isUp && !nif.isLoopback && HOTSPOT.any { nif.name.startsWith(it) } &&
+                nif.inetAddresses.toList().any { it is Inet4Address && it.isSiteLocalAddress }
+        }
+    }.getOrDefault(false)
 
     private fun start() {
         _running.value = true
@@ -243,5 +257,6 @@ class BandLink @Inject constructor(
         const val ATTR_ID = "id"
         const val ATTR_NAME = "name"
         const val CONNECT_TIMEOUT_MS = 5_000
+        val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // nomes da interface do ponto de acesso nos Androids
     }
 }
