@@ -530,6 +530,7 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="band_join">Pedir para entrar</string>
     <string name="band_waiting">Esperando o outro aparelho autorizar…</string>
     <string name="band_denied">Não autorizado</string>
+    <string name="band_busy">Está no palco agora. Peça de novo depois do show.</string>
     <string name="band_failed">Não deu para falar com ele. Tente de novo.</string>
     <string name="band_members">Da banda</string>
     <string name="band_members_none">Ninguém ainda. Quem for autorizado aparece aqui.</string>

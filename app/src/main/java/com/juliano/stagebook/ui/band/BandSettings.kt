@@ -103,7 +103,13 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
             else -> {
                 peer.join?.let { j ->
                     Text(
-                        stringResource(if (j == BandLink.Join.DENIED) R.string.band_denied else R.string.band_failed),
+                        stringResource(
+                            when (j) {
+                                BandLink.Join.DENIED -> R.string.band_denied
+                                BandLink.Join.BUSY -> R.string.band_busy
+                                else -> R.string.band_failed
+                            },
+                        ),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                     )
                 }

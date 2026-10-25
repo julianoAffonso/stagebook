@@ -1,5 +1,6 @@
 package com.juliano.stagebook
 
+import com.juliano.stagebook.data.StageGate
 import com.juliano.stagebook.ui.band.BandRequestDialog
 import com.juliano.stagebook.data.BandLink
 import android.annotation.SuppressLint
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var updater: AppUpdater
     @Inject lateinit var midi: MidiPedal
     @Inject lateinit var band: BandLink
+    @Inject lateinit var stageGate: StageGate
     private val pedal = PedalInput()
 
     // língua escolhida nos ajustes (trocar recria a Activity)
@@ -87,8 +89,10 @@ class MainActivity : ComponentActivity() {
                 }
                 CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions) }
                 // "Fulano quer entrar na banda": em qualquer tela, um de cada vez
+                // no palco, nada aparece por cima: o show nunca é interrompido
                 val requests by band.requests.collectAsStateWithLifecycle()
-                requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
+                val onStage by stageGate.onStage.collectAsStateWithLifecycle()
+                if (!onStage) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
             }
         }
     }
