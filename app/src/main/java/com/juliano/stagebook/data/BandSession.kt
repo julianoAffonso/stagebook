@@ -24,6 +24,7 @@ class BandSession(private val me: Hello) {
         onTrusted: (Hello) -> Unit,
         busy: () -> Boolean = { false },
         onPackage: (Hello, String) -> Boolean = { _, _ -> false },
+        onAsk: (Hello, String) -> String? = { _, _ -> null },
     ) {
         socket.use { s ->
             s.soTimeout = ANSWER_TIMEOUT_MS
@@ -37,6 +38,12 @@ class BandSession(private val me: Hello) {
             if (msg.kind == Kind.PACKAGE) {
                 val ok = isMember(them.id) && onPackage(them, msg.body)
                 BandProtocol.write(out, Message(if (ok) Kind.OK else Kind.DENIED))
+                return
+            }
+            // alguém da banda pergunta quem tem as músicas que faltam: responde sozinho, sem perguntar nada a ninguém
+            if (msg.kind == Kind.ASK) {
+                val answer = if (isMember(them.id)) onAsk(them, msg.body) else null
+                BandProtocol.write(out, if (answer != null) Message(Kind.ANSWER, answer) else Message(Kind.DENIED))
                 return
             }
             if (msg.kind != Kind.JOIN) return
@@ -79,6 +86,20 @@ class BandSession(private val me: Hello) {
             BandProtocol.readMessage(input)?.kind == Kind.OK
         }
     }.getOrDefault(false)
+
+    /** Pergunta a [expectedId] quem tem as músicas (pedido já cifrado); a resposta (cifrada) ou null. */
+    fun ask(socket: Socket, expectedId: String, body: String): String? = runCatching {
+        socket.use { s ->
+            s.soTimeout = SEND_TIMEOUT_MS
+            val input = s.getInputStream().bufferedReader()
+            val out = s.getOutputStream().bufferedWriter()
+            BandProtocol.write(out, me)
+            val them = BandProtocol.readHello(input) ?: return null
+            if (them.id != expectedId) return null
+            BandProtocol.write(out, Message(Kind.ASK, body))
+            BandProtocol.readMessage(input)?.takeIf { it.kind == Kind.ANSWER }?.body
+        }
+    }.getOrNull()
 
     companion object {
         const val SEND_TIMEOUT_MS = 15_000

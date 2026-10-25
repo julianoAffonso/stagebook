@@ -26,6 +26,8 @@ object BandProtocol {
         const val BUSY = "busy"   // o outro está no palco: nada interrompe o show; pedir de novo depois
         const val PACKAGE = "package"   // setlist ou músicas, cifrado com a chave do par (só entre aparelhos da banda)
         const val OK = "ok"
+        const val ASK = "ask"         // "quem tem estas músicas?" (lista cifrada); a resposta vem em ANSWER, também cifrada
+        const val ANSWER = "answer"
     }
 
     @Serializable

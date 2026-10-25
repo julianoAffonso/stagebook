@@ -568,6 +568,14 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
+    fun scanAskBandPhone() = shoot("jornada_banda_5_pedir") {
+        com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
+            scanReview.copy(rows = scanReview.rows + com.juliano.stagebook.ui.setlists.ScanRow("Outra que faltava", "", false, emptyList(), null, carried = true, fromBand = true)),
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, band = 2,
+        )
+    }
+
+    @Test @Config(qualifiers = PHONE)
     fun scanCameraPhone() = shoot("jornada_qr_1_camera") {
         com.juliano.stagebook.ui.setlists.ScanSetlistScreen(
             com.juliano.stagebook.ui.setlists.ScanUi.Scanning(com.juliano.stagebook.ui.setlists.ScanProblem.INCOMPLETE), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},

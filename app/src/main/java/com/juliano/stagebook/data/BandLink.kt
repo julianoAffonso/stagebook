@@ -50,6 +50,7 @@ class BandLink @Inject constructor(
     private val trust: BandTrust,
     private val stage: StageGate,
     private val inbox: BandInbox,
+    private val repository: LibraryRepository,
 ) {
     /** O que vai num pacote da banda: a lista (no formato do QR, em Base64) e as músicas. */
     @kotlinx.serialization.Serializable
@@ -144,6 +145,50 @@ class BandLink @Inject constructor(
         }.count { it.await() }
     }
 
+    /** Uma música pedida à banda (título e artista, como no QR). */
+    @kotlinx.serialization.Serializable
+    data class Wanted(val title: String, val artist: String = "")
+
+    // chave do par com um membro (null se ele não é mais da banda ou a chave guardada não abre)
+    private fun pairKeyWith(id: String): ByteArray? {
+        val member = trust.member(id) ?: return null
+        val theirs = BandCrypto.publicKey(member.key) ?: return null
+        return BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
+    }
+
+    /**
+     * Pergunta a todos da banda na rede agora quem tem as músicas [wanted]; junta as respostas (a primeira que chegar de
+     * cada título). Ninguém do outro lado precisa tocar em nada.
+     */
+    suspend fun askMissing(wanted: List<Wanted>): List<SetlistCloud.SharedSong> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
+        if (wanted.isEmpty()) return@io emptyList()
+        val plain = json.encodeToString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), wanted).toByteArray()
+        val answers = onlineMembers.value.map { peer ->
+            this@io.async {
+                val key = pairKeyWith(peer.id) ?: return@async emptyList()
+                runCatching {
+                    val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                    val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain)) ?: return@async emptyList()
+                    val bytes = ShareCode.decrypt(key, body) ?: return@async emptyList()
+                    json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), bytes.decodeToString())
+                }.getOrDefault(emptyList())
+            }
+        }.flatMap { it.await() }
+        answers.distinctBy { com.juliano.stagebook.domain.TextKey.of(it.title) + "|" + com.juliano.stagebook.domain.TextKey.of(it.author) }
+    }
+
+    // alguém da banda perguntou: responde com as que estão aqui (mesma regra do QR: título, e o artista desempata)
+    private fun answer(from: BandProtocol.Hello, body: String): String? {
+        val key = pairKeyWith(from.id) ?: return null
+        val plain = ShareCode.decrypt(key, body) ?: return null
+        val wanted = runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), plain.decodeToString()) }.getOrNull() ?: return null
+        val library = repository.library.value.songs
+        val found = wanted.take(MAX_ASK).mapNotNull { w ->
+            (com.juliano.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? com.juliano.stagebook.domain.QrMatch.Found)?.song
+        }.map { SetlistCloud.SharedSong(it.title, it.author, it.year, it.text) }
+        return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
+    }
+
     // pacote de alguém da banda: decifra com a chave do par e guarda na caixa de entrada
     private fun receive(from: BandProtocol.Hello, body: String): Boolean {
         val member = trust.member(from.id) ?: return false
@@ -220,7 +265,7 @@ class BandLink @Inject constructor(
                     runCatching {
                         session.serve(
                             client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
-                            busy = { stage.onStage.value }, onPackage = ::receive,
+                            busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
                         )
                     }
                 }
@@ -335,6 +380,7 @@ class BandLink @Inject constructor(
         const val ATTR_ID = "id"
         const val ATTR_NAME = "name"
         const val CONNECT_TIMEOUT_MS = 5_000
+        const val MAX_ASK = 200   // um setlist nunca passa disso; protege de pedido estranho
         val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // nomes da interface do ponto de acesso nos Androids
     }
 }

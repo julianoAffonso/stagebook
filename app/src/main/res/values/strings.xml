@@ -439,6 +439,17 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
         <item quantity="one">%1$d música adicionada</item>
         <item quantity="other">%1$d músicas adicionadas</item>
     </plurals>
+    <plurals name="scan_ask_band">
+        <item quantity="one">Pedir à banda (%1$d aparelho na rede)</item>
+        <item quantity="other">Pedir à banda (%1$d aparelhos na rede)</item>
+    </plurals>
+    <string name="scan_asking_band">Perguntando à banda…</string>
+    <string name="scan_band_row">Veio da banda: entra na sua biblioteca.</string>
+    <plurals name="scan_band_got">
+        <item quantity="one">A banda tinha %1$d de %2$d música que faltava</item>
+        <item quantity="other">A banda tinha %1$d de %2$d músicas que faltavam</item>
+    </plurals>
+    <string name="scan_band_none">Ninguém da banda tinha as que faltam. Dá para importar dos sites.</string>
     <string name="scan_carried_row">Veio junto com o setlist: entra na sua biblioteca.</string>
     <string name="scan_title">Ler QR do setlist</string>
     <string name="scan_hint">Aponte a câmera para o QR que está na tela do outro aparelho.</string>

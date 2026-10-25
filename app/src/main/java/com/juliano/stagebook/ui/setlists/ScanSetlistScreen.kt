@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import androidx.compose.runtime.DisposableEffect
 import android.widget.Toast
 import androidx.compose.material3.CircularProgressIndicator
 import android.Manifest
@@ -65,6 +66,12 @@ fun ScanSetlistRoute(
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { camera = it }
+    LaunchedEffect(viewModel) {
+        viewModel.bandResult.collect { (got, asked) ->
+            val msg = if (got > 0) resources.getQuantityString(R.plurals.scan_band_got, asked, got, asked) else resources.getString(R.string.scan_band_none)
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
     LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
     ScanSetlistScreen(
         ui = ui,
@@ -86,6 +93,10 @@ fun ScanSetlistRoute(
         camera = { onText, modifier -> QrScanner(onText, modifier) },
         byCode = viewModel.code.isNotEmpty(),
         fromName = viewModel.fromName,
+        band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
+        asking = viewModel.asking.collectAsStateWithLifecycle().value,
+        onAskBand = viewModel::askBand,
+        onBandSearch = viewModel::bandSearch,
         onRetry = viewModel::fetch,
     )
 }
@@ -112,6 +123,10 @@ fun ScanSetlistScreen(
     onRetry: () -> Unit = {},
     onAddSongs: () -> Unit = {},
     fromName: String = "",   // veio da banda: "Recebido de Ana"
+    band: Int = 0,           // da banda na rede agora
+    asking: Boolean = false,
+    onAskBand: () -> Unit = {},
+    onBandSearch: (Boolean) -> Unit = {},
 ) {
     CenteredContent(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
@@ -128,7 +143,16 @@ fun ScanSetlistScreen(
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
                 is ScanUi.Fetching -> Fetching(ui, onRetry)
-                is ScanUi.Review -> if (ui.songsOnly) SongsReview(ui, onAddSongs) else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode)
+                is ScanUi.Review -> {
+                    // faltando música: procura a banda enquanto a conferência está aberta (para pedir a ela antes dos sites)
+                    val missing = !ui.songsOnly && ui.rows.any { it.chosen == null && !it.carried && it.candidates.isEmpty() }
+                    DisposableEffect(missing) {
+                        if (missing) onBandSearch(true)
+                        onDispose { if (missing) onBandSearch(false) }
+                    }
+                    if (ui.songsOnly) SongsReview(ui, onAddSongs)
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand)
+                }
             }
         }
     }
@@ -174,6 +198,9 @@ private fun Review(
     onCreate: (replaceId: String?) -> Unit,
     onCreateAndImport: (replaceId: String?) -> Unit,
     byCode: Boolean,
+    band: Int = 0,
+    asking: Boolean = false,
+    onAskBand: () -> Unit = {},
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -200,6 +227,13 @@ private fun Review(
             contentPadding = PaddingValues(bottom = Spacing.s),
         ) {
             itemsIndexed(ui.rows) { i, row -> RowItem(row) { onChoose(i, it) } }
+        }
+        // antes dos sites: pedir à banda na rede (só aparece com alguém da banda por perto)
+        if (toImport > 0 && band > 0) {
+            ActionButton(
+                if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, band, band),
+                onAskBand, Modifier.fillMaxWidth(), icon = AppIcons.Group, tone = ButtonTone.Tonal, enabled = !asking,
+            )
         }
         if (toImport > 0) {
             ActionButton(
@@ -308,7 +342,10 @@ private fun RowItem(row: ScanRow, onChoose: (String?) -> Unit) {
             }
             when {
                 row.found -> Unit
-                row.carried -> Text(stringResource(R.string.scan_carried_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                row.carried -> Text(
+                    stringResource(if (row.fromBand) R.string.scan_band_row else R.string.scan_carried_row),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary,
+                )
                 row.candidates.isEmpty() -> Text(
                     stringResource(R.string.scan_missing_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error,
                 )

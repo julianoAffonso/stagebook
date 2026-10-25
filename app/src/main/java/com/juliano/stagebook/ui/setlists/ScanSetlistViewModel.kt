@@ -1,5 +1,11 @@
 package com.juliano.stagebook.ui.setlists
 
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.channels.Channel
+import com.juliano.stagebook.data.BandLink
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -41,6 +47,7 @@ data class ScanRow(
     val candidates: List<SongRef>,
     val chosen: String?,
     val carried: Boolean = false,
+    val fromBand: Boolean = false,   // a banda tinha (pedida na conferência)
 )
 
 enum class ScanProblem { NOT_SETLIST, INCOMPLETE }
@@ -74,7 +81,45 @@ class ScanSetlistViewModel @Inject constructor(
     private val cloud: SetlistCloud,
     savedStateHandle: SavedStateHandle,
     private val inbox: BandInbox,
+    private val bandLink: BandLink,
 ) : ViewModel() {
+    /** Quantos da banda estão na rede agora ("Pedir à banda" só aparece com alguém e com música faltando). */
+    val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    private val _asking = MutableStateFlow(false)
+    val asking: StateFlow<Boolean> = _asking
+
+    private val bandAnswer = Channel<Pair<Int, Int>>(Channel.BUFFERED)
+    /** (quantas a banda tinha, quantas foram pedidas), para o aviso. */
+    val bandResult = bandAnswer.receiveAsFlow()
+
+    /** A conferência com música faltando está aberta: procura a banda (fechou, para). */
+    fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
+
+    /** Pede à banda as que faltam; as que chegarem entram como "veio da banda", no lugar delas. */
+    fun askBand() {
+        val ui = _ui.value as? ScanUi.Review ?: return
+        if (_asking.value) return
+        val missing = ui.rows.withIndex().filter { (_, r) -> r.chosen == null && !r.carried }
+        if (missing.isEmpty()) return
+        _asking.value = true
+        viewModelScope.launch {
+            val got = bandLink.askMissing(missing.map { (_, r) -> BandLink.Wanted(r.title, r.artist) })
+            val now = _ui.value as? ScanUi.Review
+            if (now != null) {
+                val came = carried.toMutableMap()
+                val rows = now.rows.mapIndexed { i, r ->
+                    if (r.chosen != null || r.carried) return@mapIndexed r
+                    val s = got.firstOrNull { TextKey.of(it.title) == TextKey.of(r.title) && SongMatch.sameArtistKey(TextKey.of(it.author), TextKey.of(r.artist)) }
+                    if (s == null) r else { came[i] = s; r.copy(carried = true, fromBand = true) }
+                }
+                carried = came
+                _ui.value = now.copy(rows = rows)
+                bandAnswer.send(rows.count { it.fromBand } to missing.size)
+            }
+            _asking.value = false
+        }
+    }
     private val route = savedStateHandle.toRoute<ScanSetlist>()
     var code: String = route.code
         private set
