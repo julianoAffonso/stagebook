@@ -1,9 +1,15 @@
-# A cada push: compila, roda os testes e o lint. Nada é publicado nem assinado aqui.
+# Compila, roda os testes e o lint. Nada é publicado nem assinado aqui.
 name: Verificar
+# Só ao juntar na main (o dia a dia é na branch dev) ou à mão (Actions → Verificar → Run workflow): cada rodada
+# leva ~10 min dos minutos grátis do GitHub enquanto o repositório é privado
 on:
   push:
+    branches: [main]
     paths-ignore: [".claude/**", "**.md"]   # só memória/textos: não gasta minutos
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
 jobs:
   check:
     runs-on: ubuntu-latest
