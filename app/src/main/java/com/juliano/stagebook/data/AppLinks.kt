@@ -9,5 +9,5 @@ object AppLinks {
      * Botão de apoio (Buy Me a Coffee: https://buymeacoffee.com/<usuário>). Vazio = o botão não aparece. Só
      * endereço https.
      */
-    const val DONATE = ""
+    const val DONATE = "https://buymeacoffee.com/julianoaffonso"
 }
