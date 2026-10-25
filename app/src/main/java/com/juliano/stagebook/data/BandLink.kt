@@ -40,6 +40,7 @@ class BandLink @Inject constructor(
     @ApplicationContext private val context: Context,
     private val identity: DeviceIdentity,
     private val trust: BandTrust,
+    private val stage: StageGate,
 ) {
     /** Um aparelho com o Stagebook na mesma rede. */
     @Immutable
@@ -49,7 +50,7 @@ class BandLink @Inject constructor(
     @Immutable
     class Request(val id: String, val name: String, internal val answer: CompletableDeferred<Boolean>)
 
-    enum class Join { WAITING, ACCEPTED, DENIED, FAILED }
+    enum class Join { WAITING, ACCEPTED, DENIED, BUSY, FAILED }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -135,7 +136,7 @@ class BandLink @Inject constructor(
                 val client = runCatching { socket.accept() }.getOrNull() ?: break
                 launch {
                     runCatching {
-                        session.serve(client, trust::isMember, ::ask) { h -> trust.add(h.id, h.name, h.key); update() }
+                        session.serve(client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() }, busy = { stage.onStage.value })
                     }
                 }
             }
@@ -244,7 +245,7 @@ class BandLink @Inject constructor(
                 val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
                 BandSession(identity.hello()).join(s) { h -> trust.add(h.id, h.name, h.key) }
             }.getOrDefault(BandSession.JoinResult.FAILED)
-            _joins.update { it + (peer.id to when (r) { BandSession.JoinResult.ACCEPTED -> Join.ACCEPTED; BandSession.JoinResult.DENIED -> Join.DENIED; else -> Join.FAILED }) }
+            _joins.update { it + (peer.id to when (r) { BandSession.JoinResult.ACCEPTED -> Join.ACCEPTED; BandSession.JoinResult.DENIED -> Join.DENIED; BandSession.JoinResult.BUSY -> Join.BUSY; else -> Join.FAILED }) }
             update()
         }
     }

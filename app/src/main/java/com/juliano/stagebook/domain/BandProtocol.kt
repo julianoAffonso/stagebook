@@ -22,6 +22,7 @@ object BandProtocol {
         const val JOIN = "join"
         const val ACCEPTED = "accepted"
         const val DENIED = "denied"
+        const val BUSY = "busy"   // o outro está no palco: nada interrompe o show; pedir de novo depois
     }
 
     @Serializable

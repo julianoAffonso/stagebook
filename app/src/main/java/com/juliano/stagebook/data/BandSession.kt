@@ -11,13 +11,19 @@ import java.net.Socket
  * locais. Quem recebe a conexão chama [serve]; quem pede para entrar chama [join].
  */
 class BandSession(private val me: Hello) {
-    enum class JoinResult { ACCEPTED, DENIED, FAILED }
+    enum class JoinResult { ACCEPTED, DENIED, BUSY, FAILED }
 
     /**
      * Recebe uma conexão: troca os [Hello] e, se o outro pede para entrar, pergunta ao usuário ([ask]); autorizado, grava
      * ([onTrusted]). Quem já é da banda é aceito sem perguntar (pediu de novo, por exemplo depois de reinstalar).
      */
-    suspend fun serve(socket: Socket, isMember: (String) -> Boolean, ask: suspend (Hello) -> Boolean, onTrusted: (Hello) -> Unit) {
+    suspend fun serve(
+        socket: Socket,
+        isMember: (String) -> Boolean,
+        ask: suspend (Hello) -> Boolean,
+        onTrusted: (Hello) -> Unit,
+        busy: () -> Boolean = { false },
+    ) {
         socket.use { s ->
             s.soTimeout = ANSWER_TIMEOUT_MS
             val input = s.getInputStream().bufferedReader()
@@ -27,6 +33,8 @@ class BandSession(private val me: Hello) {
             BandProtocol.write(out, me)
             val msg = BandProtocol.readMessage(input) ?: return
             if (msg.kind != Kind.JOIN) return
+            // no palco: não pergunta nada (o show não é interrompido); quem pediu tenta de novo depois
+            if (!isMember(them.id) && busy()) { BandProtocol.write(out, Message(Kind.BUSY)); return }
             val ok = isMember(them.id) || ask(them)
             if (ok) onTrusted(them)
             BandProtocol.write(out, Message(if (ok) Kind.ACCEPTED else Kind.DENIED))
@@ -45,6 +53,7 @@ class BandSession(private val me: Hello) {
             when (BandProtocol.readMessage(input)?.kind) {
                 Kind.ACCEPTED -> { onTrusted(them); JoinResult.ACCEPTED }
                 Kind.DENIED -> JoinResult.DENIED
+                Kind.BUSY -> JoinResult.BUSY
                 else -> JoinResult.FAILED
             }
         }

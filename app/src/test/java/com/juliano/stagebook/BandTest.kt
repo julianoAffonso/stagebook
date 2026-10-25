@@ -81,6 +81,24 @@ class BandTest {
         assertEquals(BandSession.JoinResult.ACCEPTED, join(a, b, answer = false, aKnowsB = true))
     }
 
+    @Test fun `no palco o pedido não pergunta nada - responde que está ocupado`() {
+        val a = Device("Tablet da Ana")
+        val b = Device("Celular do Beto")
+        val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        var asked = 0
+        val t = thread {
+            runBlocking {
+                BandSession(a.hello).serve(server.accept(), { false }, { asked++; true }, { a.trusted += it }, busy = { true })
+            }
+        }
+        val r = BandSession(b.hello).join(Socket(InetAddress.getLoopbackAddress(), server.localPort)) { b.trusted += it }
+        t.join(5_000)
+        server.close()
+        assertEquals(BandSession.JoinResult.BUSY, r)
+        assertEquals(0, asked)
+        assertFalse(a.trusted.isNotEmpty() || b.trusted.isNotEmpty())
+    }
+
     @Test fun `hello com id que não é da chave é recusado`() {
         val a = Device("Tablet da Ana")
         val fake = BandProtocol.Hello("0".repeat(32), "Falso", a.pub)
