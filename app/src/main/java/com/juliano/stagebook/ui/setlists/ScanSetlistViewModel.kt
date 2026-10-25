@@ -51,6 +51,7 @@ data class ScanRow(
     val fromBand: Boolean = false,   // a banda tinha (pedida na conferência)
     val differs: Boolean = false,    // já tenho, mas a que chegou é outra versão: o usuário escolhe
     val lyricsOnly: Boolean = false, // perfil letra e cifra, mas a que chegou veio sem cifra
+    val wantChords: Boolean = false, // recusou a só-letra: vai buscar com cifra nos sites (fila de importação)
     val useIncoming: Boolean = false,
 )
 
@@ -104,7 +105,7 @@ class ScanSetlistViewModel @Inject constructor(
     fun askBand() {
         val ui = _ui.value as? ScanUi.Review ?: return
         if (_asking.value) return
-        val missing = ui.rows.withIndex().filter { (_, r) -> r.chosen == null && !r.carried }
+        val missing = ui.rows.withIndex().filter { (_, r) -> r.chosen == null && !r.carried && !r.wantChords }
         if (missing.isEmpty()) return
         _asking.value = true
         viewModelScope.launch {
@@ -139,6 +140,25 @@ class ScanSetlistViewModel @Inject constructor(
     private var carried: Map<Int, SetlistCloud.SharedSong> = emptyMap()
     // outra versão de uma música que já tenho, por linha (só usada se o usuário escolher)
     private var incoming: Map<Int, SetlistCloud.SharedSong> = emptyMap()
+
+    // as só-letra recusadas, por linha (para voltar atrás em "Aceitar só a letra")
+    private var declined: Map<Int, SetlistCloud.SharedSong> = emptyMap()
+
+    /**
+     * A que chegou só com a letra (perfil letra e cifra): [on] = não aceitar e buscar com cifra nos sites (ela fica como
+     * "falta" e entra na fila de "Importar as que faltam"); false = aceitar só a letra de novo.
+     */
+    fun searchWithChords(index: Int, on: Boolean) {
+        val ui = _ui.value as? ScanUi.Review ?: return
+        val row = ui.rows.getOrNull(index) ?: return
+        if (on && row.carried) {
+            carried[index]?.let { declined = declined + (index to it) }
+            carried = carried - index
+        } else if (!on && row.wantChords) {
+            declined[index]?.let { carried = carried + (index to it) }
+        }
+        _ui.value = ui.copy(rows = ui.rows.mapIndexed { i, r -> if (i == index) r.copy(carried = !on, wantChords = on) else r })
+    }
 
     /** O que muda da minha para a recebida, na linha [index] (para "Ver o que muda"). */
     fun changes(index: Int): List<SongMerge.Change> {
