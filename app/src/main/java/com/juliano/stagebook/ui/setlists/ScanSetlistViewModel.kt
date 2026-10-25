@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.juliano.stagebook.data.BandInbox
 import com.juliano.stagebook.data.ImportQueue
 import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.data.SetlistCloud
@@ -72,17 +73,28 @@ class ScanSetlistViewModel @Inject constructor(
     private val importQueue: ImportQueue,
     private val cloud: SetlistCloud,
     savedStateHandle: SavedStateHandle,
+    private val inbox: BandInbox,
 ) : ViewModel() {
-    var code: String = savedStateHandle.toRoute<ScanSetlist>().code
+    private val route = savedStateHandle.toRoute<ScanSetlist>()
+    var code: String = route.code
         private set
 
-    private val _ui = MutableStateFlow<ScanUi>(if (code.isEmpty()) ScanUi.Scanning() else ScanUi.Fetching())
+    /** Veio da banda (caixa de entrada): quem mandou, para o título; conferido, sai da caixa. */
+    val fromName: String = inbox.get(route.inbox)?.fromName.orEmpty()
+    private fun done() { if (route.inbox.isNotEmpty()) inbox.remove(route.inbox) }
+
+    private val _ui = MutableStateFlow<ScanUi>(if (code.isEmpty() && route.inbox.isEmpty()) ScanUi.Scanning() else ScanUi.Fetching())
     val ui: StateFlow<ScanUi> = _ui
 
     // músicas que vieram junto, por linha da conferência
     private var carried: Map<Int, SetlistCloud.SharedSong> = emptyMap()
 
-    init { if (code.isNotEmpty()) fetch() }
+    init {
+        when {
+            route.inbox.isNotEmpty() -> inbox.get(route.inbox)?.let { review(it.text, it.songs) } ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND) }
+            code.isNotEmpty() -> fetch()
+        }
+    }
 
     /** Busca o setlist pelo código (de novo, depois de um erro). */
     fun fetch() {
@@ -147,6 +159,7 @@ class ScanSetlistViewModel @Inject constructor(
     /** Músicas avulsas: as que vieram e não estão aqui entram na biblioteca; devolve quantas. */
     fun addSongs(): Int {
         carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = s.text)) }
+        done()
         return carried.size
     }
 
@@ -164,6 +177,7 @@ class ScanSetlistViewModel @Inject constructor(
         }
         val id = replaceId ?: repository.createSetlist(uniqueName(ui.name.trim()))
         repository.setSetlistItems(id, slots.filterNotNull())
+        done()
         return id to slots
     }
 

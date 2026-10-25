@@ -53,6 +53,7 @@ import com.juliano.stagebook.R
 import com.juliano.stagebook.ui.share.CloudDialog
 import com.juliano.stagebook.ui.share.CloudUi
 import com.juliano.stagebook.ui.share.ShareSheet
+import com.juliano.stagebook.ui.share.BandResultToast
 import com.juliano.stagebook.ui.share.rememberCodeActions
 import com.juliano.stagebook.ui.components.InfoDialog
 import com.juliano.stagebook.ui.components.ActionButton
@@ -98,6 +99,8 @@ fun SetlistDetailRoute(
     val online by viewModel.online.collectAsStateWithLifecycle()
     val cloud by viewModel.cloud.collectAsStateWithLifecycle()
     val codeActions = rememberCodeActions()
+    val bandOnline by viewModel.bandOnline.collectAsStateWithLifecycle()
+    BandResultToast(viewModel.bandResult)
     SetlistDetailScreen(
         uiState = uiState,
         qr = qr,
@@ -107,6 +110,9 @@ fun SetlistDetailRoute(
         onDismissCloud = viewModel::dismissCloud,
         // o código vai por qualquer app de mensagem do aparelho (WhatsApp, e-mail, SMS…)
         onCopyCode = codeActions.copy,
+        band = bandOnline,
+        onSendBand = viewModel::sendBand,
+        onBandSearch = viewModel::bandSearch,
         onShareCode = codeActions.share,
         onBack = onBack,
         onRename = viewModel::rename,
@@ -142,6 +148,9 @@ fun SetlistDetailScreen(
     onDismissCloud: () -> Unit = {},
     onShareCode: (name: String, code: String) -> Unit = { _, _ -> },
     onCopyCode: (code: String) -> Unit = {},
+    band: Int = 0,
+    onSendBand: (withSongs: Boolean) -> Unit = {},
+    onBandSearch: (Boolean) -> Unit = {},
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -262,6 +271,9 @@ fun SetlistDetailScreen(
             onQr = { sharing = false; onShowQr() },
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
             onDismiss = { sharing = false },
+            band = band,
+            onBand = { withSongs -> sharing = false; onSendBand(withSongs) },
+            onSearch = onBandSearch,
         )
     }
     cloud?.let { CloudDialog(it, onDismissCloud, onShareCode, onCopyCode) }

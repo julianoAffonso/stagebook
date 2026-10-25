@@ -34,7 +34,7 @@ class ScanSetlistTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
-        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to ""))), ids)
+        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context)), ids)
     }
 
     @Test fun `QR com todas as músicas cria o setlist na ordem do QR`() {
