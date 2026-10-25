@@ -35,9 +35,12 @@ class BandConduct @Inject constructor(
         @Immutable
         data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0) : Role
 
-        /** [songId]: a música da vez aqui (null = falta aqui). */
+        /** [songId]: a música da vez aqui (null = falta aqui); [at]: última notícia de quem conduz (relógio do aparelho). */
         @Immutable
-        data class Following(val fromId: String, val msg: Conduct.Msg, val songId: String?) : Role
+        data class Following(val fromId: String, val msg: Conduct.Msg, val songId: String?, val at: Long = System.currentTimeMillis()) : Role {
+            /** Sem notícia há mais de [GONE_MS]: quem conduz sumiu (bateria, app fechado, fora do Wi-Fi). */
+            fun gone(now: Long = System.currentTimeMillis()) = now - at > GONE_MS
+        }
     }
 
     private val _role = MutableStateFlow<Role>(Role.None)
@@ -53,6 +56,14 @@ class BandConduct @Inject constructor(
 
     init {
         link.conductHandler = ::onMessage
+        // conduzindo: sinal de vida a cada 3 min (a música da vez de novo; quem acompanha não pula de música por isso)
+        scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(ALIVE_MS)
+                val now = _role.value as? Role.Conducting ?: continue
+                send(now.setId, now.msg.copy(type = Conduct.OPEN))
+            }
+        }
         // conduzindo: alguém da banda voltou para o Wi-Fi (achado numa procura curta) → recebe a música da vez, sem toque
         scope.launch {
             var before = emptySet<String>()
@@ -124,5 +135,10 @@ class BandConduct @Inject constructor(
         _role.value = Role.Following(from.id, msg, song?.id)
         if (song != null && (before?.songId != song.id || before.msg.index != msg.index)) _openSong.tryEmit(song.id)
         return Conduct.lackFor(identity.name.value, msg, library)
+    }
+
+    companion object {
+        const val ALIVE_MS = 3 * 60_000L
+        const val GONE_MS = 10 * 60_000L
     }
 }
