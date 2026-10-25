@@ -68,7 +68,7 @@ android {
 }
 
 // arm64 = TCL e celulares; armeabi-v7a = Fire HD 10 (Fire OS 32 bits); x86_64 = emulador
-val buildNative by tasks.registering(Exec::class) {
+val buildNative = tasks.register<Exec>("buildNative") {
     val native = layout.buildDirectory.dir("native").get().asFile
     inputs.files("src/main/cpp/engine.c", "src/main/cpp/third_party/stb_vorbis.c", "src/main/cpp/third_party/dr_mp3.h", "src/main/cpp/third_party/dr_wav.h", "build_native.sh")
     outputs.dir(native)
@@ -83,7 +83,7 @@ tasks.withType<Test>().configureEach {
 // Nomes de teste são frases entre crases, e o Kotlin/JVM recusa . ; : / [ ] < > \ neles ("Name contains
 // illegal characters"), só depois de uma compilação inteira. Esta checagem roda antes e diz onde
 // trocar (o separador do projeto é " - ").
-val checkTestNames by tasks.registering {
+val checkTestNames = tasks.register("checkTestNames") {
     val sources = fileTree("src/test") { include("**/*.kt") }
     inputs.files(sources)
     doLast {
