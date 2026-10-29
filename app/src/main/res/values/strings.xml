@@ -234,6 +234,9 @@
     <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>
     <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
+    <string name="stage_auto_title">Rolagem automática</string>
+    <string name="stage_auto_speed">Velocidade: %1$d</string>
+    <string name="stage_auto_hint">Tocar na tela ou apertar o pedal pausa.</string>
     <string name="stage_auto_play">Rolar sozinho</string>
     <string name="stage_auto_pause">Pausar a rolagem</string>
     <string name="stage_auto_slower">Mais devagar</string>
