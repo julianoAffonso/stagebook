@@ -233,7 +233,7 @@
     <string name="stage_key_desc">Tom: %1$s</string>
     <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>
     <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
-    <string name="stage_capo_sounds_short">soa %1$s</string>
+    <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="stage_capo_desc">Capotraste na %1$dª casa</string>
     <string name="stage_capo_sounds_desc">Capotraste na %1$dª casa, soa em %2$s</string>
     <string name="settings_font_family">Fonte</string>
@@ -293,6 +293,10 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
     <string name="settings_colors">Cores</string>
     <string name="settings_columns">Colunas no palco</string>
+    <string name="settings_stage_mode">Como a letra anda</string>
+    <string name="settings_stage_mode_pages">Virar página</string>
+    <string name="settings_stage_mode_scroll">Rolar</string>
+    <string name="settings_stage_mode_help">Virar página mostra uma página por vez, em uma ou duas colunas. Rolar mostra a letra numa coluna só e cada toque ou pedal rola até a primeira linha que não cabia; a linha onde você continua acende por um instante.</string>
     <string name="settings_columns_auto">Automático</string>
     <string name="settings_columns_one">1</string>
     <string name="settings_columns_two">2</string>
