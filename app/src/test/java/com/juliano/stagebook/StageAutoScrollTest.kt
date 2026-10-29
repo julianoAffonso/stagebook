@@ -53,12 +53,13 @@ class StageAutoScrollTest {
         assertEquals(0, song)
         open()
         compose.onNodeWithContentDescription("Rolar sozinho").assertExists()
-        // de novo: rolando, a janela mostra o pausar, que pausa e fecha
+        // de novo: rolando, o ícone ao lado do relógio vira pause e para na hora
         compose.onNodeWithContentDescription("Rolar sozinho").performClick()
         frames(30)
-        open()
+        compose.onNodeWithContentDescription("Rolagem automática").assertDoesNotExist()
         compose.onNodeWithContentDescription("Pausar a rolagem").performClick()
         frames(10)
+        compose.onNodeWithContentDescription("Rolagem automática").assertExists()
         // o × fecha sem mudar nada
         open()
         compose.onNodeWithContentDescription("Fechar").performClick()
