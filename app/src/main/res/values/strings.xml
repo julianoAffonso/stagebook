@@ -241,6 +241,13 @@
     <string name="backup_open_other_device">Os ajustes do arquivo substituem os daqui. Noutro aparelho, autorize a banda de novo em Ajustes → Banda.</string>
     <string name="backup_share_card">Outras formas de compartilhar</string>
     <string name="backup_share_info">Um setlist na hora: Compartilhar no próprio setlist (QR, 3 palavras ou banda no Wi-Fi), com as músicas que faltarem.</string>
+    <string name="reset_title">Apagar tudo</string>
+    <string name="reset_info">Volta o app como novo: apaga músicas, setlists, backing tracks, ajustes e a banda deste aparelho.</string>
+    <string name="reset_warning">Você vai perder tudo o que está no app neste aparelho, e não dá para desfazer. Quer salvar um arquivo antes?</string>
+    <string name="reset_backup_first">Salvar arquivo antes (com tudo)</string>
+    <string name="reset_type_code">Para confirmar, digite o código:</string>
+    <string name="reset_code_label">Código</string>
+    <string name="reset_confirm">Apagar tudo</string>
     <string name="backup_make">Salvar arquivo</string>
     <string name="backup_open">Abrir arquivo</string>
     <string name="backup_open_ok">Abrir</string>

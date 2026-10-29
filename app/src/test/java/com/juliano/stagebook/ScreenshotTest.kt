@@ -211,6 +211,12 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_backup_restaurar.png")
     }
 
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun factoryResetDialog() {
+        compose.setContent { StagebookTheme { com.juliano.stagebook.ui.settings.FactoryResetDialog({}, {}, {}, code = "4827") } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_apagar_tudo.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
