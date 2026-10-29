@@ -42,7 +42,24 @@ class StageViewModel @Inject constructor(
     private val conduct: com.juliano.stagebook.data.BandConduct,
     private val metronome: com.juliano.stagebook.data.MetronomeSound,
     private val chordPlayer: com.juliano.stagebook.data.ChordPlayer,
+    private val announcer: com.juliano.stagebook.data.StageAnnouncer,
 ) : ViewModel() {
+    /** A música da vez para o telão/transmissão (se ligado em Ajustes → Tela). */
+    fun announce(index: Int) {
+        val lib = repository.library.value
+        if (!lib.look.announce) { announcer.stop(); return }
+        val set = route.setId?.let(lib::setlist)
+        val ids = set?.items ?: listOfNotNull(route.songId)
+        val song = ids.getOrNull(index)?.let(lib::song) ?: return
+        announcer.announce(
+            com.juliano.stagebook.domain.StageAnnouncement(
+                title = song.title, artist = song.author, set = set?.name.orEmpty(),
+                index = if (set != null) index + 1 else 0, count = if (set != null) ids.size else 0,
+                key = Chords.key(song.text), bpm = Chords.tempo(song.text),
+            ),
+        )
+    }
+
     /** Toca o acorde do palco no jeito escolhido em Ajustes (dedilhado, junto ou os dois). */
     fun playChord(notes: List<Int>, keyboard: Boolean) = chordPlayer.play(notes, repository.library.value.look.chordPlay, keyboard)
 
@@ -50,7 +67,10 @@ class StageViewModel @Inject constructor(
     fun metronomeSound(bpm: Int?) { if (bpm != null) metronome.start(bpm) else metronome.stop() }
 
     /** Música na tela (posição no setlist): conduzindo este setlist, a banda abre a mesma. */
-    fun songShown(index: Int) { route.setId?.let { conduct.open(it, index) } }
+    fun songShown(index: Int) {
+        route.setId?.let { conduct.open(it, index) }
+        announce(index)
+    }
 
     /** Tocando (ou esperando a saída USB para tocar) e o aviso do player. */
     val playerUi: StateFlow<PlayerUi> = player.ui
@@ -83,6 +103,7 @@ class StageViewModel @Inject constructor(
         player.pause()   // sair do palco para o backing track
         metronome.stop()
         chordPlayer.stop()
+        announcer.stop()
         stageGate.leave()
         // sair do palco NÃO encerra o "Quem conduz" (pedido do usuário): no show a pessoa sai para conferir algo e a banda
         // continua junto; só o "Encerrar" solta todos
