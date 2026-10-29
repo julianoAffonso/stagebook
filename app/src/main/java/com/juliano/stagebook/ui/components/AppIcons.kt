@@ -104,7 +104,7 @@ object AppIcons {
     val PlayRounded by lazy { icon("playrounded", "M8,19.14V4.86c0,-0.8 0.88,-1.28 1.55,-0.84l11.2,7.14c0.62,0.39 0.62,1.29 0,1.69l-11.2,7.14C8.88,20.42 8,19.94 8,19.14z") }
     val PauseRounded by lazy { icon("pauserounded", "M8,19c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2v10c0,1.1 0.9,2 2,2zM14,7v10c0,1.1 0.9,2 2,2s2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2z") }
     // duas setas para baixo: rolagem automática do palco
-    val AutoScroll by lazy { icon("autoscroll", "M18,6.41L16.59,5 12,9.58 7.41,5 6,6.41l6,6z", "M18,13l-1.41,-1.41L12,16.17l-4.59,-4.58L6,13l6,6z") }
+    val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // traço grosso (pedido de 29/10)
     val Pause by lazy { icon("pause", "M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z") }
     val Group by lazy {
         icon("group", "M16,11c1.66,0 2.99,-1.34 2.99,-3S17.66,5 16,5c-1.66,0 -3,1.34 -3,3s1.34,3 3,3zM8,11c1.66,0 2.99,-1.34 2.99,-3S9.66,5 8,5C6.34,5 5,6.34 5,8s1.34,3 3,3zM8,13c-2.33,0 -7,1.17 -7,3.5L1,19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5zM16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45L17,19h6v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z")
