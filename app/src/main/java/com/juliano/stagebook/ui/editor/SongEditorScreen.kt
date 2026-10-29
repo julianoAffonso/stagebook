@@ -342,6 +342,7 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
     val key = remember(text) { Chords.key(text) }
     val capo = remember(text) { Chords.capo(text) }
+    Column {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
         Icon(AppIcons.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
@@ -361,6 +362,17 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         // sem capo: 0 apagado (um "–" parecia um terceiro botão de menos)
         Text(capo.toString(), style = MaterialTheme.typography.titleMedium, color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
         IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
+    }
+    // com capo: os desenhos continuam os da cifra, mas o som sobe (pedido do usuário, 29/10)
+    if (capo > 0) {
+        val validKey = key.isNotEmpty() && Chords.isChord(key)
+        Text(
+            if (validKey) stringResource(R.string.editor_capo_sounds, key, capo, Chords.soundingKey(key, capo))
+            else stringResource(R.string.editor_capo_sounds_nokey, capo),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
     }
 }
 
