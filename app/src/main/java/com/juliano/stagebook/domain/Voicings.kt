@@ -23,6 +23,12 @@ object Voicings {
 
     fun strings(i: Instrument): Int = tunings[i]?.size ?: 0
 
+    /** As notas (MIDI) que o desenho faz soar, da corda grave para a aguda; [capo] sobe tudo (a nota real com capo). */
+    fun midi(shape: Shape, instrument: Instrument, capo: Int = 0): List<Int> {
+        val tuning = tunings[instrument] ?: return emptyList()
+        return shape.frets.mapIndexedNotNull { i, f -> if (f < 0 || i >= tuning.size) null else tuning[i] + f + capo }
+    }
+
     /** Formas do acorde no instrumento de cordas, das mais fáceis para as mais difíceis (vazio no teclado). */
     fun shapes(chord: String, instrument: Instrument, max: Int = 12): List<Shape> {
         val tuning = tunings[instrument] ?: return emptyList()

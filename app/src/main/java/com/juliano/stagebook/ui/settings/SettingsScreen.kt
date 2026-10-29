@@ -280,6 +280,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
+                onChordPlay = viewModel::setChordPlay,
                 onBackup = { parts ->
                     backupParts = parts
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
@@ -346,6 +347,7 @@ data class SettingsActions(
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (com.juliano.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
+    val onChordPlay: (com.juliano.stagebook.data.model.ChordPlayMode) -> Unit = {},
     val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
@@ -668,6 +670,22 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             InstrumentPicker(look.instrument, actions.onInstrument)
             HelpTip(stringResource(R.string.settings_instrument_help))
             SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
+            // como o acorde soa ao tocar em "Tocar" no desenho (T20)
+            Text(stringResource(R.string.settings_chord_play), style = MaterialTheme.typography.bodyLarge)
+            val playModes = listOf(
+                com.juliano.stagebook.data.model.ChordPlayMode.ARPEGGIO to R.string.settings_chord_play_arpeggio,
+                com.juliano.stagebook.data.model.ChordPlayMode.CHORD to R.string.settings_chord_play_chord,
+                com.juliano.stagebook.data.model.ChordPlayMode.BOTH to R.string.settings_chord_play_both,
+            )
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                playModes.forEachIndexed { i, (m, label) ->
+                    SegmentedButton(
+                        selected = look.chordPlay == m,
+                        onClick = { actions.onChordPlay(m) },
+                        shape = SegmentedButtonDefaults.itemShape(i, playModes.size, baseShape = CircleShape),
+                    ) { Text(stringResource(label)) }
+                }
+            }
             Text(stringResource(R.string.settings_chord_list), style = MaterialTheme.typography.bodyLarge)
             val places = listOf(
                 ChordListPlace.NONE to R.string.settings_chord_list_none,

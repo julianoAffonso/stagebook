@@ -240,6 +240,18 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
+    // T20: com capo, a janela explica o desenho e tem o Tocar
+    @Test fun chordPopupCapo() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                com.juliano.stagebook.ui.stage.ChordShapePopup("G", com.juliano.stagebook.data.model.Instrument.VIOLAO, chordSong, {}, {})
+            }
+        }
+        @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_tocar.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
