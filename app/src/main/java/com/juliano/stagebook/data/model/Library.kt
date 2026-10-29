@@ -108,6 +108,7 @@ data class Look(
     val pedalName: String = "",   // nome do pedal Bluetooth reconhecido pelo último botão apertado
     val columns: StageColumns = StageColumns.AUTO,
     val stageMode: StageMode = StageMode.PAGES,
+    val autoScroll: Int = DEFAULT_AUTO_SCROLL,   // velocidade da rolagem automática (1 a 10), no modo rolar
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)
     val midiBtAddress: String = "",   // pedal MIDI Bluetooth escolhido em Ajustes (o app reconecta sozinho)
     val midiBtName: String = "",
@@ -138,6 +139,9 @@ data class Look(
         const val MAX_STAGE_FONT = 120f   // com zoom no palco pode passar do máximo dos ajustes
         const val MIN_CHORD_SCALE = 0.5f
         const val DEFAULT_SECTION_SCALE = 0.9f
+        const val DEFAULT_AUTO_SCROLL = 3
+        const val MAX_AUTO_SCROLL = 10
+        const val AUTO_SCROLL_DP_PER_LEVEL = 8f   // nível 3 = 24 dp por segundo
         const val MIN_SECTION_SCALE = 0.6f
         const val MAX_SECTION_SCALE = 1.3f
         const val MAX_CHORD_SCALE = 1.2f
