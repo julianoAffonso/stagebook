@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -45,18 +46,8 @@ fun BackupPartsDialog(
         title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Backup.Part.entries.filter { it in available }.forEach { part ->
-                    val on = part.name in chosen
-                    Row(
-                        Modifier.fillMaxWidth().toggleable(on, role = Role.Checkbox) { chosen = if (it) chosen + part.name else chosen - part.name },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = on, onCheckedChange = null)
-                        Column {
-                            Text(stringResource(part.label()), style = MaterialTheme.typography.bodyLarge)
-                            Text(stringResource(part.detail()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                BackupPartsChecks(available, Backup.Part.entries.filter { it.name in chosen }.toSet()) { part, on ->
+                    chosen = if (on) chosen + part.name else chosen - part.name
                 }
                 warning?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
             }
@@ -66,6 +57,26 @@ fun BackupPartsDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
+}
+
+/** As caixas de marcar de cada parte do backup (no cartão do backup e na janela da restauração). */
+@Composable
+fun BackupPartsChecks(available: Set<Backup.Part>, chosen: Set<Backup.Part>, onChange: (Backup.Part, Boolean) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Backup.Part.entries.filter { it in available }.forEach { part ->
+            val on = part in chosen
+            Row(
+                Modifier.fillMaxWidth().toggleable(on, role = Role.Checkbox) { onChange(part, it) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = on, onCheckedChange = null)
+                Column(Modifier.padding(start = Spacing.s)) {
+                    Text(stringResource(part.label()), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(part.detail()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
 }
 
 private fun Backup.Part.label() = when (this) {
@@ -83,7 +94,7 @@ private fun Backup.Part.detail() = when (this) {
 @LightPreview
 @Composable
 private fun BackupPartsLightPreview() = PreviewSurface(dark = false) {
-    BackupPartsDialog("Fazer backup", "Salvar", Backup.Part.entries.toSet(), {}, {})
+    BackupPartsDialog("Restaurar backup", "Restaurar", Backup.Part.entries.toSet(), {}, {})
 }
 
 @DarkPreview

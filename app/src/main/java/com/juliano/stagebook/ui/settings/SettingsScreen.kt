@@ -157,26 +157,12 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::importFrom) }
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportTo) }
     // backup: escolhe as partes (todas marcadas), depois onde salvar o arquivo .stagebook
-    var backupAsk by rememberSaveable { mutableStateOf(false) }
     var backupParts by remember { mutableStateOf(com.juliano.stagebook.data.Backup.Part.entries.toSet()) }
     val backupSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(com.juliano.stagebook.data.Backup.MIME)) { uri ->
         uri?.let { viewModel.backupTo(it, backupParts) }
     }
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
-    if (backupAsk) {
-        BackupPartsDialog(
-            title = stringResource(R.string.backup_make),
-            confirmLabel = stringResource(R.string.backup_save),
-            available = com.juliano.stagebook.data.Backup.Part.entries.toSet(),
-            onConfirm = { parts ->
-                backupParts = parts
-                backupAsk = false
-                backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
-            },
-            onDismiss = { backupAsk = false },
-        )
-    }
     pendingRestore?.let { p ->
         BackupPartsDialog(
             title = stringResource(R.string.backup_restore),
@@ -299,7 +285,10 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onAutoScroll = viewModel::setAutoScroll,
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 onExport = { exporter.launch("stagebook-biblioteca.json") },
-                onBackup = { backupAsk = true },
+                onBackup = { parts ->
+                    backupParts = parts
+                    backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
+                },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
@@ -362,7 +351,7 @@ data class SettingsActions(
     val onAutoScroll: (Int) -> Unit = {},
     val onImport: () -> Unit = {},
     val onExport: () -> Unit = {},
-    val onBackup: () -> Unit = {},
+    val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
@@ -1192,9 +1181,16 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         HelpTip(stringResource(R.string.settings_import_help))
     }
     // backup completo num arquivo .stagebook (músicas, faixas e ajustes); restaurar escolhe as partes
+    // as caixas ficam no próprio cartão, todas marcadas (pedido do usuário, 29/10); sai um arquivo só com o que estiver marcado
     SettingsCard(stringResource(R.string.backup_card)) {
+        var chosen by rememberSaveable { mutableStateOf(com.juliano.stagebook.data.Backup.Part.entries.map { it.name }.toSet()) }
+        val parts = com.juliano.stagebook.data.Backup.Part.entries.filter { it.name in chosen }.toSet()
+        Text(stringResource(R.string.backup_what), style = MaterialTheme.typography.bodyLarge)
+        BackupPartsChecks(com.juliano.stagebook.data.Backup.Part.entries.toSet(), parts) { part, on ->
+            chosen = if (on) chosen + part.name else chosen - part.name
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            ActionButton(stringResource(R.string.backup_make), actions.onBackup, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.backup_make), { actions.onBackup(parts) }, Modifier.weight(1f), icon = AppIcons.Download, enabled = parts.isNotEmpty())
             ActionButton(stringResource(R.string.backup_restore), actions.onRestore, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
         }
         HelpTip(stringResource(R.string.backup_help))

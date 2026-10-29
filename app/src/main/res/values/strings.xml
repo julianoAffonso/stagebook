@@ -233,7 +233,7 @@
     <string name="stage_key_desc">Tom: %1$s</string>
     <string name="backup_card">Backup</string>
     <string name="backup_make">Fazer backup</string>
-    <string name="backup_save">Salvar</string>
+    <string name="backup_what">O que vai no backup (um arquivo só, .stagebook):</string>
     <string name="backup_restore">Restaurar backup</string>
     <string name="backup_restore_ok">Restaurar</string>
     <string name="backup_restore_warning">O que você marcar substitui o que está neste aparelho.</string>
@@ -243,7 +243,7 @@
     <string name="backup_part_tracks_detail">Os arquivos de áudio, cada um na sua música</string>
     <string name="backup_part_settings">Ajustes</string>
     <string name="backup_part_settings_detail">Palco, cores, pedais, player e interface de áudio USB, banda e língua</string>
-    <string name="backup_help">Fazer backup salva um arquivo .stagebook com tudo o que você marcar (vem tudo marcado). Guarde no Drive, no computador ou mande para você. Para passar para outro aparelho, restaure o arquivo lá. A banda vai reconhecer o aparelho novo como outro: autorize de novo em Ajustes → Banda.</string>
+    <string name="backup_help">Fazer backup salva um arquivo só, .stagebook, com o que estiver marcado acima. Guarde no Drive, no computador ou mande para você. Para passar para outro aparelho, restaure o arquivo lá. A banda vai reconhecer o aparelho novo como outro: autorize de novo em Ajustes → Banda.</string>
     <string name="backup_done">Backup salvo</string>
     <string name="backup_failed">Não deu para salvar o backup</string>
     <string name="backup_not_backup">Esse arquivo não é um backup do Stagebook</string>
