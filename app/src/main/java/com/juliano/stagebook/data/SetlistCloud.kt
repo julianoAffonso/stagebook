@@ -28,7 +28,10 @@ import javax.inject.Singleton
 class SetlistCloud @Inject constructor(private val repository: LibraryRepository, private val identity: DeviceIdentity) {
     /** Música que vai junto com o setlist (o texto em ChordPro, com a cifra: quem recebe mostra conforme o perfil dele). */
     @Serializable
-    data class SharedSong(val title: String, val author: String = "", val year: String = "", val text: String = "")
+    data class SharedSong(val title: String, val author: String = "", val year: String = "", val text: String = "") {
+        /** Só letra/cifra em texto puro e de tamanho de música (ver [com.juliano.stagebook.domain.BandContent]). */
+        fun allowed() = com.juliano.stagebook.domain.BandContent.songOk(title, author, year, text)
+    }
 
     /** [skipped]: músicas grandes demais para uma mensagem (raro), que não foram. */
     data class Sent(val code: String, val songs: Int, val skipped: Int)
@@ -124,8 +127,10 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }.getOrNull() ?: return@withContext Received.Offline
         // só o que decifra com este código (o canal é público: pode ter lixo de outra pessoa); o setlist mais novo
         val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
-        val text = plain.asReversed().firstNotNullOfOrNull { QrPayload.unpack(it) }
+        // só setlist e músicas em texto puro (BandContent): o resto é descartado
+        val text = plain.asReversed().firstNotNullOfOrNull { QrPayload.unpack(it) }?.takeIf(com.juliano.stagebook.domain.BandContent::listOk)
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
+            .filter { it.allowed() }.take(com.juliano.stagebook.domain.BandContent.MAX_SONGS)
         val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
         when {
             from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)

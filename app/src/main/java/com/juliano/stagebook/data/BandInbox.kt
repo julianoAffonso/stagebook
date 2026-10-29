@@ -50,9 +50,11 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
      * mesma pessoa substitui o antigo (ela corrigiu e mandou de novo: não vale conferir a versão velha).
      */
     fun add(fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>) {
-        val item = Item(UUID.randomUUID().toString(), fromId, fromName, text, songs)
+        // tudo o que vem da banda (rede local ou internet) passa aqui: só setlist e músicas em texto puro
+        if (!com.juliano.stagebook.domain.BandContent.listOk(text)) return
+        val item = Item(UUID.randomUUID().toString(), fromId, fromName, text, songs.filter { it.allowed() }.take(com.juliano.stagebook.domain.BandContent.MAX_SONGS))
         _items.update { list ->
-            if (list.any { it.fromId == fromId && it.text == text && it.songs == songs }) return@update list
+            if (list.any { it.fromId == fromId && it.text == text && it.songs == item.songs }) return@update list
             val kept = if (item.setName.isEmpty()) list else list.filterNot { it.fromId == fromId && it.setName == item.setName }
             (kept + item).takeLast(MAX)
         }
