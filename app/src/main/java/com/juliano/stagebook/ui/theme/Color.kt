@@ -79,5 +79,7 @@ object StagePalette {
     val text = listOf(0xFFFFFFFF, 0xFFFFEB3B, 0xFFE0E0E0, 0xFF80DEEA, 0xFFA5D6A7, 0xFF000000).map { it.toInt() }
     val background = listOf(0xFF000000, 0xFF121212, 0xFF0D1B2A, 0xFF102A1A, 0xFFFFFFFF, 0xFFFFF8E1).map { it.toInt() }
     val section = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFFFEB3B, 0xFFEF5350, 0xFFBDBDBD).map { it.toInt() }
+    // brilho do metrônomo na borda do palco
+    val glow = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFEF5350, 0xFFAB47BC, 0xFFFFFFFF).map { it.toInt() }
     val chord = listOf(0xFFFFC107, 0xFFFFFFFF, 0xFF80DEEA, 0xFFA5D6A7, 0xFFFF8A65, 0xFF000000).map { it.toInt() }
 }

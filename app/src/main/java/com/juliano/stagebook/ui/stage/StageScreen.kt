@@ -232,6 +232,7 @@ fun StageRoute(
             onAutoScroll = viewModel::setAutoScroll,
             onMetronome = viewModel::setMetronome,
             onMetronomeSound = viewModel::metronomeSound,
+            onMetronomeGlow = viewModel::setMetronomeGlow,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -268,6 +269,7 @@ fun StageScreen(
     onAutoScroll: (level: Int) -> Unit = {},
     onMetronome: (count: Boolean, sound: Boolean) -> Unit = { _, _ -> },
     onMetronomeSound: (bpm: Int?) -> Unit = {},
+    onMetronomeGlow: (on: Boolean, color: Int) -> Unit = { _, _ -> },
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -434,7 +436,7 @@ fun StageScreen(
         metroPulse.animateTo(0f, tween(METRO_FLASH_MS))
     }
     val metroAccent = metroBeat >= 0 && metroBeat % 4 == 0
-    val metroColor = MaterialTheme.colorScheme.primary
+    val metroColor = Color(look.metroGlowColor)
     val glowPx = with(LocalDensity.current) { (if (metroAccent) METRO_GLOW_ACCENT else METRO_GLOW).toPx() }
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
@@ -928,6 +930,9 @@ fun StageScreen(
                         bpm = metroBpm,
                         count = look.metroCount,
                         sound = look.metroSound,
+                        glow = look.metroGlow,
+                        glowColor = look.metroGlowColor,
+                        onGlow = { on, color -> onMetronomeGlow(on, color) },
                         onBpm = { metroBpm = it.coerceIn(Chords.MIN_TEMPO, Chords.MAX_TEMPO) },
                         onCount = { onMetronome(it, look.metroSound) },
                         onSound = { onMetronome(look.metroCount, it) },
@@ -975,7 +980,7 @@ fun StageScreen(
             .graphicsLayer()
             .drawBehind {
                 val a = metroPulse.value
-                if (a <= 0f) return@drawBehind
+                if (a <= 0f || !look.metroGlow) return@drawBehind
                 val c = metroColor.copy(alpha = a * METRO_GLOW_ALPHA)
                 val clear = metroColor.copy(alpha = 0f)
                 val g = glowPx.coerceAtMost(size.minDimension / 2)
@@ -1221,6 +1226,9 @@ private fun MetronomeDialog(
     bpm: Int,
     count: Boolean,
     sound: Boolean,
+    glow: Boolean,
+    glowColor: Int,
+    onGlow: (on: Boolean, color: Int) -> Unit,
     onBpm: (Int) -> Unit,
     onCount: (Boolean) -> Unit,
     onSound: (Boolean) -> Unit,
@@ -1246,6 +1254,9 @@ private fun MetronomeDialog(
                 }
                 com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_count), count, onChange = onCount)
                 com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_sound), sound, onChange = onSound)
+                // brilho na borda: ligar ou não, e a cor (pedido do usuário, 29/10)
+                com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_glow), glow, onChange = { onGlow(it, glowColor) })
+                if (glow) com.juliano.stagebook.ui.components.ColorSwatchRow(com.juliano.stagebook.ui.theme.StagePalette.glow, glowColor, { onGlow(true, it) })
                 IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                     Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
                 }
