@@ -17,27 +17,30 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Editor em duas abas (T27): a letra com a tela toda e os dados da música à parte. */
+/** Editor (T27): a letra com a tela toda e os dados da música recolhidos numa linha no topo. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class EditorTabsTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `música nova abre nos Dados - existente abre na Letra`() {
-        var state by mutableStateOf(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""))
+    @Test fun `música nova abre com os dados à vista - tocar no resumo recolhe`() {
+        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertExists()
-        compose.onNodeWithText("Letra").performClick()
+        compose.onNodeWithText("Música sem título").performClick()
+        compose.waitForIdle()
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertDoesNotExist()
     }
 
-    @Test fun `música existente abre na Letra e o título aparece no topo`() {
-        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "linha"), {}, {}, {}, {}, {}, {}, {}) } }
+    @Test fun `música existente abre recolhida com o resumo - tocar abre os campos`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertDoesNotExist()
-        compose.onNodeWithText("Hazard · Richard Marx").assertExists()
+        compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Título (é o nome usado no setlist)").assertExists()
     }
 
-    @Test fun `salvar sem título leva para os Dados com o erro`() {
+    @Test fun `salvar sem título abre os dados com o erro`() {
         var state by mutableStateOf(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha"))
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         state = state.copy(title = "", error = EditorError.TITLE_EMPTY)

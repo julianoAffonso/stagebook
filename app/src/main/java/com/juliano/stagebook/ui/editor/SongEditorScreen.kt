@@ -45,8 +45,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
-import androidx.compose.material3.Tab
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -134,11 +132,11 @@ fun SongEditorScreen(
     var deleting by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // a música como fica no palco
     var newChord by rememberSaveable { mutableStateOf(false) }
-    // duas abas (pedido do usuário, 29/10): a letra com a tela toda e os dados da música à parte. Música nova começa nos
-    // Dados (o título é obrigatório); aberta do palco, na letra
-    var dataTab by rememberSaveable(uiState.loading) { mutableStateOf(!uiState.loading && cursor < 0 && uiState.mode == EditorMode.NEW && uiState.title.isEmpty()) }
-    // salvar sem título (ou com título repetido): vai para os Dados, onde está o erro
-    LaunchedEffect(uiState.error) { if (uiState.error != null) dataTab = true }
+    // os dados da música (título, artista, ano, tom, capo) ficam recolhidos numa linha; música nova começa com eles
+    // abertos (o título é obrigatório)
+    var dataOpen by rememberSaveable(uiState.loading) { mutableStateOf(!uiState.loading && cursor < 0 && uiState.mode == EditorMode.NEW && uiState.title.isEmpty()) }
+    // salvar sem título (ou com título repetido): abre os dados, onde está o erro
+    LaunchedEffect(uiState.error) { if (uiState.error != null) dataOpen = true }
     // Cancelar fica colado no Salvar e o voltar do sistema é fácil de tocar sem querer
     var discarding by rememberSaveable { mutableStateOf(false) }
     // a mesma função a cada tecla: os botões Salvar/Cancelar não se redesenham enquanto digita
@@ -182,8 +180,6 @@ fun SongEditorScreen(
                                 EditorMode.IMPORTED_UPDATE -> R.string.editor_imported_update
                             },
                         ),
-                        // na aba da letra, o nome da música fica à vista no topo
-                        subtitle = listOf(uiState.title, uiState.author).filter { it.isNotBlank() }.joinToString(" · "),
                         onBack = cancel,
                         modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s),
                     ) {
@@ -203,26 +199,15 @@ fun SongEditorScreen(
                             OverflowMenu(listOf(MenuAction(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, danger = true)))
                         }
                     }
-                    PrimaryTabRow(selectedTabIndex = if (dataTab) 1 else 0, modifier = Modifier.padding(bottom = Spacing.s)) {
-                        // a aba que não está aberta fica apagada
-                        val off = MaterialTheme.colorScheme.onSurfaceVariant
-                        Tab(selected = !dataTab, onClick = { dataTab = false }, unselectedContentColor = off, text = { Text(stringResource(R.string.editor_tab_lyrics)) })
-                        Tab(
-                            selected = dataTab,
-                            onClick = { dataTab = true },
-                            unselectedContentColor = off,
-                            text = { Text(stringResource(R.string.editor_tab_data), color = if (uiState.error != null) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified) },
-                        )
-                    }
-                    if (dataTab) {
-                        Column(
-                            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = Spacing.m, vertical = Spacing.m),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.m),
-                        ) {
-                            SongDataFields(uiState, onTitle, onAuthor, onYear)
-                            if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
-                        }
-                        return@Column
+                    // dados da música recolhidos numa linha (pedido do usuário, 29/10): tocar abre os campos ali mesmo
+                    SongDataHeader(
+                        uiState = uiState,
+                        expanded = dataOpen,
+                        onToggle = { dataOpen = !dataOpen },
+                        chords = look.chords,
+                    ) {
+                        SongDataFields(uiState, onTitle, onAuthor, onYear)
+                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -296,7 +281,48 @@ internal fun lineEnd(text: String, at: Int): Int {
  * Atalhos das seções: cada toque põe o título da seção na letra, onde está o cursor. Chips soltos,
  * alinhados aos campos (Material 3 Expressive, sem a tarja de fundo).
  */
-/** Aba Dados: título (obrigatório, é o nome no setlist), artista e ano. */
+/** Linha fina com o resumo da música (título · artista · tom · capo) e a seta; aberta, mostra os campos embaixo. */
+@Composable
+private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onToggle: () -> Unit, chords: Boolean, fields: @Composable () -> Unit) {
+    val key = remember(uiState.text) { Chords.key(uiState.text) }
+    val capo = remember(uiState.text) { Chords.capo(uiState.text) }
+    val summary = listOfNotNull(
+        uiState.title.ifBlank { null } ?: stringResource(R.string.editor_data_untitled),
+        uiState.author.ifBlank { null },
+        key.ifBlank { null }?.takeIf { chords },
+        capo.takeIf { chords && it > 0 }?.let { stringResource(R.string.editor_data_capo, it) },
+    ).joinToString(" · ")
+    Column(Modifier.padding(horizontal = Spacing.m)) {
+        // sem fundo, com a seta para baixo/para cima dizendo que abre e fecha (pedido do usuário, 29/10)
+        Surface(
+            onClick = onToggle,
+            shape = MaterialTheme.shapes.small,
+            color = androidx.compose.ui.graphics.Color.Transparent,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    summary,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (uiState.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
+                    stringResource(if (expanded) R.string.editor_data_close else R.string.editor_data_open),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        AnimatedVisibility(expanded) {
+            Column(Modifier.padding(vertical = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) { fields() }
+        }
+    }
+}
+
+/** Os dados da música: título (obrigatório, é o nome no setlist), artista e ano. */
 @Composable
 private fun SongDataFields(uiState: SongEditorUiState, onTitle: (String) -> Unit, onAuthor: (String) -> Unit, onYear: (String) -> Unit) {
     OutlinedTextField(
