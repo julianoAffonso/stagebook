@@ -22,6 +22,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.widget.Toast
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -225,6 +226,7 @@ fun StageRoute(
             onRemoveTrack = viewModel::removeTrack,
             onHiddenChords = viewModel::setHiddenChords,
             onAutoScroll = viewModel::setAutoScroll,
+            onMetronome = viewModel::setMetronome,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -259,6 +261,7 @@ fun StageScreen(
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
+    onMetronome: (count: Boolean, sound: Boolean) -> Unit = { _, _ -> },
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -397,6 +400,17 @@ fun StageScreen(
     // rolagem automática (T15, modo rolar): qualquer toque ou pedal só pausa
     var autoOn by remember(index) { mutableStateOf(false) }
     var autoAvailable by remember { mutableStateOf(false) }   // modo rolar e a música não cabe numa tela
+    // metrônomo (T33c): começa no BPM da música (sem BPM, 100); para ao trocar de música. O som vem na T33d
+    var metroOn by remember(index) { mutableStateOf(false) }
+    val songTempo = remember(index, uiState.songs) { uiState.songs.getOrNull(index)?.text?.let(Chords::tempo) ?: 0 }
+    var metroBpm by remember(index, songTempo) { mutableIntStateOf(songTempo.takeIf { it > 0 } ?: Chords.DEFAULT_TEMPO) }
+    var metroBeat by remember(index) { mutableIntStateOf(-1) }   // tempo atual desde o play (0 = primeiro)
+    LaunchedEffect(metroOn, metroBpm) {
+        if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
+        val period = 60_000L / metroBpm
+        var beat = 0
+        while (true) { metroBeat = beat++; delay(period) }
+    }
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -801,6 +815,16 @@ fun StageScreen(
                     repeat(content.sheetColumns - content.columns.size) { Box(Modifier.weight(1f)) }
                 }
             }
+            // contagem do metrônomo (1 2 3 4) bem grande no meio, antes de começar
+            if (metroOn && look.metroCount && metroBeat in 0 until METRO_COUNT) {
+                Text(
+                    (metroBeat + 1).toString(),
+                    // grande o bastante para a banda ver do outro lado do palco
+                    style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 200.sp, lineHeight = 200.sp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
             // a linha onde se continua, acesa por um instante (T14), na largura da coluna da esquerda
             androidx.compose.animation.AnimatedVisibility(
                 visible = flash != null,
@@ -866,6 +890,32 @@ fun StageScreen(
             StageClock(fg.copy(alpha = 0.7f))
             // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), na linha do relógio (fora da letra)
             // um ícone só (aceso enquanto rola); a janelinha tem o play e a velocidade (pedido do usuário, 29/10)
+            // metrônomo: tocando, o ícone vira stop e pisca no tempo (mais forte no 1); parado, abre a janelinha
+            run {
+                var metroDialog by remember { mutableStateOf(false) }
+                val pulse = remember { androidx.compose.animation.core.Animatable(0.35f) }
+                LaunchedEffect(metroBeat) {
+                    if (metroBeat < 0) return@LaunchedEffect
+                    pulse.snapTo(if (metroBeat % 4 == 0) 1f else 0.75f)
+                    pulse.animateTo(0.35f, tween(METRO_FLASH_MS))
+                }
+                Box {
+                    IconButton(onClick = { if (metroOn) metroOn = false else metroDialog = true }) {
+                        if (metroOn) Icon(AppIcons.Stop, stringResource(R.string.metro_stop), tint = MaterialTheme.colorScheme.primary.copy(alpha = pulse.value))
+                        else Icon(AppIcons.Metronome, stringResource(R.string.metro_title), tint = fg.copy(alpha = 0.7f))
+                    }
+                    if (metroDialog) MetronomeDialog(
+                        bpm = metroBpm,
+                        count = look.metroCount,
+                        sound = look.metroSound,
+                        onBpm = { metroBpm = it.coerceIn(Chords.MIN_TEMPO, Chords.MAX_TEMPO) },
+                        onCount = { onMetronome(it, look.metroSound) },
+                        onSound = { onMetronome(look.metroCount, it) },
+                        onPlay = { metroOn = true; metroDialog = false },
+                        onDismiss = { metroDialog = false },
+                    )
+                }
+            }
             if (autoAvailable) {
                 var autoDialog by remember { mutableStateOf(false) }
                 // a janelinha abre colada acima do ícone (pedido do usuário, 29/10)
@@ -996,6 +1046,8 @@ private class GestureTargets(
 // leva também o estilo e as colunas da folha: a página que sai na animação não é remontada (nem muda de
 // tamanho) com os da música nova
 private const val FLASH_MS = 1500L
+private const val METRO_FLASH_MS = 180
+private const val METRO_COUNT = 4   // a contagem é de um compasso de 4
 private const val FLASH_ALPHA = 0.22f
 
 private data class PageContent(
@@ -1121,6 +1173,45 @@ private fun TrackButton(
 }
 
 /** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
+/** Metrônomo (janelinha acima do ícone): BPM com − e +, contagem e som, e o play, que fecha a janela. */
+@Composable
+private fun MetronomeDialog(
+    bpm: Int,
+    count: Boolean,
+    sound: Boolean,
+    onBpm: (Int) -> Unit,
+    onCount: (Boolean) -> Unit,
+    onSound: (Boolean) -> Unit,
+    onPlay: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = AboveAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(stringResource(R.string.metro_title), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    IconButton(onClick = { onBpm(bpm - 1) }) { Icon(AppIcons.Remove, stringResource(R.string.metro_slower)) }
+                    Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
+                    IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
+                }
+                com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_count), count, onChange = onCount)
+                com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_sound), sound, onChange = onSound)
+                IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
+                    Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
 /** Põe a janelinha em cima do ícone, alinhada à esquerda dele, sem sair da tela. */
 private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.PopupPositionProvider {
     override fun calculatePosition(

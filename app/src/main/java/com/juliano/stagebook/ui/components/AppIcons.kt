@@ -107,6 +107,15 @@ object AppIcons {
     // play e pausa de pontas arredondadas (botão grande da rolagem automática)
     val PlayRounded by lazy { icon("playrounded", "M8,19.14V4.86c0,-0.8 0.88,-1.28 1.55,-0.84l11.2,7.14c0.62,0.39 0.62,1.29 0,1.69l-11.2,7.14C8.88,20.42 8,19.94 8,19.14z") }
     val PauseRounded by lazy { icon("pauserounded", "M8,19c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2v10c0,1.1 0.9,2 2,2zM14,7v10c0,1.1 0.9,2 2,2s2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2z") }
+    // metrônomo: corpo em trapézio e o pêndulo inclinado
+    val Metronome by lazy {
+        icon(
+            "metronome",
+            "M9.2,2L11.2,2L6.8,21L4.8,21z", "M12.8,2L14.8,2L19.2,21L17.2,21z", "M9.2,2H14.8V4H9.2z", "M4.5,19.5H19.5V22H4.5z",
+            "M10.8,16L16.4,5.6L18,6.5L12.4,16.9z",
+        )
+    }
+    val Stop by lazy { icon("stop", "M8,6h8c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H8c-1.1,0 -2,-0.9 -2,-2V8c0,-1.1 0.9,-2 2,-2z") }
     // duas setas para baixo: rolagem automática do palco
     val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // traço grosso (pedido de 29/10)
     val Pause by lazy { icon("pause", "M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z") }
