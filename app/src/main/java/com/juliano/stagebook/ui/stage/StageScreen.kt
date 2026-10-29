@@ -81,6 +81,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -432,7 +435,7 @@ fun StageScreen(
     }
     val metroAccent = metroBeat >= 0 && metroBeat % 4 == 0
     val metroColor = MaterialTheme.colorScheme.primary
-    val borderPx = with(LocalDensity.current) { (if (metroAccent) METRO_BORDER_ACCENT else METRO_BORDER).toPx() }
+    val glowPx = with(LocalDensity.current) { (if (metroAccent) METRO_GLOW_ACCENT else METRO_GLOW).toPx() }
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -500,16 +503,11 @@ fun StageScreen(
         true   // o "soltar" também é consumido (alguns pedais mandam só ele para teclas de mídia)
     }
 
+    Box(modifier.fillMaxSize()) {
     Column(
-        modifier
+        Modifier
             .fillMaxSize()
             .background(Color(look.bg))
-            // borda da tela acendendo no tempo do metrônomo (lida só no desenho: não refaz a tela a cada tempo)
-            .drawWithContent {
-                drawContent()
-                val a = metroPulse.value
-                if (a > 0f) drawRect(metroColor.copy(alpha = a), style = androidx.compose.ui.graphics.drawscope.Stroke(borderPx))
-            }
             .padding(horizontal = Spacing.l),
     ) {
         // topo enxuto: música, artista e as bolinhas das páginas. No celular o artista e o ano descem para uma
@@ -969,6 +967,25 @@ fun StageScreen(
             }
         }
     }
+    // brilho do metrônomo na borda, esmaecendo para dentro, numa camada própria por cima: cada piscada redesenha só ela
+    // (a letra fica guardada como está), e nada é desenhado fora das piscadas
+    Spacer(
+        Modifier
+            .matchParentSize()
+            .graphicsLayer()
+            .drawBehind {
+                val a = metroPulse.value
+                if (a <= 0f) return@drawBehind
+                val c = metroColor.copy(alpha = a * METRO_GLOW_ALPHA)
+                val clear = metroColor.copy(alpha = 0f)
+                val g = glowPx.coerceAtMost(size.minDimension / 2)
+                drawRect(Brush.verticalGradient(listOf(c, clear), 0f, g), size = androidx.compose.ui.geometry.Size(size.width, g))
+                drawRect(Brush.verticalGradient(listOf(clear, c), size.height - g, size.height), topLeft = Offset(0f, size.height - g), size = androidx.compose.ui.geometry.Size(size.width, g))
+                drawRect(Brush.horizontalGradient(listOf(c, clear), 0f, g), size = androidx.compose.ui.geometry.Size(g, size.height))
+                drawRect(Brush.horizontalGradient(listOf(clear, c), size.width - g, size.width), topLeft = Offset(size.width - g, 0f), size = androidx.compose.ui.geometry.Size(g, size.height))
+            },
+    )
+    }
 }
 
 /** "Zoom desta música: 120%" enquanto ajusta, com atalho para voltar ao tamanho padrão. */
@@ -1069,8 +1086,9 @@ private class GestureTargets(
 // tamanho) com os da música nova
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
-private val METRO_BORDER = 4.dp
-private val METRO_BORDER_ACCENT = 8.dp
+private val METRO_GLOW = 20.dp          // brilho da borda, esmaecendo para dentro (não chega na letra)
+private val METRO_GLOW_ACCENT = 32.dp   // mais largo no 1 do compasso
+private const val METRO_GLOW_ALPHA = 0.8f
 private const val METRO_COUNT = 4   // a contagem é de um compasso de 4
 private const val FLASH_ALPHA = 0.22f
 
