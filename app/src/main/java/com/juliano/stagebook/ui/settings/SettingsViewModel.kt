@@ -83,8 +83,6 @@ sealed interface SettingsMessage {
     data class Imported(val added: Int, val replaced: Int) : SettingsMessage
     data object ImportFailed : SettingsMessage
     data object ImportNewer : SettingsMessage   // arquivo de uma versão mais nova do Stagebook: atualizar
-    data object Exported : SettingsMessage
-    data object ExportFailed : SettingsMessage
     data object BackupDone : SettingsMessage
     data object BackupFailed : SettingsMessage
     data object NotBackup : SettingsMessage
@@ -111,10 +109,11 @@ class SettingsViewModel @Inject constructor(
         _messages.send(if (ok) SettingsMessage.BackupDone else SettingsMessage.BackupFailed)
     }
 
+    /** Abrir arquivo: um .stagebook mostra as partes para escolher; um arquivo de músicas antigo (.json) soma as músicas. */
     fun inspectBackup(uri: Uri) = viewModelScope.launch {
         val c = runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
         when {
-            c == null -> _messages.send(SettingsMessage.NotBackup)
+            c == null -> importFrom(uri)   // não é .stagebook: tenta o arquivo de músicas antigo (ou avisa que não deu)
             c.newer -> _messages.send(SettingsMessage.ImportNewer)
             else -> _pendingRestore.value = PendingRestore(uri, c)
         }
@@ -122,10 +121,10 @@ class SettingsViewModel @Inject constructor(
 
     fun cancelRestore() { _pendingRestore.value = null }
 
-    fun restore(parts: Set<com.juliano.stagebook.data.Backup.Part>) = viewModelScope.launch {
+    fun restore(parts: Set<com.juliano.stagebook.data.Backup.Part>, replace: Boolean) = viewModelScope.launch {
         val p = _pendingRestore.value ?: return@launch
         _pendingRestore.value = null
-        val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts) } }.getOrDefault(false)
+        val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } }.getOrDefault(false)
         // ajustes restaurados (língua, aparência): a tela abre de novo para valerem
         _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(com.juliano.stagebook.data.Backup.Part.SETTINGS in parts))
     }
@@ -301,14 +300,6 @@ class SettingsViewModel @Inject constructor(
         val msg = runCatching { withContext(Dispatchers.Default) { repository.importSongs(json) }.let { SettingsMessage.Imported(it.added, it.replaced) } }
             .getOrElse { SettingsMessage.ImportFailed }
         _messages.send(msg)
-    }
-
-    fun exportTo(uri: Uri) = viewModelScope.launch {
-        val json = withContext(Dispatchers.Default) { repository.exportSongs() }
-        val ok = runCatching {
-            withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(json.toByteArray()) } }
-        }.isSuccess
-        _messages.send(if (ok) SettingsMessage.Exported else SettingsMessage.ExportFailed)
     }
 }
 

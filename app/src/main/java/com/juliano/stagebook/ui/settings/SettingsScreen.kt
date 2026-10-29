@@ -154,8 +154,6 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
-    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::importFrom) }
-    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportTo) }
     // backup: escolhe as partes (todas marcadas), depois onde salvar o arquivo .stagebook
     var backupParts by remember { mutableStateOf(com.juliano.stagebook.data.Backup.Part.entries.toSet()) }
     val backupSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(com.juliano.stagebook.data.Backup.MIME)) { uri ->
@@ -165,8 +163,8 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
     pendingRestore?.let { p ->
         BackupPartsDialog(
-            title = stringResource(R.string.backup_restore),
-            confirmLabel = stringResource(R.string.backup_restore_ok),
+            title = stringResource(R.string.backup_open),
+            confirmLabel = stringResource(R.string.backup_open_ok),
             available = p.contents.parts,
             onConfirm = viewModel::restore,
             onDismiss = viewModel::cancelRestore,
@@ -184,8 +182,6 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                     is SettingsMessage.Imported -> r.getString(R.string.settings_imported, m.added, m.replaced)
                     SettingsMessage.ImportFailed -> r.getString(R.string.settings_import_failed)
                     SettingsMessage.ImportNewer -> r.getString(R.string.scan_newer)
-                    SettingsMessage.Exported -> r.getString(R.string.settings_exported)
-                    SettingsMessage.ExportFailed -> r.getString(R.string.settings_export_failed)
                     SettingsMessage.BackupDone -> r.getString(R.string.backup_done)
                     SettingsMessage.BackupFailed -> r.getString(R.string.backup_failed)
                     SettingsMessage.NotBackup -> r.getString(R.string.backup_not_backup)
@@ -283,8 +279,6 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
-                onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                onExport = { exporter.launch("stagebook-biblioteca.json") },
                 onBackup = { parts ->
                     backupParts = parts
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
@@ -302,7 +296,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     pending?.let { p ->
         ConfirmDialog(
             pluralStringResource(R.plurals.settings_import_confirm, p.lyricsChanged, p.lyricsChanged, p.added),
-            stringResource(R.string.settings_import_file),
+            stringResource(R.string.backup_open_ok),
             onConfirm = viewModel::confirmImport,
             onDismiss = viewModel::cancelImport,
         )
@@ -349,8 +343,6 @@ data class SettingsActions(
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (com.juliano.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
-    val onImport: () -> Unit = {},
-    val onExport: () -> Unit = {},
     val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
@@ -1174,14 +1166,9 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 pluralStringResource(R.plurals.set_count, uiState.setCount, uiState.setCount),
             style = MaterialTheme.typography.bodyLarge,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            ActionButton(stringResource(R.string.settings_import_file), actions.onImport, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
-            ActionButton(stringResource(R.string.settings_export_file), actions.onExport, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
-        }
-        HelpTip(stringResource(R.string.settings_import_help))
     }
-    // backup completo num arquivo .stagebook (músicas, faixas e ajustes); restaurar escolhe as partes
-    // as caixas ficam no próprio cartão, todas marcadas (pedido do usuário, 29/10); sai um arquivo só com o que estiver marcado
+    // um formato só, o .stagebook (pedido do usuário, 29/10): salvar com as caixas no próprio cartão (todas marcadas) e
+    // abrir um arquivo (escolhe as partes; as músicas somam ou substituem). O arquivo de músicas antigo (.json) também abre
     SettingsCard(stringResource(R.string.backup_card)) {
         var chosen by rememberSaveable { mutableStateOf(com.juliano.stagebook.data.Backup.Part.entries.map { it.name }.toSet()) }
         val parts = com.juliano.stagebook.data.Backup.Part.entries.filter { it.name in chosen }.toSet()
@@ -1191,7 +1178,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             ActionButton(stringResource(R.string.backup_make), { actions.onBackup(parts) }, Modifier.weight(1f), icon = AppIcons.Download, enabled = parts.isNotEmpty())
-            ActionButton(stringResource(R.string.backup_restore), actions.onRestore, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
         }
         HelpTip(stringResource(R.string.backup_help))
     }

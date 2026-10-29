@@ -82,4 +82,22 @@ class BackupTest {
         val (_, _, backup) = setup()
         assertEquals(null, backup.inspect(ByteArrayInputStream("não é zip".toByteArray())))
     }
+
+    @Test fun `somar - entram só as músicas e setlists que faltam, as daqui ficam como estão`() = runBlocking {
+        val (repo, _, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val a = repo.saveSong(Song(title = "Asa Branca", text = "do arquivo"))
+        val b = repo.saveSong(Song(title = "Garota de Ipanema", text = "x"))
+        repo.createSetlist("Show").let { id -> repo.addToSetlist(id, listOf(a, b)) }
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY))
+        // aqui: a Asa Branca foi editada e a Garota não existe mais
+        repo.restore(listOf(Song(id = a, title = "Asa Branca", text = "editada aqui")), emptyList())
+        backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY), replace = false)
+        val songs = repo.library.value.songs
+        assertEquals("editada aqui", songs.single { it.title == "Asa Branca" }.text)   // a daqui fica
+        assertTrue(songs.any { it.title == "Garota de Ipanema" })                    // a que faltava entra
+        val show = repo.library.value.sets.single { it.name == "Show" }
+        assertEquals(listOf("Asa Branca", "Garota de Ipanema"), show.items.map { id -> repo.song(id)!!.title })
+    }
 }
