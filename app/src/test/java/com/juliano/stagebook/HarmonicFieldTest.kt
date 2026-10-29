@@ -18,7 +18,7 @@ class HarmonicFieldTest {
 
     @Test fun `grau do acorde no tom da música`() {
         assertEquals("IV", HarmonicField.degreeIn("C", "G"))
-        assertEquals("vi", HarmonicField.degreeIn("Em7", "G"))   // a sétima não muda a tríade
+        assertEquals("vi7", HarmonicField.degreeIn("Em7", "G"))
         assertNull(HarmonicField.degreeIn("F", "G"))
     }
 
@@ -26,5 +26,28 @@ class HarmonicFieldTest {
         val where = HarmonicField.appearances("C").map { it.roman + " em " + it.key }
         assertTrue(where.containsAll(listOf("IV em G", "V em F", "III em Am", "VI em Em", "VII em Dm")))
         assertTrue(where.none { it.startsWith("I em") })
+    }
+
+    @Test fun `a sétima conta - C7M é o IV em G, C7 não é do campo`() {
+        assertEquals("IV7M", HarmonicField.degreeIn("C7M", "G"))
+        assertEquals("IV7M", HarmonicField.degreeIn("Cmaj7", "G"))
+        assertNull(HarmonicField.degreeIn("C7", "G"))
+        assertEquals("V7", HarmonicField.degreeIn("D7", "G"))
+        assertNull(HarmonicField.degreeIn("D7M", "G"))
+        assertEquals("viiø", HarmonicField.degreeIn("F#m7(b5)", "G"))
+    }
+
+    @Test fun `campo com tétrades`() =
+        assertEquals(listOf("G7M", "Am7", "Bm7", "C7M", "D7", "Em7", "F#m7(b5)"), HarmonicField.field("G", sevenths = true).map { it.chord })
+
+    @Test fun `V7 da menor harmônica conta - E7 em Am`() {
+        assertEquals("V7", HarmonicField.degreeIn("E7", "Am"))
+        assertEquals("V", HarmonicField.degreeIn("E", "Am"))
+    }
+
+    @Test fun `C7 só aparece como V7 de F - nada de IV em G`() {
+        val where = HarmonicField.appearances("C7").map { it.roman + " em " + it.key }
+        assertTrue("V7 em F" in where)
+        assertTrue(where.none { it.endsWith("em G") })
     }
 }

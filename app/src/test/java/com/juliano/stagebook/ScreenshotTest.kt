@@ -285,6 +285,19 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes.png")
     }
 
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun chordDetailsSeventh() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                com.juliano.stagebook.ui.stage.ChordShapePopup("D7", com.juliano.stagebook.data.model.Instrument.VIOLAO, chordSong, {}, {})
+            }
+        }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes_7.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)

@@ -180,14 +180,32 @@ object Chords {
     private val majorKeys = listOf("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
     private val minorKeys = listOf("Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm")
 
-    /** Tríade básica de um acorde (raiz 0–11 e qualidade), para o campo harmônico; null se não é acorde. */
-    data class Triad(val root: Int, val minor: Boolean, val dim: Boolean)
+    /** A sétima do acorde: nenhuma, maior (7M), menor (7, m7, m7(b5)) ou diminuta (°7). */
+    enum class Seventh { NONE, MAJOR, MINOR, DIMINISHED }
+
+    /**
+     * Tríade de base (raiz 0–11 e qualidade) e a sétima, para o campo harmônico; null se não é acorde. A sétima conta: em G,
+     * Cmaj7 é o IV, mas C7 não é do campo (pedido do usuário, 29/10: ignorar a sétima dava informação errada).
+     */
+    data class Triad(val root: Int, val minor: Boolean, val dim: Boolean, val seventh: Seventh = Seventh.NONE)
 
     fun triad(c: String): Triad? {
         val m = chord.matchEntire(c.trim()) ?: return null
         val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return null
-        val q = quality(m.groupValues[3])
-        return Triad(root, q == Quality.MINOR, q == Quality.DIM)
+        val rest = m.groupValues[3]
+        val halfDim = rest.contains("m7b5") || rest.contains("m7(b5)") || rest.contains("ø")
+        val q = if (halfDim) Quality.DIM else quality(rest)
+        return Triad(root, q == Quality.MINOR, q == Quality.DIM, seventhOf(rest, halfDim))
+    }
+
+    // 7M/maj7/M7/Δ = sétima maior; °7/dim7 = diminuta; 7, m7, m7(b5) e as extensões 9/11/13 (sem "add") = menor
+    private fun seventhOf(rest: String, halfDim: Boolean): Seventh = when {
+        halfDim -> Seventh.MINOR
+        rest.contains("7M") || rest.contains("maj7") || rest.contains("M7") || rest.contains("Δ") || rest.contains("maj9") -> Seventh.MAJOR
+        rest.contains("°7") || rest.contains("º7") || rest.contains("dim7") -> Seventh.DIMINISHED
+        rest.contains("7") -> Seventh.MINOR
+        !rest.contains("add") && (rest.contains("9") || rest.contains("11") || rest.contains("13")) -> Seventh.MINOR
+        else -> Seventh.NONE
     }
 
     /** Nome de costume do tom com tônica [root] (C, Db… / Cm, C#m…). */
