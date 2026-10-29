@@ -86,6 +86,8 @@ object AppIcons {
     val Visibility by lazy {
         icon("visibility", "M12,4.5C7,4.5 2.73,7.61 1,12c1.73,4.39 6,7.5 11,7.5s9.27,-3.11 11,-7.5c-1.73,-4.39 -6,-7.5 -11,-7.5zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5 5,2.24 5,5 -2.24,5 -5,5zM12,9c-1.66,0 -3,1.34 -3,3s1.34,3 3,3 3,-1.34 3,-3 -1.34,-3 -3,-3z")
     }
+    val DropDown by lazy { icon("dropdown", "M7,10l5,5 5,-5z") }
+    val DropUp by lazy { icon("dropup", "M7,14l5,-5 5,5z") }
     val ExpandMore by lazy { icon("expandmore", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6z") }
     val ExpandLess by lazy { icon("expandless", "M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z") }
     val ChevronLeft by lazy { icon("chevronleft", "M15.41,7.41L14,6l-6,6 6,6 1.41,-1.41L10.83,12z") }
