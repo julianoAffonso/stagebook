@@ -549,7 +549,7 @@ fun StageScreen(
             // depois do artista, nesta ordem (pedido do usuário, 29/10): backing track e capo acesos na cor de destaque, depois
             // o tom; no celular vão para a linha do artista, senão o título encurta
             if (metaInline && look.playerMode && song.track.isNotEmpty()) TrackBadge()
-            if (!song.missing && metaInline && look.chords) SongKeyBadges(song.text, fg)
+            if (!song.missing && metaInline && look.chords) SongKeyBadges(song.text, fg, showCapo = look.instrument != com.juliano.stagebook.data.model.Instrument.TECLADO)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -570,7 +570,7 @@ fun StageScreen(
                     modifier = Modifier.weight(1f),
                 )
                 if (hasTrack) TrackBadge(Modifier.padding(end = Spacing.m))
-                if (!song.missing && hasKey) SongKeyBadges(song.text, fg)
+                if (!song.missing && hasKey) SongKeyBadges(song.text, fg, showCapo = look.instrument != com.juliano.stagebook.data.model.Instrument.TECLADO)
             }
         }
 
@@ -1299,9 +1299,10 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
 }
 
 @Composable
-private fun SongKeyBadges(text: String, fg: Color) {
+private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true) {
     val key = remember(text) { Chords.key(text) }
-    val capo = remember(text) { Chords.capo(text) }
+    // teclado não usa capotraste (pedido do usuário, 29/10): no palco dele o capo não aparece
+    val capo = remember(text, showCapo) { if (showCapo) Chords.capo(text) else 0 }
     if (key.isEmpty() && capo == 0) return
     val sounds = Chords.soundingKey(key, capo)
     val keyDesc = stringResource(R.string.stage_key_desc, key)
