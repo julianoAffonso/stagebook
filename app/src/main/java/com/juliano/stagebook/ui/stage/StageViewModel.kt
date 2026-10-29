@@ -116,6 +116,9 @@ class StageViewModel @Inject constructor(
     /** Metrônomo: contagem antes de começar e som (guardados nos ajustes). */
     fun setMetronome(count: Boolean, sound: Boolean) = repository.updateLook { it.copy(metroCount = count, metroSound = sound) }
 
+    /** Brilho do metrônomo na borda: ligado ou não, e a cor. */
+    fun setMetronomeGlow(on: Boolean, color: Int) = repository.updateLook { it.copy(metroGlow = on, metroGlowColor = color) }
+
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }
 
     fun setZoom(songId: String, zoom: Float) {

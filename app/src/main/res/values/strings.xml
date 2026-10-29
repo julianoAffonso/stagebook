@@ -288,6 +288,7 @@
     <string name="metro_slower">Mais devagar</string>
     <string name="metro_faster">Mais rápido</string>
     <string name="metro_count">Contagem 1-2-3-4 antes</string>
+    <string name="metro_glow">Brilho na borda da tela</string>
     <string name="metro_sound">Som (desligado: só pisca)</string>
     <string name="stage_auto_title">Rolagem automática</string>
     <string name="stage_auto_speed">Velocidade: %1$d</string>
