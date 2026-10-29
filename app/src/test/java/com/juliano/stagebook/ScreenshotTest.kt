@@ -205,10 +205,10 @@ class ScreenshotTest {
     @Test fun backupPartsDialog() {
         compose.setContent {
             StagebookTheme {
-                com.juliano.stagebook.ui.settings.BackupPartsDialog("Fazer backup", "Salvar", com.juliano.stagebook.data.Backup.Part.entries.toSet(), {}, {})
+                com.juliano.stagebook.ui.settings.BackupPartsDialog("Restaurar backup", "Restaurar", com.juliano.stagebook.data.Backup.Part.entries.toSet(), {}, {}, warning = "O que você marcar substitui o que está neste aparelho.")
             }
         }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_backup_partes.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_backup_restaurar.png")
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
