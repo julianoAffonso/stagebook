@@ -231,6 +231,7 @@ fun StageRoute(
             onHiddenChords = viewModel::setHiddenChords,
             onAutoScroll = viewModel::setAutoScroll,
             onMetronomeSound = viewModel::metronomeSound,
+            onPlayChord = viewModel::playChord,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -266,6 +267,7 @@ fun StageScreen(
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
     onMetronomeSound: (bpm: Int?) -> Unit = {},
+    onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -305,6 +307,7 @@ fun StageScreen(
             songText = song.text,
             onSave = { define -> onSaveShape(song.id, chord, define) },
             onDismiss = { shownChord = null },
+            onPlay = { notes -> onPlayChord(notes, look.instrument == com.juliano.stagebook.data.model.Instrument.TECLADO) },
         )
     }
     // zoom ao vivo durante a pinça; grava na música quando a mão para

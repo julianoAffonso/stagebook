@@ -41,7 +41,11 @@ class StageViewModel @Inject constructor(
     private val player: StagePlayer,
     private val conduct: com.juliano.stagebook.data.BandConduct,
     private val metronome: com.juliano.stagebook.data.MetronomeSound,
+    private val chordPlayer: com.juliano.stagebook.data.ChordPlayer,
 ) : ViewModel() {
+    /** Toca o acorde do palco no jeito escolhido em Ajustes (dedilhado, junto ou os dois). */
+    fun playChord(notes: List<Int>, keyboard: Boolean) = chordPlayer.play(notes, repository.library.value.look.chordPlay, keyboard)
+
     /** Clique do metrônomo pela saída normal (null = parado ou só visual). */
     fun metronomeSound(bpm: Int?) { if (bpm != null) metronome.start(bpm) else metronome.stop() }
 
@@ -78,6 +82,7 @@ class StageViewModel @Inject constructor(
     override fun onCleared() {
         player.pause()   // sair do palco para o backing track
         metronome.stop()
+        chordPlayer.stop()
         stageGate.leave()
         // sair do palco NÃO encerra o "Quem conduz" (pedido do usuário): no show a pessoa sai para conferir algo e a banda
         // continua junto; só o "Encerrar" solta todos

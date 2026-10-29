@@ -281,6 +281,12 @@
     <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>
     <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
+    <string name="chord_play">Tocar</string>
+    <string name="chord_capo_note">O desenho é o de %1$s; com capo na %2$dª casa, soa %3$s.</string>
+    <string name="settings_chord_play">Ao tocar o acorde</string>
+    <string name="settings_chord_play_arpeggio">Dedilhado</string>
+    <string name="settings_chord_play_chord">Junto</string>
+    <string name="settings_chord_play_both">Os dois</string>
     <string name="metro_title">Metrônomo</string>
     <string name="metro_stop">Parar o metrônomo</string>
     <string name="metro_play">Começar o metrônomo</string>

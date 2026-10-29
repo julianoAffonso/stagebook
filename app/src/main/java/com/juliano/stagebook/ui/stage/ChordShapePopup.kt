@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import com.juliano.stagebook.domain.Chords
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,7 +34,16 @@ import com.juliano.stagebook.ui.theme.Spacing
  * com ‹ ›, e OK guarda a variação na música ({define} do ChordPro). Abre na variação já guardada, se houver.
  */
 @Composable
-fun ChordShapePopup(chord: String, instrument: Instrument, songText: String, onSave: (define: String) -> Unit, onDismiss: () -> Unit) {
+fun ChordShapePopup(
+    chord: String,
+    instrument: Instrument,
+    songText: String,
+    onSave: (define: String) -> Unit,
+    onDismiss: () -> Unit,
+    onPlay: (notes: List<Int>) -> Unit = {},
+) {
+    // com capo, o desenho é o da cifra mas a nota que soa sobe (T18/T20): o som toca a nota real
+    val capo = remember(songText) { Chords.capo(songText) }
     val keyboard = instrument == Instrument.TECLADO
     val shapes = remember(chord, instrument, songText) {
         val generated = Voicings.shapes(chord, instrument)
@@ -73,6 +84,21 @@ fun ChordShapePopup(chord: String, instrument: Instrument, songText: String, onS
                     IconButton(onClick = { i = (i + 1) % count }, enabled = count > 1) {
                         Icon(AppIcons.ChevronRight, stringResource(R.string.chord_shape_next))
                     }
+                }
+                // tocar o acorde no desenho escolhido, com o som do instrumento (T20)
+                FilledTonalButton(onClick = {
+                    onPlay(if (keyboard) keySets[i].map { it + capo } else Voicings.midi(shapes[i], instrument, capo))
+                }) {
+                    Icon(AppIcons.PlayRounded, null)
+                    Text(stringResource(R.string.chord_play), Modifier.padding(start = Spacing.s))
+                }
+                if (capo > 0) {
+                    Text(
+                        stringResource(R.string.chord_capo_note, chord, capo, Chords.transposeChord(chord, capo)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }

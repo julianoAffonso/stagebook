@@ -53,6 +53,13 @@ enum class Instrument(val chordPro: String) {
     @SerialName("teclado") TECLADO("keyboard"),
 }
 
+/** Como o acorde tocado no palco soa: dedilhado, junto (batida) ou os dois. */
+enum class ChordPlayMode {
+    @SerialName("arpeggio") ARPEGGIO,
+    @SerialName("chord") CHORD,
+    @SerialName("both") BOTH,
+}
+
 /** Onde aparece a lista com os desenhos dos acordes da música. */
 enum class ChordListPlace {
     @SerialName("none") NONE,
@@ -112,6 +119,7 @@ data class Look(
     // metrônomo do palco: contagem 1-2-3-4 antes de começar e som (desligado = só o piscar)
     val metroCount: Boolean = true,
     val metroSound: Boolean = true,
+    val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // tocar o acorde no palco (T20)
     val metroGlow: Boolean = true,                       // brilho na borda do palco no tempo
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // velocidade da rolagem automática (1 a 10), no modo rolar
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)

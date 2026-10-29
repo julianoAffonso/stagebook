@@ -47,6 +47,7 @@ class StageMetaTest {
                 repo, com.juliano.stagebook.data.DeviceIdentity(context),
             ),
             com.juliano.stagebook.data.MetronomeSound(),
+            com.juliano.stagebook.data.ChordPlayer(),
         )
         assertEquals("Banda · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().meta)
         repo.updateSong(id) { it.copy(author = "Banda ao vivo") }
