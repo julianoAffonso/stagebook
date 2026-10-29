@@ -32,4 +32,12 @@ class KeyDetectTest {
         // sem tom nem capo: nada é acrescentado
         assertEquals("[G]linha", Chords.withMeta("[G]linha", "[G]outra"))
     }
+
+    @Test fun `BPM da música - lido do tempo, fora do campo da letra e de volta ao salvar`() {
+        val text = "{tempo: 120}\n{key: G}\n[G]linha"
+        assertEquals(120, Chords.tempo(text))
+        assertEquals(0, Chords.tempo("{tempo: 900}\nx"))   // fora do razoável: sem BPM
+        assertEquals("[G]linha", Chords.hideMeta(text))
+        assertEquals(120, Chords.tempo(Chords.withMeta("[G]linha", text)))
+    }
 }

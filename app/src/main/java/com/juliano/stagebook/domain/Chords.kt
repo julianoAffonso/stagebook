@@ -47,7 +47,14 @@ object Chords {
         return lines.joinToString("\n")
     }
 
-    private val meta = setOf("key", "capo")
+    private val meta = setOf("key", "capo", "tempo")
+
+    /** BPM da música (`{tempo: 120}` do ChordPro); 0 = sem. */
+    fun tempo(text: String): Int = directive(text, "tempo")?.filter(Char::isDigit)?.toIntOrNull()?.takeIf { it in MIN_TEMPO..MAX_TEMPO } ?: 0
+
+    const val MIN_TEMPO = 20
+    const val MAX_TEMPO = 300
+    const val DEFAULT_TEMPO = 100   // metrônomo sem BPM na música
 
     private fun isMeta(line: String) = directive.matchEntire(line)?.groupValues?.get(1)?.lowercase() in meta
 
@@ -57,6 +64,7 @@ object Chords {
     /** A letra editada (sem tom e capo) com o tom e o capo de [from] de volta no começo. */
     fun withMeta(edited: String, from: String): String {
         var t = hideMeta(edited)
+        tempo(from).takeIf { it > 0 }?.let { t = setDirective(t, "tempo", it.toString()) }
         capo(from).takeIf { it > 0 }?.let { t = setDirective(t, "capo", it.toString()) }
         key(from).takeIf { it.isNotEmpty() }?.let { t = setDirective(t, "key", it) }
         return t

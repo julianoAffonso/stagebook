@@ -129,6 +129,9 @@ class SongEditorViewModel @Inject constructor(
 
     fun setKey(key: String) = update(text = Chords.setDirective(uiState.text, "key", key.trim()))
 
+    /** BPM nos dados da música (vazio tira); o metrônomo começa nele. */
+    fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))
+
     fun save() {
         if (finished) return
         val s = uiState
