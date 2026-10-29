@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import com.juliano.stagebook.ui.editor.EditorError
 import com.juliano.stagebook.ui.editor.EditorMode
 import com.juliano.stagebook.ui.editor.SongEditorScreen
@@ -52,5 +53,12 @@ class EditorTabsTest {
         state = state.copy(title = "", error = EditorError.TITLE_EMPTY)
         compose.waitForIdle()
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertExists()
+    }
+
+    @Test fun `aberto - dá para digitar o nome da música no campo Título`() {
+        var typed = ""
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), { typed = it }, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Título (é o nome usado no setlist)").performTextInput("Hazard")
+        org.junit.Assert.assertEquals("Hazard", typed)
     }
 }
