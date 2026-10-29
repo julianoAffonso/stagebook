@@ -297,36 +297,30 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
         capo.takeIf { chords && it > 0 }?.let { stringResource(R.string.editor_data_capo, it) },
     ).joinToString(" · ")
     Column(Modifier.padding(horizontal = Spacing.m)) {
-        // sem fundo, com a seta para baixo/para cima dizendo que abre e fecha (pedido do usuário, 29/10)
-        Surface(
-            onClick = onToggle,
-            shape = MaterialTheme.shapes.small,
-            color = androidx.compose.ui.graphics.Color.Transparent,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-                // rótulo pequeno em cima do resumo, como os campos do app (pedido do usuário, 29/10)
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.editor_data_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        summary,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (uiState.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    )
-                }
-                Icon(
-                    if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
-                    stringResource(if (expanded) R.string.editor_data_close else R.string.editor_data_open),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+        // como um campo de escolha (pedido do usuário, 29/10): a caixa com borda e o rótulo, o resumo dentro e o ▼; tocar
+        // abre os campos embaixo. O campo é só de leitura: o toque chega pelo interactionSource
+        val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+        val toggle by rememberUpdatedState(onToggle)
+        LaunchedEffect(taps) {
+            taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) toggle() }
         }
+        OutlinedTextField(
+            value = summary,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.editor_data_label)) },
+            isError = uiState.error != null,
+            trailingIcon = {
+                Icon(
+                    if (expanded) AppIcons.DropUp else AppIcons.DropDown,
+                    stringResource(if (expanded) R.string.editor_data_close else R.string.editor_data_open),
+                )
+            },
+            interactionSource = taps,
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth(),
+        )
         AnimatedVisibility(expanded) {
             Column(Modifier.padding(vertical = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) { fields() }
         }
