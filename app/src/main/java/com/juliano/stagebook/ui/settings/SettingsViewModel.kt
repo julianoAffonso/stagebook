@@ -121,6 +121,9 @@ class SettingsViewModel @Inject constructor(
 
     fun cancelRestore() { _pendingRestore.value = null }
 
+    /** Apagar tudo: o Android limpa os dados do app (músicas, faixas, ajustes, banda) e fecha; ele abre limpo. */
+    fun factoryReset() { context.getSystemService(android.app.ActivityManager::class.java)?.clearApplicationUserData() }
+
     fun restore(parts: Set<com.juliano.stagebook.data.Backup.Part>, replace: Boolean) = viewModelScope.launch {
         val p = _pendingRestore.value ?: return@launch
         _pendingRestore.value = null

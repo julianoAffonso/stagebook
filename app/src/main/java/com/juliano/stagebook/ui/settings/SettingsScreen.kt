@@ -284,6 +284,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
                 },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
+                onFactoryReset = viewModel::factoryReset,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 onDownloadUpdate = viewModel::downloadUpdate,
@@ -345,6 +346,7 @@ data class SettingsActions(
     val onAutoScroll: (Int) -> Unit = {},
     val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
+    val onFactoryReset: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
@@ -1188,6 +1190,19 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
     // as outras formas de mandar músicas e setlists ficam em outras telas: aqui só o mapa
     SettingsCard(stringResource(R.string.backup_share_card)) {
         InfoText(stringResource(R.string.backup_share_info))
+    }
+    // apagar tudo, por último e em vermelho; a janela oferece salvar o arquivo antes e pede o código
+    var resetting by rememberSaveable { mutableStateOf(false) }
+    SettingsCard(stringResource(R.string.reset_title)) {
+        InfoText(stringResource(R.string.reset_info))
+        ActionButton(stringResource(R.string.reset_title), { resetting = true }, Modifier.fillMaxWidth(), icon = AppIcons.Delete, tone = ButtonTone.Danger)
+    }
+    if (resetting) {
+        FactoryResetDialog(
+            onBackupFirst = { actions.onBackup(com.juliano.stagebook.data.Backup.Part.entries.toSet()) },
+            onReset = { resetting = false; actions.onFactoryReset() },
+            onDismiss = { resetting = false },
+        )
     }
 }
 
