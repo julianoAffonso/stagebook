@@ -156,6 +156,8 @@ private const val PLAY_ALPHA = 0.35f   // o desenho continua aparecendo por baix
 private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     val triad = remember(chord) { Chords.triad(chord) }
     val own = triad?.takeIf { !it.dim }?.let { Chords.keyName(it.root, it.minor) }
+    // com sétima, os campos são de tétrades (G7M, Am7…) e o grau só acende se a sétima bater
+    val sevenths = triad != null && triad.seventh != Chords.Seventh.NONE
     val degree = remember(chord, songKey) { if (songKey.isEmpty()) null else HarmonicField.degreeIn(chord, songKey) }
     val where = remember(chord) { HarmonicField.appearances(chord) }
     Column(Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -165,16 +167,20 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
         }
         if (songKey.isNotEmpty()) {
             Text(stringResource(R.string.chord_details_song_key, songKey), style = MaterialTheme.typography.titleSmall)
-            FieldRow(HarmonicField.field(songKey), lit = degree)
+            FieldRow(HarmonicField.field(songKey, sevenths), lit = degree)
             Text(
                 if (degree != null) stringResource(R.string.chord_details_degree, chord, degree) else stringResource(R.string.chord_details_outside, chord),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (own != null) {
+        // o campo em que o acorde é o I; um acorde que nunca é o I (ex.: D7, dominante) ganha uma frase no lugar
+        val ownDegree = own?.let { HarmonicField.degreeIn(chord, it) }
+        if (own != null && ownDegree != null) {
             Text(stringResource(R.string.chord_details_own, own), style = MaterialTheme.typography.titleSmall)
-            FieldRow(HarmonicField.field(own), lit = if (triad.minor) "i" else "I")
+            FieldRow(HarmonicField.field(own, sevenths), lit = ownDegree)
+        } else if (own != null) {
+            Text(stringResource(R.string.chord_details_not_tonic, chord), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (where.isNotEmpty()) {
             Text(stringResource(R.string.chord_details_where, chord), style = MaterialTheme.typography.titleSmall)
