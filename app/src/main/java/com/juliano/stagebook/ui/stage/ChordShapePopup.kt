@@ -102,6 +102,16 @@ fun ChordShapePopup(
                         Icon(AppIcons.ChevronRight, stringResource(R.string.chord_shape_next))
                     }
                 }
+                // teclado: o acorde na tela já está no tom que soa; a linha mostra o da cifra (capo na Nª casa)
+                val cifraCapo = remember(songText, instrument) { if (instrument == Instrument.TECLADO) Chords.capo(songText) else 0 }
+                if (cifraCapo > 0) {
+                    Text(
+                        stringResource(R.string.chord_keyboard_capo, Chords.transposeChord(chord, -cifraCapo), cifraCapo, chord),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
                 if (capo > 0) {
                     Text(
                         stringResource(R.string.chord_capo_note, chord, capo, Chords.transposeChord(chord, capo)),

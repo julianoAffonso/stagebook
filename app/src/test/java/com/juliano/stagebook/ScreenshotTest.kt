@@ -265,6 +265,11 @@ class ScreenshotTest {
         }
     }
 
+    // teclado com cifra de capo: acordes no tom que soa, o aviso no topo e a mensagem da primeira vez
+    @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = com.juliano.stagebook.data.model.Instrument.TECLADO)), 0, 0, { _, _ -> }, onBack = {})
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)

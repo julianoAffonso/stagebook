@@ -118,6 +118,8 @@ class StageViewModel @Inject constructor(
 
     /** Zoom da pinça, gravado na música (vale em qualquer setlist, como no another app). */
     /** Velocidade da rolagem automática (−/+ no palco), gravada nos ajustes. */
+    fun keyboardCapoHintSeen() = repository.updateLook { it.copy(keyboardCapoHintSeen = true) }
+
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }
 
     fun setZoom(songId: String, zoom: Float) {
