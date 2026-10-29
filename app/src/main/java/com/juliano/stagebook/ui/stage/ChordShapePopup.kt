@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import com.juliano.stagebook.ui.theme.Sizes
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
 import com.juliano.stagebook.domain.Chords
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -69,13 +72,27 @@ fun ChordShapePopup(
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                     return@Column
                 }
-                ChordDiagram(
-                    chord,
-                    instrument,
-                    shapes.getOrNull(i),
-                    keySets.getOrNull(i),
-                    MaterialTheme.colorScheme.onSurface,
-                )
+                // o play fica em cima do desenho, meio translúcido (pedido do usuário, 29/10): tocar o acorde sem procurar botão
+                Box(contentAlignment = Alignment.Center) {
+                    ChordDiagram(
+                        chord,
+                        instrument,
+                        shapes.getOrNull(i),
+                        keySets.getOrNull(i),
+                        MaterialTheme.colorScheme.onSurface,
+                    )
+                    Surface(
+                        onClick = { onPlay(if (keyboard) keySets[i].map { it + capo } else Voicings.midi(shapes[i], instrument, capo)) },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = PLAY_ALPHA),
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(Sizes.touch + Spacing.m),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(AppIcons.PlayRounded, stringResource(R.string.chord_play), Modifier.size(Sizes.touch * 0.7f))
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { i = (i - 1 + count) % count }, enabled = count > 1) {
                         Icon(AppIcons.ChevronLeft, stringResource(R.string.chord_shape_previous))
@@ -84,13 +101,6 @@ fun ChordShapePopup(
                     IconButton(onClick = { i = (i + 1) % count }, enabled = count > 1) {
                         Icon(AppIcons.ChevronRight, stringResource(R.string.chord_shape_next))
                     }
-                }
-                // tocar o acorde no desenho escolhido, com o som do instrumento (T20)
-                FilledTonalButton(onClick = {
-                    onPlay(if (keyboard) keySets[i].map { it + capo } else Voicings.midi(shapes[i], instrument, capo))
-                }) {
-                    Icon(AppIcons.PlayRounded, null)
-                    Text(stringResource(R.string.chord_play), Modifier.padding(start = Spacing.s))
                 }
                 if (capo > 0) {
                     Text(
@@ -111,3 +121,5 @@ fun ChordShapePopup(
         }
     }
 }
+
+private const val PLAY_ALPHA = 0.35f   // o desenho continua aparecendo por baixo do play

@@ -2,6 +2,7 @@ package com.juliano.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import com.juliano.stagebook.data.model.ChordPlayMode
 import com.juliano.stagebook.data.model.Instrument
@@ -41,13 +42,13 @@ class ChordPlayTest {
         assertTrue(both.maxOf { kotlin.math.abs(it.toInt()) } < Short.MAX_VALUE)
     }
 
-    @Test fun `janela do acorde - Tocar manda as notas e com capo explica o desenho`() {
+    @Test fun `janela do acorde - o play sobre o desenho manda as notas e com capo explica o desenho`() {
         var played: List<Int>? = null
         compose.setContent {
             StagebookTheme { ChordShapePopup("G", Instrument.VIOLAO, "{capo: 2}\n[G]linha", {}, {}, onPlay = { played = it }) }
         }
         compose.onNodeWithText("O desenho é o de G; com capo na 2ª casa, soa A.").assertExists()
-        compose.onNodeWithText("Tocar").performClick()
+        compose.onNodeWithContentDescription("Tocar").performClick()
         assertTrue(played!!.isNotEmpty())
         assertTrue(played!!.all { it >= 40 + 2 })   // tudo pelo menos 2 casas acima da corda mais grave
     }
