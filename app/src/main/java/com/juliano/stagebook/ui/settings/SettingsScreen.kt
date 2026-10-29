@@ -224,6 +224,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onTranslateSections = viewModel::setTranslateSections,
                 onChords = viewModel::setChords,
                 onChordScale = viewModel::setChordScale,
+                onSectionScale = viewModel::setSectionScale,
                 onChordColor = viewModel::setChordColor,
                 onFontFamily = viewModel::setFontFamily,
                 onChordFont = viewModel::setChordFont,
@@ -286,6 +287,7 @@ data class SettingsActions(
     val onTranslateSections: (Boolean) -> Unit = {},
     val onChords: (Boolean) -> Unit = {},
     val onChordScale: (Float) -> Unit = {},
+    val onSectionScale: (Float) -> Unit = {},
     val onChordColor: (Int) -> Unit = {},
     val onFontFamily: (StageFont) -> Unit = {},
     val onChordFont: (StageFont) -> Unit = {},
@@ -537,6 +539,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier)
             Color(look.sectionColor),
             look.showSections,
             ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
+            look.sectionScale,
         ),
         style = style,
         chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
@@ -667,6 +670,21 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
         Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
+        if (look.showSections) {
+            // o tamanho muda ao vivo na prévia e só grava ao soltar o controle (como o dos acordes)
+            var scale by remember(look.sectionScale) { mutableFloatStateOf(look.sectionScale) }
+            Text(stringResource(R.string.settings_sections_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = scale,
+                onValueChange = { scale = it },
+                onValueChangeFinished = { actions.onSectionScale(scale) },
+                valueRange = Look.MIN_SECTION_SCALE..Look.MAX_SECTION_SCALE,
+                steps = ((Look.MAX_SECTION_SCALE - Look.MIN_SECTION_SCALE) * 10).roundToInt() - 1,
+            )
+            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
+                StagePreview(look.copy(sectionScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
+            }
+        }
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
         HelpTip(stringResource(R.string.settings_translate_sections_help))
         LegibilityWarnings(look)

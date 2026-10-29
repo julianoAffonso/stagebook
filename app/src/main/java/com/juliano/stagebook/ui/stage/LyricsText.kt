@@ -14,6 +14,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.em
 import com.juliano.stagebook.R
 import com.juliano.stagebook.domain.Chords
+import com.juliano.stagebook.data.model.Look
 import com.juliano.stagebook.domain.Sections
 
 /** Marca, no texto da linha, a letra embaixo da qual um acorde é desenhado (o valor é o acorde). */
@@ -64,8 +65,10 @@ fun rememberSectionNames(translate: Boolean): SectionNames {
  * Linhas da letra para o palco: títulos de seção em negrito, na cor escolhida, menores e em
  * maiúsculas. Títulos escondidos somem mas deixam o respiro entre as partes; brancos repetidos viram um.
  */
-fun lyricsLines(text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook): List<AnnotatedString> =
-    stageLines(text, names, sectionColor, showSections, chords).map { it.text }
+fun lyricsLines(
+    text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
+    sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
+): List<AnnotatedString> = stageLines(text, names, sectionColor, showSections, chords, sectionScale).map { it.text }
 
 /** Uma linha do palco e a linha da letra de onde ela veio (segurar a linha abre o editor nela). */
 class StageLine(val text: AnnotatedString, val source: Int)
@@ -78,14 +81,23 @@ private val sectionDirectives = mapOf(
 )
 private val directiveName = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*}\s*$""")
 
-fun stageLines(text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook): List<StageLine> {
+fun stageLines(
+    text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
+    sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
+): List<StageLine> {
     val out = ArrayList<StageLine>()
     fun blank(at: Int) { if (out.isNotEmpty() && out.last().text.isNotEmpty()) out += StageLine(AnnotatedString(""), at) }
     fun header(label: String, at: Int) {
         if (!showSections) return blank(at)
         out += StageLine(
             buildAnnotatedString {
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = sectionColor, fontSize = 0.72.em, letterSpacing = 0.08.em)) {
+                // mais destaque (pedido do usuário, 29/10): tamanho ajustável e um fundo leve na cor da seção
+                withStyle(
+                    SpanStyle(
+                        fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em,
+                        background = sectionColor.copy(alpha = SECTION_BACKGROUND_ALPHA),
+                    ),
+                ) {
                     append(label.uppercase())
                 }
             },
@@ -177,8 +189,12 @@ fun lineStart(text: String, line: Int): Int {
 }
 
 /** A letra inteira num texto só (prévia dos ajustes). */
-fun lyricsAnnotated(text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook): AnnotatedString =
-    joinLines(lyricsLines(text, names, sectionColor, showSections, chords))
+fun lyricsAnnotated(
+    text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
+    sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
+): AnnotatedString = joinLines(lyricsLines(text, names, sectionColor, showSections, chords, sectionScale))
+
+private const val SECTION_BACKGROUND_ALPHA = 0.16f
 
 /** Marca cada linha do palco com o número dela no texto montado (o "segurar a linha" acha a linha por aqui). */
 const val LINE_TAG = "line"

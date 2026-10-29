@@ -97,6 +97,7 @@ data class Look(
     val sectionLang: SectionLang = SectionLang.PT,   // fica só para ler bibliotecas antigas: as seções são sempre em português
     val sectionColor: Int = 0xFF4AF6CD.toInt(),
     val showSections: Boolean = true,
+    val sectionScale: Float = DEFAULT_SECTION_SCALE,   // tamanho do título da seção em relação à letra (ajustável, 29/10)
     val keepScreenOn: Boolean = true,   // tela não apaga com o app aberto (show); o palco fica aceso sempre
     val pedalName: String = "",   // nome do pedal Bluetooth reconhecido pelo último botão apertado
     val columns: StageColumns = StageColumns.AUTO,
@@ -129,6 +130,9 @@ data class Look(
         const val MAX_FONT = 72f
         const val MAX_STAGE_FONT = 120f   // com zoom no palco pode passar do máximo dos ajustes
         const val MIN_CHORD_SCALE = 0.5f
+        const val DEFAULT_SECTION_SCALE = 0.9f
+        const val MIN_SECTION_SCALE = 0.6f
+        const val MAX_SECTION_SCALE = 1.3f
         const val MAX_CHORD_SCALE = 1.2f
     }
 }

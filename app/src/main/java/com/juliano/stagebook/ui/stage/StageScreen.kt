@@ -339,7 +339,7 @@ fun StageScreen(
     var fitZoom by remember(index) { mutableFloatStateOf(Float.MAX_VALUE) }
     val sectionNames = rememberSectionNames(look.translateSections)
     val chordLook = remember(look.chords, look.chordScale, look.chordColor) { ChordLook(look.chords, look.chordScale, Color(look.chordColor)) }
-    val sourced = remember(song.text, look, sectionNames) { stageLines(song.text, sectionNames, Color(look.sectionColor), look.showSections, chordLook) }
+    val sourced = remember(song.text, look, sectionNames) { stageLines(song.text, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale) }
     val lines = remember(sourced) { sourced.map { it.text } }
     // segurar uma linha mostra um botão para editá-la (não abre direto: no show o polegar apoiado
     // na tela não pode tirar a letra da frente); some sozinho e ao virar a página

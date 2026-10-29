@@ -161,6 +161,7 @@ class SettingsViewModel @Inject constructor(
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
     fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }
+    fun setSectionScale(s: Float) = repository.updateLook { it.copy(sectionScale = s.coerceIn(Look.MIN_SECTION_SCALE, Look.MAX_SECTION_SCALE)) }
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }

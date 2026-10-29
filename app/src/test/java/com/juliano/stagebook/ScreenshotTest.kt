@@ -208,6 +208,11 @@ class ScreenshotTest {
     }
 
     // a faixa no contexto: embaixo do palco de quem acompanha, com a música da vez faltando para o baixo
+    // T28: títulos de seção maiores, com fundo leve, e o tamanho ajustável em Ajustes → Seções da letra
+    @Test fun settingsSectionsTablet() = shoot("tablet_5_ajustes_secoes") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SECTIONS) }
+    }
+
     @Test fun conductOnStage() = shoot("tablet_6_palco_acompanhando") {
         androidx.compose.foundation.layout.Column {
             androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
