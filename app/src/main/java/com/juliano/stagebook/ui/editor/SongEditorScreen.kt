@@ -212,7 +212,7 @@ fun SongEditorScreen(
                         chords = look.chords,
                     ) {
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
-                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo)
+                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, showCapo = look.instrument != com.juliano.stagebook.data.model.Instrument.TECLADO)
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -428,7 +428,7 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
  * guardado, mostra o calculado pelos acordes, apagado.
  */
 @Composable
-private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit) {
+private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, showCapo: Boolean = true) {
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
     val saved = remember(text) { Chords.key(text) }
     val key = saved.ifEmpty { remember(text) { Chords.detectKey(text) } }
@@ -448,6 +448,8 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         )
         IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
         Spacer(Modifier.weight(1f))
+        // teclado não usa capotraste (pedido do usuário, 29/10): sem os controles (o capo da música fica guardado)
+        if (showCapo) {
         Icon(AppIcons.Capo, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
@@ -459,9 +461,10 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
             color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
         )
         IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
+        }
     }
     // com capo: os desenhos continuam os da cifra, mas o som sobe (pedido do usuário, 29/10)
-    if (capo > 0) {
+    if (showCapo && capo > 0) {
         val validKey = key.isNotEmpty() && Chords.isChord(key)
         Text(
             if (validKey) stringResource(R.string.editor_capo_sounds, key, capo, Chords.soundingKey(key, capo))

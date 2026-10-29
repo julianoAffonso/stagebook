@@ -46,7 +46,7 @@ fun ChordShapePopup(
     onPlay: (notes: List<Int>) -> Unit = {},
 ) {
     // com capo, o desenho é o da cifra mas a nota que soa sobe (T18/T20): o som toca a nota real
-    val capo = remember(songText) { Chords.capo(songText) }
+    val capo = remember(songText, instrument) { if (instrument == Instrument.TECLADO) 0 else Chords.capo(songText) }   // teclado não usa capo
     val keyboard = instrument == Instrument.TECLADO
     val shapes = remember(chord, instrument, songText) {
         val generated = Voicings.shapes(chord, instrument)

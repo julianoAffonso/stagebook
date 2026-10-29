@@ -52,4 +52,14 @@ class ChordPlayTest {
         assertTrue(played!!.isNotEmpty())
         assertTrue(played!!.all { it >= 40 + 2 })   // tudo pelo menos 2 casas acima da corda mais grave
     }
+
+    @Test fun `teclado não usa capo - nem aviso nem nota mais alta`() {
+        var played: List<Int>? = null
+        compose.setContent {
+            StagebookTheme { ChordShapePopup("C", Instrument.TECLADO, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
+        }
+        compose.onNodeWithText("com capo", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Tocar").performClick()
+        assertEquals(Voicings.keys("C").first(), played)
+    }
 }
