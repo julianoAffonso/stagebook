@@ -45,7 +45,9 @@ class StageMetaTest {
                     StageGate(), com.juliano.stagebook.data.BandInbox(context), repo,
                 ),
                 repo, com.juliano.stagebook.data.DeviceIdentity(context),
-            ))
+            ),
+            com.juliano.stagebook.data.MetronomeSound(),
+        )
         assertEquals("Banda · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().meta)
         repo.updateSong(id) { it.copy(author = "Banda ao vivo") }
         assertEquals("Banda ao vivo · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.single().meta.startsWith("Banda ao vivo") } }.songs.single().meta)

@@ -40,7 +40,11 @@ class StageViewModel @Inject constructor(
     private val tracks: TrackStore,
     private val player: StagePlayer,
     private val conduct: com.juliano.stagebook.data.BandConduct,
+    private val metronome: com.juliano.stagebook.data.MetronomeSound,
 ) : ViewModel() {
+    /** Clique do metrônomo pela saída normal (null = parado ou só visual). */
+    fun metronomeSound(bpm: Int?) { if (bpm != null) metronome.start(bpm) else metronome.stop() }
+
     /** Música na tela (posição no setlist): conduzindo este setlist, a banda abre a mesma. */
     fun songShown(index: Int) { route.setId?.let { conduct.open(it, index) } }
 
@@ -73,6 +77,7 @@ class StageViewModel @Inject constructor(
     init { stageGate.enter() }   // segura a sincronia com o Drive enquanto o palco está aberto
     override fun onCleared() {
         player.pause()   // sair do palco para o backing track
+        metronome.stop()
         stageGate.leave()
         // sair do palco NÃO encerra o "Quem conduz" (pedido do usuário): no show a pessoa sai para conferir algo e a banda
         // continua junto; só o "Encerrar" solta todos
