@@ -167,6 +167,17 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/$name.png")
     }
 
+    // T15: o ícone de rolagem na linha do relógio abre a janelinha com o play e a velocidade
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun autoScrollDialog() {
+        compose.setContent {
+            StagebookTheme { StageScreen(stage.copy(look = stage.look.copy(stageMode = com.juliano.stagebook.data.model.StageMode.SCROLL)), 0, 0, { _, _ -> }, onBack = {}) }
+        }
+        compose.onNodeWithContentDescription("Rolagem automática").performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_palco_rolagem_auto.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)

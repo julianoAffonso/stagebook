@@ -42,14 +42,24 @@ class StageAutoScrollTest {
         }
         // relógio parado (quadro a quadro): esperando a tela, o teste andaria o tempo até a rolagem chegar ao fim
         compose.mainClock.autoAdvance = false
+        fun frames(n: Int) = repeat(n) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        fun open() { compose.onNodeWithContentDescription("Rolagem automática").performClick(); frames(3) }
+        // play na janelinha: ela fecha e a letra rola; tocar na tela pausa, sem mudar de música
+        open()
         compose.onNodeWithContentDescription("Rolar sozinho").performClick()
-        repeat(60) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onNodeWithContentDescription("Pausar a rolagem").assertExists()
+        frames(60)
         compose.onRoot().performTouchInput { click(centerRight.copy(x = centerRight.x - 50f)) }
-        repeat(10) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onNodeWithContentDescription("Rolar sozinho").assertExists()
+        frames(10)
         assertEquals(0, song)
-        compose.mainClock.autoAdvance = true
+        open()
+        compose.onNodeWithContentDescription("Rolar sozinho").assertExists()
+        // de novo: rolando, a janela mostra o pausar, que pausa e fecha
+        compose.onNodeWithContentDescription("Rolar sozinho").performClick()
+        frames(30)
+        open()
+        compose.onNodeWithContentDescription("Pausar a rolagem").performClick()
+        frames(10)
+        open()
         compose.onNodeWithContentDescription("Mais rápido").performClick()
         assertEquals(Look.DEFAULT_AUTO_SCROLL + 1, level)
     }

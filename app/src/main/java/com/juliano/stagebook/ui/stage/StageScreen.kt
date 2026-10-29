@@ -59,6 +59,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -860,7 +861,14 @@ fun StageScreen(
         ) {
             StageClock(fg.copy(alpha = 0.7f))
             // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), na linha do relógio (fora da letra)
-            if (autoAvailable) AutoScrollBar(autoOn, look.autoScroll, fg, { autoOn = !autoOn }, onAutoScroll)
+            // um ícone só (aceso enquanto rola); a janelinha tem o play e a velocidade (pedido do usuário, 29/10)
+            if (autoAvailable) {
+                var autoDialog by remember { mutableStateOf(false) }
+                IconButton(onClick = { autoDialog = true }) {
+                    Icon(AppIcons.AutoScroll, stringResource(R.string.stage_auto_title), tint = if (autoOn) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.5f))
+                }
+                if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
+            }
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
             } else {
@@ -1104,18 +1112,24 @@ private fun TrackButton(
 }
 
 /** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
-/** Rolagem automática no palco: mais devagar, liga/pausa e mais rápido (o nível vai de 1 a 10). */
+/** Rolagem automática (janelinha como a do acorde): velocidade de 1 a 10 e o play/pausa, que fecha a janela. */
 @Composable
-private fun AutoScrollBar(on: Boolean, level: Int, fg: Color, onToggle: () -> Unit, onLevel: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Surface(shape = CircleShape, color = fg.copy(alpha = 0.08f), contentColor = fg.copy(alpha = 0.7f), modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
-            Text(level.toString(), style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = onToggle) {
-                Icon(if (on) AppIcons.Pause else AppIcons.Play, stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play))
-            }
-            IconButton(onClick = { onLevel(level + 1) }, enabled = level < com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
-                Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
+private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLevel: (Int) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(Spacing.l), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                Text(stringResource(R.string.stage_auto_title), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+                    IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
+                    FilledIconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
+                        Icon(if (on) AppIcons.Pause else AppIcons.Play, stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play))
+                    }
+                    IconButton(onClick = { onLevel(level + 1) }, enabled = level < com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
+                        Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
+                    }
+                }
+                Text(stringResource(R.string.stage_auto_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
