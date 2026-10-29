@@ -85,6 +85,11 @@ sealed interface SettingsMessage {
     data object ImportNewer : SettingsMessage   // arquivo de uma versão mais nova do Stagebook: atualizar
     data object Exported : SettingsMessage
     data object ExportFailed : SettingsMessage
+    data object BackupDone : SettingsMessage
+    data object BackupFailed : SettingsMessage
+    data object NotBackup : SettingsMessage
+    data object RestoreFailed : SettingsMessage
+    data class Restored(val restart: Boolean) : SettingsMessage
 }
 
 @HiltViewModel
@@ -93,7 +98,38 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val updater: AppUpdater,
     private val midi: MidiPedal,
+    private val backup: com.juliano.stagebook.data.Backup,
 ) : ViewModel() {
+    /** Backup lido e esperando a escolha das partes para restaurar. */
+    data class PendingRestore(val uri: Uri, val contents: com.juliano.stagebook.data.Backup.Contents)
+
+    private val _pendingRestore = MutableStateFlow<PendingRestore?>(null)
+    val pendingRestore: StateFlow<PendingRestore?> = _pendingRestore.asStateFlow()
+
+    fun backupTo(uri: Uri, parts: Set<com.juliano.stagebook.data.Backup.Part>) = viewModelScope.launch {
+        val ok = runCatching { context.contentResolver.openOutputStream(uri, "wt")!!.use { backup.write(it, parts) } }.isSuccess
+        _messages.send(if (ok) SettingsMessage.BackupDone else SettingsMessage.BackupFailed)
+    }
+
+    fun inspectBackup(uri: Uri) = viewModelScope.launch {
+        val c = runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
+        when {
+            c == null -> _messages.send(SettingsMessage.NotBackup)
+            c.newer -> _messages.send(SettingsMessage.ImportNewer)
+            else -> _pendingRestore.value = PendingRestore(uri, c)
+        }
+    }
+
+    fun cancelRestore() { _pendingRestore.value = null }
+
+    fun restore(parts: Set<com.juliano.stagebook.data.Backup.Part>) = viewModelScope.launch {
+        val p = _pendingRestore.value ?: return@launch
+        _pendingRestore.value = null
+        val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts) } }.getOrDefault(false)
+        // ajustes restaurados (língua, aparência): a tela abre de novo para valerem
+        _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(com.juliano.stagebook.data.Backup.Part.SETTINGS in parts))
+    }
+
     private val lastKey = MutableStateFlow<PedalKeyUi?>(null)
     // trocar a língua recria a tela (e este ViewModel junto não precisa ouvir mudanças)
     private val language = Languages.get(context)
