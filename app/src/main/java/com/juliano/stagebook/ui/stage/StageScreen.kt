@@ -864,10 +864,13 @@ fun StageScreen(
             // um ícone só (aceso enquanto rola); a janelinha tem o play e a velocidade (pedido do usuário, 29/10)
             if (autoAvailable) {
                 var autoDialog by remember { mutableStateOf(false) }
-                IconButton(onClick = { autoDialog = true }) {
-                    Icon(AppIcons.AutoScroll, stringResource(R.string.stage_auto_title), tint = if (autoOn) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.5f))
+                // a janelinha abre colada acima do ícone (pedido do usuário, 29/10)
+                Box {
+                    IconButton(onClick = { autoDialog = true }) {
+                        Icon(AppIcons.AutoScroll, stringResource(R.string.stage_auto_title), tint = if (autoOn) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.5f))
+                    }
+                    if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
-                if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
             }
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
@@ -1112,13 +1115,35 @@ private fun TrackButton(
 }
 
 /** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
-/** Rolagem automática (janelinha como a do acorde): velocidade de 1 a 10 e o play/pausa, que fecha a janela. */
+/** Põe a janelinha em cima do ícone, alinhada à esquerda dele, sem sair da tela. */
+private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: androidx.compose.ui.unit.IntRect,
+        windowSize: androidx.compose.ui.unit.IntSize,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        popupContentSize: androidx.compose.ui.unit.IntSize,
+    ): IntOffset = IntOffset(
+        anchorBounds.left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
+        (anchorBounds.top - popupContentSize.height - gap).coerceAtLeast(0),
+    )
+}
+
+/** Rolagem automática (janelinha logo acima do ícone): velocidade de 1 a 10 e o play/pausa, que fecha a janela. */
 @Composable
 private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLevel: (Int) -> Unit, onDismiss: () -> Unit) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = AboveAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
             Column(Modifier.padding(Spacing.l), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                Text(stringResource(R.string.stage_auto_title), style = MaterialTheme.typography.titleLarge)
+                // título e o × para fechar (o play também fecha)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(stringResource(R.string.stage_auto_title), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
                 Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
                     IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
