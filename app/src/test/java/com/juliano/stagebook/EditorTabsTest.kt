@@ -35,6 +35,8 @@ class EditorTabsTest {
     @Test fun `música existente abre recolhida com o resumo - tocar abre os campos`() {
         compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertDoesNotExist()
+        // o campo da letra não mostra {key}/{capo}: estão no resumo
+        compose.onNodeWithText("{key: G}", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertExists()

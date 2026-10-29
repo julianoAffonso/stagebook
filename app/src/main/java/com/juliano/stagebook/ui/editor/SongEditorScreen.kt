@@ -152,13 +152,17 @@ fun SongEditorScreen(
             // aberta do palco: cursor no fim da linha segurada, já com o teclado
             // perfil só letra: o campo mostra a letra sem a cifra, e cada mudança volta para a música com a cifra
             // no lugar (LyricsView): quem só canta não apaga os acordes de ninguém
-            val fieldText = remember(uiState.text, look.chords) { if (look.chords) uiState.text else LyricsView.view(uiState.text) }
-            var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, cursor)))) }
+            // tom e capo ficam nos dados da música: o campo da letra não mostra as linhas {key}/{capo} (pedido do usuário,
+            // 29/10); ao editar, elas voltam do texto guardado
+            val fieldText = remember(uiState.text, look.chords) { Chords.hideMeta(if (look.chords) uiState.text else LyricsView.view(uiState.text)) }
+            // o cursor vindo do palco é no texto guardado: desconta as linhas escondidas antes dele
+            val fieldCursor = remember { if (cursor < 0) cursor else Chords.hideMeta(uiState.text.take(cursor.coerceAtMost(uiState.text.length))).length }
+            var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
             // o texto vem sempre do estado; a seleção e o cursor ficam aqui
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
             fun edit(v: TextFieldValue) {
                 lyrics = v
-                if (v.text != fieldText) onText(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text))
+                if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.text))
             }
             var editingLyrics by remember { mutableStateOf(false) }
             // acorde novo: entra onde estava o cursor da letra

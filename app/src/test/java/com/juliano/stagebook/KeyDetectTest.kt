@@ -24,4 +24,12 @@ class KeyDetectTest {
         assertEquals(text, Chords.withDetectedKey(text))
         assertEquals("G", Chords.key(Chords.withDetectedKey("[G]um [C]dois [D]três [G]quatro")))
     }
+
+    @Test fun `editor - tom e capo saem do campo da letra e voltam ao salvar`() {
+        val text = "{key: G}\n{capo: 2}\n[Verso]\n[G]linha"
+        assertEquals("[Verso]\n[G]linha", Chords.hideMeta(text))
+        assertEquals(text, Chords.withMeta("[Verso]\n[G]linha editada".replace(" editada", ""), text))
+        // sem tom nem capo: nada é acrescentado
+        assertEquals("[G]linha", Chords.withMeta("[G]linha", "[G]outra"))
+    }
 }
