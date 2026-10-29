@@ -50,4 +50,15 @@ class HarmonicFieldTest {
         assertTrue("V7 em F" in where)
         assertTrue(where.none { it.endsWith("em G") })
     }
+
+    @Test fun `todas as notas contam - sus, nona, sexta, alterações e o baixo`() {
+        assertEquals("Vsus4", HarmonicField.degreeIn("Dsus4", "G"))
+        assertEquals("IVsus2", HarmonicField.degreeIn("Csus2", "G"))
+        assertEquals("ii7(9)", HarmonicField.degreeIn("Am7(9)", "G"))
+        assertEquals("I6", HarmonicField.degreeIn("G6", "G"))
+        assertNull(HarmonicField.degreeIn("D7(b9)", "G"))   // Eb não é de G
+        assertNull(HarmonicField.degreeIn("C/Bb", "G"))     // o baixo Bb não é de G
+        assertEquals("V7", HarmonicField.degreeIn("D7/F#", "G"))
+        assertNull(HarmonicField.degreeIn("Caug", "G"))     // G# não é de G
+    }
 }

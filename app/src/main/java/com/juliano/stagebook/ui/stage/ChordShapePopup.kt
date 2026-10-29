@@ -158,7 +158,8 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     val own = triad?.takeIf { !it.dim }?.let { Chords.keyName(it.root, it.minor) }
     // com sétima, os campos são de tétrades (G7M, Am7…) e o grau só acende se a sétima bater
     val sevenths = triad != null && triad.seventh != Chords.Seventh.NONE
-    val degree = remember(chord, songKey) { if (songKey.isEmpty()) null else HarmonicField.degreeIn(chord, songKey) }
+    val place = remember(chord, songKey) { if (songKey.isEmpty()) null else HarmonicField.placeIn(chord, songKey) }
+    val degree = place?.label
     val where = remember(chord) { HarmonicField.appearances(chord) }
     Column(Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -167,7 +168,7 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
         }
         if (songKey.isNotEmpty()) {
             Text(stringResource(R.string.chord_details_song_key, songKey), style = MaterialTheme.typography.titleSmall)
-            FieldRow(HarmonicField.field(songKey, sevenths), lit = degree)
+            FieldRow(HarmonicField.field(songKey, sevenths), lit = place?.index)
             Text(
                 if (degree != null) stringResource(R.string.chord_details_degree, chord, degree) else stringResource(R.string.chord_details_outside, chord),
                 style = MaterialTheme.typography.bodySmall,
@@ -175,10 +176,10 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
             )
         }
         // o campo em que o acorde é o I; um acorde que nunca é o I (ex.: D7, dominante) ganha uma frase no lugar
-        val ownDegree = own?.let { HarmonicField.degreeIn(chord, it) }
-        if (own != null && ownDegree != null) {
+        val ownPlace = own?.let { HarmonicField.placeIn(chord, it) }?.takeIf { it.index == 0 }
+        if (own != null && ownPlace != null) {
             Text(stringResource(R.string.chord_details_own, own), style = MaterialTheme.typography.titleSmall)
-            FieldRow(HarmonicField.field(own, sevenths), lit = ownDegree)
+            FieldRow(HarmonicField.field(own, sevenths), lit = 0)
         } else if (own != null) {
             Text(stringResource(R.string.chord_details_not_tonic, chord), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -195,12 +196,12 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     }
 }
 
-/** Os 7 graus de um campo (grau em cima, acorde embaixo); o [lit] fica aceso. */
+/** Os 7 graus de um campo (grau em cima, acorde embaixo); o da posição [lit] fica aceso. */
 @Composable
-private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: String?) {
+private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: Int?) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        degrees.forEach { d ->
-            val on = d.roman == lit
+        degrees.forEachIndexed { i, d ->
+            val on = i == lit
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
