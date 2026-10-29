@@ -283,6 +283,9 @@
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="chord_play">Tocar</string>
     <string name="chord_capo_note">O desenho é o de %1$s; com capo na %2$dª casa, soa %3$s.</string>
+    <string name="chord_keyboard_capo">Na cifra: %1$s (capo na %2$dª casa). Para o teclado: %3$s.</string>
+    <string name="stage_keyboard_capo">acordes para teclado (cifra com capo na %1$dª casa)</string>
+    <string name="stage_keyboard_capo_hint">Esta cifra usa capo na %1$dª casa. Os acordes aparecem ajustados para o teclado, para você tocar junto com a banda.</string>
     <string name="settings_chord_play">Ao tocar o acorde</string>
     <string name="settings_chord_play_arpeggio">Dedilhado</string>
     <string name="settings_chord_play_chord">Junto</string>

@@ -119,7 +119,8 @@ data class Look(
     // metrônomo do palco: contagem 1-2-3-4 antes de começar e som (desligado = só o piscar)
     val metroCount: Boolean = true,
     val metroSound: Boolean = true,
-    val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // tocar o acorde no palco (T20)
+    val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,
+    val keyboardCapoHintSeen: Boolean = false,   // a explicação "acordes no tom que soa" já apareceu para o teclado   // tocar o acorde no palco (T20)
     val metroGlow: Boolean = true,                       // brilho na borda do palco no tempo
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // velocidade da rolagem automática (1 a 10), no modo rolar
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)

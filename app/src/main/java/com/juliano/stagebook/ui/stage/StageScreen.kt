@@ -22,6 +22,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.widget.Toast
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -232,6 +233,7 @@ fun StageRoute(
             onAutoScroll = viewModel::setAutoScroll,
             onMetronomeSound = viewModel::metronomeSound,
             onPlayChord = viewModel::playChord,
+            onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -268,6 +270,7 @@ fun StageScreen(
     onAutoScroll: (level: Int) -> Unit = {},
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
+    onKeyboardHintSeen: () -> Unit = {},
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -291,6 +294,21 @@ fun StageScreen(
         }
     }
     val song = uiState.songs[index]
+    // teclado não usa capo: os acordes aparecem no tom que soa (cifra em G com capo na 2ª casa → A), sem mudar a música
+    // guardada (pedido do usuário, 29/10)
+    val keyboard = look.instrument == com.juliano.stagebook.data.model.Instrument.TECLADO
+    val keyboardCapo = remember(song.text, keyboard, look.chords) { if (keyboard && look.chords) Chords.capo(song.text) else 0 }
+    val shownText = remember(song.text, keyboardCapo) { if (keyboardCapo > 0) Chords.transpose(song.text, keyboardCapo) else song.text }
+    // na primeira vez, uma mensagem curta explica (some sozinha)
+    var keyboardHint by remember { mutableIntStateOf(0) }
+    LaunchedEffect(keyboardCapo) {
+        if (keyboardCapo > 0 && !look.keyboardCapoHintSeen) {
+            keyboardHint = keyboardCapo
+            onKeyboardHintSeen()
+            delay(KEYBOARD_HINT_MS)
+            keyboardHint = 0
+        }
+    }
     hidingChord?.let { chord ->
         ConfirmDialog(
             stringResource(R.string.stage_chord_hide_confirm, chord),
@@ -354,7 +372,7 @@ fun StageScreen(
     var fitZoom by remember(index) { mutableFloatStateOf(Float.MAX_VALUE) }
     val sectionNames = rememberSectionNames(look.translateSections)
     val chordLook = remember(look.chords, look.chordScale, look.chordColor) { ChordLook(look.chords, look.chordScale, Color(look.chordColor)) }
-    val sourced = remember(song.text, look, sectionNames) { stageLines(song.text, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale) }
+    val sourced = remember(shownText, look, sectionNames) { stageLines(shownText, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale) }
     val lines = remember(sourced) { sourced.map { it.text } }
     // segurar uma linha mostra um botão para editá-la (não abre direto: no show o polegar apoiado
     // na tela não pode tirar a letra da frente); some sozinho e ao virar a página
@@ -549,7 +567,7 @@ fun StageScreen(
             // depois do artista, nesta ordem (pedido do usuário, 29/10): backing track e capo acesos na cor de destaque, depois
             // o tom; no celular vão para a linha do artista, senão o título encurta
             if (metaInline && look.playerMode && song.track.isNotEmpty()) TrackBadge()
-            if (!song.missing && metaInline && look.chords) SongKeyBadges(song.text, fg, showCapo = look.instrument != com.juliano.stagebook.data.model.Instrument.TECLADO)
+            if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -557,7 +575,7 @@ fun StageScreen(
             }
         }
         // tom e capo são de cifra: no perfil só letra não aparecem
-        val hasKey = look.chords && remember(song.text) { Chords.key(song.text).isNotEmpty() || Chords.capo(song.text) > 0 }
+        val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
         val hasTrack = look.playerMode && song.track.isNotEmpty()
         if (!metaInline && (song.meta.isNotEmpty() || ((hasKey || hasTrack) && !song.missing))) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
@@ -570,7 +588,7 @@ fun StageScreen(
                     modifier = Modifier.weight(1f),
                 )
                 if (hasTrack) TrackBadge(Modifier.padding(end = Spacing.m))
-                if (!song.missing && hasKey) SongKeyBadges(song.text, fg, showCapo = look.instrument != com.juliano.stagebook.data.model.Instrument.TECLADO)
+                if (!song.missing && hasKey) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
             }
         }
 
@@ -694,7 +712,7 @@ fun StageScreen(
             // lista de acordes da música no topo ou no fim (só no perfil letra e cifra): um espaço reservado no texto,
             // com a altura das fileiras de desenhos nesta largura, para a paginação contar com ela
             val density = LocalDensity.current
-            val stripChordCount = remember(song.text) { stripChords(song.text).size }
+            val stripChordCount = remember(shownText) { stripChords(shownText).size }
             val stripPlace = if (look.chords && stripChordCount > 0) look.chordList else ChordListPlace.NONE
             val stripEm = with(density) {
                 val perRow = maxOf(1, columnWidth / STRIP_ITEM_WIDTH.roundToPx())
@@ -828,7 +846,7 @@ fun StageScreen(
                             if (strip != null && l != null && strip.start < l.layoutInput.text.length) {
                                 val top = l.getLineTop(l.getLineForOffset(strip.start)).roundToInt()
                                 ChordStrip(
-                                    song.text,
+                                    shownText,
                                     look.instrument,
                                     Color(look.chordColor),
                                     Modifier.offset { IntOffset(0, top) },
@@ -964,6 +982,16 @@ fun StageScreen(
             }
         }
     }
+    if (keyboardHint > 0) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(Spacing.xl).widthIn(max = 560.dp),
+        ) {
+            Text(stringResource(R.string.stage_keyboard_capo_hint, keyboardHint), Modifier.padding(Spacing.m), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
     // brilho do metrônomo na borda, esmaecendo para dentro, numa camada própria por cima: cada piscada redesenha só ela
     // (a letra fica guardada como está), e nada é desenhado fora das piscadas
     Spacer(
@@ -1083,6 +1111,7 @@ private class GestureTargets(
 // tamanho) com os da música nova
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
+private const val KEYBOARD_HINT_MS = 6_000L
 private val METRO_GLOW = 20.dp          // brilho da borda, esmaecendo para dentro (não chega na letra)
 private val METRO_GLOW_ACCENT = 26.dp   // um pouco mais largo no 1 do compasso
 private const val METRO_GLOW_ALPHA = 0.8f
@@ -1299,11 +1328,11 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
 }
 
 @Composable
-private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true) {
+private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, keyboardCapo: Int = 0) {
     val key = remember(text) { Chords.key(text) }
     // teclado não usa capotraste (pedido do usuário, 29/10): no palco dele o capo não aparece
     val capo = remember(text, showCapo) { if (showCapo) Chords.capo(text) else 0 }
-    if (key.isEmpty() && capo == 0) return
+    if (key.isEmpty() && capo == 0 && keyboardCapo == 0) return
     val sounds = Chords.soundingKey(key, capo)
     val keyDesc = stringResource(R.string.stage_key_desc, key)
     val capoDesc = if (key.isNotEmpty()) stringResource(R.string.stage_capo_sounds_desc, capo, sounds) else stringResource(R.string.stage_capo_desc, capo)
@@ -1323,6 +1352,10 @@ private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true) {
                 Icon(AppIcons.MusicNote, null, tint = fg.copy(alpha = 0.6f))
                 Text(key, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
             }
+        }
+        // teclado com a cifra transposta pelo capo: diz por que o tom é outro
+        if (keyboardCapo > 0) {
+            Text(stringResource(R.string.stage_keyboard_capo, keyboardCapo), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
