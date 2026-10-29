@@ -22,6 +22,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.widget.Toast
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.unit.IntOffset
 import com.juliano.stagebook.data.model.ChordListPlace
 import androidx.compose.ui.semantics.contentDescription
@@ -621,8 +624,11 @@ fun StageScreen(
             // alturas em 1 coluna: o automático precisa delas para decidir e, dando 1 coluna, são as mesmas
             // da paginação (medir texto é o caro no Fire: uma vez só)
             val oneLines = remember(lines, styleOne, width) { lazy { measureLines(styleOne, width) } }
-            val columns = remember(lines, styleOne, width, height, look.columns, layoutZoom, fitTwo) {
-                if (look.columns != StageColumns.AUTO) StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
+            // rolar (T13): sempre uma coluna
+            val scrollMode = look.stageMode == com.juliano.stagebook.data.model.StageMode.SCROLL
+            val columns = remember(lines, styleOne, width, height, look.columns, layoutZoom, fitTwo, scrollMode) {
+                if (scrollMode) 1
+                else if (look.columns != StageColumns.AUTO) StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
                 else StageFit.columns(
                     StageColumns.AUTO,
                     fitsOnePageInOneColumn = Pagination.paginate(oneLines.value, height).size <= 1,
@@ -659,19 +665,24 @@ fun StageScreen(
             }
             val shownLines = remember(fitted) { if (fitted === sourced) lines else fitted.map { it.text } }
             SideEffect { pageLines = fitted }
-            val sheets = remember(shownLines, style, columnWidth, height, columns) {
-                val measured = if (shownLines === lines && style == styleOne && columnWidth == width) oneLines.value else lineHeights(measurer, shownLines, style, columnWidth)
-                Pagination.sheets(measured, height, columns)
+            val measured = remember(shownLines, style, columnWidth) {
+                if (shownLines === lines && style == styleOne && columnWidth == width) oneLines.value else lineHeights(measurer, shownLines, style, columnWidth)
             }
-            SideEffect { pageCount = sheets.size; pageCountFor = index }
-            val shownAt = if (page == LAST_PAGE) sheets.lastIndex else page.coerceIn(0, sheets.lastIndex)
+            val sheets = remember(measured, height, columns) { Pagination.sheets(measured, height, columns) }
+            // rolar: os "passos" fazem o papel das páginas (pedal, fila de toques e bolinhas continuam iguais)
+            val steps = remember(measured, height, scrollMode) { if (scrollMode) com.juliano.stagebook.domain.ScrollSteps.steps(measured, height) else emptyList() }
+            val stops = if (scrollMode) steps.size else sheets.size
+            SideEffect { pageCount = stops; pageCountFor = index }
+            val stopAt = if (page == LAST_PAGE) stops - 1 else page.coerceIn(0, stops - 1)
+            val shownAt = if (scrollMode) 0 else stopAt
             // cada página da animação leva o próprio texto: a que está saindo não pode ser montada com
             // as linhas da música nova (era o crash ao trocar de música)
             val shown = PageContent(
                 index,
                 shownAt,
-                sheets[shownAt].map { range -> joinLines(if (range.isEmpty()) emptyList() else shownLines.subList(range.first, range.last + 1)) },
-                sheets[shownAt].map { range -> if (range.isEmpty()) -1 else range.first },
+                if (scrollMode) listOf(joinLines(shownLines))
+                else sheets[shownAt].map { range -> joinLines(if (range.isEmpty()) emptyList() else shownLines.subList(range.first, range.last + 1)) },
+                if (scrollMode) listOf(0) else sheets[shownAt].map { range -> if (range.isEmpty()) -1 else range.first },
                 style,
                 columns,
                 // acorde: negrito, na cor e no tamanho dele, acompanhando o zoom da letra
@@ -679,6 +690,25 @@ fun StageScreen(
             )
             val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
             SideEffect { hit.show(shown, columnWidth, gutter, chordPx) }
+            // rolar: a letra sobe até o passo atual; mudou o passo (dentro da música), a linha onde se continua acende
+            val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(index, stopAt, steps) {
+                val target = steps.getOrNull(stopAt)?.offset?.toFloat() ?: 0f
+                if (page == LAST_PAGE) scrollY.snapTo(target) else scrollY.animateTo(target, tween(PAGE_IN_MS * 2))
+            }
+            var flash by remember(index) { mutableStateOf<IntRange?>(null) }   // y..y+altura da linha acesa, na tela
+            LaunchedEffect(index, stopAt) {
+                if (stopAt <= 0) { flash = null; return@LaunchedEffect }
+                flash = if (scrollMode) steps.getOrNull(stopAt)?.let { it.markY until it.markY + it.markHeight }
+                else sheets.getOrNull(stopAt)?.firstOrNull()?.let { range ->
+                    // virando página (T14): a primeira linha com texto da página nova
+                    val i = range.firstOrNull { !measured[it].blank } ?: return@let null
+                    val top = (range.first until i).sumOf { measured[it].height }
+                    top until top + measured[i].height
+                }
+                delay(FLASH_MS)
+                flash = null
+            }
             AnimatedContent(
                 modifier = Modifier.graphicsLayer {
                     // enquanto a pinça não para, a página atual só escala (a partir do canto de cima)
@@ -710,7 +740,9 @@ fun StageScreen(
                                 text,
                                 style = content.style,
                                 chordStyle = content.chordStyle,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = if (!scrollMode) Modifier.fillMaxSize()
+                                else Modifier.fillMaxWidth().clipToBounds().wrapContentHeight(Alignment.Top, unbounded = true)
+                                    .offset { IntOffset(0, -scrollY.value.roundToInt()) },
                                 onTextLayout = { laid = it; hit.laidOut(content, column, it) },
                             )
                             // a lista de acordes, por cima do espaço reservado para ela
@@ -731,6 +763,21 @@ fun StageScreen(
                     // última folha com só a coluna da esquerda: a da direita fica vazia, não estica a outra
                     repeat(content.sheetColumns - content.columns.size) { Box(Modifier.weight(1f)) }
                 }
+            }
+            // a linha onde se continua, acesa por um instante (T14), na largura da coluna da esquerda
+            androidx.compose.animation.AnimatedVisibility(
+                visible = flash != null,
+                enter = fadeIn(tween(120)),
+                exit = fadeOut(tween(600)),
+            ) {
+                val band = flash ?: IntRange(0, 0)
+                Box(
+                    Modifier
+                        .offset { IntOffset(0, band.first) }
+                        .width(with(density) { columnWidth.toDp() })
+                        .height(with(density) { (band.last - band.first + 1).coerceAtLeast(0).toDp() })
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = FLASH_ALPHA), MaterialTheme.shapes.small),
+                )
             }
             // player (só no modo player): play/pause transparente no canto de baixo à direita, por cima da letra
             if (look.playerMode && !song.missing) {
@@ -896,6 +943,9 @@ private class GestureTargets(
 /** `starts`: índice em `lines` da 1ª linha de cada coluna (-1 = coluna vazia). */
 // leva também o estilo e as colunas da folha: a página que sai na animação não é remontada (nem muda de
 // tamanho) com os da música nova
+private const val FLASH_MS = 1500L
+private const val FLASH_ALPHA = 0.22f
+
 private data class PageContent(
     val song: Int,
     val page: Int,

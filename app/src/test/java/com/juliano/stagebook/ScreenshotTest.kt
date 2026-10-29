@@ -316,6 +316,17 @@ class ScreenshotTest {
         look = Look(fontSp = 34f),
     )
 
+    // T13: modo rolar, no 2º passo (a letra rolou até a 1ª linha que não cabia)
+    @Test fun stageScrollTablet() = shoot("tablet_6_palco_rolar") {
+        StageScreen(stage.copy(look = stage.look.copy(stageMode = com.juliano.stagebook.data.model.StageMode.SCROLL)), 0, 1, { _, _ -> }, onBack = {})
+    }
+
+    @Test fun settingsLyricsScrollTablet() = shoot("tablet_5_ajustes_rolar") {
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(settings.copy(look = settings.look.copy(stageMode = com.juliano.stagebook.data.model.StageMode.SCROLL)), SettingsActions(), it, section = SettingsSection.LYRICS)
+        }
+    }
+
     @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
     // cifra inventada (nada de letra de verdade): acordes em cima, linha só de acordes, seção ChordPro e comentário

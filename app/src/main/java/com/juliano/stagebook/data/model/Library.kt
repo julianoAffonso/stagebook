@@ -80,6 +80,12 @@ object ImportSites {
     )
 }
 
+/** Como a letra anda no palco: vira página (padrão) ou rola (pedido do usuário, 29/10). */
+enum class StageMode {
+    @SerialName("pages") PAGES,
+    @SerialName("scroll") SCROLL,
+}
+
 enum class StageColumns {
     @SerialName("auto") AUTO,   // 2 colunas no tablet deitado, 1 no resto
     @SerialName("one") ONE,
@@ -101,6 +107,7 @@ data class Look(
     val keepScreenOn: Boolean = true,   // tela não apaga com o app aberto (show); o palco fica aceso sempre
     val pedalName: String = "",   // nome do pedal Bluetooth reconhecido pelo último botão apertado
     val columns: StageColumns = StageColumns.AUTO,
+    val stageMode: StageMode = StageMode.PAGES,
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)
     val midiBtAddress: String = "",   // pedal MIDI Bluetooth escolhido em Ajustes (o app reconecta sozinho)
     val midiBtName: String = "",
