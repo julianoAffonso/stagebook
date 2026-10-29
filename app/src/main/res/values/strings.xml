@@ -231,6 +231,9 @@
     <string name="editor_capo_down">Capo uma casa abaixo</string>
     <string name="editor_capo_up">Capo uma casa acima</string>
     <string name="stage_key_desc">Tom: %1$s</string>
+    <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>
+    <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
+    <string name="stage_capo_sounds_short">soa %1$s</string>
     <string name="stage_capo_desc">Capotraste na %1$dª casa</string>
     <string name="stage_capo_sounds_desc">Capotraste na %1$dª casa, soa em %2$s</string>
     <string name="settings_font_family">Fonte</string>

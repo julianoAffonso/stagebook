@@ -1034,6 +1034,8 @@ private fun SongKeyBadges(text: String, fg: Color) {
             Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
                 Icon(AppIcons.Capo, null, tint = accent)
                 Text(capo.toString(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
+                // o tom que soa com o capo, à vista (os desenhos continuam os da cifra)
+                if (key.isNotEmpty()) Text(" " + stringResource(R.string.stage_capo_sounds_short, sounds), style = MaterialTheme.typography.titleSmall, color = accent)
             }
         }
         if (key.isNotEmpty()) {

@@ -146,6 +146,11 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(chords = false))
     }
 
+    // T18: com capo, o editor diz o desenho e o tom que soa
+    @Test fun editorCapoTablet() = shoot("tablet_4_editor_capo") {
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+    }
+
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
@@ -340,7 +345,7 @@ class ScreenshotTest {
 
     // T08/T09: backing track e capo acesos, primeiro depois do artista; o tom depois
     private val stageBadges = stage.copy(
-        songs = listOf(StageSong("Canção de teste", "Banda Fictícia", "{key: G}\n{capo: 2}\n" + chordSong, false, track = "faixa.ogg")),
+        songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, track = "faixa.ogg")),
         look = stage.look.copy(chords = true, playerMode = true),
     )
 
