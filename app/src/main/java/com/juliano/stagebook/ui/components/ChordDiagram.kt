@@ -61,8 +61,9 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
     Canvas(Modifier.size(width, width * 1.15f)) {
         if (shape == null) return@Canvas
         val frets = 5
+        // margens iguais dos dois lados: a grade fica no meio, embaixo do nome (a da esquerda guarda o número da casa)
         val left = size.width * 0.18f
-        val right = size.width * 0.94f
+        val right = size.width * 0.82f
         val top = size.height * 0.16f
         val bottom = size.height * 0.98f
         val gap = (right - left) / (strings - 1)
