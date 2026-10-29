@@ -59,6 +59,11 @@ class StageAutoScrollTest {
         open()
         compose.onNodeWithContentDescription("Pausar a rolagem").performClick()
         frames(10)
+        // o × fecha sem mudar nada
+        open()
+        compose.onNodeWithContentDescription("Fechar").performClick()
+        frames(5)
+        compose.onNodeWithContentDescription("Rolar sozinho").assertDoesNotExist()
         open()
         compose.onNodeWithContentDescription("Mais rápido").performClick()
         assertEquals(Look.DEFAULT_AUTO_SCROLL + 1, level)
