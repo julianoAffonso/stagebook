@@ -277,6 +277,7 @@
     <string name="editor_tempo">BPM</string>
     <string name="editor_data_open">Mostrar os dados da música</string>
     <string name="editor_data_close">Recolher os dados da música</string>
+    <string name="editor_capo_fret">%1$dª casa</string>
     <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>
     <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
