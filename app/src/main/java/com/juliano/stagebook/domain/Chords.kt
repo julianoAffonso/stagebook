@@ -175,23 +175,32 @@ object Chords {
         return out.toString()
     }
 
+    // os nomes de tom que os músicos usam, meio tom a meio tom (pedido do usuário, 29/10): o − e o + do editor andam
+    // nesta ordem, e os acordes seguem a armadura do tom (bemóis nos tons de bemol)
+    private val majorKeys = listOf("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+    private val minorKeys = listOf("Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm")
+
+    /** O tom [semitones] meios-tons acima, com o nome de costume (D + 1 = Eb, F + 1 = F#, Am + 1 = Bbm). */
+    fun transposeKey(key: String, semitones: Int): String {
+        val m = chord.matchEntire(key.trim()) ?: return key
+        val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return key
+        val minor = quality(m.groupValues[3]) == Quality.MINOR
+        val i = ((root + semitones) % 12 + 12) % 12
+        return (if (minor) minorKeys else majorKeys)[i]
+    }
+
     /** Transpõe todos os acordes da música e o tom guardado (`{key}`), com bemóis nos tons de bemol. */
     fun transpose(text: String, semitones: Int): String {
         if (semitones % 12 == 0) return text
         val oldKey = key(text)
-        val newKey = if (oldKey.isNotEmpty()) transposeChord(oldKey, semitones) else ""
+        val newKey = if (oldKey.isNotEmpty()) transposeKey(oldKey, semitones) else ""
         // o tom novo decide bemol x sustenido; sem tom, cada acorde mantém o seu estilo
-        val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys || preferFlats(newKey) else null
+        val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys else null   // o nome do tom já é o de costume
         val body = text.split('\n').joinToString("\n") { line ->
             if (isDirective(line)) line
             else bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats) + "]" else b.value }
         }
-        return if (newKey.isNotEmpty()) setDirective(body, "key", transposeChord(oldKey, semitones, useFlats)) else body
-    }
-
-    private fun preferFlats(key: String): Boolean {
-        val enharmonic = transposeChord(key, 0, useFlats = true)
-        return enharmonic in flatKeys
+        return if (newKey.isNotEmpty()) setDirective(body, "key", newKey) else body
     }
 
     // ---- tom pelos acordes (importação sem {key}) ----
@@ -226,9 +235,7 @@ object Chords {
             if (chords.last() == tonicChord) score += 1.5
             if (score > bestScore) {
                 bestScore = score
-                val major = name(tonic, useFlats = false)
-                val label = if (minor) major + "m" else major
-                best = if (label in flatKeys || preferFlats(label)) transposeChord(label, 0, useFlats = true) else label
+                best = (if (minor) minorKeys else majorKeys)[tonic]   // o nome de costume do tom
             }
         }
         return best

@@ -452,7 +452,12 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
         // sem capo: 0 apagado (um "–" parecia um terceiro botão de menos)
-        Text(capo.toString(), style = MaterialTheme.typography.titleMedium, color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+        // "2ª casa" (pedido do usuário, 29/10); sem capo, só o 0 apagado
+        Text(
+            if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo),
+            style = MaterialTheme.typography.titleMedium,
+            color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+        )
         IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
     }
     // com capo: os desenhos continuam os da cifra, mas o som sobe (pedido do usuário, 29/10)

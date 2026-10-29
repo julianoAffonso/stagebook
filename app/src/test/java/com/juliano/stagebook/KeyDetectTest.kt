@@ -49,4 +49,15 @@ class KeyDetectTest {
         assertEquals(0, com.juliano.stagebook.domain.ChordImport.bpmOf("", "a letra fala de 120 caminhos"))   // número solto não é BPM
         assertEquals(0, com.juliano.stagebook.domain.ChordImport.bpmOf("999", ""))
     }
+
+    @Test fun `tom anda meio tom a meio tom com o nome de costume`() {
+        val up = generateSequence("C") { Chords.transposeKey(it, 1) }.take(13).toList()
+        assertEquals(listOf("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B", "C"), up)
+        val minor = generateSequence("Am") { Chords.transposeKey(it, 1) }.take(4).toList()
+        assertEquals(listOf("Am", "Bbm", "Bm", "Cm"), minor)
+        assertEquals("E", Chords.transposeKey("F", -1))
+        // os acordes seguem a armadura do tom novo
+        assertEquals("{key: Eb}\n[Eb]um [Ab]dois [Bb]três", Chords.transpose("{key: D}\n[D]um [G]dois [A]três", 1))
+        assertEquals("{key: F#}\n[F#]um [B]dois [C#]três", Chords.transpose("{key: F}\n[F]um [Bb]dois [C]três", 1))
+    }
 }
