@@ -16,3 +16,4 @@ local.properties
 /carga/
 .claude/auditoria-pendente
 !.claude/settings.json
+.DS_Store
