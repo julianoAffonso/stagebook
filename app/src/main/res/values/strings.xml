@@ -273,6 +273,8 @@
     <string name="editor_data_label">Dados da música</string>
     <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>
+    <string name="editor_data_tempo">%1$d BPM</string>
+    <string name="editor_tempo">BPM</string>
     <string name="editor_data_open">Mostrar os dados da música</string>
     <string name="editor_data_close">Recolher os dados da música</string>
     <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>

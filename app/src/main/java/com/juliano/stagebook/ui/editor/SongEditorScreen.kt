@@ -108,6 +108,7 @@ fun SongEditorRoute(
         onTranspose = viewModel::transpose,
         onCapo = viewModel::setCapo,
         onKey = viewModel::setKey,
+        onTempo = viewModel::setTempo,
         look = viewModel.look.collectAsStateWithLifecycle().value,
     )
 }
@@ -128,6 +129,7 @@ fun SongEditorScreen(
     onCapo: (Int) -> Unit = {},
     onKey: (String) -> Unit = {},
     look: Look = Look(),
+    onTempo: (String) -> Unit = {},
 ) {
     var deleting by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // a música como fica no palco
@@ -210,7 +212,7 @@ fun SongEditorScreen(
                         onToggle = { dataOpen = !dataOpen },
                         chords = look.chords,
                     ) {
-                        SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false })
+                        SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
                         if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
@@ -295,6 +297,7 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
         uiState.author.ifBlank { null },
         key.ifBlank { null }?.takeIf { chords },
         capo.takeIf { chords && it > 0 }?.let { stringResource(R.string.editor_data_capo, it) },
+        remember(uiState.text) { Chords.tempo(uiState.text) }.takeIf { it > 0 }?.let { stringResource(R.string.editor_data_tempo, it) },
     ).joinToString(" · ")
     Column(Modifier.padding(horizontal = Spacing.m)) {
         // como um campo de escolha (pedido do usuário, 29/10): a caixa com borda e o rótulo, o resumo dentro e o ▼; tocar
@@ -330,7 +333,14 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
 
 /** Os dados da música: título (obrigatório, é o nome no setlist), artista e ano. */
 @Composable
-private fun SongDataFields(uiState: SongEditorUiState, onTitle: (String) -> Unit, onAuthor: (String) -> Unit, onYear: (String) -> Unit, onCollapse: () -> Unit) {
+private fun SongDataFields(
+    uiState: SongEditorUiState,
+    onTitle: (String) -> Unit,
+    onAuthor: (String) -> Unit,
+    onYear: (String) -> Unit,
+    onCollapse: () -> Unit,
+    onTempo: (String) -> Unit = {},
+) {
     OutlinedTextField(
         value = uiState.title,
         onValueChange = onTitle,
@@ -361,6 +371,18 @@ private fun SongDataFields(uiState: SongEditorUiState, onTitle: (String) -> Unit
             onValueChange = onYear,
             label = { Text(stringResource(R.string.editor_year)) },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.weight(1f),
+        )
+        // BPM da música (`{tempo}`): o metrônomo começa nele (sem BPM, em 100)
+        val tempo = remember(uiState.text) { Chords.directive(uiState.text, "tempo").orEmpty() }
+        OutlinedTextField(
+            value = tempo,
+            onValueChange = onTempo,
+            label = { Text(stringResource(R.string.editor_tempo)) },
+            singleLine = true,
+            isError = tempo.isNotEmpty() && Chords.tempo(uiState.text) == 0,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.weight(1f),
