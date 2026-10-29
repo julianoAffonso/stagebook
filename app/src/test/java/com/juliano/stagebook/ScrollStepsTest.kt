@@ -34,4 +34,18 @@ class ScrollStepsTest {
         val steps = ScrollSteps.steps(lines(600, 100), 250)
         assertEquals(250, steps[1].offset)
     }
+
+    @Test fun `pausa no meio - a posição vira passo e o próximo parte dela`() {
+        // linhas de 100, tela de 250; pausou em 130 (entre os passos 0 e 200)
+        val steps = ScrollSteps.steps(lines(100, 100, 100, 100, 100, 100), 250, anchor = 130)
+        assertEquals(listOf(0, 130, 300, 350), steps.map { it.offset })
+        assertEquals(0, steps[1].markHeight)    // o ponto da pausa não acende: a letra não se mexe
+        assertEquals(300, steps[2].offset)      // a 4ª linha (top 300) não cabia inteira a partir de 130 (vai até 380)
+    }
+
+    @Test fun `pausa no fim ou num passo exato não duplica`() {
+        val base = ScrollSteps.steps(lines(100, 100, 100, 100, 100), 250).map { it.offset }
+        assertEquals(base, ScrollSteps.steps(lines(100, 100, 100, 100, 100), 250, anchor = 200).map { it.offset })
+        assertEquals(base.last(), ScrollSteps.steps(lines(100, 100, 100, 100, 100), 250, anchor = 9999).last().offset)
+    }
 }
