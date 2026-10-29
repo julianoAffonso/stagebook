@@ -720,7 +720,7 @@ fun StageScreen(
                 (rows * STRIP_ITEM_HEIGHT.toPx() + Spacing.m.toPx()) / style.fontSize.toPx()
             }
             val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
-                val split = splitWrappedChordLines(measurer, sourced, style, columnWidth)
+                val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth)
                 val strip = StageLine(chordListLine(stripEm), -1)
                 when (stripPlace) {
                     ChordListPlace.TOP -> listOf(strip) + split
@@ -1084,6 +1084,17 @@ internal fun splitWrappedChordLines(measurer: TextMeasurer, lines: List<StageLin
     }
     if (pieces.isEmpty()) return lines
     return lines.flatMapIndexed { i, l -> pieces[i]?.map { StageLine(it, l.source) } ?: listOf(l) }
+}
+
+/** Tablatura larga demais para a coluna: a letra de máquina diminui até caber (nunca quebra, senão as colunas se perdem). */
+internal fun fitTabs(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int): List<StageLine> {
+    if (lines.none { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }) return lines
+    // o bloco inteiro fica do mesmo tamanho (o da linha mais larga), para as cordas continuarem alinhadas entre si
+    val widest = lines.filter { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }
+        .maxOf { measurer.measure(it.text, style, softWrap = false).size.width }
+    if (widest <= width) return lines
+    val em = TAB_EM * width / widest * 0.98f
+    return lines.map { l -> if (l.text.hasStringAnnotations(TAB_TAG, 0, l.text.length)) StageLine(tabLine(l.text.text, em), l.source) else l }
 }
 
 internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style: TextStyle): List<Int> {

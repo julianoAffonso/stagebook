@@ -460,6 +460,18 @@ class ScreenshotTest {
         }
     }
 
+    // T22: tablatura no palco (letra de máquina, cabendo na coluna)
+    private val tabSong = "{key: G}\n[Intro]\n{start_of_tab}\ne|-----------------0-----3-----5-----7-----8-----10----12-----|\nB|-------1-----3-----5-----6-----8-----10----12----13---------|\nG|---0-----2-----4-----5-----7-----9-----11----12-------------|\n{end_of_tab}\n\n[Verso 1]\n[G]Saio cedo pela [D]rua sem saber"
+
+    @Test fun stageTabTablet() = shoot("tablet_6_palco_tab") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Com tablatura", "Banda Fictícia", tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageTabPhone() = shoot("celular_7_palco_tab") {
+        StageScreen(stage.copy(songs = listOf(StageSong("Com tablatura", "Banda Fictícia", tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
+    }
+
     @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
     // cifra inventada (nada de letra de verdade): acordes em cima, linha só de acordes, seção ChordPro e comentário
