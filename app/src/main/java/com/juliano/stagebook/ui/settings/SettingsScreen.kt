@@ -1187,7 +1187,7 @@ private fun ScreenDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
     }
-    // o "grito" do palco para telão e transmissão (T23)
+    // Now Playing: o "grito" do palco para OBS e outros (T23)
     SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
         SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce)
     }

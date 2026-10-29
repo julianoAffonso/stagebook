@@ -121,7 +121,7 @@ data class Look(
     val metroSound: Boolean = true,
     val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,
     val keyboardCapoHintSeen: Boolean = false,
-    val announce: Boolean = true,   // avisar a música da vez na rede local (telão, OBS, Resolume)   // a explicação "acordes no tom que soa" já apareceu para o teclado   // tocar o acorde no palco (T20)
+    val announce: Boolean = true,   // Now Playing: avisar a música da vez na rede local (OBS, Resolume)   // a explicação "acordes no tom que soa" já apareceu para o teclado   // tocar o acorde no palco (T20)
     val metroGlow: Boolean = true,                       // brilho na borda do palco no tempo
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // velocidade da rolagem automática (1 a 10), no modo rolar
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)

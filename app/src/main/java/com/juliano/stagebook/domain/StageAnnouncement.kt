@@ -4,9 +4,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * O "grito" do palco para telão e transmissão (T23): a música da vez num JSON pequeno, mandado em broadcast UDP na rede
+ * Now Playing (T23): o "grito" do palco para programas de live e de projeção: a música da vez num JSON pequeno, mandado em broadcast UDP na rede
  * local, na porta [PORT], a cada troca de música e de [REPEAT_MS] em [REPEAT_MS] (quem ligar o programa depois também
- * recebe). Formato aberto e documentado em `docs/telao.md`, para OBS, Resolume e afins. Só o nome da música, nunca a letra.
+ * recebe). Formato aberto e documentado em `docs/now-playing.md`, para OBS, Resolume e afins. Só o nome da música, nunca a letra.
  */
 @Serializable
 data class StageAnnouncement(
