@@ -210,7 +210,7 @@ fun SongEditorScreen(
                         onToggle = { dataOpen = !dataOpen },
                         chords = look.chords,
                     ) {
-                        SongDataFields(uiState, onTitle, onAuthor, onYear)
+                        SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false })
                         if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
@@ -304,7 +304,8 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
         LaunchedEffect(taps) {
             taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) toggle() }
         }
-        OutlinedTextField(
+        // aberto, o resumo some (repetiria o título logo embaixo) e o ▲ para recolher fica no campo Título
+        if (!expanded) OutlinedTextField(
             value = summary,
             onValueChange = {},
             readOnly = true,
@@ -322,18 +323,20 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
             modifier = Modifier.fillMaxWidth(),
         )
         AnimatedVisibility(expanded) {
-            Column(Modifier.padding(vertical = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) { fields() }
+            Column(Modifier.padding(bottom = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) { fields() }
         }
     }
 }
 
 /** Os dados da música: título (obrigatório, é o nome no setlist), artista e ano. */
 @Composable
-private fun SongDataFields(uiState: SongEditorUiState, onTitle: (String) -> Unit, onAuthor: (String) -> Unit, onYear: (String) -> Unit) {
+private fun SongDataFields(uiState: SongEditorUiState, onTitle: (String) -> Unit, onAuthor: (String) -> Unit, onYear: (String) -> Unit, onCollapse: () -> Unit) {
     OutlinedTextField(
         value = uiState.title,
         onValueChange = onTitle,
         label = { Text(stringResource(R.string.editor_title)) },
+        // ▲ recolhe os dados da música (volta o campo com o resumo)
+        trailingIcon = { IconButton(onClick = onCollapse) { Icon(AppIcons.DropUp, stringResource(R.string.editor_data_close)) } },
         isError = uiState.error != null,
         supportingText = uiState.error?.let { e ->
             { Text(stringResource(if (e == EditorError.TITLE_EMPTY) R.string.editor_error_title_empty else R.string.editor_error_title_taken)) }
