@@ -676,7 +676,9 @@ fun StageScreen(
             }
             val sheets = remember(measured, height, columns) { Pagination.sheets(measured, height, columns) }
             // rolar: os "passos" fazem o papel das páginas (pedal, fila de toques e bolinhas continuam iguais)
-            val steps = remember(measured, height, scrollMode) { if (scrollMode) com.juliano.stagebook.domain.ScrollSteps.steps(measured, height) else emptyList() }
+            // onde a rolagem automática pausou (os passos seguintes partem dali); zera ao trocar de música
+            var anchor by remember(index) { mutableIntStateOf(0) }
+            val steps = remember(measured, height, scrollMode, anchor) { if (scrollMode) com.juliano.stagebook.domain.ScrollSteps.steps(measured, height, anchor) else emptyList() }
             val stops = if (scrollMode) steps.size else sheets.size
             SideEffect { pageCount = stops; pageCountFor = index }
             val stopAt = if (page == LAST_PAGE) stops - 1 else page.coerceIn(0, stops - 1)
@@ -713,7 +715,10 @@ fun StageScreen(
                 if (!autoOn) {
                     if (autoRan[0]) {
                         autoRan[0] = false
-                        val k = steps.indexOfLast { it.offset <= scrollY.value + 1 }.coerceAtLeast(0)
+                        // pausou: a posição real vira um passo, e o próximo pedal continua exatamente dali
+                        val at = scrollY.value.roundToInt()
+                        anchor = at
+                        val k = com.juliano.stagebook.domain.ScrollSteps.steps(measured, height, at).indexOfFirst { it.offset >= at }.coerceAtLeast(0)
                         if (k != stopAt) { syncing[0] = true; onPosition(index, k) }
                     }
                     return@LaunchedEffect

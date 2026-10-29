@@ -34,9 +34,9 @@ class StageAutoScrollTest {
     @Test fun `play rola sozinho - tocar na tela pausa e fica na mesma música`() {
         var song by mutableIntStateOf(0)
         var level = 0
+        var page by mutableIntStateOf(0)
         compose.setContent {
             StagebookTheme {
-                var page by androidx.compose.runtime.remember { mutableIntStateOf(0) }
                 StageScreen(state, song, page, { s, p -> song = s; page = p }, onAutoScroll = { level = it })
             }
         }
@@ -51,6 +51,8 @@ class StageAutoScrollTest {
         compose.onRoot().performTouchInput { click(centerRight.copy(x = centerRight.x - 50f)) }
         frames(10)
         assertEquals(0, song)
+        // sem drift: a posição da pausa virou o passo 1 (o próximo pedal parte dela)
+        assertEquals(1, page)
         open()
         compose.onNodeWithContentDescription("Rolar sozinho").assertExists()
         // de novo: rolando, o ícone ao lado do relógio vira pause e para na hora
