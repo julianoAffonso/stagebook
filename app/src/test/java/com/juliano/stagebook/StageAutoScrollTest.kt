@@ -40,13 +40,13 @@ class StageAutoScrollTest {
                 StageScreen(state, song, page, { s, p -> song = s; page = p }, onAutoScroll = { level = it })
             }
         }
-        // relógio parado: esperando a tela, o teste andaria o tempo até a rolagem chegar ao fim
+        // relógio parado (quadro a quadro): esperando a tela, o teste andaria o tempo até a rolagem chegar ao fim
         compose.mainClock.autoAdvance = false
         compose.onNodeWithContentDescription("Rolar sozinho").performClick()
-        compose.mainClock.advanceTimeBy(1_000)
+        repeat(60) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
         compose.onNodeWithContentDescription("Pausar a rolagem").assertExists()
         compose.onRoot().performTouchInput { click(centerRight.copy(x = centerRight.x - 50f)) }
-        compose.mainClock.advanceTimeBy(500)
+        repeat(10) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
         compose.onNodeWithContentDescription("Rolar sozinho").assertExists()
         assertEquals(0, song)
         compose.mainClock.autoAdvance = true
