@@ -4,7 +4,8 @@ package com.juliano.stagebook.data
  * Script rodado na página aberta no navegador de importação. Devolve um JSON com a letra e as pistas
  * de título/artista (ver PageData). Ordem: texto selecionado > sites conhecidos > maior bloco de texto.
  *
- * Cifra (Cifra Club): `chordText` traz o bloco com os acordes na linha de cima (sem tablatura), `key` e `capo` o
+ * Cifra (Cifra Club): `chordText` traz o bloco com os acordes na linha de cima (com a tablatura, se houver: o app pergunta
+ * se ela entra), `key` e `capo` o
  * que a página diz; `text` continua só a letra. Em outros sites a cifra, se houver, está no próprio `text`.
  *
  * Letras.mus.br: na página normal a letra está em .lyric-original; na de tradução (traducao.html)
@@ -50,7 +51,7 @@ else if(h.indexOf('vagalume')>=0){ if(!x)x=t(q('#lyrics')); ti=t(q('h1')); ar=t(
 else if(h.indexOf('genius.com')>=0){ if(!x)x=Array.prototype.map.call(document.querySelectorAll('[data-lyrics-container]'),
   function(e){return e.innerText;}).join('\n'); ti=t(q('h1')); ar=t(q('a[href*="/artists/"]'));}
 else if(h.indexOf('cifraclub')>=0){ var p=q('pre'); if(p){var c=p.cloneNode(true);
-  Array.prototype.forEach.call(c.querySelectorAll('.tablatura,.tab'),function(e){e.remove();}); ch=c.textContent;
+  ch=c.textContent;
   var l=c.cloneNode(true); Array.prototype.forEach.call(l.querySelectorAll('b'),function(e){e.remove();}); if(!x)x=l.textContent;}
   ti=t(q('h1')); ar=t(q('h2')); ky=t(q('#cifra_tom')); cp=t(q('#cifra_capo'));}
 else if(h.indexOf('azlyrics')>=0){ if(!x){var d=document.querySelectorAll('.ringtone ~ div'); if(d.length)x=t(d[0]);}

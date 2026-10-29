@@ -36,9 +36,27 @@ object ChordImport {
     fun toChordPro(text: String, key: String = "", capo: String = ""): String {
         // as linhas "Tom: G" e "Capotraste na 2ª casa" viram diretivas: saem antes de converter (senão o G da linha
         // do tom ia parar em cima da letra de baixo)
-        val lines = text.replace("\r", "").split('\n').map { it.replace(trailingSpace, "") }
-            .filterNot { tabLine.matches(it) || keyText.matches(it.trim()) || (capoText.containsMatchIn(it) && it.length < 40) }
-        var body = Chords.fromChordsOverLyrics(lines.joinToString("\n")).replace(manyBlank, "\n\n").trim()
+        val all = text.replace("\r", "").split('\n').map { it.replace(trailingSpace, "") }
+        // blocos de tablatura marcados ({start_of_tab}…{end_of_tab}, T22) passam como estão; o resto é convertido
+        val inTab = Tablature.tabLines(all.joinToString("\n"))
+        val parts = ArrayList<String>()
+        val plain = ArrayList<String>()
+        fun flush() {
+            if (plain.isEmpty()) return
+            parts += Chords.fromChordsOverLyrics(plain.filterNot { tabLine.matches(it) || keyText.matches(it.trim()) || (capoText.containsMatchIn(it) && it.length < 40) }.joinToString("\n"))
+            plain.clear()
+        }
+        var block = false
+        all.forEachIndexed { i, line ->
+            when {
+                Tablature.isStart(line) -> { flush(); block = true; parts += line }
+                Tablature.isEnd(line) -> { block = false; parts += line }
+                block && inTab[i] -> parts += line
+                else -> plain += line
+            }
+        }
+        flush()
+        var body = parts.joinToString("\n").replace(manyBlank, "\n\n").trim()
         val k = keyOf(key, text)
         val c = capoOf(capo, text)
         if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
