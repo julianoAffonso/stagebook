@@ -122,12 +122,16 @@ class SongEditorViewModel @Inject constructor(
     val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
 
     /** Sobe ou desce [semitones] meios-tons: reescreve os acordes e o tom guardado (a cifra em cima vira ChordPro antes). */
-    fun transpose(semitones: Int) = update(text = Chords.transpose(Chords.fromChordsOverLyrics(uiState.text), semitones))
+    fun transpose(semitones: Int) {
+        // sem tom guardado: grava o calculado pelos acordes antes, para o tom andar junto com a cifra
+        val base = Chords.fromChordsOverLyrics(uiState.text).let { t ->
+            if (Chords.key(t).isNotEmpty()) t else Chords.detectKey(t).takeIf { it.isNotEmpty() }?.let { Chords.setDirective(t, "key", it) } ?: t
+        }
+        update(text = Chords.transpose(base, semitones))
+    }
 
     /** Capotraste: os desenhos dos acordes ficam iguais (muda o tom que soa). 0 tira a diretiva. */
     fun setCapo(capo: Int) = update(text = Chords.setDirective(uiState.text, "capo", capo.coerceIn(0, 12).takeIf { it > 0 }?.toString().orEmpty()))
-
-    fun setKey(key: String) = update(text = Chords.setDirective(uiState.text, "key", key.trim()))
 
     /** BPM nos dados da música (vazio tira); o metrônomo começa nele. */
     fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))
