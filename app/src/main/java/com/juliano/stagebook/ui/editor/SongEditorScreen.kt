@@ -305,14 +305,21 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    summary,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (uiState.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                // rótulo pequeno em cima do resumo, como os campos do app (pedido do usuário, 29/10)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.editor_data_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        summary,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (uiState.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                }
                 Icon(
                     if (expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
                     stringResource(if (expanded) R.string.editor_data_close else R.string.editor_data_open),
