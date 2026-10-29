@@ -255,6 +255,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 },
                 onKeepScreenOn = viewModel::setKeepScreenOn,
                 onColumns = viewModel::setColumns,
+                onStageMode = viewModel::setStageMode,
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 onExport = { exporter.launch("stagebook-biblioteca.json") },
                 onCheckUpdate = viewModel::checkUpdate,
@@ -314,6 +315,7 @@ data class SettingsActions(
     val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
+    val onStageMode: (com.juliano.stagebook.data.model.StageMode) -> Unit = {},
     val onImport: () -> Unit = {},
     val onExport: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
@@ -491,7 +493,24 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         }
         HelpTip(stringResource(R.string.settings_font_help))
     }
-    SettingsCard(stringResource(R.string.settings_columns)) {
+    // virar página (padrão) ou rolar a letra; nos dois o pedal e o toque andam um passo
+    SettingsCard(stringResource(R.string.settings_stage_mode)) {
+        val modes = listOf(
+            com.juliano.stagebook.data.model.StageMode.PAGES to R.string.settings_stage_mode_pages,
+            com.juliano.stagebook.data.model.StageMode.SCROLL to R.string.settings_stage_mode_scroll,
+        )
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            modes.forEachIndexed { i, (m, label) ->
+                SegmentedButton(
+                    selected = look.stageMode == m,
+                    onClick = { actions.onStageMode(m) },
+                    shape = SegmentedButtonDefaults.itemShape(i, modes.size, baseShape = CircleShape),
+                ) { Text(stringResource(label)) }
+            }
+        }
+        HelpTip(stringResource(R.string.settings_stage_mode_help))
+    }
+    if (look.stageMode == com.juliano.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns)) {
         val options = listOf(
             StageColumns.AUTO to R.string.settings_columns_auto,
             StageColumns.ONE to R.string.settings_columns_one,

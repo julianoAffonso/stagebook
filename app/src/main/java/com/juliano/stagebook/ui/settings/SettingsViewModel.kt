@@ -165,6 +165,7 @@ class SettingsViewModel @Inject constructor(
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }
+    fun setStageMode(m: com.juliano.stagebook.data.model.StageMode) = repository.updateLook { it.copy(stageMode = m) }
     fun setKeepScreenOn(on: Boolean) = repository.updateLook { it.copy(keepScreenOn = on) }
 
     fun checkUpdate() {
