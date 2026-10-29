@@ -217,6 +217,25 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_apagar_tudo.png")
     }
 
+    // T33c: o metrônomo ao lado do relógio e a janelinha
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun metronomeDialog() {
+        compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
+        compose.onNodeWithContentDescription("Metrônomo").performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_palco_metronomo.png")
+    }
+
+    @Test fun metronomeCount() {
+        compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithContentDescription("Metrônomo").performClick()
+        repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        compose.onNodeWithContentDescription("Começar o metrônomo").performClick()
+        repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_metronomo_contagem.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)

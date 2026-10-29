@@ -129,6 +129,7 @@ import com.juliano.stagebook.data.model.StageColumns
 import com.juliano.stagebook.domain.PedalAction
 import com.juliano.stagebook.ui.PedalHandler
 import com.juliano.stagebook.ui.components.ActionButton
+import com.juliano.stagebook.ui.components.SwitchRow
 import com.juliano.stagebook.ui.components.AppIcons
 import com.juliano.stagebook.ui.components.ButtonTone
 import com.juliano.stagebook.ui.components.CenteredContent
@@ -1096,7 +1097,7 @@ private fun EqCard(mixer: MixerConfig, actions: SettingsActions) {
     val onMixer = actions.onMixer
     val levels = actions.mixerLevels
     SettingsCard(stringResource(R.string.eq_title)) {
-        SwitchRow(stringResource(R.string.eq_on), mixer.eqOn) { onMixer(mixer.copy(eqOn = it)) }
+        SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { onMixer(mixer.copy(eqOn = it)) })
         HelpTip(stringResource(R.string.eq_help))
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
@@ -1271,14 +1272,6 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
         if (AppLinks.DONATE.startsWith("https://")) {
             ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Favorite)
         }
-    }
-}
-
-@Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 
