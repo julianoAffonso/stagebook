@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performClick
@@ -268,6 +269,20 @@ class ScreenshotTest {
     // teclado com cifra de capo: acordes no tom que soa, o aviso no topo e a mensagem da primeira vez
     @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = com.juliano.stagebook.data.model.Instrument.TECLADO)), 0, 0, { _, _ -> }, onBack = {})
+    }
+
+    // T21: a segunda tela do acorde (campo harmônico)
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun chordDetails() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                com.juliano.stagebook.ui.stage.ChordShapePopup("C", com.juliano.stagebook.data.model.Instrument.VIOLAO, chordSong, {}, {})
+            }
+        }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes.png")
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)

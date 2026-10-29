@@ -62,4 +62,16 @@ class ChordPlayTest {
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertEquals(Voicings.keys("C").first(), played)
     }
+
+    @Test fun `Detalhes - grau no tom da música, o campo do acorde e onde mais aparece - e volta`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("C", Instrument.VIOLAO, "{key: G}\n[G]um [C]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("Detalhes de C").assertExists()
+        compose.onNodeWithText("No tom da música (G)").assertExists()
+        compose.onNodeWithText("C é o IV neste tom.").assertExists()
+        compose.onNodeWithText("Campo harmônico de C").assertExists()
+        compose.onNodeWithText("V em F").assertExists()
+        compose.onNodeWithContentDescription("Voltar ao desenho").performClick()
+        compose.onNodeWithContentDescription("Tocar").assertExists()
+    }
 }

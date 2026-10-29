@@ -180,6 +180,22 @@ object Chords {
     private val majorKeys = listOf("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
     private val minorKeys = listOf("Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm")
 
+    /** Tríade básica de um acorde (raiz 0–11 e qualidade), para o campo harmônico; null se não é acorde. */
+    data class Triad(val root: Int, val minor: Boolean, val dim: Boolean)
+
+    fun triad(c: String): Triad? {
+        val m = chord.matchEntire(c.trim()) ?: return null
+        val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return null
+        val q = quality(m.groupValues[3])
+        return Triad(root, q == Quality.MINOR, q == Quality.DIM)
+    }
+
+    /** Nome de costume do tom com tônica [root] (C, Db… / Cm, C#m…). */
+    fun keyName(root: Int, minor: Boolean): String = (if (minor) minorKeys else majorKeys)[((root % 12) + 12) % 12]
+
+    /** Nome da nota [pc] na armadura do tom [key] (bemóis nos tons de bemol). */
+    fun noteIn(key: String, pc: Int): String = name(pc, key in flatKeys)
+
     /** O tom [semitones] meios-tons acima, com o nome de costume (D + 1 = Eb, F + 1 = F#, Am + 1 = Bbm). */
     fun transposeKey(key: String, semitones: Int): String {
         val m = chord.matchEntire(key.trim()) ?: return key
