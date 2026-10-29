@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.widthIn
+import com.juliano.stagebook.domain.HarmonicField
 import com.juliano.stagebook.ui.theme.Sizes
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -16,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -64,9 +68,20 @@ fun ChordShapePopup(
         else Voicings.savedShape(songText, instrument, chord)?.let(shapes::indexOf) ?: 0
     }
     var i by rememberSaveable(chord, instrument) { mutableIntStateOf(start.coerceAtLeast(0)) }
+    // "Detalhes": a segunda tela da janela, com o campo harmônico (T21); o desenho fica na primeira, sem distrair
+    var details by rememberSaveable(chord) { mutableStateOf(false) }
+    val songKey = remember(songText, instrument) {
+        val k = Chords.key(songText).ifEmpty { Chords.detectKey(songText) }
+        val kc = if (instrument == Instrument.TECLADO) Chords.capo(songText) else 0
+        if (k.isNotEmpty() && kc > 0) Chords.transposeKey(k, kc) else k
+    }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                if (details) {
+                    ChordDetails(chord, songKey, onBack = { details = false })
+                    return@Column
+                }
                 if (count == 0) {
                     Text(stringResource(R.string.chord_shape_none, chord), style = MaterialTheme.typography.bodyLarge)
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
@@ -122,6 +137,7 @@ fun ChordShapePopup(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+                    TextButton(onClick = { details = true }) { Text(stringResource(R.string.chord_details)) }
                     TextButton(onClick = {
                         onSave(if (keyboard) Voicings.defineKeys(chord, keySets[i]) else Voicings.define(instrument, chord, shapes[i]))
                         onDismiss()
@@ -133,3 +149,62 @@ fun ChordShapePopup(
 }
 
 private const val PLAY_ALPHA = 0.35f   // o desenho continua aparecendo por baixo do play
+
+/** Segunda tela da janela do acorde: o campo harmônico do tom da música (com o grau do acorde), o dele e onde mais aparece. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
+    val triad = remember(chord) { Chords.triad(chord) }
+    val own = triad?.takeIf { !it.dim }?.let { Chords.keyName(it.root, it.minor) }
+    val degree = remember(chord, songKey) { if (songKey.isEmpty()) null else HarmonicField.degreeIn(chord, songKey) }
+    val where = remember(chord) { HarmonicField.appearances(chord) }
+    Column(Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(AppIcons.Back, stringResource(R.string.chord_back_to_shape)) }
+            Text(stringResource(R.string.chord_details_title, chord), style = MaterialTheme.typography.titleLarge)
+        }
+        if (songKey.isNotEmpty()) {
+            Text(stringResource(R.string.chord_details_song_key, songKey), style = MaterialTheme.typography.titleSmall)
+            FieldRow(HarmonicField.field(songKey), lit = degree)
+            Text(
+                if (degree != null) stringResource(R.string.chord_details_degree, chord, degree) else stringResource(R.string.chord_details_outside, chord),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (own != null) {
+            Text(stringResource(R.string.chord_details_own, own), style = MaterialTheme.typography.titleSmall)
+            FieldRow(HarmonicField.field(own), lit = if (triad.minor) "i" else "I")
+        }
+        if (where.isNotEmpty()) {
+            Text(stringResource(R.string.chord_details_where, chord), style = MaterialTheme.typography.titleSmall)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                where.forEach { a ->
+                    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+                        Text(stringResource(R.string.chord_details_in, a.roman, a.key), Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Os 7 graus de um campo (grau em cima, acorde embaixo); o [lit] fica aceso. */
+@Composable
+private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: String?) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        degrees.forEach { d ->
+            val on = d.roman == lit
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            ) {
+                Column(Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(d.roman, style = MaterialTheme.typography.labelSmall)
+                    Text(d.chord, style = MaterialTheme.typography.titleSmall)
+                }
+            }
+        }
+    }
+}

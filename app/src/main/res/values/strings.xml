@@ -282,6 +282,15 @@
     <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="chord_play">Tocar</string>
+    <string name="chord_details">Detalhes</string>
+    <string name="chord_back_to_shape">Voltar ao desenho</string>
+    <string name="chord_details_title">Detalhes de %1$s</string>
+    <string name="chord_details_song_key">No tom da música (%1$s)</string>
+    <string name="chord_details_degree">%1$s é o %2$s neste tom.</string>
+    <string name="chord_details_outside">%1$s não é do campo harmônico deste tom (empréstimo ou passagem).</string>
+    <string name="chord_details_own">Campo harmônico de %1$s</string>
+    <string name="chord_details_where">Onde mais %1$s aparece</string>
+    <string name="chord_details_in">%1$s em %2$s</string>
     <string name="chord_capo_note">O desenho é o de %1$s; com capo na %2$dª casa, soa %3$s.</string>
     <string name="chord_keyboard_capo">Na cifra: %1$s (capo na %2$dª casa). Para o teclado: %3$s.</string>
     <string name="stage_keyboard_capo">teclado · capo na %1$dª</string>
