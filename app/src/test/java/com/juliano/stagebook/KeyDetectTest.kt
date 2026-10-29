@@ -40,4 +40,13 @@ class KeyDetectTest {
         assertEquals("[G]linha", Chords.hideMeta(text))
         assertEquals(120, Chords.tempo(Chords.withMeta("[G]linha", text)))
     }
+
+    @Test fun `importação - BPM da página ou escrito no texto`() {
+        assertEquals(128, com.juliano.stagebook.domain.ChordImport.bpmOf("128", ""))
+        assertEquals(96, com.juliano.stagebook.domain.ChordImport.bpmOf("", "Intro\nBPM: 96\n[G]linha"))
+        assertEquals(110, com.juliano.stagebook.domain.ChordImport.bpmOf("", "110 bpm\nletra"))
+        assertEquals(72, com.juliano.stagebook.domain.ChordImport.bpmOf("", "{tempo: 72}\nletra"))
+        assertEquals(0, com.juliano.stagebook.domain.ChordImport.bpmOf("", "a letra fala de 120 caminhos"))   // número solto não é BPM
+        assertEquals(0, com.juliano.stagebook.domain.ChordImport.bpmOf("999", ""))
+    }
 }

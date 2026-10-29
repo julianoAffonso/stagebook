@@ -90,7 +90,7 @@ class ImportViewModel @Inject constructor(
             if (page == null) { _uiState.update { it.copy(problem = ImportProblem.UNREADABLE) }; return }
             // perfil letra e cifra + página com cifra: entra em ChordPro (com tom e capo); senão, só a letra
             val chordSource = page.chordText.ifBlank { page.text }
-            val text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
+            var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
                 ChordImport.toChordPro(chordSource, page.key, page.capo)
             } else {
                 // só letra: sem acordes, mas o tom e o capo da página ficam guardados (escondidos neste perfil; não se
@@ -103,6 +103,9 @@ class ImportViewModel @Inject constructor(
                 lyrics
             }
             if (text.lines().size < 3) { _uiState.update { it.copy(problem = ImportProblem.NOT_FOUND) }; return }
+            // BPM da página (ou escrito no texto): guardado na música, o metrônomo começa nele
+            val bpm = ChordImport.bpmOf(page.bpm, page.chordText.ifBlank { page.text })
+            if (bpm > 0 && Chords.tempo(text) == 0) text = Chords.setDirective(text, "tempo", bpm.toString())
             _uiState.update { it.copy(busy = true) }
             val meta = PageMeta.pick(page)
             var artist = meta.artist

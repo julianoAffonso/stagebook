@@ -16,6 +16,14 @@ object ChordImport {
     /** Tom e capo que a página mostra (para guardar também no perfil só letra). */
     fun keyOf(vararg texts: String): String = texts.firstNotNullOfOrNull { t -> keyText.find(t)?.groupValues?.get(1)?.takeIf(Chords::isChord) ?: t.trim().takeIf(Chords::isChord) }.orEmpty()
 
+    /** BPM: o da página, ou uma linha "BPM 120"/"Tempo: 120"/"{tempo: 120}" no próprio texto; 0 = não veio. */
+    fun bpmOf(page: String, text: String): Int {
+        val fromText = bpmText.find(text)?.let { m -> m.groupValues.drop(1).firstOrNull { it.isNotEmpty() } }
+        return listOf(page.trim(), fromText.orEmpty()).firstNotNullOfOrNull { it.toIntOrNull()?.takeIf { v -> v in Chords.MIN_TEMPO..Chords.MAX_TEMPO } } ?: 0
+    }
+
+    private val bpmText = Regex("""(?im)^\s*(?:\{\s*tempo\s*:\s*(\d{2,3})\s*\}|(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})|(\d{2,3})\s*bpm)\s*$""")
+
     fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t -> capoText.find(t)?.groupValues?.get(1)?.toIntOrNull() ?: t.trim().toIntOrNull() }?.takeIf { it in 1..12 } ?: 0
 
     /** A página tem cifra? (duas ou mais linhas só de acordes) */
