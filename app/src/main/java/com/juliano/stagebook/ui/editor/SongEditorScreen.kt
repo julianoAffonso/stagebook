@@ -435,7 +435,9 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
     val capo = remember(text) { Chords.capo(text) }
     Column {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(AppIcons.MusicNote, stringResource(R.string.editor_key), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        // ícone e nome à vista (pedido do usuário, 29/10)
+        Icon(AppIcons.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
         Text(
             key.ifEmpty { "–" },
@@ -446,7 +448,8 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         )
         IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
         Spacer(Modifier.weight(1f))
-        Icon(AppIcons.Capo, stringResource(R.string.editor_capo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(AppIcons.Capo, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
         // sem capo: 0 apagado (um "–" parecia um terceiro botão de menos)
         Text(capo.toString(), style = MaterialTheme.typography.titleMedium, color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
