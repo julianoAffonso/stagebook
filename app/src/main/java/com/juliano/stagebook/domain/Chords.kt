@@ -47,6 +47,21 @@ object Chords {
         return lines.joinToString("\n")
     }
 
+    private val meta = setOf("key", "capo")
+
+    private fun isMeta(line: String) = directive.matchEntire(line)?.groupValues?.get(1)?.lowercase() in meta
+
+    /** A letra sem as linhas de tom e capo (no editor elas ficam nos dados da música, não no campo da letra). */
+    fun hideMeta(text: String): String = text.split('\n').filterNot(::isMeta).joinToString("\n")
+
+    /** A letra editada (sem tom e capo) com o tom e o capo de [from] de volta no começo. */
+    fun withMeta(edited: String, from: String): String {
+        var t = hideMeta(edited)
+        capo(from).takeIf { it > 0 }?.let { t = setDirective(t, "capo", it.toString()) }
+        key(from).takeIf { it.isNotEmpty() }?.let { t = setDirective(t, "key", it) }
+        return t
+    }
+
     fun key(text: String): String = directive(text, "key").orEmpty()
 
     // acordes que o usuário tirou da lista de acordes do palco (extensão do ChordPro: diretivas x_ são dos apps)
