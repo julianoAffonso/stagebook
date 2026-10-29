@@ -868,7 +868,7 @@ fun StageScreen(
                     // rolando: o ícone vira pause e para na hora (pedido do usuário, 29/10); parado, abre a janelinha
                     IconButton(onClick = { if (autoOn) autoOn = false else autoDialog = true }) {
                         if (autoOn) Icon(AppIcons.PauseRounded, stringResource(R.string.stage_auto_pause), tint = MaterialTheme.colorScheme.primary)
-                        else Icon(AppIcons.AutoScroll, stringResource(R.string.stage_auto_title), tint = fg.copy(alpha = 0.5f))
+                        else Icon(AppIcons.AutoScroll, stringResource(R.string.stage_auto_title), tint = fg.copy(alpha = 0.7f))
                     }
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
