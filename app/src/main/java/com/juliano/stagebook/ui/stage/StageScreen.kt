@@ -59,7 +59,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -1147,12 +1146,14 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
                 Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
                     IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
-                    FilledIconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
-                        // play arredondado, grande e no centro óptico do círculo (pedido do usuário, 29/10)
+                    // play arredondado e grande, na cor de destaque e sem fundo (pedido do usuário, 29/10); o alvo de toque
+                    // continua grande
+                    IconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                         Icon(
                             if (on) AppIcons.PauseRounded else AppIcons.PlayRounded,
                             stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play),
-                            Modifier.size(Sizes.touch * 0.75f).offset(x = if (on) 0.dp else 2.dp),
+                            Modifier.size(Sizes.touch),
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                     IconButton(onClick = { onLevel(level + 1) }, enabled = level < com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
