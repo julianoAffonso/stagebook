@@ -61,4 +61,16 @@ class EditorTabsTest {
         compose.onNodeWithText("Título (é o nome usado no setlist)").performTextInput("Hazard")
         org.junit.Assert.assertEquals("Hazard", typed)
     }
+
+    @Test fun `tom igual ao capo - mostra o tom e + transpõe meio tom`() {
+        var moved = 0
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", "{key: G}\n[G]um [C]dois [D]três"), {}, {}, {}, {}, {}, {}, {}, onTranspose = { moved += it })
+            }
+        }
+        compose.onNodeWithText("G").assertExists()
+        compose.onNodeWithContentDescription("Subir meio tom").performClick()
+        org.junit.Assert.assertEquals(1, moved)
+    }
 }

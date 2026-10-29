@@ -3,6 +3,7 @@ package com.juliano.stagebook.ui.editor
 import com.juliano.stagebook.domain.LyricsView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -107,7 +108,6 @@ fun SongEditorRoute(
         cursor = viewModel.cursor,
         onTranspose = viewModel::transpose,
         onCapo = viewModel::setCapo,
-        onKey = viewModel::setKey,
         onTempo = viewModel::setTempo,
         look = viewModel.look.collectAsStateWithLifecycle().value,
     )
@@ -127,7 +127,6 @@ fun SongEditorScreen(
     cursor: Int = -1,
     onTranspose: (Int) -> Unit = {},
     onCapo: (Int) -> Unit = {},
-    onKey: (String) -> Unit = {},
     look: Look = Look(),
     onTempo: (String) -> Unit = {},
 ) {
@@ -213,7 +212,7 @@ fun SongEditorScreen(
                         chords = look.chords,
                     ) {
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
-                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
+                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo)
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -424,28 +423,28 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
 }
 
 /**
- * Tom e capotraste da música, com ícones: ▼▲ transpõem meio tom (reescrevem os acordes e o tom guardado);
- * − e + mudam a casa do capo (os desenhos dos acordes ficam iguais). O tom também pode ser escrito.
+ * Tom e capotraste da música, os dois do mesmo jeito (pedido do usuário, 29/10): − e + do tom transpõem meio tom
+ * (reescrevem os acordes e o tom guardado); − e + do capo mudam a casa (os desenhos dos acordes ficam iguais). Sem tom
+ * guardado, mostra o calculado pelos acordes, apagado.
  */
 @Composable
-private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, onKey: (String) -> Unit) {
+private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit) {
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
-    val key = remember(text) { Chords.key(text) }
+    val saved = remember(text) { Chords.key(text) }
+    val key = saved.ifEmpty { remember(text) { Chords.detectKey(text) } }
     val capo = remember(text) { Chords.capo(text) }
     Column {
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-        Icon(AppIcons.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = key,
-            onValueChange = { v -> onKey(v.take(6)) },
-            label = { Text(stringResource(R.string.editor_key)) },
-            singleLine = true,
-            isError = key.isNotEmpty() && !Chords.isChord(key),
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.width(96.dp),
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(AppIcons.MusicNote, stringResource(R.string.editor_key), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
+        Text(
+            key.ifEmpty { "–" },
+            style = MaterialTheme.typography.titleMedium,
+            color = if (saved.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.widthIn(min = 32.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-        IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.ArrowDown, stringResource(R.string.editor_transpose_down)) }
-        IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.ArrowUp, stringResource(R.string.editor_transpose_up)) }
+        IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
         Spacer(Modifier.weight(1f))
         Icon(AppIcons.Capo, stringResource(R.string.editor_capo), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
