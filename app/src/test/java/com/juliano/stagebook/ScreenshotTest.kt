@@ -151,6 +151,11 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
+    // T27: a aba Dados (título, artista, ano, tom e capo)
+    @Test fun editorDataTablet() = shoot("tablet_4_editor_dados") {
+        SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", chordSong), {}, {}, {}, {}, {}, {}, {})
+    }
+
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
