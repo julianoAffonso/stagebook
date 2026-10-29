@@ -369,7 +369,7 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
 private fun EditorPreview(text: String, look: Look) {
     val names = rememberSectionNames(look.translateSections)
     val chordLook = ChordLook(look.chords, look.chordScale, Color(look.chordColor))
-    val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook).map { it.text } }
+    val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale).map { it.text } }
     val font = minOf(look.fontSp, 28f)
     val style = TextStyle(
         color = Color(look.fg),
