@@ -113,12 +113,6 @@ class StageViewModel @Inject constructor(
 
     /** Zoom da pinça, gravado na música (vale em qualquer setlist, como no another app). */
     /** Velocidade da rolagem automática (−/+ no palco), gravada nos ajustes. */
-    /** Metrônomo: contagem antes de começar e som (guardados nos ajustes). */
-    fun setMetronome(count: Boolean, sound: Boolean) = repository.updateLook { it.copy(metroCount = count, metroSound = sound) }
-
-    /** Brilho do metrônomo na borda: ligado ou não, e a cor. */
-    fun setMetronomeGlow(on: Boolean, color: Int) = repository.updateLook { it.copy(metroGlow = on, metroGlowColor = color) }
-
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }
 
     fun setZoom(songId: String, zoom: Float) {

@@ -33,15 +33,12 @@ class StageMetronomeTest {
     }
 
     @Test fun `play conta 1-2-3-4 e o ícone vira stop - stop para`() {
-        var settings: Pair<Boolean, Boolean>? = null
-        compose.setContent { StagebookTheme { StageScreen(state("linha"), 0, 0, { _, _ -> }, onMetronome = { c, s -> settings = c to s }) } }
+        compose.setContent { StagebookTheme { StageScreen(state("linha"), 0, 0, { _, _ -> }) } }
         compose.mainClock.autoAdvance = false
         fun frames(n: Int) = repeat(n) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
         compose.onNodeWithContentDescription("Metrônomo").performClick()
         frames(3)
         compose.onNodeWithText("100 BPM").assertExists()
-        compose.onNodeWithText("Som (desligado: só pisca)").performClick()   // a chave grava nos ajustes
-        assertEquals(true to false, settings)
         compose.onNodeWithContentDescription("Começar o metrônomo").performClick()
         frames(3)
         compose.onNodeWithText("1").assertExists()                           // contagem

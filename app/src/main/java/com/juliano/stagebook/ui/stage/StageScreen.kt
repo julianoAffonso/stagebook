@@ -230,9 +230,7 @@ fun StageRoute(
             onRemoveTrack = viewModel::removeTrack,
             onHiddenChords = viewModel::setHiddenChords,
             onAutoScroll = viewModel::setAutoScroll,
-            onMetronome = viewModel::setMetronome,
             onMetronomeSound = viewModel::metronomeSound,
-            onMetronomeGlow = viewModel::setMetronomeGlow,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -267,9 +265,7 @@ fun StageScreen(
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
-    onMetronome: (count: Boolean, sound: Boolean) -> Unit = { _, _ -> },
     onMetronomeSound: (bpm: Int?) -> Unit = {},
-    onMetronomeGlow: (on: Boolean, color: Int) -> Unit = { _, _ -> },
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -928,14 +924,7 @@ fun StageScreen(
                     }
                     if (metroDialog) MetronomeDialog(
                         bpm = metroBpm,
-                        count = look.metroCount,
-                        sound = look.metroSound,
-                        glow = look.metroGlow,
-                        glowColor = look.metroGlowColor,
-                        onGlow = { on, color -> onMetronomeGlow(on, color) },
                         onBpm = { metroBpm = it.coerceIn(Chords.MIN_TEMPO, Chords.MAX_TEMPO) },
-                        onCount = { onMetronome(it, look.metroSound) },
-                        onSound = { onMetronome(look.metroCount, it) },
                         onPlay = { metroOn = true; metroDialog = false },
                         onDismiss = { metroDialog = false },
                     )
@@ -1220,18 +1209,11 @@ private fun TrackButton(
 }
 
 /** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
-/** Metrônomo (janelinha acima do ícone): BPM com − e +, contagem e som, e o play, que fecha a janela. */
+/** Metrônomo (janelinha acima do ícone): o BPM com − e + e o play, que fecha a janela; o resto fica em Ajustes. */
 @Composable
 private fun MetronomeDialog(
     bpm: Int,
-    count: Boolean,
-    sound: Boolean,
-    glow: Boolean,
-    glowColor: Int,
-    onGlow: (on: Boolean, color: Int) -> Unit,
     onBpm: (Int) -> Unit,
-    onCount: (Boolean) -> Unit,
-    onSound: (Boolean) -> Unit,
     onPlay: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1252,11 +1234,7 @@ private fun MetronomeDialog(
                     Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
                     IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
                 }
-                com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_count), count, onChange = onCount)
-                com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_sound), sound, onChange = onSound)
-                // brilho na borda: ligar ou não, e a cor (pedido do usuário, 29/10)
-                com.juliano.stagebook.ui.components.SwitchRow(stringResource(R.string.metro_glow), glow, onChange = { onGlow(it, glowColor) })
-                if (glow) com.juliano.stagebook.ui.components.ColorSwatchRow(com.juliano.stagebook.ui.theme.StagePalette.glow, glowColor, { onGlow(true, it) })
+                Text(stringResource(R.string.metro_in_settings), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                     Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
                 }

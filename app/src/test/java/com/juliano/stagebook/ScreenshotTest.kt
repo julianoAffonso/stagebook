@@ -236,6 +236,10 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_metronomo_contagem.png")
     }
 
+    @Test fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.METRONOME) }
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
