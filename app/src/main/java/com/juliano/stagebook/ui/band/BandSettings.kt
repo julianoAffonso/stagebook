@@ -45,10 +45,9 @@ fun BandDetail(band: BandUi, actions: BandActions) {
     var renaming by rememberSaveable { mutableStateOf(!band.nameConfirmed) }   // 1ª vez: pergunta o nome
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        SettingsCard(stringResource(R.string.band_this_device)) {
+        SettingsCard(stringResource(R.string.band_this_device), help = stringResource(R.string.band_help)) {
             Text(band.name, style = MaterialTheme.typography.titleLarge)
             ActionButton(stringResource(R.string.band_rename), { renaming = true }, icon = AppIcons.Edit, tone = ButtonTone.Tonal)
-            HelpTip(stringResource(R.string.band_help))
         }
         SettingsCard(stringResource(R.string.band_nearby)) {
             when {

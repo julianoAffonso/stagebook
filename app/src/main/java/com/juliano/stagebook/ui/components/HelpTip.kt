@@ -1,6 +1,7 @@
 package com.juliano.stagebook.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,10 +52,32 @@ fun HelpTip(text: String, modifier: Modifier = Modifier, label: String = stringR
     }
 }
 
+/** Só o ⓘ (ao lado do título de um cartão): ao tocar, o balão com o [text]. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HelpIcon(text: String, modifier: Modifier = Modifier) {
+    val state = rememberTooltipState(isPersistent = true)
+    val scope = rememberCoroutineScope()
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
+        tooltip = { RichTooltip { Text(text) } },
+        state = state,
+        modifier = modifier,
+    ) {
+        Icon(
+            AppIcons.Info,
+            stringResource(R.string.help_how),
+            Modifier.clip(CircleShape).clickable { scope.launch { state.show() } }.padding(Spacing.xs).size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun HelpTipSample() = Column {
     HelpTip("Toca o backing track de cada música numa interface de áudio USB ou na saída do aparelho.")
     HelpTip("Interface USB Audio Class 2.0, 48 kHz, USB OTG.", label = "O que a saída USB precisa")
+    HelpIcon("Explicação do cartão, ao lado do título.")
 }
 
 @LightPreview

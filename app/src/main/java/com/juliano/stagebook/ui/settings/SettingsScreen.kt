@@ -515,7 +515,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
 private fun LyricsDetail(look: Look, actions: SettingsActions) {
     // o tamanho muda ao vivo na prévia e só grava ao soltar o controle
     var font by remember(look.fontSp) { mutableFloatStateOf(look.fontSp) }
-    SettingsCard(stringResource(R.string.settings_font_card)) {
+    SettingsCard(stringResource(R.string.settings_font_card), help = stringResource(R.string.settings_font_help)) {
         // controle em cima e prévia de altura fixa embaixo: mudar o tamanho não mexe na tela
         Text(stringResource(R.string.settings_font_value, font.roundToInt()), style = MaterialTheme.typography.headlineSmall)
         Slider(
@@ -532,10 +532,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         ) {
             StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds())
         }
-        HelpTip(stringResource(R.string.settings_font_help))
     }
     // virar página (padrão) ou rolar a letra; nos dois o pedal e o toque andam um passo
-    SettingsCard(stringResource(R.string.settings_stage_mode)) {
+    SettingsCard(stringResource(R.string.settings_stage_mode), help = stringResource(R.string.settings_stage_mode_help) + "\n\n" + stringResource(R.string.settings_auto_scroll_help)) {
         val modes = listOf(
             com.juliano.stagebook.data.model.StageMode.PAGES to R.string.settings_stage_mode_pages,
             com.juliano.stagebook.data.model.StageMode.SCROLL to R.string.settings_stage_mode_scroll,
@@ -549,7 +548,6 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 ) { Text(stringResource(label)) }
             }
         }
-        HelpTip(stringResource(R.string.settings_stage_mode_help))
         if (look.stageMode == com.juliano.stagebook.data.model.StageMode.SCROLL) {
             var level by remember(look.autoScroll) { mutableFloatStateOf(look.autoScroll.toFloat()) }
             Text(stringResource(R.string.settings_auto_scroll, level.roundToInt()), style = MaterialTheme.typography.bodyLarge)
@@ -560,10 +558,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 valueRange = 1f..Look.MAX_AUTO_SCROLL.toFloat(),
                 steps = Look.MAX_AUTO_SCROLL - 2,
             )
-            HelpTip(stringResource(R.string.settings_auto_scroll_help))
         }
     }
-    if (look.stageMode == com.juliano.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns)) {
+    if (look.stageMode == com.juliano.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns), help = stringResource(R.string.settings_columns_help)) {
         val options = listOf(
             StageColumns.AUTO to R.string.settings_columns_auto,
             StageColumns.ONE to R.string.settings_columns_one,
@@ -579,7 +576,6 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 ) { Text(stringResource(label)) }
             }
         }
-        HelpTip(stringResource(R.string.settings_columns_help))
     }
     SettingsCard(stringResource(R.string.settings_colors)) {
         Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
@@ -642,9 +638,8 @@ private fun LegibilityWarnings(look: Look) {
 private fun ChordsDetail(look: Look, actions: SettingsActions) {
     // o tamanho muda ao vivo na prévia e só grava ao soltar o controle
     var scale by remember(look.chordScale) { mutableFloatStateOf(look.chordScale) }
-    SettingsCard(stringResource(R.string.settings_chords)) {
+    SettingsCard(stringResource(R.string.settings_chords), help = stringResource(R.string.settings_chords_show_help)) {
         SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
-        HelpTip(stringResource(R.string.settings_chords_show_help))
         if (look.chords) {
             Text(stringResource(R.string.settings_chords_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
@@ -666,9 +661,8 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     }
     // os desenhos dos acordes num cartão próprio (só no perfil letra e cifra), com um exemplo do instrumento
     if (look.chords) {
-        SettingsCard(stringResource(R.string.settings_chord_shapes)) {
+        SettingsCard(stringResource(R.string.settings_chord_shapes), help = stringResource(R.string.settings_instrument_help) + "\n\n" + stringResource(R.string.settings_chord_list_help)) {
             InstrumentPicker(look.instrument, actions.onInstrument)
-            HelpTip(stringResource(R.string.settings_instrument_help))
             SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
             // como o acorde soa ao tocar em "Tocar" no desenho (T20)
             Text(stringResource(R.string.settings_chord_play), style = MaterialTheme.typography.bodyLarge)
@@ -701,7 +695,6 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                     ) { Text(stringResource(label)) }
                 }
             }
-            HelpTip(stringResource(R.string.settings_chord_list_help))
             // exemplo: o G no instrumento escolhido, como aparece no palco
             ChordDiagram(
                 "G",
@@ -753,8 +746,7 @@ private const val PREVIEW_FONT = 30f
 @Composable
 private fun SectionsDetail(look: Look, actions: SettingsActions) {
     var confirming by rememberSaveable { mutableStateOf(false) }
-    SettingsCard(stringResource(R.string.settings_sections_look)) {
-        HelpTip(stringResource(R.string.settings_sections_help))
+    SettingsCard(stringResource(R.string.settings_sections_look), help = stringResource(R.string.settings_sections_help) + "\n\n" + stringResource(R.string.settings_translate_sections_help)) {
         Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
@@ -774,11 +766,9 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
             }
         }
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
-        HelpTip(stringResource(R.string.settings_translate_sections_help))
         LegibilityWarnings(look)
     }
-    SettingsCard(stringResource(R.string.settings_normalize_card)) {
-        HelpTip(stringResource(R.string.settings_normalize_help))
+    SettingsCard(stringResource(R.string.settings_normalize_card), help = stringResource(R.string.settings_normalize_help)) {
         ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, tone = ButtonTone.Tonal)
     }
     if (confirming) {
@@ -986,7 +976,7 @@ private fun ImportSitesDetail(look: Look, actions: SettingsActions) {
 @Composable
 private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List<ImportSite>) -> Unit) {
     var adding by rememberSaveable { mutableStateOf(false) }
-    SettingsCard(title) {
+    SettingsCard(title, help = stringResource(R.string.settings_sites_help)) {
         sites.forEachIndexed { i, site ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // o padrão é o primeiro: escolher outro o põe no topo
@@ -1000,7 +990,6 @@ private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List
                 }
             }
         }
-        HelpTip(stringResource(R.string.settings_sites_help))
         ActionButton(stringResource(R.string.settings_site_add), { adding = true }, icon = AppIcons.Add, tone = ButtonTone.Tonal)
     }
     if (adding) {
@@ -1035,9 +1024,8 @@ private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
 /** Modo player: desligado, o app é só letra e cifra e nada do player gasta CPU ou memória. */
 @Composable
 private fun PlayerDetail(look: Look, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_player)) {
+    SettingsCard(stringResource(R.string.settings_player), help = stringResource(R.string.settings_player_mode_help)) {
         SwitchRow(stringResource(R.string.settings_player_mode), look.playerMode, actions.onPlayerMode)
-        HelpTip(stringResource(R.string.settings_player_mode_help))
         UsbRequirements()
     }
     if (look.playerMode) {
@@ -1062,8 +1050,7 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
     val onMixer = actions.onMixer
     val levels = actions.mixerLevels
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // canal em edição (o primeiro do par); -1 = nenhum
-    SettingsCard(stringResource(R.string.mixer_title)) {
-        HelpTip(stringResource(R.string.mixer_help))
+    SettingsCard(stringResource(R.string.mixer_title), help = stringResource(R.string.mixer_help) + "\n\n" + stringResource(R.string.mixer_routes_help)) {
         OptionDropdown(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
@@ -1074,7 +1061,6 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
             pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
             style = MaterialTheme.typography.titleSmall,
         )
-        HelpTip(stringResource(R.string.mixer_routes_help))
         val groups = mixer.groups()
         // celular: um canal por linha, fader deitado; tablet: faixas estreitas lado a lado, fader de pé (como numa mesa)
         BoxWithConstraints {
@@ -1123,9 +1109,8 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
 private fun EqCard(mixer: MixerConfig, actions: SettingsActions) {
     val onMixer = actions.onMixer
     val levels = actions.mixerLevels
-    SettingsCard(stringResource(R.string.eq_title)) {
+    SettingsCard(stringResource(R.string.eq_title), help = stringResource(R.string.eq_help)) {
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { onMixer(mixer.copy(eqOn = it)) })
-        HelpTip(stringResource(R.string.eq_help))
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
@@ -1174,9 +1159,8 @@ private fun languageLabel(l: AppLanguage): String = stringResource(
 
 @Composable
 private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_language)) {
+    SettingsCard(stringResource(R.string.settings_language), help = stringResource(R.string.settings_language_help)) {
         OptionDropdown(stringResource(R.string.settings_language), Languages.available, selected, actions.onLanguage, nameOf = { languageLabel(it) })
-        HelpTip(stringResource(R.string.settings_language_help))
     }
 }
 
@@ -1185,7 +1169,7 @@ private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
 private fun MetronomeDetail(look: Look, actions: SettingsActions) {
     fun set(count: Boolean = look.metroCount, sound: Boolean = look.metroSound, glow: Boolean = look.metroGlow, color: Int = look.metroGlowColor) =
         actions.onMetronome(count, sound, glow, color)
-    SettingsCard(stringResource(R.string.metro_title)) {
+    SettingsCard(stringResource(R.string.metro_title), help = stringResource(R.string.metro_help)) {
         SwitchRow(stringResource(R.string.metro_count), look.metroCount, { set(count = it) })
         SwitchRow(stringResource(R.string.metro_sound), look.metroSound, { set(sound = it) })
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
@@ -1193,15 +1177,13 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             Text(stringResource(R.string.metro_glow_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(com.juliano.stagebook.ui.theme.StagePalette.glow, look.metroGlowColor, { set(color = it) })
         }
-        HelpTip(stringResource(R.string.metro_help))
     }
 }
 
 @Composable
 private fun ScreenDetail(look: Look, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_screen)) {
+    SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
-        HelpTip(stringResource(R.string.settings_keep_screen_on_help))
     }
 }
 
@@ -1260,7 +1242,7 @@ private fun InfoText(text: String) {
 @Composable
 private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
     val up = uiState.update
-    SettingsCard(stringResource(R.string.settings_update)) {
+    SettingsCard(stringResource(R.string.settings_update), help = stringResource(R.string.settings_update_help)) {
         Text(stringResource(R.string.settings_update_installed, uiState.version), style = MaterialTheme.typography.bodyLarge)
         val status = when (up) {
             UpdateState.UpToDate -> stringResource(R.string.settings_update_latest)
@@ -1292,7 +1274,6 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 tone = ButtonTone.Tonal,
             )
         }
-        HelpTip(stringResource(R.string.settings_update_help))
     }
 }
 
