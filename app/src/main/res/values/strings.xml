@@ -231,7 +231,16 @@
     <string name="editor_capo_down">Capo uma casa abaixo</string>
     <string name="editor_capo_up">Capo uma casa acima</string>
     <string name="stage_key_desc">Tom: %1$s</string>
-    <string name="backup_card">Salvar e abrir</string>
+    <string name="backup_save_card">Salvar arquivo</string>
+    <string name="backup_save_info">Gera um arquivo só, .stagebook, com o que estiver marcado. Serve de backup, para passar tudo para outro aparelho e para mandar músicas e setlists para alguém.</string>
+    <string name="backup_save_where">Depois de tocar em Salvar arquivo, escolha onde guardar: Drive, computador, cartão de memória ou um app de mensagem. As backing tracks deixam o arquivo grande: desmarque se for só mandar as letras para alguém.</string>
+    <string name="backup_open_card">Abrir arquivo</string>
+    <string name="backup_open_info">Abre um arquivo .stagebook e mostra o que ele tem, para você marcar o que entra.</string>
+    <string name="backup_open_merge">Somar às minhas (o padrão): entram só as músicas que você não tem e os setlists com nome novo. A mesma música, pelo título e artista, fica como está aqui.</string>
+    <string name="backup_open_replace">Substituir as minhas: suas músicas e setlists são trocados pelos do arquivo. Use para voltar um backup ou trocar de aparelho.</string>
+    <string name="backup_open_other_device">Os ajustes do arquivo substituem os daqui. Arquivos de músicas antigos (.json) também abrem e somam. Noutro aparelho, a banda reconhece um aparelho novo: autorize de novo em Ajustes → Banda.</string>
+    <string name="backup_share_card">Outras formas de compartilhar</string>
+    <string name="backup_share_info">Para mandar um setlist na hora, use Compartilhar no próprio setlist: pelo QR, pelas 3 palavras (pela internet) ou para a banda no mesmo Wi-Fi. As músicas que faltarem podem ir junto.</string>
     <string name="backup_make">Salvar arquivo</string>
     <string name="backup_open">Abrir arquivo</string>
     <string name="backup_open_ok">Abrir</string>
@@ -240,7 +249,6 @@
     <string name="backup_replace">Substituir as minhas</string>
     <string name="backup_merge_help">Entram só as músicas e os setlists que você não tem; os seus ficam como estão.</string>
     <string name="backup_replace_help">Suas músicas e setlists são trocados pelos do arquivo.</string>
-    <string name="backup_what">O que vai no arquivo (.stagebook):</string>
     <string name="backup_restore">Restaurar backup</string>
     <string name="backup_restore_ok">Restaurar</string>
     <string name="backup_restore_warning">Os ajustes do arquivo substituem os daqui.</string>
@@ -249,8 +257,7 @@
     <string name="backup_part_tracks">Backing tracks</string>
     <string name="backup_part_tracks_detail">Os arquivos de áudio, cada um na sua música</string>
     <string name="backup_part_settings">Ajustes</string>
-    <string name="backup_part_settings_detail">Palco, cores, pedais, player e interface de áudio USB, banda e língua</string>
-    <string name="backup_help">Salvar arquivo gera um arquivo só, .stagebook, com o que estiver marcado acima: serve de backup e para passar músicas para alguém. Guarde no Drive, no computador ou mande por mensagem. Abrir arquivo mostra o que ele tem; as músicas somam às suas ou substituem, você escolhe. Arquivos de músicas antigos (.json) também abrem. Noutro aparelho, a banda reconhece um aparelho novo: autorize de novo em Ajustes → Banda.</string>
+    <string name="backup_part_settings_detail">Palco, cores, pedais, player e interface de áudio USB, banda e os outros ajustes</string>
     <string name="backup_done">Backup salvo</string>
     <string name="backup_failed">Não deu para salvar o backup</string>
     <string name="backup_not_backup">Esse arquivo não é um backup do Stagebook</string>
@@ -400,7 +407,8 @@ O app identifica cada parte pela repetição (a estrofe que se repete é o refr�
     <string name="settings_midi_after">Depois de conectar</string>
     <string name="settings_midi_help">Depois de conectar, aperte um botão do pedal e escolha o que ele faz em Teste de botão.</string>
     <string name="settings_midi_location">Nesta versão do Android, a localização do aparelho precisa estar ligada para a procura achar o pedal.</string>
-    <string name="settings_library">Biblioteca</string>
+    <string name="settings_library">Biblioteca e backup</string>
+    <string name="library_card">Sua biblioteca</string>
     <string name="settings_imported">Importado. Novas: %1$d · atualizadas: %2$d</string>
     <plurals name="settings_import_confirm">
         <item quantity="one">%1$d música que já está aqui vai ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>

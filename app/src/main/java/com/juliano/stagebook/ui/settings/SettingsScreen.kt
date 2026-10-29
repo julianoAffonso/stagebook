@@ -1160,28 +1160,41 @@ private fun ScreenDetail(look: Look, actions: SettingsActions) {
 
 @Composable
 private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_library)) {
+    SettingsCard(stringResource(R.string.library_card)) {
         Text(
             pluralStringResource(R.plurals.song_count, uiState.songCount, uiState.songCount) + " · " +
                 pluralStringResource(R.plurals.set_count, uiState.setCount, uiState.setCount),
             style = MaterialTheme.typography.bodyLarge,
         )
     }
-    // um formato só, o .stagebook (pedido do usuário, 29/10): salvar com as caixas no próprio cartão (todas marcadas) e
-    // abrir um arquivo (escolhe as partes; as músicas somam ou substituem). O arquivo de músicas antigo (.json) também abre
-    SettingsCard(stringResource(R.string.backup_card)) {
+    // um formato só, o .stagebook (pedido do usuário, 29/10), com a explicação à vista (sem esconder em "Como funciona")
+    SettingsCard(stringResource(R.string.backup_save_card)) {
         var chosen by rememberSaveable { mutableStateOf(com.juliano.stagebook.data.Backup.Part.entries.map { it.name }.toSet()) }
         val parts = com.juliano.stagebook.data.Backup.Part.entries.filter { it.name in chosen }.toSet()
-        Text(stringResource(R.string.backup_what), style = MaterialTheme.typography.bodyLarge)
+        InfoText(stringResource(R.string.backup_save_info))
         BackupPartsChecks(com.juliano.stagebook.data.Backup.Part.entries.toSet(), parts) { part, on ->
             chosen = if (on) chosen + part.name else chosen - part.name
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            ActionButton(stringResource(R.string.backup_make), { actions.onBackup(parts) }, Modifier.weight(1f), icon = AppIcons.Download, enabled = parts.isNotEmpty())
-            ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
-        }
-        HelpTip(stringResource(R.string.backup_help))
+        ActionButton(stringResource(R.string.backup_make), { actions.onBackup(parts) }, Modifier.fillMaxWidth(), icon = AppIcons.Download, enabled = parts.isNotEmpty())
+        InfoText(stringResource(R.string.backup_save_where))
     }
+    SettingsCard(stringResource(R.string.backup_open_card)) {
+        InfoText(stringResource(R.string.backup_open_info))
+        InfoText(stringResource(R.string.backup_open_merge))
+        InfoText(stringResource(R.string.backup_open_replace))
+        ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.fillMaxWidth(), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
+        InfoText(stringResource(R.string.backup_open_other_device))
+    }
+    // as outras formas de mandar músicas e setlists ficam em outras telas: aqui só o mapa
+    SettingsCard(stringResource(R.string.backup_share_card)) {
+        InfoText(stringResource(R.string.backup_share_info))
+    }
+}
+
+/** Parágrafo explicativo dos cartões (à vista, em tom mais baixo que o texto principal). */
+@Composable
+private fun InfoText(text: String) {
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
