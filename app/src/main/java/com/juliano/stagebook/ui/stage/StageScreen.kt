@@ -224,6 +224,7 @@ fun StageRoute(
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
             onRemoveTrack = viewModel::removeTrack,
             onHiddenChords = viewModel::setHiddenChords,
+            onAutoScroll = viewModel::setAutoScroll,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -257,6 +258,7 @@ fun StageScreen(
     onTogglePlay: () -> Unit = {},
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
+    onAutoScroll: (level: Int) -> Unit = {},
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -392,7 +394,10 @@ fun StageScreen(
     // aplicado assim que a tela assenta.
     // pela ordem das músicas, não pelos objetos: gravar o zoom traz a lista de novo e não pode zerar a fila
     val presses = remember(uiState.songs.map { it.id }) { PressQueue() }
+    // rolagem automática (T15, modo rolar): qualquer toque ou pedal só pausa
+    var autoOn by remember(index) { mutableStateOf(false) }
     fun go(forward: Boolean) {
+        if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
         val target = (if (forward) nextTarget() else previousTarget()) ?: return
         presses.from = index to page
@@ -692,9 +697,35 @@ fun StageScreen(
             SideEffect { hit.show(shown, columnWidth, gutter, chordPx) }
             // rolar: a letra sobe até o passo atual; mudou o passo (dentro da música), a linha onde se continua acende
             val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
+            val syncing = remember(index) { BooleanArray(1) }   // a pausa da rolagem automática acerta o passo sem rolar
             LaunchedEffect(index, stopAt, steps) {
+                if (syncing[0]) { syncing[0] = false; return@LaunchedEffect }
                 val target = steps.getOrNull(stopAt)?.offset?.toFloat() ?: 0f
                 if (page == LAST_PAGE) scrollY.snapTo(target) else scrollY.animateTo(target, tween(PAGE_IN_MS * 2))
+            }
+            // rolagem automática: sobe sozinha na velocidade dos ajustes até o fim; pausada, o passo vira o da posição atual
+            // (o próximo toque continua dali, sem voltar)
+            val autoRan = remember(index) { BooleanArray(1) }
+            val maxScroll = steps.lastOrNull()?.offset ?: 0
+            val autoPx = with(density) { (look.autoScroll * com.juliano.stagebook.data.model.Look.AUTO_SCROLL_DP_PER_LEVEL).dp.toPx() }
+            LaunchedEffect(autoOn, maxScroll, autoPx) {
+                if (!autoOn) {
+                    if (autoRan[0]) {
+                        autoRan[0] = false
+                        val k = steps.indexOfLast { it.offset <= scrollY.value + 1 }.coerceAtLeast(0)
+                        if (k != stopAt) { syncing[0] = true; onPosition(index, k) }
+                    }
+                    return@LaunchedEffect
+                }
+                autoRan[0] = true
+                var last = androidx.compose.runtime.withFrameNanos { it }
+                while (true) {
+                    val now = androidx.compose.runtime.withFrameNanos { it }
+                    val v = (scrollY.value + autoPx * (now - last) / 1_000_000_000f).coerceAtMost(maxScroll.toFloat())
+                    last = now
+                    scrollY.snapTo(v)
+                    if (v >= maxScroll) { autoOn = false; break }
+                }
             }
             var flash by remember(index) { mutableStateOf<IntRange?>(null) }   // y..y+altura da linha acesa, na tela
             LaunchedEffect(index, stopAt) {
@@ -777,6 +808,17 @@ fun StageScreen(
                         .width(with(density) { columnWidth.toDp() })
                         .height(with(density) { (band.last - band.first + 1).coerceAtLeast(0).toDp() })
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = FLASH_ALPHA), MaterialTheme.shapes.small),
+                )
+            }
+            // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), embaixo no meio, discretos como o botão do player
+            if (scrollMode && !song.missing && maxScroll > 0) {
+                AutoScrollBar(
+                    on = autoOn,
+                    level = look.autoScroll,
+                    fg = fg,
+                    onToggle = { autoOn = !autoOn },
+                    onLevel = onAutoScroll,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.s),
                 )
             }
             // player (só no modo player): play/pause transparente no canto de baixo à direita, por cima da letra
@@ -1069,6 +1111,23 @@ private fun TrackButton(
 }
 
 /** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
+/** Rolagem automática no palco: mais devagar, liga/pausa e mais rápido (o nível vai de 1 a 10). */
+@Composable
+private fun AutoScrollBar(on: Boolean, level: Int, fg: Color, onToggle: () -> Unit, onLevel: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Surface(shape = CircleShape, color = fg.copy(alpha = 0.08f), contentColor = fg.copy(alpha = 0.7f), modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
+            Text(level.toString(), style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = onToggle) {
+                Icon(if (on) AppIcons.Pause else AppIcons.Play, stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play))
+            }
+            IconButton(onClick = { onLevel(level + 1) }, enabled = level < com.juliano.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
+                Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
+            }
+        }
+    }
+}
+
 @Composable
 private fun SongKeyBadges(text: String, fg: Color) {
     val key = remember(text) { Chords.key(text) }

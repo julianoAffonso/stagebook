@@ -234,6 +234,12 @@
     <string name="editor_capo_sounds">Desenhos em %1$s · com capo na %2$dª casa, soa em %3$s</string>
     <string name="editor_capo_sounds_nokey">Os desenhos são os da cifra · com capo na %1$dª casa, tudo soa %1$d meio-tons acima</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
+    <string name="stage_auto_play">Rolar sozinho</string>
+    <string name="stage_auto_pause">Pausar a rolagem</string>
+    <string name="stage_auto_slower">Mais devagar</string>
+    <string name="stage_auto_faster">Mais rápido</string>
+    <string name="settings_auto_scroll">Velocidade da rolagem automática: %1$d</string>
+    <string name="settings_auto_scroll_help">No modo rolar, o botão ▶ embaixo no palco faz a letra subir sozinha, para quem não tem pedal. Tocar na tela ou apertar o pedal pausa; − e + mudam a velocidade ali mesmo.</string>
     <string name="stage_capo_desc">Capotraste na %1$dª casa</string>
     <string name="stage_capo_sounds_desc">Capotraste na %1$dª casa, soa em %2$s</string>
     <string name="settings_font_family">Fonte</string>

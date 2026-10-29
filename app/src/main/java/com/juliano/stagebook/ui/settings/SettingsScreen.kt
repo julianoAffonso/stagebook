@@ -256,6 +256,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onKeepScreenOn = viewModel::setKeepScreenOn,
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
+                onAutoScroll = viewModel::setAutoScroll,
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 onExport = { exporter.launch("stagebook-biblioteca.json") },
                 onCheckUpdate = viewModel::checkUpdate,
@@ -316,6 +317,7 @@ data class SettingsActions(
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (com.juliano.stagebook.data.model.StageMode) -> Unit = {},
+    val onAutoScroll: (Int) -> Unit = {},
     val onImport: () -> Unit = {},
     val onExport: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
@@ -509,6 +511,18 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             }
         }
         HelpTip(stringResource(R.string.settings_stage_mode_help))
+        if (look.stageMode == com.juliano.stagebook.data.model.StageMode.SCROLL) {
+            var level by remember(look.autoScroll) { mutableFloatStateOf(look.autoScroll.toFloat()) }
+            Text(stringResource(R.string.settings_auto_scroll, level.roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = level,
+                onValueChange = { level = it },
+                onValueChangeFinished = { actions.onAutoScroll(level.roundToInt()) },
+                valueRange = 1f..Look.MAX_AUTO_SCROLL.toFloat(),
+                steps = Look.MAX_AUTO_SCROLL - 2,
+            )
+            HelpTip(stringResource(R.string.settings_auto_scroll_help))
+        }
     }
     if (look.stageMode == com.juliano.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns)) {
         val options = listOf(
