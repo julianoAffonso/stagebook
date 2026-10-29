@@ -57,7 +57,7 @@ fun ChordDiagram(
 @Composable
 private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width: Dp) {
     val measurer = rememberTextMeasurer()
-    val label = TextStyle(color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    val label = TextStyle(color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     Canvas(Modifier.size(width, width * 1.15f)) {
         if (shape == null) return@Canvas
         val frets = 5
@@ -73,7 +73,11 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         // casas e cordas; a pestana do braço (nut) grossa quando começa na primeira casa
         for (i in 0..frets) drawLine(color, Offset(left, top + i * row), Offset(right, top + i * row), if (i == 0 && base == 1) 5.dp.toPx() else thin)
         for (s in 0 until strings) drawLine(color, Offset(left + s * gap, top), Offset(left + s * gap, bottom), thin)
-        if (base > 1) drawText(measurer, "$base", Offset(0f, top + row * 0.2f), label)
+        // número da casa colado à esquerda da grade, na altura da primeira casa do desenho
+        if (base > 1) {
+            val laid = measurer.measure("$base", label)
+            drawText(laid, topLeft = Offset(left - laid.size.width - 14.dp.toPx(), top + (row - laid.size.height) / 2))   // longe da bolinha da pestana
+        }
         val dot = minOf(gap, row) * 0.28f
         shape.frets.forEachIndexed { s, f ->
             val x = left + s * gap

@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
@@ -251,6 +252,17 @@ class ScreenshotTest {
         }
         @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_tocar.png")
+    }
+
+    // desenho que começa acima da 1ª casa: o número da casa à esquerda (A com pestana na 5ª)
+    @Test fun chordDiagramHighFret() = shoot("acorde_casa_5") {
+        androidx.compose.foundation.layout.Box(Modifier.padding(32.dp)) {
+            com.juliano.stagebook.ui.components.ChordDiagram(
+                "A", com.juliano.stagebook.data.model.Instrument.VIOLAO,
+                com.juliano.stagebook.domain.Voicings.Shape(listOf(5, 7, 7, 6, 5, 5)), null, MaterialTheme.colorScheme.onSurface,
+                width = 240.dp,
+            )
+        }
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
