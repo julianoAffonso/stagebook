@@ -1087,7 +1087,7 @@ private class GestureTargets(
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
 private val METRO_GLOW = 20.dp          // brilho da borda, esmaecendo para dentro (não chega na letra)
-private val METRO_GLOW_ACCENT = 32.dp   // mais largo no 1 do compasso
+private val METRO_GLOW_ACCENT = 26.dp   // um pouco mais largo no 1 do compasso
 private const val METRO_GLOW_ALPHA = 0.8f
 private const val METRO_COUNT = 4   // a contagem é de um compasso de 4
 private const val FLASH_ALPHA = 0.22f
