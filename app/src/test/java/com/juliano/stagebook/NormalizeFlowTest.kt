@@ -58,7 +58,7 @@ class NormalizeFlowTest {
         repo.saveSong(Song(title = "E", text = "{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num"))
         repo.saveSong(Song(title = "C", text = "um\ndois\n\nrefrão aqui\nde novo\n\ntrês\nquatro\n\nrefrão aqui\nde novo"))
         repo.saveSong(Song(title = "D", text = "nada\nse\n\nrepete\naqui"))
-        val vm = SettingsViewModel(repo, context, com.juliano.stagebook.data.AppUpdater(context), com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)))
+        val vm = SettingsViewModel(repo, context, com.juliano.stagebook.data.AppUpdater(context), com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), com.juliano.stagebook.data.Backup(context, repo, com.juliano.stagebook.data.TrackStore(context)))
         vm.normalizeSections()
         assertEquals(SettingsMessage.Normalized(1, 1), withTimeout(5_000) { vm.messages.first() })
         // títulos que já existem ficam como estão (o palco mostra na língua do app)

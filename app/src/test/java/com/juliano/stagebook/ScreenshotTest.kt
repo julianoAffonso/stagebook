@@ -196,6 +196,21 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_rolando.png")
     }
 
+    // T25: backup em Ajustes → Biblioteca e a escolha das partes (tudo marcado)
+    @Test fun settingsLibraryBackup() = shoot("tablet_5_ajustes_backup") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LIBRARY) }
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun backupPartsDialog() {
+        compose.setContent {
+            StagebookTheme {
+                com.juliano.stagebook.ui.settings.BackupPartsDialog("Fazer backup", "Salvar", com.juliano.stagebook.data.Backup.Part.entries.toSet(), {}, {})
+            }
+        }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_backup_partes.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)

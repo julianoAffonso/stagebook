@@ -156,6 +156,37 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val snackbar = remember { SnackbarHostState() }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::importFrom) }
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let(viewModel::exportTo) }
+    // backup: escolhe as partes (todas marcadas), depois onde salvar o arquivo .stagebook
+    var backupAsk by rememberSaveable { mutableStateOf(false) }
+    var backupParts by remember { mutableStateOf(com.juliano.stagebook.data.Backup.Part.entries.toSet()) }
+    val backupSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(com.juliano.stagebook.data.Backup.MIME)) { uri ->
+        uri?.let { viewModel.backupTo(it, backupParts) }
+    }
+    val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
+    val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
+    if (backupAsk) {
+        BackupPartsDialog(
+            title = stringResource(R.string.backup_make),
+            confirmLabel = stringResource(R.string.backup_save),
+            available = com.juliano.stagebook.data.Backup.Part.entries.toSet(),
+            onConfirm = { parts ->
+                backupParts = parts
+                backupAsk = false
+                backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
+            },
+            onDismiss = { backupAsk = false },
+        )
+    }
+    pendingRestore?.let { p ->
+        BackupPartsDialog(
+            title = stringResource(R.string.backup_restore),
+            confirmLabel = stringResource(R.string.backup_restore_ok),
+            available = p.contents.parts,
+            onConfirm = viewModel::restore,
+            onDismiss = viewModel::cancelRestore,
+            warning = stringResource(R.string.backup_restore_warning),
+        )
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { m ->
@@ -169,6 +200,15 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                     SettingsMessage.ImportNewer -> r.getString(R.string.scan_newer)
                     SettingsMessage.Exported -> r.getString(R.string.settings_exported)
                     SettingsMessage.ExportFailed -> r.getString(R.string.settings_export_failed)
+                    SettingsMessage.BackupDone -> r.getString(R.string.backup_done)
+                    SettingsMessage.BackupFailed -> r.getString(R.string.backup_failed)
+                    SettingsMessage.NotBackup -> r.getString(R.string.backup_not_backup)
+                    SettingsMessage.RestoreFailed -> r.getString(R.string.backup_restore_failed)
+                    is SettingsMessage.Restored -> {
+                        // língua e aparência valem ao abrir a tela de novo
+                        if (m.restart) (context as? android.app.Activity)?.recreate()
+                        r.getString(R.string.backup_restored)
+                    }
                 },
             )
         }
@@ -259,6 +299,8 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onAutoScroll = viewModel::setAutoScroll,
                 onImport = { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 onExport = { exporter.launch("stagebook-biblioteca.json") },
+                onBackup = { backupAsk = true },
+                onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 onDownloadUpdate = viewModel::downloadUpdate,
@@ -320,6 +362,8 @@ data class SettingsActions(
     val onAutoScroll: (Int) -> Unit = {},
     val onImport: () -> Unit = {},
     val onExport: () -> Unit = {},
+    val onBackup: () -> Unit = {},
+    val onRestore: () -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
@@ -1146,6 +1190,14 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             ActionButton(stringResource(R.string.settings_export_file), actions.onExport, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
         }
         HelpTip(stringResource(R.string.settings_import_help))
+    }
+    // backup completo num arquivo .stagebook (músicas, faixas e ajustes); restaurar escolhe as partes
+    SettingsCard(stringResource(R.string.backup_card)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            ActionButton(stringResource(R.string.backup_make), actions.onBackup, Modifier.weight(1f), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.backup_restore), actions.onRestore, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
+        }
+        HelpTip(stringResource(R.string.backup_help))
     }
 }
 

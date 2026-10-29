@@ -62,7 +62,7 @@ class AppUpdaterTest {
     }
 
     private fun vm(u: AppUpdater) = LibraryRepository(context, CoroutineScope(Dispatchers.IO)).let { repo ->
-        SettingsViewModel(repo, context, u, com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)))
+        SettingsViewModel(repo, context, u, com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), com.juliano.stagebook.data.Backup(context, repo, com.juliano.stagebook.data.TrackStore(context)))
     }
 
     /** Espera o estado da atualização chegar à tela (o uiState só anda com alguém olhando). */

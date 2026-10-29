@@ -230,6 +230,12 @@ class LibraryRepository @Inject constructor(
         return result
     }
 
+    /** Backup restaurado: as músicas e os setlists dele substituem os daqui (a aparência continua). */
+    suspend fun restore(songs: List<Song>, sets: List<Setlist>) {
+        ready.await()
+        mutate { lib -> lib.copy(songs = songs, sets = sets) }
+    }
+
     // a faixa é um arquivo deste aparelho: não vai para outro
     fun exportSongs(): String = LibraryCodec.encodeSongs(_library.value.songs.map { it.copy(track = "") })
 }
