@@ -333,6 +333,17 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
+    // T08/T09: backing track e capo acesos, primeiro depois do artista; o tom depois
+    private val stageBadges = stage.copy(
+        songs = listOf(StageSong("Canção de teste", "Banda Fictícia", "{key: G}\n{capo: 2}\n" + chordSong, false, track = "faixa.ogg")),
+        look = stage.look.copy(chords = true, playerMode = true),
+    )
+
+    @Test fun stageBadgesTablet() = shoot("tablet_6_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageBadgesPhone() = shoot("celular_7_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
+
     @Test @Config(qualifiers = PHONE)
     fun stageChordsPhone() = shoot("celular_7_palco_cifra") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})

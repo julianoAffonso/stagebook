@@ -496,13 +496,10 @@ fun StageScreen(
                 )
             }
         }
-            // tom e capo da música (ícone + valor, o texto inteiro só para leitores de tela); no celular vão
-            // para a linha do artista, senão o título encurta
+            // depois do artista, nesta ordem (pedido do usuário, 29/10): backing track e capo acesos na cor de destaque, depois
+            // o tom; no celular vão para a linha do artista, senão o título encurta
+            if (metaInline && look.playerMode && song.track.isNotEmpty()) TrackBadge()
             if (!song.missing && metaInline && look.chords) SongKeyBadges(song.text, fg)
-            // a música tem Backing track (modo player); no celular vai para a linha do artista
-            if (metaInline && look.playerMode && song.track.isNotEmpty()) {
-                Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), tint = fg.copy(alpha = 0.6f))
-            }
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -522,10 +519,8 @@ fun StageScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                if (hasTrack) TrackBadge(Modifier.padding(end = Spacing.m))
                 if (!song.missing && hasKey) SongKeyBadges(song.text, fg)
-                if (hasTrack) {
-                    Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), Modifier.padding(start = Spacing.m), tint = fg.copy(alpha = 0.6f))
-                }
             }
         }
 
@@ -1033,19 +1028,27 @@ private fun SongKeyBadges(text: String, fg: Color) {
     val keyDesc = stringResource(R.string.stage_key_desc, key)
     val capoDesc = if (key.isNotEmpty()) stringResource(R.string.stage_capo_sounds_desc, capo, sounds) else stringResource(R.string.stage_capo_desc, capo)
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        // o capo vem antes do tom e aceso: muda o que se toca, não pode passar despercebido (pedido do usuário, 29/10)
+        if (capo > 0) {
+            val accent = MaterialTheme.colorScheme.primary
+            Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
+                Icon(AppIcons.Capo, null, tint = accent)
+                Text(capo.toString(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
+            }
+        }
         if (key.isNotEmpty()) {
             Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
                 Icon(AppIcons.MusicNote, null, tint = fg.copy(alpha = 0.6f))
                 Text(key, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
             }
         }
-        if (capo > 0) {
-            Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
-                Icon(AppIcons.Capo, null, tint = fg.copy(alpha = 0.6f))
-                Text(capo.toString(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
-            }
-        }
     }
+}
+
+/** A música tem backing track: o primeiro ícone depois do artista, aceso na cor de destaque. */
+@Composable
+private fun TrackBadge(modifier: Modifier = Modifier) {
+    Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), modifier, tint = MaterialTheme.colorScheme.primary)
 }
 
 @Composable
