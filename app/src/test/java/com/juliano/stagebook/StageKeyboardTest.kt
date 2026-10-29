@@ -28,7 +28,7 @@ class StageKeyboardTest {
         var seen = 0
         val state = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look(instrument = Instrument.TECLADO))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onKeyboardHintSeen = { seen++ }) } }
-        compose.onNodeWithText("acordes para teclado (cifra com capo na 2ª casa)").assertExists()
+        compose.onNodeWithText("teclado · capo na 2ª").assertExists()
         compose.onNodeWithText("A", useUnmergedTree = true).assertExists()   // o tom que soa
         compose.onNodeWithText("Esta cifra usa capo na 2ª casa", substring = true).assertExists()
         assertEquals(1, seen)
