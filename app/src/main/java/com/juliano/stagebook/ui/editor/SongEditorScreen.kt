@@ -45,6 +45,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -132,6 +134,11 @@ fun SongEditorScreen(
     var deleting by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // a música como fica no palco
     var newChord by rememberSaveable { mutableStateOf(false) }
+    // duas abas (pedido do usuário, 29/10): a letra com a tela toda e os dados da música à parte. Música nova começa nos
+    // Dados (o título é obrigatório); aberta do palco, na letra
+    var dataTab by rememberSaveable(uiState.loading) { mutableStateOf(!uiState.loading && cursor < 0 && uiState.mode == EditorMode.NEW && uiState.title.isEmpty()) }
+    // salvar sem título (ou com título repetido): vai para os Dados, onde está o erro
+    LaunchedEffect(uiState.error) { if (uiState.error != null) dataTab = true }
     // Cancelar fica colado no Salvar e o voltar do sistema é fácil de tocar sem querer
     var discarding by rememberSaveable { mutableStateOf(false) }
     // a mesma função a cada tecla: os botões Salvar/Cancelar não se redesenham enquanto digita
@@ -175,6 +182,8 @@ fun SongEditorScreen(
                                 EditorMode.IMPORTED_UPDATE -> R.string.editor_imported_update
                             },
                         ),
+                        // na aba da letra, o nome da música fica à vista no topo
+                        subtitle = listOf(uiState.title, uiState.author).filter { it.isNotBlank() }.joinToString(" · "),
                         onBack = cancel,
                         modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s),
                     ) {
@@ -193,6 +202,27 @@ fun SongEditorScreen(
                         if (uiState.canDelete) {
                             OverflowMenu(listOf(MenuAction(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, danger = true)))
                         }
+                    }
+                    PrimaryTabRow(selectedTabIndex = if (dataTab) 1 else 0, modifier = Modifier.padding(bottom = Spacing.s)) {
+                        // a aba que não está aberta fica apagada
+                        val off = MaterialTheme.colorScheme.onSurfaceVariant
+                        Tab(selected = !dataTab, onClick = { dataTab = false }, unselectedContentColor = off, text = { Text(stringResource(R.string.editor_tab_lyrics)) })
+                        Tab(
+                            selected = dataTab,
+                            onClick = { dataTab = true },
+                            unselectedContentColor = off,
+                            text = { Text(stringResource(R.string.editor_tab_data), color = if (uiState.error != null) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified) },
+                        )
+                    }
+                    if (dataTab) {
+                        Column(
+                            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = Spacing.m, vertical = Spacing.m),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.m),
+                        ) {
+                            SongDataFields(uiState, onTitle, onAuthor, onYear)
+                            if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
+                        }
+                        return@Column
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -217,41 +247,6 @@ fun SongEditorScreen(
                             .padding(horizontal = Spacing.m, vertical = Spacing.m),
                         verticalArrangement = Arrangement.spacedBy(Spacing.m),
                     ) {
-                        OutlinedTextField(
-                            value = uiState.title,
-                            onValueChange = onTitle,
-                            label = { Text(stringResource(R.string.editor_title)) },
-                            isError = uiState.error != null,
-                            supportingText = uiState.error?.let { e ->
-                                { Text(stringResource(if (e == EditorError.TITLE_EMPTY) R.string.editor_error_title_empty else R.string.editor_error_title_taken)) }
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                            OutlinedTextField(
-                                value = uiState.author,
-                                onValueChange = onAuthor,
-                                label = { Text(stringResource(R.string.editor_author)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.weight(3f),
-                            )
-                            OutlinedTextField(
-                                value = uiState.year,
-                                onValueChange = onYear,
-                                label = { Text(stringResource(R.string.editor_year)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, onKey)
                         if (previewing) {
                             EditorPreview(uiState.text, look)
                             return@Column
@@ -265,8 +260,8 @@ fun SongEditorScreen(
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             textStyle = MaterialTheme.typography.bodyLarge,
                             shape = MaterialTheme.shapes.small,
-                            minLines = 14,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
+                            minLines = 20,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 480.dp).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
                         )
                     }
                 }
@@ -301,6 +296,45 @@ internal fun lineEnd(text: String, at: Int): Int {
  * Atalhos das seções: cada toque põe o título da seção na letra, onde está o cursor. Chips soltos,
  * alinhados aos campos (Material 3 Expressive, sem a tarja de fundo).
  */
+/** Aba Dados: título (obrigatório, é o nome no setlist), artista e ano. */
+@Composable
+private fun SongDataFields(uiState: SongEditorUiState, onTitle: (String) -> Unit, onAuthor: (String) -> Unit, onYear: (String) -> Unit) {
+    OutlinedTextField(
+        value = uiState.title,
+        onValueChange = onTitle,
+        label = { Text(stringResource(R.string.editor_title)) },
+        isError = uiState.error != null,
+        supportingText = uiState.error?.let { e ->
+            { Text(stringResource(if (e == EditorError.TITLE_EMPTY) R.string.editor_error_title_empty else R.string.editor_error_title_taken)) }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        OutlinedTextField(
+            value = uiState.author,
+            onValueChange = onAuthor,
+            label = { Text(stringResource(R.string.editor_author)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.weight(3f),
+        )
+        OutlinedTextField(
+            value = uiState.year,
+            onValueChange = onYear,
+            label = { Text(stringResource(R.string.editor_year)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
 @Composable
 private fun SectionBar(onPick: (Sections.Kind) -> Unit, modifier: Modifier = Modifier) {
     Row(
