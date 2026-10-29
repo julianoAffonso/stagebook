@@ -202,6 +202,7 @@ class BandLink @Inject constructor(
                     val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain)) ?: return@async emptyList()
                     val bytes = ShareCode.decrypt(key, body) ?: return@async emptyList()
                     json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), bytes.decodeToString())
+                        .filter { it.allowed() }.take(com.juliano.stagebook.domain.BandContent.MAX_SONGS)
                 }.getOrDefault(emptyList())
             }
         }.flatMap { it.await() }
