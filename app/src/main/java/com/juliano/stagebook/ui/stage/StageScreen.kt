@@ -227,6 +227,7 @@ fun StageRoute(
             onHiddenChords = viewModel::setHiddenChords,
             onAutoScroll = viewModel::setAutoScroll,
             onMetronome = viewModel::setMetronome,
+            onMetronomeSound = viewModel::metronomeSound,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -262,6 +263,7 @@ fun StageScreen(
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
     onMetronome: (count: Boolean, sound: Boolean) -> Unit = { _, _ -> },
+    onMetronomeSound: (bpm: Int?) -> Unit = {},
 ) {
     // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
     var hidingChord by remember { mutableStateOf<String?>(null) }
@@ -405,12 +407,21 @@ fun StageScreen(
     val songTempo = remember(index, uiState.songs) { uiState.songs.getOrNull(index)?.text?.let(Chords::tempo) ?: 0 }
     var metroBpm by remember(index, songTempo) { mutableIntStateOf(songTempo.takeIf { it > 0 } ?: Chords.DEFAULT_TEMPO) }
     var metroBeat by remember(index) { mutableIntStateOf(-1) }   // tempo atual desde o play (0 = primeiro)
-    LaunchedEffect(metroOn, metroBpm) {
+    // o som (T33d) e o piscar começam juntos; o piscar mira o instante de cada tempo desde o começo (não escorrega)
+    LaunchedEffect(metroOn, metroBpm, look.metroSound) {
+        onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
-        val period = 60_000L / metroBpm
+        val periodNanos = 60_000_000_000L / metroBpm
+        val start = androidx.compose.runtime.withFrameNanos { it }
         var beat = 0
-        while (true) { metroBeat = beat++; delay(period) }
+        while (true) {
+            metroBeat = beat
+            beat++
+            val now = androidx.compose.runtime.withFrameNanos { it }
+            delay(((start + beat * periodNanos - now) / 1_000_000).coerceAtLeast(0))
+        }
     }
+    DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
