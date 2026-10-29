@@ -76,6 +76,16 @@ fun ImportRoute(
     val queue by viewModel.queueState.collectAsStateWithLifecycle()
     // na fila, o importador fica embaixo do editor (cancelar volta para a mesma música)
     LaunchedEffect(viewModel) { viewModel.openEditor.collect { if (viewModel.queueState.value != null) onOpenEditorQueued(it) else onOpenEditor(it) } }
+    // a página tem tablatura: importar junto? (pergunta a cada vez)
+    if (uiState.askTab) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.answerTab(false) },
+            title = { Text(stringResource(R.string.import_tab_title)) },
+            text = { Text(stringResource(R.string.import_tab_message)) },
+            confirmButton = { TextButton(onClick = { viewModel.answerTab(true) }) { Text(stringResource(R.string.import_tab_yes)) } },
+            dismissButton = { TextButton(onClick = { viewModel.answerTab(false) }) { Text(stringResource(R.string.import_tab_no)) } },
+        )
+    }
     ImportScreen(
         uiState = uiState,
         initialQuery = viewModel.initialQuery,

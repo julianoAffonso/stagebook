@@ -73,4 +73,41 @@ class ImportChordsTest {
         assertEquals("G", Chords.key(text))
         assertEquals(2, Chords.capo(text))
     }
+
+    // página com tablatura: pergunta; com a tab entra em bloco, sem ela some
+    private fun rawWithTab(): String {
+        val page = buildJsonObject {
+            put("title", ""); put("artist", "")
+            put("text", "Saio cedo pela rua\nPra você ouvir\nE mais uma linha")
+            put("chordText", "[Intro]\ne|---0---3---|\nB|---1---0---|\n\nG              D\nSaio cedo pela rua\nEm       C\nPra você ouvir\nC\nE mais uma linha")
+            put("key", "G"); put("site", "www.cifraclub.com.br")
+        }.toString()
+        return Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(page))
+    }
+
+    private fun importTab(include: Boolean): String = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        repo.updateLook { it.copy(chords = true) }
+        val draft = ImportDraft()
+        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), com.juliano.stagebook.data.ImportQueue(repo))
+        vm.onExtracted(rawWithTab())
+        withTimeout(5_000) { vm.uiState.first { it.askTab } }
+        vm.answerTab(include)
+        withTimeout(5_000) { vm.openEditor.first() }
+        draft.take()!!.text
+    }
+
+    @Test fun `tablatura - pergunta e entra em bloco`() {
+        val text = importTab(include = true)
+        assertTrue(text, text.contains("{start_of_tab}\ne|---0---3---|\nB|---1---0---|\n{end_of_tab}"))
+        assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))
+    }
+
+    @Test fun `tablatura - sem ela, nenhuma linha de tab entra`() {
+        val text = importTab(include = false)
+        assertFalse(text, text.contains("|---"))
+        assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))
+    }
 }

@@ -3,6 +3,7 @@ package com.juliano.stagebook.ui.importer
 import androidx.core.net.toUri
 import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.domain.ChordImport
+import com.juliano.stagebook.domain.Tablature
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
@@ -31,7 +32,8 @@ import javax.inject.Inject
 enum class ImportProblem { NOT_FOUND, UNREADABLE }
 
 @Immutable
-data class ImportUiState(val busy: Boolean = false, val problem: ImportProblem? = null)
+/** [askTab]: a página tem tablatura e o app pergunta se ela entra (T22, decisão do usuário: perguntar a cada vez). */
+data class ImportUiState(val busy: Boolean = false, val problem: ImportProblem? = null, val askTab: Boolean = false)
 
 @HiltViewModel
 class ImportViewModel @Inject constructor(
@@ -84,10 +86,29 @@ class ImportViewModel @Inject constructor(
 
     private var extracting = false
 
-    private suspend fun extract(raw: String?) {
+    // página com tablatura esperando a resposta "importar junto?"
+    private var pendingTab: String? = null
+
+    /** Resposta da pergunta da tablatura: importa com ela (em bloco `{start_of_tab}`) ou sem. */
+    fun answerTab(include: Boolean) {
+        val raw = pendingTab ?: return
+        pendingTab = null
+        _uiState.update { it.copy(askTab = false) }
+        viewModelScope.launch { extract(raw, include) }
+    }
+
+    private suspend fun extract(raw: String?, withTab: Boolean? = null) {
         run {
-            val page = runCatching { json.decodeFromString<PageData>(json.decodeFromString<String>(raw.orEmpty())) }.getOrNull()
-            if (page == null) { _uiState.update { it.copy(problem = ImportProblem.UNREADABLE) }; return }
+            val parsed = runCatching { json.decodeFromString<PageData>(json.decodeFromString<String>(raw.orEmpty())) }.getOrNull()
+            if (parsed == null) { _uiState.update { it.copy(problem = ImportProblem.UNREADABLE) }; return }
+            // tablatura na página: pergunta antes (a resposta volta por answerTab)
+            if (withTab == null && (Tablature.hasTab(parsed.chordText) || Tablature.hasTab(parsed.text))) {
+                pendingTab = raw
+                _uiState.update { it.copy(askTab = true) }
+                return
+            }
+            val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
+            val page = parsed.copy(text = tab(parsed.text), chordText = tab(parsed.chordText))
             // perfil letra e cifra + página com cifra: entra em ChordPro (com tom e capo); senão, só a letra
             val chordSource = page.chordText.ifBlank { page.text }
             var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
