@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -539,7 +540,8 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText("Como funciona")[0].performClick()
+        // a explicação agora é o ⓘ ao lado do título do cartão
+        compose.onAllNodesWithContentDescription("Como funciona")[0].performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_4_explicacao.png")
     }
