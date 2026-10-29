@@ -41,30 +41,63 @@ object HarmonicField {
         }
     }
 
-    /** O grau do acorde no tom [key] (ex.: C em G → "IV"; C7M em G → "IV7M"), ou null se não é do campo. */
-    fun degreeIn(chord: String, key: String): String? {
-        val c = Chords.triad(chord) ?: return null
+    /** Onde o acorde cai num tom: a posição na escala (0 = I … 6 = VII) e o nome do grau com a cifra (ex.: "V7(9)"). */
+    data class Place(val index: Int, val label: String)
+
+    private val majorScale = listOf(0, 2, 4, 5, 7, 9, 11)
+    private val naturalMinor = listOf(0, 2, 3, 5, 7, 8, 10)
+    private val harmonicMinor = listOf(0, 2, 3, 5, 7, 8, 11)   // o V maior (E7 em Am)
+    private val numerals = listOf("I", "II", "III", "IV", "V", "VI", "VII")
+
+    /**
+     * O acorde no tom [key]: só é do campo se **todas** as notas dele (tríade, sétima, extensões, sus, alterações e o baixo)
+     * estão na escala do tom (pedido do usuário, 29/10: olhar só a tríade, ou só a sétima, dava informação errada). Em G:
+     * C7M e Csus2 são do campo; C7 (Bb) não é. Na menor vale a natural ou a harmônica.
+     */
+    fun placeIn(chord: String, key: String): Place? {
+        val n = ChordTheory.notes(chord) ?: return null
         val k = Chords.triad(key) ?: return null
-        return steps(k.minor).firstOrNull { st -> (k.root + st.semis) % 12 == c.root && matches(st, c) }?.let { label(it, c) }
+        val rel = (n.tones + n.bass).map { (it - k.root + 12) % 12 }.toSet()
+        val scale = when {
+            !k.minor -> majorScale.takeIf { it.containsAll(rel) }
+            naturalMinor.containsAll(rel) -> naturalMinor
+            harmonicMinor.containsAll(rel) -> harmonicMinor
+            else -> null
+        } ?: return null
+        val index = scale.indexOf((n.root - k.root + 12) % 12).takeIf { it >= 0 } ?: return null
+        return Place(index, label(index, chord, n))
     }
 
-    /** Os tons em que o acorde aparece, menos o dele mesmo (o principal), maiores primeiro. */
+    /** O nome do grau do acorde no tom [key] (ex.: C em G → "IV"; C7M → "IV7M"; Dsus4 → "Vsus4"), ou null se não é do campo. */
+    fun degreeIn(chord: String, key: String): String? = placeIn(chord, key)?.label
+
+    /** Os tons em que o acorde aparece, menos os em que ele é o I (o principal já aparece à parte), maiores primeiro. */
     fun appearances(chord: String): List<Appearance> {
-        val c = Chords.triad(chord) ?: return emptyList()
         val out = ArrayList<Appearance>()
         for (minorKey in listOf(false, true)) for (tonic in 0 until 12) {
-            val st = steps(minorKey).firstOrNull { (tonic + it.semis) % 12 == c.root && matches(it, c) } ?: continue
-            if (st.semis == 0) continue   // o campo em que ele é o I já aparece à parte
-            out += Appearance(Chords.keyName(tonic, minorKey), label(st, c), minorKey)
+            val key = Chords.keyName(tonic, minorKey)
+            val place = placeIn(chord, key) ?: continue
+            if (place.index == 0) continue
+            out += Appearance(key, place.label, minorKey)
         }
         return out
     }
 
-    // a tríade tem de bater; a sétima, se o acorde tiver uma
-    private fun matches(st: Step, c: Chords.Triad) =
-        st.minor == c.minor && st.dim == c.dim && (c.seventh == Seventh.NONE || c.seventh == st.seventh)
-
-    private fun label(st: Step, c: Chords.Triad) = if (c.seventh == Seventh.NONE) st.roman else st.roman7
+    // numeral romano: maiúsculo com terça maior (ou sem terça), minúsculo com terça menor; ° diminuto, ø meio-diminuto;
+    // depois o resto da cifra (7M, 7, (9), sus4, 6…), sem o "m" que o minúsculo já diz
+    private fun label(index: Int, chord: String, n: ChordTheory.Notes): String {
+        val r = n.root
+        val minorThird = (r + 3) % 12 in n.tones && (r + 4) % 12 !in n.tones
+        val dimFifth = (r + 6) % 12 in n.tones && (r + 7) % 12 !in n.tones
+        val numeral = numerals[index].let { if (minorThird) it.lowercase() else it }
+        val rest = chord.trim().substringBefore('/').drop(1).dropWhile { it == '#' || it == 'b' || it == '♯' || it == '♭' }
+            .replace("maj7", "7M").replace("M7", "7M").replace("Δ", "7M")
+        return when {
+            minorThird && dimFifth && (r + 10) % 12 in n.tones -> numeral + "ø"
+            minorThird && dimFifth -> numeral + "°"
+            else -> numeral + (if (minorThird) rest.removePrefix("m").removePrefix("in") else rest)
+        }
+    }
 
     private fun suffix7(st: Step) = when {
         st.dim -> "m7(b5)"
