@@ -278,7 +278,7 @@ class ScanSetlistViewModel @Inject constructor(
 
     /** Músicas avulsas: as que vieram e não estão aqui entram na biblioteca; devolve quantas. */
     fun addSongs(): Int {
-        carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = s.text)) }
+        carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = com.juliano.stagebook.domain.Chords.withDetectedKey(s.text))) }
         (_ui.value as? ScanUi.Review)?.let(::applyIncoming)
         done()
         return carried.size
@@ -294,7 +294,7 @@ class ScanSetlistViewModel @Inject constructor(
     private fun createWithSlots(replaceId: String?): Pair<String, List<String?>>? {
         val ui = _ui.value as? ScanUi.Review ?: return null
         val slots = ui.rows.mapIndexed { i, r ->
-            r.chosen ?: carried[i]?.let { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = s.text)) }
+            r.chosen ?: carried[i]?.let { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = com.juliano.stagebook.domain.Chords.withDetectedKey(s.text))) }
         }
         val id = replaceId ?: repository.createSetlist(uniqueName(ui.name.trim()))
         repository.setSetlistItems(id, slots.filterNotNull())

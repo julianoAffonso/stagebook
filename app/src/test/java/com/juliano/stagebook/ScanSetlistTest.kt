@@ -96,7 +96,8 @@ class ScanSetlistTest {
         val items = repo.library.value.setlist(id)!!.items
         assertEquals(2, items.size)
         assertEquals(ids[1], items[0])
-        assertEquals("[C]linha nova", repo.song(items[1])!!.text)
+        // sem tom na música recebida: o app grava o tom calculado pelos acordes (T17)
+        assertEquals("{key: C}\n[C]linha nova", repo.song(items[1])!!.text)
         assertEquals(before, repo.song(ids[1])!!.text)
     }
 
@@ -116,7 +117,7 @@ class ScanSetlistTest {
         assertEquals(1, vm.addSongs())
         assertEquals(sets, repo.library.value.sets.size)
         assertEquals(before, repo.song(ids[0])!!.text)
-        assertTrue(repo.library.value.songs.any { it.title == "Música Nova" && it.text == "[C]nova" })
+        assertTrue(repo.library.value.songs.any { it.title == "Música Nova" && it.text == "{key: C}\n[C]nova" })
     }
 
     @Test fun `outra versão - por padrão fica a minha - escolhendo a recebida entra sem perder a minha cifra`() {
