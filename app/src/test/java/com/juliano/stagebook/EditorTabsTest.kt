@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import com.juliano.stagebook.ui.editor.EditorError
 import com.juliano.stagebook.ui.editor.EditorMode
@@ -27,8 +28,11 @@ class EditorTabsTest {
         val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertExists()
-        compose.onNodeWithText("Música sem título").performClick()
+        // aberto, o resumo não aparece (repetiria o título): o ▲ do campo Título recolhe
+        compose.onNodeWithText("Música sem título").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Recolher os dados da música").performClick()
         compose.waitForIdle()
+        compose.onNodeWithText("Música sem título").assertExists()
         compose.onNodeWithText("Título (é o nome usado no setlist)").assertDoesNotExist()
     }
 
