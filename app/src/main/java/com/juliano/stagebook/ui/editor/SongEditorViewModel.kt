@@ -131,7 +131,12 @@ class SongEditorViewModel @Inject constructor(
     }
 
     /** Capotraste: os desenhos dos acordes ficam iguais (muda o tom que soa). 0 tira a diretiva. */
-    fun setCapo(capo: Int) = update(text = Chords.setDirective(uiState.text, "capo", capo.coerceIn(0, 12).takeIf { it > 0 }?.toString().orEmpty()))
+    fun setCapo(capo: Int) {
+        val now = capo.coerceIn(0, 12)
+        // a tablatura fica em casas sem capo: o capo sobe, as casas sobem junto (decisão do usuário, 29/10)
+        val shifted = com.juliano.stagebook.domain.Tablature.shift(uiState.text, now - Chords.capo(uiState.text))
+        update(text = Chords.setDirective(shifted, "capo", now.takeIf { it > 0 }?.toString().orEmpty()))
+    }
 
     /** BPM nos dados da música (vazio tira); o metrônomo começa nele. */
     fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))

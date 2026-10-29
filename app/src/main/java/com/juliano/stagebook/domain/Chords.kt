@@ -234,7 +234,9 @@ object Chords {
             if (isDirective(line)) line
             else bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats) + "]" else b.value }
         }
-        return if (newKey.isNotEmpty()) setDirective(body, "key", newKey) else body
+        // a tablatura anda junto (T22)
+        val tabbed = Tablature.shift(body, semitones)
+        return if (newKey.isNotEmpty()) setDirective(tabbed, "key", newKey) else tabbed
     }
 
     // ---- tom pelos acordes (importação sem {key}) ----
