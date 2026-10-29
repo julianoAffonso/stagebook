@@ -67,7 +67,9 @@ var og=(q('meta[property="og:title"]')||{}).content||'';
 // tom e capotraste escritos na página (Cifra Club e parecidos), se o site não os deu acima
 var bt=(document.body&&document.body.innerText)||''; var km=bt.match(/Tom:\s*([A-G][#b]?m?)/); if(!ky&&km)ky=km[1];
 var cm=bt.match(/Capotraste na \d+/i); if(!cp&&cm)cp=cm[0];
-return JSON.stringify({title:ti,artist:ar,text:x,chordText:ch,key:ky,capo:cp,site:h,ldName:ld.name||'',ldArtist:ld.artist||'',ldDate:ld.date||'',
+// BPM escrito na página (qualquer site): "120 BPM", "BPM: 120", "Tempo: 120"
+var bm=bt.match(/(\d{2,3})\s*bpm\b/i)||bt.match(/\b(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})\b/i); var bp=bm?bm[1]:'';
+return JSON.stringify({title:ti,artist:ar,text:x,chordText:ch,key:ky,capo:cp,bpm:bp,site:h,ldName:ld.name||'',ldArtist:ld.artist||'',ldDate:ld.date||'',
  ogTitle:og,docTitle:document.title});
 })()
 """.trimIndent()

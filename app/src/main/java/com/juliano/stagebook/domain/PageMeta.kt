@@ -11,6 +11,7 @@ data class PageData(
     val chordText: String = "",   // cifra com os acordes em cima (Cifra Club)
     val key: String = "",
     val capo: String = "",
+    val bpm: String = "",   // "120 BPM" / "BPM: 120" / "Tempo: 120" escrito na página, se houver
     val site: String = "",
     val ldName: String = "",
     val ldArtist: String = "",
