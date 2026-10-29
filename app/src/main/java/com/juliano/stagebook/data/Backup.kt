@@ -95,8 +95,11 @@ class Backup @Inject constructor(
         }.getOrNull()
     }
 
-    /** Restaura as partes escolhidas: músicas e setlists substituem os daqui; ajustes substituem os daqui. */
-    suspend fun restore(input: InputStream, parts: Set<Part>): Boolean = withContext(Dispatchers.IO) {
+    /**
+     * Restaura as partes escolhidas. Músicas e setlists: [replace] = substituem os daqui; senão somam (só entra o que falta).
+     * Ajustes substituem os daqui.
+     */
+    suspend fun restore(input: InputStream, parts: Set<Part>, replace: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             var songs: Songs? = null
             var settings: JsonObject? = null
@@ -117,7 +120,8 @@ class Backup @Inject constructor(
             if (Part.LIBRARY in parts) songs?.let { s ->
                 trackFiles.forEach { (name, bytes) -> tracks.file(name).writeBytes(bytes) }
                 val keepTracks = Part.TRACKS in parts
-                repository.restore(s.songs.map { if (keepTracks && it.track in trackFiles) it else it.copy(track = "") }, s.sets)
+                val songs = s.songs.map { if (keepTracks && it.track in trackFiles) it else it.copy(track = "") }
+                if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
             }
             if (Part.SETTINGS in parts) settings?.let { st ->
                 st["look"]?.let { repository.updateLook { _ -> json.decodeFromJsonElement(Look.serializer(), st["look"]!!) } }

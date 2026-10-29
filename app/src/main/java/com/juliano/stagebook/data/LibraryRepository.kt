@@ -230,14 +230,38 @@ class LibraryRepository @Inject constructor(
         return result
     }
 
+    /**
+     * Backup somado ao que está aqui: entram só as músicas que faltam (a mesma música, por título e artista, fica como está
+     * aqui) e os setlists com nome novo, apontando para as músicas daqui. Devolve quantas músicas e setlists entraram.
+     */
+    suspend fun mergeBackup(songs: List<Song>, sets: List<Setlist>): Pair<Int, Int> {
+        ready.await()
+        var added = 0
+        var addedSets = 0
+        mutate { lib ->
+            val all = lib.songs.toMutableList()
+            val idOf = HashMap<String, String>()   // id no backup → id aqui
+            for (s in songs) {
+                if (s.title.isBlank()) continue
+                val here = all.firstOrNull { SongMatch.same(it.title, it.author, s.title, s.author) }
+                if (here != null) idOf[s.id] = here.id
+                else { val n = s.copy(id = newId()); all += n; idOf[s.id] = n.id; added++ }
+            }
+            val names = lib.sets.map { it.name.trim().lowercase() }.toSet()
+            val newSets = sets.filter { it.name.trim().lowercase() !in names }
+                .map { it.copy(id = newId(), items = it.items.mapNotNull(idOf::get)) }
+            addedSets = newSets.size
+            lib.copy(songs = all, sets = lib.sets + newSets)
+        }
+        return added to addedSets
+    }
+
     /** Backup restaurado: as músicas e os setlists dele substituem os daqui (a aparência continua). */
     suspend fun restore(songs: List<Song>, sets: List<Setlist>) {
         ready.await()
         mutate { lib -> lib.copy(songs = songs, sets = sets) }
     }
 
-    // a faixa é um arquivo deste aparelho: não vai para outro
-    fun exportSongs(): String = LibraryCodec.encodeSongs(_library.value.songs.map { it.copy(track = "") })
 }
 
 private const val TAG = "stagebook"

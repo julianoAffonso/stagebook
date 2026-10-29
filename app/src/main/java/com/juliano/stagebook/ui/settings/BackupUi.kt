@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,11 +40,13 @@ fun BackupPartsDialog(
     title: String,
     confirmLabel: String,
     available: Set<Backup.Part>,
-    onConfirm: (Set<Backup.Part>) -> Unit,
+    onConfirm: (parts: Set<Backup.Part>, replace: Boolean) -> Unit,
     onDismiss: () -> Unit,
     warning: String? = null,
 ) {
     var chosen by rememberSaveable { mutableStateOf(available.map { it.name }.toSet()) }
+    // músicas do arquivo: somar às daqui (padrão, seguro) ou substituir
+    var replace by rememberSaveable { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -49,11 +55,29 @@ fun BackupPartsDialog(
                 BackupPartsChecks(available, Backup.Part.entries.filter { it.name in chosen }.toSet()) { part, on ->
                     chosen = if (on) chosen + part.name else chosen - part.name
                 }
-                warning?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+                if (Backup.Part.LIBRARY.name in chosen) {
+                    Text(stringResource(R.string.backup_songs_how), style = MaterialTheme.typography.bodyLarge)
+                    val options = listOf(false to R.string.backup_merge, true to R.string.backup_replace)
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        options.forEachIndexed { i, (r, label) ->
+                            SegmentedButton(
+                                selected = replace == r,
+                                onClick = { replace = r },
+                                shape = SegmentedButtonDefaults.itemShape(i, options.size, baseShape = CircleShape),
+                            ) { Text(stringResource(label)) }
+                        }
+                    }
+                    Text(
+                        stringResource(if (replace) R.string.backup_replace_help else R.string.backup_merge_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (replace) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (Backup.Part.SETTINGS.name in chosen) warning?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(Backup.Part.entries.filter { it.name in chosen }.toSet()) }, enabled = chosen.isNotEmpty()) { Text(confirmLabel) }
+            TextButton(onClick = { onConfirm(Backup.Part.entries.filter { it.name in chosen }.toSet(), replace) }, enabled = chosen.isNotEmpty()) { Text(confirmLabel) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
@@ -94,11 +118,11 @@ private fun Backup.Part.detail() = when (this) {
 @LightPreview
 @Composable
 private fun BackupPartsLightPreview() = PreviewSurface(dark = false) {
-    BackupPartsDialog("Restaurar backup", "Restaurar", Backup.Part.entries.toSet(), {}, {})
+    BackupPartsDialog("Abrir arquivo", "Abrir", Backup.Part.entries.toSet(), { _, _ -> }, {})
 }
 
 @DarkPreview
 @Composable
 private fun BackupPartsDarkPreview() = PreviewSurface(dark = true) {
-    BackupPartsDialog("Restaurar backup", "Restaurar", Backup.Part.entries.toSet(), {}, {}, warning = "Substitui o que está neste aparelho.")
+    BackupPartsDialog("Abrir arquivo", "Abrir", Backup.Part.entries.toSet(), { _, _ -> }, {}, warning = "Os ajustes do arquivo substituem os daqui.")
 }

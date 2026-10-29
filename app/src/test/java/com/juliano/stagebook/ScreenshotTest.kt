@@ -205,7 +205,7 @@ class ScreenshotTest {
     @Test fun backupPartsDialog() {
         compose.setContent {
             StagebookTheme {
-                com.juliano.stagebook.ui.settings.BackupPartsDialog("Restaurar backup", "Restaurar", com.juliano.stagebook.data.Backup.Part.entries.toSet(), {}, {}, warning = "O que você marcar substitui o que está neste aparelho.")
+                com.juliano.stagebook.ui.settings.BackupPartsDialog("Abrir arquivo", "Abrir", com.juliano.stagebook.data.Backup.Part.entries.toSet(), { _, _ -> }, {}, warning = "Os ajustes do arquivo substituem os daqui.")
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_backup_restaurar.png")
