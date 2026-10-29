@@ -396,6 +396,7 @@ fun StageScreen(
     val presses = remember(uiState.songs.map { it.id }) { PressQueue() }
     // rolagem automática (T15, modo rolar): qualquer toque ou pedal só pausa
     var autoOn by remember(index) { mutableStateOf(false) }
+    var autoAvailable by remember { mutableStateOf(false) }   // modo rolar e a música não cabe numa tela
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -810,17 +811,7 @@ fun StageScreen(
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = FLASH_ALPHA), MaterialTheme.shapes.small),
                 )
             }
-            // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), embaixo no meio, discretos como o botão do player
-            if (scrollMode && !song.missing && maxScroll > 0) {
-                AutoScrollBar(
-                    on = autoOn,
-                    level = look.autoScroll,
-                    fg = fg,
-                    onToggle = { autoOn = !autoOn },
-                    onLevel = onAutoScroll,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.s),
-                )
-            }
+            SideEffect { autoAvailable = scrollMode && !song.missing && maxScroll > 0 }
             // player (só no modo player): play/pause transparente no canto de baixo à direita, por cima da letra
             if (look.playerMode && !song.missing) {
                 TrackButton(
@@ -868,6 +859,8 @@ fun StageScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             StageClock(fg.copy(alpha = 0.7f))
+            // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), na linha do relógio (fora da letra)
+            if (autoAvailable) AutoScrollBar(autoOn, look.autoScroll, fg, { autoOn = !autoOn }, onAutoScroll)
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
             } else {
