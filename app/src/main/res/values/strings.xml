@@ -231,6 +231,7 @@
     <string name="editor_capo_down">Capo uma casa abaixo</string>
     <string name="editor_capo_up">Capo uma casa acima</string>
     <string name="stage_key_desc">Tom: %1$s</string>
+    <string name="editor_data_label">DADOS DA MÚSICA</string>
     <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>
     <string name="editor_data_open">Mostrar os dados da música</string>
