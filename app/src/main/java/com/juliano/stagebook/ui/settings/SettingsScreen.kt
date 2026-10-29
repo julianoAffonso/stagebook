@@ -281,6 +281,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
                 onChordPlay = viewModel::setChordPlay,
+                onAnnounce = viewModel::setAnnounce,
                 onBackup = { parts ->
                     backupParts = parts
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
@@ -348,6 +349,7 @@ data class SettingsActions(
     val onStageMode: (com.juliano.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
     val onChordPlay: (com.juliano.stagebook.data.model.ChordPlayMode) -> Unit = {},
+    val onAnnounce: (Boolean) -> Unit = {},
     val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
@@ -1184,6 +1186,10 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
 private fun ScreenDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
+    }
+    // o "grito" do palco para telão e transmissão (T23)
+    SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
+        SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce)
     }
 }
 

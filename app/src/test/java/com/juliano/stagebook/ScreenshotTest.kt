@@ -298,6 +298,10 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes_7.png")
     }
 
+    @Test fun settingsScreenTablet() = shoot("tablet_5_ajustes_tela") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SCREEN) }
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
