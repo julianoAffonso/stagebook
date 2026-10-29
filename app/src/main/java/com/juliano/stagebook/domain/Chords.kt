@@ -171,6 +171,50 @@ object Chords {
         return enharmonic in flatKeys
     }
 
+    // ---- tom pelos acordes (importação sem {key}) ----
+
+    private enum class Quality { MAJOR, MINOR, DIM }
+
+    private fun quality(rest: String) = when {
+        rest.startsWith("dim") || rest.startsWith("°") || rest.startsWith("º") || rest.startsWith("m7b5") -> Quality.DIM
+        rest.startsWith("m") && !rest.startsWith("maj") -> Quality.MINOR
+        else -> Quality.MAJOR
+    }
+
+    // graus do campo harmônico: maior I ii iii IV V vi vii°; menor (natural, com o V maior da harmônica) i ii° III iv v V VI VII
+    private val majorField = listOf(0 to Quality.MAJOR, 2 to Quality.MINOR, 4 to Quality.MINOR, 5 to Quality.MAJOR, 7 to Quality.MAJOR, 9 to Quality.MINOR, 11 to Quality.DIM)
+    private val minorField = listOf(0 to Quality.MINOR, 2 to Quality.DIM, 3 to Quality.MAJOR, 5 to Quality.MINOR, 7 to Quality.MINOR, 7 to Quality.MAJOR, 8 to Quality.MAJOR, 10 to Quality.MAJOR)
+
+    /**
+     * O tom provável pelos acordes (ex.: "G", "Em"); vazio sem acordes. Cada tom (12 maiores e 12 menores) ganha um ponto por
+     * acorde do seu campo harmônico; o primeiro e o último acorde contam mais quando são a tônica. Empate: o maior.
+     */
+    fun detectKey(text: String): String {
+        val chords = bracket.findAll(fromChordsOverLyrics(text)).mapNotNull { chord.matchEntire(it.groupValues[1].trim()) }
+            .mapNotNull { m -> index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 }?.let { it to quality(m.groupValues[3]) } }
+            .toList()
+        if (chords.isEmpty()) return ""
+        var best = "" ; var bestScore = -1.0
+        for (minor in listOf(false, true)) for (tonic in 0 until 12) {
+            val field = if (minor) minorField else majorField
+            val tonicChord = tonic to if (minor) Quality.MINOR else Quality.MAJOR
+            var score = chords.count { (r, q) -> field.any { (deg, fq) -> (tonic + deg) % 12 == r && fq == q } }.toDouble()
+            if (chords.first() == tonicChord) score += 2.0
+            if (chords.last() == tonicChord) score += 1.5
+            if (score > bestScore) {
+                bestScore = score
+                val major = name(tonic, useFlats = false)
+                val label = if (minor) major + "m" else major
+                best = if (label in flatKeys || preferFlats(label)) transposeChord(label, 0, useFlats = true) else label
+            }
+        }
+        return best
+    }
+
+    /** Sem {key}: grava o tom calculado pelos acordes (só na importação; o que o usuário escrever depois prevalece). */
+    fun withDetectedKey(text: String): String =
+        if (key(text).isNotEmpty()) text else detectKey(text).takeIf { it.isNotEmpty() }?.let { setDirective(text, "key", it) } ?: text
+
     /** Tom que soa com o capo: os desenhos ficam, o som sobe [capo] casas (G com capo 2 soa A). */
     fun soundingKey(key: String, capo: Int): String = if (key.isEmpty() || capo == 0) key else transposeChord(key, capo)
 

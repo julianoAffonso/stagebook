@@ -89,7 +89,8 @@ class SongEditorViewModel @Inject constructor(
                 title = song?.title ?: draft?.title.orEmpty(),
                 author = draft?.artist?.ifBlank { null } ?: song?.author.orEmpty(),
                 year = draft?.year?.ifBlank { null } ?: song?.year.orEmpty(),
-                text = draft?.text ?: song?.text.orEmpty(),
+                // importada sem tom: o app calcula pelos acordes (o campo Tom mostra, e o usuário pode trocar)
+                text = draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty(),
                 unsaved = draft != null,
             )
             original = loaded
