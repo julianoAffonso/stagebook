@@ -16,6 +16,7 @@ import com.juliano.stagebook.R
 import com.juliano.stagebook.domain.Chords
 import com.juliano.stagebook.data.model.Look
 import com.juliano.stagebook.domain.Sections
+import com.juliano.stagebook.domain.Tablature
 
 /** Marca, no texto da linha, a letra embaixo da qual um acorde é desenhado (o valor é o acorde). */
 const val CHORD_TAG = "chord"
@@ -25,6 +26,10 @@ private const val CHORD_LINE_TAG = "chordline"
 
 /** Marca o espaço da lista de acordes da música (topo ou fim); o palco desenha os acordes por cima dele. */
 const val CHORD_LIST_TAG = "chordlist"
+
+/** Linha de tablatura (T22): letra de máquina, nunca quebra; o palco diminui até caber na coluna ([fitTab]). */
+const val TAB_TAG = "tab"
+const val TAB_EM = 0.7f
 
 /** Uma linha vazia de [heightEm] de altura, reservada para a lista de acordes (entra na paginação como as outras). */
 fun chordListLine(heightEm: Float): AnnotatedString = buildAnnotatedString {
@@ -104,7 +109,13 @@ fun stageLines(
             at,
         )
     }
+    val tabs = Tablature.tabLines(text)
     text.split('\n').forEachIndexed { i, raw ->
+        // tablatura: só no perfil letra e cifra, em letra de máquina (as colunas ficam alinhadas)
+        if (tabs[i]) {
+            if (chords.show) out += StageLine(tabLine(raw.trimEnd()), i)
+            return@forEachIndexed
+        }
         val d = directiveName.matchEntire(raw)
         if (d != null) {
             val name = d.groupValues[1].lowercase()
@@ -127,6 +138,12 @@ fun stageLines(
     }
     while (out.isNotEmpty() && out.last().text.isEmpty()) out.removeAt(out.lastIndex)
     return out
+}
+
+internal fun tabLine(raw: String, em: Float = TAB_EM): AnnotatedString = buildAnnotatedString {
+    withAnnotation(TAB_TAG, "") {
+        withStyle(SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = em.em)) { append(raw) }
+    }
 }
 
 private val bracket = Regex("""\[([^\[\]]*)]""")

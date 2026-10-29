@@ -38,4 +38,14 @@ class TablatureTest {
         assertEquals("letra\nmais letra", Tablature.strip(Tablature.wrap(raw)))
         assertTrue(Tablature.hasTab(raw))
     }
+
+    @Test fun `no palco - tab em letra de máquina, e some no perfil só letra`() {
+        val text = "[G]letra\n${Tablature.START}\n$tab\n${Tablature.END}"
+        val names = com.juliano.stagebook.ui.stage.SectionNames(null)
+        val withChords = com.juliano.stagebook.ui.stage.stageLines(text, names, androidx.compose.ui.graphics.Color.Cyan, true, com.juliano.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow))
+        val tabLines = withChords.filter { it.text.hasStringAnnotations(com.juliano.stagebook.ui.stage.TAB_TAG, 0, it.text.length) }
+        assertEquals(listOf("e|---0---3---|", "B|---1---0---|"), tabLines.map { it.text.text })
+        val lyricsOnly = com.juliano.stagebook.ui.stage.stageLines(text, names, androidx.compose.ui.graphics.Color.Cyan, true, com.juliano.stagebook.ui.stage.ChordLook(false, 0.8f, androidx.compose.ui.graphics.Color.Yellow))
+        assertTrue(lyricsOnly.none { it.text.text.contains("|---") })
+    }
 }
