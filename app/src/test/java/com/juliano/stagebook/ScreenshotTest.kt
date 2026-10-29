@@ -256,6 +256,8 @@ class ScreenshotTest {
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
+    @Test fun chordPopupCavaquinho() = chordPopup("tablet_6_acorde_cavaquinho", "D", com.juliano.stagebook.data.model.Instrument.CAVAQUINHO)
+    @Test fun chordPopupGuitarra() = chordPopup("tablet_6_acorde_guitarra", "A", com.juliano.stagebook.data.model.Instrument.GUITARRA)
 
     /** Versão nova do app oferecida ao abrir (outra janela). */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
