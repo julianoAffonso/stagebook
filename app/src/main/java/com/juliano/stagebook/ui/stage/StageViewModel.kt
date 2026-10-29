@@ -44,7 +44,7 @@ class StageViewModel @Inject constructor(
     private val chordPlayer: com.juliano.stagebook.data.ChordPlayer,
     private val announcer: com.juliano.stagebook.data.StageAnnouncer,
 ) : ViewModel() {
-    /** A música da vez para o telão/transmissão (se ligado em Ajustes → Tela). */
+    /** Now Playing: a música da vez para OBS e outros (se ligado em Ajustes → Tela). */
     fun announce(index: Int) {
         val lib = repository.library.value
         if (!lib.look.announce) { announcer.stop(); return }

@@ -15,7 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manda a música da vez na rede local para telão/transmissão ([StageAnnouncement]): na hora em que ela muda e depois a
+ * Manda o Now Playing (a música da vez) na rede local para programas de live e projeção ([StageAnnouncement]): na hora em que ela muda e depois a
  * cada 10 s, enquanto o palco está aberto. Um pacote pequeno por vez (custo desprezível). Só com rede local ligada (Wi-Fi,
  * cabo ou o ponto de acesso do celular, pedido do usuário, 29/10): sem ela, nem tenta.
  */

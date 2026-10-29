@@ -1,10 +1,10 @@
-# Telão e transmissão / Big screen and streaming
+# Now Playing (OBS, Resolume…)
 
 ## Português
 
-No palco, a cada troca de música (e depois a cada 10 segundos), o Stagebook avisa na rede local qual música está
-tocando. Programas de telão e de transmissão (OBS, Resolume e outros) podem mostrar o nome da música e o artista.
-A letra nunca vai. Para desligar: Ajustes → Tela → Telão e transmissão.
+No palco, a cada troca de música (e depois a cada 10 segundos), o Stagebook envia o **Now Playing** na rede local: a
+música que está tocando. Programas de live e de projeção (OBS, Resolume e outros) podem mostrar o nome da música e o
+artista. A letra nunca vai. Para desligar: Ajustes → Tela → Now Playing.
 
 - **Como:** broadcast UDP para `255.255.255.255`, porta **47800**, só com a rede local ligada (Wi-Fi, cabo ou ponto de
   acesso do celular).
@@ -38,9 +38,9 @@ while True:
 
 ## English
 
-On stage, every time the song changes (and every 10 seconds after that), Stagebook announces the current song on the
-local network, so big-screen and streaming software (OBS, Resolume and others) can show the title and artist. Lyrics are
-never sent. To turn it off: Settings → Screen → Big screen and streaming.
+On stage, every time the song changes (and every 10 seconds after that), Stagebook sends **Now Playing** on the local
+network, so streaming and projection software (OBS, Resolume and others) can show the title and artist. Lyrics are
+never sent. To turn it off: Settings → Screen → Now Playing.
 
 - **How:** UDP broadcast to `255.255.255.255`, port **47800**, only while a local network is on (Wi-Fi, cable or a phone
   hotspot).

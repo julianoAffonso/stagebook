@@ -304,9 +304,9 @@
     <string name="settings_chord_play_arpeggio">Dedilhado</string>
     <string name="settings_chord_play_chord">Junto</string>
     <string name="settings_chord_play_both">Os dois</string>
-    <string name="announce_title">Telão e transmissão</string>
-    <string name="announce_switch">Avisar a música da vez na rede local</string>
-    <string name="announce_help">No palco, a cada troca de música, o app avisa na rede (Wi-Fi) o nome da música, o artista, o setlist, o tom e o BPM, para programas de telão e transmissão (OBS, Resolume e outros) mostrarem. Nunca vai a letra. O formato está explicado no site do Stagebook.</string>
+    <string name="announce_title">Now Playing</string>
+    <string name="announce_switch">Enviar a música atual para OBS e outros</string>
+    <string name="announce_help">Com a rede local ligada, a cada troca de música o palco envia o Now Playing (nome da música, artista, setlist, tom e BPM) para programas de live e de projeção, como OBS e Resolume. A letra nunca vai. O formato está explicado no site do Stagebook.</string>
     <string name="metro_title">Metrônomo</string>
     <string name="metro_stop">Parar o metrônomo</string>
     <string name="metro_play">Começar o metrônomo</string>
