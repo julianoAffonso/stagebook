@@ -81,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -422,6 +423,16 @@ fun StageScreen(
         }
     }
     DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
+    // o piscar do tempo: no ícone e na borda da tela (pedido do usuário, 29/10), mais forte no 1 do compasso
+    val metroPulse = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(metroBeat) {
+        if (metroBeat < 0) { metroPulse.snapTo(0f); return@LaunchedEffect }
+        metroPulse.snapTo(if (metroBeat % 4 == 0) 1f else 0.6f)
+        metroPulse.animateTo(0f, tween(METRO_FLASH_MS))
+    }
+    val metroAccent = metroBeat >= 0 && metroBeat % 4 == 0
+    val metroColor = MaterialTheme.colorScheme.primary
+    val borderPx = with(LocalDensity.current) { (if (metroAccent) METRO_BORDER_ACCENT else METRO_BORDER).toPx() }
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -493,6 +504,12 @@ fun StageScreen(
         modifier
             .fillMaxSize()
             .background(Color(look.bg))
+            // borda da tela acendendo no tempo do metrônomo (lida só no desenho: não refaz a tela a cada tempo)
+            .drawWithContent {
+                drawContent()
+                val a = metroPulse.value
+                if (a > 0f) drawRect(metroColor.copy(alpha = a), style = androidx.compose.ui.graphics.drawscope.Stroke(borderPx))
+            }
             .padding(horizontal = Spacing.l),
     ) {
         // topo enxuto: música, artista e as bolinhas das páginas. No celular o artista e o ano descem para uma
@@ -904,15 +921,9 @@ fun StageScreen(
             // metrônomo: tocando, o ícone vira stop e pisca no tempo (mais forte no 1); parado, abre a janelinha
             run {
                 var metroDialog by remember { mutableStateOf(false) }
-                val pulse = remember { androidx.compose.animation.core.Animatable(0.35f) }
-                LaunchedEffect(metroBeat) {
-                    if (metroBeat < 0) return@LaunchedEffect
-                    pulse.snapTo(if (metroBeat % 4 == 0) 1f else 0.75f)
-                    pulse.animateTo(0.35f, tween(METRO_FLASH_MS))
-                }
                 Box {
                     IconButton(onClick = { if (metroOn) metroOn = false else metroDialog = true }) {
-                        if (metroOn) Icon(AppIcons.Stop, stringResource(R.string.metro_stop), tint = MaterialTheme.colorScheme.primary.copy(alpha = pulse.value))
+                        if (metroOn) Icon(AppIcons.Stop, stringResource(R.string.metro_stop), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f + 0.65f * metroPulse.value))
                         else Icon(AppIcons.Metronome, stringResource(R.string.metro_title), tint = fg.copy(alpha = 0.7f))
                     }
                     if (metroDialog) MetronomeDialog(
@@ -1058,6 +1069,8 @@ private class GestureTargets(
 // tamanho) com os da música nova
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
+private val METRO_BORDER = 4.dp
+private val METRO_BORDER_ACCENT = 8.dp
 private const val METRO_COUNT = 4   // a contagem é de um compasso de 4
 private const val FLASH_ALPHA = 0.22f
 
