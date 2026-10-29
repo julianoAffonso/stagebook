@@ -100,6 +100,9 @@ object AppIcons {
     val Undo by lazy {
         icon("undo", "M12.5,8c-2.65,0 -5.05,0.99 -6.9,2.6L2,7v9h9l-3.62,-3.62c1.39,-1.16 3.16,-1.88 5.12,-1.88 3.54,0 6.55,2.31 7.6,5.5l2.37,-0.78C21.08,11.03 17.15,8 12.5,8z")
     }
+    // play e pausa de pontas arredondadas (botão grande da rolagem automática)
+    val PlayRounded by lazy { icon("playrounded", "M8,19.14V4.86c0,-0.8 0.88,-1.28 1.55,-0.84l11.2,7.14c0.62,0.39 0.62,1.29 0,1.69l-11.2,7.14C8.88,20.42 8,19.94 8,19.14z") }
+    val PauseRounded by lazy { icon("pauserounded", "M8,19c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2v10c0,1.1 0.9,2 2,2zM14,7v10c0,1.1 0.9,2 2,2s2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2z") }
     // duas setas para baixo: rolagem automática do palco
     val AutoScroll by lazy { icon("autoscroll", "M18,6.41L16.59,5 12,9.58 7.41,5 6,6.41l6,6z", "M18,13l-1.41,-1.41L12,16.17l-4.59,-4.58L6,13l6,6z") }
     val Pause by lazy { icon("pause", "M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z") }
