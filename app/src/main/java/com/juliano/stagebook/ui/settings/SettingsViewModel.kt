@@ -203,6 +203,8 @@ class SettingsViewModel @Inject constructor(
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }
+    fun setMetronome(count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) =
+        repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, Look.MAX_AUTO_SCROLL)) }
     fun setStageMode(m: com.juliano.stagebook.data.model.StageMode) = repository.updateLook { it.copy(stageMode = m) }
     fun setKeepScreenOn(on: Boolean) = repository.updateLook { it.copy(keepScreenOn = on) }

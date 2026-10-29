@@ -288,6 +288,13 @@
     <string name="metro_slower">Mais devagar</string>
     <string name="metro_faster">Mais rápido</string>
     <string name="metro_count">Contagem 1-2-3-4 antes</string>
+    <string name="metro_glow_color">Cor do brilho</string>
+    <string name="metro_help">No palco, o ícone de metrônomo ao lado do relógio abre o BPM e o play. O BPM começa no da música (Dados da música); sem BPM, em 100. Com a contagem ligada, 1-2-3-4 aparece grande no meio antes de começar; sem som, só o ícone e a borda piscam.</string>
+    <string name="metro_in_settings">Contagem, som e brilho: Ajustes → Metrônomo</string>
+    <string name="metro_short_count">contagem</string>
+    <string name="metro_short_sound">som</string>
+    <string name="metro_short_silent">sem som</string>
+    <string name="metro_short_glow">brilho</string>
     <string name="metro_glow">Brilho na borda da tela</string>
     <string name="metro_sound">Som (desligado: só pisca)</string>
     <string name="stage_auto_title">Rolagem automática</string>

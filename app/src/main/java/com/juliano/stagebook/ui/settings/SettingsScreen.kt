@@ -286,6 +286,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onFactoryReset = viewModel::factoryReset,
+                onMetronome = viewModel::setMetronome,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 onDownloadUpdate = viewModel::downloadUpdate,
@@ -348,6 +349,7 @@ data class SettingsActions(
     val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
+    val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
@@ -360,6 +362,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     PLAYER(R.string.settings_player, AppIcons.Play),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
+    METRONOME(R.string.metro_title, AppIcons.Metronome),
     PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
     BAND(R.string.settings_band, AppIcons.Group),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
@@ -472,6 +475,11 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.PEDAL -> if (ui.look.pedalName.isEmpty()) stringResource(R.string.settings_pedal_none_short)
     else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
+    SettingsSection.METRONOME -> listOfNotNull(
+        stringResource(R.string.metro_short_count).takeIf { ui.look.metroCount },
+        stringResource(if (ui.look.metroSound) R.string.metro_short_sound else R.string.metro_short_silent),
+        stringResource(R.string.metro_short_glow).takeIf { ui.look.metroGlow },
+    ).joinToString(" · ")
     SettingsSection.LANGUAGE -> languageLabel(ui.language)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
@@ -491,6 +499,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
+            SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
             SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
@@ -1150,6 +1159,23 @@ private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_language)) {
         OptionDropdown(stringResource(R.string.settings_language), Languages.available, selected, actions.onLanguage, nameOf = { languageLabel(it) })
         HelpTip(stringResource(R.string.settings_language_help))
+    }
+}
+
+/** Metrônomo (o palco tem só o BPM e o play): contagem, som, brilho na borda e a cor dele. */
+@Composable
+private fun MetronomeDetail(look: Look, actions: SettingsActions) {
+    fun set(count: Boolean = look.metroCount, sound: Boolean = look.metroSound, glow: Boolean = look.metroGlow, color: Int = look.metroGlowColor) =
+        actions.onMetronome(count, sound, glow, color)
+    SettingsCard(stringResource(R.string.metro_title)) {
+        SwitchRow(stringResource(R.string.metro_count), look.metroCount, { set(count = it) })
+        SwitchRow(stringResource(R.string.metro_sound), look.metroSound, { set(sound = it) })
+        SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
+        if (look.metroGlow) {
+            Text(stringResource(R.string.metro_glow_color), style = MaterialTheme.typography.bodyLarge)
+            ColorSwatchRow(com.juliano.stagebook.ui.theme.StagePalette.glow, look.metroGlowColor, { set(color = it) })
+        }
+        HelpTip(stringResource(R.string.metro_help))
     }
 }
 
