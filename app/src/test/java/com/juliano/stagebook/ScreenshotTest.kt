@@ -178,6 +178,19 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_palco_rolagem_auto.png")
     }
 
+    // rolando: o ícone ao lado do relógio vira pause
+    @Test fun autoScrollRunning() {
+        compose.setContent {
+            StagebookTheme { StageScreen(stage.copy(look = stage.look.copy(stageMode = com.juliano.stagebook.data.model.StageMode.SCROLL)), 0, 0, { _, _ -> }, onBack = {}) }
+        }
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithContentDescription("Rolagem automática").performClick()
+        repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        compose.onNodeWithContentDescription("Rolar sozinho").performClick()
+        repeat(90) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_rolando.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
