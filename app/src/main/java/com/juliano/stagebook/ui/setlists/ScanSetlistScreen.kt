@@ -1,11 +1,12 @@
 package com.juliano.stagebook.ui.setlists
 
+import com.juliano.stagebook.ui.components.QuestionDialog
+import com.juliano.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SegmentedButton
 import com.juliano.stagebook.domain.SongMerge
 import androidx.compose.runtime.DisposableEffect
-import android.widget.Toast
 import androidx.compose.material3.CircularProgressIndicator
 import android.Manifest
 import android.content.pm.PackageManager
@@ -66,6 +67,7 @@ fun ScanSetlistRoute(
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
+    val message = LocalAppMessage.current
     var camera by rememberSaveable {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
@@ -73,13 +75,13 @@ fun ScanSetlistRoute(
     LaunchedEffect(viewModel) {
         viewModel.bandResult.collect { (got, asked) ->
             val msg = if (got > 0) resources.getQuantityString(R.plurals.scan_band_got, asked, got, asked) else resources.getString(R.string.scan_band_none)
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            message.show(msg, long = true)
         }
     }
     LaunchedEffect(viewModel) {
         viewModel.internetResult.collect { ok ->
             val name = viewModel.internetFrom.value.orEmpty()
-            Toast.makeText(context, if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), Toast.LENGTH_LONG).show()
+            message.show(if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), long = true)
         }
     }
     LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
@@ -96,7 +98,7 @@ fun ScanSetlistRoute(
         onCreateAndImport = { replace -> if (viewModel.createAndImport(replace)) onImport() },
         onAddSongs = {
             val n = viewModel.addSongs()
-            Toast.makeText(context, resources.getQuantityString(R.plurals.songs_added, n, n), Toast.LENGTH_SHORT).show()
+            message.show(resources.getQuantityString(R.plurals.songs_added, n, n))
             onBack()
         },
         onBack = onBack,
@@ -316,12 +318,11 @@ private fun Review(
         )
     }
     nameTaken?.let { id ->
-        AlertDialog(
-            onDismissRequest = { nameTaken = null },
-            title = { Text(stringResource(R.string.scan_name_taken)) },
-            text = { Text(stringResource(R.string.scan_name_taken_text, ui.name.trim()), style = MaterialTheme.typography.bodyLarge) },
-            confirmButton = { TextButton(onClick = { nameTaken = null; finish(id) }) { Text(stringResource(R.string.scan_replace)) } },
-            dismissButton = { TextButton(onClick = { nameTaken = null; finish(null) }) { Text(stringResource(R.string.scan_create_other)) } },
+        QuestionDialog(
+            stringResource(R.string.scan_name_taken), stringResource(R.string.scan_name_taken_text, ui.name.trim()),
+            stringResource(R.string.scan_replace), { nameTaken = null; finish(id) },
+            stringResource(R.string.scan_create_other), { nameTaken = null; finish(null) },
+            onOutside = { nameTaken = null },
         )
     }
 }

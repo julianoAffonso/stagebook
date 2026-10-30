@@ -1,9 +1,10 @@
 package com.juliano.stagebook.ui.share
 
+import com.juliano.stagebook.ui.components.LocalAppMessage
+import com.juliano.stagebook.ui.components.SwitchRow
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,7 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -122,13 +122,13 @@ fun ImportButton(
 
 /** Mostra para quantos aparelhos da banda chegou o envio (ou que ninguém recebeu). */
 @Composable
-fun BandResultToast(results: kotlinx.coroutines.flow.Flow<Int>) {
-    val context = LocalContext.current
+fun BandResultMessage(results: kotlinx.coroutines.flow.Flow<Int>) {
+    val message = LocalAppMessage.current
     val resources = androidx.compose.ui.platform.LocalResources.current
     androidx.compose.runtime.LaunchedEffect(results) {
         results.collect { n ->
             val msg = if (n > 0) resources.getQuantityString(R.plurals.share_band_sent, n, n) else resources.getString(R.string.share_band_failed)
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            message.show(msg, long = true)
         }
     }
 }
@@ -141,11 +141,13 @@ fun rememberCodeActions(): CodeActions {
     val context = LocalContext.current
     val text = stringResource(R.string.share_message)
     val textSongs = stringResource(R.string.share_message_songs)
-    return remember(context, text, textSongs) {
+    val copied = stringResource(R.string.share_copied)
+    val message = LocalAppMessage.current
+    return remember(context, text, textSongs, copied, message) {
         CodeActions(
             copy = { code ->
                 context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", code))
-                Toast.makeText(context, R.string.share_copied, Toast.LENGTH_SHORT).show()
+                message.show(copied)
             },
             share = { name, code ->
                 val msg = if (name.isEmpty()) textSongs.format(code) else text.format(name, code)
@@ -217,13 +219,13 @@ fun ShareOptions(
         }
         // no setlist dá para mandar só os títulos (banda e internet); músicas avulsas sempre vão inteiras
         if (onQr != null && (online || band > 0)) {
-            Row(Modifier.fillMaxWidth().padding(top = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(pluralStringResource(R.plurals.share_with_songs, songs, songs), style = MaterialTheme.typography.bodyLarge)
-                    Text(stringResource(R.string.share_with_songs_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(withSongs, { withSongs = it })
-            }
+            SwitchRow(
+                pluralStringResource(R.plurals.share_with_songs, songs, songs),
+                withSongs,
+                { withSongs = it },
+                Modifier.padding(top = Spacing.s),
+                detail = stringResource(R.string.share_with_songs_hint),
+            )
         }
     }
 }

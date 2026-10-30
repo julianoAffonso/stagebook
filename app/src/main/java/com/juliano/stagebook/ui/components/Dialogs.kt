@@ -64,6 +64,31 @@ fun TextInputDialog(
     )
 }
 
+/**
+ * Pergunta com duas respostas que fazem coisas diferentes ("Importar junto" / "Só a cifra"). Tocar fora
+ * da janela vale [onOutside] (padrão: a resposta [noLabel]).
+ */
+@Composable
+fun QuestionDialog(
+    title: String,
+    message: String,
+    yesLabel: String,
+    onYes: () -> Unit,
+    noLabel: String,
+    onNo: () -> Unit,
+    onOutside: () -> Unit = onNo,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+) {
+    AlertDialog(
+        onDismissRequest = onOutside,
+        icon = icon?.let { { androidx.compose.material3.Icon(it, null) } },
+        title = { Text(title) },
+        text = { Text(message, style = MaterialTheme.typography.bodyLarge) },
+        confirmButton = { TextButton(onClick = onYes) { Text(yesLabel) } },
+        dismissButton = { TextButton(onClick = onNo) { Text(noLabel) } },
+    )
+}
+
 /** Aviso com título e um botão de ok; [extra] é um segundo botão opcional (texto e ação). */
 @Composable
 fun InfoDialog(title: String, message: String, onDismiss: () -> Unit, extra: Pair<String, () -> Unit>? = null) {

@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.band
 
+import com.juliano.stagebook.ui.components.InfoDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -141,15 +142,11 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
         }
     }
     if (showLacks) {
-        AlertDialog(
-            onDismissRequest = { showLacks = false },
-            title = { Text(stringResource(R.string.conduct_lacks_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    lacks.forEach { Text(stringResource(R.string.conduct_lack_line, it.who, it.titles.joinToString(", "))) }
-                }
-            },
-            confirmButton = { TextButton({ showLacks = false }) { Text(stringResource(R.string.action_ok)) } },
+        val resources = androidx.compose.ui.platform.LocalResources.current
+        InfoDialog(
+            stringResource(R.string.conduct_lacks_title),
+            lacks.joinToString("\n") { resources.getString(R.string.conduct_lack_line, it.who, it.titles.joinToString(", ")) },
+            onDismiss = { showLacks = false },
         )
     }
 }

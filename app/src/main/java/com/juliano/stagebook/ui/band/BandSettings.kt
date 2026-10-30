@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.band
 
+import com.juliano.stagebook.ui.components.QuestionDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -126,13 +127,11 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
 /** "Tablet da Ana quer entrar na banda" → Autorizar / Não autorizar (como no Bluetooth), em qualquer tela. */
 @Composable
 fun BandRequestDialog(name: String, onAnswer: (Boolean) -> Unit) {
-    AlertDialog(
-        onDismissRequest = { onAnswer(false) },
-        icon = { Icon(AppIcons.Group, null) },
-        title = { Text(stringResource(R.string.band_request_title, name)) },
-        text = { Text(stringResource(R.string.band_request_text), style = MaterialTheme.typography.bodyLarge) },
-        confirmButton = { TextButton(onClick = { onAnswer(true) }) { Text(stringResource(R.string.band_allow)) } },
-        dismissButton = { TextButton(onClick = { onAnswer(false) }) { Text(stringResource(R.string.band_deny)) } },
+    QuestionDialog(
+        stringResource(R.string.band_request_title, name), stringResource(R.string.band_request_text),
+        stringResource(R.string.band_allow), { onAnswer(true) },
+        stringResource(R.string.band_deny), { onAnswer(false) },
+        icon = AppIcons.Group,
     )
 }
 
