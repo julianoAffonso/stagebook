@@ -1533,13 +1533,31 @@ private fun StageClock(color: Color, modifier: Modifier = Modifier) {
     Text(format.format(now), style = MaterialTheme.typography.titleLarge, color = color, maxLines = 1, modifier = modifier)
 }
 
-/** The stage always stays lit (the app already hides the system bars on every screen). */
+/**
+ * The stage always stays lit (the app already hides the system bars on every screen). Counted per view: following the
+ * leader, the next song's stage comes in before the old one leaves, and the old one switching it off left the screen
+ * free to dim mid-song (audit 30/10).
+ */
 @Composable
-private fun KeepScreenOn() {
+internal fun KeepScreenOn() {
     val view = LocalView.current
     DisposableEffect(view) {
+        ScreenOnCount.add(view)
+        onDispose { ScreenOnCount.remove(view) }
+    }
+}
+
+internal object ScreenOnCount {
+    private val count = java.util.WeakHashMap<android.view.View, Int>()
+
+    fun add(view: android.view.View) = synchronized(count) {
+        count[view] = (count[view] ?: 0) + 1
         view.keepScreenOn = true
-        onDispose { view.keepScreenOn = false }
+    }
+
+    fun remove(view: android.view.View) = synchronized(count) {
+        val left = (count[view] ?: 1) - 1
+        if (left > 0) count[view] = left else { count.remove(view); view.keepScreenOn = false }
     }
 }
 
