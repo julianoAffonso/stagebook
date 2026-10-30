@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -53,6 +54,11 @@ class WebEditorServer @Inject constructor(
     val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value }, onAccess = idle::touch)
 
     init {
+        // every app start begins with the editor off (user's decision of 30/10): it's turned on on purpose, each time
+        scope.launch {
+            repository.loaded.first { it }
+            turnOff()
+        }
         scope.launch {
             repository.library.map { it.look.webEditorOn && !it.look.essential }.distinctUntilChanged().collect { update() }
         }

@@ -777,7 +777,8 @@
     <string name="settings_web_editor">Editar no computador</string>
     <string name="settings_web_editor_card">No navegador</string>
     <string name="settings_web_editor_switch">Ligar o editor</string>
-    <string name="settings_web_editor_help">Edite músicas e setlists no navegador do computador, no mesmo Wi-Fi. Desliga sozinho depois de 5 minutos sem uso no computador, ou ao fechar o app.</string>
+    <string name="settings_web_editor_help">Edite músicas e setlists no navegador do computador, no mesmo Wi-Fi. Começa desligado toda vez que o app abre e desliga sozinho depois de 5 minutos sem uso no computador, ou ao fechar o app.</string>
+    <string name="settings_web_editor_switch_detail">Começa desligado toda vez que o app abre. Desliga sozinho após 5 minutos sem uso.</string>
     <string name="settings_web_editor_open">No computador, abra este endereço no navegador:</string>
     <string name="settings_web_editor_no_wifi">Conecte num Wi-Fi (ou ligue o ponto de acesso) para usar o editor.</string>
     <string name="settings_web_editor_devices">Computadores autorizados</string>
