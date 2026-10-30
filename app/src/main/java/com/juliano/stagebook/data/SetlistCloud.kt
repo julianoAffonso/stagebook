@@ -96,7 +96,10 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         Sent(code, sent, skipped)
     }
 
-    private fun post(topic: String, body: String): Boolean = runCatching {
+    /** Modo essencial (T19): "Internet" desligada, nada sai daqui (envio, caixa, recibos, pedidos, 3 palavras). */
+    private val internetOn get() = repository.library.value.look.internetOn
+
+    private fun post(topic: String, body: String): Boolean = if (!internetOn) false else runCatching {
         val c = URL("$SERVER/$topic").openConnection() as HttpURLConnection
         c.requestMethod = "POST"
         c.doOutput = true
@@ -114,6 +117,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     suspend fun receive(input: String): Received = withContext(Dispatchers.IO) {
         val code = ShareCode.normalize(input) ?: return@withContext Received.NotFound
         val keys = ShareCode.keys(code)
+        if (!internetOn) return@withContext Received.Offline
         val lines = runCatching {
             val c = URL("$SERVER/${keys.topic}/json?poll=1&since=all").openConnection() as HttpURLConnection
             c.connectTimeout = TIMEOUT_MS
@@ -245,7 +249,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         ShareCode.decrypt(ShareCode.keys(code).key, body)?.let { unpack(ACK_MARK, it) }?.let(::hello)
     }
 
-    private fun get(url: String): List<String>? = runCatching {
+    private fun get(url: String): List<String>? = if (!internetOn) null else runCatching {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = TIMEOUT_MS
         c.readTimeout = TIMEOUT_MS

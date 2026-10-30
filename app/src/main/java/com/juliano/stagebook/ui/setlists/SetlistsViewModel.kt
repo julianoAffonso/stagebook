@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +29,8 @@ data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRo
 class SetlistsViewModel @Inject constructor(private val repository: LibraryRepository, connectivity: Connectivity) : ViewModel() {
     /** "Digitar código" só com internet (só observa com a aba aberta). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val internetOn: StateFlow<Boolean> = repository.library.map { it.look.internetOn }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.internetOn)
 
     val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
         SetlistsUiState(!loaded, lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) })

@@ -1324,7 +1324,7 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.app_name)) {
         Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge)
     }
-    UpdateDetail(uiState, actions)
+    if (uiState.look.internetOn) UpdateDetail(uiState, actions)   // procurar versão nova usa a internet (T19)
     SettingsCard(stringResource(R.string.about_privacy)) {
         Text(stringResource(R.string.about_privacy_text), style = MaterialTheme.typography.bodyMedium)
     }

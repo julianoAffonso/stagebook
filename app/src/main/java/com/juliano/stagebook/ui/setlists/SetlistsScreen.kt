@@ -62,6 +62,7 @@ fun SetlistsRoute(
     onSync: (() -> Unit)? = null,
 ) {
     val online by viewModel.online.collectAsStateWithLifecycle()
+    val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val nameLimit by viewModel.nameLimit.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -74,6 +75,7 @@ fun SetlistsRoute(
         onPlay = onPlay,
         onScan = onScan,
         online = online,
+        internetOn = internetOn,
         onReceiveCode = onReceiveCode,
         received = received,
         onReceived = onReceived,
@@ -94,6 +96,7 @@ fun SetlistsScreen(
     modifier: Modifier = Modifier,
     onScan: () -> Unit = {},
     online: Boolean = false,
+    internetOn: Boolean = true,
     onReceiveCode: (String) -> Unit = {},
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -111,7 +114,7 @@ fun SetlistsScreen(
             )
             // importar um (QR ou código) no começo e a ação principal, novo setlist, no fim (igual à aba Músicas)
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync)
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->

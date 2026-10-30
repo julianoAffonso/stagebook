@@ -70,12 +70,14 @@ fun SongsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val online by viewModel.online.collectAsStateWithLifecycle()
+    val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
     BandResultMessage(viewModel.bandResult)
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
     SongsScreen(
         uiState = uiState,
         online = online,
+        internetOn = internetOn,
         query = query,
         onQueryChange = { query = it },
         onNewSong = { onEditSong(null) },
@@ -111,6 +113,7 @@ fun SongsScreen(
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     online: Boolean = true,
+    internetOn: Boolean = true,
     cloud: CloudUi? = null,
     onShareSongs: (List<String>) -> Unit = {},
     onDismissCloud: () -> Unit = {},
@@ -154,7 +157,7 @@ fun SongsScreen(
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 // secundário no começo, a ação principal no fim (como nos apps do Google)
                 // importar dos sites (com internet), ler o QR ou digitar o código: um botão, um menu
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync)
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
             }
             AnimatedVisibility(!online) {
@@ -205,7 +208,7 @@ fun SongsScreen(
     }
     if (sharing) {
         ShareSheet(
-            songs = selected.size, online = online, onQr = null,
+            songs = selected.size, online = online, onQr = null, internetOn = internetOn,
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,
