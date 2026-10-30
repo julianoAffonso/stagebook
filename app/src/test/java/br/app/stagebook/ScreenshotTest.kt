@@ -696,7 +696,7 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText("Sobre a normalização")[0].performClick()
+        compose.onAllNodesWithText("Sobre igualar o volume")[0].performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_5_sobre_normalizar.png")
     }

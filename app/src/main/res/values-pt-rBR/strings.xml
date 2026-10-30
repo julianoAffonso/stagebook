@@ -264,7 +264,7 @@
     <string name="backup_save_where">Guarde no Drive, no computador ou mande por mensagem. Vai mandar só as letras? Desmarque as backing tracks, que deixam o arquivo grande.</string>
     <string name="backup_open_card">Abrir arquivo</string>
     <string name="backup_open_info">Mostra o que o arquivo tem para você marcar. Abre também os .json antigos.</string>
-    <string name="backup_open_merge">Somar traz só as músicas e setlists que você não tem. Os seus ficam como estão.</string>
+    <string name="backup_open_merge">Juntar traz só as músicas e setlists que você não tem. Os seus ficam como estão.</string>
     <string name="backup_open_replace">Substituir troca suas músicas e setlists pelos do arquivo. Use para voltar um backup ou trocar de aparelho.</string>
     <string name="backup_open_other_device">Os ajustes do arquivo substituem os daqui. Em outro aparelho, autorize a banda de novo em Ajustes → Banda.</string>
     <string name="backup_share_card">Outras formas de compartilhar</string>
@@ -532,7 +532,7 @@
     <!-- mixer do player (Ajustes → Player) -->
     <string name="mixer_title">Mixer</string>
     <string name="mixer_monitor">Ver os níveis ao vivo</string>
-    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui. Toque no nome do canal para escolher a saída, normalizar, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
+    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui. Toque no nome do canal para escolher a saída, igualar o volume, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
     <string name="mixer_channels">Canais nos backing tracks</string>
     <string name="mixer_channel">Canal %1$d</string>
     <string name="mixer_pair">Canais %1$d e %2$d</string>
@@ -558,7 +558,7 @@
     <string name="mixer_output_one">Saída %1$d</string>
     <string name="mixer_output_pair">Saídas %1$d-%2$d</string>
     <string name="mixer_eq">EQ</string>
-    <string name="mixer_norm_about">Sobre a normalização</string>
+    <string name="mixer_norm_about">Sobre igualar o volume</string>
     <string name="mixer_edit">Editar o canal</string>
     <string name="mixer_done">Pronto</string>
     <string name="mixer_eq_switch">Equalizador ligado</string>
@@ -566,7 +566,7 @@
     <string name="mixer_center_pair">Juntar os dois lados em mono</string>
     <string name="mixer_center_short">Mono</string>
     <string name="mixer_join">Juntar com o canal %1$d em estéreo</string>
-    <string name="mixer_norm_help">Deixa o volume deste canal igual entre as músicas, sem você mexer no fader a cada uma.\n• Não: toca como foi gravado.\n• Volume: todas no mesmo volume percebido (LUFS), com pico abaixo de -1 dB. Bom para o backing.\n• Pico: todas com o mesmo pico (-6 dB). Bom para click e guia.\nO app mede cada backing track uma vez, antes do play.</string>
+    <string name="mixer_norm_help">Deixa o volume deste canal igual entre as músicas, sem você mexer no fader a cada uma.\n• Não: toca como foi gravado.\n• Média: todas no mesmo volume percebido (LUFS), com pico abaixo de -1 dB. Bom para o backing.\n• Pico: todas com o mesmo pico (-6 dB). Bom para click e guia.\nO app mede cada backing track uma vez, antes do play.</string>
     <string name="eq_title">Equalizador</string>
     <string name="eq_on">Equalizador ligado</string>
     <string name="eq_help">Uma curva só, aplicada em cada canal marcado com EQ, cada um separado. Um limitador segura os picos.</string>
