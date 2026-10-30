@@ -157,6 +157,8 @@ fun ScanSetlistScreen(
                 if (fromName.isNotEmpty()) stringResource(R.string.scan_from, fromName) else stringResource(
                     when {
                         (ui as? ScanUi.Review)?.songsOnly == true -> R.string.scan_songs_title
+                        // reviewing: "Review setlist", however it arrived (the camera and the code are done by now)
+                        ui is ScanUi.Review -> R.string.scan_review_title
                         byCode -> R.string.scan_code_title
                         else -> R.string.scan_title
                     },

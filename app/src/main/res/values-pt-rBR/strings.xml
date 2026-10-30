@@ -584,6 +584,7 @@
     <string name="sets_type_code">Digitar as 3 palavras</string>
     <string name="sets_type_code_offline">Digitar as 3 palavras (sem internet)</string>
     <string name="sets_code_hint">As 3 palavras com hífen, como 47-violao-lua</string>
+    <string name="scan_review_title">Conferir setlist</string>
     <string name="scan_code_title">Recebendo as 3 palavras</string>
     <string name="scan_code_loading">Buscando o setlist…</string>
     <string name="scan_code_not_found">Nada chegou com essas palavras. Confira. Elas valem por 12 horas depois do envio.</string>
