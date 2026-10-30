@@ -418,8 +418,8 @@
     <string name="settings_pedal_connected_short">connected</string>
     <string name="settings_pedal_disconnected_short">disconnected</string>
     <string name="settings_pedal_test_card">Button test</string>
-    <string name="settings_pedal_from_device">From: %1$s</string>
-    <string name="settings_pedal_from_device_builtin">From the device itself, not the pedal</string>
+    <string name="settings_pedal_from_device">from %1$s</string>
+    <string name="settings_pedal_from_device_builtin">from the device itself, not the pedal</string>
     <string name="settings_font_card">Lyrics size</string>
     <string name="settings_font_help">Applies to every song. On stage, pinching changes only the open song.</string>
     <string name="settings_colors">Colors</string>
@@ -444,7 +444,7 @@
     <string name="settings_screen_off_short">Goes dark as usual</string>
     <string name="settings_pair_pedal">Pair pedal</string>
     <string name="settings_pedal_test">Press a pedal button to see if it\'s connected.</string>
-    <string name="settings_pedal_last">Last button: %1$s · %2$s</string>
+    <string name="settings_pedal_last">Last button: %1$s</string>
     <string name="settings_pedal_next">next page</string>
     <string name="settings_pedal_previous">previous page</string>
     <string name="settings_pedal_unused">not used on stage</string>
