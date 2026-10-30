@@ -70,6 +70,7 @@ fun ImportButton(
     received: Int = 0,               // o que a banda mandou e não foi conferido
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,    // "Sincronizar com a banda" (só com alguém da banda)
+    internetOn: Boolean = true,      // modo essencial (T19): sem "Digitar as 3 palavras"
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
@@ -103,7 +104,7 @@ fun ImportButton(
                 onClick = { open = false; onScan() },
                 leadingIcon = { Icon(AppIcons.QrCode, null) },
             )
-            DropdownMenuItem(
+            if (internetOn) DropdownMenuItem(
                 text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
                 onClick = { open = false; typing = true },
                 leadingIcon = { Icon(AppIcons.Edit, null) },
@@ -182,13 +183,14 @@ fun ShareSheet(
     band: Int = 0,
     onBand: (Boolean) -> Unit = {},
     onSearch: (Boolean) -> Unit = {},
+    internetOn: Boolean = true,
 ) {
     DisposableEffect(Unit) {
         onSearch(true)
         onDispose { onSearch(false) }
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l), band, onBand)
+        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l), band, onBand, internetOn)
     }
 }
 
@@ -202,6 +204,7 @@ fun ShareOptions(
     modifier: Modifier = Modifier,
     band: Int = 0,
     onBand: (Boolean) -> Unit = {},
+    internetOn: Boolean = true,   // modo essencial (T19): sem o envio pela internet nem o aviso de "sem internet"
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -212,13 +215,14 @@ fun ShareOptions(
         }
         // QR na tela: só no setlist (leva só os títulos; músicas avulsas não cabem num QR)
         onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), it) }
-        if (online) {
+        if (!internetOn) Unit
+        else if (online) {
             ShareOption(AppIcons.Public, stringResource(R.string.share_internet), stringResource(R.string.share_internet_hint)) { onInternet(withSongs) }
         } else {
             Text(stringResource(if (onQr != null) R.string.share_offline else R.string.share_offline_songs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         // no setlist dá para mandar só os títulos (banda e internet); músicas avulsas sempre vão inteiras
-        if (onQr != null && (online || band > 0)) {
+        if (onQr != null && ((online && internetOn) || band > 0)) {
             SwitchRow(
                 pluralStringResource(R.plurals.share_with_songs, songs, songs),
                 withSongs,

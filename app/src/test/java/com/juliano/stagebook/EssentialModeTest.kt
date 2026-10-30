@@ -86,4 +86,25 @@ class EssentialModeTest {
         assertEquals(com.juliano.stagebook.data.BandConduct.Role.None, conduct.role.value)
         assertFalse(link.running.value)
     }
+
+    @Test fun `internet desligada - nada sai para a internet da banda`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        repo.updateLook { it.copy(internetOn = false) }
+        withTimeout(5_000) { repo.library.first { !it.look.internetOn } }
+        val cloud = com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context))
+        assertEquals(com.juliano.stagebook.data.SetlistCloud.Received.Offline, cloud.receive(com.juliano.stagebook.domain.ShareCode.generate()))
+        assertTrue(cloud.acks(com.juliano.stagebook.domain.ShareCode.generate()).isEmpty())
+    }
+
+    @Test fun `internet desligada - compartilhar fica com o QR e sem o aviso de sem internet`() {
+        compose.setContent {
+            com.juliano.stagebook.ui.theme.StagebookTheme {
+                com.juliano.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {}, internetOn = false)
+            }
+        }
+        compose.onNodeWithText("QR na tela").assertExists()
+        compose.onNodeWithText("Enviar pela internet").assertDoesNotExist()
+        compose.onNodeWithText("Sem internet", substring = true).assertDoesNotExist()
+    }
 }

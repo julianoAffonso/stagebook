@@ -134,12 +134,13 @@ class ImportViewModel @Inject constructor(
             var year = PageMeta.yearOf(page)
             // ano do primeiro lançamento no MusicBrainz (o site costuma não ter); sem internet boa,
             // não segura o vocalista no "carregando" mais que 8 s
-            if (meta.title.isNotEmpty()) musicBrainz.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { m ->
+            val net = repository.library.value.look.internetOn   // modo essencial (T19): sem consultas
+            if (net && meta.title.isNotEmpty()) musicBrainz.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { m ->
                 if (artist.isBlank()) artist = m.artist
                 if (m.year.isNotEmpty()) year = m.year
             }
             // sem BPM na página nem no texto: o Deezer sugere (o músico confere nos Dados da música)
-            if (Chords.tempo(text) == 0 && meta.title.isNotEmpty()) deezer.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { bpm ->
+            if (net && Chords.tempo(text) == 0 && meta.title.isNotEmpty()) deezer.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { bpm ->
                 text = Chords.setDirective(text, "tempo", bpm.toString())
             }
             draft.put(ImportDraft.Draft(meta.title, artist, year, text))

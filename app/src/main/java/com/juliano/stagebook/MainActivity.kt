@@ -102,7 +102,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        updateOffer.onEnter()   // versão nova do app: procura em segundo plano e pergunta fora do palco
+        // versão nova do app: procura em segundo plano e pergunta fora do palco (não no modo essencial sem internet, T19)
+        if (repository.library.value.look.internetOn) updateOffer.onEnter()
         band.setForeground(true)   // banda na rede: só com o app na frente
         bandInternet.onAppOpen()   // banda pela internet: confere a caixa uma vez, ao abrir
     }

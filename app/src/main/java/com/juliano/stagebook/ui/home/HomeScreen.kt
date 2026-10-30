@@ -84,7 +84,8 @@ fun HomeScreen(
     val hasBand by inboxVm.hasBand.collectAsStateWithLifecycle()
     val message = LocalAppMessage.current
     val syncing = androidx.compose.ui.res.stringResource(R.string.import_syncing)
-    val onSync: (() -> Unit)? = if (hasBand) {
+    val canSync by homeVm.canSync.collectAsStateWithLifecycle()
+    val onSync: (() -> Unit)? = if (hasBand && canSync) {
         {
             inboxVm.syncNow()
             message.show(syncing)

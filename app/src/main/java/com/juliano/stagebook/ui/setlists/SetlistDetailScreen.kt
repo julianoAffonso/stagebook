@@ -97,6 +97,7 @@ fun SetlistDetailRoute(
         )
     }
     val online by viewModel.online.collectAsStateWithLifecycle()
+    val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
     val cloud by viewModel.cloud.collectAsStateWithLifecycle()
     val codeActions = rememberCodeActions()
     val bandOnline by viewModel.bandOnline.collectAsStateWithLifecycle()
@@ -105,6 +106,7 @@ fun SetlistDetailRoute(
         uiState = uiState,
         qr = qr,
         online = online,
+        internetOn = internetOn,
         cloud = cloud,
         onSendInternet = viewModel::sendInternet,
         onDismissCloud = viewModel::dismissCloud,
@@ -144,6 +146,7 @@ fun SetlistDetailScreen(
     onDeleteSetlist: () -> Unit,
     modifier: Modifier = Modifier,
     online: Boolean = false,
+    internetOn: Boolean = true,
     cloud: CloudUi? = null,
     onSendInternet: (withSongs: Boolean) -> Unit = {},
     onDismissCloud: () -> Unit = {},
@@ -274,6 +277,7 @@ fun SetlistDetailScreen(
         ShareSheet(
             songs = uiState.items.count { !it.missing },
             online = online,
+            internetOn = internetOn,
             onQr = { sharing = false; onShowQr() },
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
             onDismiss = { sharing = false },

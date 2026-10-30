@@ -16,4 +16,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(repository: LibraryRepository) : ViewModel() {
     val essential: StateFlow<Boolean> = repository.library.map { it.look.essential }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.essential)
+
+    /** "Sincronizar com a banda" usa a rede local e a internet: some com as duas desligadas. */
+    val canSync: StateFlow<Boolean> = repository.library.map { it.look.bandOn || it.look.internetOn }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 }

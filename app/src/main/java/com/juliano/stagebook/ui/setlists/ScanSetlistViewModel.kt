@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.setlists
 
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
@@ -96,7 +97,7 @@ class ScanSetlistViewModel @Inject constructor(
     private fun senderId(): String? = (inbox.get(route.inbox)?.fromId ?: sender?.id)?.takeIf(trust::isMember)
 
     /** Nome de quem mandou, quando dá para pedir pela internet as que faltam (é da banda e há internet); senão null. */
-    val internetFrom: StateFlow<String?> = connectivity.online.map { on ->
+    val internetFrom: StateFlow<String?> = combine(connectivity.online, repository.library.map { it.look.internetOn }) { a, b -> a && b }.map { on ->
         if (!on) null else senderId()?.let { id -> trust.member(id)?.name ?: fromName.ifBlank { null } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

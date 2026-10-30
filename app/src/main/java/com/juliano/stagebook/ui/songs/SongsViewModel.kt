@@ -55,7 +55,9 @@ class SongsViewModel @Inject constructor(
     private val bandTrust: BandTrust,
     private val bandInternet: BandInternet,
 ) : ViewModel() {
-    private val internet = connectivity.online
+    val internetOn: StateFlow<Boolean> = repository.library.map { it.look.internetOn }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.internetOn)
+    private val internet = combine(connectivity.online, internetOn) { a, b -> a && b }   // modo essencial (T19)
     private fun connectivityNow() = connectivity.isOnline()
     private val _cloud = MutableStateFlow<CloudUi?>(null)
     val cloud: StateFlow<CloudUi?> = _cloud
