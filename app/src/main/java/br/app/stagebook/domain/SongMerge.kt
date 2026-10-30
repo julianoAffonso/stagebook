@@ -26,19 +26,14 @@ object SongMerge {
     fun changes(mine: String, incoming: String): List<Change> {
         val a = LyricsView.view(mine).split('\n').map { it.trimEnd() }
         val b = LyricsView.view(incoming).split('\n').map { it.trimEnd() }
-        val t = Array(a.size + 1) { IntArray(b.size + 1) }
-        for (i in a.indices.reversed()) for (j in b.indices.reversed()) {
-            t[i][j] = if (a[i] == b[j]) t[i + 1][j + 1] + 1 else maxOf(t[i + 1][j], t[i][j + 1])
-        }
+        // the equal lines (LineDiff); between two of them, what left mine and what came in theirs
         val out = ArrayList<Change>()
         var i = 0
         var j = 0
-        while (i < a.size || j < b.size) {
-            when {
-                i < a.size && j < b.size && a[i] == b[j] -> { i++; j++ }
-                j < b.size && (i == a.size || t[i][j + 1] > t[i + 1][j]) -> { if (b[j].isNotBlank()) out += Change(Kind.ADDED, b[j]); j++ }
-                else -> { if (a[i].isNotBlank()) out += Change(Kind.REMOVED, a[i]); i++ }
-            }
+        for ((pi, pj) in LineDiff.pairs(a, b) + (a.size to b.size)) {
+            while (i < pi) { if (a[i].isNotBlank()) out += Change(Kind.REMOVED, a[i]); i++ }
+            while (j < pj) { if (b[j].isNotBlank()) out += Change(Kind.ADDED, b[j]); j++ }
+            i++; j++
         }
         return out
     }

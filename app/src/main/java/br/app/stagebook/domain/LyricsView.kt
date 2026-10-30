@@ -93,22 +93,6 @@ object LyricsView {
         return sb.toString()
     }
 
-    /** Pairs (old, new) of equal lines, in order (longest common subsequence). */
-    private fun lcs(a: List<String>, b: List<String>): List<Pair<Int, Int>> {
-        val t = Array(a.size + 1) { IntArray(b.size + 1) }
-        for (i in a.indices.reversed()) for (j in b.indices.reversed()) {
-            t[i][j] = if (a[i] == b[j]) t[i + 1][j + 1] + 1 else maxOf(t[i + 1][j], t[i][j + 1])
-        }
-        val out = ArrayList<Pair<Int, Int>>()
-        var i = 0
-        var j = 0
-        while (i < a.size && j < b.size) {
-            when {
-                a[i] == b[j] -> { out += i to j; i++; j++ }
-                t[i + 1][j] >= t[i][j + 1] -> i++
-                else -> j++
-            }
-        }
-        return out
-    }
+    /** Pairs (old, new) of equal lines, in order (see [LineDiff]). */
+    private fun lcs(a: List<String>, b: List<String>): List<Pair<Int, Int>> = LineDiff.pairs(a, b)
 }
