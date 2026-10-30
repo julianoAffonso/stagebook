@@ -97,9 +97,9 @@
     </plurals>
 
     <!-- import -->
-    <string name="import_address_hint">Song and artist, or site address</string>
+    <string name="import_address_hint">Song, artist or address</string>
     <string name="import_go">Search</string>
-    <string name="import_this">Import these lyrics</string>
+    <string name="import_this">Import</string>
     <string name="import_busy">Looking up artist and year…</string>
     <string name="import_not_found">Couldn\'t find the lyrics on this page. Open the song\'s page or select the lyrics with your finger and tap Import.</string>
     <string name="import_unreadable">Couldn\'t read this page.</string>
@@ -595,6 +595,11 @@
         <item quantity="one">Add %1$d song</item>
         <item quantity="other">Add %1$d songs</item>
     </plurals>
+    <string name="scan_songs_add_update">Add %1$d and update %2$d</string>
+    <plurals name="scan_songs_update">
+        <item quantity="one">Update %1$d song</item>
+        <item quantity="other">Update %1$d songs</item>
+    </plurals>
     <plurals name="songs_added">
         <item quantity="one">%1$d song added</item>
         <item quantity="other">%1$d songs added</item>
@@ -618,7 +623,6 @@
     <string name="scan_version_other">You have another version of this song.</string>
     <string name="scan_add_lyrics">Accept</string>
     <string name="scan_keep_mine">Keep mine</string>
-    <string name="scan_update_chosen">Update the chosen ones</string>
     <string name="scan_lyrics_only_row">Came with lyrics only, no chords.</string>
     <string name="scan_search_chords">Find with chords</string>
     <string name="scan_accept_lyrics">Accept</string>
@@ -723,7 +727,7 @@
     <string name="band_nearby">On the network now</string>
     <string name="band_no_wifi">Get on the venue\'s Wi-Fi, or a phone\'s hotspot, to find the band.</string>
     <string name="band_searching">Searching… Open Settings → Band on the other device too.</string>
-    <string name="band_is_member">In the band</string>
+    <string name="band_online">Online now</string>
     <string name="band_join">Ask to join</string>
     <string name="band_waiting">Waiting for the other device to allow…</string>
     <string name="band_denied">Not allowed</string>
@@ -757,5 +761,5 @@
         <item quantity="one">Received from the band (%1$d)</item>
         <item quantity="other">Received from the band (%1$d)</item>
     </plurals>
-    <string name="scan_from">Received from %1$s</string>
+    <string name="scan_from">Sent by %1$s</string>
 </resources>

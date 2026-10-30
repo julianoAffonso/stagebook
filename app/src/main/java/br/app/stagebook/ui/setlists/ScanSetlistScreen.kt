@@ -261,7 +261,12 @@ private fun Review(
         Text(
             pluralStringResource(R.plurals.scan_found, ui.rows.size, found, ui.rows.size),
             style = MaterialTheme.typography.titleSmall,
-            color = if (found < ui.rows.size) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            // red only when a song really is missing; when only a choice is pending, the same orange as that row
+            color = when {
+                toImport > 0 -> MaterialTheme.colorScheme.error
+                found < ui.rows.size -> MaterialTheme.colorScheme.tertiary
+                else -> MaterialTheme.colorScheme.primary
+            },
         )
         LazyColumn(
             Modifier.weight(1f, fill = false),
@@ -347,7 +352,8 @@ private fun SongsReview(
         LazyColumn(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.s)) {
             itemsIndexed(ui.rows) { i, row ->
                 Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    // the icon sits on the title line (centered, it floated next to the choice buttons)
+                    Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                         val (icon, tint, note) = when {
                             row.wantChords || (row.carried && row.lyricsOnly) -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
                             row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
@@ -355,7 +361,7 @@ private fun SongsReview(
                             row.found -> Triple(AppIcons.Check, MaterialTheme.colorScheme.onSurfaceVariant, R.string.scan_song_have)
                             else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
                         }
-                        Icon(icon, null, Modifier.size(20.dp), tint = tint)
+                        Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = tint)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             Text(row.title, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
@@ -371,8 +377,14 @@ private fun SongsReview(
                 }
             }
         }
+        // the label says everything the button does: new songs in, chosen versions updated
         ActionButton(
-            if (new > 0) pluralStringResource(R.plurals.scan_songs_add, new, new) else stringResource(R.string.scan_update_chosen), onAdd,
+            when {
+                new > 0 && updates > 0 -> stringResource(R.string.scan_songs_add_update, new, updates)
+                new > 0 -> pluralStringResource(R.plurals.scan_songs_add, new, new)
+                else -> pluralStringResource(R.plurals.scan_songs_update, updates, updates)
+            },
+            onAdd,
             Modifier.fillMaxWidth().padding(bottom = Spacing.m), icon = AppIcons.Check, enabled = new > 0 || updates > 0,
         )
     }
@@ -500,7 +512,8 @@ private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean,
 // action inside a review row: icon + text with no background (the app's button pattern, T35)
 @Composable
 private fun RowAction(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.m, vertical = Spacing.xs)) {
+    // no start padding: the icon lines up with the row's text above
+    TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 0.dp, end = Spacing.m, top = Spacing.xs, bottom = Spacing.xs)) {
         Icon(icon, null, Modifier.size(18.dp))
         Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = Spacing.s))
     }

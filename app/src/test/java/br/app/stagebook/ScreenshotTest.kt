@@ -795,7 +795,7 @@ class ScreenshotTest {
             br.app.stagebook.ui.band.NearbyUi("3", "Baixo", member = false),
             br.app.stagebook.ui.band.NearbyUi("4", "Bateria", member = true, otherVersion = "0.2.90"),
         ),
-        members = listOf(br.app.stagebook.ui.band.MemberUi("1", "Celular da Ana", 0)),
+        members = listOf(br.app.stagebook.ui.band.MemberUi("1", "Celular da Ana", 0), br.app.stagebook.ui.band.MemberUi("4", "Bateria", 0)),
     )
 
     @Test @Config(qualifiers = "pt-rBR-w412dp-h1600dp-port-xxhdpi")

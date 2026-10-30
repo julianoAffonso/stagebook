@@ -97,9 +97,9 @@
     </plurals>
 
     <!-- importar -->
-    <string name="import_address_hint">Música e artista, ou endereço do site</string>
+    <string name="import_address_hint">Música, artista ou endereço</string>
     <string name="import_go">Buscar</string>
-    <string name="import_this">Importar esta letra</string>
+    <string name="import_this">Importar</string>
     <string name="import_busy">Buscando artista e ano…</string>
     <string name="import_not_found">Não achei a letra nesta página. Abra a página da música ou selecione a letra com o dedo e toque em Importar.</string>
     <string name="import_unreadable">Não consegui ler esta página.</string>
@@ -593,6 +593,11 @@
         <item quantity="one">Adicionar %1$d música</item>
         <item quantity="other">Adicionar %1$d músicas</item>
     </plurals>
+    <string name="scan_songs_add_update">Adicionar %1$d e atualizar %2$d</string>
+    <plurals name="scan_songs_update">
+        <item quantity="one">Atualizar %1$d música</item>
+        <item quantity="other">Atualizar %1$d músicas</item>
+    </plurals>
     <plurals name="songs_added">
         <item quantity="one">%1$d música adicionada</item>
         <item quantity="other">%1$d músicas adicionadas</item>
@@ -616,7 +621,6 @@
     <string name="scan_version_other">Você tem outra versão desta música.</string>
     <string name="scan_add_lyrics">Aceitar</string>
     <string name="scan_keep_mine">Fica a minha</string>
-    <string name="scan_update_chosen">Atualizar as escolhidas</string>
     <string name="scan_lyrics_only_row">Veio só com a letra, sem cifra.</string>
     <string name="scan_search_chords">Buscar com cifra</string>
     <string name="scan_accept_lyrics">Aceitar</string>
@@ -721,7 +725,7 @@
     <string name="band_nearby">Na rede agora</string>
     <string name="band_no_wifi">Entre no Wi-Fi do lugar, ou no ponto de acesso de um celular, para achar a banda.</string>
     <string name="band_searching">Procurando… Abra Ajustes → Banda no outro aparelho também.</string>
-    <string name="band_is_member">Da banda</string>
+    <string name="band_online">Na rede agora</string>
     <string name="band_join">Pedir para entrar</string>
     <string name="band_waiting">Esperando o outro aparelho autorizar…</string>
     <string name="band_denied">Não autorizado</string>
@@ -755,5 +759,5 @@
         <item quantity="one">Recebido da banda (%1$d)</item>
         <item quantity="other">Recebidos da banda (%1$d)</item>
     </plurals>
-    <string name="scan_from">Recebido de %1$s</string>
+    <string name="scan_from">Enviado por %1$s</string>
 </resources>
