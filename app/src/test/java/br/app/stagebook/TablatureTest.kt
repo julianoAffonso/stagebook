@@ -48,4 +48,9 @@ class TablatureTest {
         val lyricsOnly = br.app.stagebook.ui.stage.stageLines(text, names, androidx.compose.ui.graphics.Color.Cyan, true, br.app.stagebook.ui.stage.ChordLook(false, 0.8f, androidx.compose.ui.graphics.Color.Yellow))
         assertTrue(lyricsOnly.none { it.text.text.contains("|---") })
     }
+
+    @Test fun `a long run of digits doesn't crash transposing and stays as it is`() {
+        val line = "e|12121212121212---3---|"
+        assertEquals("e|12121212121212---5---|", br.app.stagebook.domain.Tablature.shiftLine(line, 2))
+    }
 }

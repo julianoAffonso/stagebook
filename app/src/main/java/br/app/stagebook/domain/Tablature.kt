@@ -42,6 +42,8 @@ object Tablature {
         return text.split('\n').mapIndexed { i, line -> if (flags[i]) shiftLine(line, semitones) else line }.joinToString("\n")
     }
 
+    private const val MAX_FRET_DIGITS = 2
+
     /** A tab line with the frets shifted; the string name at the start (e, B, G…) isn't a fret. */
     fun shiftLine(line: String, semitones: Int): String {
         val bar = line.indexOfFirst { it == '|' || it == ':' }.coerceAtLeast(0)
@@ -52,7 +54,11 @@ object Tablature {
             if (!c.isDigit()) { out.append(c); i++; continue }
             var j = i
             while (j < line.length && line[j].isDigit()) j++
-            var fret = line.substring(i, j).toInt() + semitones
+            // a fret has 1 or 2 digits; a longer run (pasted junk, a phone number) stays as it is instead of crashing
+            // the app when transposing (audit 30/10)
+            val digits = line.substring(i, j)
+            if (digits.length > MAX_FRET_DIGITS) { out.append(digits); i = j; continue }
+            var fret = digits.toInt() + semitones
             while (fret < 0) fret += 12
             val now = fret.toString()
             var width = j - i
