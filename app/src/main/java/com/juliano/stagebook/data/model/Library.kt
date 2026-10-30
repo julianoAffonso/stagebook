@@ -99,6 +99,9 @@ enum class StageColumns {
     @SerialName("two") TWO,
 }
 
+/** Modo essencial (T19): banda, internet, player e extras do palco desligados; fica letra, cifra (com o desenho) e pedal. */
+val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !extrasOn
+
 /** Aparência do palco: vale para todas as músicas. Cores em ARGB. */
 @Immutable
 @Serializable
@@ -142,6 +145,10 @@ data class Look(
     val chordTap: Boolean = true,
     // modo player (faixas, saída USB, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço
     val playerMode: Boolean = false,
+    // modo essencial (T19): o que fica ligado. Desligado, some da tela e para de rodar. As três e o player desligados = modo essencial
+    val bandOn: Boolean = true,       // banda na rede: procura, envio pela banda, Quem conduz
+    val internetOn: Boolean = true,   // 3 palavras, caixa da banda, reenvios, versão nova, BPM e dados da música
+    val extrasOn: Boolean = true,     // palco: som do acorde, Detalhes (campo harmônico), metrônomo, Now Playing
     // mixer do player (Ajustes → Player): do app, vale para todos os backing tracks; por música só a medição
     val mixer: com.juliano.stagebook.domain.MixerConfig = com.juliano.stagebook.domain.MixerConfig(),
     // importação: os sites de cada tipo; o primeiro de cada lista é o padrão (onde o importador abre)

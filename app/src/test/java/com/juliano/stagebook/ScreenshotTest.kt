@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
+import com.juliano.stagebook.ui.theme.Spacing
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
@@ -296,6 +297,20 @@ class ScreenshotTest {
         compose.onNodeWithText("Detalhes").performClick()
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes_7.png")
+    }
+
+    @Test fun settingsEssentialTablet() = shoot("tablet_5_ajustes_essencial") {
+        val look = settings.look.copy(bandOn = false, internetOn = false, extrasOn = false, playerMode = false)
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
+    }
+
+    @Test fun essentialBannerTablet() = shoot("tablet_1_musicas_essencial") {
+        HomeScaffold(HomeTab.SONGS, {}) { m ->
+            androidx.compose.foundation.layout.Column(m) {
+                com.juliano.stagebook.ui.home.EssentialBanner({}, androidx.compose.ui.Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
+                Songs(androidx.compose.ui.Modifier.weight(1f))
+            }
+        }
     }
 
     @Test fun settingsScreenTablet() = shoot("tablet_5_ajustes_tela") {

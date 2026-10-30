@@ -196,6 +196,15 @@ class SettingsViewModel @Inject constructor(
         repository.updateLook { it.copy(playerMode = on) }
         if (!on) com.juliano.stagebook.player.StagePlayer.turnOff()   // desligado, nada do player fica rodando
     }
+    fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on) }
+    fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on) }
+    fun setExtrasOn(on: Boolean) = repository.updateLook { it.copy(extrasOn = on) }
+
+    /** Ligar desliga as quatro (player incluso); desligar religa banda, internet e extras (o player continua como estava: começa desligado). */
+    fun setEssential(on: Boolean) {
+        repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode) }
+        if (on) com.juliano.stagebook.player.StagePlayer.turnOff()
+    }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
     fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }

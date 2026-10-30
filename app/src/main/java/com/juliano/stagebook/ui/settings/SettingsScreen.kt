@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.model.essential
 import androidx.core.net.toUri
 import com.juliano.stagebook.data.AppLinks
 import androidx.compose.runtime.DisposableEffect
@@ -282,6 +283,10 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
                 onAutoScroll = viewModel::setAutoScroll,
                 onChordPlay = viewModel::setChordPlay,
                 onAnnounce = viewModel::setAnnounce,
+                onEssential = viewModel::setEssential,
+                onBandOn = viewModel::setBandOn,
+                onInternetOn = viewModel::setInternetOn,
+                onExtrasOn = viewModel::setExtrasOn,
                 onBackup = { parts ->
                     backupParts = parts
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${com.juliano.stagebook.data.Backup.EXTENSION}")
@@ -350,6 +355,10 @@ data class SettingsActions(
     val onAutoScroll: (Int) -> Unit = {},
     val onChordPlay: (com.juliano.stagebook.data.model.ChordPlayMode) -> Unit = {},
     val onAnnounce: (Boolean) -> Unit = {},
+    val onEssential: (Boolean) -> Unit = {},
+    val onBandOn: (Boolean) -> Unit = {},
+    val onInternetOn: (Boolean) -> Unit = {},
+    val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<com.juliano.stagebook.data.Backup.Part>) -> Unit = {},
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
@@ -362,6 +371,7 @@ data class SettingsActions(
 
 /** Seções dos ajustes: lista à esquerda no tablet, uma tela por seção no celular. */
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
+    ESSENTIAL(R.string.essential_title, AppIcons.Eco),   // primeiro: muda o app inteiro
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
     CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     PLAYER(R.string.settings_player, AppIcons.Play),
@@ -467,6 +477,7 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
 private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): String = when (s) {
     SettingsSection.BAND -> if (band.members.isEmpty()) stringResource(R.string.settings_band_none)
     else pluralStringResource(R.plurals.settings_band_short, band.members.size, band.members.size)
+    SettingsSection.ESSENTIAL -> stringResource(if (ui.look.essential) R.string.essential_on_short else R.string.essential_off_short)
     SettingsSection.LYRICS -> stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
         when (ui.look.columns) {
             StageColumns.AUTO -> ""
@@ -497,6 +508,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
 private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         when (section) {
+            SettingsSection.ESSENTIAL -> EssentialDetail(uiState.look, actions)
             SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions)
             SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
             SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
@@ -1021,6 +1033,20 @@ private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = { url?.let { onDone(ImportSite(ImportSiteRules.nameOf(it), it)) } }, enabled = url != null) { Text(stringResource(R.string.settings_site_add_ok)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
+}
+
+/** Modo essencial (T19): uma chave para tudo e uma para cada parte; mexer numa parte já tira do modo essencial. */
+@Composable
+private fun EssentialDetail(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.essential_title), help = stringResource(R.string.essential_help)) {
+        SwitchRow(stringResource(R.string.essential_switch), look.essential, actions.onEssential, detail = stringResource(R.string.essential_keeps))
+    }
+    SettingsCard(stringResource(R.string.essential_parts)) {
+        SwitchRow(stringResource(R.string.essential_band), look.bandOn, actions.onBandOn, detail = stringResource(R.string.essential_band_detail))
+        SwitchRow(stringResource(R.string.essential_internet), look.internetOn, actions.onInternetOn, detail = stringResource(R.string.essential_internet_detail))
+        SwitchRow(stringResource(R.string.essential_player), look.playerMode, actions.onPlayerMode, detail = stringResource(R.string.essential_player_detail))
+        SwitchRow(stringResource(R.string.essential_extras), look.extrasOn, actions.onExtrasOn, detail = stringResource(R.string.essential_extras_detail))
+    }
 }
 
 /** Modo player: desligado, o app é só letra e cifra e nada do player gasta CPU ou memória. */
