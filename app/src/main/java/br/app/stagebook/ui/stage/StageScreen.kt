@@ -1,7 +1,6 @@
 package br.app.stagebook.ui.stage
 
 import androidx.compose.foundation.clickable
-import br.app.stagebook.ui.components.KeyCapoControls
 import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
@@ -1357,6 +1356,60 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
     }
 }
 
+/**
+ * Key and capo (small window below "Key G", in the same style as the metronome and auto-scroll ones): − value + for
+ * each; every change is saved in the song right away. On keyboard only the key (it doesn't use a capo).
+ */
+@Composable
+private fun KeyCapoDialog(text: String, showCapo: Boolean, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, onDismiss: () -> Unit) {
+    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+    val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
+    val key = remember(text) { Chords.key(text).ifEmpty { Chords.detectKey(text) } }
+    val capo = remember(text) { Chords.capo(text) }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = BelowAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(stringResource(if (showCapo) R.string.stage_key_capo_title else R.string.editor_key), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
+                if (showCapo) Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
+                    Text(key.ifEmpty { "–" }, style = MaterialTheme.typography.headlineSmall)
+                    IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
+                }
+                if (showCapo) {
+                    Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                        IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
+                        Text(if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo), style = MaterialTheme.typography.headlineSmall)
+                        IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
+                    }
+                }
+                Text(stringResource(R.string.stage_key_capo_saved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** Places the small window below the badges, aligned to their right, without leaving the screen. */
+private class BelowAnchor(private val gap: Int) : androidx.compose.ui.window.PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: androidx.compose.ui.unit.IntRect,
+        windowSize: androidx.compose.ui.unit.IntSize,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        popupContentSize: androidx.compose.ui.unit.IntSize,
+    ): IntOffset = IntOffset(
+        (anchorBounds.right - popupContentSize.width).coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
+        (anchorBounds.bottom + gap).coerceAtMost((windowSize.height - popupContentSize.height).coerceAtLeast(0)),
+    )
+}
+
 @Composable
 private fun SongKeyBadges(
     text: String,
@@ -1402,9 +1455,7 @@ private fun SongKeyBadges(
                 Text(stringResource(R.string.stage_keyboard_capo, keyboardCapo), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
         }
-        DropdownMenu(expanded = adjusting, onDismissRequest = { adjusting = false }) {
-            KeyCapoControls(text, onTranspose, onCapo, Modifier.padding(horizontal = Spacing.m), showCapo = showCapo, stacked = true)
-        }
+        if (adjusting) KeyCapoDialog(text, showCapo, onTranspose, onCapo, onDismiss = { adjusting = false })
     }
 }
 

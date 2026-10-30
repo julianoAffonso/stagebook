@@ -23,8 +23,7 @@ import br.app.stagebook.ui.theme.Spacing
 /**
  * The song's key and capo, both the same way (user's request, 29/10): − and + on the key transpose a half step
  * (rewriting the chords and the saved key); − and + on the capo change the fret (the chord diagrams stay the same).
- * With no saved key, shows the one computed from the chords, dimmed. Used in the editor (one line, [stacked] false)
- * and in the stage menu that opens from "Key G" (one under the other).
+ * With no saved key, shows the one computed from the chords, dimmed.
  */
 @Composable
 fun KeyCapoControls(
@@ -33,7 +32,6 @@ fun KeyCapoControls(
     onCapo: (Int) -> Unit,
     modifier: Modifier = Modifier,
     showCapo: Boolean = true,
-    stacked: Boolean = false,
 ) {
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
     val saved = remember(text) { Chords.key(text) }
@@ -70,15 +68,10 @@ fun KeyCapoControls(
         )
     }
     Column(modifier) {
-        if (stacked) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             keyStepper()
+            Spacer(Modifier.weight(1f))
             if (showCapo) capoStepper()
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                keyStepper()
-                Spacer(Modifier.weight(1f))
-                if (showCapo) capoStepper()
-            }
         }
         // with a capo: the diagrams stay the chart's, but the sound goes up (user's request, 29/10)
         if (showCapo && capo > 0) {
@@ -128,7 +121,7 @@ private const val SAMPLE = "{key: G}\n{capo: 2}\n[G]Saio cedo pela [D]rua"
 private fun KeyCapoSamples() {
     Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Spacing.m)) {
         KeyCapoControls(SAMPLE, {}, {})
-        KeyCapoControls(SAMPLE, {}, {}, stacked = true)
+        KeyCapoControls(SAMPLE, {}, {}, showCapo = false)
     }
 }
 

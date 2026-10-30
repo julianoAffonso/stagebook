@@ -309,6 +309,8 @@
     <string name="editor_capo_sounds">Shapes in %1$s. With the capo on fret %2$d, it sounds in %3$s.</string>
     <string name="editor_capo_sounds_nokey">Shapes as written. With the capo on fret %1$d, everything sounds %1$d half steps higher.</string>
     <string name="stage_key_adjust">change key and capo</string>
+    <string name="stage_key_capo_title">Key and capo</string>
+    <string name="stage_key_capo_saved">Saved in the song.</string>
     <string name="stage_capo_short">Capo %1$d</string>
     <string name="stage_key_short">Key %1$s</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
