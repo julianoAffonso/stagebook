@@ -304,6 +304,14 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
     }
 
+    @Test fun essentialAlertTablet() = shoot("tablet_1_aviso_essencial") {
+        HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+        com.juliano.stagebook.ui.components.InfoDialog(
+            androidx.compose.ui.res.stringResource(R.string.essential_alert_title), androidx.compose.ui.res.stringResource(R.string.essential_alert_text),
+            onDismiss = {}, neverAgain = {},
+        )
+    }
+
     @Test fun essentialBannerTablet() = shoot("tablet_1_musicas_essencial") {
         HomeScaffold(HomeTab.SONGS, {}) { m ->
             androidx.compose.foundation.layout.Column(m) {
@@ -538,6 +546,18 @@ class ScreenshotTest {
     )
 
     @Test fun stageBadgesTablet() = shoot("tablet_6_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
+
+    // T19: música com backing track e o player desligado no modo essencial: o play e o selo da faixa somem
+    @Test fun `player desligado - musica com backing track fica sem o play`() {
+        compose.setContent { StageScreen(stageBadges.copy(look = stageBadges.look.copy(playerMode = false)), 0, 0, { _, _ -> }, onBack = {}) }
+        compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Escolher o backing track desta música").assertDoesNotExist()
+    }
+
+    @Test fun `player ligado - musica com backing track mostra o play`() {
+        compose.setContent { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
+        compose.onNodeWithContentDescription("Tocar o backing track").assertExists()
+    }
 
     @Test @Config(qualifiers = PHONE)
     fun stageBadgesPhone() = shoot("celular_7_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }

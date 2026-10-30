@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -106,5 +107,36 @@ class EssentialModeTest {
         compose.onNodeWithText("QR na tela").assertExists()
         compose.onNodeWithText("Enviar pela internet").assertDoesNotExist()
         compose.onNodeWithText("Sem internet", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun `aviso ao abrir - nao mostrar de novo vale ate o modo desligar`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val vm = SettingsViewModel(
+            repo, context, AppUpdater(context),
+            com.juliano.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
+            com.juliano.stagebook.data.Backup(context, repo, com.juliano.stagebook.data.TrackStore(context)),
+        )
+        suspend fun until(ok: (Look) -> Boolean) = withTimeout(5_000) { repo.library.first { ok(it.look) } }.look
+        vm.setEssential(true)
+        until { it.essential }
+        repo.updateLook { it.copy(essentialAlertOff = true) }   // "Não mostrar de novo"
+        until { it.essentialAlertOff }
+        vm.setExtrasOn(true)   // religar uma parte também sai do modo
+        assertFalse(until { it.extrasOn }.essentialAlertOff)
+        vm.setEssential(true)
+        assertFalse(until { it.essential }.essentialAlertOff)   // ligou de novo: o aviso volta
+    }
+
+    @Test fun `aviso com nao mostrar de novo - o ok devolve a caixa`() {
+        var answer: Boolean? = null
+        compose.setContent {
+            com.juliano.stagebook.ui.theme.StagebookTheme {
+                com.juliano.stagebook.ui.components.InfoDialog("Modo essencial ligado", "Texto", onDismiss = {}, neverAgain = { answer = it })
+            }
+        }
+        compose.onNodeWithText("Não mostrar de novo").performClick()
+        compose.onNodeWithText("OK").performClick()
+        assertEquals(true, answer)
     }
 }
