@@ -84,21 +84,51 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
         title = { Text(stringResource(R.string.inbox_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                items.asReversed().forEach { item ->
-                    Row(
-                        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { onOpen(item.id) }.padding(vertical = Spacing.s),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(itemText(item), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        androidx.compose.material3.IconButton(onClick = { onDiscard(item.id) }) {
-                            Icon(AppIcons.Delete, stringResource(R.string.inbox_discard))
+                // o mesmo setlist mandado por mais de um membro fica junto (T11): quem mandou, quando, e o mais novo marcado
+                com.juliano.stagebook.data.groupInbox(items).forEach { group ->
+                    if (group.size > 1) {
+                        Text(
+                            stringResource(R.string.inbox_versions, group.first().setName, group.size),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = Spacing.s),
+                        )
+                    }
+                    group.forEachIndexed { i, item ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { onOpen(item.id) }.padding(vertical = Spacing.s),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(if (group.size > 1) item.fromName else itemText(item), style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    timeOf(item.at) + if (group.size > 1 && i == 0) " · " + stringResource(R.string.inbox_latest) else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            androidx.compose.material3.IconButton(onClick = { onDiscard(item.id) }) {
+                                Icon(AppIcons.Delete, stringResource(R.string.inbox_discard))
+                            }
                         }
                     }
+                }
+                if (items.any { a -> items.count { it.setName.isNotEmpty() && it.setName.equals(a.setName, true) } > 1 }) {
+                    Text(stringResource(R.string.inbox_versions_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
     )
+}
+
+/** Hora em que chegou (hoje: "14:05"; outro dia: "28/10 14:05"). */
+@Composable
+private fun timeOf(at: Long): String {
+    val today = android.text.format.DateUtils.isToday(at)
+    val pattern = if (today) "HH:mm" else "dd/MM HH:mm"
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(at))
 }
 
 private val sample = BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado")

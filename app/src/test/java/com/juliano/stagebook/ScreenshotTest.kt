@@ -302,6 +302,19 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SCREEN) }
     }
 
+    // T11: o mesmo setlist mandado por dois membros fica junto na caixa
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun inboxVersions() {
+        val now = System.currentTimeMillis()
+        val items = listOf(
+            com.juliano.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado", at = now - 600_000),
+            com.juliano.stagebook.data.BandInbox.Item("2", "b", "Tablet do Beto", "LETRAS3\n12\nShow de sábado", at = now - 60_000),
+            com.juliano.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "LETRAS3\n8\nEnsaio", at = now - 300_000),
+        )
+        compose.setContent { StagebookTheme { com.juliano.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_2_recebidos_versoes.png")
+    }
+
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", com.juliano.stagebook.data.model.Instrument.VIOLAO)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", com.juliano.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", com.juliano.stagebook.data.model.Instrument.TECLADO)
