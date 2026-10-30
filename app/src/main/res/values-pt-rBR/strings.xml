@@ -309,6 +309,8 @@
     <string name="editor_capo_sounds">Desenhos em %1$s. Com capo na %2$dª casa, soa em %3$s.</string>
     <string name="editor_capo_sounds_nokey">Desenhos como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</string>
     <string name="stage_key_adjust">mudar tom e capo</string>
+    <string name="stage_key_capo_title">Tom e capo</string>
+    <string name="stage_key_capo_saved">Fica salvo na música.</string>
     <string name="stage_capo_short">Capo %1$d</string>
     <string name="stage_key_short">Tom %1$s</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
