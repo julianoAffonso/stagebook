@@ -503,7 +503,6 @@
         <item quantity="other">%1$d músicas que já estão aqui vão ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>
     </plurals>
     <string name="settings_import_failed">Esse arquivo não é uma biblioteca do Stagebook.</string>
-    <string name="settings_version">Stagebook %1$s</string>
     <string name="update_offer_title">Nova versão do Stagebook</string>
     <string name="update_offer_message">Saiu a versão %1$s. Atualizar agora? Suas músicas, setlists e ajustes continuam.\n\nA banda toda deve estar na mesma versão. Senão, envios, sincronia e a virada de página entre os aparelhos podem falhar.</string>
     <string name="update_offer_update">Atualizar</string>
@@ -512,6 +511,7 @@
     <string name="update_offer_ready">Baixada. Toque em Instalar e confirme na tela do Android.</string>
     <!-- player: avisos de saída, iguais para qualquer interface de áudio USB -->
     <string name="player_channel">Player</string>
+    <string name="settings_usb_card">Saída USB</string>
     <string name="settings_player_requirements">O que a saída USB precisa</string>
     <string name="settings_player_requirements_text">• Interface de áudio USB \"class compliant\" (USB Audio Class 2.0, que funciona no computador sem driver).\n• Que aceite 48 kHz.\n• Celular ou tablet com USB OTG e o cabo ou adaptador certo.\n\nInterfaces só USB Audio 1.0, ou só de 44,1 kHz, ainda não funcionam.</string>
     <string name="player_starting">Iniciando o player…</string>
@@ -551,8 +551,8 @@
     <string name="mixer_out_right">Direita</string>
     <string name="mixer_out_left_right">Esquerda e direita</string>
     <plurals name="mixer_now_output">
-        <item quantity="one">Roteamento de: %1$s (%2$d saída)</item>
-        <item quantity="other">Roteamento de: %1$s (%2$d saídas)</item>
+        <item quantity="one">Tocando em: %1$s (%2$d saída)</item>
+        <item quantity="other">Tocando em: %1$s (%2$d saídas)</item>
     </plurals>
     <string name="mixer_routes_help">A saída de cada canal fica guardada para cada interface. Ao ligar outra, ou tocar na saída do aparelho, o app usa o que ficou guardado para ela. Se não tiver nada, cada canal sai na saída de mesmo número.</string>
     <string name="mixer_output_one">Saída %1$d</string>

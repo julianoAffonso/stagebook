@@ -505,7 +505,6 @@
         <item quantity="other">%1$d songs you already have will get the file\'s lyrics, and %2$d new ones come in. Import anyway?</item>
     </plurals>
     <string name="settings_import_failed">This file isn\'t a Stagebook library.</string>
-    <string name="settings_version">Stagebook %1$s</string>
     <string name="update_offer_title">New Stagebook version</string>
     <string name="update_offer_message">Version %1$s is out. Update now? Songs, setlists and settings stay.\n\nThe whole band should be on the same version. Otherwise sending, sync and page turns between devices may not work.</string>
     <string name="update_offer_update">Update</string>
@@ -514,6 +513,7 @@
     <string name="update_offer_ready">Downloaded. Tap Install and confirm on the Android screen.</string>
     <!-- player: output messages, the same for any USB audio interface -->
     <string name="player_channel">Player</string>
+    <string name="settings_usb_card">USB output</string>
     <string name="settings_player_requirements">What the USB output needs</string>
     <string name="settings_player_requirements_text">• A class compliant USB audio interface (USB Audio Class 2.0, works on a computer without a driver).\n• 48 kHz support.\n• A phone or tablet with USB OTG and the right cable or adapter.\n\nInterfaces that are only USB Audio 1.0 or only 44.1 kHz don\'t work yet.</string>
     <string name="player_starting">Starting the player…</string>
@@ -553,8 +553,8 @@
     <string name="mixer_out_right">Right</string>
     <string name="mixer_out_left_right">Left and right</string>
     <plurals name="mixer_now_output">
-        <item quantity="one">Routing for %1$s (%2$d output)</item>
-        <item quantity="other">Routing for %1$s (%2$d outputs)</item>
+        <item quantity="one">Playing on %1$s (%2$d output)</item>
+        <item quantity="other">Playing on %1$s (%2$d outputs)</item>
     </plurals>
     <string name="mixer_routes_help">Each channel\'s output is saved per interface. When you plug in another one, or play on the device\'s output, the app uses the routing saved for it. If there\'s none, each channel goes to the output with the same number.</string>
     <string name="mixer_output_one">Output %1$d</string>
