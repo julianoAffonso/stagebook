@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,5 +68,22 @@ class EssentialModeTest {
         compose.onNodeWithContentDescription("Tocar").assertDoesNotExist()
         compose.onNodeWithText("Detalhes").assertDoesNotExist()
         compose.onNodeWithContentDescription("Próxima variação").assertExists()
+    }
+
+    @Test fun `banda na rede desligada encerra o Quem conduz e nao religa`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val link = com.juliano.stagebook.data.BandLink(
+            context, com.juliano.stagebook.data.DeviceIdentity(context), com.juliano.stagebook.data.BandTrust(context),
+            com.juliano.stagebook.data.StageGate(), com.juliano.stagebook.data.BandInbox(context), repo,
+        )
+        val conduct = com.juliano.stagebook.data.BandConduct(link, repo, com.juliano.stagebook.data.DeviceIdentity(context))
+        conduct.start("s1", "Ensaio", listOf(com.juliano.stagebook.domain.Conduct.Item("Música")))
+        assertTrue(conduct.role.value is com.juliano.stagebook.data.BandConduct.Role.Conducting)
+        repo.updateLook { it.copy(bandOn = false) }
+        withTimeout(5_000) { conduct.role.first { it == com.juliano.stagebook.data.BandConduct.Role.None } }
+        kotlinx.coroutines.delay(300)   // o envio que já tinha saído não traz a condução de volta
+        assertEquals(com.juliano.stagebook.data.BandConduct.Role.None, conduct.role.value)
+        assertFalse(link.running.value)
     }
 }

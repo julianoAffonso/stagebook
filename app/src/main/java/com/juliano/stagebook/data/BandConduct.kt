@@ -1,5 +1,7 @@
 package com.juliano.stagebook.data
 
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.Immutable
 import com.juliano.stagebook.domain.BandProtocol
 import com.juliano.stagebook.domain.Conduct
@@ -56,6 +58,12 @@ class BandConduct @Inject constructor(
 
     init {
         link.conductHandler = ::onMessage
+        // modo essencial (T19): "Banda na rede" desligada encerra o Quem conduz (conduzindo ou acompanhando) e a faixa some
+        scope.launch {
+            repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { on ->
+                if (!on) when (_role.value) { is Role.Conducting -> end(); is Role.Following -> leave(); Role.None -> Unit }
+            }
+        }
         // conduzindo: sinal de vida a cada 3 min (a música da vez de novo; quem acompanha não pula de música por isso)
         scope.launch {
             while (true) {
@@ -108,6 +116,7 @@ class BandConduct @Inject constructor(
 
     private suspend fun send(setId: String, msg: Conduct.Msg) {
         val members = link.onlineMembers.value.size
+        if (_role.value !is Role.Conducting) return   // encerrado antes de mandar: não religa
         _role.value = Role.Conducting(setId, msg)
         val replies = link.conduct(msg)
         if (_role.value !is Role.Conducting) return   // encerrado enquanto mandava
