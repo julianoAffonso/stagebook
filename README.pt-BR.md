@@ -12,7 +12,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 ## O que ele faz
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. Cada botão do pedal pode fazer outra coisa.
-- **Cifras:** acordes em cima da letra (ChordPro), transpor, capotraste, tablatura e o desenho de cada acorde no
+- **Cifras:** acordes em cima da letra (ChordPro), transpor, capotraste, tablatura e o diagrama de cada acorde no
   violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom.
 - **Setlists:** monte o show e arraste para mudar a ordem. Mande para quem está do lado por QR, para longe com 3
   palavras pela internet, ou para a banda toda no mesmo Wi-Fi.

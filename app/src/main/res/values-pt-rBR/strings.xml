@@ -190,7 +190,7 @@
     <string name="essential_title">Modo essencial</string>
     <string name="essential_help">Para quem toca sozinho ou com a bateria no fim. Desliga o que roda por trás e tira da tela o que não for usado. Dá para desligar só uma parte.</string>
     <string name="essential_switch">Ligar o modo essencial</string>
-    <string name="essential_keeps">Ficam letra, cifra, desenho dos acordes e pedal</string>
+    <string name="essential_keeps">Ficam letra, cifra, diagramas dos acordes e pedal</string>
     <string name="essential_parts">O que fica ligado</string>
     <string name="essential_band">Banda na rede</string>
     <string name="essential_band_detail">Achar a banda no Wi-Fi, enviar pela banda e Quem conduz</string>
@@ -204,7 +204,7 @@
     <string name="essential_off_short">Desligado</string>
     <string name="essential_banner">Modo essencial ligado</string>
     <string name="essential_alert_title">Modo essencial ligado</string>
-    <string name="essential_alert_text">Ficam a letra, a cifra, os desenhos dos acordes e o pedal. O que está desligado:</string>
+    <string name="essential_alert_text">Ficam a letra, a cifra, os diagramas dos acordes e o pedal. O que está desligado:</string>
     <string name="essential_alert_some_title">Funções desligadas</string>
     <string name="essential_alert_some_text">O que está desligado:</string>
     <string name="essential_alert_relink">Para religar, vá em</string>
@@ -221,15 +221,15 @@
     <string name="settings_site_remove">Tirar %1$s</string>
     <string name="import_needs_internet">Sem internet. Por enquanto, só dá para importar lendo QR.</string>
     <string name="import_personal_use">Para uso pessoal. O que você importa fica só neste aparelho.</string>
-    <string name="settings_chord_shapes">Desenhos dos acordes</string>
+    <string name="settings_chord_shapes">Diagramas dos acordes</string>
     <string name="settings_instrument">Instrumento</string>
-    <string name="settings_instrument_help">Os desenhos dos acordes no palco são deste instrumento.</string>
+    <string name="settings_instrument_help">Os diagramas dos acordes no palco são deste instrumento.</string>
     <string name="instrument_acoustic_guitar">Violão</string>
     <string name="instrument_electric_guitar">Guitarra</string>
     <string name="instrument_ukulele">Ukulele</string>
     <string name="instrument_cavaquinho">Cavaquinho</string>
     <string name="instrument_keyboard">Teclado</string>
-    <string name="settings_chord_tap">Mostrar o desenho ao tocar no acorde</string>
+    <string name="settings_chord_tap">Mostrar o diagrama ao tocar no acorde</string>
     <string name="settings_chord_list">Lista de acordes</string>
     <string name="settings_chord_list_none">Esconder</string>
     <string name="settings_chord_list_top">Início</string>
@@ -306,8 +306,8 @@
     <string name="editor_data_open">Mostrar os dados da música</string>
     <string name="editor_data_close">Recolher os dados da música</string>
     <string name="editor_capo_fret">%1$dª casa</string>
-    <string name="editor_capo_sounds">Desenhos em %1$s. Com capo na %2$dª casa, soa em %3$s.</string>
-    <string name="editor_capo_sounds_nokey">Desenhos como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</string>
+    <string name="editor_capo_sounds">Diagramas de %1$s. Com capo na %2$dª casa, soa em %3$s.</string>
+    <string name="editor_capo_sounds_nokey">Diagramas como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</string>
     <string name="stage_key_adjust">mudar tom e capo</string>
     <string name="stage_key_capo_title">Tom e capo</string>
     <string name="stage_key_capo_saved">Fica salvo na música.</string>
@@ -328,7 +328,7 @@
     <string name="import_tab_no">Sem a tablatura</string>
     <string name="chord_play">Tocar</string>
     <string name="chord_details">Detalhes</string>
-    <string name="chord_back_to_shape">Voltar ao desenho</string>
+    <string name="chord_back_to_shape">Voltar ao diagrama</string>
     <string name="chord_details_title">Detalhes de %1$s</string>
     <string name="chord_details_song_key">No tom da música (%1$s)</string>
     <string name="chord_details_degree">%1$s é o %2$s neste tom.</string>
@@ -337,7 +337,7 @@
     <string name="chord_details_not_tonic">%1$s não é o I de nenhum campo. Com essas notas, ele leva para outro acorde, como dominante ou de passagem.</string>
     <string name="chord_details_where">Onde mais %1$s aparece</string>
     <string name="chord_details_in">%1$s em %2$s</string>
-    <string name="chord_capo_note">O desenho é de %1$s. Com capo na %2$dª casa, soa %3$s.</string>
+    <string name="chord_capo_note">O diagrama é de %1$s. Com capo na %2$dª casa, soa %3$s.</string>
     <string name="chord_keyboard_capo">Na cifra é %1$s, com capo na %2$dª casa. No teclado, toque %3$s.</string>
     <string name="stage_keyboard_capo">teclado · capo na %1$dª</string>
     <string name="stage_keyboard_capo_hint">Esta cifra usa capo na %1$dª casa. Os acordes aparecem ajustados para o teclado, para você tocar junto com a banda.</string>
