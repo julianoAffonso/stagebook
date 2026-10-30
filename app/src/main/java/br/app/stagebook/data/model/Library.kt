@@ -188,6 +188,10 @@ data class Library(
     val sets: List<Setlist> = emptyList(),
     val look: Look = Look(),
 ) {
-    fun song(id: String): Song? = songs.firstOrNull { it.id == id }
+    // by id in one step (a setlist screen looked up each of its songs in the whole list on every library change); not
+    // serialized, built the first time it's needed for this library
+    private val byId: Map<String, Song> by lazy { songs.associateBy { it.id } }
+
+    fun song(id: String): Song? = byId[id]
     fun setlist(id: String): Setlist? = sets.firstOrNull { it.id == id }
 }

@@ -6,6 +6,10 @@ package br.app.stagebook.domain
  * fourth, `7M` is a major seventh.
  */
 object ChordTheory {
+    // built once, not on every chord (they ran for each diagram and harmonic field; audit 30/10)
+    private val REST = Regex("""maj7|7M|M|add9|add11|add13|add2|add4|sus2|sus4|sus|b13|#11|b9|#9|b5|#5|-5|5-|5\+|13|11|9|7|6|5|4|2""")
+    private val SEPARATORS = Regex("""[()\s,]""")
+
     /**
      * [root] and [bass] in 0..11; [tones] = all notes; [essential] = the ones that can't be missing (the fifth can).
      */
@@ -43,9 +47,9 @@ object ChordTheory {
             take("min") || (s.startsWith("m") && !s.startsWith("maj") && take("m")) -> third = 3
         }
         // the rest, in any order: 7, 7M, 6, 9, 11, 13, sus, add, (b5), (#5), (9), 5 (power chord)…
-        val rest = Regex("""maj7|7M|M|add9|add11|add13|add2|add4|sus2|sus4|sus|b13|#11|b9|#9|b5|#5|-5|5-|5\+|13|11|9|7|6|5|4|2""")
+        val rest = REST
         var power = false
-        Regex("""[()\s,]""").replace(s, " ").split(' ').filter { it.isNotEmpty() }.forEach { part ->
+        SEPARATORS.replace(s, " ").split(' ').filter { it.isNotEmpty() }.forEach { part ->
             var p = part
             while (p.isNotEmpty()) {
                 val t = rest.find(p)?.takeIf { it.range.first == 0 }?.value ?: break
