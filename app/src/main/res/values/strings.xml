@@ -690,7 +690,7 @@
         <item quantity="other">Sent to %1$d band devices</item>
     </plurals>
     <string name="share_band_failed">Couldn\'t send to the band. Check the Wi-Fi or internet and try again.</string>
-    <string name="share_qr">QR on screen</string>
+    <string name="share_qr">QR without internet</string>
     <string name="share_qr_hint">Whoever is next to you scans it with the camera. Titles only.</string>
     <string name="share_internet">Send online</string>
     <string name="share_internet_hint">You get 3 words and a QR for whoever is receiving. They last 12 hours.</string>
@@ -713,10 +713,11 @@
         <item quantity="one">%1$d song was too big and didn\'t go.</item>
         <item quantity="other">%1$d songs were too big and didn\'t go.</item>
     </plurals>
-    <string name="share_sent_hint">On the other device, go to Import → Type the 3 words, or Import → Scan QR and point at this QR. They last 12 hours.</string>
+    <string name="share_sent_hint">On the other device, go to Import → Type the 3 words. They last 12 hours.</string>
     <string name="share_send_code">Send in a message</string>
     <string name="share_message_songs">Songs on Stagebook. To get them, go to Import → Type the 3 words and type %1$s. Good for 12 hours.</string>
     <string name="share_joined">%1$s accepted and is now in the band</string>
+    <string name="share_qr_or">If you prefer, scan this QR in Import → Scan QR.</string>
     <string name="share_copy">Copy the words</string>
     <string name="share_copied">Words copied</string>
     <string name="share_code_qr">QR of the words. Take a photo or scan it in Import → Scan QR.</string>
