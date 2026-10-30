@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
 
 /** Menu ⋮ das listas e das barras de cima: abre fechado, a ação escolhida roda e o menu fecha. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class OverflowMenuTest {
     @get:Rule val compose = createComposeRule()
     private var picked = ""

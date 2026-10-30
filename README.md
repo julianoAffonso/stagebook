@@ -32,6 +32,10 @@ O release é assinado por uma chave que não está no repositório.
 ## Instalar
 Pelos [Releases](../../releases) deste repositório (o app avisa e instala as versões novas sozinho).
 
+## Línguas
+O app sai em inglês (a base) e português do Brasil. Quer ajudar a traduzir para outra língua? O passo a passo está em
+[docs/traduzir.md](docs/traduzir.md).
+
 ## Licença
 Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)): qualquer uso, inclusive em shows pagos,
 mudanças e redistribuição; só não vale usar o código para fazer um produto concorrente.

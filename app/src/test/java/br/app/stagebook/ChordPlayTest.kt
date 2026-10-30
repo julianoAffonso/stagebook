@@ -47,7 +47,7 @@ class ChordPlayTest {
         compose.setContent {
             StagebookTheme { ChordShapePopup("G", Instrument.VIOLAO, "{capo: 2}\n[G]linha", {}, {}, onPlay = { played = it }) }
         }
-        compose.onNodeWithText("O desenho é o de G; com capo na 2ª casa, soa A.").assertExists()
+        compose.onNodeWithText("O desenho é de G. Com capo na 2ª casa, soa A.").assertExists()
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertTrue(played!!.isNotEmpty())
         assertTrue(played!!.all { it >= 40 + 2 })   // tudo pelo menos 2 casas acima da corda mais grave
@@ -58,7 +58,7 @@ class ChordPlayTest {
         compose.setContent {
             StagebookTheme { ChordShapePopup("C", Instrument.TECLADO, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
         }
-        compose.onNodeWithText("com capo", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("O desenho é de", substring = true).assertDoesNotExist()   // teclado: sem a nota do desenho com capo
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertEquals(Voicings.keys("C").first(), played)
     }

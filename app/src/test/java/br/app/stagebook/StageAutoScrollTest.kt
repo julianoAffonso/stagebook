@@ -24,7 +24,7 @@ import org.robolectric.annotation.Config
 
 /** Rolagem automática (T15): o ▶ liga, tocar na tela pausa sem mudar de música, e −/+ mudam a velocidade. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class StageAutoScrollTest {
     @get:Rule val compose = createComposeRule()
 

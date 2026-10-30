@@ -27,7 +27,7 @@ import org.robolectric.annotation.GraphicsMode
 /** Tocar num acorde do palco abre o desenho dele; tocar na letra continua virando a página. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35], qualifiers = "w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class StageChordTapTest {
     @get:Rule val compose = createComposeRule()
 
