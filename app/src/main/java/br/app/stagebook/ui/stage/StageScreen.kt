@@ -144,16 +144,16 @@ import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
 import br.app.stagebook.ui.components.ConfirmDialog
 
-/** Página "-1" = a última da música (ao voltar de uma música, cai no fim da anterior). */
+/** Page "-1" = the song's last page (going back from a song lands at the end of the previous one). */
 private const val LAST_PAGE = -1
 
 private val SPACES = Regex("\\s+")
 
-/** Com os dedos parados por esse tempo, a pinça refaz as páginas (antes disso, só escala o texto). */
+/** With the fingers still for this long, the pinch rebuilds the pages (before that, it only scales the text). */
 private const val PINCH_REFLOW_MS = 120L
-private const val PAGE_SLOTS = 7      // bolinhas no rodapé (7 × 28dp cabem no celular com o relógio)
-private const val PAGE_IN_MS = 220   // a página nova entrando (e a arrastada voltando ao lugar junto)
-private const val EDIT_OFFER_MS = 4_000L   // o botão de editar some sozinho
+private const val PAGE_SLOTS = 7      // dots in the footer (7 × 28dp fit on phones with the clock)
+private const val PAGE_IN_MS = 220   // the new page coming in (and the dragged one going back with it)
+private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itself
 
 @Composable
 fun StageRoute(
@@ -164,7 +164,7 @@ fun StageRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerUi by viewModel.playerUi.collectAsStateWithLifecycle()
     var index by rememberSaveable { mutableIntStateOf(viewModel.start) }
-    // escolher a faixa da música (OGG, MP3 ou WAV): copiada para o app ao voltar do seletor do Android
+    // pick the song's track (OGG, MP3 or WAV): copied into the app when coming back from the Android picker
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val message = LocalAppMessage.current
@@ -179,11 +179,11 @@ fun StageRoute(
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
     KeepScreenOn()
-    // a música na tela diz ao player qual backing track tocar; o aviso da saída aparece uma vez
+    // the song on screen tells the player which backing track to play; the output notice shows once
     val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
     LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
     LaunchedEffect(index, uiState.loading) { if (!uiState.loading) viewModel.songShown(index) }
-    // 1º play: avisa e pede para sair da economia de bateria (uma vez) e, no Android 13+, a notificação do player
+    // first play: warns and asks to skip battery saving (once) and, on Android 13+, the player notification
     var askBattery by rememberSaveable { mutableStateOf(false) }
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.togglePlay() }
     fun onPlay() {
@@ -201,7 +201,7 @@ fun StageRoute(
             askBattery = false
             viewModel.batteryAsked()
             if (allow) {
-                @SuppressLint("BatteryLife")   // app de palco: tocar com a tela apagada é a função, com aviso antes
+                @SuppressLint("BatteryLife")   // a stage app: playing with the screen off is the point, with a notice first
                 val ask = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${context.packageName}".toUri())
                 runCatching { context.startActivity(ask) }
             }
@@ -238,7 +238,7 @@ fun StageRoute(
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
-            // setlist apagado (ou vazio) não abre um palco preto sem explicação
+            // a deleted (or empty) setlist doesn't open a black stage with no explanation
             if (!uiState.loading) {
                 EmptyState(AppIcons.QueueMusic, stringResource(R.string.stage_empty_title), stringResource(R.string.stage_empty_message))
             }
@@ -247,10 +247,10 @@ fun StageRoute(
 }
 
 /**
- * Palco: uma música por vez, tela cheia e acesa, em páginas (sem rolagem: o pedal vira a página
- * inteira, para não se perder no que já foi cantado). No fim da música vai para a próxima do setlist.
- * Toque na metade direita avança, na esquerda volta. Segurar uma linha oferece editar a letra nela;
- * o lápis do topo abre o editor na página que está na tela.
+ * Stage: one song at a time, full screen and lit, in pages (no scrolling: the pedal turns the whole page, so you don't
+ * lose track of what was sung). At the end of a song it goes to the next in the setlist. A tap on the right half goes
+ * forward, on the left goes back. Holding a line offers to edit the lyrics there; the top pencil opens the editor on
+ * the page on screen.
  */
 @Composable
 fun StageScreen(
@@ -273,14 +273,14 @@ fun StageScreen(
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
 ) {
-    // × num acorde da lista: pergunta antes (no palco um toque sem querer é fácil)
+    // × on a chord in the list: asks first (on stage an accidental tap is easy)
     var hidingChord by remember { mutableStateOf<String?>(null) }
     val look = uiState.look
-    // acorde tocado no palco: o desenho dele (só no perfil letra e cifra)
+    // chord tapped on stage: its diagram (only in the lyrics and chords profile)
     var shownChord by remember { mutableStateOf<String?>(null) }
     val fg = Color(look.fg)
-    // sair do palco (seta ou gesto de voltar) pergunta antes: um toque sem querer no show não tira a letra
-    // da tela (pedido do usuário, 23/10)
+    // leaving the stage (arrow or back gesture) asks first: an accidental tap during the show doesn't take the lyrics
+    // off the screen (user's request, 23/10)
     var askExit by rememberSaveable { mutableStateOf(false) }
     if (onBack != null) {
         BackHandler { askExit = true }
@@ -295,12 +295,12 @@ fun StageScreen(
         }
     }
     val song = uiState.songs[index]
-    // teclado não usa capo: os acordes aparecem no tom que soa (cifra em G com capo na 2ª casa → A), sem mudar a música
-    // guardada (pedido do usuário, 29/10)
+    // keyboard doesn't use capo: chords show in the sounding key (chart in G with capo on fret 2 → A), without changing
+    // the saved song (user's request, 29/10)
     val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD
     val keyboardCapo = remember(song.text, keyboard, look.chords) { if (keyboard && look.chords) Chords.capo(song.text) else 0 }
     val shownText = remember(song.text, keyboardCapo) { if (keyboardCapo > 0) Chords.transpose(song.text, keyboardCapo) else song.text }
-    // na primeira vez, uma mensagem curta explica (some sozinha)
+    // the first time, a short message explains (it goes away by itself)
     var keyboardHint by remember { mutableIntStateOf(0) }
     LaunchedEffect(keyboardCapo) {
         if (keyboardCapo > 0 && !look.keyboardCapoHintSeen) {
@@ -330,18 +330,18 @@ fun StageScreen(
             extras = look.extrasOn,
         )
     }
-    // zoom ao vivo durante a pinça; grava na música quando a mão para
+    // live zoom during the pinch; saved to the song when the hand stops
     val minZoom = Look.MIN_FONT / look.fontSp
     val maxZoom = Look.MAX_STAGE_FONT / look.fontSp
-    // o estado vive enquanto a música está aberta (não é recriado quando o zoom gravado volta do
-    // repositório: o gesto continuaria escrevendo no estado antigo e só a 1ª pinça funcionava)
+    // the state lives while the song is open (it isn't recreated when the saved zoom comes back from the repository:
+    // the gesture would keep writing to the old state and only the first pinch worked)
     val zoomState = remember(index) { mutableFloatStateOf(song.zoom.coerceIn(minZoom, maxZoom)) }
     var zoom by zoomState
-    val unsavedZoom = remember(index) { mutableStateOf(false) }   // pinça desta música ainda não gravada
+    val unsavedZoom = remember(index) { mutableStateOf(false) }   // pinch on this song not saved yet
     var zoomTouched by remember(index) { mutableStateOf(false) }
     LaunchedEffect(song.zoom) { if (!zoomTouched) zoom = song.zoom.coerceIn(minZoom, maxZoom) }
-    // o zoom ao vivo só é lido dentro de efeitos, da camada e do selo: ler na composição recompunha o
-    // palco inteiro a cada quadro da pinça
+    // the live zoom is only read inside effects, the layer and the badge: reading it in composition recomposed the
+    // whole stage on every pinch frame
     val songNow by rememberUpdatedState(song)
     LaunchedEffect(index, zoomTouched) {
         if (!zoomTouched) return@LaunchedEffect
@@ -354,14 +354,14 @@ fun StageScreen(
             zoomTouched = false
         }
     }
-    // o pedal trocou de música antes de a pinça ser gravada: grava ao sair dela (com o estado desta
-    // música, guardado ao entrar: na saída a tela já está montando a próxima)
+    // the pedal changed songs before the pinch was saved: save on leaving it (with this song's state, kept on entry: on
+    // exit the screen is already building the next one)
     DisposableEffect(index) {
         val id = song.id
         onDispose { if (unsavedZoom.value) onZoom(id, zoomState.floatValue) }
     }
-    // medir e paginar o texto é caro no Fire: durante a pinça o texto só escala, e as páginas são
-    // refeitas quando os dedos param
+    // measuring and paginating text is expensive on the Fire: during the pinch the text only scales, and the pages are
+    // rebuilt when the fingers stop
     var layoutZoom by remember(index) { mutableFloatStateOf(zoomState.floatValue) }
     LaunchedEffect(index) {
         snapshotFlow { zoomState.floatValue }.collectLatest { z ->
@@ -370,25 +370,25 @@ fun StageScreen(
             layoutZoom = z
         }
     }
-    // maior zoom em que a palavra mais longa ainda cabe na largura (calculado com a largura real, abaixo)
+    // the largest zoom at which the longest word still fits the width (computed with the real width, below)
     var fitZoom by remember(index) { mutableFloatStateOf(Float.MAX_VALUE) }
     val sectionNames = rememberSectionNames(look.translateSections)
     val chordLook = remember(look.chords, look.chordScale, look.chordColor) { ChordLook(look.chords, look.chordScale, Color(look.chordColor)) }
     val sourced = remember(shownText, look, sectionNames) { stageLines(shownText, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale) }
     val lines = remember(sourced) { sourced.map { it.text } }
-    // segurar uma linha mostra um botão para editá-la (não abre direto: no show o polegar apoiado
-    // na tela não pode tirar a letra da frente); some sozinho e ao virar a página
+    // holding a line shows a button to edit it (it doesn't open right away: during a show a resting thumb on the screen
+    // can't take the lyrics away); it goes away by itself and on page turn
     val hit = remember(index) { PageHit() }
     var editOffer by remember(index) { mutableStateOf<EditOffer?>(null) }
     LaunchedEffect(editOffer) { if (editOffer != null) { delay(EDIT_OFFER_MS); editOffer = null } }
     val haptics = LocalHapticFeedback.current
-    // onde está o botão da faixa (o toque longo nele não oferece editar a linha)
+    // where the track button is (a long press on it doesn't offer to edit the line)
     var trackButton by remember { mutableStateOf<Rect?>(null) }
-    // as linhas da página como estão na tela (linha com acordes que quebra vira pedaços): o índice do toque é nelas
+    // the page's lines as they are on screen (a wrapping line with chords becomes pieces): the tap index is in these
     var pageLines by remember(sourced) { mutableStateOf(sourced) }
     fun editAt(line: Int?) {
         if (song.missing) return
-        // a lista de acordes (fonte -1) não é linha da letra: abre no começo
+        // the chord list (source -1) isn't a lyrics line: opens at the start
         onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }?.let { lineStart(song.text, it) } ?: -1)
     }
     fun styleFor(z: Float) = TextStyle(
@@ -397,14 +397,14 @@ fun StageScreen(
         lineHeight = (look.fontSp * z * 1.25f).sp,
         fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
         fontFamily = look.font.family,
-        // sem cortar o respiro da primeira/última linha: a linha medida sozinha tem a mesma altura
-        // que dentro do texto, e a soma das linhas é a altura real da página
+        // without cutting the breathing room of the first/last line: a line measured alone has the same height as
+        // inside the text, and the sum of the lines is the page's real height
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
         hyphens = Hyphens.None,
     )
     val measurer = rememberTextMeasurer()
     var pageCount by remember { mutableIntStateOf(1) }
-    var pageCountFor by remember { mutableIntStateOf(-1) }   // de qual música é o pageCount (medido na tela)
+    var pageCountFor by remember { mutableIntStateOf(-1) }   // which song the pageCount belongs to (measured on screen)
     val current = if (page == LAST_PAGE) pageCount - 1 else page.coerceIn(0, pageCount - 1)
 
     fun nextTarget(): Pair<Int, Int>? = when {
@@ -419,20 +419,20 @@ fun StageScreen(
         else -> null
     }
 
-    // pé rápido: um aperto que chega antes de a posição pedida aparecer com a contagem de páginas da
-    // música certa usaria valores velhos (pulava uma música ou se perdia). Ele fica na fila e é
-    // aplicado assim que a tela assenta.
-    // pela ordem das músicas, não pelos objetos: gravar o zoom traz a lista de novo e não pode zerar a fila
+    // fast foot: a press that arrives before the requested position shows up with the right song's page count would use
+    // stale values (it skipped a song or got lost). It waits in the queue and is applied as soon as the screen settles.
+    // Keyed by song order, not by the objects: saving the zoom brings the list again and must not clear the queue.
     val presses = remember(uiState.songs.map { it.id }) { PressQueue() }
-    // rolagem automática (T15, modo rolar): qualquer toque ou pedal só pausa
+    // auto-scroll (T15, scroll mode): any tap or pedal press only pauses
     var autoOn by remember(index) { mutableStateOf(false) }
-    var autoAvailable by remember { mutableStateOf(false) }   // modo rolar e a música não cabe numa tela
-    // metrônomo (T33c): começa no BPM da música (sem BPM, 100); para ao trocar de música. O som vem na T33d
+    var autoAvailable by remember { mutableStateOf(false) }   // scroll mode and the song doesn't fit on one screen
+    // metronome (T33c): starts at the song's BPM (no BPM, 100); stops when changing songs. The sound came in T33d
     var metroOn by remember(index) { mutableStateOf(false) }
     val songTempo = remember(index, uiState.songs) { uiState.songs.getOrNull(index)?.text?.let(Chords::tempo) ?: 0 }
     var metroBpm by remember(index, songTempo) { mutableIntStateOf(songTempo.takeIf { it > 0 } ?: Chords.DEFAULT_TEMPO) }
-    var metroBeat by remember(index) { mutableIntStateOf(-1) }   // tempo atual desde o play (0 = primeiro)
-    // o som (T33d) e o piscar começam juntos; o piscar mira o instante de cada tempo desde o começo (não escorrega)
+    var metroBeat by remember(index) { mutableIntStateOf(-1) }   // current beat since play (0 = first)
+    // the sound (T33d) and the blink start together; the blink aims at the moment of each beat since the start (it
+    // doesn't drift)
     LaunchedEffect(metroOn, metroBpm, look.metroSound) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
@@ -447,7 +447,7 @@ fun StageScreen(
         }
     }
     DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
-    // o piscar do tempo: no ícone e na borda da tela (pedido do usuário, 29/10), mais forte no 1 do compasso
+    // the beat blink: on the icon and on the screen edge (user's request, 29/10), stronger on beat 1 of the bar
     val metroPulse = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(metroBeat) {
         if (metroBeat < 0) { metroPulse.snapTo(0f); return@LaunchedEffect }
@@ -466,7 +466,7 @@ fun StageScreen(
     }
     fun next() = go(true)
     fun previous() = go(false)
-    // pedal ligado a "próxima música"/"música anterior": sempre no começo dela; com uma virada a caminho, espera
+    // pedal set to "next song"/"previous song": always at its start; with a page turn on the way, it waits
     fun goSong(forward: Boolean) {
         if (presses.from != null) return
         val target = index + if (forward) 1 else -1
@@ -494,7 +494,7 @@ fun StageScreen(
             minZoom = minZoom,
             maxZoom = maxZoom,
             hold = { p ->
-                // toque longo no botão da faixa é dele (trocar/tirar), não "editar esta linha"
+                // a long press on the track button belongs to it (change/remove), not "edit this line"
                 if (trackButton?.contains(p) == true) return@GestureTargets
                 val line = hit.lineAt(p)
                 if (!song.missing && line != null) {
@@ -510,7 +510,7 @@ fun StageScreen(
     PedalHandler { p ->
         val action = PedalAction.of(p.code, look.pedalKeys)
         if (action == PedalAction.NONE) return@PedalHandler false
-        // pé apoiado no pedal repete a tecla: só a primeira vira a página
+        // a foot resting on the pedal repeats the key: only the first one turns the page
         if (p.down && p.repeat == 0) {
             when (action) {
                 PedalAction.NEXT -> next()
@@ -521,7 +521,7 @@ fun StageScreen(
                 PedalAction.NONE -> Unit
             }
         }
-        true   // o "soltar" também é consumido (alguns pedais mandam só ele para teclas de mídia)
+        true   // the "release" is consumed too (some pedals send only that for media keys)
     }
 
     Box(modifier.fillMaxSize()) {
@@ -531,13 +531,13 @@ fun StageScreen(
             .background(Color(look.bg))
             .padding(horizontal = Spacing.l),
     ) {
-        // topo enxuto: música, artista e as bolinhas das páginas. No celular o artista e o ano descem para uma
-        // linha própria, na largura toda (dividindo a linha com o título, eles ficavam cortados)
+        // lean header: song, artist and the page dots. On phones the artist and year drop to their own line, full width
+        // (sharing the line with the title, they got cut)
         val metaInline = wideLists()
         Row(Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
-            // sair do palco num toque, como nos visualizadores de tela cheia do Google: as barras do Android
-            // ficam sempre ocultas e o gesto da borda era uma luta (pedido do usuário, 23/10). Só o ícone.
+            // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
+            // gesture was a fight (user's request, 23/10). Icon only.
             if (onBack != null) {
                 IconButton(onClick = { askExit = true }) {
                     Icon(AppIcons.Back, stringResource(R.string.action_back), tint = fg.copy(alpha = 0.6f))
@@ -548,7 +548,7 @@ fun StageScreen(
             }
             Text(
                 if (song.missing) stringResource(R.string.set_item_missing) else song.title,
-                // um pouco maior que o resto do topo (pedido do usuário, 23/10): só o nome da música
+                // a bit bigger than the rest of the header (user's request, 23/10): only the song name
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 color = fg,
                 maxLines = 1,
@@ -566,8 +566,8 @@ fun StageScreen(
                 )
             }
         }
-            // depois do artista, nesta ordem (pedido do usuário, 29/10): backing track e capo acesos na cor de destaque, depois
-            // o tom; no celular vão para a linha do artista, senão o título encurta
+            // after the artist, in this order (user's request, 29/10): backing track and capo lit in the accent color,
+            // then the key; on phones they go to the artist line, otherwise the title gets shorter
             if (metaInline && look.playerMode && song.track.isNotEmpty()) TrackBadge()
             if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
             if (!song.missing) {
@@ -576,7 +576,7 @@ fun StageScreen(
                 }
             }
         }
-        // tom e capo são de cifra: no perfil só letra não aparecem
+        // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
         val hasTrack = look.playerMode && song.track.isNotEmpty()
         if (!metaInline && (song.meta.isNotEmpty() || ((hasKey || hasTrack) && !song.missing))) {
@@ -594,11 +594,11 @@ fun StageScreen(
             }
         }
 
-        // arrastar na horizontal: a página acompanha o dedo (só deslocamento, sem medir texto de novo) e, ao
-        // soltar além do limite, vira para o lado do arraste (pedido do usuário, 23/10)
+        // horizontal drag: the page follows the finger (offset only, without measuring text again) and, released past
+        // the threshold, turns toward the drag (user's request, 23/10)
         var dragX by remember { mutableFloatStateOf(0f) }
         val dragScope = rememberCoroutineScope()
-        var settle by remember { mutableStateOf<Job?>(null) }   // a página voltando ao lugar depois de soltar
+        var settle by remember { mutableStateOf<Job?>(null) }   // the page going back into place after release
         val swipeMin = with(LocalDensity.current) { Sizes.swipe.toPx() }
         BoxWithConstraints(
             Modifier
@@ -606,12 +606,13 @@ fun StageScreen(
                 .fillMaxWidth()
                 .clipToBounds()
                 .pointerInput(index) {
-                    // um gesto só: dois dedos = zoom; um dedo que toca sem arrastar = vira a página;
-                    // um dedo que arrasta na horizontal = vira para o lado do arraste;
-                    // um dedo parado por ~0,5 s = oferece editar a linha
+                    // a single gesture: two fingers = zoom; one finger tapping without dragging = turn the page; one
+                    // finger dragging horizontally = turn toward the drag; one finger still for ~0.5 s = offer to edit
+                    // the line
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        // dedo novo antes de a página voltar: a volta para e o dedo assume (senão os dois brigavam)
+                        // a new finger before the page goes back: the return stops and the finger takes over (otherwise
+                        // both fought)
                         settle?.cancel()
                         var drag = Offset.Zero
                         val holdAt = down.uptimeMillis + viewConfiguration.longPressTimeoutMillis
@@ -619,7 +620,7 @@ fun StageScreen(
                         var pinched = false
                         var moved = false
                         var held = false
-                        var taken = false   // um botão por cima (editar, zoom) já usou o toque
+                        var taken = false   // a button on top (edit, zoom) already used the tap
                         while (true) {
                             val event = if (pinched || moved || held) awaitPointerEvent()
                             else withTimeoutOrNull(maxOf(holdAt - last, 1L)) { awaitPointerEvent() }
@@ -643,8 +644,9 @@ fun StageScreen(
                             }
                             if (!pinched && !held && !taken) {
                                 event.changes.firstOrNull { it.id == down.id }?.let { drag = it.position - down.position }
-                                // só a horizontal mexe a página; até o terço da largura, para não sumir da tela
-                                // descontado o trecho até o arraste valer, para a página não dar um pulo ao começar
+                                // only horizontal movement moves the page; up to a third of the width, so it doesn't
+                                // leave the screen, minus the stretch before the drag counts, so the page doesn't jump
+                                // when it starts
                                 if (moved && abs(drag.x) > abs(drag.y)) {
                                     val follow = (abs(drag.x) - viewConfiguration.touchSlop).coerceAtLeast(0f) * sign(drag.x)
                                     dragX = follow.coerceIn(-size.width / 3f, size.width / 3f)
@@ -654,8 +656,9 @@ fun StageScreen(
                         }
                         val swiped = !pinched && !held && !taken && moved && abs(drag.x) > swipeMin && abs(drag.x) > abs(drag.y)
                         if (swiped && !latest.dismiss()) {
-                            // a nova página entra pelo lado de onde o dedo veio. A página não volta ao lugar de uma
-                            // vez (era o engasgo, 23/10): volta junto com a virada, continuando de onde o dedo soltou
+                            // the new page comes in from the side the finger came from. The page doesn't snap back all
+                            // at once (that was the stutter, 23/10): it returns along with the turn, continuing from
+                            // where the finger let go
                             if (drag.x < 0) latest.next() else latest.previous()
                             val from = dragX
                             settle = dragScope.launch { animate(from, 0f, animationSpec = tween(PAGE_IN_MS)) { v, _ -> dragX = v } }
@@ -663,7 +666,7 @@ fun StageScreen(
                             val from = dragX
                             settle = dragScope.launch { animate(from, 0f, animationSpec = tween(180)) { v, _ -> dragX = v } }
                         }
-                        // com o botão de editar aberto, tocar fora só o fecha (não vira a página)
+                        // with the edit button open, tapping outside only closes it (no page turn)
                         if (!pinched && !moved && !held && !taken && !latest.dismiss() && !latest.chord(down.position)) {
                             if (down.position.x > size.width / 2f) latest.next() else latest.previous()
                         }
@@ -673,7 +676,7 @@ fun StageScreen(
             val width = constraints.maxWidth
             val height = constraints.maxHeight
             val gutter = with(LocalDensity.current) { Spacing.xxl.roundToPx() }
-            // nunca quebrar palavra no meio: a letra não passa do tamanho em que a maior palavra cabe
+            // never break a word in the middle: the lyrics don't go over the size at which the longest word fits
             val widest = remember(lines, look.fontSp, look.bold) {
                 val words = lines.asSequence()
                     .flatMap { it.text.split(SPACES).asSequence() }
@@ -686,12 +689,12 @@ fun StageScreen(
             val fitTwo = StageFit.zoomToFit(widest, (width - gutter) / 2)
             val halfWidth = (width - gutter) / 2
             fun measureLines(style: TextStyle, w: Int) = lineHeights(measurer, lines, style, w)
-            // automático: decide pelas frases desta música no tamanho em que ela aparece (1 coluna)
+            // automatic: decides by this song's lines at the size it shows (1 column)
             val styleOne = styleFor(minOf(layoutZoom, fitOne))
-            // alturas em 1 coluna: o automático precisa delas para decidir e, dando 1 coluna, são as mesmas
-            // da paginação (medir texto é o caro no Fire: uma vez só)
+            // heights in 1 column: automatic needs them to decide and, when it picks 1 column, they're the same as the
+            // pagination's (measuring text is the expensive part on the Fire: only once)
             val oneLines = remember(lines, styleOne, width) { lazy { measureLines(styleOne, width) } }
-            // rolar (T13): sempre uma coluna
+            // scroll (T13): always one column
             val scrollMode = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
             val columns = remember(lines, styleOne, width, height, look.columns, layoutZoom, fitTwo, scrollMode) {
                 if (scrollMode) 1
@@ -705,14 +708,14 @@ fun StageScreen(
                 )
             }
             val fit = if (columns == 2) fitTwo else fitOne
-            // no automático a pinça pode crescer até o limite de 1 coluna (passando da meia tela, vira 1 coluna)
+            // in automatic the pinch can grow up to the 1 column limit (past half the screen, it becomes 1 column)
             SideEffect { fitZoom = if (look.columns == StageColumns.AUTO) fitOne else fit }
             val style = styleFor(minOf(layoutZoom, fit))
             val columnWidth = if (columns == 2) halfWidth else width
-            // linha com acordes que quebra nesta largura: um pedaço por linha da tela, e só os com acorde
-            // guardam o espaço de cima (senão a 2ª parte ganhava um vão sem acorde nenhum)
-            // lista de acordes da música no topo ou no fim (só no perfil letra e cifra): um espaço reservado no texto,
-            // com a altura das fileiras de desenhos nesta largura, para a paginação contar com ela
+            // a line with chords that wraps at this width: one piece per screen line, and only the ones with a chord
+            // keep the space above (otherwise the 2nd part got a gap with no chord at all). The song's chord list at
+            // the top or end (only in the lyrics and chords profile): a space reserved in the text, as tall as the rows
+            // of diagrams at this width, so the pagination counts it.
             val density = LocalDensity.current
             val stripChordCount = remember(shownText) { stripChords(shownText).size }
             val stripPlace = if (look.chords && stripChordCount > 0) look.chordList else ChordListPlace.NONE
@@ -736,16 +739,16 @@ fun StageScreen(
                 if (shownLines === lines && style == styleOne && columnWidth == width) oneLines.value else lineHeights(measurer, shownLines, style, columnWidth)
             }
             val sheets = remember(measured, height, columns) { Pagination.sheets(measured, height, columns) }
-            // rolar: os "passos" fazem o papel das páginas (pedal, fila de toques e bolinhas continuam iguais)
-            // onde a rolagem automática pausou (os passos seguintes partem dali); zera ao trocar de música
+            // scroll: the "steps" play the role of pages (pedal, tap queue and dots stay the same). Where auto-scroll
+            // paused (the next steps start from there); reset when changing songs.
             var anchor by remember(index) { mutableIntStateOf(0) }
             val steps = remember(measured, height, scrollMode, anchor) { if (scrollMode) br.app.stagebook.domain.ScrollSteps.steps(measured, height, anchor) else emptyList() }
             val stops = if (scrollMode) steps.size else sheets.size
             SideEffect { pageCount = stops; pageCountFor = index }
             val stopAt = if (page == LAST_PAGE) stops - 1 else page.coerceIn(0, stops - 1)
             val shownAt = if (scrollMode) 0 else stopAt
-            // cada página da animação leva o próprio texto: a que está saindo não pode ser montada com
-            // as linhas da música nova (era o crash ao trocar de música)
+            // each animation page carries its own text: the one leaving can't be built with the new song's lines (that
+            // was the crash when changing songs)
             val shown = PageContent(
                 index,
                 shownAt,
@@ -754,21 +757,22 @@ fun StageScreen(
                 if (scrollMode) listOf(0) else sheets[shownAt].map { range -> if (range.isEmpty()) -1 else range.first },
                 style,
                 columns,
-                // acorde: negrito, na cor e no tamanho dele, acompanhando o zoom da letra
+                // chord: bold, in its color and size, following the lyrics zoom
                 style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
             )
             val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
             SideEffect { hit.show(shown, columnWidth, gutter, chordPx) }
-            // rolar: a letra sobe até o passo atual; mudou o passo (dentro da música), a linha onde se continua acende
+            // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
+            // you continue lights up
             val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
-            val syncing = remember(index) { BooleanArray(1) }   // a pausa da rolagem automática acerta o passo sem rolar
+            val syncing = remember(index) { BooleanArray(1) }   // an auto-scroll pause sets the step without scrolling
             LaunchedEffect(index, stopAt, steps) {
                 if (syncing[0]) { syncing[0] = false; return@LaunchedEffect }
                 val target = steps.getOrNull(stopAt)?.offset?.toFloat() ?: 0f
                 if (page == LAST_PAGE) scrollY.snapTo(target) else scrollY.animateTo(target, tween(PAGE_IN_MS * 2))
             }
-            // rolagem automática: sobe sozinha na velocidade dos ajustes até o fim; pausada, o passo vira o da posição atual
-            // (o próximo toque continua dali, sem voltar)
+            // auto-scroll: moves up by itself at the speed from settings until the end; when paused, the step becomes
+            // the current position (the next tap continues from there, without going back)
             val autoRan = remember(index) { BooleanArray(1) }
             val maxScroll = steps.lastOrNull()?.offset ?: 0
             val autoPx = with(density) { (look.autoScroll * br.app.stagebook.data.model.Look.AUTO_SCROLL_DP_PER_LEVEL).dp.toPx() }
@@ -776,7 +780,8 @@ fun StageScreen(
                 if (!autoOn) {
                     if (autoRan[0]) {
                         autoRan[0] = false
-                        // pausou: a posição real vira um passo, e o próximo pedal continua exatamente dali
+                        // paused: the real position becomes a step, and the next pedal press continues exactly from
+                        // there
                         val at = scrollY.value.roundToInt()
                         anchor = at
                         val k = br.app.stagebook.domain.ScrollSteps.steps(measured, height, at).indexOfFirst { it.offset >= at }.coerceAtLeast(0)
@@ -794,12 +799,12 @@ fun StageScreen(
                     if (v >= maxScroll) { autoOn = false; break }
                 }
             }
-            var flash by remember(index) { mutableStateOf<IntRange?>(null) }   // y..y+altura da linha acesa, na tela
+            var flash by remember(index) { mutableStateOf<IntRange?>(null) }   // y..y+height of the lit line, on screen
             LaunchedEffect(index, stopAt) {
                 if (stopAt <= 0) { flash = null; return@LaunchedEffect }
                 flash = if (scrollMode) steps.getOrNull(stopAt)?.let { it.markY until it.markY + it.markHeight }
                 else sheets.getOrNull(stopAt)?.firstOrNull()?.let { range ->
-                    // virando página (T14): a primeira linha com texto da página nova
+                    // turning pages (T14): the first line with text on the new page
                     val i = range.firstOrNull { !measured[it].blank } ?: return@let null
                     val top = (range.first until i).sumOf { measured[it].height }
                     top until top + measured[i].height
@@ -809,7 +814,7 @@ fun StageScreen(
             }
             AnimatedContent(
                 modifier = Modifier.graphicsLayer {
-                    // enquanto a pinça não para, a página atual só escala (a partir do canto de cima)
+                    // while the pinch hasn't stopped, the current page only scales (from the top corner)
                     val pinchScale = minOf(zoomState.floatValue, fit) / minOf(layoutZoom, fit)
                     scaleX = pinchScale
                     scaleY = pinchScale
@@ -817,10 +822,10 @@ fun StageScreen(
                     translationX = dragX
                 },
                 targetState = shown,
-                // texto refeito pelo zoom não é virada de página: troca sem animar
+                // text rebuilt by zoom isn't a page turn: swap without animating
                 contentKey = { it.song to it.page },
                 transitionSpec = {
-                    // vira a página: a nova entra pelo lado do movimento
+                    // turn the page: the new one comes in from the side of the movement
                     val forward = targetState.song > initialState.song ||
                         (targetState.song == initialState.song && targetState.page > initialState.page)
                     val dir = if (forward) 1 else -1
@@ -843,7 +848,7 @@ fun StageScreen(
                                     .offset { IntOffset(0, -scrollY.value.roundToInt()) },
                                 onTextLayout = { laid = it; hit.laidOut(content, column, it) },
                             )
-                            // a lista de acordes, por cima do espaço reservado para ela
+                            // the chord list, over the space reserved for it
                             val l = laid
                             if (strip != null && l != null && strip.start < l.layoutInput.text.length) {
                                 val top = l.getLineTop(l.getLineForOffset(strip.start)).roundToInt()
@@ -858,21 +863,21 @@ fun StageScreen(
                             }
                         }
                     }
-                    // última folha com só a coluna da esquerda: a da direita fica vazia, não estica a outra
+                    // last sheet with only the left column: the right one stays empty, it doesn't stretch the other
                     repeat(content.sheetColumns - content.columns.size) { Box(Modifier.weight(1f)) }
                 }
             }
-            // contagem do metrônomo (1 2 3 4) bem grande no meio, antes de começar
+            // metronome count-in (1 2 3 4) very big in the middle, before starting
             if (metroOn && look.metroCount && metroBeat in 0 until METRO_COUNT) {
                 Text(
                     (metroBeat + 1).toString(),
-                    // grande o bastante para a banda ver do outro lado do palco
+                    // big enough for the band to see from across the stage
                     style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 200.sp, lineHeight = 200.sp),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
-            // a linha onde se continua, acesa por um instante (T14), na largura da coluna da esquerda
+            // the line where you continue, lit for a moment (T14), at the left column's width
             androidx.compose.animation.AnimatedVisibility(
                 visible = flash != null,
                 enter = fadeIn(tween(120)),
@@ -888,7 +893,7 @@ fun StageScreen(
                 )
             }
             SideEffect { autoAvailable = scrollMode && !song.missing && maxScroll > 0 }
-            // player (só no modo player): play/pause transparente no canto de baixo à direita, por cima da letra
+            // player (player mode only): transparent play/pause in the bottom right corner, over the lyrics
             if (look.playerMode && !song.missing) {
                 TrackButton(
                     hasTrack = song.track.isNotEmpty(),
@@ -910,7 +915,7 @@ fun StageScreen(
                 EditLineButton(
                     onClick = { editOffer = null; editAt(offer.line) },
                     modifier = Modifier.layout { measurable, c ->
-                        // em cima do dedo (embaixo, se não couber), sem sair da tela
+                        // above the finger (below if it doesn't fit), without leaving the screen
                         val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
                         val gap = Spacing.l.roundToPx()
                         val above = offer.at.y.roundToInt() - gap - p.height
@@ -925,9 +930,9 @@ fun StageScreen(
             }
         }
 
-        // rodapé: hora à esquerda; à direita as bolinhas das páginas e, na última página, a próxima música
-        // (ou o fim do setlist) no lugar delas. As bolinhas vieram do topo e substituem o "Continua →", que
-        // repetia o que elas já mostram (pedido do usuário, 23/10)
+        // footer: time on the left; on the right the page dots and, on the last page, the next song (or the end of the
+        // setlist) in their place. The dots came from the header and replace "Continues →", which repeated what they
+        // already show (user's request, 23/10)
         val nextTitle = uiState.songs.getOrNull(index + 1)?.let { if (it.missing) stringResource(R.string.set_item_missing) else it.title }
         Row(
             Modifier.fillMaxWidth().padding(top = Spacing.s, bottom = Spacing.m),
@@ -935,10 +940,10 @@ fun StageScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             StageClock(fg.copy(alpha = 0.7f))
-            // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), na linha do relógio (fora da letra)
-            // um ícone só (aceso enquanto rola); a janelinha tem o play e a velocidade (pedido do usuário, 29/10)
-            // metrônomo: tocando, o ícone vira stop e pisca no tempo (mais forte no 1); parado, abre a janelinha
-            if (look.extrasOn) {   // modo essencial (T19): sem o metrônomo
+            // scroll: auto-scroll ▶/⏸ and speed (−/+), on the clock line (outside the lyrics). A single icon (lit while
+            // scrolling); the small window has play and speed (user's request, 29/10). Metronome: while playing, the
+            // icon becomes stop and blinks on the beat (stronger on 1); when stopped, it opens the small window
+            if (look.extrasOn) {   // essential mode (T19): no metronome
                 var metroDialog by remember { mutableStateOf(false) }
                 Box {
                     IconButton(onClick = { if (metroOn) metroOn = false else metroDialog = true }) {
@@ -955,9 +960,10 @@ fun StageScreen(
             }
             if (autoAvailable) {
                 var autoDialog by remember { mutableStateOf(false) }
-                // a janelinha abre colada acima do ícone (pedido do usuário, 29/10)
+                // the small window opens right above the icon (user's request, 29/10)
                 Box {
-                    // rolando: o ícone vira pause e para na hora (pedido do usuário, 29/10); parado, abre a janelinha
+                    // while scrolling: the icon becomes pause and stops right away (user's request, 29/10); when
+                    // stopped, it opens the small window
                     IconButton(onClick = { if (autoOn) autoOn = false else autoDialog = true }) {
                         if (autoOn) Icon(AppIcons.PauseRounded, stringResource(R.string.stage_auto_pause), tint = MaterialTheme.colorScheme.primary)
                         else Icon(AppIcons.AutoScroll, stringResource(R.string.stage_auto_title), tint = fg.copy(alpha = 0.7f))
@@ -994,8 +1000,8 @@ fun StageScreen(
             Text(stringResource(R.string.stage_keyboard_capo_hint, keyboardHint), Modifier.padding(Spacing.m), style = MaterialTheme.typography.bodyLarge)
         }
     }
-    // brilho do metrônomo na borda, esmaecendo para dentro, numa camada própria por cima: cada piscada redesenha só ela
-    // (a letra fica guardada como está), e nada é desenhado fora das piscadas
+    // metronome glow on the edge, fading inward, on its own layer on top: each blink redraws only it (the lyrics stay
+    // cached as they are), and nothing is drawn outside the blinks
     Spacer(
         Modifier
             .matchParentSize()
@@ -1015,11 +1021,11 @@ fun StageScreen(
     }
 }
 
-/** "Zoom desta música: 120%" enquanto ajusta, com atalho para voltar ao tamanho padrão. */
+/** "Zoom for this song: 120%" while adjusting, with a shortcut back to the default size. */
 @Composable
 private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
-        // lido aqui dentro: durante a pinça só o selo recompõe
+        // read in here: during the pinch only the badge recomposes
         val percent = percent()
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 4.dp) {
             Row(
@@ -1039,14 +1045,14 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
 }
 
 /**
- * Largura (px) de cada texto numa linha só, medidos todos de uma vez: no Fire, centenas de
- * medições separadas na troca de música davam um engasgo visível.
+ * Width (px) of each text on a single line, all measured at once: on the Fire, hundreds of separate measurements when
+ * changing songs caused a visible stutter.
  */
 /**
- * Altura de cada linha da letra na largura [width], numa medição só do texto inteiro (medir linha a
- * linha montava um layout por linha: dezenas na troca de música, o caro no Fire). A altura de uma
- * linha é a das linhas desenhadas que ela ocupa (quebras inclusas); bate com a medição separada porque
- * a altura de linha é fixa (LineHeightStyle.Trim.None). Linha vazia mede como um espaço.
+ * Height of each lyrics line at width [width], in a single measurement of the whole text (measuring line by line built
+ * a layout per line: dozens when changing songs, the expensive part on the Fire). A line's height is that of the drawn
+ * lines it takes (wraps included); it matches the separate measurement because the line height is fixed
+ * (LineHeightStyle.Trim.None). An empty line measures as a space.
  */
 internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, style: TextStyle, width: Int): List<Pagination.Line> {
     if (lines.isEmpty()) return emptyList()
@@ -1062,9 +1068,9 @@ internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, s
 }
 
 /**
- * Linhas com acordes que quebram na largura [width] viram um pedaço por linha da tela (medidas numa passada
- * só, como o resto). Pedaço sem acorde perde o espaço de cima e vira uma linha comum. Sem quebra, devolve a
- * mesma lista (o palco reaproveita a medição já feita).
+ * Lines with chords that wrap at width [width] become one piece per screen line (measured in a single pass, like the
+ * rest). A piece without a chord loses the space above and becomes a plain line. Without wrapping, returns the same
+ * list (the stage reuses the measurement already done).
  */
 internal fun splitWrappedChordLines(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int): List<StageLine> {
     val chordAt = lines.indices.filter { lines[it].text.isChordLine() }
@@ -1088,10 +1094,10 @@ internal fun splitWrappedChordLines(measurer: TextMeasurer, lines: List<StageLin
     return lines.flatMapIndexed { i, l -> pieces[i]?.map { StageLine(it, l.source) } ?: listOf(l) }
 }
 
-/** Tablatura larga demais para a coluna: a letra de máquina diminui até caber (nunca quebra, senão as colunas se perdem). */
+/** Tablature too wide for the column: the monospace shrinks until it fits (never wraps, or the columns get lost). */
 internal fun fitTabs(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int): List<StageLine> {
     if (lines.none { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }) return lines
-    // o bloco inteiro fica do mesmo tamanho (o da linha mais larga), para as cordas continuarem alinhadas entre si
+    // the whole block stays the same size (that of the widest line), so the strings stay aligned with each other
     val widest = lines.filter { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }
         .maxOf { measurer.measure(it.text, style, softWrap = false).size.width }
     if (widest <= width) return lines
@@ -1108,27 +1114,27 @@ internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style:
     return List(r.lineCount) { ceil(r.getLineRight(it) - r.getLineLeft(it)).toInt() }
 }
 
-/** O que o detector de gesto precisa ler sempre atualizado (ele não reinicia a cada página). */
+/** What the gesture detector must always read up to date (it doesn't restart on every page). */
 private class GestureTargets(
     val next: () -> Unit,
     val previous: () -> Unit,
     val minZoom: Float,
     val maxZoom: Float,
     val hold: (Offset) -> Unit,
-    val dismiss: () -> Boolean,   // fecha o botão de editar; true se ele estava aberto
-    val chord: (Offset) -> Boolean,   // tocou num acorde: abre o desenho; true se abriu
+    val dismiss: () -> Boolean,   // closes the edit button; true if it was open
+    val chord: (Offset) -> Boolean,   // tapped a chord: opens the diagram; true if it opened
 )
 
-/** `starts`: índice em `lines` da 1ª linha de cada coluna (-1 = coluna vazia). */
-// leva também o estilo e as colunas da folha: a página que sai na animação não é remontada (nem muda de
-// tamanho) com os da música nova
+/** `starts`: index in `lines` of the first line of each column (-1 = empty column). */
+// also carries the sheet's style and columns: the page leaving in the animation isn't rebuilt (or resized) with the new
+// song's
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
 private const val KEYBOARD_HINT_MS = 6_000L
-private val METRO_GLOW = 20.dp          // brilho da borda, esmaecendo para dentro (não chega na letra)
-private val METRO_GLOW_ACCENT = 26.dp   // um pouco mais largo no 1 do compasso
+private val METRO_GLOW = 20.dp          // edge glow, fading inward (it doesn't reach the lyrics)
+private val METRO_GLOW_ACCENT = 26.dp   // a bit wider on beat 1 of the bar
 private const val METRO_GLOW_ALPHA = 0.8f
-private const val METRO_COUNT = 4   // a contagem é de um compasso de 4
+private const val METRO_COUNT = 4   // the count-in is one bar of 4
 private const val FLASH_ALPHA = 0.22f
 
 private data class PageContent(
@@ -1141,10 +1147,10 @@ private data class PageContent(
     val chordStyle: TextStyle,
 )
 
-/** Botão "editar esta linha" oferecido onde o dedo segurou; `line` é o índice em `lines`. */
+/** "Edit this line" button offered where the finger held; `line` is the index in `lines`. */
 private class EditOffer(val at: Offset, val line: Int)
 
-/** Acha a linha embaixo do dedo pelo texto já desenhado na página (quebras de linha inclusas). */
+/** Finds the line under the finger through the text already drawn on the page (line wraps included). */
 private class PageHit {
     private var content: PageContent? = null
     private var columnWidth = 0
@@ -1162,12 +1168,12 @@ private class PageHit {
 
     fun laidOut(c: PageContent, column: Int, r: TextLayoutResult) { if (c == content && column < layouts.size) layouts[column] = r }
 
-    /** Índice em `lines` da 1ª linha da página na tela. */
+    /** Index in `lines` of the first line of the page on screen. */
     fun firstLine(): Int? = content?.starts?.firstOrNull { it >= 0 }
 
     /**
-     * O acorde no ponto `p`, ou null: os desenhados em cima da letra (marca [CHORD_TAG], na faixa de cima da linha)
-     * e os das linhas só de acordes (a palavra tocada, se for acorde).
+     * The chord at point `p`, or null: the ones drawn above the lyrics (marked with [CHORD_TAG], in the line's top
+     * band) and the ones on chords-only lines (the tapped word, if it's a chord).
      */
     fun chordAt(p: Offset): String? {
         val c = content ?: return null
@@ -1186,7 +1192,7 @@ private class PageHit {
                 if (x >= x0 - tolerance && x <= x0 + a.item.length * chordPx * 0.7f + tolerance) return a.item
             }
         }
-        // linha só de acordes: a palavra embaixo do dedo
+        // chords-only line: the word under the finger
         val lineText = text.text.substring(layout.getLineStart(line), layout.getLineEnd(line))
         if (Chords.isChordLine(lineText)) {
             val o = layout.getOffsetForPosition(Offset(x, p.y))
@@ -1200,14 +1206,14 @@ private class PageHit {
         return null
     }
 
-    /** Índice em `lines` da linha no ponto `p`, ou null fora do texto. */
+    /** Index in `lines` of the line at point `p`, or null outside the text. */
     fun lineAt(p: Offset): Int? {
         val c = content ?: return null
         val column = if (c.columns.size > 1 && p.x >= columnWidth + gutter / 2f) 1 else 0
         val layout = layouts[column] ?: return null
         val start = c.starts[column]
         if (start < 0 || p.y > layout.size.height) return null
-        // só a altura importa: a linha inteira é a mesma, em qualquer ponto dela
+        // only the height matters: the whole line is the same at any point in it
         val offset = layout.getLineStart(layout.getLineForVerticalPosition(p.y))
         val text = layout.layoutInput.text
         val line = text.getStringAnnotations(LINE_TAG, offset, minOf(offset + 1, text.length)).firstOrNull()?.item?.toInt() ?: return null
@@ -1216,8 +1222,8 @@ private class PageHit {
 }
 
 /**
- * Play/pause da faixa: círculo translúcido, para não esconder a letra. Sem faixa, o toque escolhe o arquivo; com
- * faixa, o toque longo oferece trocar ou tirar a faixa.
+ * Track play/pause: a translucent circle, so it doesn't hide the lyrics. Without a track, the tap picks the file; with
+ * a track, a long press offers to change or remove it.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1253,8 +1259,10 @@ private fun TrackButton(
     }
 }
 
-/** Tom ({key}) e capotraste ({capo}) da música no topo do palco; nada se a música não tem nenhum dos dois. */
-/** Metrônomo (janelinha acima do ícone): o BPM com − e + e o play, que fecha a janela; o resto fica em Ajustes. */
+/** The song's key ({key}) and capo ({capo}) at the top of the stage; nothing if the song has neither. */
+/**
+ * Metronome (small window above the icon): BPM with − and + and play, which closes the window; the rest is in Settings.
+ */
 @Composable
 private fun MetronomeDialog(
     bpm: Int,
@@ -1288,7 +1296,7 @@ private fun MetronomeDialog(
     }
 }
 
-/** Põe a janelinha em cima do ícone, alinhada à esquerda dele, sem sair da tela. */
+/** Places the small window above the icon, aligned to its left, without leaving the screen. */
 private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: androidx.compose.ui.unit.IntRect,
@@ -1301,7 +1309,7 @@ private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.Pop
     )
 }
 
-/** Rolagem automática (janelinha logo acima do ícone): velocidade de 1 a 10 e o play/pausa, que fecha a janela. */
+/** Auto-scroll (small window right above the icon): speed from 1 to 10 and play/pause, which closes the window. */
 @Composable
 private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLevel: (Int) -> Unit, onDismiss: () -> Unit) {
     val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
@@ -1312,7 +1320,7 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
     ) {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
             Column(Modifier.padding(Spacing.l), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                // título e o × para fechar (o play também fecha)
+                // title and the × to close (play also closes)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Text(stringResource(R.string.stage_auto_title), style = MaterialTheme.typography.titleLarge)
                     IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
@@ -1320,8 +1328,8 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
                 Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
                     IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
-                    // play arredondado e grande, na cor de destaque e sem fundo (pedido do usuário, 29/10); o alvo de toque
-                    // continua grande
+                    // rounded, big play in the accent color with no background (user's request, 29/10); the touch
+                    // target stays big
                     IconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                         Icon(
                             if (on) AppIcons.PauseRounded else AppIcons.PlayRounded,
@@ -1343,20 +1351,21 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
 @Composable
 private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, keyboardCapo: Int = 0) {
     val key = remember(text) { Chords.key(text) }
-    // teclado não usa capotraste (pedido do usuário, 29/10): no palco dele o capo não aparece
+    // keyboard doesn't use a capo (user's request, 29/10): on its stage the capo doesn't show
     val capo = remember(text, showCapo) { if (showCapo) Chords.capo(text) else 0 }
     if (key.isEmpty() && capo == 0 && keyboardCapo == 0) return
     val sounds = Chords.soundingKey(key, capo)
     val keyDesc = stringResource(R.string.stage_key_desc, key)
     val capoDesc = if (key.isNotEmpty()) stringResource(R.string.stage_capo_sounds_desc, capo, sounds) else stringResource(R.string.stage_capo_desc, capo)
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
-        // o capo vem antes do tom e aceso: muda o que se toca, não pode passar despercebido (pedido do usuário, 29/10)
+        // the capo comes before the key and lit: it changes what you play, it can't go unnoticed (user's request,
+        // 29/10)
         if (capo > 0) {
             val accent = MaterialTheme.colorScheme.primary
             Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
                 Icon(AppIcons.Capo, null, tint = accent)
                 Text(capo.toString(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
-                // o tom que soa com o capo, à vista (os desenhos continuam os da cifra)
+                // the key that sounds with the capo, in view (the diagrams stay the chart's)
                 if (key.isNotEmpty()) Text(" " + stringResource(R.string.stage_capo_sounds_short, sounds), style = MaterialTheme.typography.titleSmall, color = accent)
             }
         }
@@ -1366,14 +1375,14 @@ private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, key
                 Text(key, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
             }
         }
-        // teclado com a cifra transposta pelo capo: diz por que o tom é outro
+        // keyboard with the chart transposed by the capo: says why the key is different
         if (keyboardCapo > 0) {
             Text(stringResource(R.string.stage_keyboard_capo, keyboardCapo), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
 
-/** A música tem backing track: o primeiro ícone depois do artista, aceso na cor de destaque. */
+/** The song has a backing track: the first icon after the artist, lit in the accent color. */
 @Composable
 private fun TrackBadge(modifier: Modifier = Modifier) {
     Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), modifier, tint = MaterialTheme.colorScheme.primary)
@@ -1394,10 +1403,9 @@ private fun EditLineButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 /**
- * Uma bolinha por página, com o número dela (pedido do usuário, 23/10): a atual preenchida e acesa, as
- * outras só com o número apagado. Some quando a música cabe numa página só. Mais de [PAGE_SLOTS]
- * páginas: a paginação do Google ([PageSlots]), primeira, atual com as vizinhas, "…" e última; igual no
- * celular e no tablet (pedido do usuário, 23/10).
+ * One dot per page, with its number (user's request, 23/10): the current one filled and lit, the others with just a dim
+ * number. Hidden when the song fits on one page. More than [PAGE_SLOTS] pages: Google's pagination ([PageSlots]),
+ * first, current with its neighbors, "…" and last; the same on phones and tablets (user's request, 23/10).
  */
 @Composable
 private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier = Modifier) {
@@ -1423,7 +1431,7 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
     }
 }
 
-/** Hora atual no formato do aparelho, atualizada na virada de cada minuto. */
+/** Current time in the device's format, updated at the turn of each minute. */
 @Composable
 private fun StageClock(color: Color, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -1438,7 +1446,7 @@ private fun StageClock(color: Color, modifier: Modifier = Modifier) {
     Text(format.format(now), style = MaterialTheme.typography.titleLarge, color = color, maxLines = 1, modifier = modifier)
 }
 
-/** O palco fica sempre aceso (as barras do sistema o app já esconde em todas as telas). */
+/** The stage always stays lit (the app already hides the system bars on every screen). */
 @Composable
 private fun KeepScreenOn() {
     val view = LocalView.current
@@ -1466,8 +1474,8 @@ private fun StageLightPreview() = StagebookTheme(darkTheme = false) {
 @Composable
 private fun StageDarkPreview() = StagebookTheme(darkTheme = true) { StageScreen(previewState, 0, 0, { _, _ -> }) }
 
-/** Apertos do pedal/toque esperando a posição pedida aparecer (ver "pé rápido" no StageScreen). */
+/** Pedal/tap presses waiting for the requested position to show (see "fast foot" in StageScreen). */
 private class PressQueue {
-    var from: Pair<Int, Int>? = null   // posição de onde saiu o aperto ainda não assentado
-    var steps = 0                      // apertos que chegaram nesse meio tempo (+ avança, - volta)
+    var from: Pair<Int, Int>? = null   // position the press left from, not settled yet
+    var steps = 0                      // presses that arrived in the meantime (+ forward, - back)
 }

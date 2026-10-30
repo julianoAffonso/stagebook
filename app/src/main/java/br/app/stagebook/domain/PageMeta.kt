@@ -2,16 +2,16 @@ package br.app.stagebook.domain
 
 import kotlinx.serialization.Serializable
 
-/** O que o script de extração lê da página aberta no navegador de importação. */
+/** What the extraction script reads from the page open in the import browser. */
 @Serializable
 data class PageData(
     val title: String = "",
     val artist: String = "",
     val text: String = "",
-    val chordText: String = "",   // cifra com os acordes em cima (Cifra Club)
+    val chordText: String = "",   // chords with the chords above (Cifra Club)
     val key: String = "",
     val capo: String = "",
-    val bpm: String = "",   // "120 BPM" / "BPM: 120" / "Tempo: 120" escrito na página, se houver
+    val bpm: String = "",   // "120 BPM" / "BPM: 120" / "Tempo: 120" written on the page, if any
     val site: String = "",
     val ldName: String = "",
     val ldArtist: String = "",
@@ -21,8 +21,8 @@ data class PageData(
 )
 
 /**
- * Título e artista: dados estruturados da página > og:title / título da aba ("Música - Artista - SITE")
- * > h1/h2. Descarta o que for o nome do próprio site.
+ * Title and artist: the page's structured data > og:title / tab title ("Song - Artist - SITE") > h1/h2. Drops whatever
+ * is the site's own name.
  */
 object PageMeta {
     data class TitleArtist(val title: String, val artist: String)
@@ -47,7 +47,7 @@ object PageMeta {
     private fun first(site: String, vararg candidates: String): String =
         candidates.map { it.trim() }.firstOrNull { it.isNotEmpty() && it.length <= 80 && !isSite(it, site) }.orEmpty()
 
-    /** "LETRAS.MUS.BR", "Vagalume", "Cifra Club", "Genius"… não são título nem artista. */
+    /** "LETRAS.MUS.BR", "Vagalume", "Cifra Club", "Genius"… are neither title nor artist. */
     fun isSite(s: String, host: String): Boolean {
         val k = TextKey.of(s).replace(" ", "")
         if (k.isEmpty()) return true

@@ -38,12 +38,13 @@ import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Ajustes → Banda: o nome com que a banda vê este aparelho, quem está na mesma rede agora (pedir para entrar) e quem é da
- * banda (remover). Sem Wi-Fi, só o aviso; a procura só roda com esta tela aberta ou com alguém da banda guardado.
+ * Settings → Band: the name the band sees for this device, who is on the same network now (ask to join) and who is in
+ * the band (remove). Without Wi-Fi, just the notice; the search only runs with this screen open or with a saved band
+ * member.
  */
 @Composable
-fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // lan: "Banda na rede" ligada (T19)
-    var renaming by rememberSaveable { mutableStateOf(!band.nameConfirmed) }   // 1ª vez: pergunta o nome
+fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // lan: "Band on the network" on (T19)
+    var renaming by rememberSaveable { mutableStateOf(!band.nameConfirmed) }   // first time: asks for the name
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         SettingsCard(stringResource(R.string.band_this_device), help = stringResource(R.string.band_help)) {
@@ -77,7 +78,7 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
         TextInputDialog(
             stringResource(R.string.band_name_title), band.name, stringResource(R.string.band_name_hint),
             onConfirm = { actions.onName(it); renaming = false },
-            onDismiss = { actions.onName(band.name); renaming = false },   // fechar também confirma a sugestão
+            onDismiss = { actions.onName(band.name); renaming = false },   // closing also confirms the suggestion
         )
     }
     removing?.let { id ->
@@ -89,13 +90,13 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
     }
 }
 
-// um aparelho na rede: já é da banda, ou "Pedir para entrar" (e como está o pedido)
+// a device on the network: already in the band, or "Ask to join" (and the request's state)
 @Composable
 private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(peer.name, style = MaterialTheme.typography.bodyLarge)
         when {
-            // outra versão do app: nada funciona entre os dois até atualizarem para a mesma
+            // another app version: nothing works between the two until both update to the same one
             peer.otherVersion != null -> Text(
                 stringResource(R.string.band_other_version, peer.otherVersion), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
             )
@@ -124,7 +125,7 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
     }
 }
 
-/** "Tablet da Ana quer entrar na banda" → Autorizar / Não autorizar (como no Bluetooth), em qualquer tela. */
+/** "Ana's tablet wants to join the band" → Allow / Don't allow (like Bluetooth), on any screen. */
 @Composable
 fun BandRequestDialog(name: String, onAnswer: (Boolean) -> Unit) {
     QuestionDialog(

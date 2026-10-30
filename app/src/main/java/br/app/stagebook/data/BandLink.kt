@@ -38,12 +38,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * A banda na rede local (Wi-Fi do lugar ou o ponto de acesso de um celular; sem internet): anuncia este aparelho, acha os
- * outros e atende os pedidos de entrada. Gasta o mínimo do tablet (pedido do usuário, 25/10):
- * - **anúncio + servidor** (quase nada: o Android responde e o servidor fica parado esperando): app na frente, rede local
- *   e (alguém da banda guardado, ou uma tela que procura aberta);
- * - **procura + multicast lock** (o que gasta: perguntas na rede e o Wi-Fi acordando para cada pacote): só enquanto uma
- *   tela precisa dela ([setScreenOpen]) e **nunca no palco**.
+ * The band on the local network (venue Wi-Fi or a phone's hotspot; no internet): announces this device, finds the
+ * others and handles join requests. Uses as little of the tablet as possible (user's request, 25/10):
+ * - **announcement + server** (almost nothing: Android answers and the server sits waiting): app in front, local
+ *   network and (a saved band member, or a searching screen open);
+ * - **search + multicast lock** (the costly part: network queries and the Wi-Fi waking for each packet): only while a
+ *   screen needs it ([setScreenOpen]) and **never on stage**.
  */
 @Singleton
 class BandLink @Inject constructor(
@@ -54,16 +54,16 @@ class BandLink @Inject constructor(
     private val inbox: BandInbox,
     private val repository: LibraryRepository,
 ) {
-    /** O que vai num pacote da banda: a lista (no formato do QR, em Base64) e as músicas. */
+    /** What goes in a band package: the list (in QR format, in Base64) and the songs. */
     @kotlinx.serialization.Serializable
     private data class Package(val list: String, val songs: List<SetlistCloud.SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
 
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-    /** Um aparelho com o Stagebook na mesma rede. */
+    /** A device with Stagebook on the same network. */
     @Immutable
     data class Peer(val id: String, val name: String, val host: InetAddress, val port: Int, val v: Int = BandProtocol.VERSION, val app: String = "")
 
-    /** Alguém pedindo para entrar na banda por este aparelho (o usuário responde Autorizar / Não autorizar). */
+    /** Someone asking to join the band through this device (the user answers Allow / Don't allow). */
     @Immutable
     class Request(val id: String, val name: String, internal val answer: CompletableDeferred<Boolean>)
 
@@ -77,16 +77,16 @@ class BandLink @Inject constructor(
     private val _requests = MutableStateFlow<List<Request>>(emptyList())
     val requests: StateFlow<List<Request>> = _requests
 
-    /** Pedidos que este aparelho fez, por id do outro. */
+    /** Requests this device made, by the other one's id. */
     private val _joins = MutableStateFlow<Map<String, Join>>(emptyMap())
     val joins: StateFlow<Map<String, Join>> = _joins
 
     private val _running = MutableStateFlow(false)
-    /** Anunciado na rede (o servidor esperando). A procura dos outros é à parte e mais curta. */
+    /** Announced on the network (the server waiting). Searching for the others is separate and shorter. */
     val running: StateFlow<Boolean> = _running
 
     private var foreground = false
-    private var searchUsers = 0   // telas abertas que precisam achar os outros (Ajustes → Banda, folha Compartilhar)
+    private var searchUsers = 0   // open screens that need to find the others (Settings → Band, Share sheet)
     private val screenOpen get() = searchUsers > 0
     private var server: ServerSocket? = null
     private var serverJob: Job? = null
@@ -95,7 +95,7 @@ class BandLink @Inject constructor(
     private var multicast: WifiManager.MulticastLock? = null
     private val nsd get() = context.getSystemService(NsdManager::class.java)
 
-    /** O app foi para a frente / saiu dela (MainActivity). Na frente, acompanha o Wi-Fi ligar e desligar. */
+    /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
         foreground = on
         val cm = context.getSystemService(ConnectivityManager::class.java)
@@ -115,23 +115,23 @@ class BandLink @Inject constructor(
     private var netCallback: ConnectivityManager.NetworkCallback? = null
 
     private val _wifi = MutableStateFlow(false)
-    /** No Wi-Fi agora (a tela mostra "conecte no Wi-Fi" sem ele). */
+    /** On Wi-Fi now (the screen shows "connect to Wi-Fi" without it). */
     val wifi: StateFlow<Boolean> = _wifi
 
-    /** Uma tela que precisa achar os outros abriu (true) ou fechou (false): Ajustes → Banda, a folha Compartilhar. */
+    /** A screen that needs to find the others opened (true) or closed (false): Settings → Band, the Share sheet. */
     @Synchronized
     fun setScreenOpen(on: Boolean) { searchUsers = (searchUsers + if (on) 1 else -1).coerceAtLeast(0); update() }
 
-    /** Quem é da banda e está na rede agora (para "Banda na rede (N)"). */
+    /** Band members on the network now (for "Band on the network (N)"). */
     val onlineMembers: StateFlow<List<Peer>> = kotlinx.coroutines.flow.combine(_peers, trust.members) { peers, members ->
         val ids = members.map { it.id }.toSet()
-        peers.filter { it.id in ids && it.v == BandProtocol.VERSION }   // outra versão não recebe: fica na fila
+        peers.filter { it.id in ids && it.v == BandProtocol.VERSION }   // another version doesn't receive: it stays in the queue
     }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
-    /** Quem confere um "ok" das 3 palavras que chegou pela rede (a [BandInternet], que guarda os meus envios). */
+    /** Who checks a 3 words "ok" that arrived over the network ([BandInternet], which keeps my sends). */
     @Volatile var codeAckHandler: ((BandProtocol.Hello, String) -> Boolean)? = null
 
-    /** Manda para um aparelho da rede (pacote cifrado com a chave do par, ou um CODE_ACK); true se ele guardou. */
+    /** Sends to a device on the network (package encrypted with the pair key, or a CODE_ACK); true if it stored it. */
     suspend fun sendTo(peer: Peer, body: String, kind: String = BandProtocol.Kind.PACKAGE): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
         runCatching {
             val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
@@ -139,7 +139,7 @@ class BandLink @Inject constructor(
         }.getOrDefault(false)
     }
 
-    /** O pacote (lista + músicas) cifrado para um membro, pronto para [sendTo]. */
+    /** The package (list + songs) encrypted for a member, ready for [sendTo]. */
     fun packageFor(memberId: String, list: ByteArray, songs: List<SetlistCloud.SharedSong>): String? {
         val key = pairKeyWith(memberId) ?: return null
         val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
@@ -147,8 +147,8 @@ class BandLink @Inject constructor(
     }
 
     /**
-     * Procura a banda por pouco tempo (ao abrir o app com algo pendente: envios sem recibo, "ok" sem confirmação), para
-     * acertar com quem estiver no mesmo Wi-Fi. Nunca no palco (a procura já respeita isso).
+     * Searches for the band briefly (on app open with something pending: sends with no receipt, an unconfirmed "ok"),
+     * to catch up with whoever is on the same Wi-Fi. Never on stage (the search already respects that).
      */
     fun burst(ms: Long = BURST_MS, evenOnStage: Boolean = false) {
         if (evenOnStage) { onStageSearch++; update() } else setScreenOpen(true)
@@ -158,10 +158,10 @@ class BandLink @Inject constructor(
         }
     }
 
-    // só o "Quem conduz" procura no palco, e sempre por pouco tempo (burst): achar quem voltou para o Wi-Fi
+    // only "Lead the band" searches on stage, and always briefly (burst): find whoever came back to the Wi-Fi
     @Volatile private var onStageSearch = 0
 
-    /** Manda um setlist ou músicas para todos da banda na rede agora; devolve os ids de quem recebeu. */
+    /** Sends a setlist or songs to everyone in the band on the network now; returns the ids of who got it. */
     suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Set<String> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
         val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
         onlineMembers.value.map { peer ->
@@ -178,11 +178,11 @@ class BandLink @Inject constructor(
         }.mapNotNull { it.await() }.toSet()
     }
 
-    /** Uma música pedida à banda (título e artista, como no QR). */
+    /** A song asked of the band (title and artist, as in the QR). */
     @kotlinx.serialization.Serializable
     data class Wanted(val title: String, val artist: String = "")
 
-    // chave do par com um membro (null se ele não é mais da banda ou a chave guardada não abre)
+    // pair key with a member (null if they're no longer in the band or the saved key doesn't open)
     private fun pairKeyWith(id: String): ByteArray? {
         val member = trust.member(id) ?: return null
         val theirs = BandCrypto.publicKey(member.key) ?: return null
@@ -190,8 +190,8 @@ class BandLink @Inject constructor(
     }
 
     /**
-     * Pergunta a todos da banda na rede agora quem tem as músicas [wanted]; junta as respostas (a primeira que chegar de
-     * cada título). Ninguém do outro lado precisa tocar em nada.
+     * Asks everyone in the band on the network now who has the [wanted] songs; collects the answers (the first to
+     * arrive for each title). Nobody on the other side has to tap anything.
      */
     suspend fun askMissing(wanted: List<Wanted>): List<SetlistCloud.SharedSong> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
         if (wanted.isEmpty()) return@io emptyList()
@@ -208,17 +208,18 @@ class BandLink @Inject constructor(
                 }.getOrDefault(emptyList())
             }
         }.flatMap { it.await() }
-        // mais de um aparelho tem a mesma música: fica a versão com cifra (no perfil só letra ela fica guardada, escondida)
+        // more than one device has the same song: the version with chords wins (in the lyrics only profile it's kept,
+        // hidden)
         answers.groupBy { br.app.stagebook.domain.TextKey.of(it.title) + "|" + br.app.stagebook.domain.TextKey.of(it.author) }
             .values.map { versions -> versions.maxBy { if (br.app.stagebook.domain.Chords.hasChords(it.text)) 1 else 0 } }
     }
 
-    /** Quem acompanha recebe a mensagem de quem conduz e devolve o que falta aqui (null = não está acompanhando). */
+    /** A follower gets the leader's message and answers what's missing here (null = not following). */
     @Volatile var conductHandler: ((BandProtocol.Hello, br.app.stagebook.domain.Conduct.Msg) -> br.app.stagebook.domain.Conduct.Lack?)? = null
 
     /**
-     * "Quem conduz": manda [msg] aos da banda online, ao mesmo tempo, e junta o que falta para cada um (id → falta; quem
-     * não respondeu fica de fora do mapa e a tela trata como "não respondeu").
+     * "Lead the band": sends [msg] to the band members online, all at once, and collects what each one is missing (id →
+     * missing; whoever didn't answer is left out of the map and the screen treats them as "didn't answer").
      */
     suspend fun conduct(msg: br.app.stagebook.domain.Conduct.Msg): Map<String, br.app.stagebook.domain.Conduct.Lack> =
         kotlinx.coroutines.withContext(Dispatchers.IO) io@{
@@ -244,7 +245,7 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, json.encodeToString(br.app.stagebook.domain.Conduct.Lack.serializer(), lack).toByteArray())
     }
 
-    /** As músicas daqui que respondem a um pedido (mesma regra do QR: título, e o artista desempata). */
+    /** The songs here that answer a request (same rule as the QR: title, with the artist as tiebreaker). */
     fun songsFor(wanted: List<Wanted>): List<String> {
         val library = repository.library.value.songs
         return wanted.take(MAX_ASK).mapNotNull { w ->
@@ -252,7 +253,7 @@ class BandLink @Inject constructor(
         }.distinct()
     }
 
-    // alguém da banda perguntou: responde com as que estão aqui (mesma regra do QR: título, e o artista desempata)
+    // a band member asked: answer with the ones here (same rule as the QR: title, with the artist as tiebreaker)
     private fun answer(from: BandProtocol.Hello, body: String): String? {
         val key = pairKeyWith(from.id) ?: return null
         val plain = ShareCode.decrypt(key, body) ?: return null
@@ -264,7 +265,7 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
     }
 
-    // pacote de alguém da banda: decifra com a chave do par e guarda na caixa de entrada
+    // package from a band member: decrypt with the pair key and keep it in the inbox
     private fun receive(from: BandProtocol.Hello, body: String): Boolean {
         val member = trust.member(from.id) ?: return false
         val theirs = BandCrypto.publicKey(member.key) ?: return false
@@ -279,15 +280,16 @@ class BandLink @Inject constructor(
 
     @Synchronized
     fun update() {
-        // modo essencial (T19): "Banda na rede" desligada, nada anuncia, procura ou atende
+        // essential mode (T19): "Band on the network" off, nothing announces, searches or answers
         val want = repository.library.value.look.bandOn && foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
         if (want && !_running.value) start() else if (!want && _running.value) stop()
         updateSearch()
     }
 
     /**
-     * Tem rede local? No Wi-Fi (ou cabo), ou **criando o ponto de acesso**: o celular que divide a internet no bar fica com
-     * a internet pelo 4G, mas a rede dos outros passa por uma interface dele (wlan/ap/swlan) com endereço local.
+     * Is there a local network? On Wi-Fi (or cable), or **running a hotspot**: the phone sharing internet at the bar
+     * gets internet over 4G, but the others' network goes through one of its interfaces (wlan/ap/swlan) with a local
+     * address.
      */
     fun onWifi(): Boolean {
         val cm = context.getSystemService(ConnectivityManager::class.java)
@@ -305,7 +307,8 @@ class BandLink @Inject constructor(
 
     private var searching = false
 
-    // a procura liga e desliga sozinha, sem mexer no anúncio: tela que precisa aberta e fora do palco
+    // the search turns on and off by itself, without touching the announcement: a screen that needs it open and off
+    // stage
     private fun updateSearch() {
         val want = _running.value && ((screenOpen && !stage.onStage.value) || onStageSearch > 0)
         if (want && !searching) startSearch() else if (!want && searching) stopSearch()
@@ -382,7 +385,7 @@ class BandLink @Inject constructor(
         runCatching { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener) }
     }
 
-    // o NSD do Android resolve um serviço por vez: uma fila simples
+    // Android's NSD resolves one service at a time: a simple queue
     private val toResolve = ArrayDeque<NsdServiceInfo>()
     private var resolving = false
 
@@ -394,7 +397,8 @@ class BandLink @Inject constructor(
             override fun onStopDiscoveryFailed(type: String, error: Int) = Unit
             override fun onServiceFound(info: NsdServiceInfo) { synchronized(toResolve) { toResolve.addLast(info) }; resolveNext() }
             override fun onServiceLost(info: NsdServiceInfo) {
-                // sem o id aqui: some quem tinha esse nome de serviço; o próximo anúncio traz de volta quem continua
+                // without the id here: whoever had this service name goes away; the next announcement brings back
+                // whoever is still there
                 _peers.update { list -> list.filterNot { names[it.id] == info.serviceName } }
             }
         }
@@ -402,9 +406,9 @@ class BandLink @Inject constructor(
         runCatching { nsd.discoverServices(BandProtocol.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener) }
     }
 
-    private val names = mutableMapOf<String, String>()   // id → nome do serviço anunciado
+    private val names = mutableMapOf<String, String>()   // id → announced service name
 
-    @Suppress("DEPRECATION")   // resolveService: o substituto (registerServiceInfoCallback) é só do Android 14
+    @Suppress("DEPRECATION")   // resolveService: the replacement (registerServiceInfoCallback) is Android 14 only
     private fun resolveNext() {
         val next = synchronized(toResolve) { if (resolving) null else toResolve.removeFirstOrNull()?.also { resolving = true } } ?: return
         runCatching {
@@ -436,10 +440,10 @@ class BandLink @Inject constructor(
         return ok
     }
 
-    /** O usuário respondeu a um pedido de entrada. */
+    /** The user answered a join request. */
     fun answer(request: Request, accept: Boolean) { request.answer.complete(accept) }
 
-    /** Pede para entrar na banda pelo aparelho [peer] (o usuário de lá toca Autorizar). */
+    /** Asks to join the band through device [peer] (the user over there taps Allow). */
     fun requestJoin(peer: Peer) {
         if (_joins.value[peer.id] == Join.WAITING) return
         _joins.update { it + (peer.id to Join.WAITING) }
@@ -453,7 +457,7 @@ class BandLink @Inject constructor(
         }
     }
 
-    /** Tira o aparelho da banda (vale na hora). */
+    /** Removes the device from the band (applies right away). */
     fun remove(id: String) { trust.remove(id); _joins.update { it - id }; update() }
 
     private companion object {
@@ -464,12 +468,12 @@ class BandLink @Inject constructor(
         const val ATTR_APP = "app"
         const val CONNECT_TIMEOUT_MS = 5_000
         const val BURST_MS = 30_000L
-        const val MAX_ASK = 200   // um setlist nunca passa disso; protege de pedido estranho
-        val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // nomes da interface do ponto de acesso nos Androids
+        const val MAX_ASK = 200   // a setlist never goes over this; guards against an odd request
+        val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // hotspot interface names on Android devices
     }
 
-    // entrou no palco: a procura para na hora; saiu, volta se a tela ainda precisar. Fica depois de todos os campos:
-    // a coleta roda em outra linha de execução e pode chamar update() antes de o resto da classe existir
+    // went on stage: the search stops right away; left it, it comes back if the screen still needs it. Placed after all
+    // fields: the collection runs on another thread and can call update() before the rest of the class exists
     init {
         scope.launch { stage.onStage.collect { update() } }
         scope.launch { repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { update() } }

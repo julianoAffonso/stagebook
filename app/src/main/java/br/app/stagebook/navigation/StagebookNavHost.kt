@@ -32,14 +32,14 @@ import br.app.stagebook.ui.stage.StageRoute
 import br.app.stagebook.ui.AppUpdateDialog
 import br.app.stagebook.data.UpdateOffer
 
-// Voltar e abrir outra tela só valem com a tela ainda na frente: um toque duplo em Salvar/OK/Voltar
-// desempilhava duas telas (a segunda era a Home, e o app ficava em branco), e um toque duplo no play
-// empilhava dois palcos (e o de baixo voltava com a tela podendo apagar).
+// Back and opening another screen only count while the screen is still in front: a double tap on Save/OK/Back popped
+// two screens (the second was Home, and the app went blank), and a double tap on play stacked two stages (and the one
+// below came back with the screen allowed to dim).
 private inline fun NavBackStackEntry.ifResumed(go: () -> Unit) {
     if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) go()
 }
 
-/** [updateOffer]: versão nova do app; avisa por cima de qualquer tela, nunca do palco. */
+/** [updateOffer]: new app version; shows on top of any screen, never on stage. */
 @Composable
 fun StagebookNavHost(
     updateOffer: UpdateOffer? = null,
@@ -47,8 +47,8 @@ fun StagebookNavHost(
     followSongs: Flow<String> = emptyFlow(),
 ) {
     val nav = rememberNavController()
-    // "Quem conduz" trocou de música: o palco de quem acompanha abre nela (no lugar do palco aberto, sem empilhar). Editando
-    // ou importando, não arranca a pessoa da tela: a faixa "Acompanhando" mostra a música da vez
+    // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
+    // editing or importing, it doesn't pull the person off the screen: the "Following" strip shows the current song
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             val here = nav.currentBackStackEntry?.destination ?: return@collect
@@ -58,8 +58,8 @@ fun StagebookNavHost(
         }
     }
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
-    // a faixa do "Quem conduz" fica embaixo de qualquer tela (o palco inclusive) enquanto o modo estiver ligado
-    // avisos curtos (snackbar) de qualquer tela, no rodapé, acima da faixa do "Quem conduz"
+    // the "Lead the band" strip sits below any screen (the stage included) while the mode is on. Short messages
+    // (snackbar) from any screen, at the bottom, above the "Lead the band" strip
     val message = rememberAppMessage()
     CompositionLocalProvider(LocalAppMessage provides message) {
     androidx.compose.foundation.layout.Column {
@@ -86,7 +86,7 @@ fun StagebookNavHost(
         composable<SongEditor> {
             SongEditorRoute(
                 onDone = dropUnlessResumed { nav.popBackStack() },
-                // fila de importação: salva, abre a próxima música no importador; acabou, abre o setlist
+                // import queue: saves, opens the next song in the importer; when done, opens the setlist
                 onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
                 onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
             )
@@ -101,10 +101,10 @@ fun StagebookNavHost(
         }
         composable<ScanSetlist> {
             ScanSetlistRoute(
-                // criado: abre o setlist no lugar do leitor (voltar leva para a lista)
+                // created: opens the setlist in place of the scanner (back goes to the list)
                 onDone = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<ScanSetlist> { inclusive = true } } },
                 onBack = dropUnlessResumed { nav.popBackStack() },
-                // as que faltam: o importador abre em fila no lugar do leitor
+                // the missing ones: the importer opens as a queue in place of the scanner
                 onImport = { nav.navigate(Importer(queued = true)) { popUpTo<ScanSetlist> { inclusive = true } } },
             )
         }
@@ -118,7 +118,7 @@ fun StagebookNavHost(
         composable<Importer> {
             ImportRoute(
                 onClose = dropUnlessResumed { nav.popBackStack() },
-                // o editor substitui o navegador: salvar ou cancelar volta para a lista
+                // the editor replaces the browser: save or cancel goes back to the list
                 onOpenEditor = { id -> nav.navigate(SongEditor(songId = id, fromImport = true)) { popUpTo<Importer> { inclusive = true } } },
                 onOpenEditorQueued = { id -> nav.navigate(SongEditor(songId = id, fromImport = true)) },
                 onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
@@ -132,7 +132,7 @@ fun StagebookNavHost(
     }
 }
 
-/** O que o aviso de versão nova faz (ligado ao AppUpdateOffer pela MainActivity). */
+/** What the new version notice does (wired to AppUpdateOffer by MainActivity). */
 data class AppUpdateActions(
     val onUpdate: () -> Unit = {},
     val onLater: () -> Unit = {},

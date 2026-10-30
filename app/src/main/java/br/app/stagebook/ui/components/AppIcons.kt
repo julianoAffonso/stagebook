@@ -7,8 +7,8 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
 /**
- * Ícones do Material (Apache-2.0) desenhados aqui mesmo, sem a biblioteca de ícones inteira.
- * A cor vem do `tint` do Icon; o preto abaixo é só a máscara.
+ * Material icons (Apache-2.0) drawn right here, without the whole icon library. The color comes from the Icon's `tint`;
+ * the black below is only the mask.
  */
 object AppIcons {
     private fun icon(name: String, vararg paths: String): ImageVector =
@@ -36,7 +36,7 @@ object AppIcons {
     val Close by lazy {
         icon("close", "M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z")
     }
-    // disquete em contorno: salvar (o check ficava parecendo "pronto"/"ok")
+    // outlined floppy disk: save (the check looked like "done"/"ok")
     val Save by lazy {
         icon("save", "M17,3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2V7l-4,-4zM19,19H5V5h11.17L19,7.83V19zM12,12c-1.66,0 -3,1.34 -3,3s1.34,3 3,3 3,-1.34 3,-3 -1.34,-3 -3,-3zM6,6h9v4H6z")
     }
@@ -76,7 +76,7 @@ object AppIcons {
     }
     val ChevronRight by lazy { icon("chevron", "M10,6L8.59,7.41 13.17,12l-4.58,4.59L10,18l6,-6z") }
     val Warning by lazy { icon("warning", "M1,21h22L12,2 1,21zM13,18h-2v-2h2v2zM13,14h-2v-4h2v4z") }
-    // capotraste: quatro cordas no braço e a barra presa por cima (não há ícone do Material para isso)
+    // capo: four strings on the neck and the bar clamped on top (there's no Material icon for it)
     val Capo by lazy {
         icon("capo", "M6,3h1.5v18H6zM10,3h1.5v18H10zM14,3h1.5v18H14zM18,3h1.5v18H18zM3.5,9.5h17a1.5,1.5 0,0 1,1.5 1.5v1a1.5,1.5 0,0 1,-1.5 1.5h-17a1.5,1.5 0,0 1,-1.5 -1.5v-1a1.5,1.5 0,0 1,1.5 -1.5z")
     }
@@ -88,7 +88,7 @@ object AppIcons {
     }
     val DropDown by lazy { icon("dropdown", "M7,10l5,5 5,-5z") }
     val DropUp by lazy { icon("dropup", "M7,14l5,-5 5,5z") }
-    // ⓘ vazado (só o contorno): explicações dos ajustes, discretas (pedido do usuário, 29/10)
+    // outlined ⓘ (only the outline): settings explanations, kept quiet (user's request, 29/10)
     val InfoOutline by lazy { icon("infooutline", "M11,7h2v2h-2zM11,11h2v6h-2zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z") }
     val ExpandMore by lazy { icon("expandmore", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6z") }
     val ExpandLess by lazy { icon("expandless", "M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z") }
@@ -99,17 +99,17 @@ object AppIcons {
     val Info by lazy {
         icon("info", "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM13,17h-2v-6h2v6zM13,9h-2V7h2v2z")
     }
-    // tradução (文A), o ícone de língua dos apps do Google: não se confunde com o globo da importação
+    // translate (文A), the language icon in Google's apps: not confused with the import globe
     val Translate by lazy {
         icon("translate", "M12.87,15.07l-2.54,-2.51 0.03,-0.03c1.74,-1.94 2.98,-4.17 3.71,-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5,7.92 10.44,9.75 9,11.35 8.07,10.32 7.3,9.19 6.69,8h-2c0.73,1.63 1.73,3.17 2.98,4.56l-5.09,5.02L4,19l5,-5 3.11,3.11 0.76,-2.04zM18.5,10h-2L12,22h2l1.12,-3h4.75L21,22h2l-4.5,-12zM15.88,17l1.62,-4.33L19.12,17h-3.24z")
     }
     val Undo by lazy {
         icon("undo", "M12.5,8c-2.65,0 -5.05,0.99 -6.9,2.6L2,7v9h9l-3.62,-3.62c1.39,-1.16 3.16,-1.88 5.12,-1.88 3.54,0 6.55,2.31 7.6,5.5l2.37,-0.78C21.08,11.03 17.15,8 12.5,8z")
     }
-    // play e pausa de pontas arredondadas (botão grande da rolagem automática)
+    // rounded play and pause (big auto-scroll button)
     val PlayRounded by lazy { icon("playrounded", "M8,19.14V4.86c0,-0.8 0.88,-1.28 1.55,-0.84l11.2,7.14c0.62,0.39 0.62,1.29 0,1.69l-11.2,7.14C8.88,20.42 8,19.94 8,19.14z") }
     val PauseRounded by lazy { icon("pauserounded", "M8,19c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2v10c0,1.1 0.9,2 2,2zM14,7v10c0,1.1 0.9,2 2,2s2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2z") }
-    // metrônomo: corpo em trapézio e o pêndulo inclinado
+    // metronome: trapezoid body and tilted pendulum
     val Eco by lazy {
         icon("eco", "M6.05,8.05c-2.73,2.73 -2.73,7.15 -0.02,9.88c1.47,-3.4 4.09,-6.24 7.36,-7.93c-2.77,2.34 -4.71,5.61 -5.39,9.32c2.6,1.23 5.8,0.78 7.95,-1.37C19.43,14.47 20,4 20,4S9.53,4.57 6.05,8.05z")
     }
@@ -121,8 +121,8 @@ object AppIcons {
         )
     }
     val Stop by lazy { icon("stop", "M8,6h8c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H8c-1.1,0 -2,-0.9 -2,-2V8c0,-1.1 0.9,-2 2,-2z") }
-    // duas setas para baixo: rolagem automática do palco
-    val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // traço grosso (pedido de 29/10)
+    // two down arrows: stage auto-scroll
+    val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // thick stroke (request from 29/10)
     val Pause by lazy { icon("pause", "M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z") }
     val Group by lazy {
         icon("group", "M16,11c1.66,0 2.99,-1.34 2.99,-3S17.66,5 16,5c-1.66,0 -3,1.34 -3,3s1.34,3 3,3zM8,11c1.66,0 2.99,-1.34 2.99,-3S9.66,5 8,5C6.34,5 5,6.34 5,8s1.34,3 3,3zM8,13c-2.33,0 -7,1.17 -7,3.5L1,19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5zM16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45L17,19h6v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z")

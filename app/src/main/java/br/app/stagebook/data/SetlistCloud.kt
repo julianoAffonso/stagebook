@@ -20,36 +20,44 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Setlist (e as músicas) pela internet, sem servidor nosso: o pacote do QR (`L3` + deflate) e cada música (`S1` +
- * deflate), cifrados com a chave do código, vão para um canal do ntfy.sh (serviço público grátis; regras conferidas em 24/10: mensagem até 4 KB, guardada 12 h, "melhor esforço").
- * Quem recebe digita o código; o app busca no canal, decifra e abre a mesma conferência do QR.
+ * Setlist (and songs) over the internet, with no server of ours: the QR package (`L3` + deflate) and each song (`S1` +
+ * deflate), encrypted with the code's key, go to an ntfy.sh channel (free public service; rules checked on 24/10:
+ * messages up to 4 KB, kept 12 h, "best effort"). The receiver types the code; the app fetches the channel, decrypts
+ * and opens the same review as the QR.
  */
 @Singleton
 class SetlistCloud @Inject constructor(private val repository: LibraryRepository, private val identity: DeviceIdentity) {
-    /** Música que vai junto com o setlist (o texto em ChordPro, com a cifra: quem recebe mostra conforme o perfil dele). */
+    /**
+     * Song that goes along with the setlist (the ChordPro text, with chords: the receiver shows it according to their
+     * profile).
+     */
     @Serializable
     data class SharedSong(val title: String, val author: String = "", val year: String = "", val text: String = "") {
-        /** Só letra/cifra em texto puro e de tamanho de música (ver [br.app.stagebook.domain.BandContent]). */
+        /** Only lyrics/chords in plain text and song-sized (see [br.app.stagebook.domain.BandContent]). */
         fun allowed() = br.app.stagebook.domain.BandContent.songOk(title, author, year, text)
     }
 
-    /** [skipped]: músicas grandes demais para uma mensagem (raro), que não foram. */
+    /** [skipped]: songs too big for one message (rare), which didn't go. */
     data class Sent(val code: String, val songs: Int, val skipped: Int)
 
     sealed interface Received {
-        /** [from]: quem enviou (o aparelho dele), para virar "da banda" ao aceitar. */
+        /** [from]: the sender (their device), to join "the band" on accepting. */
         data class Ok(val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null) : Received
-        data object NotFound : Received   // código errado ou já passou das 12 h
+        data object NotFound : Received   // wrong code or past the 12 h
         data object Offline : Received
-        /** Veio de uma versão mais nova do Stagebook (formato que este app ainda não conhece): atualizar para receber. */
+        /** Came from a newer Stagebook (a format this app doesn't know yet): update to receive. */
         data class Newer(val app: String) : Received
     }
 
     /**
-     * Envia o setlist (e, com [withSongs], cada música numa mensagem própria, antes do setlist: quem recebe nunca vê o
-     * setlist sem as músicas). Devolve o código, ou null se não deu (sem internet, serviço fora, setlist grande demais).
+     * Sends the setlist (and, with [withSongs], each song in its own message, before the setlist: the receiver never
+     * sees the setlist without the songs). Returns the code, or null if it failed (no internet, service down, setlist
+     * too big).
      */
-    /** O pacote de um setlist: a lista (o mesmo do QR) e, com [withSongs], as músicas. Vale para a internet e a banda. */
+    /**
+     * A setlist's package: the list (the same as the QR) and, with [withSongs], the songs. Works for the internet and
+     * the band.
+     */
     fun setlistPackage(setId: String, withSongs: Boolean): Pair<ByteArray, List<SharedSong>>? {
         val lib = repository.library.value
         val set = lib.setlist(setId) ?: return null
@@ -58,8 +66,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     }
 
     /**
-     * Músicas avulsas (da aba Músicas), sem setlist: a lista vai no mesmo formato do setlist, **sem nome** — é assim que
-     * quem recebe sabe que são só músicas para a biblioteca.
+     * Loose songs (from the Songs tab), with no setlist: the list goes in the same format as a setlist, **with no
+     * name**, which is how the receiver knows they're just songs for the library.
      */
     fun songsPackage(songIds: List<String>): Pair<ByteArray, List<SharedSong>>? {
         val songs = songIds.mapNotNull(repository.library.value::song)
@@ -75,13 +83,13 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     suspend fun sendSongs(songIds: List<String>): Sent? = songsPackage(songIds)?.let { (p, s) -> sendPackage(p, s) }
 
-    // cada música numa mensagem própria e a lista por último: quem recebe nunca vê a lista sem as músicas
+    // each song in its own message and the list last: the receiver never sees the list without the songs
     private suspend fun sendPackage(packed: ByteArray, songs: List<SharedSong>): Sent? = withContext(Dispatchers.IO) {
         val code = ShareCode.generate()
         val keys = ShareCode.keys(code)
         var sent = 0
         var skipped = 0
-        // quem envia vai junto (cifrado): quem aceitar guarda este aparelho como "da banda"
+        // the sender goes along (encrypted): whoever accepts saves this device as "band"
         if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello()))))) return@withContext null
         for (song in songs) {
             val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song)))
@@ -96,7 +104,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         Sent(code, sent, skipped)
     }
 
-    /** Modo essencial (T19): "Internet" desligada, nada sai daqui (envio, caixa, recibos, pedidos, 3 palavras). */
+    /** Essential mode (T19): "Internet" off, nothing leaves from here (sends, inbox, receipts, requests, 3 words). */
     private val internetOn get() = repository.library.value.look.internetOn
 
     private fun post(topic: String, body: String): Boolean = if (!internetOn) false else runCatching {
@@ -129,9 +137,10 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
                 c.disconnect()
             }
         }.getOrNull() ?: return@withContext Received.Offline
-        // só o que decifra com este código (o canal é público: pode ter lixo de outra pessoa); o setlist mais novo
+        // only what decrypts with this code (the channel is public: there may be junk from someone else); the newest
+        // setlist
         val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
-        // só setlist e músicas em texto puro (BandContent): o resto é descartado
+        // only setlists and songs in plain text (BandContent): the rest is discarded
         val text = plain.asReversed().firstNotNullOfOrNull { QrPayload.unpack(it) }?.takeIf(br.app.stagebook.domain.BandContent::listOk)
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
             .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
@@ -143,18 +152,21 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }
     }
 
-    // identidade conferida: o id tem de ser o da chave (ninguém se passa por outro aparelho)
+    // identity checked: the id must match the key (nobody passes as another device)
     private fun hello(text: String): BandProtocol.Hello? = runCatching { json.decodeFromString<BandProtocol.Hello>(text) }.getOrNull()
         ?.takeIf { BandCrypto.publicKey(it.key) != null && BandCrypto.idOf(it.key) == it.id && it.name.length <= BandProtocol.MAX_NAME }
 
-    /** Quem recebeu pelas palavras e aceitou devolve um "ok" com a identidade dele, no mesmo canal (vira da banda dos dois lados). */
+    /**
+     * Whoever received through the words and accepted sends back an "ok" with their identity, on the same channel
+     * (joins the band on both sides).
+     */
     suspend fun ack(input: String): Boolean = withContext(Dispatchers.IO) {
         val code = ShareCode.normalize(input) ?: return@withContext false
         val keys = ShareCode.keys(code)
         post(keys.topic, ShareCode.encrypt(keys.key, pack(ACK_MARK, json.encodeToString(identity.hello()))))
     }
 
-    /** Os "ok" que chegaram para um envio meu (quem aceitou); vazio sem internet. */
+    /** The "ok"s that arrived for one of my sends (who accepted); empty with no internet. */
     suspend fun acks(code: String): List<BandProtocol.Hello> = withContext(Dispatchers.IO) {
         val keys = ShareCode.keys(code)
         val lines = get("$SERVER/${keys.topic}/json?poll=1&since=all") ?: return@withContext emptyList()
@@ -162,33 +174,38 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             .filter { it.id != identity.id }.distinctBy { it.id }
     }
 
-    // ---- caixa de entrada de cada par da banda, pela internet ----
+    // ---- each band pair's inbox, over the internet ----
 
     /**
-     * Uma mensagem da caixa de um par: um pedaço de pacote ([k] = "pkg"; até ~2 KB, o ntfy aceita 4 KB e a cifra/Base64
-     * aumentam), o recibo de um pacote ("rcpt", [p] = o pacote) ou o "bem-vindo" de quem passou a confiar ("welcome").
+     * A message in a pair's inbox: a package chunk ([k] = "pkg"; up to ~2 KB, ntfy takes 4 KB and encryption/Base64 add
+     * size), a package receipt ("rcpt", [p] = the package) or the "welcome" from someone who started trusting
+     * ("welcome").
      */
     @Serializable
     private data class Chunk(val p: String, val i: Int = 0, val n: Int = 1, val d: String = "", val k: String = "pkg")
 
-    /** O que chegou na caixa de um par: pacotes (id, lista, músicas), recibos dos meus envios e se ele me deu as boas-vindas. */
+    /**
+     * What arrived in a pair's inbox: packages (id, list, songs), receipts for my sends and whether they welcomed me.
+     */
     class PairFetch(
         val packages: List<Triple<String, String, List<SharedSong>>>,
         val receipts: List<String>,
         val welcome: Boolean,
         val last: String?,
-        val requests: List<List<BandLink.Wanted>> = emptyList(),   // "me manda estas músicas" (T12)
+        val requests: List<List<BandLink.Wanted>> = emptyList(),   // "send me these songs" (T12)
     )
 
     @Serializable
     private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
 
-    /** Canal da caixa de entrada de [recipientId] para o par: sai da chave do par (só os dois sabem qual é). */
+    /** [recipientId]'s inbox channel for the pair: derived from the pair key (only the two know which it is). */
     fun pairTopic(pairKey: ByteArray, recipientId: String): String =
         "sb" + java.security.MessageDigest.getInstance("SHA-256").apply { update(pairKey); update("inbox|$recipientId".toByteArray()) }
             .digest().copyOf(16).joinToString("") { "%02x".format(it) }
 
-    /** Manda um pacote ([id] fixo: o reenvio usa o mesmo) para a caixa de um aparelho da banda; true se todos os pedaços foram. */
+    /**
+     * Sends a package (fixed [id]: the resend uses the same one) to a band device's inbox; true if every chunk went.
+     */
     suspend fun sendToPair(pairKey: ByteArray, recipientId: String, list: ByteArray, songs: List<SharedSong>, id: String): Boolean = withContext(Dispatchers.IO) {
         val whole = pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
         val parts = whole.toList().chunked(CHUNK).map { it.toByteArray() }
@@ -199,23 +216,23 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }
     }
 
-    /** Recibo de um pacote, na caixa de quem mandou (para ele parar de reenviar). */
+    /** A package receipt, in the sender's inbox (so they stop resending). */
     suspend fun receipt(pairKey: ByteArray, senderId: String, packageId: String) = withContext(Dispatchers.IO) {
         post(pairTopic(pairKey, senderId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk(packageId, k = "rcpt")).toByteArray()))
     }
 
-    /** "Agora você é da minha banda", na caixa do outro (o "ok" dele chegou; ele para de repetir). */
+    /** "You're in my band now", in the other one's inbox (their "ok" arrived; they stop repeating). */
     suspend fun welcome(pairKey: ByteArray, recipientId: String) = withContext(Dispatchers.IO) {
         post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "welcome")).toByteArray()))
     }
 
-    /** Pede ao par as músicas que faltam (T12): vai para a caixa dele e ele responde com um pacote de músicas. */
+    /** Asks the pair for the missing songs (T12): goes to their inbox and they answer with a songs package. */
     suspend fun requestFromPair(pairKey: ByteArray, recipientId: String, wanted: List<BandLink.Wanted>) = withContext(Dispatchers.IO) {
         val body = java.util.Base64.getEncoder().encodeToString(json.encodeToString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), wanted.take(MAX_REQUEST)).toByteArray())
         post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray()))
     }
 
-    /** O que chegou na minha caixa vinda de um par, desde [since] (null = as últimas 12 h); null sem internet. */
+    /** What arrived in my inbox from a pair, since [since] (null = the last 12 h); null with no internet. */
     suspend fun fetchPair(pairKey: ByteArray, since: String?): PairFetch? = withContext(Dispatchers.IO) {
         val lines = get("$SERVER/${pairTopic(pairKey, identity.id)}/json?poll=1&since=${since ?: "12h"}") ?: return@withContext null
         val msgs = messagesWithIds(lines)
@@ -227,24 +244,27 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             if (ordered.size != n) return@mapNotNull null
             val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
             val pkg = unpack(PAIR_MARK, bytes)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
-            if (pkg.v > BandProtocol.VERSION) return@mapNotNull Triple(pid, NEWER, emptyList())   // a caixa avisa "atualize"
+            if (pkg.v > BandProtocol.VERSION) return@mapNotNull Triple(pid, NEWER, emptyList())   // the inbox says "update"
             val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
             Triple(pid, text, pkg.songs)
         }
-        // pedidos de músicas que faltam (T12)
+        // requests for missing songs (T12)
         val requests = all.filter { it.k == "req" }.mapNotNull { c ->
             runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), String(java.util.Base64.getDecoder().decode(c.d))) }.getOrNull()
         }
         PairFetch(packages, all.filter { it.k == "rcpt" }.map { it.p }, all.any { it.k == "welcome" }, msgs.lastOrNull()?.first ?: since, requests)
     }
 
-    /** O "ok" das palavras cifrado (para entregar também pela rede local, quando os dois se encontram). */
+    /** The words' "ok", encrypted (to also deliver over the local network, when the two meet). */
     fun ackBody(input: String): String? {
         val code = ShareCode.normalize(input) ?: return null
         return ShareCode.encrypt(ShareCode.keys(code).key, pack(ACK_MARK, json.encodeToString(identity.hello())))
     }
 
-    /** Confere um "ok" que chegou pela rede local contra os meus envios ([codes]): a identidade de quem aceitou, ou null. */
+    /**
+     * Checks an "ok" that arrived over the local network against my sends ([codes]): the identity of who accepted, or
+     * null.
+     */
     fun checkAckBody(body: String, codes: List<String>): BandProtocol.Hello? = codes.firstNotNullOfOrNull { code ->
         ShareCode.decrypt(ShareCode.keys(code).key, body)?.let { unpack(ACK_MARK, it) }?.let(::hello)
     }
@@ -264,19 +284,19 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     companion object {
         private const val SERVER = "https://ntfy.sh"
         private const val TIMEOUT_MS = 10_000
-        private const val MAX_MESSAGE = 4_000          // o ntfy.sh aceita até 4.096 bytes por mensagem
+        private const val MAX_MESSAGE = 4_000          // ntfy.sh takes up to 4,096 bytes per message
         private const val USER_AGENT = "StagebookApp/0.2 (setlist da banda)"
         private val json = Json { ignoreUnknownKeys = true }
-        private const val MAX_REQUEST = 200   // um setlist nunca passa disso
+        private const val MAX_REQUEST = 200   // a setlist never goes over this
         private val SONG_MARK = byteArrayOf('S'.code.toByte(), '1'.code.toByte())
-        private val ID_MARK = byteArrayOf('I'.code.toByte(), '1'.code.toByte())     // quem enviou (identidade)
-        private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" de quem aceitou
-        private val PAIR_MARK = byteArrayOf('P'.code.toByte(), '1'.code.toByte())   // pacote da caixa de um par
+        private val ID_MARK = byteArrayOf('I'.code.toByte(), '1'.code.toByte())     // sender (identity)
+        private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" from someone who accepted
+        private val PAIR_MARK = byteArrayOf('P'.code.toByte(), '1'.code.toByte())   // package from a pair's inbox
         private const val CHUNK = 2_000
-        /** Marca, na caixa, de um envio de versão mais nova (não dá para ler: a conferência pede para atualizar). */
+        /** Marks, in the inbox, a send from a newer version (can't be read: the review asks to update). */
         const val NEWER = "\u0000newer"
 
-        /** As mensagens com o id de cada uma (para continuar de onde parou). */
+        /** The messages with each one's id (to continue from where it stopped). */
         fun messagesWithIds(lines: List<String>): List<Pair<String, String>> = lines.mapNotNull { l ->
             runCatching {
                 val o = json.parseToJsonElement(l).jsonObject
@@ -286,7 +306,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             }.getOrNull()
         }
 
-        /** [mark] + deflate do texto (o mesmo jeito do pacote do QR, com outra marca para as músicas). */
+        /** [mark] + deflate of the text (the same way as the QR package, with another mark for songs). */
         fun pack(mark: ByteArray, text: String): ByteArray {
             val d = Deflater(Deflater.BEST_COMPRESSION, true)
             return try {
@@ -324,7 +344,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
         private const val MAX_SONG_TEXT = 256 * 1024
 
-        /** As mensagens (texto) de uma resposta do ntfy em JSON por linha. */
+        /** The messages (text) of an ntfy answer in JSON per line. */
         fun messages(lines: List<String>): List<String> = lines.mapNotNull { l ->
             runCatching {
                 val o = json.parseToJsonElement(l).jsonObject

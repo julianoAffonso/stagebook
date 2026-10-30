@@ -15,8 +15,8 @@ import androidx.compose.ui.semantics.Role
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Toda chave liga/desliga do app: texto à esquerda (com [detail] embaixo, em letra menor, quando precisa
- * explicar), chave à direita, e tocar em qualquer lugar da linha também muda.
+ * Every on/off switch in the app: text on the left (with [detail] below, in smaller type, when it needs explaining),
+ * switch on the right, and tapping anywhere on the row also toggles.
  */
 @Composable
 fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, detail: String? = null) {

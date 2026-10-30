@@ -21,18 +21,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Completa artista e ano pelo MusicBrainz (base aberta, sem conta). O ano é o do primeiro lançamento
- * da gravação, não o de coletânea.
+ * Fills in artist and year from MusicBrainz (open database, no account). The year is the recording's first release, not
+ * a compilation's.
  */
 @Singleton
 class MusicBrainz @Inject constructor() {
     data class Info(val title: String, val artist: String, val year: String)
 
-    internal var endpoint = "https://musicbrainz.org/ws/2/recording/"   // os testes trocam por um servidor local
-    // a rede bloqueante (DNS, conexão) não atende cancelamento: roda solta aqui, e quem espera desiste no prazo
+    internal var endpoint = "https://musicbrainz.org/ws/2/recording/"   // tests swap it for a local server
+    // blocking network calls (DNS, connect) ignore cancellation: they run loose here, and the waiter gives up on time
     private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** Como [lookup], mas devolve null em [ms] mesmo com a rede travada (o pedido segue e é descartado). */
+    /** Like [lookup], but returns null within [ms] even with a stuck network (the request goes on and is discarded). */
     suspend fun lookupWithin(title: String, artist: String, ms: Long): Info? {
         val job = io.async { lookup(title, artist) }
         return try {
@@ -62,7 +62,7 @@ class MusicBrainz @Inject constructor() {
     companion object {
         private fun esc(s: String) = s.replace("\\", " ").replace("\"", " ")
 
-        /** Mesmo título (sem acento/caixa), artista compatível e o lançamento mais antigo. */
+        /** Same title (ignoring accents/case), compatible artist and the oldest release. */
         fun best(body: String, title: String, artist: String): Info? {
             val recordings = Json.parseToJsonElement(body).jsonObject["recordings"] as? JsonArray ?: return null
             val kt = TextKey.of(title)

@@ -5,7 +5,7 @@ import br.app.stagebook.domain.PedalAction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// Formato do letras.json (o mesmo da versão em Java: a biblioteca antiga abre sem conversão).
+// letras.json format (the same as the Java version: the old library opens without conversion).
 
 @Immutable
 @Serializable
@@ -15,8 +15,8 @@ data class Song(
     val author: String = "",
     val year: String = "",
     val text: String = "",
-    val zoom: Float = 1f,   // zoom desta música no palco (pinça), sobre o tamanho padrão dos ajustes
-    // faixa de Backing track copiada para o app (nome em filesDir/tracks); só deste aparelho: fora da exportação/QR
+    val zoom: Float = 1f,   // this song's stage zoom (pinch), over the default size from settings
+    // backing track file copied into the app (name in filesDir/tracks); this device only: left out of export/QR
     val track: String = "",
 )
 
@@ -25,7 +25,7 @@ data class Song(
 data class Setlist(
     val id: String = "",
     val name: String = "",
-    val items: List<String> = emptyList(),   // ids de música, na ordem
+    val items: List<String> = emptyList(),   // song ids, in order
 )
 
 @Serializable
@@ -36,7 +36,7 @@ enum class SectionLang {
 }
 
 @Serializable
-/** Fonte do palco: só as que vêm no Android (nada para baixar; o Fire não tem o Google Play Services). */
+/** Stage font: only the ones that come with Android (nothing to download; the Fire has no Google Play Services). */
 enum class StageFont {
     @SerialName("default") DEFAULT,
     @SerialName("condensed") CONDENSED,
@@ -44,7 +44,7 @@ enum class StageFont {
     @SerialName("mono") MONO,
 }
 
-/** Instrumento dos desenhos de acorde. Violão e guitarra têm a mesma afinação (mesmos desenhos). */
+/** Instrument for chord diagrams. Acoustic and electric guitar share the tuning (same diagrams). */
 enum class Instrument(val chordPro: String) {
     @SerialName("violao") ACOUSTIC_GUITAR("guitar"),
     @SerialName("guitarra") ELECTRIC_GUITAR("guitar"),
@@ -53,26 +53,26 @@ enum class Instrument(val chordPro: String) {
     @SerialName("teclado") KEYBOARD("keyboard"),
 }
 
-/** Como o acorde tocado no palco soa: dedilhado, junto (batida) ou os dois. */
+/** How the chord tapped on stage sounds: picked, strummed or both. */
 enum class ChordPlayMode {
     @SerialName("arpeggio") ARPEGGIO,
     @SerialName("chord") CHORD,
     @SerialName("both") BOTH,
 }
 
-/** Onde aparece a lista com os desenhos dos acordes da música. */
+/** Where the list with the song's chord diagrams shows. */
 enum class ChordListPlace {
     @SerialName("none") NONE,
     @SerialName("top") TOP,
     @SerialName("bottom") BOTTOM,
 }
 
-/** Site de importação (letra ou cifra). */
+/** Import site (lyrics or chords). */
 @Immutable
 @Serializable
 data class ImportSite(val name: String, val url: String)
 
-/** Os sites que já vêm no app; o usuário escolhe o padrão, tira e acrescenta outros. */
+/** The sites that come with the app; the user picks the default, removes and adds others. */
 object ImportSites {
     val LYRICS = listOf(
         ImportSite("Letras", "https://www.letras.mus.br/"),
@@ -87,25 +87,27 @@ object ImportSites {
     )
 }
 
-/** Como a letra anda no palco: vira página (padrão) ou rola (pedido do usuário, 29/10). */
+/** How the lyrics move on stage: turn pages (default) or scroll (user's request, 29/10). */
 enum class StageMode {
     @SerialName("pages") PAGES,
     @SerialName("scroll") SCROLL,
 }
 
 enum class StageColumns {
-    @SerialName("auto") AUTO,   // 2 colunas no tablet deitado, 1 no resto
+    @SerialName("auto") AUTO,   // 2 columns on a tablet in landscape, 1 elsewhere
     @SerialName("one") ONE,
     @SerialName("two") TWO,
 }
 
-/** Modo essencial (T19): banda, internet, player e extras do palco desligados; fica letra, cifra (com o desenho) e pedal. */
+/**
+ * Essential mode (T19): band, internet, player and stage extras off; lyrics, chords (with the diagram) and pedal stay.
+ */
 val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !extrasOn
 
-/** Alguma parte desligada (banda, internet, player, extras): o aviso ao abrir lista quais. */
+/** Some part is off (band, internet, player, extras): the alert on open lists which. */
 val Look.anyOff: Boolean get() = !bandOn || !internetOn || !playerMode || !extrasOn
 
-/** Aparência do palco: vale para todas as músicas. Cores em ARGB. */
+/** Stage look: applies to every song. Colors in ARGB. */
 @Immutable
 @Serializable
 data class Look(
@@ -113,62 +115,64 @@ data class Look(
     val fg: Int = 0xFFFFFFFF.toInt(),
     val bg: Int = 0xFF000000.toInt(),
     val bold: Boolean = false,
-    val sectionLang: SectionLang = SectionLang.PT,   // fica só para ler bibliotecas antigas: as seções são sempre em português
+    val sectionLang: SectionLang = SectionLang.PT,   // kept only to read old libraries: sections are always in Portuguese
     val sectionColor: Int = 0xFF4AF6CD.toInt(),
     val showSections: Boolean = true,
-    val sectionScale: Float = DEFAULT_SECTION_SCALE,   // tamanho do título da seção em relação à letra (ajustável, 29/10)
-    val keepScreenOn: Boolean = true,   // tela não apaga com o app aberto (show); o palco fica aceso sempre
-    val pedalName: String = "",   // nome do pedal Bluetooth reconhecido pelo último botão apertado
+    val sectionScale: Float = DEFAULT_SECTION_SCALE,   // section title size relative to the lyrics (adjustable, 29/10)
+    val keepScreenOn: Boolean = true,   // screen doesn't dim with the app open (show); the stage always stays lit
+    val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,
     val stageMode: StageMode = StageMode.PAGES,
-    val autoScroll: Int = DEFAULT_AUTO_SCROLL,
-    // metrônomo do palco: contagem 1-2-3-4 antes de começar e som (desligado = só o piscar)
+    val autoScroll: Int = DEFAULT_AUTO_SCROLL,   // auto-scroll speed (1 to 10), in scroll mode
+    // stage metronome: 1-2-3-4 count-in before starting and sound (off = blink only)
     val metroCount: Boolean = true,
     val metroSound: Boolean = true,
-    val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,
-    val keyboardCapoHintSeen: Boolean = false,
-    val announce: Boolean = true,   // Now Playing: avisar a música da vez na rede local (OBS, Resolume)   // a explicação "acordes no tom que soa" já apareceu para o teclado   // tocar o acorde no palco (T20)
-    val metroGlow: Boolean = true,                       // brilho na borda do palco no tempo
-    val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // velocidade da rolagem automática (1 a 10), no modo rolar
-    val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // botões ligados a outro comando nos ajustes (tecla → comando)
-    val midiBtAddress: String = "",   // pedal MIDI Bluetooth escolhido em Ajustes (o app reconecta sozinho)
+    val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // playing the chord on stage (T20)
+    val keyboardCapoHintSeen: Boolean = false,   // the "chords in the sounding key" note already showed for keyboard
+    val announce: Boolean = true,   // Now Playing: announce the current song on the local network (OBS, Resolume)
+    val metroGlow: Boolean = true,   // glow on the stage edge on the beat
+    val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // glow color
+    val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // buttons set to another command in settings (key → command)
+    val midiBtAddress: String = "",   // Bluetooth MIDI pedal chosen in Settings (the app reconnects by itself)
     val midiBtName: String = "",
-    // pedal MIDI pelo USB: desligado, o app não abre nada no USB (fica livre para a interface de áudio USB)
+    // MIDI pedal over USB: when off, the app opens nothing on USB (it stays free for the USB audio interface)
     val midiUsb: Boolean = true,
-    // cifras (etapa 3): perfil "letra e cifra" (false = só letra), tamanho do acorde em relação à letra e cor
+    // chords (step 3): "lyrics and chords" profile (false = lyrics only), chord size relative to the lyrics and color
     val chords: Boolean = true,
     val chordScale: Float = 0.8f,
     val chordColor: Int = 0xFFFFC107.toInt(),
-    // seções reconhecidas na língua do app (a letra guardada não muda); false = como estão escritas
+    // recognized sections in the app's language (the saved lyrics don't change); false = as written
     val translateSections: Boolean = true,
-    val font: StageFont = StageFont.DEFAULT,        // fonte da letra
-    val chordFont: StageFont = StageFont.DEFAULT,   // fonte dos acordes
-    val instrument: Instrument = Instrument.ACOUSTIC_GUITAR,   // desenhos de acorde (popup e lista)
+    val font: StageFont = StageFont.DEFAULT,        // lyrics font
+    val chordFont: StageFont = StageFont.DEFAULT,   // chord font
+    val instrument: Instrument = Instrument.ACOUSTIC_GUITAR,   // chord diagrams (popup and list)
     val chordList: ChordListPlace = ChordListPlace.NONE,
-    val chordTap: Boolean = true,
-    // modo player (faixas, saída USB, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço.
-    // Instalação nova começa ligado (pedido do usuário, 29/10); bibliotecas salvas guardam o valor (encodeDefaults)
+    val chordTap: Boolean = true,   // tapping a chord on stage shows the diagram (off: the tap turns the page)
+    // player mode (tracks, USB output, mixer): when off, nothing from the player loads, not the engine, the USB or the
+    // service. A new install starts with it on (user's request, 29/10); saved libraries keep their value
+    // (encodeDefaults)
     val playerMode: Boolean = true,
-    // modo essencial (T19): o que fica ligado. Desligado, some da tela e para de rodar. As três e o player desligados = modo essencial
-    val bandOn: Boolean = true,       // banda na rede: procura, envio pela banda, Quem conduz
-    val internetOn: Boolean = true,   // 3 palavras, caixa da banda, reenvios, versão nova, BPM e dados da música
-    val extrasOn: Boolean = true,     // palco: som do acorde, Detalhes (campo harmônico), metrônomo, Now Playing
-    val essentialAlertOff: Boolean = false,   // "Não mostrar de novo" no aviso ao abrir; mexer em qualquer parte apaga a marca
-    // mixer do player (Ajustes → Player): do app, vale para todos os backing tracks; por música só a medição
+    // essential mode (T19): what stays on. When off, it leaves the screen and stops running. These three and the player
+    // off = essential mode
+    val bandOn: Boolean = true,       // band on the network: search, sending to the band, Lead the band
+    val internetOn: Boolean = true,   // 3 words, band inbox, resends, new version, BPM and song details
+    val extrasOn: Boolean = true,     // stage: chord sound, Details (harmonic field), metronome, Now Playing
+    val essentialAlertOff: Boolean = false,   // "Don't show again" on the alert on open; touching any part clears the mark
+    // player mixer (Settings → Player): app-wide, applies to every backing track; per song only the measurement
     val mixer: br.app.stagebook.domain.MixerConfig = br.app.stagebook.domain.MixerConfig(),
-    // importação: os sites de cada tipo; o primeiro de cada lista é o padrão (onde o importador abre)
+    // import: the sites for each kind; the first in each list is the default (where the importer opens)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
-    val chordSites: List<ImportSite> = ImportSites.CHORDS,   // tocar num acorde no palco mostra o desenho (desligado: o toque vira a página)
+    val chordSites: List<ImportSite> = ImportSites.CHORDS,
 ) {
     companion object {
         const val MIN_FONT = 16f
         const val MAX_FONT = 72f
-        const val MAX_STAGE_FONT = 120f   // com zoom no palco pode passar do máximo dos ajustes
+        const val MAX_STAGE_FONT = 120f   // with zoom on stage it can go over the settings maximum
         const val MIN_CHORD_SCALE = 0.5f
         const val DEFAULT_SECTION_SCALE = 0.9f
         const val DEFAULT_AUTO_SCROLL = 3
         const val MAX_AUTO_SCROLL = 10
-        const val AUTO_SCROLL_DP_PER_LEVEL = 8f   // nível 3 = 24 dp por segundo
+        const val AUTO_SCROLL_DP_PER_LEVEL = 8f   // level 3 = 24 dp per second
         const val MIN_SECTION_SCALE = 0.6f
         const val MAX_SECTION_SCALE = 1.3f
         const val MAX_CHORD_SCALE = 1.2f

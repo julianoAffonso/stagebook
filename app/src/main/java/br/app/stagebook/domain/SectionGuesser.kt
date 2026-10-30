@@ -3,19 +3,19 @@ package br.app.stagebook.domain
 import br.app.stagebook.data.model.SectionLang
 
 /**
- * Letra sem títulos de seção: descobre o que é cada estrofe pela repetição.
- * - Refrão: a estrofe que mais se repete (quase igual também conta).
- * - Pré-refrão: outra estrofe repetida que vem sempre logo antes do refrão.
- * - Ponte: estrofe única que aparece depois de pelo menos dois refrões e antes do último.
- * - Verso: o resto, numerado; um verso que volta igual mantém o número.
- * Sem nenhuma estrofe repetida não dá para saber qual é o refrão: devolve null (letra fica como está).
+ * Lyrics without section titles: finds what each verse is by repetition.
+ * - Chorus: the verse that repeats the most (nearly the same also counts).
+ * - Pre-chorus: another repeated verse that always comes right before the chorus.
+ * - Bridge: a unique verse that shows up after at least two choruses and before the last one.
+ * - Verse: the rest, numbered; a verse that comes back the same keeps its number.
+ * With no repeated verse there's no way to tell the chorus: returns null (the lyrics stay as they are).
  */
 object SectionGuesser {
-    private const val SAME = 0.6   // fração de linhas iguais para duas estrofes contarem como a mesma
+    private const val SAME = 0.6   // share of equal lines for two verses to count as the same
 
     fun guess(text: String, lang: SectionLang): String? {
         val lines = text.replace("\r", "").split('\n')
-        if (lines.any { Sections.detect(it) != null }) return null   // já tem títulos: só padronizar
+        if (lines.any { Sections.detect(it) != null }) return null   // already has titles: just standardize
         val stanzas = splitStanzas(lines)
         if (stanzas.size < 2) return null
 
@@ -23,7 +23,8 @@ object SectionGuesser {
         val counts = group.groupingBy { it }.eachCount()
         val repeated = counts.filterValues { it >= 2 }.keys
         if (repeated.isEmpty()) return null
-        // refrão: o grupo que mais aparece; empate = o que aparece primeiro mais tarde (o pré-refrão vem antes)
+        // chorus: the group that shows up the most; on a tie, the one whose first appearance comes later (the
+        // pre-chorus comes before)
         val chorus = repeated.maxWith(compareBy<Int> { counts[it] }.thenBy { g -> group.indexOf(g) })
         val chorusAt = group.indices.filter { group[it] == chorus }
         val preChorus = repeated.filter { g ->
@@ -66,7 +67,7 @@ object SectionGuesser {
         return out
     }
 
-    /** Número do grupo de cada estrofe: estrofes parecidas recebem o mesmo número. */
+    /** Group number for each verse: similar verses get the same number. */
     private fun groupSimilar(stanzas: List<List<String>>): List<Int> {
         val keys = stanzas.map { s -> s.map { TextKey.of(it) } }
         val group = IntArray(stanzas.size) { -1 }

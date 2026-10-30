@@ -31,10 +31,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Player do Stagebook na interface de áudio USB: conecta fora da tela, vigia de 5 s que reconecta, confere o
- * relógio da interface, wake lock só tocando e desliga em segundo plano. Toca o backing track da música aberta
- * no palco (comandos em {@link StagePlayer}).
- * Só sobe no primeiro play com o modo player ligado: antes disso nada de USB, motor ou serviço.
+ * Stagebook's player on the USB audio interface: connects off the UI thread, a 5 s watchdog that reconnects, checks the
+ * interface clock, wake lock only while playing and turns off in the background. Plays the backing track of the song
+ * open on stage (commands in {@link StagePlayer}). Only starts on the first play with player mode on: before that no
+ * USB, engine or service.
  */
 public class PlayerService extends Service {
     static final String TAG = "stagebook";
@@ -42,23 +42,23 @@ public class PlayerService extends Service {
     static final String ACTION_USB_PERM = "br.app.stagebook.player.USB_PERM";
     static final long WAKE_TIMEOUT_MS = 30 * 60 * 1000L;
     static final long WATCHDOG_MS = 5000;
-    // tempo para o relógio da interface travar depois de conectar: quando a conexão vem boa ele chega em
-    // ~2 ms; com 3 s + a passada de 5 s do vigia, a reconexão caía no play do usuário (19/10/2026)
+    // time for the interface clock to lock after connecting: when the connection is good it arrives in ~2 ms; with 3 s
+    // + the watchdog's 5 s pass, the reconnection landed on the user's play (19/10/2026)
     static final long FB_WAIT_MS = 1000;
     static final int FB_RETRIES = 3;
-    static final long ATTACH_GRANT_WAIT_MS = 1500;   // espera a autorização automática do Android
+    static final long ATTACH_GRANT_WAIT_MS = 1500;   // waits for Android's automatic permission
     long connectedAt;
     int fbRetries;
 
-    // estado lido pela tela (StagePlayer)
+    // state read by the screen (StagePlayer)
     static volatile boolean running;
     static volatile boolean connected;
     static volatile String status = "";
-    // a saída conectada (para o roteamento guardado por saída): "device" ou "usb:vid:pid", nome e quantas saídas
+    // the connected output (for routing saved per output): "device" or "usb:vid:pid", name and how many outputs
     static volatile String outputKey = "", outputName = "";
     static volatile int outputCount;
-    // tocando pela saída do aparelho (sem interface USB). Se a USB já esteve conectada e caiu, não cai para o
-    // aparelho no meio do show: espera a USB voltar (o click iria para o alto-falante).
+    // playing on the device's output (no USB interface). If USB was connected and dropped, it doesn't fall back to the
+    // device mid-show: it waits for USB to come back (the click would go to the speaker).
     boolean deviceOut, hadUsb;
 
     final Handler main = new Handler(Looper.getMainLooper());
@@ -91,8 +91,9 @@ public class PlayerService extends Service {
         return START_STICKY;
     }
 
-    // O fluxo USB pode morrer sem o aviso de desconexão (a interface reinicia, erro no cabo): com o
-    // fluxo parado muitas interfaces repetem o último trecho (apito). A cada 5 s, se o motor caiu, fecha e conecta de novo.
+    // The USB stream can die without the disconnect notice (the interface restarts, a cable error): with the stream
+    // stopped many interfaces repeat the last chunk (a whine). Every 5 s, if the engine dropped, close and connect
+    // again.
     final Runnable watchdog = new Runnable() {
         @Override
         public void run() {
@@ -110,7 +111,7 @@ public class PlayerService extends Service {
             } else if (fbRetryDue()) {
                 fbRetry();
             } else if (link == null) {
-                // autorização dada pela janela do Android, sem o aviso do nosso pedido
+                // permission granted through Android's window, without our request's notice
                 UsbDevice d = UsbLink.find(um);
                 if (d != null && um.hasPermission(d)) connectUsb();
             }
@@ -118,9 +119,9 @@ public class PlayerService extends Service {
         }
     };
 
-    // A 1ª conexão depois de plugar ou religar a mesa às vezes vem com a entrada muda: sem o relógio dela,
-    // solavanco a cada ~70 s. Reconectar resolve (visto em 19/10/2026). Conferido FB_WAIT_MS depois de cada
-    // conexão e, de novo, pelo vigia.
+    // The 1st connection after plugging in or powering the desk back on sometimes comes with the input silent: without
+    // its clock, a hiccup every ~70 s. Reconnecting fixes it (seen on 19/10/2026). Checked FB_WAIT_MS after each
+    // connection and again by the watchdog.
     final Runnable fbCheck = () -> {
         if (running && Engine.isRunning() && Engine.feedback() != 1 && fbRetryDue()) fbRetry();
     };
@@ -151,16 +152,16 @@ public class PlayerService extends Service {
         StagePlayer.onServiceChanged();
     }
 
-    // Parar o motor espera ~0,5 s de silêncio (sem ele a interface repete o último trecho) e abrir conversa com a interface, que
-    // pode não responder: os dois rodam fora da tela (uma interface sem responder ao SET_INTERFACE
-    // prendia a tela e dava ANR). Um único executor, em ordem: conectar só começa depois do desligamento
-    // anterior, senão a interface ainda estaria presa ao fluxo antigo.
+    // Stopping the engine waits ~0.5 s of silence (without it the interface repeats the last chunk) and opening a
+    // conversation with the interface, which may not answer: both run off the UI thread (an interface not answering
+    // SET_INTERFACE froze the screen and caused an ANR). A single executor, in order: connecting only starts after the
+    // previous shutdown, otherwise the interface would still be tied to the old stream.
     static final ExecutorService usbOps = Executors.newSingleThreadExecutor();
-    static UsbLink usbOpen;   // a conexão que o motor está usando; só lida e escrita dentro do usbOps
-    int usbGen;               // muda a cada desligamento: uma conexão que termina depois dele é descartada
+    static UsbLink usbOpen;   // the connection the engine is using; only read and written inside usbOps
+    int usbGen;               // changes on every shutdown: a connection that finishes after it is discarded
     boolean connecting;
 
-    // fecha a saída atual (USB ou do aparelho)
+    // closes the current output (USB or device)
     void releaseUsb() {
         link = null;
         deviceOut = false;
@@ -188,7 +189,7 @@ public class PlayerService extends Service {
             setStatus(getString(R.string.player_usb_permission));
             return;
         }
-        if (deviceOut) releaseUsb();   // a interface USB chegou: sai do aparelho e vai para ela
+        if (deviceOut) releaseUsb();   // the USB interface arrived: leave the device and go to it
         connecting = true;
         int gen = usbGen;
         setStatus(getString(R.string.player_usb_connecting));
@@ -202,12 +203,12 @@ public class PlayerService extends Service {
                         l.outIfNum, l.outAltNum, l.inEp, l.inMaxPacket, l.inChannels * l.inSubslot);
                 usbOpen = l;
             }
-            // desligou ou caiu no meio: o releaseUsb (na fila depois desta) já fecha esta conexão
+            // turned off or dropped midway: releaseUsb (queued after this one) already closes this connection
             main.post(() -> { if (gen == usbGen) usbReady(l, err); });
         });
     }
 
-    // Sem interface USB: abre a saída do aparelho, também fora da tela.
+    // No USB interface: opens the device's output, also off the UI thread.
     void useDevice() {
         if (deviceOut || connecting) return;
         connecting = true;
@@ -230,7 +231,7 @@ public class PlayerService extends Service {
         setStatus(getString(R.string.player_device_out));
     }
 
-    // De volta na tela, com a conexão aberta (ou o erro dela).
+    // Back on the UI thread, with the connection open (or its error).
     void usbReady(UsbLink l, String err) {
         connecting = false;
         if (err != null) { Log.w(TAG, err); setStatus(getString(R.string.player_usb_failed)); return; }
@@ -263,7 +264,7 @@ public class PlayerService extends Service {
                 UsbDevice d = IntentCompat.getParcelableExtra(i, UsbManager.EXTRA_DEVICE, UsbDevice.class);
                 if (d != null && link != null && d.equals(link.dev)) {
                     releaseUsb();
-                    fbRetries = 0;   // cabo novo: novas tentativas de pegar o relógio
+                    fbRetries = 0;   // new cable: new attempts to get the clock
                     holdWake(false);
                     setStatus(getString(R.string.player_usb_lost));
                 }
@@ -271,7 +272,7 @@ public class PlayerService extends Service {
         }
     };
 
-    // Só segura o wake lock tocando; tempo limite maior que qualquer música, pego de novo a cada play.
+    // Only holds the wake lock while playing; timeout longer than any song, taken again on every play.
     void holdWake(boolean on) {
         if (wake == null) return;
         if (on && !wake.isHeld()) wake.acquire(WAKE_TIMEOUT_MS);
@@ -286,7 +287,7 @@ public class PlayerService extends Service {
         instance = this;
     }
 
-    /** Tocando ou parado (StagePlayer): o wake lock acompanha. */
+    /** Playing or stopped (StagePlayer): the wake lock follows. */
     static void playing(boolean on) {
         PlayerService s = instance;
         if (s != null) s.main.post(() -> s.holdWake(on));

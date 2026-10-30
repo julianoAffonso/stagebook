@@ -18,33 +18,33 @@ import br.app.stagebook.data.model.Look
 import br.app.stagebook.domain.Sections
 import br.app.stagebook.domain.Tablature
 
-/** Marca, no texto da linha, a letra embaixo da qual um acorde é desenhado (o valor é o acorde). */
+/** Marks, in the line's text, the letter a chord is drawn above (the value is the chord). */
 const val CHORD_TAG = "chord"
 
-/** Marca a linha de letra com acordes; o valor é a altura da linha (em em) com o espaço dos acordes. */
+/** Marks a lyrics line with chords; the value is the line height (in em) including the chord space. */
 private const val CHORD_LINE_TAG = "chordline"
 
-/** Marca o espaço da lista de acordes da música (topo ou fim); o palco desenha os acordes por cima dele. */
+/** Marks the space for the song's chord list (top or end); the stage draws the chords over it. */
 const val CHORD_LIST_TAG = "chordlist"
 
-/** Linha de tablatura (T22): letra de máquina, nunca quebra; o palco diminui até caber na coluna ([fitTab]). */
+/** Tablature line (T22): monospace, never wraps; the stage shrinks it to fit the column ([fitTab]). */
 const val TAB_TAG = "tab"
 const val TAB_EM = 0.7f
 
-/** Uma linha vazia de [heightEm] de altura, reservada para a lista de acordes (entra na paginação como as outras). */
+/** An empty line [heightEm] tall, reserved for the chord list (paginated like the others). */
 fun chordListLine(heightEm: Float): AnnotatedString = buildAnnotatedString {
     withAnnotation(CHORD_LINE_TAG, heightEm.toString()) { withAnnotation(CHORD_LIST_TAG, "") { append(' ') } }
 }
 
-/** Altura da linha da letra, em relação à fonte (a mesma do estilo do palco). */
+/** Lyrics line height, relative to the font (the same as the stage style). */
 private const val LYRIC_LINE = 1.25f
 
-/** Como mostrar acordes: [show] false = perfil "só letra"; [scale] = tamanho do acorde em relação à letra. */
+/** How to show chords: [show] false = "lyrics only" profile; [scale] = chord size relative to the lyrics. */
 class ChordLook(val show: Boolean, val scale: Float, val color: Color)
 
 /**
- * Nomes das seções reconhecidas na língua do app ([translate]), ou como estão escritas na música.
- * A letra guardada nunca muda: só o que aparece (decisão do usuário, 24/10).
+ * Names of recognized sections in the app's language ([translate]), or as written in the song. The saved lyrics never
+ * change: only what shows (user's decision, 24/10).
  */
 class SectionNames(private val names: Map<Sections.Kind, String>?) {
     fun label(h: Sections.Header): String = names?.get(h.kind)?.let { Sections.label(h, it) } ?: h.original
@@ -67,18 +67,18 @@ fun rememberSectionNames(translate: Boolean): SectionNames {
 }
 
 /**
- * Linhas da letra para o palco: títulos de seção em negrito, na cor escolhida, menores e em
- * maiúsculas. Títulos escondidos somem mas deixam o respiro entre as partes; brancos repetidos viram um.
+ * Lyrics lines for the stage: section titles in bold, in the chosen color, smaller and in capitals. Hidden titles go
+ * away but leave the breathing room between parts; repeated blanks become one.
  */
 fun lyricsLines(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
 ): List<AnnotatedString> = stageLines(text, names, sectionColor, showSections, chords, sectionScale).map { it.text }
 
-/** Uma linha do palco e a linha da letra de onde ela veio (segurar a linha abre o editor nela). */
+/** A stage line and the lyrics line it came from (holding the line opens the editor on it). */
 class StageLine(val text: AnnotatedString, val source: Int)
 
-// diretivas do ChordPro que abrem uma seção
+// ChordPro directives that open a section
 private val sectionDirectives = mapOf(
     "start_of_chorus" to Sections.Kind.CHORUS, "soc" to Sections.Kind.CHORUS,
     "start_of_verse" to Sections.Kind.VERSE, "sov" to Sections.Kind.VERSE,
@@ -96,7 +96,7 @@ fun stageLines(
         if (!showSections) return blank(at)
         out += StageLine(
             buildAnnotatedString {
-                // mais destaque (pedido do usuário, 29/10): tamanho ajustável e um fundo leve na cor da seção
+                // more emphasis (user's request, 29/10): adjustable size and a light background in the section color
                 withStyle(
                     SpanStyle(
                         fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em,
@@ -111,7 +111,7 @@ fun stageLines(
     }
     val tabs = Tablature.tabLines(text)
     text.split('\n').forEachIndexed { i, raw ->
-        // tablatura: só no perfil letra e cifra, em letra de máquina (as colunas ficam alinhadas)
+        // tablature: only in the lyrics and chords profile, in monospace (the columns stay aligned)
         if (tabs[i]) {
             if (chords.show) out += StageLine(tabLine(raw.trimEnd()), i)
             return@forEachIndexed
@@ -123,7 +123,7 @@ fun stageLines(
             sectionDirectives[name]?.let { kind ->
                 header(names.label(Sections.Header(kind, "", "", value.ifEmpty { kind.en })), i)
             }
-            // comentário do ChordPro ({c: Solo de sax}) aparece como um título; as outras (key, capo, fim de seção…) não
+            // a ChordPro comment ({c: Sax solo}) shows as a title; the others (key, capo, end of section…) don't
             if ((name == "comment" || name == "c" || name == "ci") && value.isNotEmpty()) header(value, i)
             return@forEachIndexed
         }
@@ -149,10 +149,9 @@ internal fun tabLine(raw: String, em: Float = TAB_EM): AnnotatedString = buildAn
 private val bracket = Regex("""\[([^\[\]]*)]""")
 
 /**
- * Linha com acordes. Só acordes (intro, solo): os próprios acordes, na cor deles. Com letra: a letra, com um
- * espaço em cima de cada linha desenhada (altura de linha maior) e uma marca [CHORD_TAG] na letra embaixo de
- * cada acorde; o palco desenha o acorde ali. Um trecho curto demais para o acorde é completado com espaços,
- * senão o acorde seguinte o cobriria.
+ * Line with chords. Chords only (intro, solo): the chords themselves, in their color. With lyrics: the lyrics, with
+ * space above each drawn line (taller line height) and a [CHORD_TAG] mark on the letter under each chord; the stage
+ * draws the chord there. A stretch too short for the chord is padded with spaces, or the next chord would cover it.
  */
 internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     data class Seg(val chord: String?, var text: String)
@@ -160,7 +159,7 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     var last = 0
     bracket.findAll(raw).forEach { m ->
         val inner = m.groupValues[1]
-        if (!Chords.isChord(inner)) return@forEach   // [Refrão] no meio da linha: fica como texto
+        if (!Chords.isChord(inner)) return@forEach   // [Chorus] in the middle of a line: stays as text
         val before = raw.substring(last, m.range.first)
         if (segs.isEmpty()) segs += Seg(null, before) else segs.last().text += before
         segs += Seg(inner, "")
@@ -181,7 +180,7 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
         val need = chord.length + if (i < segs.lastIndex) 1 else 0
         if (s.text.length < need) s.text = s.text.padEnd(need)
     }
-    // a altura maior entra como estilo de parágrafo só ao juntar as linhas ([joinLines])
+    // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
     return buildAnnotatedString {
         withAnnotation(CHORD_LINE_TAG, (LYRIC_LINE + look.scale * 1.15f).toString()) {
             segs.forEach { s ->
@@ -198,14 +197,14 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     }
 }
 
-/** Posição na letra onde começa a linha `line` (uma por '\n'). */
+/** Position in the lyrics where line `line` starts (one per '\n'). */
 fun lineStart(text: String, line: Int): Int {
     var at = 0
     repeat(line) { at = text.indexOf('\n', at).let { if (it < 0) return text.length else it + 1 } }
     return at
 }
 
-/** A letra inteira num texto só (prévia dos ajustes). */
+/** The whole lyrics in a single text (settings preview). */
 fun lyricsAnnotated(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
@@ -213,15 +212,15 @@ fun lyricsAnnotated(
 
 private const val SECTION_BACKGROUND_ALPHA = 0.16f
 
-/** Marca cada linha do palco com o número dela no texto montado (o "segurar a linha" acha a linha por aqui). */
+/** Marks each stage line with its number in the assembled text (holding a line finds it through this). */
 const val LINE_TAG = "line"
 
 /**
- * Junta as linhas do palco num texto só (o mesmo para medir e para desenhar). Linha com acordes vira um
- * parágrafo próprio, com a altura maior (espaço dos acordes em cima, letra embaixo). Entre parágrafos o
- * Compose já quebra a linha: uma quebra a mais ali vira uma linha vazia (medido em teste), então a quebra só
- * entra entre duas linhas comuns. Linha vazia vira um espaço (sem ele, ela sumiria entre parágrafos).
- * [starts]: se dado, recebe onde cada linha começa.
+ * Joins the stage lines into one text (the same for measuring and drawing). A line with chords becomes its own
+ * paragraph, with the taller height (chord space on top, lyrics below). Between paragraphs Compose already breaks the
+ * line: an extra break there becomes an empty line (measured in a test), so the break only goes between two plain
+ * lines. An empty line becomes a space (without it, it would vanish between paragraphs). [starts]: if given, gets where
+ * each line starts.
  */
 fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): AnnotatedString = buildAnnotatedString {
     lines.forEachIndexed { i, l ->
@@ -241,7 +240,7 @@ fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): Annotated
     }
 }
 
-/** Linha de letra com acordes (com o espaço deles em cima)? */
+/** Lyrics line with chords (with their space on top)? */
 fun AnnotatedString.isChordLine(): Boolean = chordLineHeight() != null
 
 private fun AnnotatedString.chordLineHeight(): Float? =

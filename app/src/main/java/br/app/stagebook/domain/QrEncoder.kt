@@ -6,12 +6,12 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 
-/** Desenha o QR em preto e branco (o leitor precisa do contraste; não segue o tema do app). */
+/** Draws the QR in black and white (the reader needs the contrast; it doesn't follow the app theme). */
 object QrEncoder {
     private const val BLACK = 0xFF000000.toInt()
     private const val WHITE = 0xFFFFFFFF.toInt()
 
-    /** Bytes no QR em modo binário: um caractere ISO-8859-1 por byte, sem ECI (o leitor usa os bytes crus). */
+    /** Bytes in the QR in binary mode: one ISO-8859-1 character per byte, no ECI (the reader uses the raw bytes). */
     fun encode(bytes: ByteArray, size: Int): Bitmap = encode(String(bytes, Charsets.ISO_8859_1), size, "ISO-8859-1")
 
     private fun encode(payload: String, size: Int, charset: String): Bitmap {

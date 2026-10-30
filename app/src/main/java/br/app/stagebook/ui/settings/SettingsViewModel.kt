@@ -64,15 +64,15 @@ data class SettingsUiState(
     val language: AppLanguage = AppLanguage.SYSTEM,
 )
 
-/** Ajustes → Atualizar o app. */
+/** Settings → Update the app. */
 sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
     data object UpToDate : UpdateState
     data class Available(val versionName: String) : UpdateState
     data class Downloading(val percent: Int) : UpdateState
-    data object Ready : UpdateState            // baixado: falta o toque em "Instalar" do Android
-    data object Offline : UpdateState          // não achou a versão publicada (sem internet?)
+    data object Ready : UpdateState            // downloaded: Android's "Install" tap is still needed
+    data object Offline : UpdateState          // couldn't find the published version (no internet?)
     data object DownloadFailed : UpdateState
 }
 
@@ -82,7 +82,7 @@ sealed interface SettingsMessage {
     data class Normalized(val count: Int, val unidentified: Int) : SettingsMessage
     data class Imported(val added: Int, val replaced: Int) : SettingsMessage
     data object ImportFailed : SettingsMessage
-    data object ImportNewer : SettingsMessage   // arquivo de uma versão mais nova do Stagebook: atualizar
+    data object ImportNewer : SettingsMessage   // file from a newer Stagebook: update
     data object BackupDone : SettingsMessage
     data object BackupFailed : SettingsMessage
     data object NotBackup : SettingsMessage
@@ -98,7 +98,7 @@ class SettingsViewModel @Inject constructor(
     private val midi: MidiPedal,
     private val backup: br.app.stagebook.data.Backup,
 ) : ViewModel() {
-    /** Backup lido e esperando a escolha das partes para restaurar. */
+    /** Backup read and waiting for the choice of parts to restore. */
     data class PendingRestore(val uri: Uri, val contents: br.app.stagebook.data.Backup.Contents)
 
     private val _pendingRestore = MutableStateFlow<PendingRestore?>(null)
@@ -109,11 +109,11 @@ class SettingsViewModel @Inject constructor(
         _messages.send(if (ok) SettingsMessage.BackupDone else SettingsMessage.BackupFailed)
     }
 
-    /** Abrir arquivo: um .stagebook mostra as partes para escolher; um arquivo de músicas antigo (.json) soma as músicas. */
+    /** Open file: a .stagebook shows the parts to choose; an old songs file (.json) adds the songs. */
     fun inspectBackup(uri: Uri) = viewModelScope.launch {
         val c = runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
         when {
-            c == null -> importFrom(uri)   // não é .stagebook: tenta o arquivo de músicas antigo (ou avisa que não deu)
+            c == null -> importFrom(uri)   // not a .stagebook: tries the old songs file (or says it couldn't)
             c.newer -> _messages.send(SettingsMessage.ImportNewer)
             else -> _pendingRestore.value = PendingRestore(uri, c)
         }
@@ -121,21 +121,21 @@ class SettingsViewModel @Inject constructor(
 
     fun cancelRestore() { _pendingRestore.value = null }
 
-    /** Apagar tudo: o Android limpa os dados do app (músicas, faixas, ajustes, banda) e fecha; ele abre limpo. */
+    /** Erase everything: Android clears the app data (songs, tracks, settings, band) and closes it; it opens clean. */
     fun factoryReset() { context.getSystemService(android.app.ActivityManager::class.java)?.clearApplicationUserData() }
 
     fun restore(parts: Set<br.app.stagebook.data.Backup.Part>, replace: Boolean) = viewModelScope.launch {
         val p = _pendingRestore.value ?: return@launch
         _pendingRestore.value = null
         val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } }.getOrDefault(false)
-        // ajustes restaurados (língua, aparência): a tela abre de novo para valerem
+        // settings restored (language, look): the screen opens again so they apply
         _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(br.app.stagebook.data.Backup.Part.SETTINGS in parts))
     }
 
     private val lastKey = MutableStateFlow<PedalKeyUi?>(null)
-    // trocar a língua recria a tela (e este ViewModel junto não precisa ouvir mudanças)
+    // changing the language recreates the screen (and this ViewModel with it, no need to listen for changes)
     private val language = Languages.get(context)
-    // aparelhos de entrada ligados agora (o pedal aparece aqui quando está conectado)
+    // input devices connected now (the pedal shows here when connected)
     private val inputManager = context.getSystemService(InputManager::class.java)
     private val devices = MutableStateFlow(connectedDevices())
     private val deviceListener = object : InputManager.InputDeviceListener {
@@ -146,7 +146,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         inputManager?.registerInputDeviceListener(deviceListener, null)
-        // sobra de uma atualização anterior (já instalada ou abandonada)
+        // leftover from an earlier update (already installed or abandoned)
         viewModelScope.launch(Dispatchers.IO) { updater.clean() }
     }
 
@@ -162,13 +162,13 @@ class SettingsViewModel @Inject constructor(
     private val update = MutableStateFlow<UpdateState>(UpdateState.Idle)
     private var updateJob: Job? = null
     private var downloaded: File? = null
-    // APK baixado e conferido: a tela abre o instalador do Android
+    // APK downloaded and checked: the screen opens the Android installer
     private val _install = Channel<Unit>(Channel.CONFLATED)
     val install = _install.receiveAsFlow()
 
     val uiState: StateFlow<SettingsUiState> = combine(
         combine(repository.loaded, repository.library, lastKey, devices, update) { loaded, lib, key, connected, up ->
-            // o comando sai da escolha atual: trocar no seletor muda na hora o que o cartão mostra
+            // the command comes from the current choice: changing the picker updates what the card shows right away
             val shown = key?.copy(action = PedalAction.of(key.keyCode, lib.look.pedalKeys))
             SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, shown, version, lib.look.pedalName in connected, up)
         },
@@ -194,14 +194,17 @@ class SettingsViewModel @Inject constructor(
 
     fun setPlayerMode(on: Boolean) {
         repository.updateLook { it.copy(playerMode = on).copy(essentialAlertOff = false) }
-        if (!on) br.app.stagebook.player.StagePlayer.turnOff()   // desligado, nada do player fica rodando
+        if (!on) br.app.stagebook.player.StagePlayer.turnOff()   // when off, nothing from the player keeps running
     }
     fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on).copy(essentialAlertOff = false) }
     fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on).copy(essentialAlertOff = false) }
     fun setExtrasOn(on: Boolean) = repository.updateLook { it.copy(extrasOn = on).copy(essentialAlertOff = false) }
 
-    // mexer em qualquer parte apaga o "Não mostrar de novo": o aviso ao abrir volta com a lista nova
-    /** Ligar desliga as quatro (player incluso); desligar religa banda, internet e extras (o player continua como estava: começa desligado). */
+    // touching any part clears "Don't show again": the alert on open comes back with the new list
+    /**
+     * Turning on turns off all four (player included); turning off brings back band, internet and extras (the player
+     * stays as it was: it starts off).
+     */
     fun setEssential(on: Boolean) {
         repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode).copy(essentialAlertOff = false) }
         if (on) br.app.stagebook.player.StagePlayer.turnOff()
@@ -225,7 +228,7 @@ class SettingsViewModel @Inject constructor(
         if (updateJob?.isActive == true) return
         updateJob = viewModelScope.launch {
             update.value = UpdateState.Checking
-            val p = updater.published(maxAgeMs = 0)   // o usuário pediu: lê agora
+            val p = updater.published(maxAgeMs = 0)   // the user asked: read now
             update.value = when {
                 p == null -> UpdateState.Offline
                 p.versionCode > updater.installedCode -> UpdateState.Available(p.versionName)
@@ -249,7 +252,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** O instalador do Android com o APK baixado, ou null se ainda não baixou. */
+    /** The Android installer with the downloaded APK, or null if not downloaded yet. */
     fun installIntent(): Intent? = downloaded?.let(updater::installIntent)
 
     fun canInstall() = updater.canInstall()
@@ -261,16 +264,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** Teste do pedal: mostra o botão recebido, o que ele faz no palco e de qual aparelho veio (e guarda o nome). */
+    /**
+     * Pedal test: shows the button received, what it does on stage and which device it came from (and saves the name).
+     */
     fun onKey(p: PedalPress) {
         lastKey.value = PedalKeyUi(p.name, PedalAction.NONE, p.device, p.code)
-        // o nome guardado é o do pedal-teclado (o "conectado" vem da lista de teclados); o MIDI tem o cartão dele
+        // the saved name is the keyboard pedal's ("connected" comes from the keyboard list); MIDI has its own card
         if (!MidiCode.isMidi(p.code) && p.device.isNotEmpty() && p.device != repository.library.value.look.pedalName) {
             repository.updateLook { it.copy(pedalName = p.device) }
         }
     }
 
-    /** Liga o último botão apertado a um comando do palco. */
+    /** Sets the last button pressed to a stage command. */
     fun setPedalAction(keyCode: Int, action: PedalAction) =
         repository.updateLook { it.copy(pedalKeys = PedalAction.assign(it.pedalKeys, keyCode, action)) }
 
@@ -283,7 +288,7 @@ class SettingsViewModel @Inject constructor(
     fun forgetMidi() = midi.forget()
     fun setMidiUsb(on: Boolean) = repository.updateLook { it.copy(midiUsb = on) }
 
-    /** Import esperando o ok: ia trocar a letra de músicas que já existem. */
+    /** Import waiting for ok: it would replace the lyrics of songs that already exist. */
     private val _pendingImport = MutableStateFlow<PendingImport?>(null)
     val pendingImport: StateFlow<PendingImport?> = _pendingImport.asStateFlow()
 
@@ -298,7 +303,7 @@ class SettingsViewModel @Inject constructor(
         when {
             result.exceptionOrNull() is br.app.stagebook.data.LibraryCodec.NewerFileException -> _messages.send(SettingsMessage.ImportNewer)
             preview == null -> _messages.send(SettingsMessage.ImportFailed)
-            // um arquivo antigo trocaria letras editadas depois dele: pergunta antes
+            // an old file would replace lyrics edited after it: ask first
             preview.second.lyricsChanged > 0 -> _pendingImport.value = PendingImport(preview.first, preview.second.added, preview.second.lyricsChanged)
             else -> apply(preview.first)
         }
@@ -313,7 +318,7 @@ class SettingsViewModel @Inject constructor(
     fun cancelImport() { _pendingImport.value = null }
 
     private suspend fun apply(json: String) {
-        // ler e juntar ~200 músicas pesa no Fire: fora da thread principal
+        // reading and merging ~200 songs is heavy on the Fire: off the main thread
         val msg = runCatching { withContext(Dispatchers.Default) { repository.importSongs(json) }.let { SettingsMessage.Imported(it.added, it.replaced) } }
             .getOrElse { SettingsMessage.ImportFailed }
         _messages.send(msg)

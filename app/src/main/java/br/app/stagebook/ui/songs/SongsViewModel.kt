@@ -41,7 +41,7 @@ data class SongsUiState(
     val total: Int = 0,
 )
 
-/** Espera a pessoa parar de digitar antes de filtrar; limpar a busca é na hora. */
+/** Waits for the person to stop typing before filtering; clearing the search is immediate. */
 fun typingDelay(q: String): Long = if (q.isEmpty()) 0L else 150L
 
 fun Song.subtitle(): String = listOf(author, year).filter { it.isNotBlank() }.joinToString(" · ") { it.trim() }
@@ -62,7 +62,7 @@ class SongsViewModel @Inject constructor(
     private val _cloud = MutableStateFlow<CloudUi?>(null)
     val cloud: StateFlow<CloudUi?> = _cloud
 
-    /** Manda as músicas escolhidas pela internet (sem setlist); o código aparece num diálogo. */
+    /** Sends the chosen songs over the internet (no setlist); the code shows in a dialog. */
     fun shareSongs(ids: List<String>) {
         if (_cloud.value == CloudUi.Sending || ids.isEmpty()) return
         _cloud.value = CloudUi.Sending
@@ -80,7 +80,7 @@ class SongsViewModel @Inject constructor(
 
     private var joinsJob: kotlinx.coroutines.Job? = null
 
-    // com o diálogo das palavras aberto: confere de tempos em tempos quem aceitou (vira da banda); fechou, para
+    // with the words dialog open, checks now and then who accepted (they join the band); once closed, it stops
     private fun watchJoins(code: String) {
         joinsJob?.cancel()
         joinsJob = viewModelScope.launch {
@@ -93,32 +93,32 @@ class SongsViewModel @Inject constructor(
     }
 
     /**
-     * Para quantos da banda dá para mandar agora ("Mandar para a banda (N)"): todos, se alguém está no Wi-Fi ou há
-     * internet; 0 = a opção não aparece.
+     * How many band members we can send to right now ("Send to the band (N)"): all of them if someone is on Wi-Fi or
+     * there's internet; 0 = the option doesn't show.
      */
     val bandOnline: StateFlow<Int> = combine(bandTrust.members, bandLink.onlineMembers, internet) { members, lan, net ->
         if (members.isNotEmpty() && (lan.isNotEmpty() || net)) members.size else 0
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private val bandSent = Channel<Int>(Channel.BUFFERED)
-    /** Para quantos aparelhos da banda chegou o último envio (0 = ninguém recebeu). */
+    /** How many band devices got the last send (0 = nobody got it). */
     val bandResult = bandSent.receiveAsFlow()
 
-    /** A folha Compartilhar abriu/fechou: liga/desliga a procura da banda. */
+    /** The Share sheet opened or closed: turns the band search on or off. */
     fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
 
-    /** Manda as músicas escolhidas para todos da banda na rede agora. */
+    /** Sends the chosen songs to everyone in the band on the network now. */
     fun sendBand(ids: List<String>) {
         viewModelScope.launch {
             val pkg = setlistCloud.songsPackage(ids) ?: return@launch
-            // perto (Wi-Fi) na hora; os outros pela internet, na caixa de cada par
+            // nearby ones (Wi-Fi) right away; the others over the internet, in each pair's inbox
             val lan = bandLink.send(pkg.first, pkg.second)
             val net = if (connectivityNow()) bandInternet.sendToBand(pkg.first, pkg.second, lan) else 0
             bandSent.send(lan.size + net)
         }
     }
 
-    /** Importar precisa de internet: o botão fica indisponível sem ela (só observa com a tela aberta). */
+    /** Import needs internet: the button is disabled without it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     private val query = MutableStateFlow("")
@@ -140,6 +140,6 @@ class SongsViewModel @Inject constructor(
 
     private companion object {
         const val JOIN_EVERY_MS = 15_000L
-        const val JOIN_CHECKS = 40   // 10 min no máximo
+        const val JOIN_CHECKS = 40   // 10 min at most
     }
 }

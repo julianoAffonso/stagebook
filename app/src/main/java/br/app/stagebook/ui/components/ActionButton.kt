@@ -35,9 +35,10 @@ import br.app.stagebook.ui.theme.Spacing
 enum class ButtonTone { Primary, Tonal, Danger, Quiet }
 
 /**
- * Botão de ação do app, no padrão dos apps do Google (regra da T35, decisão do usuário): **a única ação principal da tela**
- * ([ButtonTone.Primary]) tem fundo cheio; as outras são ícone + texto **sem fundo** (Tonal = cor do texto, Danger = vermelho,
- * Quiet = apagado). A principal encosta no fim do espaço; as outras, no começo. Ao tocar, a onda em pílula e um leve afundar (o "morph" do Expressive).
+ * The app's action button, in Google's app pattern (T35 rule, user's decision): **the screen's only main action**
+ * ([ButtonTone.Primary]) has a filled background; the others are icon + text **with no background** (Tonal = text
+ * color, Danger = red, Quiet = dimmed). The main one sits at the end of the space; the others at the start. On tap, the
+ * pill ripple and a slight press (the Expressive "morph").
  */
 @Composable
 fun ActionButton(
@@ -52,8 +53,8 @@ fun ActionButton(
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.95f else 1f, label = "press")
     val corner by animateIntAsState(if (pressed) 30 else 50, label = "corner")
-    // como nos apps do Google: numa fileira, o secundário encosta no começo e a ação principal no fim (Cancelar … OK); um
-    // botão esticado nunca deixa o texto boiando no meio
+    // like Google's apps: in a row, the secondary sits at the start and the main action at the end (Cancel … OK); a
+    // stretched button never leaves the text floating in the middle
     Box(modifier, contentAlignment = if (tone == ButtonTone.Primary) Alignment.CenterEnd else Alignment.CenterStart) {
     Button(
         onClick = onClick,
@@ -78,7 +79,7 @@ fun ActionButton(
 @Composable
 private fun toneColors(tone: ButtonTone): ButtonColors {
     val c = MaterialTheme.colorScheme
-    // a ação principal da tela: pílula cheia, como o "Escrever" do Gmail ou o "Salvar" das telas do Google
+    // the screen's main action: a filled pill, like Gmail's "Compose" or "Save" on Google's screens
     if (tone == ButtonTone.Primary) return ButtonDefaults.buttonColors()
     val content = when (tone) {
         ButtonTone.Tonal -> c.onSurface

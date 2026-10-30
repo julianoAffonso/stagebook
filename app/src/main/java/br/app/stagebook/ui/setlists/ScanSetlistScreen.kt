@@ -119,8 +119,8 @@ fun ScanSetlistRoute(
 }
 
 /**
- * Ler o QR de um setlist e conferir antes de criar. [camera] é a câmera de verdade no app e
- * um quadro vazio nos testes e prints.
+ * Scan a setlist QR and check it before creating. [camera] is the real camera in the app and an empty frame in tests
+ * and screenshots.
  */
 @Composable
 fun ScanSetlistScreen(
@@ -139,8 +139,8 @@ fun ScanSetlistScreen(
     byCode: Boolean = false,
     onRetry: () -> Unit = {},
     onAddSongs: () -> Unit = {},
-    fromName: String = "",   // veio da banda: "Recebido de Ana"
-    band: Int = 0,           // da banda na rede agora
+    fromName: String = "",   // came from the band: "Received from Ana"
+    band: Int = 0,           // from the band on the network now
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
     internetFrom: String? = null,
@@ -150,7 +150,7 @@ fun ScanSetlistScreen(
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
     onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
-    var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // linha com "Ver o que muda" aberto
+    var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // row with "See what changes" open
     CenteredContent(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             ScreenHeader(
@@ -167,7 +167,7 @@ fun ScanSetlistScreen(
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
                 is ScanUi.Fetching -> Fetching(ui, onRetry)
                 is ScanUi.Review -> {
-                    // faltando música: procura a banda enquanto a conferência está aberta (para pedir a ela antes dos sites)
+                    // missing songs: searches for the band while the review is open (to ask them before the sites)
                     val missing = !ui.songsOnly && ui.rows.any { it.chosen == null && !it.carried && it.candidates.isEmpty() }
                     DisposableEffect(missing) {
                         if (missing) onBandSearch(true)
@@ -245,12 +245,13 @@ private fun Review(
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
-    var importing by rememberSaveable { mutableStateOf(false) }   // o nome repetido veio de "Importar as que faltam"
+    var importing by rememberSaveable { mutableStateOf(false) }   // the repeated name came from "Import the missing ones"
     fun finish(replace: String?) = if (importing) onCreateAndImport(replace) else onCreate(replace)
-    // primeiro avisa o que fica de fora; depois, se o nome já existe, pergunta se troca ou cria outro
+    // first say what's left out; then, if the name exists, ask whether to replace or create another
     fun goName() { existing(ui.name.trim())?.let { nameTaken = it } ?: finish(null) }
     fun go() { importing = false; if (ui.missing.isNotEmpty()) confirmMissing = true else goName() }
-    // importar as que faltam: o setlist é criado com as achadas e o importador abre buscando a primeira que falta
+    // import the missing ones: the setlist is created with the found ones and the importer opens searching for the
+    // first missing one
     fun goImport() { importing = true; goName() }
     val toImport = ui.rows.count { it.chosen == null && !it.carried && it.candidates.isEmpty() }
 
@@ -269,14 +270,14 @@ private fun Review(
         ) {
             itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }, { onWantChords(i, it) }, { onUseIncoming(i, it) }) }
         }
-        // antes dos sites: pedir à banda na rede (só aparece com alguém da banda por perto)
+        // before the sites: ask the band on the network (only shows with a band member nearby)
         if (toImport > 0 && band > 0) {
             ActionButton(
                 if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, band, band),
                 onAskBand, Modifier.fillMaxWidth(), icon = AppIcons.Group, tone = ButtonTone.Tonal, enabled = !asking,
             )
         }
-        // pedir pela internet a quem mandou (da banda), sem fundo (preferência do usuário): elas chegam depois nos Recebidos
+        // ask the sender (in the band) online, with no background (user's preference): they arrive later in Received
         if (toImport > 0 && internetFrom != null) {
             ActionButton(
                 stringResource(R.string.scan_ask_internet, internetFrom), onAskInternet,
@@ -297,7 +298,7 @@ private fun Review(
             ActionButton(stringResource(R.string.scan_create), { go() }, Modifier.weight(1f), icon = AppIcons.Check, enabled = ui.name.isNotBlank() && found > 0)
         }
     }
-    // "Criar setlist" com música faltando: diz o que fica de fora e oferece o caminho certo (importar), contra o toque errado
+    // "Create setlist" with missing songs: says what's left out and offers the right path (import), against a wrong tap
     if (confirmMissing) {
         AlertDialog(
             onDismissRequest = { confirmMissing = false },
@@ -327,7 +328,7 @@ private fun Review(
     }
 }
 
-// músicas avulsas recebidas: as novas entram na biblioteca; as que já estão aqui ficam como estão
+// loose songs received: the new ones go into the library; the ones already here stay as they are
 @Composable
 private fun SongsReview(
     ui: ScanUi.Review,
@@ -402,7 +403,7 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
     }
 }
 
-// uma música do QR: achada (✓), com dúvida (escolher ou deixar de fora) ou que não está na biblioteca (aviso)
+// a song from the QR: found (✓), uncertain (pick or leave out) or not in the library (notice)
 @Composable
 private fun RowItem(
     row: ScanRow,
@@ -429,15 +430,16 @@ private fun RowItem(
                 }
             }
             when {
-                // já tenho outra versão: Fica a minha | Usar a recebida, e o que muda
+                // I already have another version: Keep mine | Use theirs, and what changes
                 row.found && row.differs -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(stringResource(R.string.scan_version_other), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
                     TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(it) }
                     RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes), onCompare)
                 }
                 row.found -> Unit
-                // perfil letra e cifra: a que veio só com a letra pode ser recusada e ir buscar com cifra nos sites
-                // veio só com a letra (perfil letra e cifra): as duas opções lado a lado, a escolhida marcada
+                // lyrics and chords profile: one that came with lyrics only can be refused and searched with chords on
+                // the sites. Came with lyrics only (lyrics and chords profile): both options side by side, the chosen
+                // one marked
                 row.wantChords || (row.carried && row.lyricsOnly) -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(stringResource(R.string.scan_lyrics_only_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
                     TwoChoices(stringResource(R.string.scan_accept_lyrics), stringResource(R.string.scan_search_chords), second = row.wantChords) { onWantChords(it) }
@@ -468,7 +470,7 @@ private fun RowItem(
     }
 }
 
-// "Ver o que muda": as linhas da letra que saem (a minha) e entram (a recebida); a minha cifra fica de qualquer jeito
+// "See what changes": the lyrics lines leaving (mine) and coming in (theirs); my chords stay either way
 @Composable
 private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean, onChoose: (Boolean) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
@@ -495,7 +497,7 @@ private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean,
     )
 }
 
-// ação dentro de uma linha da conferência: ícone + texto sem fundo (padrão dos botões do app, T35)
+// action inside a review row: icon + text with no background (the app's button pattern, T35)
 @Composable
 private fun RowAction(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.m, vertical = Spacing.xs)) {
@@ -504,7 +506,9 @@ private fun RowAction(icon: androidx.compose.ui.graphics.vector.ImageVector, tex
     }
 }
 
-/** Duas opções lado a lado, a escolhida marcada ([second] = a da direita): mostra o que vai acontecer, sem adivinhar. */
+/**
+ * Two options side by side, the chosen one marked ([second] = the right one): shows what will happen, without guessing.
+ */
 @Composable
 private fun TwoChoices(first: String, secondLabel: String, second: Boolean, onChoose: (Boolean) -> Unit) {
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

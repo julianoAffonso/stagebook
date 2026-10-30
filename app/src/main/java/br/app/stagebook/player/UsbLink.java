@@ -5,16 +5,17 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 
-// Abre a saída de uma interface de áudio USB classe 2 (qualquer uma com saída isócrona) e a tira do controle do Android.
+// Opens the output of a class 2 USB audio interface (any with an isochronous output) and takes it away from Android's
+// control.
 final class UsbLink {
 
     UsbDevice dev;
     UsbDeviceConnection conn;
-    UsbInterface streaming;   // alt com o endpoint isócrono
+    UsbInterface streaming;   // alt with the isochronous endpoint
     UsbInterface idle;        // alt 0 (banda zero)
     int ep, maxPacket, interval, channels, subslot, bitRes, clockId = -1;
     int outIfNum, outAltNum;
-    // entrada (gravação) da interface: o ritmo dela é o relógio da interface (feedback implícito)
+    // the interface's input (recording): its pace is the interface clock (implicit feedback)
     int inEp = -1, inMaxPacket, inChannels, inSubslot, inIfNum = -1, inAltNum;
     UsbInterface inStreaming, inIdle;
     final java.util.List<UsbInterface> others = new java.util.ArrayList<>();
@@ -26,7 +27,7 @@ final class UsbLink {
         return null;
     }
 
-    // Interface de áudio USB classe 2 (protocolo 0x20) com um endpoint isócrono de saída: o formato que o motor fala.
+    // Class 2 USB audio interface (protocol 0x20) with an isochronous output endpoint: the format the engine speaks.
     static boolean isAudioOut(UsbDevice d) {
         for (int i = 0; i < d.getInterfaceCount(); i++) {
             UsbInterface x = d.getInterface(i);
@@ -40,13 +41,13 @@ final class UsbLink {
         return false;
     }
 
-    // Nome para a tela: o do fabricante, ou um genérico.
+    // Name for the screen: the manufacturer's, or a generic one.
     String name() {
         String n = dev != null ? dev.getProductName() : null;
         return n != null && !n.trim().isEmpty() ? n.trim() : "USB";
     }
 
-    // Retorna null se deu certo, ou a mensagem de erro.
+    // Returns null on success, or the error message.
     String open(UsbManager um, UsbDevice d) {
         dev = d;
         conn = um.openDevice(d);
@@ -69,7 +70,7 @@ final class UsbLink {
                 if (curSub == 2 && st == 0x02 && len >= 6) { candSub = raw[p + 4] & 0xff; candRes = raw[p + 5] & 0xff; }
             } else if (type == 5 && len >= 7 && curSub == 2) {
                 int addr = raw[p + 2] & 0xff, attr = raw[p + 3] & 0xff;
-                // entrada isócrona de dados (não um endpoint só de feedback explícito)
+                // isochronous data input (not an explicit-feedback-only endpoint)
                 if ((addr & 0x80) != 0 && (attr & 3) == 1 && (attr & 0x30) != 0x10 && inEp < 0) {
                     inEp = addr; inIfNum = curIf; inAltNum = curAlt;
                     inMaxPacket = (raw[p + 4] & 0xff) | ((raw[p + 5] & 0x07) << 8);
@@ -95,8 +96,8 @@ final class UsbLink {
             if (x.getAlternateSetting() == 0) idle = x;
         }
         if (streaming == null) return "interface de streaming não encontrada";
-        // Assume TODAS as interfaces de áudio: se o Android mantiver a placa de som USB,
-        // o driver dele mexe na mesma interface quando outro app toca e derruba o fluxo.
+        // Claims ALL audio interfaces: if Android keeps the USB sound card, its driver touches the same interface when
+        // another app plays and drops the stream.
         for (int i = 0; i < d.getInterfaceCount(); i++) {
             UsbInterface x = d.getInterface(i);
             if (x.getInterfaceClass() != 1 || x.getAlternateSetting() != 0 || x.getId() == outIf) continue;
@@ -106,10 +107,10 @@ final class UsbLink {
         outIfNum = outIf;
         outAltNum = outAlt;
         if (!conn.setInterface(streaming)) return "a interface USB recusou o modo de streaming";
-        // sem a entrada não há feedback: o motor cai no ritmo nominal (48 kHz do tablet)
+        // without the input there's no feedback: the engine falls back to the nominal rate (the tablet's 48 kHz)
         if (inStreaming == null || inChannels == 0 || !conn.setInterface(inStreaming)) inEp = -1;
         if (clockId >= 0) {
-            byte[] rate = {(byte) 0x80, (byte) 0xBB, 0, 0}; // 48000 Hz; interfaces de taxa fixa podem recusar
+            byte[] rate = {(byte) 0x80, (byte) 0xBB, 0, 0}; // 48000 Hz; fixed-rate interfaces may refuse
             conn.controlTransfer(0x21, 0x01, 0x0100, clockId << 8, rate, 4, 1000);
         }
         return null;

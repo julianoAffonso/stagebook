@@ -65,7 +65,7 @@ enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SETTINGS(R.string.tab_settings, AppIcons.Tune),
 }
 
-/** Abas Músicas, Setlists e Ajustes: barra baixa no celular, lateral larga no tablet (Material 3 Expressive). */
+/** Songs, Setlists and Settings tabs: bottom bar on phones, wide rail on tablets (Material 3 Expressive). */
 @Composable
 fun HomeScreen(
     onOpenSong: (String) -> Unit,
@@ -80,7 +80,7 @@ fun HomeScreen(
     homeVm: HomeViewModel = hiltViewModel(),
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.SONGS) }
-    // o que a banda mandou: aviso no topo das abas (o mais novo ainda não dispensado), número no ícone e a lista
+    // what the band sent: notice at the top of the tabs (the newest not dismissed yet), number on the icon and the list
     val inbox by inboxVm.items.collectAsStateWithLifecycle()
     val hasBand by inboxVm.hasBand.collectAsStateWithLifecycle()
     val message = LocalAppMessage.current
@@ -100,15 +100,15 @@ fun HomeScreen(
         HomeTab.SONGS to inbox.count { it.setName.isEmpty() },
         HomeTab.SETLISTS to inbox.count { it.setName.isNotEmpty() },
     )
-    // voltar numa aba que não é a primeira volta para Músicas (em vez de fechar o app)
+    // back on a tab that isn't the first goes to Songs (instead of closing the app)
     BackHandler(enabled = tab != HomeTab.SONGS) { tab = HomeTab.SONGS }
 
-    // cada aba guarda o próprio estado (busca, posição da lista) ao trocar; sem fade, que desenhava as
-    // duas telas cheias ao mesmo tempo no Fire
+    // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
+    // once on the Fire
     val tabs = rememberSaveableStateHolder()
-    // Ajustes abre sempre na lista do começo (não na última seção vista): cada toque no ícone é uma visita nova
+    // Settings always opens on the starting list (not the last section seen): each tap on the icon is a new visit
     var settingsVisit by rememberSaveable { mutableIntStateOf(0) }
-    var settingsStart by rememberSaveable { mutableStateOf<SettingsSection?>(null) }   // link do aviso: abre direto na seção
+    var settingsStart by rememberSaveable { mutableStateOf<SettingsSection?>(null) }   // link from the alert: opens right on the section
     val onTab: (HomeTab) -> Unit = { t ->
         if (t == HomeTab.SETTINGS) {
             tabs.removeState("${HomeTab.SETTINGS}$settingsVisit")
@@ -121,7 +121,8 @@ fun HomeScreen(
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
         Column(m) {
-            // modo essencial: lembrete discreto de que tem coisa desligada; o toque abre os Ajustes (a seção é a primeira)
+            // essential mode: a quiet reminder that something is off; tapping opens Settings (the section is the first
+            // one)
             if (tab != HomeTab.SETTINGS && essential) {
                 EssentialBanner(openEssential, Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
             }
@@ -151,13 +152,12 @@ fun HomeScreen(
 }
 
 /**
- * Moldura das abas, sem estado, no padrão atual do Google (Material 3 Expressive): no tablet a lateral
- * larga, que abre com o botão de menu para mostrar os nomes; no celular a barra baixa. O conteúdo recebe o
- * Modifier com o espaço que sobra.
+ * Tab frame, stateless, in Google's current pattern (Material 3 Expressive): on tablets the wide rail, which the menu
+ * button opens to show the names; on phones the bottom bar. The content gets the Modifier with the remaining space.
  */
 @Composable
 fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), content: @Composable (Modifier) -> Unit) {
-    // número de novidades da banda no ícone da aba (como e-mail novo)
+    // number of band news on the tab icon (like new email)
     val badged: @Composable (HomeTab) -> Unit = { t ->
         val n = badges[t] ?: 0
         if (n > 0) BadgedBox(badge = { Badge { Text(n.toString()) } }) { Icon(t.icon, contentDescription = null) }
@@ -218,7 +218,7 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
     }
 }
 
-// aba selecionada só com ícone e nome na cor de destaque, sem a pílula de fundo (ícones simples no app todo)
+// selected tab shows only icon and name in the accent color, no background pill (simple icons across the app)
 @Composable
 private fun railColors() = WideNavigationRailItemDefaults.colors(
     selectedIndicatorColor = Color.Transparent,
@@ -233,7 +233,7 @@ private fun barColors() = ShortNavigationBarItemDefaults.colors(
     selectedTextColor = MaterialTheme.colorScheme.primary,
 )
 
-/** "Modo essencial ligado": uma linha discreta no topo das abas, sem fundo. */
+/** "Essential mode on": a quiet line at the top of the tabs, no background. */
 @Composable
 fun EssentialBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
@@ -246,7 +246,7 @@ fun EssentialBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** Aviso ao abrir: o que está desligado, em lista, e o link que leva direto a Ajustes → Modo essencial. */
+/** Alert on open: what is off, as a list, and the link that goes straight to Settings → Essential mode. */
 @Composable
 fun EssentialAlert(look: br.app.stagebook.data.model.Look, onDismiss: () -> Unit, onNeverAgain: (Boolean) -> Unit, onOpen: () -> Unit = {}) {
     val off = listOfNotNull(

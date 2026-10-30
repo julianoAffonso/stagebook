@@ -2,7 +2,9 @@ package br.app.stagebook.domain
 
 import java.util.Locale
 
-/** Limpeza da letra importada de um site: tira acordes soltos e a tradução (fica só a língua original). */
+/**
+ * Cleaning lyrics imported from a site: removes loose chords and the translation (only the original language stays).
+ */
 object LyricsCleaner {
     private const val CHORD = "[A-G][#b]?(m|maj|min|dim|aug|sus|add|M|º|°|\\+)?[0-9]*(\\([^)]*\\))?(/[A-G][#b]?)?"
     private val chordLine = Regex("($CHORD\\s*)+")
@@ -18,7 +20,7 @@ object LyricsCleaner {
 
     enum class Lang { EN, PT }
 
-    // palavras frequentes e sem ambiguidade entre inglês e português ("a", "no", "me", "do", "as", "so" ficam de fora)
+    // common words with no ambiguity between English and Portuguese ("a", "no", "me", "do", "as", "so" are left out)
     private val english = setOf(
         "the", "you", "i", "i'm", "im", "and", "to", "my", "of", "it", "it's", "is", "your", "that", "on", "for",
         "we", "be", "don't", "dont", "love", "with", "all", "this", "know", "like", "was", "will", "just", "when",
@@ -59,9 +61,9 @@ object LyricsCleaner {
     }
 
     /**
-     * Página com letra + tradução (em blocos ou linha a linha, em qualquer ordem): fica o inglês, que é
-     * a língua original quando o site mostra inglês e português juntos (a tradução é para o português).
-     * Texto de uma língua só não muda.
+     * Page with lyrics + translation (in blocks or line by line, in any order): English stays, as it's the original
+     * language when the site shows English and Portuguese together (the translation is into Portuguese).
+     * Single-language text doesn't change.
      */
     fun keepOriginalLanguage(text: String): String {
         val lines = text.split('\n')
@@ -79,10 +81,10 @@ object LyricsCleaner {
             val stanza = (i until end)
             val orig = stanza.count { langs[it] == original }
             val trans = stanza.count { langs[it] != null && langs[it] != original }
-            // uma ou outra palavra mal reconhecida não muda a decisão da estrofe inteira
+            // one or two misrecognized words don't change the decision for the whole verse
             when {
                 trans * 3 < orig || trans == 0 -> stanza.mapTo(out) { lines[it] }   // estrofe original
-                orig * 3 < trans -> Unit                                            // estrofe da tradução
+                orig * 3 < trans -> Unit                                            // translation verse
                 else -> {                                                           // linhas intercaladas
                     var previous = ""
                     for (k in stanza) {

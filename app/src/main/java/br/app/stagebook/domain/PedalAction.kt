@@ -5,8 +5,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * O pedal funciona como teclado: cada tecla faz um comando no palco. As teclas comuns de pedal já vêm
- * ligadas; em Ajustes → Pedal cada botão pode ser ligado a outro comando (como no another app).
+ * The pedal works like a keyboard: each key runs a stage command. Common pedal keys come preset; in Settings → Pedal
+ * each button can be set to another command (like another app).
  */
 @Serializable
 enum class PedalAction {
@@ -14,11 +14,11 @@ enum class PedalAction {
     @SerialName("previous") PREVIOUS,
     @SerialName("nextSong") NEXT_SONG,
     @SerialName("previousSong") PREVIOUS_SONG,
-    @SerialName("playPause") PLAY_PAUSE,   // play/pause do backing track (só com o modo player e a música com backing track)
+    @SerialName("playPause") PLAY_PAUSE,   // play/pause the backing track (only in player mode and with a song that has a backing track)
     @SerialName("none") NONE;
 
     companion object {
-        /** O comando da tecla: o escolhido nos ajustes ou, sem escolha, o padrão. */
+        /** The key's command: the one chosen in settings or, with no choice, the default. */
         fun of(keyCode: Int, custom: Map<Int, PedalAction> = emptyMap()): PedalAction = custom[keyCode] ?: default(keyCode)
 
         fun default(keyCode: Int): PedalAction = when (keyCode) {
@@ -34,7 +34,7 @@ enum class PedalAction {
             else -> NONE
         }
 
-        /** Grava a escolha de um botão; voltar ao padrão tira a tecla da lista. */
+        /** Saves a button's choice; resetting to default removes the key from the list. */
         fun assign(custom: Map<Int, PedalAction>, keyCode: Int, action: PedalAction): Map<Int, PedalAction> =
             if (action == default(keyCode)) custom - keyCode else custom + (keyCode to action)
     }

@@ -13,12 +13,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Tem internet agora? Só observa enquanto alguém coleta (a tela que mostra o botão de importar): nada fica
- * escutando a rede com a tela fechada (só gasta quando está em uso).
+ * Internet now? Only watched while someone collects (the screen showing the import button): nothing listens to the
+ * network with the screen closed (it only costs while in use).
  */
 @Singleton
 class Connectivity @Inject constructor(@ApplicationContext private val context: Context) {
-    /** Tem internet agora (uma leitura, sem ficar observando). */
+    /** Internet now (a single read, without watching). */
     fun isOnline(): Boolean {
         val cm = context.getSystemService(ConnectivityManager::class.java) ?: return true
         return cm.getNetworkCapabilities(cm.activeNetwork)?.let {

@@ -11,9 +11,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import br.app.stagebook.domain.PedalPress
 
 /**
- * Apertos do pedal chegam na Activity (teclas do pedal Bluetooth comum e mensagens do pedal MIDI) e vão
- * para a tela que estiver ouvindo por último (palco ou teste do pedal). Não depende de foco: o pedal
- * funciona mesmo sem tocar na tela antes.
+ * Pedal presses reach the Activity (regular Bluetooth pedal keys and MIDI pedal messages) and go to the screen that
+ * started listening last (stage or pedal test). Doesn't depend on focus: the pedal works without tapping the screen
+ * first.
  */
 class PedalInput {
     private val handlers = ArrayList<(PedalPress) -> Boolean>()
@@ -36,13 +36,13 @@ class PedalInput {
     }
 }
 
-/** Pedal, teclado Bluetooth etc.; deixa de fora os botões do próprio aparelho e os virtuais. */
+/** Pedal, Bluetooth keyboard and so on; leaves out the device's own and virtual buttons. */
 fun isExternal(d: InputDevice): Boolean =
     !d.isVirtual && (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) d.isExternal else d.name?.contains("gpio", ignoreCase = true) != true)
 
 val LocalPedalInput = staticCompositionLocalOf { PedalInput() }
 
-/** Enquanto esta tela estiver na composição, recebe os apertos; devolve true para consumir. */
+/** While this screen is in the composition, it gets the presses; return true to consume. */
 @Composable
 fun PedalHandler(onPress: (PedalPress) -> Boolean) {
     val input = LocalPedalInput.current

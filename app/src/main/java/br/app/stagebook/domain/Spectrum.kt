@@ -8,9 +8,9 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Espectro do backing que o motor mede (engine.c: SP_BINS faixas logarítmicas de SP_LO a SP_HI Hz) e
- * a resposta do equalizador, com as mesmas contas dos filtros do motor (eq_design), para a tela somar
- * o EQ a cada faixa: o motor mede antes do EQ.
+ * The backing spectrum the engine measures (engine.c: SP_BINS log bands from SP_LO to SP_HI Hz) and the equalizer
+ * response, with the same math as the engine's filters (eq_design), so the screen adds the EQ to each band: the engine
+ * measures before the EQ.
  */
 object Spectrum {
     const val BINS = 48
@@ -20,10 +20,10 @@ object Spectrum {
     const val TOP_DB = 0f
     private const val RATE = 48_000.0
 
-    /** Frequências dos 5 faders do EQ (as do motor). */
+    /** Frequencies of the 5 EQ faders (the engine's). */
     val EQ_FREQ = doubleArrayOf(80.0, 250.0, 1000.0, 3500.0, 10_000.0)
 
-    /** Centro (Hz) de cada faixa. */
+    /** Center (Hz) of each band. */
     val centers: DoubleArray = DoubleArray(BINS) { b ->
         val lo = LO * (HI / LO).pow(b.toDouble() / BINS)
         val hi = LO * (HI / LO).pow((b + 1).toDouble() / BINS)
@@ -33,8 +33,8 @@ object Spectrum {
     fun fraction(db: Float): Float = ((db - FLOOR_DB) / (TOP_DB - FLOOR_DB)).coerceIn(0f, 1f)
 
     /**
-     * Posição horizontal (0..1) de uma frequência na linha dos 5 faders, que dividem a largura em
-     * partes iguais: cada fader no centro da sua parte, e entre eles a escala é logarítmica.
+     * Horizontal position (0..1) of a frequency on the row of 5 faders, which split the width into equal parts: each
+     * fader at the center of its part, with a log scale between them.
      */
     fun x(freq: Double): Float {
         val lf = log10(freq)
@@ -48,7 +48,7 @@ object Spectrum {
         return ((i + t + 0.5) / EQ_FREQ.size).toFloat()
     }
 
-    /** Ganho (dB) do EQ inteiro em cada faixa, para os ganhos dados (5 valores em dB). */
+    /** Gain (dB) of the whole EQ at each band, for the given gains (5 values in dB). */
     fun eqResponseDb(gainsDb: List<Float>): FloatArray {
         val coefs = gainsDb.mapIndexed { i, g -> design(i, g.toDouble()) }
         return FloatArray(BINS) { b ->
@@ -57,7 +57,7 @@ object Spectrum {
         }
     }
 
-    // RBJ, igual ao eq_design do engine.c: prateleiras nas pontas (S = 1), sinos com Q = 1
+    // RBJ, same as engine.c's eq_design: shelves at the ends (S = 1), bells with Q = 1
     private fun design(i: Int, gainDb: Double): DoubleArray {
         val a = 10.0.pow(gainDb / 40)
         val w = 2 * PI * EQ_FREQ[i] / RATE

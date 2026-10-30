@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Cartão de uma seção dos ajustes: rótulo pequeno em destaque e o conteúdo embaixo. [help]: a explicação do cartão, num ⓘ
- * ao lado do título (pedido do usuário, 29/10: um "Como funciona" repetido em todo cartão cansava).
+ * Card for a settings section: small highlighted label and the content below. [help]: the card's explanation, in an ⓘ
+ * next to the title (user's request, 29/10: a "How it works" repeated on every card was tiring).
  */
 @Composable
 fun SettingsCard(title: String, modifier: Modifier = Modifier, help: String? = null, content: @Composable ColumnScope.() -> Unit) {

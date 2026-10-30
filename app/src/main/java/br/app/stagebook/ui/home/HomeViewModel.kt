@@ -15,13 +15,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-/** O que o Início precisa além da caixa da banda: o aviso do modo essencial (T19). */
+/** What Home needs besides the band inbox: the essential mode alert (T19). */
 @HiltViewModel
 class HomeViewModel @Inject constructor(private val repository: LibraryRepository) : ViewModel() {
     val essential: StateFlow<Boolean> = repository.library.map { it.look.essential }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.essential)
 
-    /** Aviso ao abrir com alguma parte desligada (o que está desligado vem no Look; null = sem aviso): uma vez por abertura, até "Não mostrar de novo". */
+    /**
+     * Alert on open when some part is off (what's off comes in the Look; null = no alert): once per launch, until
+     * "Don't show again".
+     */
     val alert: StateFlow<Look?> = combine(repository.library, alerted) { lib, seen -> lib.look.takeIf { it.anyOff && !it.essentialAlertOff && !seen } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -31,10 +34,10 @@ class HomeViewModel @Inject constructor(private val repository: LibraryRepositor
     }
 
     private companion object {
-        val alerted = MutableStateFlow(false)   // por abertura do app (processo): voltar ao Início não repete
+        val alerted = MutableStateFlow(false)   // per app launch (process): going back to Home doesn't repeat it
     }
 
-    /** "Sincronizar com a banda" usa a rede local e a internet: some com as duas desligadas. */
+    /** "Sync with the band" uses the local network and the internet: hidden when both are off. */
     val canSync: StateFlow<Boolean> = repository.library.map { it.look.bandOn || it.look.internetOn }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 }

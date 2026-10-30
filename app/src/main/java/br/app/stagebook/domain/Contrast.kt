@@ -3,8 +3,8 @@ package br.app.stagebook.domain
 import kotlin.math.pow
 
 /**
- * Contraste entre duas cores (razão do WCAG, de 1 a 21). Abaixo de [LEGIBLE] o texto fica difícil de ler no
- * palco: os ajustes avisam (cor igual ao fundo, ou parecida demais, como cinza-escuro no preto).
+ * Contrast between two colors (WCAG ratio, from 1 to 21). Below [LEGIBLE] the text gets hard to read on stage: settings
+ * warn (color equal to the background, or too similar, like dark gray on black).
  */
 object Contrast {
     const val LEGIBLE = 3.0

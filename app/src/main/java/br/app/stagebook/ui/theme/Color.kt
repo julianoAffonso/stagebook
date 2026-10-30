@@ -4,7 +4,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Paleta "dark/modern": verde-água neon sobre grafite.
+// "Dark/modern" palette: neon aqua on graphite.
 private val Mint = Color(0xFF4AF6CD)
 private val MintDeep = Color(0xFF00A884)
 private val Graphite = Color(0xFF121212)
@@ -70,8 +70,8 @@ internal val LightColors = lightColorScheme(
     onErrorContainer = Color(0xFF410002),
 )
 
-/** Opções de cor do palco que o vocalista escolhe (são dados da biblioteca, em ARGB). */
-/** Teclas do teclado no desenho do acorde (como num piano, nos dois temas). */
+/** Stage color options the singer picks (they're library data, in ARGB). */
+/** Keyboard keys in the chord diagram (like a piano, in both themes). */
 val PianoWhite = Color(0xFFF5F5F5)
 val PianoBlack = Color(0xFF1A1A1A)
 
@@ -79,7 +79,7 @@ object StagePalette {
     val text = listOf(0xFFFFFFFF, 0xFFFFEB3B, 0xFFE0E0E0, 0xFF80DEEA, 0xFFA5D6A7, 0xFF000000).map { it.toInt() }
     val background = listOf(0xFF000000, 0xFF121212, 0xFF0D1B2A, 0xFF102A1A, 0xFFFFFFFF, 0xFFFFF8E1).map { it.toInt() }
     val section = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFFFEB3B, 0xFFEF5350, 0xFFBDBDBD).map { it.toInt() }
-    // brilho do metrônomo na borda do palco
+    // metronome glow on the stage edge
     val glow = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFEF5350, 0xFFAB47BC, 0xFFFFFFFF).map { it.toInt() }
     val chord = listOf(0xFFFFC107, 0xFFFFFFFF, 0xFF80DEEA, 0xFFA5D6A7, 0xFFFF8A65, 0xFF000000).map { it.toInt() }
 }

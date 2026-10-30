@@ -49,14 +49,14 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-/** A faixa do "Quem conduz" (por cima de qualquer tela, embaixo): quem conduz e quem acompanha veem o mesmo alerta. */
+/** The "Lead the band" strip (on top of any screen, at the bottom): the leader and the followers see the same alert. */
 @Immutable
 sealed interface ConductUi {
-    /** [nowMissing]: quem não tem a música da vez; [lacks]: todas as faltas (o "Ver faltas"). */
+    /** [nowMissing]: who lacks the current song; [lacks]: all missing songs (the "See what's missing"). */
     @Immutable
     data class Conducting(val set: String, val noAnswer: Int, val nowMissing: List<String>, val lacks: List<Conduct.Lack>) : ConductUi
 
-    /** [missingHere]: a música da vez não está neste aparelho; [gone]: quem conduz sumiu (10 min sem notícia). */
+    /** [missingHere]: the current song isn't on this device; [gone]: the leader is gone (10 min with no news). */
     @Immutable
     data class Following(
         val from: String,
@@ -70,7 +70,7 @@ sealed interface ConductUi {
 
 @HiltViewModel
 class ConductViewModel @Inject constructor(private val conduct: BandConduct) : ViewModel() {
-    // relógio para o "sumiu" (a cada 30 s; só enquanto a faixa está na tela)
+    // clock for "gone" (every 30 s; only while the strip is on screen)
     private val tick = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
 
     val ui: StateFlow<ConductUi?> = combine(conduct.role, tick) { role, now ->
@@ -102,7 +102,8 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
     var showLacks by rememberSaveable { mutableStateOf(false) }
     val lacks = when (ui) { is ConductUi.Conducting -> ui.lacks; is ConductUi.Following -> ui.lacks }
     val nowMissing = when (ui) { is ConductUi.Conducting -> ui.nowMissing; is ConductUi.Following -> ui.nowMissing }
-    // falta para alguém agora (ou sumiu quem conduz): a faixa inteira fica em vermelho, para a banda ver antes de começar
+    // someone is missing a song now (or the leader is gone): the whole strip turns red, so the band sees it before
+    // starting
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
     Surface(
         color = if (alert) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
@@ -172,6 +173,6 @@ private fun ConductBarLightPreview() = PreviewSurface(dark = false) { ConductBar
 @Composable
 private fun ConductBarDarkPreview() = PreviewSurface(dark = true) { ConductBarSamples() }
 
-/** Para as capturas de tela (o ScreenshotTest). */
+/** For the screenshots (ScreenshotTest). */
 @Composable
 internal fun ConductBarSamplesForTest() = ConductBarSamples()

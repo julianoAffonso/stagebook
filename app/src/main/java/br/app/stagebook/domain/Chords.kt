@@ -1,40 +1,40 @@
 package br.app.stagebook.domain
 
 /**
- * Cifra em ChordPro (padrão aberto, chordpro.org), o formato em que o Stagebook guarda as músicas: o acorde
- * vai entre colchetes antes da sílaba (`[G]Hoje eu [D]vou`) e as informações em diretivas (`{key: G}`,
- * `{capo: 2}`). Aqui ficam as regras puras: reconhecer acorde, converter a cifra com acordes na linha de
- * cima, transpor, tom com capo e tirar os acordes (perfil "só letra").
+ * Chords in ChordPro (open standard, chordpro.org), the format Stagebook saves songs in: the chord goes in brackets
+ * before the syllable (`[G]Hoje eu [D]vou`) and info in directives (`{key: G}`, `{capo: 2}`). The pure rules live here:
+ * recognize a chord, convert a chart with chords on the line above, transpose, key with capo and strip the chords
+ * ("lyrics only" profile).
  *
- * `[Refrão]` também usa colchetes (título de seção, ver [Sections]): só é acorde o que tem forma de acorde.
+ * `[Refrão]` also uses brackets (a section title, see [Sections]): only what looks like a chord is a chord.
  */
 object Chords {
     private val sharps = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val flats = listOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
-    // tons escritos com bemóis (maiores e menores); os outros com sustenidos
+    // keys written with flats (major and minor); the others with sharps
     private val flatKeys = setOf("F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb", "Dm", "Gm", "Cm", "Fm", "Bbm", "Ebm", "Abm")
 
-    // nota, acidente, o resto do acorde (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) e o baixo
+    // note, accidental, the rest of the chord (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) and the bass
     private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,)*)(?:/([A-G])([#b♯♭]?))?""")
     private val bracket = Regex("""\[([^\[\]]*)]""")
     private val directive = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*}\s*$""")
-    // marcas que podem estar numa linha de acordes sem fazer dela uma linha de letra
+    // marks that can be on a chord line without making it a lyrics line
     private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?""", RegexOption.IGNORE_CASE)
 
-    /** O texto inteiro é um acorde? (`G`, `F#m7/E`, `Cm7(b5)`, `G7M`, `Bb`) */
+    /** Is the whole text a chord? (`G`, `F#m7/E`, `Cm7(b5)`, `G7M`, `Bb`) */
     fun isChord(s: String): Boolean = chord.matchEntire(s.trim()) != null
 
     // ---- diretivas ----
 
     fun isDirective(line: String): Boolean = directive.matchEntire(line) != null
 
-    /** Valor de uma diretiva (`key`, `capo`…), ou null. */
+    /** A directive's value (`key`, `capo`…), or null. */
     fun directive(text: String, name: String): String? = text.lineSequence()
         .mapNotNull { directive.matchEntire(it) }
         .firstOrNull { it.groupValues[1].equals(name, ignoreCase = true) }
         ?.groupValues?.get(2)?.trim()
 
-    /** Grava (ou tira, com valor vazio) uma diretiva; nova vai para o começo do texto. */
+    /** Saves (or removes, with an empty value) a directive; a new one goes at the start of the text. */
     fun setDirective(text: String, name: String, value: String): String {
         val lines = text.split('\n').toMutableList()
         val i = lines.indexOfFirst { directive.matchEntire(it)?.groupValues?.get(1).equals(name, ignoreCase = true) }
@@ -49,19 +49,21 @@ object Chords {
 
     private val meta = setOf("key", "capo", "tempo")
 
-    /** BPM da música (`{tempo: 120}` do ChordPro); 0 = sem. */
+    /** Song BPM (ChordPro `{tempo: 120}`); 0 = none. */
     fun tempo(text: String): Int = directive(text, "tempo")?.filter(Char::isDigit)?.toIntOrNull()?.takeIf { it in MIN_TEMPO..MAX_TEMPO } ?: 0
 
     const val MIN_TEMPO = 20
     const val MAX_TEMPO = 300
-    const val DEFAULT_TEMPO = 100   // metrônomo sem BPM na música
+    const val DEFAULT_TEMPO = 100   // metronome when the song has no BPM
 
     private fun isMeta(line: String) = directive.matchEntire(line)?.groupValues?.get(1)?.lowercase() in meta
 
-    /** A letra sem as linhas de tom e capo (no editor elas ficam nos dados da música, não no campo da letra). */
+    /**
+     * The lyrics without the key and capo lines (in the editor they live in the song details, not the lyrics field).
+     */
     fun hideMeta(text: String): String = text.split('\n').filterNot(::isMeta).joinToString("\n")
 
-    /** A letra editada (sem tom e capo) com o tom e o capo de [from] de volta no começo. */
+    /** The edited lyrics (without key and capo) with [from]'s key and capo back at the start. */
     fun withMeta(edited: String, from: String): String {
         var t = hideMeta(edited)
         tempo(from).takeIf { it > 0 }?.let { t = setDirective(t, "tempo", it.toString()) }
@@ -72,7 +74,7 @@ object Chords {
 
     fun key(text: String): String = directive(text, "key").orEmpty()
 
-    // acordes que o usuário tirou da lista de acordes do palco (extensão do ChordPro: diretivas x_ são dos apps)
+    // chords the user took off the stage chord list (ChordPro extension: x_ directives belong to apps)
     private const val HIDE = "x_hide_chords"
 
     fun hiddenChords(text: String): Set<String> =
@@ -82,9 +84,12 @@ object Chords {
 
     fun capo(text: String): Int = directive(text, "capo")?.toIntOrNull()?.coerceIn(0, 12) ?: 0
 
-    // ---- acordes na linha de cima → ChordPro ----
+    // ---- chords on the line above → ChordPro ----
 
-    /** Linha só de acordes (e marcas como `|`, `(2x)`), com pelo menos um acorde. Aceita rótulo antes: `Intro: G D`, `[Intro] G D`. */
+    /**
+     * Chords-only line (and marks like `|`, `(2x)`), with at least one chord. Accepts a label first: `Intro: G D`,
+     * `[Intro] G D`.
+     */
     fun isChordLine(line: String): Boolean {
         val tokens = line.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
@@ -96,9 +101,9 @@ object Chords {
         (t.endsWith(":") && !isChord(t.dropLast(1))) || (t.startsWith("[") && t.endsWith("]") && !isChord(t.drop(1).dropLast(1)))
 
     /**
-     * Converte cifra com os acordes na linha de cima (Cifra Club, texto colado) para ChordPro: cada acorde
-     * entra na letra da linha de baixo, na mesma coluna. Linha de acordes sem letra embaixo (intro, solo)
-     * vira uma linha só de acordes. O que já está em ChordPro passa igual.
+     * Converts a chart with chords on the line above (Cifra Club, pasted text) to ChordPro: each chord goes into the
+     * lyrics on the line below, at the same column. A chord line with no lyrics below (intro, solo) becomes a
+     * chords-only line. What's already ChordPro passes unchanged.
      */
     fun fromChordsOverLyrics(text: String): String {
         val lines = text.replace("\t", "    ").split('\n')
@@ -107,7 +112,7 @@ object Chords {
         while (i < lines.size) {
             val line = lines[i]
             if (!isChordLine(line)) { out += line; i++; continue }
-            // "[Intro] G D" (rótulo de seção na frente): o título numa linha e os acordes na de baixo
+            // "[Intro] G D" (section label in front): the title on one line and the chords on the next
             val first = line.trim().substringBefore(' ')
             if (first.startsWith("[") && Sections.detect(first) != null && line.trim().length > first.length) {
                 out += first
@@ -131,7 +136,7 @@ object Chords {
         positions(chordLine).reversed().forEach { (col, token) ->
             val mark = if (isChord(token)) "[$token]" else return@forEach
             if (col >= sb.length) {
-                // acorde depois do fim da letra: fica no fim, separado
+                // chord after the end of the lyrics: stays at the end, separate
                 while (sb.length < col) sb.append(' ')
                 sb.append(mark)
             } else {
@@ -161,7 +166,7 @@ object Chords {
 
     private fun name(i: Int, useFlats: Boolean) = (if (useFlats) flats else sharps)[((i % 12) + 12) % 12]
 
-    /** O acorde [semitones] meios-tons acima (negativo = abaixo). [useFlats] null = o estilo do próprio acorde. */
+    /** The chord [semitones] half steps up (negative = down). [useFlats] null = the chord's own style. */
     fun transposeChord(c: String, semitones: Int, useFlats: Boolean? = null): String {
         val m = chord.matchEntire(c.trim()) ?: return c
         val (root, acc, rest, bass, bassAcc) = m.destructured
@@ -175,17 +180,18 @@ object Chords {
         return out.toString()
     }
 
-    // os nomes de tom que os músicos usam, meio tom a meio tom (pedido do usuário, 29/10): o − e o + do editor andam
-    // nesta ordem, e os acordes seguem a armadura do tom (bemóis nos tons de bemol)
+    // the key names musicians use, half step by half step (user's request, 29/10): the editor's − and + move in this
+    // order, and the chords follow the key signature (flats in flat keys)
     private val majorKeys = listOf("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
     private val minorKeys = listOf("Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm")
 
-    /** A sétima do acorde: nenhuma, maior (7M), menor (7, m7, m7(b5)) ou diminuta (°7). */
+    /** The chord's seventh: none, major (7M), minor (7, m7, m7(b5)) or diminished (°7). */
     enum class Seventh { NONE, MAJOR, MINOR, DIMINISHED }
 
     /**
-     * Tríade de base (raiz 0–11 e qualidade) e a sétima, para o campo harmônico; null se não é acorde. A sétima conta: em G,
-     * Cmaj7 é o IV, mas C7 não é do campo (pedido do usuário, 29/10: ignorar a sétima dava informação errada).
+     * Base triad (root 0–11 and quality) and the seventh, for the harmonic field; null if it isn't a chord. The seventh
+     * counts: in G, Cmaj7 is the IV, but C7 isn't in the field (user's request, 29/10: ignoring the seventh gave wrong
+     * information).
      */
     data class Triad(val root: Int, val minor: Boolean, val dim: Boolean, val seventh: Seventh = Seventh.NONE)
 
@@ -198,7 +204,8 @@ object Chords {
         return Triad(root, q == Quality.MINOR, q == Quality.DIM, seventhOf(rest, halfDim))
     }
 
-    // 7M/maj7/M7/Δ = sétima maior; °7/dim7 = diminuta; 7, m7, m7(b5) e as extensões 9/11/13 (sem "add") = menor
+    // 7M/maj7/M7/Δ = major seventh; °7/dim7 = diminished; 7, m7, m7(b5) and the 9/11/13 extensions (without "add") =
+    // minor
     private fun seventhOf(rest: String, halfDim: Boolean): Seventh = when {
         halfDim -> Seventh.MINOR
         rest.contains("7M") || rest.contains("maj7") || rest.contains("M7") || rest.contains("Δ") || rest.contains("maj9") -> Seventh.MAJOR
@@ -208,13 +215,13 @@ object Chords {
         else -> Seventh.NONE
     }
 
-    /** Nome de costume do tom com tônica [root] (C, Db… / Cm, C#m…). */
+    /** Usual name of the key with root [root] (C, Db… / Cm, C#m…). */
     fun keyName(root: Int, minor: Boolean): String = (if (minor) minorKeys else majorKeys)[((root % 12) + 12) % 12]
 
-    /** Nome da nota [pc] na armadura do tom [key] (bemóis nos tons de bemol). */
+    /** Name of note [pc] in key [key]'s signature (flats in flat keys). */
     fun noteIn(key: String, pc: Int): String = name(pc, key in flatKeys)
 
-    /** O tom [semitones] meios-tons acima, com o nome de costume (D + 1 = Eb, F + 1 = F#, Am + 1 = Bbm). */
+    /** The key [semitones] half steps up, with the usual name (D + 1 = Eb, F + 1 = F#, Am + 1 = Bbm). */
     fun transposeKey(key: String, semitones: Int): String {
         val m = chord.matchEntire(key.trim()) ?: return key
         val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return key
@@ -223,23 +230,23 @@ object Chords {
         return (if (minor) minorKeys else majorKeys)[i]
     }
 
-    /** Transpõe todos os acordes da música e o tom guardado (`{key}`), com bemóis nos tons de bemol. */
+    /** Transposes every chord in the song and the saved key (`{key}`), with flats in flat keys. */
     fun transpose(text: String, semitones: Int): String {
         if (semitones % 12 == 0) return text
         val oldKey = key(text)
         val newKey = if (oldKey.isNotEmpty()) transposeKey(oldKey, semitones) else ""
-        // o tom novo decide bemol x sustenido; sem tom, cada acorde mantém o seu estilo
-        val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys else null   // o nome do tom já é o de costume
+        // the new key decides flat vs sharp; with no key, each chord keeps its own style
+        val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys else null   // the key name is already the usual one
         val body = text.split('\n').joinToString("\n") { line ->
             if (isDirective(line)) line
             else bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats) + "]" else b.value }
         }
-        // a tablatura anda junto (T22)
+        // the tablature moves too (T22)
         val tabbed = Tablature.shift(body, semitones)
         return if (newKey.isNotEmpty()) setDirective(tabbed, "key", newKey) else tabbed
     }
 
-    // ---- tom pelos acordes (importação sem {key}) ----
+    // ---- key from the chords (import without {key}) ----
 
     private enum class Quality { MAJOR, MINOR, DIM }
 
@@ -249,13 +256,15 @@ object Chords {
         else -> Quality.MAJOR
     }
 
-    // graus do campo harmônico: maior I ii iii IV V vi vii°; menor (natural, com o V maior da harmônica) i ii° III iv v V VI VII
+    // harmonic field degrees: major I ii iii IV V vi vii°; minor (natural, with the harmonic's major V) i ii° III iv v
+    // V VI VII
     private val majorField = listOf(0 to Quality.MAJOR, 2 to Quality.MINOR, 4 to Quality.MINOR, 5 to Quality.MAJOR, 7 to Quality.MAJOR, 9 to Quality.MINOR, 11 to Quality.DIM)
     private val minorField = listOf(0 to Quality.MINOR, 2 to Quality.DIM, 3 to Quality.MAJOR, 5 to Quality.MINOR, 7 to Quality.MINOR, 7 to Quality.MAJOR, 8 to Quality.MAJOR, 10 to Quality.MAJOR)
 
     /**
-     * O tom provável pelos acordes (ex.: "G", "Em"); vazio sem acordes. Cada tom (12 maiores e 12 menores) ganha um ponto por
-     * acorde do seu campo harmônico; o primeiro e o último acorde contam mais quando são a tônica. Empate: o maior.
+     * The likely key from the chords (e.g. "G", "Em"); empty with no chords. Each key (12 major and 12 minor) gets a
+     * point per chord in its harmonic field; the first and last chords count more when they're the tonic. On a tie:
+     * major.
      */
     fun detectKey(text: String): String {
         val chords = bracket.findAll(fromChordsOverLyrics(text)).mapNotNull { chord.matchEntire(it.groupValues[1].trim()) }
@@ -271,22 +280,22 @@ object Chords {
             if (chords.last() == tonicChord) score += 1.5
             if (score > bestScore) {
                 bestScore = score
-                best = (if (minor) minorKeys else majorKeys)[tonic]   // o nome de costume do tom
+                best = (if (minor) minorKeys else majorKeys)[tonic]   // the key's usual name
             }
         }
         return best
     }
 
-    /** Sem {key}: grava o tom calculado pelos acordes (só na importação; o que o usuário escrever depois prevalece). */
+    /** No {key}: saves the key computed from the chords (only on import; whatever the user writes later wins). */
     fun withDetectedKey(text: String): String =
         if (key(text).isNotEmpty()) text else detectKey(text).takeIf { it.isNotEmpty() }?.let { setDirective(text, "key", it) } ?: text
 
-    /** Tom que soa com o capo: os desenhos ficam, o som sobe [capo] casas (G com capo 2 soa A). */
+    /** Key that sounds with the capo: the shapes stay, the sound goes up [capo] frets (G with capo 2 sounds A). */
     fun soundingKey(key: String, capo: Int): String = if (key.isEmpty() || capo == 0) key else transposeChord(key, capo)
 
-    // ---- perfil "só letra" ----
+    // ---- "lyrics only" profile ----
 
-    /** A letra sem acordes: tira os `[C]`, as linhas só de acordes e as diretivas. Títulos de seção ficam. */
+    /** The lyrics without chords: removes the `[C]`s, chords-only lines and directives. Section titles stay. */
     fun stripChords(text: String): String = text.split('\n').mapNotNull { line ->
         if (isDirective(line)) return@mapNotNull null
         val hadChord = bracket.findAll(line).any { isChord(it.groupValues[1]) }
@@ -294,6 +303,6 @@ object Chords {
         if (hadChord && clean.isBlank()) null else clean.replace(Regex(" {2,}"), " ").trimEnd()
     }.joinToString("\n")
 
-    /** A música tem algum acorde? */
+    /** Does the song have any chord? */
     fun hasChords(text: String): Boolean = bracket.findAll(text).any { isChord(it.groupValues[1]) }
 }

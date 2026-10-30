@@ -29,19 +29,19 @@ import br.app.stagebook.domain.Voicings
 import br.app.stagebook.ui.components.ChordDiagram
 import br.app.stagebook.ui.editor.usedChords
 
-/** Largura e altura de cada desenho da lista de acordes (o palco reserva o espaço com elas). */
+/** Width and height of each diagram in the chord list (the stage reserves the space with them). */
 val STRIP_ITEM_WIDTH: Dp = 76.dp
 val STRIP_ITEM_HEIGHT: Dp = 94.dp   // nome (≈20) + desenho (56 × 1,15) + folga
 
-/** Os acordes da música, na ordem em que aparecem, menos os que o usuário escondeu da lista (todos, sem limite). */
+/** The song's chords, in the order they appear, minus the ones the user hid from the list (all of them, no limit). */
 fun stripChords(text: String): List<String> {
     val hidden = Chords.hiddenChords(text)
     return usedChords(text, max = Int.MAX_VALUE).filterNot { it in hidden }
 }
 
 /**
- * Os desenhos dos acordes da música (topo ou fim do palco), na forma guardada na música ({define}) ou na mais fácil.
- * Lê o texto da música: escolher outra variação no palco atualiza a lista na hora.
+ * The song's chord diagrams (top or end of the stage), in the shape saved in the song ({define}) or the easiest one.
+ * Reads the song text: picking another shape on stage updates the list right away.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -67,7 +67,7 @@ fun ChordStrip(
         items.forEach { (c, shape, keys) ->
             Box {
                 ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true)
-                // × discreto: tira o acorde da lista desta música (o palco pede confirmação)
+                // quiet ×: removes the chord from this song's list (the stage asks to confirm)
                 Box(
                     Modifier.align(Alignment.TopEnd).size(28.dp).clip(CircleShape).clickable { onHide(c) },
                     contentAlignment = Alignment.Center,
@@ -76,7 +76,7 @@ fun ChordStrip(
                 }
             }
         }
-        // acordes escondidos: um toque devolve todos (sem confirmação, não tira nada da tela)
+        // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
         if (hiddenCount > 0) {
             Box(Modifier.size(STRIP_ITEM_WIDTH, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

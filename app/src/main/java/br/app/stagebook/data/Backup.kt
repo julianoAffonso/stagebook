@@ -29,10 +29,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Backup (Ajustes → Biblioteca): um arquivo `.stagebook` (um zip por dentro) com as partes escolhidas (todas marcadas por padrão; o usuário tira o que não quer).
- * [Part.LIBRARY]: músicas e setlists, com o zoom de cada música. [Part.TRACKS]: os arquivos de backing track, ligados às
- * músicas. [Part.SETTINGS]: aparência e ajustes do palco, pedais, player e perfis da interface de áudio USB, banda e língua.
- * A identidade do aparelho (chave guardada no Keystore) não vai: noutro aparelho, a banda reconhece um aparelho novo.
+ * Backup (Settings → Library): a `.stagebook` file (a zip inside) with the chosen parts (all checked by default; the
+ * user unchecks what they don't want).
+ * [Part.LIBRARY]: songs and setlists, with each song's zoom. [Part.TRACKS]: the backing track files, linked to the
+ * songs. [Part.SETTINGS]: stage look and settings, pedals, player and USB audio interface profiles, band and language.
+ * The device identity (key kept in the Keystore) doesn't go: on another device, the band sees a new device.
  */
 @Singleton
 class Backup @Inject constructor(
@@ -48,7 +49,7 @@ class Backup @Inject constructor(
     @Serializable
     private data class Songs(val songs: List<Song> = emptyList(), val sets: List<Setlist> = emptyList())
 
-    /** O que um arquivo de backup traz (para marcar na restauração). [newer]: de uma versão mais nova do app. */
+    /** What a backup file has (to check on restore). [newer]: from a newer app version. */
     data class Contents(val parts: Set<Part>, val songs: Int, val newer: Boolean)
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -59,7 +60,7 @@ class Backup @Inject constructor(
             fun put(name: String, bytes: ByteArray) { zip.putNextEntry(ZipEntry(name)); zip.write(bytes); zip.closeEntry() }
             put(MANIFEST, json.encodeToString(Manifest.serializer(), Manifest(app = appVersion(), parts = parts.toList())).toByteArray())
             if (Part.LIBRARY in parts) {
-                // sem as faixas no backup, a música não aponta para um arquivo que não vai junto
+                // without the tracks in the backup, the song doesn't point to a file that isn't included
                 val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.copy(track = "") }
                 put(SONGS, json.encodeToString(Songs.serializer(), Songs(songs, lib.sets)).toByteArray())
                 if (Part.TRACKS in parts) {
@@ -96,8 +97,8 @@ class Backup @Inject constructor(
     }
 
     /**
-     * Restaura as partes escolhidas. Músicas e setlists: [replace] = substituem os daqui; senão somam (só entra o que falta).
-     * Ajustes substituem os daqui.
+     * Restores the chosen parts. Songs and setlists: [replace] = they replace the ones here; otherwise they add (only
+     * what's missing comes in). Settings replace the ones here.
      */
     suspend fun restore(input: InputStream, parts: Set<Part>, replace: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         runCatching {
@@ -110,7 +111,7 @@ class Backup @Inject constructor(
                         e.name == SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readBytes().decodeToString())
                         e.name == SETTINGS -> settings = json.parseToJsonElement(zip.readBytes().decodeToString()).jsonObject
                         e.name.startsWith(TRACKS_DIR) && Part.TRACKS in parts -> {
-                            // só o nome do arquivo (nunca uma pasta de fora: "../")
+                            // only the file name (never an outside folder: "../")
                             val name = e.name.removePrefix(TRACKS_DIR).substringAfterLast('/')
                             if (name.isNotEmpty() && !name.startsWith(".")) trackFiles[name] = zip.readBytes()
                         }
@@ -131,7 +132,7 @@ class Backup @Inject constructor(
         }.getOrDefault(false)
     }
 
-    // SharedPreferences ↔ JSON, com o tipo de cada valor (texto, sim/não, número inteiro/longo/decimal, lista de textos)
+    // SharedPreferences ↔ JSON, with each value's type (text, yes/no, int/long/float, list of texts)
     private fun prefsToJson(name: String): JsonElement = buildJsonObject {
         context.getSharedPreferences(name, Context.MODE_PRIVATE).all.forEach { (k, v) ->
             when (v) {
@@ -163,14 +164,14 @@ class Backup @Inject constructor(
     companion object {
         const val FORMAT = 1
         const val EXTENSION = "stagebook"
-        // o seletor do Android não conhece .stagebook: grava como binário e abre qualquer arquivo (o conteúdo é conferido)
+        // Android's picker doesn't know .stagebook: saves as binary and opens any file (the content is checked)
         const val MIME = "application/octet-stream"
         private const val MANIFEST = "manifest.json"
         private const val SONGS = "biblioteca.json"
         private const val SETTINGS = "ajustes.json"
         private const val TRACKS_DIR = "faixas/"
-        // ajustes que vão no backup: player e perfis da interface USB, normalização, banda (quem é da banda) e língua.
-        // Ficam de fora a identidade (Keystore), a caixa de entrada e a fila da internet (passageiras)
+        // settings that go in the backup: player and USB interface profiles, normalization, band (who's in it) and
+        // language. Left out: the identity (Keystore), the inbox and the internet queue (temporary)
         val PREFS = listOf("player", "norm", "band", "lingua")
     }
 }

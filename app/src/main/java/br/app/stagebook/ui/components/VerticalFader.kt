@@ -27,10 +27,10 @@ import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Fader vertical de mesa: arrastar ou tocar no ponto; a faixa acesa vai de [origin]
- * (0 no equalizador, o fim de baixo no volume) até o valor; a marca fina fica no 0 dB. `onValueChange` recebe o valor contínuo; quem chama arredonda o passo.
- * Com `enabled = false` (travado), não responde ao toque e fica apagado. `height` é a altura mínima:
- * com `Modifier.fillMaxHeight()` o fader cresce até o espaço que tiver.
+ * Desk-style vertical fader: drag or tap the spot; the lit track goes from [origin] (0 on the equalizer, the bottom end
+ * on volume) to the value; the thin mark sits at 0 dB. `onValueChange` gets the continuous value; the caller rounds to
+ * the step. With `enabled = false` (locked), it doesn't respond to touch and looks dimmed. `height` is the minimum
+ * height: with `Modifier.fillMaxHeight()` the fader grows to the space available.
  */
 @Composable
 fun VerticalFader(

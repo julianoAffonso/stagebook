@@ -37,8 +37,8 @@ import br.app.stagebook.ui.components.ChordDiagram
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Como montar o acorde tocado no palco (como no Cifra Club): o desenho no instrumento dos ajustes, as variações
- * com ‹ ›, e OK guarda a variação na música ({define} do ChordPro). Abre na variação já guardada, se houver.
+ * How to play the chord tapped on stage (like Cifra Club): the diagram for the instrument in settings, the shapes with
+ * ‹ ›, and OK saves the shape in the song (ChordPro {define}). Opens on the saved shape, if there is one.
  */
 @Composable
 fun ChordShapePopup(
@@ -48,10 +48,10 @@ fun ChordShapePopup(
     onSave: (define: String) -> Unit,
     onDismiss: () -> Unit,
     onPlay: (notes: List<Int>) -> Unit = {},
-    extras: Boolean = true,   // modo essencial (T19): sem o som e sem os Detalhes; o desenho e as variações ficam
+    extras: Boolean = true,   // essential mode (T19): no sound and no Details; the diagram and shapes stay
 ) {
-    // com capo, o desenho é o da cifra mas a nota que soa sobe (T18/T20): o som toca a nota real
-    val capo = remember(songText, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(songText) }   // teclado não usa capo
+    // with a capo, the diagram is the chart's but the sounding note goes up (T18/T20): the sound plays the real note
+    val capo = remember(songText, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(songText) }   // keyboard doesn't use capo
     val keyboard = instrument == Instrument.KEYBOARD
     val shapes = remember(chord, instrument, songText) {
         val generated = Voicings.shapes(chord, instrument)
@@ -69,7 +69,8 @@ fun ChordShapePopup(
         else Voicings.savedShape(songText, instrument, chord)?.let(shapes::indexOf) ?: 0
     }
     var i by rememberSaveable(chord, instrument) { mutableIntStateOf(start.coerceAtLeast(0)) }
-    // "Detalhes": a segunda tela da janela, com o campo harmônico (T21); o desenho fica na primeira, sem distrair
+    // "Details": the window's second screen, with the harmonic field (T21); the diagram stays on the first one, without
+    // distractions
     var details by rememberSaveable(chord) { mutableStateOf(false) }
     val songKey = remember(songText, instrument) {
         val k = Chords.key(songText).ifEmpty { Chords.detectKey(songText) }
@@ -88,7 +89,8 @@ fun ChordShapePopup(
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                     return@Column
                 }
-                // o play fica em cima do desenho, meio translúcido (pedido do usuário, 29/10): tocar o acorde sem procurar botão
+                // play sits on top of the diagram, half transparent (user's request, 29/10): play the chord without
+                // hunting for a button
                 Box(contentAlignment = Alignment.Center) {
                     ChordDiagram(
                         chord,
@@ -118,7 +120,8 @@ fun ChordShapePopup(
                         Icon(AppIcons.ChevronRight, stringResource(R.string.chord_shape_next))
                     }
                 }
-                // teclado: o acorde na tela já está no tom que soa; a linha mostra o da cifra (capo na Nª casa)
+                // keyboard: the chord on screen is already in the sounding key; the line shows the chart's (capo on
+                // fret N)
                 val chartCapo = remember(songText, instrument) { if (instrument == Instrument.KEYBOARD) Chords.capo(songText) else 0 }
                 if (chartCapo > 0) {
                     Text(
@@ -149,15 +152,18 @@ fun ChordShapePopup(
     }
 }
 
-private const val PLAY_ALPHA = 0.35f   // o desenho continua aparecendo por baixo do play
+private const val PLAY_ALPHA = 0.35f   // the diagram still shows under the play button
 
-/** Segunda tela da janela do acorde: o campo harmônico do tom da música (com o grau do acorde), o dele e onde mais aparece. */
+/**
+ * Second screen of the chord window: the harmonic field of the song's key (with the chord's degree), the chord's own
+ * field and where else it shows up.
+ */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     val triad = remember(chord) { Chords.triad(chord) }
     val own = triad?.takeIf { !it.dim }?.let { Chords.keyName(it.root, it.minor) }
-    // com sétima, os campos são de tétrades (G7M, Am7…) e o grau só acende se a sétima bater
+    // with a seventh, the fields use seventh chords (Gmaj7, Am7…) and the degree only lights if the seventh matches
     val sevenths = triad != null && triad.seventh != Chords.Seventh.NONE
     val place = remember(chord, songKey) { if (songKey.isEmpty()) null else HarmonicField.placeIn(chord, songKey) }
     val degree = place?.label
@@ -176,7 +182,7 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        // o campo em que o acorde é o I; um acorde que nunca é o I (ex.: D7, dominante) ganha uma frase no lugar
+        // the field where the chord is the I; a chord that is never the I (like D7, a dominant) gets a sentence instead
         val ownPlace = own?.let { HarmonicField.placeIn(chord, it) }?.takeIf { it.index == 0 }
         if (own != null && ownPlace != null) {
             Text(stringResource(R.string.chord_details_own, own), style = MaterialTheme.typography.titleSmall)
@@ -197,7 +203,7 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     }
 }
 
-/** Os 7 graus de um campo (grau em cima, acorde embaixo); o da posição [lit] fica aceso. */
+/** The 7 degrees of a field (degree on top, chord below); the one at position [lit] is lit. */
 @Composable
 private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: Int?) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {

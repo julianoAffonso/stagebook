@@ -27,7 +27,7 @@ data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRo
 
 @HiltViewModel
 class SetlistsViewModel @Inject constructor(private val repository: LibraryRepository, connectivity: Connectivity) : ViewModel() {
-    /** "Digitar código" só com internet (só observa com a aba aberta). */
+    /** "Type code" only with internet (only watched while the tab is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     val internetOn: StateFlow<Boolean> = repository.library.map { it.look.internetOn }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.internetOn)
@@ -36,14 +36,14 @@ class SetlistsViewModel @Inject constructor(private val repository: LibraryRepos
         SetlistsUiState(!loaded, lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistsUiState())
 
-    /** Nome vazio = dia e hora de agora. Devolve o id para abrir o setlist novo. */
+    /** Empty name = current date and time. Returns the id to open the new setlist. */
     fun create(name: String): String =
         repository.createSetlist(name.ifBlank { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ROOT).format(Date()) })
 
     fun delete(id: String) = repository.deleteSetlist(id)
 
     private val _nameLimit = MutableStateFlow(false)
-    /** O nome novo faria o setlist passar do limite do QR (mesmo aviso de dentro do setlist). */
+    /** The new name would push the setlist over the QR limit (same notice as inside the setlist). */
     val nameLimit: StateFlow<Boolean> = _nameLimit.asStateFlow()
 
     fun dismissNameLimit() { _nameLimit.value = false }
@@ -52,7 +52,7 @@ class SetlistsViewModel @Inject constructor(private val repository: LibraryRepos
         if (name.isBlank()) return
         val lib = repository.library.value
         val set = lib.setlist(id) ?: return
-        // o nome também vai no QR: um nome novo que faria o setlist passar do limite não é gravado
+        // the name also goes in the QR: a new name that would push the setlist over the limit isn't saved
         if (QrPayload.fits(set, lib) && !QrPayload.fits(set, lib, name = name)) { _nameLimit.value = true; return }
         repository.renameSetlist(id, name)
     }

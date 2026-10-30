@@ -19,7 +19,7 @@ import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.PreviewSurface
 import br.app.stagebook.ui.theme.Spacing
 
-/** Versão nova do app: pergunta, mostra o download e abre o instalador do Android. */
+/** New app version: asks, shows the download and opens the Android installer. */
 @Composable
 fun AppUpdateDialog(
     offer: UpdateOffer,
@@ -30,7 +30,7 @@ fun AppUpdateDialog(
 ) {
     val downloading = offer is UpdateOffer.Downloading
     AlertDialog(
-        // baixando: não fecha tocando fora (o download continua e o aviso volta pronto)
+        // downloading: tapping outside doesn't close it (the download goes on and the notice comes back ready)
         onDismissRequest = { if (!downloading) (if (offer is UpdateOffer.Available) onLater() else onClose()) },
         properties = DialogProperties(dismissOnClickOutside = !downloading),
         title = { Text(stringResource(R.string.update_offer_title)) },

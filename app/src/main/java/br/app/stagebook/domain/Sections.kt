@@ -3,8 +3,8 @@ package br.app.stagebook.domain
 import br.app.stagebook.data.model.SectionLang
 
 /**
- * Títulos de seção (refrão, verso, ponte…) em português e inglês: reconhece a linha inteira, com ou
- * sem colchetes/parênteses/dois-pontos, número e "2x", para mostrar como título em destaque no palco.
+ * Section titles (chorus, verse, bridge…) in Portuguese and English: recognizes the whole line, with or without
+ * brackets/parentheses/colons, number and "2x", to show as a highlighted title on stage.
  */
 object Sections {
     enum class Kind(val pt: String, val en: String, val keys: List<String>) {
@@ -15,12 +15,12 @@ object Sections {
         BRIDGE("Ponte", "Bridge", listOf("bridge", "ponte")),
         SOLO("Solo", "Solo", listOf("solo", "guitar solo", "solo de guitarra")),
         INTERLUDE("Interlúdio", "Interlude", listOf("interlude", "interludio", "instrumental", "break", "passagem")),
-        OUTRO("Fim", "Outro", listOf("outro", "final", "fim", "ending", "coda", "encerramento")),   // "Fim": padrão do another app do usuário
+        OUTRO("Fim", "Outro", listOf("outro", "final", "fim", "ending", "coda", "encerramento")),   // "Fim": the user's another app default
     }
 
     data class Header(val kind: Kind, val number: String, val repeat: String, val original: String)
 
-    /** Uma linha do texto: ou letra, ou título de seção. */
+    /** A line of the text: either lyrics or a section title. */
     data class Line(val text: String, val header: Header?)
 
     private val shape = Regex("^[\\[(*#\\s]*(.+?)[\\])*\\s]*:?\\s*$")
@@ -28,7 +28,7 @@ object Sections {
     private val brackets = Regex("[\\])(\\[]")
     private val digits = Regex("(\\d+)")
 
-    /** A linha inteira é um título de seção? (só palavra-chave, número e repetição; nada de letra) */
+    /** Is the whole line a section title? (only keyword, number and repeat; no lyrics) */
     fun detect(line: String): Header? {
         val t = line.trim()
         if (t.isEmpty() || t.length > 40) return null
@@ -46,7 +46,7 @@ object Sections {
         return Header(kind, number, repeat, inner)
     }
 
-    /** Nome mostrado no idioma escolhido ("como escrito" = sem colchetes e dois-pontos). */
+    /** Name shown in the chosen language ("as written" = without brackets and colons). */
     fun label(h: Header, lang: SectionLang): String {
         if (lang == SectionLang.ORIGINAL) return h.original
         return buildString {
@@ -56,7 +56,7 @@ object Sections {
         }
     }
 
-    /** [name] (o nome da seção na língua do app) com o número e a repetição do título original. */
+    /** [name] (the section name in the app's language) with the original title's number and repeat. */
     fun label(h: Header, name: String): String = buildString {
         append(name)
         if (h.number.isNotEmpty()) append(' ').append(h.number)
@@ -65,7 +65,7 @@ object Sections {
 
     fun parse(text: String): List<Line> = text.split('\n').map { Line(it, detect(it)) }
 
-    /** Reescreve os títulos de seção no formato "[Refrão]", "[Verso 2]" (botão "Padronizar"). */
+    /** Rewrites section titles in the "[Chorus]", "[Verse 2]" format ("Standardize" button). */
     fun normalize(text: String, lang: SectionLang): String {
         val target = if (lang == SectionLang.ORIGINAL) SectionLang.PT else lang
         return parse(text).joinToString("\n") { line ->

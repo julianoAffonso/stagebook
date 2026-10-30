@@ -17,18 +17,18 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** O que o aviso de versão nova mostra. */
+/** What the new version notice shows. */
 sealed interface UpdateOffer {
     data class Available(val versionName: String) : UpdateOffer
     data class Downloading(val percent: Int) : UpdateOffer
-    data class Ready(val apk: File) : UpdateOffer   // baixado: falta o "Instalar" do Android
+    data class Ready(val apk: File) : UpdateOffer   // downloaded: Android's "Install" is still needed
     data object Failed : UpdateOffer
 }
 
 /**
- * Versão nova do app oferecida sozinha: ao abrir o app com internet, procura em segundo plano (baixa
- * prioridade) e, fora do palco, pergunta se quer atualizar. "Agora não" vale até o dia seguinte para a
- * mesma versão. Atualizar baixa e abre o instalador, como em Ajustes → Atualizar o app.
+ * New app version offered on its own: when the app opens with internet, it checks in the background (low priority) and,
+ * off stage, asks whether to update. "Not now" holds until the next day for the same version. Update downloads and
+ * opens the installer, like Settings → Update the app.
  */
 @Singleton
 class AppUpdateOffer @Inject constructor(
@@ -39,34 +39,34 @@ class AppUpdateOffer @Inject constructor(
     @LowPriority private val background: CoroutineDispatcher,
 ) {
     private val _offer = MutableStateFlow<UpdateOffer?>(null)
-    /** null = nada a oferecer agora. */
+    /** null = nothing to offer right now. */
     val offer: StateFlow<UpdateOffer?> = _offer.asStateFlow()
     private var job: Job? = null
-    private var code = 0L   // versão oferecida
+    private var code = 0L   // offered version
 
 
-    /** O app abriu (ou voltou para a frente): procura uma vez por abertura, se não está procurando nem oferecendo. */
+    /** The app opened (or came back to the front): checks once per launch, if it isn't already checking or offering. */
     @Synchronized
     fun onEnter(): Job? {
         if (job?.isActive == true || _offer.value != null) return job
         job = scope.launch {
-            val p = updater.published(background) ?: return@launch   // sem internet: na próxima abertura
+            val p = updater.published(background) ?: return@launch   // no internet: next launch
             if (p.versionCode <= updater.installedCode) return@launch
             if (order.declinedToday(p.versionCode)) return@launch
-            stage.onStage.first { !it }   // no palco: espera sair
+            stage.onStage.first { !it }   // on stage: wait until leaving
             code = p.versionCode
             _offer.value = UpdateOffer.Available(p.versionName)
         }
         return job
     }
 
-    /** "Agora não": a mesma versão só volta a ser oferecida amanhã. */
+    /** "Not now": the same version is only offered again tomorrow. */
     fun decline() {
         order.defer(code, remember = true)
         _offer.value = null
     }
 
-    /** "Atualizar": baixa (com o progresso no aviso) e deixa pronto para o instalador do Android. */
+    /** "Update": downloads (with progress in the notice) and gets it ready for the Android installer. */
     fun accept(): Job = scope.launch {
         _offer.value = UpdateOffer.Downloading(0)
         _offer.value = try {
@@ -79,7 +79,7 @@ class AppUpdateOffer @Inject constructor(
         }
     }
 
-    /** O aviso fechou depois de abrir o instalador ou de falhar. */
+    /** The notice closed after opening the installer or failing. */
     fun dismiss() {
         order.defer(code, remember = false)
         _offer.value = null

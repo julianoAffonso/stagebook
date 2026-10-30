@@ -17,12 +17,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import br.app.stagebook.R
 
-/** Uma ação do menu ⋮. `danger`: em vermelho (apagar). */
+/** An action in the ⋮ menu. `danger`: in red (delete). */
 data class MenuAction(val label: String, val icon: ImageVector, val onClick: () -> Unit, val danger: Boolean = false)
 
 /**
- * Menu ⋮ da barra de cima, como nos apps do Google (Fotos, Gmail): as ações secundárias ficam aqui e
- * a principal continua à vista, para o título não ser cortado no celular.
+ * The top bar's ⋮ menu, like Google's apps (Photos, Gmail): secondary actions live here and the main one stays visible,
+ * so the title isn't cut on phones.
  */
 @Composable
 fun OverflowMenu(actions: List<MenuAction>, modifier: Modifier = Modifier) {

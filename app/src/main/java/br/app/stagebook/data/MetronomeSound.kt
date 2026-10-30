@@ -8,8 +8,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * O clique do metrônomo pela saída normal do aparelho (fone, caixa; não passa pelo motor das backing tracks). Uma linha
- * de execução escreve o áudio sem parar (silêncio + cliques na amostra certa), então o tempo não escorrega.
+ * The metronome click on the device's regular output (headphones, speaker; doesn't go through the backing track
+ * engine). A thread writes audio nonstop (silence + clicks on the right sample), so the timing doesn't drift.
  */
 @Singleton
 class MetronomeSound @Inject constructor() {
@@ -51,5 +51,5 @@ class MetronomeSound @Inject constructor() {
         worker = null
     }
 
-    private companion object { const val CHUNK = 960 }   // 20 ms por escrita
+    private companion object { const val CHUNK = 960 }   // 20 ms per write
 }

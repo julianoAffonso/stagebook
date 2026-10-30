@@ -47,7 +47,7 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
         uiState = uiState,
         query = query,
         onQueryChange = { query = it },
-        // marcou uma: a busca fica limpa (e com o teclado aberto) para a próxima música
+        // checked one: the search clears (with the keyboard open) for the next song
         onToggle = { if (viewModel.toggle(it)) query = "" },
         onConfirm = { viewModel.confirm(); onDone() },
         onBack = onDone,
@@ -78,7 +78,7 @@ fun PickSongsScreen(
                     onBack = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                 ) {
-                    // no cabeçalho fixo: o teclado da busca cobria o botão quando ele ficava embaixo
+                    // in the fixed header: the search keyboard covered the button when it sat at the bottom
                     ActionButton(
                         text = stringResource(R.string.pick_add_short, uiState.selectedCount),
                         onClick = onConfirm,

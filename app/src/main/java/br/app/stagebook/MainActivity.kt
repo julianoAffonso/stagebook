@@ -50,10 +50,10 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var band: BandLink
     @Inject lateinit var stageGate: StageGate
     @Inject lateinit var bandInternet: BandInternet
-    @Inject lateinit var conduct: br.app.stagebook.data.BandConduct   // criado aqui: quem acompanha já responde
+    @Inject lateinit var conduct: br.app.stagebook.data.BandConduct   // created here so a follower answers right away
     private val pedal = PedalInput()
 
-    // língua escolhida nos ajustes (trocar recria a Activity)
+    // language chosen in settings (changing it recreates the Activity)
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Languages.wrap(newBase))
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         hideSystemBars()
-        // "manter a tela ligada": vale enquanto o app está na frente; fora dele o Android apaga normalmente
+        // "keep the screen on" applies while the app is in front; outside it Android dims as usual
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 repository.library.map { it.look.keepScreenOn }.distinctUntilChanged().collect { on ->
@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // pedal MIDI (USB e Bluetooth): os apertos entram pelo mesmo caminho das teclas, na linha da tela
+        // MIDI pedal (USB and Bluetooth): presses take the same path as keys, on the screen's line
         midi.start()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) { midi.presses.collect { pedal.dispatch(it) } }
@@ -91,8 +91,8 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong) }
-                // "Fulano quer entrar na banda": em qualquer tela, um de cada vez
-                // no palco, nada aparece por cima: o show nunca é interrompido
+                // "So-and-so wants to join the band" on any screen, one at a time. On stage nothing shows on top: the
+                // show is never interrupted.
                 val requests by band.requests.collectAsStateWithLifecycle()
                 val onStage by stageGate.onStage.collectAsStateWithLifecycle()
                 if (!onStage) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
@@ -102,10 +102,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        // versão nova do app: procura em segundo plano e pergunta fora do palco (não no modo essencial sem internet, T19)
+        // new app version: checks in the background and asks off stage (not in essential mode without internet, T19)
         if (repository.library.value.look.internetOn) updateOffer.onEnter()
-        band.setForeground(true)   // banda na rede: só com o app na frente
-        bandInternet.onAppOpen()   // banda pela internet: confere a caixa uma vez, ao abrir
+        band.setForeground(true)   // band on the network: only with the app in front
+        bandInternet.onAppOpen()   // band over the internet: checks the inbox once, on open
     }
 
     override fun onStop() {
@@ -113,8 +113,8 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // app sempre em tela cheia (show): barras do sistema escondidas; um deslize da borda as mostra
-    // por um instante. Reaplica ao voltar para o app ou depois de um diálogo/teclado.
+    // the app is always full screen (show): system bars hidden; a swipe from the edge shows them for a moment.
+    // Reapplied when coming back to the app or after a dialog or keyboard.
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemBars()
@@ -127,8 +127,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // o pedal é um teclado Bluetooth: as teclas vão para o palco (ou para o teste do pedal) antes do resto.
-    // RestrictedApi: falso positivo do lint; o método é o Activity.dispatchKeyEvent público do Android.
+    // the pedal is a Bluetooth keyboard: keys go to the stage (or the pedal test) before anything else. RestrictedApi
+    // is a lint false positive; this is Android's public Activity.dispatchKeyEvent.
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = pedal.dispatch(event) || super.dispatchKeyEvent(event)
 }

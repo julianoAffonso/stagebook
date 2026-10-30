@@ -4,7 +4,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import br.app.stagebook.domain.Chords
 
-/** Põe `[acorde]` no lugar do cursor (ou da seleção), com o cursor logo depois, pronto para a sílaba. */
+/** Puts `[chord]` at the cursor (or over the selection), with the cursor right after it, ready for the syllable. */
 fun insertChord(value: TextFieldValue, chord: String): TextFieldValue {
     val mark = "[" + chord.trim() + "]"
     val start = minOf(value.selection.start, value.selection.end)
@@ -15,6 +15,6 @@ fun insertChord(value: TextFieldValue, chord: String): TextFieldValue {
 
 private val bracket = Regex("""\[([^\[\]]*)]""")
 
-/** Os acordes da música, na ordem em que aparecem, sem repetir (atalhos do editor). */
+/** The song's chords, in the order they appear, without repeats (editor shortcuts). */
 fun usedChords(text: String, max: Int = 16): List<String> =
     bracket.findAll(text).map { it.groupValues[1] }.filter(Chords::isChord).distinct().take(max).toList()

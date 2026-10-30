@@ -4,9 +4,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Now Playing (T23): o "grito" do palco para programas de live e de projeção: a música da vez num JSON pequeno, mandado em broadcast UDP na rede
- * local, na porta [PORT], a cada troca de música e de [REPEAT_MS] em [REPEAT_MS] (quem ligar o programa depois também
- * recebe). Formato aberto e documentado em `docs/now-playing.md`, para OBS, Resolume e afins. Só o nome da música, nunca a letra.
+ * Now Playing (T23): the stage's "shout" to live and projection apps: the current song in a small JSON, sent as a UDP
+ * broadcast on the local network, on port [PORT], on every song change and every [REPEAT_MS] (whoever starts their app
+ * later also gets it). Open format documented in `docs/now-playing.md`, for OBS, Resolume and the like. Only the song
+ * name, never the lyrics.
  */
 @Serializable
 data class StageAnnouncement(
@@ -15,8 +16,8 @@ data class StageAnnouncement(
     val title: String,
     val artist: String = "",
     val set: String = "",
-    val index: Int = 0,      // posição no setlist, a partir de 1 (0 = música avulsa)
-    val count: Int = 0,      // músicas no setlist
+    val index: Int = 0,      // position in the setlist, from 1 (0 = loose song)
+    val count: Int = 0,      // songs in the setlist
     val key: String = "",
     val bpm: Int = 0,
 ) {

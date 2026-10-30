@@ -1,22 +1,21 @@
 package br.app.stagebook.domain
 
 /**
- * Quais bolinhas de página o rodapé do palco mostra, como a paginação do Google: cabendo, todas; não
- * cabendo, a primeira, a última, a atual com as vizinhas e "…" (null) no lugar das que ficam de fora
- * (pedido do usuário, 23/10: com muitas páginas o celular escondia o relógio e cortava as últimas; o
- * palco usa o mesmo número no celular e no tablet).
+ * Which page dots the stage footer shows, like Google's pagination: when they fit, all; when not, the first, the last,
+ * the current with its neighbors and "…" (null) in place of the ones left out (user's request, 23/10: with many pages
+ * the phone hid the clock and cut the last ones; the stage uses the same number on phones and tablets).
  */
 object PageSlots {
-    /** [current] e o resultado são índices de 0; [capacity] = quantas bolinhas (ou "…") cabem. */
+    /** [current] and the result are 0-based indexes; [capacity] = how many dots (or "…") fit. */
     fun of(current: Int, count: Int, capacity: Int): List<Int?> {
         if (count <= capacity) return (0 until count).toList()
-        // espaço para primeira, "…", vizinhas, "…", última: com menos que isso, só a atual
+        // room for first, "…", neighbors, "…", last: with less than that, only the current one
         if (capacity < 5) return listOf(current)
         val window = capacity - 4
         return when {
-            // perto do começo: um bloco corrido desde a 1ª, "…" e a última
+            // near the start: a solid block from the 1st, "…" and the last
             current <= capacity - 4 -> (0..capacity - 3).toList() + null + (count - 1)
-            // perto do fim: a 1ª, "…" e um bloco corrido até a última
+            // near the end: the 1st, "…" and a solid block to the last
             current >= count - (capacity - 3) -> listOf(0, null) + (count - (capacity - 2) until count)
             else -> {
                 val start = current - (window - 1) / 2

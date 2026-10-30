@@ -36,9 +36,9 @@ import br.app.stagebook.ui.theme.Spacing
 import kotlin.math.roundToInt
 
 /**
- * Um canal do mixer (ou um par estéreo) como na mesa: nome, liga/desliga e fader, com um resumo do resto. Tocar no
- * nome (ou no ícone de ajuste) abre a edição ([MixerChannelEditor]). [first] é o canal do arquivo (0 = canal 1).
- * [upright]: faixa estreita com o fader de pé (tablet); senão, uma linha com o fader deitado (celular).
+ * A mixer channel (or a stereo pair) like on a desk: name, on/off and fader, with a summary of the rest. Tapping the
+ * name (or the settings icon) opens editing ([MixerChannelEditor]). [first] is the file's channel (0 = channel 1).
+ * [upright]: narrow strip with a vertical fader (tablet); otherwise a row with a horizontal fader (phone).
  */
 @Composable
 fun MixerStrip(
@@ -49,12 +49,12 @@ fun MixerStrip(
     onEdit: () -> Unit,
     modifier: Modifier = Modifier,
     upright: Boolean = false,
-    output: Int = first,                                         // primeira saída do canal na saída em uso
-    outputs: OutputInfo = OutputInfo(),                          // a saída em uso (aparelho ou interface USB)
-    meters: () -> Meters = { Meters.silent(MixerConfig.MAX) },   // lido só no desenho: medidor ao lado do fader
+    output: Int = first,                                         // the channel's first output on the output in use
+    outputs: OutputInfo = OutputInfo(),                          // the output in use (device or USB interface)
+    meters: () -> Meters = { Meters.silent(MixerConfig.MAX) },   // read only when drawing: meter next to the fader
     showMeters: Boolean = false,                                  // chave "Monitorar"
 ) {
-    val lanes = if (pair) listOf(first, first + 1) else listOf(first)   // unidos: medidor duplo (esquerda e direita)
+    val lanes = if (pair) listOf(first, first + 1) else listOf(first)   // paired: double meter (left and right)
     val setGain = { db: Float -> onChange(strip.copy(gainDb = (db * 2).roundToInt() / 2f)) }
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         if (upright) {
@@ -84,7 +84,7 @@ fun MixerStrip(
                     )
                     GainText(strip, Modifier.widthIn(min = 72.dp))
                 }
-                // celular: o medidor deitado logo abaixo do fader (um por lado nos unidos)
+                // phone: the horizontal meter right below the fader (one per side when paired)
                 if (showMeters) {
                     Column(Modifier.fillMaxWidth().padding(end = 80.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }, vertical = false) }
@@ -95,7 +95,7 @@ fun MixerStrip(
     }
 }
 
-// nome do canal e o resumo (normalizar, saída, EQ, centralizar); um toque abre a edição
+// channel name and the summary (normalize, output, EQ, center); a tap opens editing
 @Composable
 private fun Header(
     first: Int, strip: MixChannel, pair: Boolean, output: Int, outputs: OutputInfo, onEdit: () -> Unit, modifier: Modifier, centered: Boolean,
@@ -112,7 +112,7 @@ private fun Header(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs, if (centered) Alignment.CenterHorizontally else Alignment.Start),
     ) {
-        // de pé, o cabeçalho tem altura fixa: os faders lado a lado começam na mesma linha
+        // upright, the header has a fixed height: the faders side by side start on the same line
         Column(
             Modifier.weight(1f, fill = !centered).then(if (centered) Modifier.height(64.dp) else Modifier),
             horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
@@ -134,7 +134,7 @@ private fun Header(
 private fun channelTitle(first: Int, pair: Boolean) =
     if (pair) stringResource(R.string.mixer_pair, first + 1, first + 2) else stringResource(R.string.mixer_channel, first + 1)
 
-/** Edição de um canal do mixer: nome, normalizar, saída, EQ, Centralizar e Par estéreo. Cada mudança vale na hora. */
+/** Editing a mixer channel: name, normalize, output, EQ, Center and Stereo pair. Each change applies right away. */
 @Composable
 fun MixerChannelEditor(
     first: Int,
@@ -155,7 +155,7 @@ fun MixerChannelEditor(
     )
 }
 
-/** O que a edição de um canal mostra (separado do diálogo para o preview e os prints). */
+/** What editing a channel shows (separate from the dialog for the preview and screenshots). */
 @Composable
 fun MixerChannelForm(
     first: Int,
@@ -176,7 +176,7 @@ fun MixerChannelForm(
         SwitchRow(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center, {
             onChange(strip.copy(center = it))
         })
-        // une este canal físico com o seguinte num par estéreo (no par, separa de novo)
+        // pairs this physical channel with the next one as stereo (on a pair, splits it again)
         if (canPair) {
             SwitchRow(stringResource(R.string.mixer_join, first + 2), strip.stereo, { onChange(strip.copy(stereo = it)) })
         }
@@ -215,7 +215,7 @@ private fun NormDropdown(strip: MixChannel, onChange: (MixChannel) -> Unit, modi
     stringResource(R.string.mixer_norm), NormMode.entries, strip.norm, { onChange(strip.copy(norm = it)) }, { normName(it) }, modifier,
 )
 
-// as saídas que a saída em uso tem (no aparelho: esquerda e direita); a escolhida aparece mesmo se esta não tiver
+// the outputs the output in use has (on the device: left and right); the chosen one shows even if this one lacks it
 @Composable
 private fun OutputDropdown(output: Int, pair: Boolean, outputs: OutputInfo, onOutput: (Int) -> Unit, modifier: Modifier) =
     OptionDropdown(
@@ -224,7 +224,7 @@ private fun OutputDropdown(output: Int, pair: Boolean, outputs: OutputInfo, onOu
         output, onOutput, { outputName(it, pair, outputs) }, modifier,
     )
 
-/** Nome de uma saída: "Saída 7"/"Saídas 7-8" na interface; "Esquerda"/"Direita"/"Esquerda e direita" no aparelho. */
+/** Output name: "Output 7"/"Outputs 7-8" on the interface; "Left"/"Right"/"Left and right" on the device. */
 @Composable
 fun outputName(out: Int, pair: Boolean, outputs: OutputInfo): String = when {
     outputs.key == OutputInfo.DEVICE && pair && out == 0 -> stringResource(R.string.mixer_out_left_right)
@@ -234,7 +234,7 @@ fun outputName(out: Int, pair: Boolean, outputs: OutputInfo): String = when {
     else -> stringResource(R.string.mixer_output_one, out + 1)
 }
 
-/** Nome da saída para a tela: o da interface, ou "saída do aparelho". */
+/** Output name for the screen: the interface's, or "device output". */
 @Composable
 fun OutputInfo.label(): String = if (key == OutputInfo.DEVICE || name.isEmpty()) stringResource(R.string.mixer_out_device) else name
 

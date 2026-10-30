@@ -22,7 +22,7 @@ import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 import br.app.stagebook.ui.theme.StagePalette
 
-/** Bolinhas de cor (ARGB) para escolher uma; a escolhida ganha borda e um ✓. */
+/** Color dots (ARGB) to pick one; the chosen one gets a border and a ✓. */
 @Composable
 fun ColorSwatchRow(colors: List<Int>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -43,7 +43,7 @@ fun ColorSwatchRow(colors: List<Int>, selected: Int, onSelect: (Int) -> Unit, mo
                 contentAlignment = Alignment.Center,
             ) {
                 if (isSelected) {
-                    // ✓ em preto ou branco, o que aparecer melhor sobre a cor
+                    // ✓ in black or white, whichever shows better on the color
                     Icon(AppIcons.Check, contentDescription = null, tint = if (color.luminance() > 0.5f) Color.Black else Color.White)
                 }
             }

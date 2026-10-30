@@ -53,12 +53,12 @@ import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.Spacing
 
-// Compartilhar (setlist ou músicas avulsas): a folha com os jeitos de enviar e o diálogo do código da internet.
+// Share (setlist or loose songs): the sheet with the ways to send and the internet code dialog.
 
 /**
- * Importar (nas abas Músicas e Setlists), um botão só com menu: dos sites ([onSites], só na aba Músicas e só com
- * internet), ler o QR (sempre) ou digitar o código (só com internet). O que chegar pelo QR ou código — setlist ou músicas
- * avulsas — abre a conferência certa, seja qual for a aba.
+ * Import (on the Songs and Setlists tabs), a single button with a menu: from the sites ([onSites], only on the Songs
+ * tab and only with internet), scan the QR (always) or type the code (only with internet). Whatever arrives by QR or
+ * code (setlist or loose songs) opens the right review, whatever the tab.
  */
 @Composable
 fun ImportButton(
@@ -67,10 +67,10 @@ fun ImportButton(
     onCode: (String) -> Unit,
     modifier: Modifier = Modifier,
     onSites: (() -> Unit)? = null,
-    received: Int = 0,               // o que a banda mandou e não foi conferido
+    received: Int = 0,               // what the band sent and hasn't been reviewed
     onReceived: () -> Unit = {},
-    onSync: (() -> Unit)? = null,    // "Sincronizar com a banda" (só com alguém da banda)
-    internetOn: Boolean = true,      // modo essencial (T19): sem "Digitar as 3 palavras"
+    onSync: (() -> Unit)? = null,    // "Sync with the band" (only with a band member)
+    internetOn: Boolean = true,      // essential mode (T19): no "Type the 3 words"
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
@@ -121,7 +121,7 @@ fun ImportButton(
     }
 }
 
-/** Mostra para quantos aparelhos da banda chegou o envio (ou que ninguém recebeu). */
+/** Shows how many band devices got the send (or that nobody got it). */
 @Composable
 fun BandResultMessage(results: kotlinx.coroutines.flow.Flow<Int>) {
     val message = LocalAppMessage.current
@@ -134,7 +134,7 @@ fun BandResultMessage(results: kotlinx.coroutines.flow.Flow<Int>) {
     }
 }
 
-/** O que fazer com o código pronto: copiar ou mandar por um app de mensagem do aparelho (WhatsApp, e-mail, SMS…). */
+/** What to do with the ready code: copy it or send it through a messaging app on the device (WhatsApp, email, SMS…). */
 class CodeActions(val copy: (code: String) -> Unit, val share: (name: String, code: String) -> Unit)
 
 @Composable
@@ -159,18 +159,19 @@ fun rememberCodeActions(): CodeActions {
     }
 }
 
-/** Envio pela internet: enviando, enviado (com o código) ou falhou. */
+/** Sending over the internet: sending, sent (with the code) or failed. */
 @Immutable
 sealed interface CloudUi {
     data object Sending : CloudUi
-    /** [joined]: quem já aceitou e virou da banda (aparece no diálogo enquanto ele está aberto). */
+    /** [joined]: who already accepted and joined the band (shows in the dialog while it's open). */
     data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null, val joined: List<String> = emptyList()) : CloudUi
     data object Failed : CloudUi
 }
 
 /**
- * A folha "Compartilhar": cada jeito de enviar só aparece quando dá para usar (QR sempre; banda só com alguém da banda na
- * rede agora; internet só com internet). Aberta, liga a procura da banda ([onSearch]); fechada, desliga (bateria).
+ * The "Share" sheet: each way to send only shows when it can be used (QR always; band only with a band member on the
+ * network now; internet only with internet). Open, it turns on the band search ([onSearch]); closed, it turns it off
+ * (battery).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -194,7 +195,9 @@ fun ShareSheet(
     }
 }
 
-/** O conteúdo da folha (separado para o preview e os prints). [band]: quantos da banda estão na rede agora. */
+/**
+ * The sheet's content (separate for the preview and screenshots). [band]: how many band members are on the network now.
+ */
 @Composable
 fun ShareOptions(
     songs: Int,
@@ -204,16 +207,16 @@ fun ShareOptions(
     modifier: Modifier = Modifier,
     band: Int = 0,
     onBand: (Boolean) -> Unit = {},
-    internetOn: Boolean = true,   // modo essencial (T19): sem o envio pela internet nem o aviso de "sem internet"
+    internetOn: Boolean = true,   // essential mode (T19): no sending over the internet and no "no internet" notice
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
-        // banda na rede: chega sozinho para quem é da banda e está neste Wi-Fi (sem palavras, sem QR)
+        // band on the network: arrives by itself for band members on this Wi-Fi (no words, no QR)
         if (band > 0) {
             ShareOption(AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band), stringResource(R.string.share_band_hint)) { onBand(withSongs) }
         }
-        // QR na tela: só no setlist (leva só os títulos; músicas avulsas não cabem num QR)
+        // QR on screen: only in a setlist (it carries only the titles; loose songs don't fit in a QR)
         onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), it) }
         if (!internetOn) Unit
         else if (online) {
@@ -221,7 +224,7 @@ fun ShareOptions(
         } else {
             Text(stringResource(if (onQr != null) R.string.share_offline else R.string.share_offline_songs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        // no setlist dá para mandar só os títulos (banda e internet); músicas avulsas sempre vão inteiras
+        // in a setlist you can send only the titles (band and internet); loose songs always go whole
         if (onQr != null && ((online && internetOn) || band > 0)) {
             SwitchRow(
                 pluralStringResource(R.plurals.share_with_songs, songs, songs),
@@ -249,7 +252,7 @@ private fun ShareOption(icon: ImageVector, title: String, hint: String, onClick:
     }
 }
 
-// enviando, o código pronto (com "Mandar por mensagem") ou o erro
+// sending, the ready code (with "Send in a message") or the error
 @Composable
 fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, String) -> Unit, onCopyCode: (String) -> Unit) {
     AlertDialog(
@@ -280,7 +283,7 @@ fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, Str
     )
 }
 
-/** O código grande (para ditar), o QR dele (para foto ou "Ler QR"), Copiar, e o que foi junto. */
+/** The big code (to read out), its QR (for a photo or "Scan QR"), Copy, and what went along. */
 @Composable
 fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {

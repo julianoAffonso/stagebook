@@ -69,7 +69,7 @@ fun SetlistsRoute(
     if (nameLimit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_name), viewModel::dismissNameLimit)
     SetlistsScreen(
         uiState = uiState,
-        // toque duplo no OK criava dois setlists: depois do primeiro a tela já está saindo
+        // double tap on OK created two setlists: after the first one the screen is already leaving
         onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onOpen(viewModel.create(name)) },
         onOpen = onOpen,
         onPlay = onPlay,
@@ -112,7 +112,7 @@ fun SetlistsScreen(
                 subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             )
-            // importar um (QR ou código) no começo e a ação principal, novo setlist, no fim (igual à aba Músicas)
+            // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
@@ -138,7 +138,7 @@ fun SetlistsScreen(
                                                 tint = if (set.count > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
-                                        // renomear e apagar no ⋮ (padrão do Google), sem abrir o setlist
+                                        // rename and delete in the ⋮ (Google's pattern), without opening the setlist
                                         OverflowMenu(
                                             listOf(
                                                 MenuAction(stringResource(R.string.sets_rename), AppIcons.Edit, { renaming = set.id }),

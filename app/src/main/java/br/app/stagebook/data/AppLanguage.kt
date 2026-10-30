@@ -7,7 +7,7 @@ import android.os.LocaleList
 import androidx.core.content.edit
 import java.util.Locale
 
-/** Língua do app. [SYSTEM] = a do aparelho (cai no inglês, a base, se não houver tradução). */
+/** App language. [SYSTEM] = the device's (falls back to English, the base, if there's no translation). */
 enum class AppLanguage(val tag: String) {
     SYSTEM(""),
     PT("pt-BR"),
@@ -15,13 +15,13 @@ enum class AppLanguage(val tag: String) {
 }
 
 /**
- * Escolha da língua, guardada no aparelho e aplicada antes de qualquer tela (`attachBaseContext` do app e da
- * Activity): fica fora da biblioteca, que só carrega depois. Inglês é a base (`values`) e o português do Brasil fica em
- * `values-pt-rBR`; cada tradução nova é um `values-<tag>` e só entra em [available] quando estiver completa (o
- * `LanguagesTest` confere). Como traduzir: `docs/traduzir.md`.
+ * Language choice, saved on the device and applied before any screen (`attachBaseContext` of the app and the Activity):
+ * kept outside the library, which only loads later. English is the base (`values`) and Brazilian Portuguese lives in
+ * `values-pt-rBR`; each new translation is a `values-<tag>` and only joins [available] when complete (`LanguagesTest`
+ * checks). How to translate: `docs/traduzir.md`.
  */
 object Languages {
-    /** As línguas oferecidas nos ajustes. Traduzir = criar `values-<tag>/strings.xml` e acrescentar aqui. */
+    /** The languages offered in settings. Translating = creating `values-<tag>/strings.xml` and adding it here. */
     val available: List<AppLanguage> = listOf(AppLanguage.SYSTEM, AppLanguage.PT, AppLanguage.EN)
 
     private const val PREFS = "lingua"
@@ -35,8 +35,8 @@ object Languages {
     fun set(context: Context, language: AppLanguage) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = true) { putString(KEY, language.tag) }
 
-    /** O contexto com a língua escolhida (o mesmo, se for a do aparelho). */
-    // o aviso é sobre pacotes da Play divididos por língua: o Stagebook sai como APK inteiro (GitHub Releases)
+    /** The context with the chosen language (the same one, if it's the device's). */
+    // the warning is about Play bundles split by language: Stagebook ships as a whole APK (GitHub Releases)
     @SuppressLint("AppBundleLocaleChanges")
     fun wrap(base: Context): Context {
         val language = get(base)

@@ -1,9 +1,10 @@
 package br.app.stagebook.domain
 
 /**
- * Tablatura dentro da cifra (T22). Guardada como `{start_of_tab}`…`{end_of_tab}` do ChordPro; linhas soltas com cara de
- * tab (`e|---0---3---|`) também contam. [shift] sobe/desce as casas mantendo as colunas alinhadas: transpor o tom e mudar o
- * capo mexem nelas (decisão do usuário, 29/10: a tab fica em casas sem capo). Casa que ficaria negativa sobe uma oitava.
+ * Tablature inside the chart (T22). Saved as ChordPro `{start_of_tab}`…`{end_of_tab}`; loose lines that look like tab
+ * (`e|---0---3---|`) count too. [shift] moves frets up/down keeping the columns aligned: transposing the key and
+ * changing the capo move them (user's decision, 29/10: the tab stays in frets without a capo). A fret that would go
+ * negative goes up an octave.
  */
 object Tablature {
     const val START = "{start_of_tab}"
@@ -11,16 +12,16 @@ object Tablature {
 
     private val startDirective = Regex("""^\s*\{\s*(start_of_tab|sot)\s*(:.*)?}\s*$""", RegexOption.IGNORE_CASE)
     private val endDirective = Regex("""^\s*\{\s*(end_of_tab|eot)\s*}\s*$""", RegexOption.IGNORE_CASE)
-    // nome da corda (opcional) + barra, e depois só traços, números e as marcas de técnica (h p b r / \ ~ x)
+    // string name (optional) + bar, then only dashes, digits and technique marks (h p b r / \ ~ x)
     private val tabLine = Regex("""^\s*([A-Ga-g][#b]?\s*)?[|:][-0-9|hpbrxHPBRX/\\~().*\s]+$""")
 
     fun isStart(line: String) = startDirective.matches(line)
     fun isEnd(line: String) = endDirective.matches(line)
 
-    /** Uma linha com cara de tablatura (precisa de traços: "e|---0---|"). */
+    /** A line that looks like tablature (needs dashes: "e|---0---|"). */
     fun isTabLine(line: String): Boolean = tabLine.matches(line) && line.count { it == '-' } >= 3
 
-    /** Para cada linha do texto: se ela é de tablatura (dentro do bloco ou com cara de tab). */
+    /** For each line of the text: whether it's tablature (inside the block or looking like tab). */
     fun tabLines(text: String): List<Boolean> {
         var inBlock = false
         return text.split('\n').map { line ->
@@ -34,14 +35,14 @@ object Tablature {
 
     fun hasTab(text: String): Boolean = tabLines(text).any { it }
 
-    /** Sobe ([semitones] > 0) ou desce as casas de toda tablatura do texto, sem tirar as colunas do lugar. */
+    /** Moves up ([semitones] > 0) or down the frets of every tablature in the text, without moving the columns. */
     fun shift(text: String, semitones: Int): String {
         if (semitones == 0) return text
         val flags = tabLines(text)
         return text.split('\n').mapIndexed { i, line -> if (flags[i]) shiftLine(line, semitones) else line }.joinToString("\n")
     }
 
-    /** Uma linha de tab com as casas deslocadas; o nome da corda no começo (e, B, G…) não é casa. */
+    /** A tab line with the frets shifted; the string name at the start (e, B, G…) isn't a fret. */
     fun shiftLine(line: String, semitones: Int): String {
         val bar = line.indexOfFirst { it == '|' || it == ':' }.coerceAtLeast(0)
         val out = StringBuilder(line.substring(0, bar))
@@ -56,7 +57,7 @@ object Tablature {
             val now = fret.toString()
             var width = j - i
             out.append(now)
-            // casa com mais algarismos come os traços de depois; com menos, devolve traços (as colunas não andam)
+            // a fret with more digits eats the dashes after it; with fewer, gives dashes back (the columns don't move)
             while (now.length > width && j < line.length && line[j] == '-') { j++; width++ }
             repeat(width - now.length) { out.append('-') }
             i = j
@@ -64,7 +65,7 @@ object Tablature {
         return out.toString()
     }
 
-    /** Põe as linhas de tab soltas entre `{start_of_tab}` e `{end_of_tab}` (o que veio da importação). */
+    /** Wraps loose tab lines between `{start_of_tab}` and `{end_of_tab}` (what came from the import). */
     fun wrap(text: String): String {
         val lines = text.split('\n')
         val flags = lines.map(::isTabLine)
@@ -79,7 +80,7 @@ object Tablature {
         return out.joinToString("\n")
     }
 
-    /** Tira toda tablatura (importar sem a tab). */
+    /** Removes all tablature (import without the tab). */
     fun strip(text: String): String {
         val flags = tabLines(text)
         return text.split('\n').filterIndexed { i, line -> !flags[i] && !isStart(line) && !isEnd(line) }.joinToString("\n")

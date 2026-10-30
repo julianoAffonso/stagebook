@@ -34,7 +34,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-/** O que a banda mandou e ainda não foi conferido (para o aviso nas abas, o número no ícone e a lista). */
+/**
+ * What the band sent and hasn't been reviewed yet (for the notice on the tabs, the number on the icon and the list).
+ */
 @HiltViewModel
 class InboxViewModel @Inject constructor(
     private val inbox: BandInbox,
@@ -43,11 +45,11 @@ class InboxViewModel @Inject constructor(
 ) : ViewModel() {
     val items: StateFlow<List<BandInbox.Item>> = inbox.items
 
-    /** Tem alguém da banda ("Sincronizar com a banda" só aparece aí). */
+    /** There's someone in the band ("Sync with the band" only shows then). */
     val hasBand: StateFlow<Boolean> = trust.members.map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), trust.members.value.isNotEmpty())
 
-    /** Sincronizar agora (caixa da internet, reenvios, "ok" pendentes e 30 s de procura no Wi-Fi). */
+    /** Sync now (internet inbox, resends, pending "ok"s and 30 s of Wi-Fi search). */
     fun syncNow() = bandInternet.syncNow()
     fun later(id: String) = inbox.markSeen(id)
     fun discard(id: String) = inbox.remove(id)
@@ -59,7 +61,7 @@ private fun itemText(item: BandInbox.Item) =
     else if (item.setName.isEmpty()) pluralStringResource(R.plurals.inbox_songs, item.songCount, item.fromName, item.songCount)
     else stringResource(R.string.inbox_setlist, item.fromName, item.setName)
 
-/** O aviso de novidade, como e-mail novo: "Ana enviou o setlist Show de sábado" → Conferir / Agora não. */
+/** The news notice, like new email: "Ana sent the setlist Saturday show" → Check / Not now. */
 @Composable
 fun InboxBanner(item: BandInbox.Item, onOpen: () -> Unit, onLater: () -> Unit, modifier: Modifier = Modifier) {
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.secondaryContainer) {
@@ -76,7 +78,7 @@ fun InboxBanner(item: BandInbox.Item, onOpen: () -> Unit, onLater: () -> Unit, m
     }
 }
 
-/** "Recebidos da banda": tudo o que ainda não foi conferido; tocar abre a conferência, a lixeira descarta. */
+/** "Received from the band": everything not reviewed yet; tapping opens the review, the trash can discards. */
 @Composable
 fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
@@ -84,7 +86,8 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
         title = { Text(stringResource(R.string.inbox_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                // o mesmo setlist mandado por mais de um membro fica junto (T11): quem mandou, quando, e o mais novo marcado
+                // the same setlist sent by more than one member stays together (T11): who sent it, when, and the newest
+                // marked
                 br.app.stagebook.data.groupInbox(items).forEach { group ->
                     if (group.size > 1) {
                         Text(
@@ -123,7 +126,7 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
     )
 }
 
-/** Hora em que chegou (hoje: "14:05"; outro dia: "28/10 14:05"). */
+/** Time it arrived (today: "14:05"; another day: "28/10 14:05"). */
 @Composable
 private fun timeOf(at: Long): String {
     val today = android.text.format.DateUtils.isToday(at)
@@ -132,7 +135,7 @@ private fun timeOf(at: Long): String {
     return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(at))
 }
 
-/** "atualizado às 21:18" (hoje) ou "atualizado em 29/10, 21:18" (outro dia). */
+/** "updated at 21:18" (today) or "updated 29/10, 21:18" (another day). */
 @Composable
 private fun updatedOf(at: Long): String {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]

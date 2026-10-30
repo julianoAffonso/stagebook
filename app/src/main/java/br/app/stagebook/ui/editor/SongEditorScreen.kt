@@ -131,16 +131,16 @@ fun SongEditorScreen(
     onTempo: (String) -> Unit = {},
 ) {
     var deleting by rememberSaveable { mutableStateOf(false) }
-    var previewing by rememberSaveable { mutableStateOf(false) }   // a música como fica no palco
+    var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
     var newChord by rememberSaveable { mutableStateOf(false) }
-    // os dados da música (título, artista, ano, tom, capo) ficam recolhidos numa linha; música nova começa com eles
-    // abertos (o título é obrigatório)
+    // the song details (title, artist, year, key, capo) stay collapsed on one line; a new song starts with them open
+    // (the title is required)
     var dataOpen by rememberSaveable(uiState.loading) { mutableStateOf(!uiState.loading && cursor < 0 && uiState.mode == EditorMode.NEW && uiState.title.isEmpty()) }
-    // salvar sem título (ou com título repetido): abre os dados, onde está o erro
+    // saving without a title (or with a repeated one): opens the details, where the error is
     LaunchedEffect(uiState.error) { if (uiState.error != null) dataOpen = true }
-    // Cancelar fica colado no Salvar e o voltar do sistema é fácil de tocar sem querer
+    // Cancel sits right next to Save and the system back is easy to hit by accident
     var discarding by rememberSaveable { mutableStateOf(false) }
-    // a mesma função a cada tecla: os botões Salvar/Cancelar não se redesenham enquanto digita
+    // the same function on every key: the Save/Cancel buttons don't redraw while typing
     val unsaved by rememberUpdatedState(uiState.unsaved)
     val cancel = remember(onCancel) { { if (unsaved) discarding = true else onCancel() } }
     BackHandler(enabled = !uiState.loading && uiState.unsaved) { discarding = true }
@@ -150,23 +150,23 @@ fun SongEditorScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 return@Crossfade
             }
-            // aberta do palco: cursor no fim da linha segurada, já com o teclado
-            // perfil só letra: o campo mostra a letra sem a cifra, e cada mudança volta para a música com a cifra
-            // no lugar (LyricsView): quem só canta não apaga os acordes de ninguém
-            // tom e capo ficam nos dados da música: o campo da letra não mostra as linhas {key}/{capo} (pedido do usuário,
-            // 29/10); ao editar, elas voltam do texto guardado
+            // opened from the stage: cursor at the end of the held line, keyboard already up. Lyrics only profile: the
+            // field shows the lyrics without chords, and each change goes back into the song with the chords in place
+            // (LyricsView): someone who only sings doesn't delete anyone's chords. Key and capo live in the song
+            // details: the lyrics field doesn't show the {key}/{capo} lines (user's request, 29/10); on edit they come
+            // back from the saved text
             val fieldText = remember(uiState.text, look.chords) { Chords.hideMeta(if (look.chords) uiState.text else LyricsView.view(uiState.text)) }
-            // o cursor vindo do palco é no texto guardado: desconta as linhas escondidas antes dele
+            // the cursor coming from the stage is in the saved text: subtract the hidden lines before it
             val fieldCursor = remember { if (cursor < 0) cursor else Chords.hideMeta(uiState.text.take(cursor.coerceAtMost(uiState.text.length))).length }
             var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
-            // o texto vem sempre do estado; a seleção e o cursor ficam aqui
+            // the text always comes from the state; the selection and cursor live here
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
             fun edit(v: TextFieldValue) {
                 lyrics = v
                 if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.text))
             }
             var editingLyrics by remember { mutableStateOf(false) }
-            // acorde novo: entra onde estava o cursor da letra
+            // new chord: goes where the lyrics cursor was
             if (newChord) {
                 ChordDialog(
                     onDone = { chord -> newChord = false; edit(insertChord(shown, chord)) },
@@ -175,7 +175,7 @@ fun SongEditorScreen(
             }
             CenteredContent(Modifier.fillMaxSize()) {
                 Column {
-                    // cabeçalho fixo com o Salvar: à mão em qualquer ponto da letra (o voltar é o cancelar)
+                    // fixed header with Save: at hand anywhere in the lyrics (back is cancel)
                     ScreenHeader(
                         title = stringResource(
                             when (uiState.mode) {
@@ -188,7 +188,7 @@ fun SongEditorScreen(
                         onBack = cancel,
                         modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s),
                     ) {
-                        // prévia do palco (o olho aceso = mostrando a prévia; tocar de novo volta ao texto)
+                        // stage preview (the lit eye = showing the preview; tapping again goes back to the text)
                         IconButton(onClick = { previewing = !previewing }) {
                             Icon(
                                 if (previewing) AppIcons.Edit else AppIcons.Visibility,
@@ -196,7 +196,7 @@ fun SongEditorScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        // salvar à vista; excluir (música existente) no ⋮, longe do salvar (padrão do Google)
+                        // save in view; delete (existing song) in the ⋮, away from save (Google's pattern)
                         IconButton(onClick = onSave) {
                             Icon(AppIcons.Save, stringResource(R.string.action_save), tint = MaterialTheme.colorScheme.primary)
                         }
@@ -204,7 +204,7 @@ fun SongEditorScreen(
                             OverflowMenu(listOf(MenuAction(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, danger = true)))
                         }
                     }
-                    // dados da música recolhidos numa linha (pedido do usuário, 29/10): tocar abre os campos ali mesmo
+                    // song details collapsed on one line (user's request, 29/10): tapping opens the fields right there
                     SongDataHeader(
                         uiState = uiState,
                         expanded = dataOpen,
@@ -214,13 +214,13 @@ fun SongEditorScreen(
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
                         if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
                     }
-                    // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
+                    // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
                     AnimatedVisibility(editingLyrics && !previewing) {
                         Column(Modifier.padding(bottom = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             SectionBar(onPick = { kind ->
                                 edit(insertSection(shown, kind))
                             })
-                            // perfil só letra: nada de cifra no editor (a letra guardada não muda)
+                            // lyrics only profile: no chords in the editor (the saved lyrics don't change)
                             if (look.chords) {
                                 ChordBar(
                                     chords = remember(uiState.text) { usedChords(uiState.text) },
@@ -276,17 +276,17 @@ fun SongEditorScreen(
     }
 }
 
-/** Fim da linha onde está a posição `at` (fora do texto = início). */
+/** End of the line at position `at` (outside the text = start). */
 internal fun lineEnd(text: String, at: Int): Int {
     if (at !in 0..text.length) return 0
     return text.indexOf('\n', at).let { if (it < 0) text.length else it }
 }
 
 /**
- * Atalhos das seções: cada toque põe o título da seção na letra, onde está o cursor. Chips soltos,
- * alinhados aos campos (Material 3 Expressive, sem a tarja de fundo).
+ * Section shortcuts: each tap puts the section title in the lyrics at the cursor. Loose chips, aligned with the fields
+ * (Material 3 Expressive, no background strip).
  */
-/** Linha fina com o resumo da música (título · artista · tom · capo) e a seta; aberta, mostra os campos embaixo. */
+/** Thin line with the song summary (title · artist · key · capo) and the arrow; when open, shows the fields below. */
 @Composable
 private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onToggle: () -> Unit, chords: Boolean, fields: @Composable () -> Unit) {
     val key = remember(uiState.text) { Chords.key(uiState.text) }
@@ -299,14 +299,15 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
         remember(uiState.text) { Chords.tempo(uiState.text) }.takeIf { it > 0 }?.let { stringResource(R.string.editor_data_tempo, it) },
     ).joinToString(" · ")
     Column(Modifier.padding(horizontal = Spacing.m)) {
-        // como um campo de escolha (pedido do usuário, 29/10): a caixa com borda e o rótulo, o resumo dentro e o ▼; tocar
-        // abre os campos embaixo. O campo é só de leitura: o toque chega pelo interactionSource
+        // like a choice field (user's request, 29/10): the outlined box and label, the summary inside and the ▼;
+        // tapping opens the fields below. The field is read only: the tap arrives through the interactionSource
         val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
         val toggle by rememberUpdatedState(onToggle)
         LaunchedEffect(taps) {
             taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) toggle() }
         }
-        // aberto, o resumo some (repetiria o título logo embaixo) e o ▲ para recolher fica no campo Título
+        // when open, the summary goes away (it would repeat the title right below) and the ▲ to collapse sits in the
+        // Title field
         if (!expanded) OutlinedTextField(
             value = summary,
             onValueChange = {},
@@ -330,7 +331,7 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
     }
 }
 
-/** Os dados da música: título (obrigatório, é o nome no setlist), artista e ano. */
+/** The song details: title (required, it's the name in the setlist), artist and year. */
 @Composable
 private fun SongDataFields(
     uiState: SongEditorUiState,
@@ -344,7 +345,7 @@ private fun SongDataFields(
         value = uiState.title,
         onValueChange = onTitle,
         label = { Text(stringResource(R.string.editor_title)) },
-        // ▲ recolhe os dados da música (volta o campo com o resumo)
+        // ▲ collapses the song details (brings back the summary field)
         trailingIcon = { IconButton(onClick = onCollapse) { Icon(AppIcons.DropUp, stringResource(R.string.editor_data_close)) } },
         isError = uiState.error != null,
         supportingText = uiState.error?.let { e ->
@@ -374,7 +375,7 @@ private fun SongDataFields(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.weight(1f),
         )
-        // BPM da música (`{tempo}`): o metrônomo começa nele (sem BPM, em 100)
+        // song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100)
         val tempo = remember(uiState.text) { Chords.directive(uiState.text, "tempo").orEmpty() }
         OutlinedTextField(
             value = tempo,
@@ -408,7 +409,7 @@ private fun SectionBar(onPick: (Sections.Kind) -> Unit, modifier: Modifier = Mod
     }
 }
 
-/** Atalhos de acorde: os que a música já usa e o "+" para um novo; cada toque põe `[acorde]` no cursor. */
+/** Chord shortcuts: the ones the song already uses and "+" for a new one; each tap puts `[chord]` at the cursor. */
 @Composable
 private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -> Unit, modifier: Modifier = Modifier) {
     Row(
@@ -423,9 +424,9 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
 }
 
 /**
- * Tom e capotraste da música, os dois do mesmo jeito (pedido do usuário, 29/10): − e + do tom transpõem meio tom
- * (reescrevem os acordes e o tom guardado); − e + do capo mudam a casa (os desenhos dos acordes ficam iguais). Sem tom
- * guardado, mostra o calculado pelos acordes, apagado.
+ * The song's key and capo, both the same way (user's request, 29/10): − and + on the key transpose a half step
+ * (rewriting the chords and the saved key); − and + on the capo change the fret (the chord diagrams stay the same).
+ * With no saved key, shows the one computed from the chords, dimmed.
  */
 @Composable
 private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, showCapo: Boolean = true) {
@@ -435,7 +436,7 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
     val capo = remember(text) { Chords.capo(text) }
     Column {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // ícone e nome à vista (pedido do usuário, 29/10)
+        // icon and name in view (user's request, 29/10)
         Icon(AppIcons.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
@@ -448,13 +449,13 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         )
         IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
         Spacer(Modifier.weight(1f))
-        // teclado não usa capotraste (pedido do usuário, 29/10): sem os controles (o capo da música fica guardado)
+        // keyboard doesn't use a capo (user's request, 29/10): no controls (the song's capo stays saved)
         if (showCapo) {
         Icon(AppIcons.Capo, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
-        // sem capo: 0 apagado (um "–" parecia um terceiro botão de menos)
-        // "2ª casa" (pedido do usuário, 29/10); sem capo, só o 0 apagado
+        // no capo: a dimmed 0 (a "–" looked like a third minus button). "Fret 2" (user's request, 29/10); without a
+        // capo, just the dimmed 0
         Text(
             if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo),
             style = MaterialTheme.typography.titleMedium,
@@ -463,7 +464,7 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
         IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
         }
     }
-    // com capo: os desenhos continuam os da cifra, mas o som sobe (pedido do usuário, 29/10)
+    // with a capo: the diagrams stay the chart's, but the sound goes up (user's request, 29/10)
     if (showCapo && capo > 0) {
         val validKey = key.isNotEmpty() && Chords.isChord(key)
         Text(
@@ -476,7 +477,7 @@ private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -
     }
 }
 
-/** A música como fica no palco, com a aparência escolhida nos ajustes (só para conferir). */
+/** The song as it looks on stage, with the look chosen in settings (just to check). */
 @Composable
 private fun EditorPreview(text: String, look: Look) {
     val names = rememberSectionNames(look.translateSections)
@@ -501,7 +502,7 @@ private fun EditorPreview(text: String, look: Look) {
     }
 }
 
-/** Escrever um acorde novo; só aceita o que tem forma de acorde. */
+/** Type a new chord; only accepts what looks like a chord. */
 @Composable
 private fun ChordDialog(onDone: (String) -> Unit, onDismiss: () -> Unit) {
     var value by rememberSaveable { mutableStateOf("") }

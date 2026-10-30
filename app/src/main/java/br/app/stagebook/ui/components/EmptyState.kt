@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import br.app.stagebook.ui.theme.Spacing
 
-/** Lista vazia: ícone grande, frase curta e, se houver, o botão do próximo passo. */
+/** Empty list: big icon, short sentence and, if there is one, the next-step button. */
 @Composable
 fun EmptyState(
     icon: ImageVector,
