@@ -380,7 +380,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     PLAYER(R.string.settings_player, AppIcons.Play),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     METRONOME(R.string.metro_title, AppIcons.Metronome),
-    PEDAL(R.string.settings_pedal, AppIcons.Bluetooth),
+    PEDAL(R.string.settings_pedal, AppIcons.Pedal),
     BAND(R.string.settings_band, AppIcons.Group),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
     LANGUAGE(R.string.settings_language, AppIcons.Translate),
@@ -700,7 +700,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             FontPicker(look.chordFont, actions.onChordFont)
             // the preview right after what it shows (size, color, font)
             Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
+                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
             }
             LegibilityWarnings(look)
         }
@@ -810,7 +810,7 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
                 steps = ((Look.MAX_SECTION_SCALE - Look.MIN_SECTION_SCALE) * 10).roundToInt() - 1,
             )
             Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(sectionScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
+                StagePreview(look.copy(sectionScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
             }
         }
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
@@ -848,8 +848,7 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
     }
     SettingsCard(stringResource(R.string.settings_pedal_test_card)) {
         val key = uiState.lastKey
-        // like another app: the last button pressed can be set to another stage command
-        if (key != null) PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
+        // first the button you pressed, then what it does: before pressing, the choice had no button to belong to
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text(
@@ -881,6 +880,8 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 }
             }
         }
+        // like another app: the last button pressed can be set to another stage command
+        if (key != null) PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
     }
     PedalKeysCard(uiState.look.pedalKeys, actions)
     MidiCard(uiState.midi, uiState.look, actions)

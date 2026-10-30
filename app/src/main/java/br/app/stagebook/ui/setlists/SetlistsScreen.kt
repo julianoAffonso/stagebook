@@ -133,7 +133,7 @@ fun SetlistsScreen(
                                     Row {
                                         IconButton(onClick = { onPlay(set.id) }, enabled = set.count > 0) {
                                             Icon(
-                                                AppIcons.Play,
+                                                AppIcons.Slideshow,
                                                 contentDescription = stringResource(R.string.action_stage),
                                                 tint = if (set.count > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             )

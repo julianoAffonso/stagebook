@@ -122,7 +122,7 @@
 
     <!-- settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_appearance">Lyrics on stage</string>
+    <string name="settings_appearance">Stage look</string>
     <string name="settings_preview_text">[Chorus]\n[G]A sample [D]line\n[Em]To see how it [C]looks</string>
     <string name="settings_preview_size_text">[Chorus]\n[G]A sample [D]line</string>
     <string name="settings_font_value">%1$d</string>
@@ -308,6 +308,8 @@
     <string name="editor_capo_fret">fret %1$d</string>
     <string name="editor_capo_sounds">Shapes in %1$s. With the capo on fret %2$d, it sounds in %3$s.</string>
     <string name="editor_capo_sounds_nokey">Shapes as written. With the capo on fret %1$d, everything sounds %1$d half steps higher.</string>
+    <string name="stage_capo_short">Capo %1$d</string>
+    <string name="stage_key_short">Key %1$s</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="inbox_versions">%1$s · %2$d versions</string>
     <string name="inbox_latest">newest</string>

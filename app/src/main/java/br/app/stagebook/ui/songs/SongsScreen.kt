@@ -152,7 +152,7 @@ fun SongsScreen(
                         pluralStringResource(R.plurals.songs_selected, selected.size, selected.size),
                         style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
                     )
-                    ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Upload, tone = ButtonTone.Tonal)
+                    ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Share, tone = ButtonTone.Tonal)
                 }
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 // secondary at the start, the main action at the end (like Google's apps). Import from sites (with
@@ -189,12 +189,12 @@ fun SongsScreen(
                                 inline = wide,
                                 trailing = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(AppIcons.Play, contentDescription = stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
+                                        Icon(AppIcons.Slideshow, contentDescription = stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
                                         // edit and delete in the ⋮ (Google's pattern), visible on the row
                                         OverflowMenu(
                                             listOf(
                                                 MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEdit(song.id) }),
-                                                MenuAction(stringResource(R.string.share_title), AppIcons.Upload, { selected = listOf(song.id); sharing = true }),
+                                                MenuAction(stringResource(R.string.share_title), AppIcons.Share, { selected = listOf(song.id); sharing = true }),
                                                 MenuAction(stringResource(R.string.action_delete), AppIcons.Delete, { pendingDelete = song.id }, danger = true),
                                             ),
                                         )

@@ -122,7 +122,7 @@
 
     <!-- ajustes -->
     <string name="settings_title">Ajustes</string>
-    <string name="settings_appearance">Letra no palco</string>
+    <string name="settings_appearance">Visual do palco</string>
     <string name="settings_preview_text">[Refrão]\n[G]Uma linha de e[D]xemplo\n[Em]Pra ver como [C]fica</string>
     <string name="settings_preview_size_text">[Refrão]\n[G]Uma linha de e[D]xemplo</string>
     <string name="settings_font_value">%1$d</string>
@@ -308,6 +308,8 @@
     <string name="editor_capo_fret">%1$dª casa</string>
     <string name="editor_capo_sounds">Desenhos em %1$s. Com capo na %2$dª casa, soa em %3$s.</string>
     <string name="editor_capo_sounds_nokey">Desenhos como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</string>
+    <string name="stage_capo_short">Capo %1$d</string>
+    <string name="stage_key_short">Tom %1$s</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="inbox_versions">%1$s · %2$d versões</string>
     <string name="inbox_latest">mais nova</string>

@@ -1368,16 +1368,15 @@ private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, key
         if (capo > 0) {
             val accent = MaterialTheme.colorScheme.primary
             Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
-                Icon(AppIcons.Capo, null, tint = accent)
-                Text(capo.toString(), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
+                // written out ("Capo 2"): a fretboard icon with a bare number didn't say what it was
+                Text(stringResource(R.string.stage_capo_short, capo), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
                 // the key that sounds with the capo, in view (the diagrams stay the chart's)
                 if (key.isNotEmpty()) Text(" " + stringResource(R.string.stage_capo_sounds_short, sounds), style = MaterialTheme.typography.titleSmall, color = accent)
             }
         }
         if (key.isNotEmpty()) {
             Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
-                Icon(AppIcons.MusicNote, null, tint = fg.copy(alpha = 0.6f))
-                Text(key, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+                Text(stringResource(R.string.stage_key_short, key), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
             }
         }
         // keyboard with the chart transposed by the capo: says why the key is different
