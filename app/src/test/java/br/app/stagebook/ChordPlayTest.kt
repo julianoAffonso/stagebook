@@ -50,7 +50,7 @@ class ChordPlayTest {
         compose.setContent {
             StagebookTheme { ChordShapePopup("G", Instrument.ACOUSTIC_GUITAR, "{capo: 2}\n[G]linha", {}, {}, onPlay = { played = it }) }
         }
-        compose.onNodeWithText("O desenho é de G. Com capo na 2ª casa, soa A.").assertExists()
+        compose.onNodeWithText("O diagrama é de G. Com capo na 2ª casa, soa A.").assertExists()
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertTrue(played!!.isNotEmpty())
         assertTrue(played!!.all { it >= 40 + 2 })   // everything at least 2 frets above the lowest string
@@ -61,7 +61,7 @@ class ChordPlayTest {
         compose.setContent {
             StagebookTheme { ChordShapePopup("C", Instrument.KEYBOARD, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
         }
-        compose.onNodeWithText("O desenho é de", substring = true).assertDoesNotExist()   // keyboard: no diagram note with capo
+        compose.onNodeWithText("O diagrama é de", substring = true).assertDoesNotExist()   // keyboard: no diagram note with capo
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertEquals(Voicings.keys("C").first(), played)
     }
@@ -74,7 +74,7 @@ class ChordPlayTest {
         compose.onNodeWithText("C é o IV neste tom.").assertExists()
         compose.onNodeWithText("Campo harmônico de C").assertExists()
         compose.onNodeWithText("V em F").assertExists()
-        compose.onNodeWithContentDescription("Voltar ao desenho").performClick()
+        compose.onNodeWithContentDescription("Voltar ao diagrama").performClick()
         compose.onNodeWithContentDescription("Tocar").assertExists()
     }
 }
