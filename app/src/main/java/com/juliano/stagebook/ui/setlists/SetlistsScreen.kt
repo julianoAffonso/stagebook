@@ -109,10 +109,10 @@ fun SetlistsScreen(
                 subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             )
-            // novo setlist ou importar um (QR ou código)
+            // importar um (QR ou código) no começo e a ação principal, novo setlist, no fim (igual à aba Músicas)
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync)
+                ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
