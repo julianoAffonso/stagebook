@@ -704,8 +704,8 @@
     <string name="share_failed">Não deu para enviar</string>
     <string name="share_failed_text">O serviço não respondeu. Confira a internet e tente de novo, ou use o QR.</string>
     <plurals name="share_sent_songs">
-        <item quantity="one">%1$d música foi junto.</item>
-        <item quantity="other">%1$d músicas foram junto.</item>
+        <item quantity="one">Vai com %1$d música.</item>
+        <item quantity="other">Vai com %1$d músicas.</item>
     </plurals>
     <plurals name="share_skipped">
         <item quantity="one">%1$d música grande demais não foi.</item>
