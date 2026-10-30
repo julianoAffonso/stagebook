@@ -89,7 +89,30 @@ class ScanSetlistViewModel @Inject constructor(
     private val inbox: BandInbox,
     private val bandLink: BandLink,
     private val bandInternet: BandInternet,
+    private val trust: com.juliano.stagebook.data.BandTrust,
+    private val connectivity: com.juliano.stagebook.data.Connectivity,
 ) : ViewModel() {
+    /** Quem mandou, se for da banda (o pedido pela internet vai para a caixa dele). */
+    private fun senderId(): String? = (inbox.get(route.inbox)?.fromId ?: sender?.id)?.takeIf(trust::isMember)
+
+    /** Nome de quem mandou, quando dá para pedir pela internet as que faltam (é da banda e há internet); senão null. */
+    val internetFrom: StateFlow<String?> = connectivity.online.map { on ->
+        if (!on) null else senderId()?.let { id -> trust.member(id)?.name ?: fromName.ifBlank { null } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val internetAsked = Channel<Boolean>(Channel.BUFFERED)
+    /** Resultado do pedido pela internet (true = foi). */
+    val internetResult = internetAsked.receiveAsFlow()
+
+    /** Pede pela internet a quem mandou as músicas que faltam (T12); elas chegam depois em "Recebidos da banda". */
+    fun askInternet() {
+        val ui = _ui.value as? ScanUi.Review ?: return
+        val id = senderId() ?: return
+        val missing = ui.rows.filter { r -> r.chosen == null && !r.carried }.map { BandLink.Wanted(it.title, it.artist) }
+        if (missing.isEmpty()) return
+        viewModelScope.launch { internetAsked.send(bandInternet.requestSongs(id, missing)) }
+    }
+
     // quem mandou pelas 3 palavras: ao aceitar, vira da banda (e recebe o meu "ok")
     private var sender: com.juliano.stagebook.domain.BandProtocol.Hello? = null
     /** Quantos da banda estão na rede agora ("Pedir à banda" só aparece com alguém e com música faltando). */

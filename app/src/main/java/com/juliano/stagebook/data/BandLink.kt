@@ -242,6 +242,14 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, json.encodeToString(com.juliano.stagebook.domain.Conduct.Lack.serializer(), lack).toByteArray())
     }
 
+    /** As músicas daqui que respondem a um pedido (mesma regra do QR: título, e o artista desempata). */
+    fun songsFor(wanted: List<Wanted>): List<String> {
+        val library = repository.library.value.songs
+        return wanted.take(MAX_ASK).mapNotNull { w ->
+            (com.juliano.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? com.juliano.stagebook.domain.QrMatch.Found)?.song?.id
+        }.distinct()
+    }
+
     // alguém da banda perguntou: responde com as que estão aqui (mesma regra do QR: título, e o artista desempata)
     private fun answer(from: BandProtocol.Hello, body: String): String? {
         val key = pairKeyWith(from.id) ?: return null
