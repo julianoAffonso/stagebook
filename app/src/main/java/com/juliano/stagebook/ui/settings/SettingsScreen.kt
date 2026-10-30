@@ -389,6 +389,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 /** Modo essencial (T19): a seção do que está desligado some da lista. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
     SettingsSection.METRONOME -> look.extrasOn
+    SettingsSection.BAND -> look.bandOn || look.internetOn   // a banda vale também pela internet (os mesmos membros)
     else -> true
 }
 
@@ -519,7 +520,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
             SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
-            SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions)
+            SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)

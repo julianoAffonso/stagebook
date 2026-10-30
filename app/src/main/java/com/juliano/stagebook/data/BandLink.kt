@@ -21,6 +21,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -277,7 +279,8 @@ class BandLink @Inject constructor(
 
     @Synchronized
     fun update() {
-        val want = foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
+        // modo essencial (T19): "Banda na rede" desligada, nada anuncia, procura ou atende
+        val want = repository.library.value.look.bandOn && foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
         if (want && !_running.value) start() else if (!want && _running.value) stop()
         updateSearch()
     }
@@ -467,5 +470,8 @@ class BandLink @Inject constructor(
 
     // entrou no palco: a procura para na hora; saiu, volta se a tela ainda precisar. Fica depois de todos os campos:
     // a coleta roda em outra linha de execução e pode chamar update() antes de o resto da classe existir
-    init { scope.launch { stage.onStage.collect { update() } } }
+    init {
+        scope.launch { stage.onStage.collect { update() } }
+        scope.launch { repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { update() } }
+    }
 }
