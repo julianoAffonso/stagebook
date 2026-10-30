@@ -210,10 +210,10 @@ fun SongEditorScreen(
                         // 16dp below: the details field's label sits on its top border and reached up into the subtitle
                         modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s, bottom = Spacing.m),
                     ) {
-                        // stage preview (the lit eye = showing the preview; tapping again goes back to the text)
+                        // stage preview (the "present" icon; while previewing it becomes the pencil, back to the text)
                         IconButton(onClick = { previewing = !previewing }) {
                             Icon(
-                                if (previewing) AppIcons.Edit else AppIcons.Visibility,
+                                if (previewing) AppIcons.Edit else AppIcons.Slideshow,
                                 stringResource(if (previewing) R.string.editor_back_to_text else R.string.editor_preview),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
