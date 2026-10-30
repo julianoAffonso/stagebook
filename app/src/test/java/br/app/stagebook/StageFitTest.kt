@@ -8,7 +8,7 @@ import org.junit.Test
 
 class StageFitTest {
     @Test
-    fun `zoom máximo faz a maior palavra caber na largura`() {
+    fun `max zoom makes the longest word fit the width`() {
         // palavra de 500 px no tamanho padrão, tela de 1000 px: pode crescer até ~2x
         val z = StageFit.zoomToFit(500, 1000)
         assertEquals(1.96f, z, 0.001f)
@@ -16,18 +16,18 @@ class StageFitTest {
     }
 
     @Test
-    fun `palavra maior que a tela já no tamanho padrão faz a letra diminuir`() {
+    fun `word wider than the screen at default size makes the lyrics smaller`() {
         assertTrue(StageFit.zoomToFit(1200, 1000) < 1f)
     }
 
     @Test
-    fun `sem palavras ou sem largura não limita`() {
+    fun `no words or no width does not limit`() {
         assertEquals(Float.MAX_VALUE, StageFit.zoomToFit(0, 1000))
         assertEquals(Float.MAX_VALUE, StageFit.zoomToFit(300, 0))
     }
 
     @Test
-    fun `automático decide pelas frases da música`() {
+    fun `automatic decides by the song's lines`() {
         val curtas = List(20) { 400 }
         assertEquals("frases curtas e música longa: 2 colunas", 2, StageFit.columns(StageColumns.AUTO, false, curtas, 500, true))
         assertEquals("cabe numa página: 1 coluna", 1, StageFit.columns(StageColumns.AUTO, true, curtas, 500, true))

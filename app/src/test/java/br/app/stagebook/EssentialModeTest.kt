@@ -30,7 +30,7 @@ class EssentialModeTest {
     @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    @Test fun `essencial so com as quatro desligadas`() {
+    @Test fun `essential only with all four off`() {
         assertFalse(Look().essential)   // app novo: tudo ligado, o player também
         assertFalse(Look().anyOff)        // e por isso nenhum aviso ao abrir
         assertTrue(Look(extrasOn = false).anyOff)
@@ -38,7 +38,7 @@ class EssentialModeTest {
         assertFalse(Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = true).essential)
     }
 
-    @Test fun `ligar desliga tudo - religar uma parte sai do modo - desligar religa banda internet e extras`() = runBlocking {
+    @Test fun `turning on turns everything off - turning a part back on leaves the mode - turning off brings back band internet and extras`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         val vm = SettingsViewModel(
             repo, context, AppUpdater(context),
@@ -63,7 +63,7 @@ class EssentialModeTest {
         assertFalse(back.playerMode)   // o player continua como estava no modo (desligado)
     }
 
-    @Test fun `sem os extras a janela do acorde fica com o desenho e as variacoes - sem som nem Detalhes`() {
+    @Test fun `without extras the chord window keeps the diagram and shapes - no sound or Details`() {
         compose.setContent {
             br.app.stagebook.ui.theme.StagebookTheme {
                 br.app.stagebook.ui.stage.ChordShapePopup("G", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, "[G]linha", {}, {}, extras = false)
@@ -74,7 +74,7 @@ class EssentialModeTest {
         compose.onNodeWithContentDescription("Próxima variação").assertExists()
     }
 
-    @Test fun `banda na rede desligada encerra o Quem conduz e nao religa`() = runBlocking {
+    @Test fun `band on the network off ends Lead the band and does not come back`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val link = br.app.stagebook.data.BandLink(
@@ -91,7 +91,7 @@ class EssentialModeTest {
         assertFalse(link.running.value)
     }
 
-    @Test fun `internet desligada - nada sai para a internet da banda`() = runBlocking {
+    @Test fun `internet off - nothing goes out to the band internet`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(internetOn = false) }
@@ -101,7 +101,7 @@ class EssentialModeTest {
         assertTrue(cloud.acks(br.app.stagebook.domain.ShareCode.generate()).isEmpty())
     }
 
-    @Test fun `internet desligada - compartilhar fica com o QR e sem o aviso de sem internet`() {
+    @Test fun `internet off - share keeps the QR and no no-internet notice`() {
         compose.setContent {
             br.app.stagebook.ui.theme.StagebookTheme {
                 br.app.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {}, internetOn = false)
@@ -112,7 +112,7 @@ class EssentialModeTest {
         compose.onNodeWithText("Sem internet", substring = true).assertDoesNotExist()
     }
 
-    @Test fun `aviso ao abrir - nao mostrar de novo vale ate o modo desligar`() = runBlocking {
+    @Test fun `alert on open - don't show again lasts until the mode is turned off`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val vm = SettingsViewModel(
@@ -131,7 +131,7 @@ class EssentialModeTest {
         assertFalse(until { it.essential }.essentialAlertOff)   // ligou de novo: o aviso volta
     }
 
-    @Test fun `aviso com nao mostrar de novo - o ok devolve a caixa`() {
+    @Test fun `alert with don't show again - ok returns the checkbox`() {
         var answer: Boolean? = null
         compose.setContent {
             br.app.stagebook.ui.theme.StagebookTheme {
@@ -143,7 +143,7 @@ class EssentialModeTest {
         assertEquals(true, answer)
     }
 
-    @Test fun `aviso lista o que esta desligado e o link leva aos Ajustes`() {
+    @Test fun `alert lists what is off and the link goes to Settings`() {
         var opened = false
         compose.setContent {
             br.app.stagebook.ui.theme.StagebookTheme {

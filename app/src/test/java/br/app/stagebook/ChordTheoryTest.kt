@@ -8,7 +8,7 @@ import org.junit.Test
 class ChordTheoryTest {
     private fun tones(c: String) = ChordTheory.notes(c)!!.tones
 
-    @Test fun `tríades, sétimas e o costume brasileiro`() {
+    @Test fun `triads, sevenths and the Brazilian way of writing them`() {
         assertEquals(setOf(0, 4, 7), tones("C"))
         assertEquals(setOf(9, 0, 4), tones("Am"))
         assertEquals(setOf(7, 11, 2, 5), tones("G7"))
@@ -21,14 +21,14 @@ class ChordTheoryTest {
         assertEquals(setOf(0, 7), tones("C5"))
     }
 
-    @Test fun `baixo invertido`() {
+    @Test fun `slash bass`() {
         val n = ChordTheory.notes("D/F#")!!
         assertEquals(2, n.root)
         assertEquals(6, n.bass)
         assertEquals(setOf(2, 6, 9), n.tones)
     }
 
-    @Test fun `não é acorde`() {
+    @Test fun `not a chord`() {
         assertNull(ChordTheory.notes("Refrão"))
     }
 }

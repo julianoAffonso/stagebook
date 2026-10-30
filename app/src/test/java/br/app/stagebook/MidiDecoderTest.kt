@@ -11,7 +11,7 @@ import org.junit.Test
 class MidiDecoderTest {
     private fun bytes(vararg b: Int) = ByteArray(b.size) { b[it].toByte() }
 
-    @Test fun `CC aperta com 127 e solta com 0`() {
+    @Test fun `CC presses with 127 and releases with 0`() {
         val d = MidiDecoder("FS-1")
         val p = d.feed(bytes(0xB0, 64, 127, 0xB0, 64, 0))
         assertEquals(2, p.size)
@@ -24,7 +24,7 @@ class MidiDecoderTest {
         assertTrue(MidiCode.isMidi(p[0].code))
     }
 
-    @Test fun `running status e clock no meio`() {
+    @Test fun `running status and clock in between`() {
         val d = MidiDecoder("")
         // CC 80 canal 2, depois sem repetir o status, com um clock (F8) entre os bytes
         val p = d.feed(bytes(0xB1, 80, 0xF8, 127, 80, 0))
@@ -32,7 +32,7 @@ class MidiDecoderTest {
         assertEquals(2, MidiCode.channel(p[0].code))
     }
 
-    @Test fun `nota com Note Off ou velocidade zero solta a mesma tecla`() {
+    @Test fun `note with Note Off or zero velocity releases the same key`() {
         val d = MidiDecoder("")
         val p = d.feed(bytes(0x90, 60, 100, 0x80, 60, 0, 0x90, 60, 90, 0x90, 60, 0))
         assertEquals(listOf(true, false, true, false), p.map { it.down })
@@ -40,7 +40,7 @@ class MidiDecoderTest {
         assertEquals(MidiCode.Kind.NOTE, MidiCode.kind(p[0].code))
     }
 
-    @Test fun `program change só aperta`() {
+    @Test fun `program change only presses`() {
         val p = MidiDecoder("").feed(bytes(0xC0, 3))
         assertEquals(1, p.size)
         assertTrue(p[0].down)
@@ -48,17 +48,17 @@ class MidiDecoderTest {
         assertEquals(3, MidiCode.number(p[0].code))
     }
 
-    @Test fun `apertar de novo sem soltar é repetição e soltar sem apertar é ignorado`() {
+    @Test fun `pressing again without releasing is a repeat and releasing without pressing is ignored`() {
         val d = MidiDecoder("")
         val p = d.feed(bytes(0xB0, 64, 0, 0xB0, 64, 127, 0xB0, 64, 120))
         assertEquals(listOf(0, 1), p.map { it.repeat })
     }
 
-    @Test fun `sysex não vira botão`() {
+    @Test fun `sysex does not become a button`() {
         assertTrue(MidiDecoder("").feed(bytes(0xF0, 0x41, 0x10, 0x42, 0xF7)).isEmpty())
     }
 
-    @Test fun `botão MIDI sem escolha não faz nada e com escolha faz o comando`() {
+    @Test fun `MIDI button with no choice does nothing and with a choice runs the command`() {
         val code = MidiCode.of(0xB0, 64)
         assertEquals(PedalAction.NONE, PedalAction.of(code))
         assertEquals(PedalAction.NEXT, PedalAction.of(code, PedalAction.assign(emptyMap(), code, PedalAction.NEXT)))

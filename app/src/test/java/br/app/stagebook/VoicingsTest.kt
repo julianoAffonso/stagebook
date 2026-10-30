@@ -10,7 +10,7 @@ class VoicingsTest {
     private fun first(chord: String, i: Instrument = Instrument.ACOUSTIC_GUITAR) =
         Voicings.shapes(chord, i).first().frets.joinToString("") { if (it < 0) "x" else it.toString() }
 
-    @Test fun `violão começa pelas formas conhecidas`() {
+    @Test fun `acoustic guitar starts with the known shapes`() {
         assertEquals("x32010", first("C"))
         assertEquals("320003", first("G"))
         assertEquals("xx0232", first("D"))
@@ -22,7 +22,7 @@ class VoicingsTest {
         assertEquals("x02220", first("A"))
     }
 
-    @Test fun `várias variações e baixo invertido`() {
+    @Test fun `several shapes and slash bass`() {
         assertTrue(Voicings.shapes("G", Instrument.ACOUSTIC_GUITAR).size >= 4)
         // D/F#: o baixo é F#, na corda mais grave que toca
         val s = Voicings.shapes("D/F#", Instrument.ACOUSTIC_GUITAR).first().frets
@@ -37,20 +37,20 @@ class VoicingsTest {
         assertEquals("2010", first("F", Instrument.UKULELE))
     }
 
-    @Test fun `pestana só quando faltam dedos`() {
+    @Test fun `barre only when fingers run out`() {
         assertEquals(true, Voicings.needsBarre(intArrayOf(1, 3, 3, 2, 1, 1)))     // F
         assertEquals(false, Voicings.needsBarre(intArrayOf(0, 2, 3, 2)))         // G no ukulele: três dedos
         assertEquals(false, Voicings.needsBarre(intArrayOf(-1, 0, 2, 2, 2, 0)))  // A
     }
 
-    @Test fun `cavaquinho tem formas e teclado tem inversões`() {
+    @Test fun `cavaquinho has shapes and keyboard has inversions`() {
         assertTrue(Voicings.shapes("G", Instrument.CAVAQUINHO).isNotEmpty())
         val keys = Voicings.keys("C")
         assertEquals(listOf(60, 64, 67), keys.first())
         assertEquals(3, keys.size)
     }
 
-    @Test fun `forma escolhida vai e volta pelo define do ChordPro`() {
+    @Test fun `the chosen shape goes and comes back through the ChordPro define`() {
         val shape = Voicings.Shape(listOf(-1, 3, 5, 5, 5, 3))   // C com pestana na 3ª
         val line = Voicings.define(Instrument.ACOUSTIC_GUITAR, "C", shape)
         assertEquals("{define-guitar: C base-fret 3 frets x 1 3 3 3 1}", line)

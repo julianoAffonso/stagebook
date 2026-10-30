@@ -26,7 +26,7 @@ import kotlin.random.Random
 class FactoryResetTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `código tem quatro números e confere sem espaços`() {
+    @Test fun `code has four digits and matches without spaces`() {
         val code = ResetCode.generate(Random(7))
         assertEquals(4, code.length)
         assertTrue(code.all(Char::isDigit))
@@ -34,7 +34,7 @@ class FactoryResetTest {
         assertFalse(ResetCode.matches(code, "0000".takeIf { it != code } ?: "1111"))
     }
 
-    @Test fun `apagar só libera com o código certo - salvar antes chama o backup`() {
+    @Test fun `erase is only enabled with the right code - save first calls the backup`() {
         var reset = 0
         var backup = 0
         compose.setContent { StagebookTheme { FactoryResetDialog({ backup++ }, { reset++ }, {}, code = "4827") } }
@@ -48,7 +48,7 @@ class FactoryResetTest {
         assertEquals(0, reset)
     }
 
-    @Test fun `com o código certo apaga`() {
+    @Test fun `with the right code it erases`() {
         var reset = 0
         compose.setContent { StagebookTheme { FactoryResetDialog({}, { reset++ }, {}, code = "4827") } }
         compose.onNodeWithText("Código").performTextInput("4827")

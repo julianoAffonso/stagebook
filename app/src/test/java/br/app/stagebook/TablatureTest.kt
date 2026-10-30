@@ -10,14 +10,14 @@ import org.junit.Test
 class TablatureTest {
     private val tab = "e|---0---3---|\nB|---1---0---|"
 
-    @Test fun `reconhece linha de tab e não confunde com letra`() {
+    @Test fun `recognizes a tab line and does not mistake it for lyrics`() {
         assertTrue(Tablature.isTabLine("e|---0---3---|"))
         assertTrue(Tablature.isTabLine("|--5h7--5--|"))
         assertFalse(Tablature.isTabLine("Saio cedo pela rua"))
         assertFalse(Tablature.isTabLine("[G]linha"))
     }
 
-    @Test fun `sobe e desce as casas sem tirar as colunas do lugar`() {
+    @Test fun `moves frets up and down without moving the columns`() {
         assertEquals("e|---2---5---|", Tablature.shiftLine("e|---0---3---|", 2))
         assertEquals("e|---10--12--|", Tablature.shiftLine("e|---8---10--|", 2))   // 8 vira 10: come um traço
         assertEquals("e|---9---10--|", Tablature.shiftLine("e|---10--11--|", -1))  // 10 vira 9: devolve um traço
@@ -25,21 +25,21 @@ class TablatureTest {
         assertEquals("B|--5h7--|", Tablature.shiftLine("B|--3h5--|", 2))           // a corda B não é casa
     }
 
-    @Test fun `transpor o tom leva a tab junto`() {
+    @Test fun `transposing the key takes the tab along`() {
         val text = "{key: G}\n[G]letra\n${Tablature.START}\n$tab\n${Tablature.END}"
         val up = Chords.transpose(text, 2)
         assertTrue(up.contains("e|---2---5---|"))
         assertTrue(up.contains("[A]letra"))
     }
 
-    @Test fun `importar - embrulha a tab solta, ou tira`() {
+    @Test fun `import - wraps a loose tab, or removes it`() {
         val raw = "letra\n$tab\nmais letra"
         assertEquals("letra\n${Tablature.START}\n$tab\n${Tablature.END}\nmais letra", Tablature.wrap(raw))
         assertEquals("letra\nmais letra", Tablature.strip(Tablature.wrap(raw)))
         assertTrue(Tablature.hasTab(raw))
     }
 
-    @Test fun `no palco - tab em letra de máquina, e some no perfil só letra`() {
+    @Test fun `on stage - tab in monospace, and gone in the lyrics only profile`() {
         val text = "[G]letra\n${Tablature.START}\n$tab\n${Tablature.END}"
         val names = br.app.stagebook.ui.stage.SectionNames(null)
         val withChords = br.app.stagebook.ui.stage.stageLines(text, names, androidx.compose.ui.graphics.Color.Cyan, true, br.app.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow))

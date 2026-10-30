@@ -34,7 +34,7 @@ class StageMetaTest {
     @Before fun main() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun reset() = Dispatchers.resetMain()
 
-    @Test fun `artista trocado no editor aparece no subtítulo do palco`() = runBlocking {
+    @Test fun `artist changed in the editor shows in the stage subtitle`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val id = repo.saveSong(Song(title = "Música", author = "Banda", year = "1985", text = "linha"))

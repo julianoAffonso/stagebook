@@ -20,38 +20,38 @@ class LyricsCleanerTest {
     )
 
     @Test
-    fun `tira linhas só de acordes`() {
+    fun `removes chords-only lines`() {
         val raw = "Am   F   C   G\nEu andei pela beira do rio\nD/F#  Em7\nVocê me disse"
         assertEquals("Eu andei pela beira do rio\nVocê me disse", LyricsCleaner.clean(raw))
     }
 
     @Test
-    fun `tradução linha a linha com o português primeiro fica só o inglês`() {
+    fun `line by line translation with Portuguese first keeps only the English`() {
         // como a página traducao.html do letras.mus.br mostra: tradução em cima, original embaixo
         val mixed = english.indices.flatMap { listOf(portuguese[it], english[it]) }.joinToString("\n")
         assertEquals(english.joinToString("\n"), LyricsCleaner.clean(mixed))
     }
 
     @Test
-    fun `tradução em blocos fica só o inglês`() {
+    fun `block translation keeps only the English`() {
         val blocks = english.joinToString("\n") + "\n\n" + portuguese.joinToString("\n")
         assertEquals(english.joinToString("\n"), LyricsCleaner.clean(blocks))
     }
 
     @Test
-    fun `música em português não muda`() {
+    fun `song in Portuguese does not change`() {
         val pt = portuguese.joinToString("\n") + "\n\n" + portuguese.reversed().joinToString("\n")
         assertEquals(pt, LyricsCleaner.clean(pt))
     }
 
     @Test
-    fun `música em inglês com uma palavra em português não muda`() {
+    fun `song in English with one Portuguese word does not change`() {
         val en = (english + "Saudade, my old friend") .joinToString("\n")
         assertEquals(en, LyricsCleaner.clean(en))
     }
 
     @Test
-    fun `refrão repetido sem língua reconhecível não duplica`() {
+    fun `repeated chorus with no recognizable language does not duplicate`() {
         val mixed = listOf(portuguese[0], english[0], "Oh, oh, oh", "Oh, oh, oh", portuguese[1], english[1], portuguese[2], english[2], portuguese[3], english[3])
         assertEquals((listOf(english[0], "Oh, oh, oh") + english.drop(1)).joinToString("\n"), LyricsCleaner.clean(mixed.joinToString("\n")))
     }

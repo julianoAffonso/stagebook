@@ -17,7 +17,7 @@ import java.io.File
 class LanguagesTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    @Test fun `a língua escolhida vale para os textos e a do aparelho não muda nada`() {
+    @Test fun `the chosen language applies to the texts and the device language changes nothing`() {
         Languages.set(context, AppLanguage.PT)
         assertEquals("pt", Languages.wrap(context).resources.configuration.locales[0].language)
         assertEquals("BR", Languages.wrap(context).resources.configuration.locales[0].country)
@@ -28,13 +28,13 @@ class LanguagesTest {
         assertTrue(Languages.wrap(context) === context)
     }
 
-    @Test fun `língua guardada que saiu do app volta para a do aparelho`() {
+    @Test fun `saved language that left the app falls back to the device language`() {
         context.getSharedPreferences("lingua", android.content.Context.MODE_PRIVATE).edit().putString("lingua", "es").commit()
         assertEquals(AppLanguage.SYSTEM, Languages.get(context))
     }
 
     /** Toda língua oferecida tem a tradução completa: nenhum texto da base (inglês) faltando. */
-    @Test fun `traduções oferecidas estão completas`() {
+    @Test fun `offered translations are complete`() {
         val names = Regex("""<(string|plurals) name="([^"]+)"(?![^>]*translatable="false")""")
         fun keys(f: File) = names.findAll(f.readText()).map { it.groupValues[2] }.toSet()
         val base = keys(File("src/main/res/values/strings.xml"))

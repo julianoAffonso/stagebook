@@ -19,12 +19,12 @@ class SectionGuesserTest {
     private fun labels(text: String?) = text!!.lines().filter { it.startsWith("[") }
 
     @Test
-    fun `verso refrão verso refrão`() {
+    fun `verse chorus verse chorus`() {
         assertEquals(listOf("[Verso 1]", "[Refrão]", "[Verso 2]", "[Refrão]"), labels(SectionGuesser.guess(song(v1, ch, v2, ch), SectionLang.PT)))
     }
 
     @Test
-    fun `pré-refrão antes de cada refrão e ponte no fim`() {
+    fun `pre-chorus before each chorus and bridge at the end`() {
         val text = song(v1, pre, ch, v2, pre, ch, br, ch)
         assertEquals(
             listOf("[Verso 1]", "[Pré-refrão]", "[Refrão]", "[Verso 2]", "[Pré-refrão]", "[Refrão]", "[Ponte]", "[Refrão]"),
@@ -33,7 +33,7 @@ class SectionGuesserTest {
     }
 
     @Test
-    fun `refrão com uma linha diferente continua sendo o refrão, em inglês`() {
+    fun `chorus with one different line is still the chorus, in English`() {
         val chVariant = "esse é o refrão\nque todo mundo canta\ne repete mais uma vez"
         assertEquals(
             listOf("[Verse 1]", "[Chorus]", "[Verse 2]", "[Chorus]", "[Verse 3]"),
@@ -42,19 +42,19 @@ class SectionGuesserTest {
     }
 
     @Test
-    fun `verso que volta igual mantém o número`() {
+    fun `verse that comes back the same keeps its number`() {
         assertEquals(listOf("[Verso 1]", "[Refrão]", "[Verso 2]", "[Refrão]", "[Verso 1]"), labels(SectionGuesser.guess(song(v1, ch, v2, ch, v1), SectionLang.PT)))
     }
 
     @Test
-    fun `sem repetição ou já com títulos não mexe`() {
+    fun `no repeats or already titled is left alone`() {
         assertNull(SectionGuesser.guess(song(v1, v2, v3), SectionLang.PT))
         assertNull(SectionGuesser.guess("[Refrão]\n" + song(ch, v1, ch), SectionLang.PT))
         assertNull(SectionGuesser.guess(v1, SectionLang.PT))
     }
 
     @Test
-    fun `as palavras da letra não mudam, só entram os títulos`() {
+    fun `the lyrics words do not change, only titles come in`() {
         val text = song(v1, ch, v2, ch)
         val guessed = SectionGuesser.guess("$text\n\n\n", SectionLang.PT)!!
         assertEquals(text, guessed.lines().filterNot { it.startsWith("[") }.joinToString("\n"))

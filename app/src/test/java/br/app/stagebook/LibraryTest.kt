@@ -21,7 +21,7 @@ class LibraryTest {
     private val newId = { "id${++n}" }
 
     @Test
-    fun `abre o letras json da versão em Java`() {
+    fun `opens the letras json from the Java version`() {
         // formato gravado pelo app antigo (org.json, toString(1))
         val old = """
             {"version": 1,
@@ -42,14 +42,14 @@ class LibraryTest {
     }
 
     @Test
-    fun `valor desconhecido cai no padrão em vez de perder a biblioteca`() {
+    fun `unknown value falls back to the default instead of losing the library`() {
         val lib = LibraryCodec.decode("""{"songs":[{"title":"X"}],"look":{"sectionLang":"fr"}}""", newId)
         assertEquals(SectionLang.PT, lib.look.sectionLang)
         assertEquals("id1", lib.songs.single().id)
     }
 
     @Test
-    fun `importar substitui pelo título e acrescenta as novas`() {
+    fun `import replaces by title and adds the new ones`() {
         val lib = Library(songs = listOf(Song("a", "Tempo Perdido", text = "velha")))
         val incoming = LibraryCodec.decodeSongs("""{"songs":[{"title":"tempo perdido","text":"nova"},{"title":"Hazard"},{"title":" "}]}""")
         val (merged, result) = lib.mergeSongs(incoming, newId)
@@ -61,7 +61,7 @@ class LibraryTest {
     }
 
     @Test
-    fun `importar não duplica e mantém músicas de mesmo título com artistas diferentes`() {
+    fun `import does not duplicate and keeps same-title songs by different artists`() {
         val lib = Library(songs = listOf(Song("a", "It's My Life", "Bon Jovi", text = "velha", zoom = 1.4f)))
         val incoming = listOf(
             Song(title = "Its my life", author = "bon jovi", text = "nova"),     // a mesma: atualiza
@@ -88,7 +88,7 @@ class LibraryTest {
     }
 
     @Test
-    fun `QR leva a quantidade e o artista só nos títulos repetidos, compactado`() {
+    fun `QR carries the count and the artist only on repeated titles, compressed`() {
         val lib = Library(songs = listOf(
             Song("a", "Hazard", "Richard Marx"), Song("b", "Malandragem"),
             Song("c", "It's My Life", "Bon Jovi"), Song("d", "Its my life", "Talk Talk"),
@@ -107,7 +107,7 @@ class LibraryTest {
     }
 
     @Test
-    fun `limite do QR conta o tamanho compactado, com o nome e as músicas a mais`() {
+    fun `QR limit counts the compressed size, with the name and extra songs`() {
         // títulos variados como os reais (repetitivos, o deflate comprimiria demais e o teste não diria nada)
         val rnd = kotlin.random.Random(5)
         fun word() = (1..rnd.nextInt(3, 9)).map { "abcdefghijklmnopqrstuvwxyzáéíõç"[rnd.nextInt(31)] }.joinToString("")
@@ -121,7 +121,7 @@ class LibraryTest {
     }
 
     @Test
-    fun `MusicBrainz escolhe o lançamento mais antigo do mesmo título`() {
+    fun `MusicBrainz picks the oldest release with the same title`() {
         val body = """
             {"recordings":[
               {"score":100,"title":"Hazard","first-release-date":"1997-01-01","artist-credit":[{"name":"Richard Marx"}]},
@@ -135,14 +135,14 @@ class LibraryTest {
     }
 
     @Test
-    fun `teclas do pedal`() {
+    fun `pedal keys`() {
         assertEquals(PedalAction.NEXT, PedalAction.of(android.view.KeyEvent.KEYCODE_PAGE_DOWN))
         assertEquals(PedalAction.PREVIOUS, PedalAction.of(android.view.KeyEvent.KEYCODE_DPAD_UP))
         assertEquals(PedalAction.NONE, PedalAction.of(android.view.KeyEvent.KEYCODE_A))
     }
 
     @Test
-    fun `botão do pedal ligado a outro comando nos ajustes`() {
+    fun `pedal button set to another command in settings`() {
         val a = android.view.KeyEvent.KEYCODE_A
         val down = android.view.KeyEvent.KEYCODE_PAGE_DOWN
         var keys = PedalAction.assign(emptyMap(), a, PedalAction.NEXT_SONG)

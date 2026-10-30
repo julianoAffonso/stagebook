@@ -9,7 +9,7 @@ import org.junit.Test
 
 class SectionsTest {
     @Test
-    fun `reconhece títulos em português e inglês em vários formatos`() {
+    fun `recognizes titles in Portuguese and English in several formats`() {
         val headers = listOf(
             "[Chorus]", "Refrão:", "REFRÃO", "(Refrão 2x)", "Verso 2", "[Verse 1]", "Estrofe", "Ponte", "Bridge:",
             "Intro", "Solo", "[Solo de guitarra]", "Final", "Fim", "Outro", "Pré-refrão", "[Pre-Chorus]",
@@ -20,7 +20,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `não confunde letra com título`() {
+    fun `does not mistake lyrics for a title`() {
         listOf(
             "Refrão de amor que eu canto pra você", "The chorus of the birds", "Fim de tarde na praia",
             "Solo eu e você", "Intro to the night we had", "",
@@ -28,7 +28,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `nome no idioma escolhido com número e repetição`() {
+    fun `name in the chosen language with number and repeat`() {
         val h = Sections.detect("[Chorus 2] (x2)")!!
         assertEquals("Refrão 2  2x", Sections.label(h, SectionLang.PT))
         assertEquals("Chorus 2  2x", Sections.label(h, SectionLang.EN))
@@ -37,7 +37,7 @@ class SectionsTest {
     }
 
     @Test
-    fun `padronizar troca só os títulos`() {
+    fun `standardizing changes only the titles`() {
         val text = "Chorus:\nletra um\n\nVerse 2\nletra dois"
         assertEquals("[Refrão]\nletra um\n\n[Verso 2]\nletra dois", Sections.normalize(text, SectionLang.PT))
     }

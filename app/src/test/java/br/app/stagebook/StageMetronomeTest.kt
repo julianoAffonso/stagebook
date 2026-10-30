@@ -24,7 +24,7 @@ class StageMetronomeTest {
 
     private fun state(text: String) = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look())
 
-    @Test fun `sem BPM começa em 100 - com BPM começa nele`() {
+    @Test fun `without BPM starts at 100 - with BPM starts at it`() {
         compose.setContent { StagebookTheme { StageScreen(state("{tempo: 120}\nlinha"), 0, 0, { _, _ -> }) } }
         compose.onNodeWithContentDescription("Metrônomo").performClick()
         compose.onNodeWithText("120 BPM").assertExists()
@@ -32,7 +32,7 @@ class StageMetronomeTest {
         compose.onNodeWithText("121 BPM").assertExists()
     }
 
-    @Test fun `play conta 1-2-3-4 e o ícone vira stop - stop para`() {
+    @Test fun `play counts 1-2-3-4 and the icon becomes stop - stop stops`() {
         compose.setContent { StagebookTheme { StageScreen(state("linha"), 0, 0, { _, _ -> }) } }
         compose.mainClock.autoAdvance = false
         fun frames(n: Int) = repeat(n) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }

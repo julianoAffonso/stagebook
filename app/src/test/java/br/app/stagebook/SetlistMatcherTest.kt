@@ -18,23 +18,23 @@ class SetlistMatcherTest {
         Song(id = "4", title = "Estrada Longa", author = "Banda D"),
     )
 
-    @Test fun `título igual sem ligar para acento e caixa`() {
+    @Test fun `same title ignoring accents and case`() {
         assertEquals(QrMatch.Found(lib[0]), SetlistMatcher.match(QrPayload.Entry("cancao do mar", ""), lib))
     }
 
-    @Test fun `artista desempata títulos iguais e sem ele o usuário escolhe`() {
+    @Test fun `artist settles same titles and without it the user chooses`() {
         assertEquals(QrMatch.Found(lib[2]), SetlistMatcher.match(QrPayload.Entry("Noite Clara", "Banda C"), lib))
         val m = SetlistMatcher.match(QrPayload.Entry("Noite Clara", ""), lib)
         assertTrue(m is QrMatch.Similar && m.candidates.size == 2)
     }
 
-    @Test fun `parecida vira sugestão e nunca escolha automática - sem nada é falta`() {
+    @Test fun `similar becomes a suggestion and never an automatic choice - nothing means missing`() {
         val m = SetlistMatcher.match(QrPayload.Entry("Estrada Longas", ""), lib)
         assertTrue(m is QrMatch.Similar && m.candidates == listOf(lib[3]))
         assertEquals(QrMatch.Missing, SetlistMatcher.match(QrPayload.Entry("Outra Coisa", ""), lib))
     }
 
-    @Test fun `QR do setlist - compactar e ler de volta`() {
+    @Test fun `setlist QR - compress and read back`() {
         val text = listOf(QrPayload.HEADER, "2", "Show de sábado", "Canção do Mar", "Noite Clara\tBanda C").joinToString("\n")
         val back = QrPayload.unpack(QrPayload.pack(text))
         assertEquals(text, back)
@@ -43,7 +43,7 @@ class SetlistMatcherTest {
         assertEquals(listOf(QrPayload.Entry("Canção do Mar", ""), QrPayload.Entry("Noite Clara", "Banda C")), parsed.songs)
     }
 
-    @Test fun `QR puro do formato atual continua valendo e um formato mais novo pede atualização`() {
+    @Test fun `plain QR in the current format still works and a newer format asks to update`() {
         val atual = listOf(QrPayload.HEADER, "1", "Show", "A").joinToString("\n")
         assertTrue(QrPayload.parse(atual) != null)
         assertFalse(QrPayload.isNewer(atual))
@@ -51,7 +51,7 @@ class SetlistMatcherTest {
         assertFalse(QrPayload.isNewer("LETRAS2\n1\nShow\nA"))
     }
 
-    @Test fun `QR cortado ou de outra coisa não vira setlist`() {
+    @Test fun `cut QR or QR of something else does not become a setlist`() {
         val packed = QrPayload.pack(listOf(QrPayload.HEADER, "3", "Show", "A", "B", "C").joinToString("\n"))
         assertNull(QrPayload.unpack(packed.copyOf(packed.size - 3)))
         assertNull(QrPayload.unpack("https://exemplo".toByteArray()))

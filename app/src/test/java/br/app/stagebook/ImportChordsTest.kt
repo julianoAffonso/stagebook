@@ -58,7 +58,7 @@ class ImportChordsTest {
         draft.take()!!.text
     }
 
-    @Test fun `letra e cifra entra em ChordPro com tom e capo`() {
+    @Test fun `lyrics and chords come in as ChordPro with key and capo`() {
         val text = import(chords = true)
         assertEquals("G", Chords.key(text))
         assertEquals(2, Chords.capo(text))
@@ -66,7 +66,7 @@ class ImportChordsTest {
         assertTrue(text, text.contains("[Intro]\n[G] [D]"))
     }
 
-    @Test fun `só letra entra sem acordes, mas guarda o tom e o capo da página`() {
+    @Test fun `lyrics only come in without chords, but keep the page's key and capo`() {
         val text = import(chords = false)
         assertFalse(text, Chords.hasChords(text))
         assertTrue(text, text.contains("Saio cedo pela rua"))
@@ -99,13 +99,13 @@ class ImportChordsTest {
         draft.take()!!.text
     }
 
-    @Test fun `tablatura - pergunta e entra em bloco`() {
+    @Test fun `tablature - asks and comes in as a block`() {
         val text = importTab(include = true)
         assertTrue(text, text.contains("{start_of_tab}\ne|---0---3---|\nB|---1---0---|\n{end_of_tab}"))
         assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))
     }
 
-    @Test fun `tablatura - sem ela, nenhuma linha de tab entra`() {
+    @Test fun `tablature - without it, no tab line comes in`() {
         val text = importTab(include = false)
         assertFalse(text, text.contains("|---"))
         assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))

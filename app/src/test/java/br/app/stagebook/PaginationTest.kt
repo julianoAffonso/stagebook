@@ -11,30 +11,30 @@ class PaginationTest {
         stanzaSizes.toList().flatMapIndexed { i, n -> (if (i > 0) listOf(Line(10, true)) else emptyList()) + List(n) { Line(10, false) } }
 
     @Test
-    fun `tudo cabe numa página`() {
+    fun `everything fits on one page`() {
         assertEquals(listOf(0..8), Pagination.paginate(lines(4, 4), 100))
     }
 
     @Test
-    fun `quebra entre estrofes, nunca no meio de uma que cabe inteira`() {
+    fun `breaks between verses, never in the middle of one that fits whole`() {
         // 4 + branco + 4 = 90; a terceira estrofe (4) não cabe mais
         assertEquals(listOf(0..8, 10..13), Pagination.paginate(lines(4, 4, 4), 90))
     }
 
     @Test
-    fun `estrofe maior que a página é cortada por linha`() {
+    fun `verse longer than the page is cut by line`() {
         assertEquals(listOf(0..1, 3..7, 8..9), Pagination.paginate(lines(2, 7), 50))
     }
 
     @Test
-    fun `brancos sobrando nas bordas não viram página`() {
+    fun `blank space at the edges does not become a page`() {
         val l = listOf(Line(10, true), Line(10, false), Line(10, true), Line(10, true), Line(10, false), Line(10, true))
         assertEquals(listOf(1..4), Pagination.paginate(l, 100))
         assertEquals(listOf(IntRange.EMPTY), Pagination.paginate(emptyList(), 100))
     }
 
     @Test
-    fun `duas colunas enchem a esquerda e depois a direita, o pedal vira a folha`() {
+    fun `two columns fill the left then the right, the pedal turns the sheet`() {
         // estrofes de 4 linhas, coluna com 90 de altura (2 estrofes por coluna)
         val sheets = Pagination.sheets(lines(4, 4, 4, 4, 4), 90, 2)
         assertEquals(listOf(listOf(0..8, 10..18), listOf(20..23)), sheets)

@@ -10,10 +10,10 @@ class MetronomeClickTest {
     private val normal = ShortArray(10) { 100 }
     private val accent = ShortArray(10) { 200 }
 
-    @Test fun `120 BPM a 48 mil amostras - um tempo a cada 24 mil amostras`() =
+    @Test fun `120 BPM at 48 thousand samples - one beat every 24 thousand samples`() =
         assertEquals(24_000L, MetronomeClick.samplesPerBeat(120))
 
-    @Test fun `os cliques caem na amostra certa mesmo atravessando pedaços`() {
+    @Test fun `clicks land on the right sample even across chunks`() {
         val spb = 50L
         val all = ShortArray(400)
         // em pedaços de 37 amostras (como o áudio escreve), juntando tudo
@@ -31,7 +31,7 @@ class MetronomeClickTest {
         }
     }
 
-    @Test fun `o clique agudo e o normal são diferentes e curtos`() {
+    @Test fun `the high click and the normal one are different and short`() {
         val a = MetronomeClick.click(true)
         val n = MetronomeClick.click(false)
         assertTrue(a.size < MetronomeClick.RATE / 10)

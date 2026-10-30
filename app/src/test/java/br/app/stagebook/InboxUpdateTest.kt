@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
 class InboxUpdateTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    @Test fun `igual não duplica - com mudanças substitui e marca atualizado`() {
+    @Test fun `same does not duplicate - with changes it replaces and marks updated`() {
         val inbox = BandInbox(context)
         inbox.add("ana", "Ana", "LETRAS3\n2\nShow\nA\nB", emptyList())
         inbox.add("ana", "Ana", "LETRAS3\n2\nShow\nA\nB", emptyList())

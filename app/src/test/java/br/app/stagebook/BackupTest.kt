@@ -34,7 +34,7 @@ class BackupTest {
         Triple(repo, tracks, Backup(context, repo, tracks))
     }
 
-    @Test fun `tudo marcado - músicas com zoom, setlist, faixa e ajustes voltam iguais`() = runBlocking {
+    @Test fun `everything checked - songs with zoom, setlist, track and settings come back the same`() = runBlocking {
         val (repo, tracks, backup) = setup()
         tracks.file("faixa.ogg").writeBytes(byteArrayOf(1, 2, 3))
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "linha", zoom = 1.4f, track = "faixa.ogg"))
@@ -61,7 +61,7 @@ class BackupTest {
         assertEquals("Interface X", context.getSharedPreferences("player", 0).getString("perfil", null))
     }
 
-    @Test fun `desmarcando - sem faixas a música não aponta para arquivo, e só ajustes não mexe nas músicas`() = runBlocking {
+    @Test fun `unchecking - without tracks the song points to no file, and settings only leave songs alone`() = runBlocking {
         val (repo, tracks, backup) = setup()
         tracks.file("t.ogg").writeBytes(byteArrayOf(9))
         repo.saveSong(Song(title = "Com faixa", text = "x", track = "t.ogg"))
@@ -78,12 +78,12 @@ class BackupTest {
         assertEquals("", repo.library.value.songs.single { it.title == "Com faixa" }.track)
     }
 
-    @Test fun `arquivo que não é backup não é lido`() = runBlocking {
+    @Test fun `file that is not a backup is not read`() = runBlocking {
         val (_, _, backup) = setup()
         assertEquals(null, backup.inspect(ByteArrayInputStream("não é zip".toByteArray())))
     }
 
-    @Test fun `somar - entram só as músicas e setlists que faltam, as daqui ficam como estão`() = runBlocking {
+    @Test fun `add - only missing songs and setlists come in, the ones here stay as they are`() = runBlocking {
         val (repo, _, backup) = setup()
         repo.restore(emptyList(), emptyList())
         val a = repo.saveSong(Song(title = "Asa Branca", text = "do arquivo"))

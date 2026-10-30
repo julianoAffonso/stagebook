@@ -35,7 +35,7 @@ class OverflowMenuTest {
         }
     }
 
-    @Test fun `começa fechado e abre no toque`() {
+    @Test fun `starts closed and opens on tap`() {
         menu()
         compose.onAllNodesWithText("Excluir").assertCountEquals(0)
         compose.onNodeWithContentDescription("Mais opções").performClick()
@@ -43,7 +43,7 @@ class OverflowMenuTest {
         compose.onNodeWithText("Excluir").assertExists()
     }
 
-    @Test fun `a ação escolhida roda e o menu fecha`() {
+    @Test fun `the chosen action runs and the menu closes`() {
         menu()
         compose.onNodeWithContentDescription("Mais opções").performClick()
         compose.onNodeWithText("Excluir").performClick()

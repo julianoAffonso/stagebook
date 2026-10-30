@@ -47,7 +47,7 @@ class EditorFlowTest {
     }
 
     @Test
-    fun `com algo digitado, voltar pergunta antes de sair`() {
+    fun `with something typed, back asks before leaving`() {
         var left = 0
         screen(SongEditorUiState(loading = false, title = "Hazard", text = "letra nova", unsaved = true)) { left++ }
         compose.onNodeWithContentDescription("Voltar").performClick()   // o voltar do cabeçalho é o cancelar
@@ -58,7 +58,7 @@ class EditorFlowTest {
     }
 
     @Test
-    fun `sem nada mudado, voltar sai direto`() {
+    fun `with nothing changed, back leaves right away`() {
         var left = 0
         screen(SongEditorUiState(loading = false, title = "Hazard", text = "letra")) { left++ }
         compose.onNodeWithContentDescription("Voltar").performClick()   // o voltar do cabeçalho é o cancelar
@@ -66,7 +66,7 @@ class EditorFlowTest {
     }
 
     @Test
-    fun `Android fechou o app no meio da edição - o texto digitado volta`() = runBlocking {
+    fun `Android closed the app mid-edit - the typed text comes back`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
@@ -95,7 +95,7 @@ class EditorFlowTest {
         onAllNodes(androidx.compose.ui.test.hasText(text)).onFirst().performScrollTo()
 
     @Test
-    fun `aberta do palco - cursor no fim da linha segurada e teclado no campo da letra`() {
+    fun `opened from the stage - cursor at the end of the held line and keyboard in the lyrics field`() {
         val text = "[Refrão]\nprimeira linha\nsegunda linha"
         compose.setContent {
             StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = text), {}, {}, {}, {}, {}, {}, {}, cursor = 9) }
@@ -108,14 +108,14 @@ class EditorFlowTest {
     }
 
     @Test
-    fun `fim da linha`() {
+    fun `end of the line`() {
         assertEquals(4, br.app.stagebook.ui.editor.lineEnd("abcd\nef", 0))
         assertEquals(7, br.app.stagebook.ui.editor.lineEnd("abcd\nef", 5))
         assertEquals(0, br.app.stagebook.ui.editor.lineEnd("abcd", -1))
     }
 
     @Test
-    fun `atalho de seção põe o título na letra onde está o cursor`() {
+    fun `section shortcut puts the title in the lyrics at the cursor`() {
         val texts = mutableListOf<String>()
         compose.setContent {
             StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = "linha um"), {}, {}, {}, { texts += it }, {}, {}, {}, cursor = 0) }
