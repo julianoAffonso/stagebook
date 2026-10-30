@@ -375,6 +375,7 @@
     <string name="font_mono">Monoespaçada</string>
     <string name="settings_chords_on_short">Letra e cifra · acordes %1$d%%</string>
     <string name="settings_chords_off_short">Só letra</string>
+    <string name="settings_chords_card">Acordes na letra</string>
     <string name="settings_chords_show">Mostrar acordes</string>
     <string name="settings_chords_show_help">Desligado, o palco mostra só a letra, mesmo nas músicas com cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
