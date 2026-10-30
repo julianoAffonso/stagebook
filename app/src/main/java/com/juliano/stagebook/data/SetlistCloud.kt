@@ -168,7 +168,13 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     private data class Chunk(val p: String, val i: Int = 0, val n: Int = 1, val d: String = "", val k: String = "pkg")
 
     /** O que chegou na caixa de um par: pacotes (id, lista, músicas), recibos dos meus envios e se ele me deu as boas-vindas. */
-    class PairFetch(val packages: List<Triple<String, String, List<SharedSong>>>, val receipts: List<String>, val welcome: Boolean, val last: String?)
+    class PairFetch(
+        val packages: List<Triple<String, String, List<SharedSong>>>,
+        val receipts: List<String>,
+        val welcome: Boolean,
+        val last: String?,
+        val requests: List<List<BandLink.Wanted>> = emptyList(),   // "me manda estas músicas" (T12)
+    )
 
     @Serializable
     private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
@@ -199,6 +205,12 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "welcome")).toByteArray()))
     }
 
+    /** Pede ao par as músicas que faltam (T12): vai para a caixa dele e ele responde com um pacote de músicas. */
+    suspend fun requestFromPair(pairKey: ByteArray, recipientId: String, wanted: List<BandLink.Wanted>) = withContext(Dispatchers.IO) {
+        val body = java.util.Base64.getEncoder().encodeToString(json.encodeToString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), wanted.take(MAX_REQUEST)).toByteArray())
+        post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray()))
+    }
+
     /** O que chegou na minha caixa vinda de um par, desde [since] (null = as últimas 12 h); null sem internet. */
     suspend fun fetchPair(pairKey: ByteArray, since: String?): PairFetch? = withContext(Dispatchers.IO) {
         val lines = get("$SERVER/${pairTopic(pairKey, identity.id)}/json?poll=1&since=${since ?: "12h"}") ?: return@withContext null
@@ -215,7 +227,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
             Triple(pid, text, pkg.songs)
         }
-        PairFetch(packages, all.filter { it.k == "rcpt" }.map { it.p }, all.any { it.k == "welcome" }, msgs.lastOrNull()?.first ?: since)
+        // pedidos de músicas que faltam (T12)
+        val requests = all.filter { it.k == "req" }.mapNotNull { c ->
+            runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), String(java.util.Base64.getDecoder().decode(c.d))) }.getOrNull()
+        }
+        PairFetch(packages, all.filter { it.k == "rcpt" }.map { it.p }, all.any { it.k == "welcome" }, msgs.lastOrNull()?.first ?: since, requests)
     }
 
     /** O "ok" das palavras cifrado (para entregar também pela rede local, quando os dois se encontram). */
@@ -247,6 +263,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         private const val MAX_MESSAGE = 4_000          // o ntfy.sh aceita até 4.096 bytes por mensagem
         private const val USER_AGENT = "StagebookApp/0.2 (setlist da banda)"
         private val json = Json { ignoreUnknownKeys = true }
+        private const val MAX_REQUEST = 200   // um setlist nunca passa disso
         private val SONG_MARK = byteArrayOf('S'.code.toByte(), '1'.code.toByte())
         private val ID_MARK = byteArrayOf('I'.code.toByte(), '1'.code.toByte())     // quem enviou (identidade)
         private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" de quem aceitou

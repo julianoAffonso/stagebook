@@ -76,6 +76,12 @@ fun ScanSetlistRoute(
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.internetResult.collect { ok ->
+            val name = viewModel.internetFrom.value.orEmpty()
+            Toast.makeText(context, if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), Toast.LENGTH_LONG).show()
+        }
+    }
     LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
     ScanSetlistScreen(
         ui = ui,
@@ -100,6 +106,8 @@ fun ScanSetlistRoute(
         band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
         asking = viewModel.asking.collectAsStateWithLifecycle().value,
         onAskBand = viewModel::askBand,
+        internetFrom = viewModel.internetFrom.collectAsStateWithLifecycle().value,
+        onAskInternet = viewModel::askInternet,
         onBandSearch = viewModel::bandSearch,
         changes = viewModel::changes,
         onUseIncoming = viewModel::useIncoming,
@@ -133,6 +141,8 @@ fun ScanSetlistScreen(
     band: Int = 0,           // da banda na rede agora
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
+    internetFrom: String? = null,
+    onAskInternet: () -> Unit = {},
     onBandSearch: (Boolean) -> Unit = {},
     changes: (Int) -> List<SongMerge.Change> = { emptyList() },
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
@@ -162,7 +172,7 @@ fun ScanSetlistScreen(
                         onDispose { if (missing) onBandSearch(false) }
                     }
                     if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords, onUseIncoming)
-                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming)
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming, internetFrom, onAskInternet)
                     comparing?.let { i ->
                         ChangesDialog(
                             changes(i), useIncoming = ui.rows.getOrNull(i)?.useIncoming == true,
@@ -228,6 +238,8 @@ private fun Review(
     onCompare: (Int) -> Unit = {},
     onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
+    internetFrom: String? = null,
+    onAskInternet: () -> Unit = {},
 ) {
     var confirmMissing by rememberSaveable { mutableStateOf(false) }
     var nameTaken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -260,6 +272,13 @@ private fun Review(
             ActionButton(
                 if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, band, band),
                 onAskBand, Modifier.fillMaxWidth(), icon = AppIcons.Group, tone = ButtonTone.Tonal, enabled = !asking,
+            )
+        }
+        // pedir pela internet a quem mandou (da banda), sem fundo (preferência do usuário): elas chegam depois nos Recebidos
+        if (toImport > 0 && internetFrom != null) {
+            ActionButton(
+                stringResource(R.string.scan_ask_internet, internetFrom), onAskInternet,
+                Modifier.fillMaxWidth(), icon = AppIcons.Public, tone = ButtonTone.Quiet,
             )
         }
         if (toImport > 0) {

@@ -127,6 +127,11 @@ class BandInternet @Inject constructor(
         trust.members.value.forEach { m ->
             val key = pairKey(m) ?: return@forEach
             val got = cloud.fetchPair(key, prefs.getString("$KEY_SINCE${m.id}", null)) ?: return@forEach
+            // pediram músicas que faltavam no setlist que mandei (T12): responde com as que tenho, num pacote de músicas
+            got.requests.forEach { wanted ->
+                val ids = link.songsFor(wanted)
+                if (ids.isNotEmpty()) cloud.songsPackage(ids)?.let { (list, songs) -> cloud.sendToPair(key, m.id, list, songs, java.util.UUID.randomUUID().toString()) }
+            }
             got.packages.forEach { (pid, text, songs) ->
                 // repetido (reenvio que chegou duas vezes) não entra de novo; o recibo vai de qualquer jeito
                 if (seen.add("${m.id}|$pid")) inbox.add(m.id, m.name, text, songs)
@@ -184,6 +189,16 @@ class BandInternet @Inject constructor(
 
     /** Quantos envios esperam recibo (para a tela, se precisar). */
     fun pendingCount() = outbox().size
+
+    /**
+     * Pede pela internet a quem mandou o setlist (alguém da banda) as músicas que faltam (T12). Ele responde quando o app dele
+     * sincronizar, e as músicas chegam em "Recebidos da banda". false = não é da banda ou sem internet.
+     */
+    suspend fun requestSongs(memberId: String, wanted: List<BandLink.Wanted>): Boolean {
+        val m = trust.member(memberId) ?: return false
+        val key = pairKey(m) ?: return false
+        return runCatching { cloud.requestFromPair(key, m.id, wanted) }.getOrDefault(false)
+    }
 
     private companion object {
         const val KEY_OUT = "outbox"

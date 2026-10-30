@@ -45,7 +45,7 @@ class ScanSetlistTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
-        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo)), ids)
+        Triple(repo, ScanSetlistViewModel(repo, com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), com.juliano.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo), com.juliano.stagebook.data.BandTrust(context), com.juliano.stagebook.data.Connectivity(context)), ids)
     }
 
     @Test fun `QR com todas as músicas cria o setlist na ordem do QR`() {
@@ -145,6 +145,7 @@ class ScanSetlistTest {
         val vm = ScanSetlistViewModel(
             repo, queue, com.juliano.stagebook.data.SetlistCloud(repo, com.juliano.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")),
             com.juliano.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo),
+            com.juliano.stagebook.data.BandTrust(context), com.juliano.stagebook.data.Connectivity(context),
         )
         vm.review(qr("Show", "Noite Clara", "Só Letra"), listOf(com.juliano.stagebook.data.SetlistCloud.SharedSong("Só Letra", "", text = "linha um\nlinha dois")))
         val row = (vm.ui.value as ScanUi.Review).rows[1]
@@ -195,5 +196,19 @@ class ScanSetlistTest {
         assertEquals(ScanUi.Scanning(ScanProblem.INCOMPLETE), vm.ui.value)
         vm.onText("https://exemplo.com")
         assertEquals(ScanUi.Scanning(ScanProblem.NOT_SETLIST), vm.ui.value)
+    }
+
+    @Test fun `pedir pela internet só aparece quando quem mandou é da banda`() {
+        val (_, vm, _) = setup()
+        vm.review(qr("Show", "Noite Clara", "Não Tenho"), emptyList())
+        // veio pelo QR (ninguém da banda): não há a quem pedir pela internet
+        assertEquals(null, vm.internetFrom.value)
+    }
+
+    @Test fun `quem mandou responde o pedido com as músicas que tem`() {
+        val (repo, _, ids) = setup()
+        val link = bandLink(repo)
+        val found = link.songsFor(listOf(com.juliano.stagebook.data.BandLink.Wanted(repo.song(ids[0])!!.title), com.juliano.stagebook.data.BandLink.Wanted("Não existe")))
+        assertEquals(listOf(ids[0]), found)
     }
 }

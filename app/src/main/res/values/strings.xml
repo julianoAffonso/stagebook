@@ -286,6 +286,9 @@
     <string name="inbox_updated_today">atualizado às %1$s</string>
     <string name="inbox_updated_day">atualizado em %1$s, %2$s</string>
     <string name="inbox_versions_hint">Mais de um membro mandou o mesmo setlist: abra cada versão para conferir o que muda e escolha qual usar.</string>
+    <string name="scan_ask_internet">Pedir as que faltam a %1$s pela internet</string>
+    <string name="scan_internet_sent">Pedido enviado a %1$s. As músicas chegam em Recebidos da banda quando o Stagebook de lá sincronizar.</string>
+    <string name="scan_internet_failed">Não deu para enviar o pedido. Confira a internet e tente de novo.</string>
     <string name="import_tab_title">Esta cifra tem tablatura</string>
     <string name="import_tab_message">Importar a tablatura junto? No palco ela aparece em letra de máquina, cabendo na tela. Dá para apagar depois no editor.</string>
     <string name="import_tab_yes">Com a tablatura</string>
