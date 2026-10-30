@@ -418,8 +418,8 @@
     <string name="settings_pedal_connected_short">conectado</string>
     <string name="settings_pedal_disconnected_short">desconectado</string>
     <string name="settings_pedal_test_card">Teste de botão</string>
-    <string name="settings_pedal_from_device">Veio de: %1$s</string>
-    <string name="settings_pedal_from_device_builtin">Veio do próprio aparelho, não do pedal</string>
+    <string name="settings_pedal_from_device">de %1$s</string>
+    <string name="settings_pedal_from_device_builtin">do próprio aparelho, não do pedal</string>
     <string name="settings_font_card">Tamanho da letra</string>
     <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
     <string name="settings_colors">Cores</string>
@@ -444,7 +444,7 @@
     <string name="settings_screen_off_short">Apaga normalmente</string>
     <string name="settings_pair_pedal">Parear pedal</string>
     <string name="settings_pedal_test">Aperte um botão do pedal para ver se ele está conectado.</string>
-    <string name="settings_pedal_last">Último botão: %1$s · %2$s</string>
+    <string name="settings_pedal_last">Último botão: %1$s</string>
     <string name="settings_pedal_next">avança a página</string>
     <string name="settings_pedal_previous">volta a página</string>
     <string name="settings_pedal_unused">não usado no palco</string>

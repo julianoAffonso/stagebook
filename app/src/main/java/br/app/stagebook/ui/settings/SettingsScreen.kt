@@ -833,7 +833,6 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
                     if (key == null) stringResource(R.string.settings_pedal_test)
                     else stringResource(
                         R.string.settings_pedal_last,
-                        pedalKeyName(key),
                         stringResource(
                             when (key.action) {
                                 PedalAction.NEXT -> R.string.settings_pedal_next
@@ -848,9 +847,11 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (key == null || key.action == PedalAction.NONE) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
                 )
+                // the button (key or MIDI) and where it came from, in the subtitle style: the command is the line above
                 if (key != null) {
                     Text(
-                        if (key.device.isEmpty()) stringResource(R.string.settings_pedal_from_device_builtin) else stringResource(R.string.settings_pedal_from_device, key.device),
+                        pedalKeyName(key) + " · " +
+                            if (key.device.isEmpty()) stringResource(R.string.settings_pedal_from_device_builtin) else stringResource(R.string.settings_pedal_from_device, key.device),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -973,25 +974,11 @@ private fun PedalKeysCard(keys: Map<Int, PedalAction>, actions: SettingsActions)
 
 @Composable
 private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, onRemove: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        Row(
-            Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { open = true }.padding(start = Spacing.s),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            // name on top, command below: the MIDI name is long and wrapped the line on phones
-            Column(Modifier.weight(1f).padding(vertical = Spacing.xs)) {
-                Text(name, style = MaterialTheme.typography.bodyLarge)
-                Text(pedalActionLabel(action), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-            }
-            IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            PedalAction.entries.forEach { a ->
-                DropdownMenuItem(text = { Text(pedalActionLabel(a)) }, onClick = { onSelect(a); open = false })
-            }
-        }
+    // a choice field per button (like the button test above): the key or MIDI message is the label, the command is
+    // the value, so it's visible that it can be changed; × resets that button to default
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        OptionDropdown(name, PedalAction.entries, action, onSelect, nameOf = { pedalActionLabel(it) }, modifier = Modifier.weight(1f))
+        IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
     }
 }
 
