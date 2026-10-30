@@ -677,7 +677,7 @@ static void dev_close(void) {
 #endif
 
 // ---- JNI ----
-#define FN(name) Java_com_juliano_stagebook_player_Engine_##name
+#define FN(name) Java_br_app_stagebook_player_Engine_##name
 
 JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint maxpkt, jint ch, jint subslot,
                                      jint intf, jint alt, jint in_ep, jint in_maxpkt, jint in_fb) {
