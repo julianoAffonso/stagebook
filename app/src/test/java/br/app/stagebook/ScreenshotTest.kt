@@ -1,5 +1,6 @@
 package br.app.stagebook
 
+import br.app.stagebook.R
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -60,7 +61,17 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = TABLET, application = android.app.Application::class)
 class ScreenshotTest {
-    @get:Rule val compose = createComposeRule()
+    // the captures folder (T39) runs these again with the app in English: -PshotsLang=en switches the language before
+    // anything is drawn
+    @get:Rule(order = 0) val language = org.junit.rules.TestRule { base, _ ->
+        object : org.junit.runners.model.Statement() {
+            override fun evaluate() {
+                SHOTS_LANG?.let { org.robolectric.RuntimeEnvironment.setQualifiers("+$it") }
+                base.evaluate()
+            }
+        }
+    }
+    @get:Rule(order = 1) val compose = createComposeRule()
 
     private val songs = SongsUiState(
         loading = false,
@@ -83,7 +94,7 @@ class ScreenshotTest {
 
     private fun shoot(name: String, content: @Composable () -> Unit) {
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
     @Composable
@@ -173,7 +184,7 @@ class ScreenshotTest {
                 br.app.stagebook.ui.stage.ChordShapePopup(chord, instrument, chordSong, {}, {})
             }
         }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/$name.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // T15: the scroll icon on the clock line opens the small window with play and speed
@@ -182,9 +193,9 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme { StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 0, { _, _ -> }, onBack = {}) }
         }
-        compose.onNodeWithContentDescription("Rolagem automática").performClick()
+        compose.onNodeWithContentDescription(str(R.string.stage_auto_title)).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_palco_rolagem_auto.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_rolagem_auto.png")
     }
 
     // scrolling: the icon next to the clock becomes pause
@@ -193,11 +204,11 @@ class ScreenshotTest {
             StagebookTheme { StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 0, { _, _ -> }, onBack = {}) }
         }
         compose.mainClock.autoAdvance = false
-        compose.onNodeWithContentDescription("Rolagem automática").performClick()
+        compose.onNodeWithContentDescription(str(R.string.stage_auto_title)).performClick()
         repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onNodeWithContentDescription("Rolar sozinho").performClick()
+        compose.onNodeWithContentDescription(str(R.string.stage_auto_play)).performClick()
         repeat(90) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_rolando.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/tablet_6_palco_rolando.png")
     }
 
     // T25: backup in Settings → Library and the choice of parts (all checked)
@@ -212,32 +223,32 @@ class ScreenshotTest {
                 br.app.stagebook.ui.settings.BackupPartsDialog("Abrir arquivo", "Abrir", br.app.stagebook.data.Backup.Part.entries.toSet(), { _, _ -> }, {}, warning = "Os ajustes do arquivo substituem os daqui.")
             }
         }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_backup_restaurar.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_5_backup_restaurar.png")
     }
 
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun factoryResetDialog() {
         compose.setContent { StagebookTheme { br.app.stagebook.ui.settings.FactoryResetDialog({}, {}, {}, code = "4827") } }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_apagar_tudo.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_5_apagar_tudo.png")
     }
 
     // T33c: the metronome next to the clock and its small window
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun metronomeDialog() {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
-        compose.onNodeWithContentDescription("Metrônomo").performClick()
+        compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_palco_metronomo.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_metronomo.png")
     }
 
     @Test fun metronomeCount() {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.mainClock.autoAdvance = false
-        compose.onNodeWithContentDescription("Metrônomo").performClick()
+        compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
         repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onNodeWithContentDescription("Começar o metrônomo").performClick()
+        compose.onNodeWithContentDescription(str(R.string.metro_play)).performClick()
         repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_metronomo_contagem.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/tablet_6_palco_metronomo_contagem.png")
     }
 
     @Test fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
@@ -253,7 +264,7 @@ class ScreenshotTest {
             }
         }
         @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_tocar.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_tocar.png")
     }
 
     // a diagram starting above the 1st fret: the fret number on the left (A with a barre on the 5th)
@@ -281,9 +292,9 @@ class ScreenshotTest {
                 br.app.stagebook.ui.stage.ChordShapePopup("C", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
-        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText(str(R.string.chord_details)).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_detalhes.png")
     }
 
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
@@ -294,9 +305,9 @@ class ScreenshotTest {
                 br.app.stagebook.ui.stage.ChordShapePopup("D7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
-        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText(str(R.string.chord_details)).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_detalhes_7.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_detalhes_7.png")
     }
 
     @Test fun settingsEssentialTablet() = shoot("tablet_5_ajustes_essencial") {
@@ -346,7 +357,7 @@ class ScreenshotTest {
             br.app.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "LETRAS3\n8\nEnsaio", at = now - 300_000, updated = true),
         )
         compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_2_recebidos_versoes.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_2_recebidos_versoes.png")
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR)
@@ -364,7 +375,7 @@ class ScreenshotTest {
                 br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.3.101 (abc1234)"), {}, {}, {}, {})
             }
         }
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_8_versao_nova.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_versao_nova.png")
     }
 
     @Test fun pickSongsTablet() = shoot("tablet_9_escolher_musicas") {
@@ -573,19 +584,19 @@ class ScreenshotTest {
     // T19: song with a backing track and the player off in essential mode: the play button and track badge go away
     @Test fun `player off - song with a backing track has no play`() {
         compose.setContent { StageScreen(stageBadges.copy(look = stageBadges.look.copy(playerMode = false)), 0, 0, { _, _ -> }, onBack = {}) }
-        compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Escolher o backing track desta música").assertDoesNotExist()
+        compose.onNodeWithContentDescription(str(R.string.stage_play)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(str(R.string.stage_track_pick)).assertDoesNotExist()
     }
 
     @Test fun `player on - song without a backing track shows no track button`() {
         compose.setContent { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
-        compose.onNodeWithContentDescription("Escolher o backing track desta música").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
+        compose.onNodeWithContentDescription(str(R.string.stage_track_pick)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(str(R.string.stage_play)).assertDoesNotExist()
     }
 
     @Test fun `player on - song with a backing track shows play`() {
         compose.setContent { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
-        compose.onNodeWithContentDescription("Tocar o backing track").assertExists()
+        compose.onNodeWithContentDescription(str(R.string.stage_play)).assertExists()
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -596,9 +607,9 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stageKeyCapoPhone() {
         compose.setContent { StagebookTheme { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) } }
-        compose.onNodeWithText("Tom G", useUnmergedTree = true).performClick()
+        compose.onNodeWithText(str(R.string.stage_key_short, "G"), useUnmergedTree = true).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/celular_7_palco_tom_capo.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_7_palco_tom_capo.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -692,9 +703,9 @@ class ScreenshotTest {
             }
         }
         // the explanation is now the ⓘ next to the card title
-        compose.onAllNodesWithContentDescription("Como funciona")[0].performClick()
+        compose.onAllNodesWithContentDescription(str(R.string.help_how))[0].performClick()
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_4_explicacao.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_mixer_4_explicacao.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -708,9 +719,9 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText("Sobre igualar o volume")[0].performClick()
+        compose.onAllNodesWithText(str(R.string.mixer_norm_about))[0].performClick()
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_5_sobre_normalizar.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_mixer_5_sobre_normalizar.png")
     }
 
     // ---- scanning a setlist QR: review (found, uncertain, missing) ----
@@ -759,7 +770,7 @@ class ScreenshotTest {
     fun shareCodePhone() = shoot("jornada_compartilhar_2_codigo") {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.l)) {
-                androidx.compose.material3.Text("Para receber, digite", style = MaterialTheme.typography.headlineSmall)
+                androidx.compose.material3.Text(str(R.string.share_sent), style = MaterialTheme.typography.headlineSmall)
                 br.app.stagebook.ui.share.CodeBox(
                     br.app.stagebook.ui.share.CloudUi.Sent(
                         "47-violao-lua", "Show de sábado", 12, 0,
@@ -797,9 +808,9 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText("Importar")[0].performClick()
+        compose.onAllNodesWithText(str(R.string.import_menu))[0].performClick()
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_importar_menu.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_importar_menu.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -902,9 +913,9 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText("Criar setlist")[0].performClick()
+        compose.onAllNodesWithText(str(R.string.scan_create))[0].performClick()
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_conferencia_criar_aviso.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_conferencia_criar_aviso.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -922,7 +933,7 @@ class ScreenshotTest {
     fun mixerEditPhone() = shoot("jornada_mixer_3_editar_canal") {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.l)) {
-                androidx.compose.material3.Text("Canal 3", style = MaterialTheme.typography.headlineSmall)
+                androidx.compose.material3.Text(str(R.string.mixer_channel, 3), style = MaterialTheme.typography.headlineSmall)
                 br.app.stagebook.ui.components.MixerChannelForm(2, mixerLook.mixer.strip(2), pair = false, canPair = true, output = mixerLook.mixer.outputOf(2), outputs = mixerLook.mixer.output, onChange = {}, onOutput = {})
             }
         }
@@ -952,9 +963,9 @@ class ScreenshotTest {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
             }
         }
-        compose.onNodeWithContentDescription("Tocar o backing track").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription(str(R.string.stage_play)).performTouchInput { longClick() }
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/jornada_faixa_4_menu.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/jornada_faixa_4_menu.png")
     }
 
     @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
@@ -979,6 +990,14 @@ class ScreenshotTest {
 }
 
 // Fire HD 10 (2019, 9th gen): 1920x1200 at 1.5x (hdpi) = 1280x800 dp; the app hides the bars
+// texts by id: the same test clicks the right thing with the app in Portuguese or English (captures folder, T39)
+private fun str(id: Int, vararg args: Any): String =
+    androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().getString(id, *args)
+
+// where the captures go and in which language (-PshotsDir, -PshotsLang; empty = the usual folder, Portuguese)
+private val SHOTS_DIR = System.getProperty("shots.dir")?.takeIf { it.isNotEmpty() } ?: "build/outputs/roborazzi"
+private val SHOTS_LANG = System.getProperty("shots.lang")?.takeIf { it.isNotEmpty() }
+
 private const val TABLET = "pt-rBR-w1280dp-h800dp-land-hdpi"
 private const val TABLET_PORTRAIT = "pt-rBR-w800dp-h1280dp-port-hdpi"
 private const val PHONE = "pt-rBR-w412dp-h915dp-port-xxhdpi"
