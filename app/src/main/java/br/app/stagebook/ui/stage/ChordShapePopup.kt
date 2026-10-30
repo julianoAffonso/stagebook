@@ -51,8 +51,8 @@ fun ChordShapePopup(
     extras: Boolean = true,   // modo essencial (T19): sem o som e sem os Detalhes; o desenho e as variações ficam
 ) {
     // com capo, o desenho é o da cifra mas a nota que soa sobe (T18/T20): o som toca a nota real
-    val capo = remember(songText, instrument) { if (instrument == Instrument.TECLADO) 0 else Chords.capo(songText) }   // teclado não usa capo
-    val keyboard = instrument == Instrument.TECLADO
+    val capo = remember(songText, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(songText) }   // teclado não usa capo
+    val keyboard = instrument == Instrument.KEYBOARD
     val shapes = remember(chord, instrument, songText) {
         val generated = Voicings.shapes(chord, instrument)
         val saved = Voicings.savedShape(songText, instrument, chord)
@@ -73,7 +73,7 @@ fun ChordShapePopup(
     var details by rememberSaveable(chord) { mutableStateOf(false) }
     val songKey = remember(songText, instrument) {
         val k = Chords.key(songText).ifEmpty { Chords.detectKey(songText) }
-        val kc = if (instrument == Instrument.TECLADO) Chords.capo(songText) else 0
+        val kc = if (instrument == Instrument.KEYBOARD) Chords.capo(songText) else 0
         if (k.isNotEmpty() && kc > 0) Chords.transposeKey(k, kc) else k
     }
     Dialog(onDismissRequest = onDismiss) {
@@ -119,10 +119,10 @@ fun ChordShapePopup(
                     }
                 }
                 // teclado: o acorde na tela já está no tom que soa; a linha mostra o da cifra (capo na Nª casa)
-                val cifraCapo = remember(songText, instrument) { if (instrument == Instrument.TECLADO) Chords.capo(songText) else 0 }
-                if (cifraCapo > 0) {
+                val chartCapo = remember(songText, instrument) { if (instrument == Instrument.KEYBOARD) Chords.capo(songText) else 0 }
+                if (chartCapo > 0) {
                     Text(
-                        stringResource(R.string.chord_keyboard_capo, Chords.transposeChord(chord, -cifraCapo), cifraCapo, chord),
+                        stringResource(R.string.chord_keyboard_capo, Chords.transposeChord(chord, -chartCapo), chartCapo, chord),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,

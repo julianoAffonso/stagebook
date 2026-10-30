@@ -297,7 +297,7 @@ fun StageScreen(
     val song = uiState.songs[index]
     // teclado não usa capo: os acordes aparecem no tom que soa (cifra em G com capo na 2ª casa → A), sem mudar a música
     // guardada (pedido do usuário, 29/10)
-    val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.TECLADO
+    val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD
     val keyboardCapo = remember(song.text, keyboard, look.chords) { if (keyboard && look.chords) Chords.capo(song.text) else 0 }
     val shownText = remember(song.text, keyboardCapo) { if (keyboardCapo > 0) Chords.transpose(song.text, keyboardCapo) else song.text }
     // na primeira vez, uma mensagem curta explica (some sozinha)
@@ -326,7 +326,7 @@ fun StageScreen(
             songText = song.text,
             onSave = { define -> onSaveShape(song.id, chord, define) },
             onDismiss = { shownChord = null },
-            onPlay = { notes -> onPlayChord(notes, look.instrument == br.app.stagebook.data.model.Instrument.TECLADO) },
+            onPlay = { notes -> onPlayChord(notes, look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD) },
             extras = look.extrasOn,
         )
     }

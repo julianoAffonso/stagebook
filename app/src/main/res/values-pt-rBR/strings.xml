@@ -218,11 +218,11 @@
     <string name="settings_chord_shapes">Desenhos dos acordes</string>
     <string name="settings_instrument">Instrumento</string>
     <string name="settings_instrument_help">Os desenhos dos acordes no palco são deste instrumento.</string>
-    <string name="instrument_violao">Violão</string>
-    <string name="instrument_guitarra">Guitarra</string>
+    <string name="instrument_acoustic_guitar">Violão</string>
+    <string name="instrument_electric_guitar">Guitarra</string>
     <string name="instrument_ukulele">Ukulele</string>
     <string name="instrument_cavaquinho">Cavaquinho</string>
-    <string name="instrument_teclado">Teclado</string>
+    <string name="instrument_keyboard">Teclado</string>
     <string name="settings_chord_tap">Mostrar o desenho ao tocar no acorde</string>
     <string name="settings_chord_list">Acordes da música</string>
     <string name="settings_chord_list_none">Não</string>

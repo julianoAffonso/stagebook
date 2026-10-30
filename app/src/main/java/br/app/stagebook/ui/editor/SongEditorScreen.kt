@@ -212,7 +212,7 @@ fun SongEditorScreen(
                         chords = look.chords,
                     ) {
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
-                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.TECLADO)
+                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
                     }
                     // atalhos das seções no topo enquanto edita a letra: continuam à vista com o teclado
                     AnimatedVisibility(editingLyrics && !previewing) {

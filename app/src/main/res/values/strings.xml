@@ -218,11 +218,11 @@
     <string name="settings_chord_shapes">Chord diagrams</string>
     <string name="settings_instrument">Instrument</string>
     <string name="settings_instrument_help">Chord diagrams on stage are drawn for this instrument.</string>
-    <string name="instrument_violao">Acoustic guitar</string>
-    <string name="instrument_guitarra">Electric guitar</string>
+    <string name="instrument_acoustic_guitar">Acoustic guitar</string>
+    <string name="instrument_electric_guitar">Electric guitar</string>
     <string name="instrument_ukulele">Ukulele</string>
     <string name="instrument_cavaquinho">Cavaquinho</string>
-    <string name="instrument_teclado">Keyboard</string>
+    <string name="instrument_keyboard">Keyboard</string>
     <string name="settings_chord_tap">Show the diagram when you tap a chord</string>
     <string name="settings_chord_list">Song chords</string>
     <string name="settings_chord_list_none">No</string>

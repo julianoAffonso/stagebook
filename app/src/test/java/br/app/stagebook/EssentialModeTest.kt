@@ -66,7 +66,7 @@ class EssentialModeTest {
     @Test fun `sem os extras a janela do acorde fica com o desenho e as variacoes - sem som nem Detalhes`() {
         compose.setContent {
             br.app.stagebook.ui.theme.StagebookTheme {
-                br.app.stagebook.ui.stage.ChordShapePopup("G", br.app.stagebook.data.model.Instrument.VIOLAO, "[G]linha", {}, {}, extras = false)
+                br.app.stagebook.ui.stage.ChordShapePopup("G", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, "[G]linha", {}, {}, extras = false)
             }
         }
         compose.onNodeWithContentDescription("Tocar").assertDoesNotExist()

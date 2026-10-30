@@ -26,9 +26,9 @@ class ChordPlayTest {
 
     @Test fun `notas do G aberto no violão - com capo 2 sobem um tom`() {
         val g = Voicings.Shape(listOf(3, 2, 0, 0, 0, 3))
-        assertEquals(listOf(43, 47, 50, 55, 59, 67), Voicings.midi(g, Instrument.VIOLAO))
-        assertEquals(listOf(45, 49, 52, 57, 61, 69), Voicings.midi(g, Instrument.VIOLAO, capo = 2))
-        assertEquals(listOf(47, 50, 55, 59, 67), Voicings.midi(Voicings.Shape(listOf(-1, 2, 0, 0, 0, 3)), Instrument.VIOLAO))   // corda x não toca
+        assertEquals(listOf(43, 47, 50, 55, 59, 67), Voicings.midi(g, Instrument.ACOUSTIC_GUITAR))
+        assertEquals(listOf(45, 49, 52, 57, 61, 69), Voicings.midi(g, Instrument.ACOUSTIC_GUITAR, capo = 2))
+        assertEquals(listOf(47, 50, 55, 59, 67), Voicings.midi(Voicings.Shape(listOf(-1, 2, 0, 0, 0, 3)), Instrument.ACOUSTIC_GUITAR))   // corda x não toca
     }
 
     @Test fun `dedilhado demora mais que junto - os dois é o mais longo - sem estourar`() {
@@ -45,7 +45,7 @@ class ChordPlayTest {
     @Test fun `janela do acorde - o play sobre o desenho manda as notas e com capo explica o desenho`() {
         var played: List<Int>? = null
         compose.setContent {
-            StagebookTheme { ChordShapePopup("G", Instrument.VIOLAO, "{capo: 2}\n[G]linha", {}, {}, onPlay = { played = it }) }
+            StagebookTheme { ChordShapePopup("G", Instrument.ACOUSTIC_GUITAR, "{capo: 2}\n[G]linha", {}, {}, onPlay = { played = it }) }
         }
         compose.onNodeWithText("O desenho é de G. Com capo na 2ª casa, soa A.").assertExists()
         compose.onNodeWithContentDescription("Tocar").performClick()
@@ -56,7 +56,7 @@ class ChordPlayTest {
     @Test fun `teclado não usa capo - nem aviso nem nota mais alta`() {
         var played: List<Int>? = null
         compose.setContent {
-            StagebookTheme { ChordShapePopup("C", Instrument.TECLADO, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
+            StagebookTheme { ChordShapePopup("C", Instrument.KEYBOARD, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
         }
         compose.onNodeWithText("O desenho é de", substring = true).assertDoesNotExist()   // teclado: sem a nota do desenho com capo
         compose.onNodeWithContentDescription("Tocar").performClick()
@@ -64,7 +64,7 @@ class ChordPlayTest {
     }
 
     @Test fun `Detalhes - grau no tom da música, o campo do acorde e onde mais aparece - e volta`() {
-        compose.setContent { StagebookTheme { ChordShapePopup("C", Instrument.VIOLAO, "{key: G}\n[G]um [C]dois", {}, {}) } }
+        compose.setContent { StagebookTheme { ChordShapePopup("C", Instrument.ACOUSTIC_GUITAR, "{key: G}\n[G]um [C]dois", {}, {}) } }
         compose.onNodeWithText("Detalhes").performClick()
         compose.onNodeWithText("Detalhes de C").assertExists()
         compose.onNodeWithText("No tom da música (G)").assertExists()

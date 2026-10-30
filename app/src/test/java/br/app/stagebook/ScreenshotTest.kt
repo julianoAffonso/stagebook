@@ -249,7 +249,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
-                br.app.stagebook.ui.stage.ChordShapePopup("G", br.app.stagebook.data.model.Instrument.VIOLAO, chordSong, {}, {})
+                br.app.stagebook.ui.stage.ChordShapePopup("G", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
         @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
@@ -260,7 +260,7 @@ class ScreenshotTest {
     @Test fun chordDiagramHighFret() = shoot("acorde_casa_5") {
         androidx.compose.foundation.layout.Box(Modifier.padding(32.dp)) {
             br.app.stagebook.ui.components.ChordDiagram(
-                "A", br.app.stagebook.data.model.Instrument.VIOLAO,
+                "A", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR,
                 br.app.stagebook.domain.Voicings.Shape(listOf(5, 7, 7, 6, 5, 5)), null, MaterialTheme.colorScheme.onSurface,
                 width = 240.dp,
             )
@@ -269,7 +269,7 @@ class ScreenshotTest {
 
     // teclado com cifra de capo: acordes no tom que soa, o aviso no topo e a mensagem da primeira vez
     @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.TECLADO)), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.KEYBOARD)), 0, 0, { _, _ -> }, onBack = {})
     }
 
     // T21: a segunda tela do acorde (campo harmônico)
@@ -278,7 +278,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
-                br.app.stagebook.ui.stage.ChordShapePopup("C", br.app.stagebook.data.model.Instrument.VIOLAO, chordSong, {}, {})
+                br.app.stagebook.ui.stage.ChordShapePopup("C", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
         compose.onNodeWithText("Detalhes").performClick()
@@ -291,7 +291,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
-                br.app.stagebook.ui.stage.ChordShapePopup("D7", br.app.stagebook.data.model.Instrument.VIOLAO, chordSong, {}, {})
+                br.app.stagebook.ui.stage.ChordShapePopup("D7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
         compose.onNodeWithText("Detalhes").performClick()
@@ -349,11 +349,11 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_2_recebidos_versoes.png")
     }
 
-    @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.VIOLAO)
+    @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", br.app.stagebook.data.model.Instrument.UKULELE)
-    @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", br.app.stagebook.data.model.Instrument.TECLADO)
+    @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", br.app.stagebook.data.model.Instrument.KEYBOARD)
     @Test fun chordPopupCavaquinho() = chordPopup("tablet_6_acorde_cavaquinho", "D", br.app.stagebook.data.model.Instrument.CAVAQUINHO)
-    @Test fun chordPopupGuitarra() = chordPopup("tablet_6_acorde_guitarra", "A", br.app.stagebook.data.model.Instrument.GUITARRA)
+    @Test fun chordPopupElectricGuitar() = chordPopup("tablet_6_acorde_guitarra", "A", br.app.stagebook.data.model.Instrument.ELECTRIC_GUITAR)
 
     /** Versão nova do app oferecida ao abrir (outra janela). */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
@@ -648,7 +648,7 @@ class ScreenshotTest {
         live = true,
     )
 
-    @Test @Config(qualifiers = PHONE_LONGO)
+    @Test @Config(qualifiers = PHONE_TALL)
     fun mixerPhone() = shoot("jornada_mixer_1_celular") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
     }
@@ -897,7 +897,7 @@ class ScreenshotTest {
         }
     }
 
-    @Test @Config(qualifiers = TABLET_LONGO)
+    @Test @Config(qualifiers = TABLET_TALL)
     fun mixerTablet() = shoot("jornada_mixer_2_tablet") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
     }
@@ -937,10 +937,10 @@ class ScreenshotTest {
     @Test fun stageTabletLastPage() = shoot("tablet_7_palco_ultima") { StageScreen(stage, 0, -1, { _, _ -> }, onBack = {}) }
 
     // Fire em pé
-    @Test @Config(qualifiers = TABLET_EM_PE)
+    @Test @Config(qualifiers = TABLET_PORTRAIT)
     fun homeSongsTabletPortrait() = shoot("tablet_em_pe_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
-    @Test @Config(qualifiers = TABLET_EM_PE)
+    @Test @Config(qualifiers = TABLET_PORTRAIT)
     fun stageTabletPortrait() = shoot("tablet_em_pe_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
     @Test @Config(qualifiers = PHONE)
@@ -949,7 +949,7 @@ class ScreenshotTest {
 
 // Fire HD 10 (2019, 9ª geração): 1920x1200 a 1,5x (hdpi) = 1280x800 dp; o app esconde as barras
 private const val TABLET = "pt-rBR-w1280dp-h800dp-land-hdpi"
-private const val TABLET_EM_PE = "pt-rBR-w800dp-h1280dp-port-hdpi"
+private const val TABLET_PORTRAIT = "pt-rBR-w800dp-h1280dp-port-hdpi"
 private const val PHONE = "pt-rBR-w412dp-h915dp-port-xxhdpi"
-private const val PHONE_LONGO = "pt-rBR-w412dp-h3000dp-port-xxhdpi"     // a tela inteira, sem rolar
-private const val TABLET_LONGO = "pt-rBR-w1280dp-h2000dp-port-hdpi"
+private const val PHONE_TALL = "pt-rBR-w412dp-h3000dp-port-xxhdpi"     // a tela inteira, sem rolar
+private const val TABLET_TALL = "pt-rBR-w1280dp-h2000dp-port-hdpi"

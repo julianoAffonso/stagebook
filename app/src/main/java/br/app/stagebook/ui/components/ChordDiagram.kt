@@ -50,7 +50,7 @@ fun ChordDiagram(
         verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
     ) {
         Text(chord, style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold), color = color, maxLines = 1)
-        if (instrument == Instrument.TECLADO) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width)
+        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width)
     }
 }
 
@@ -129,11 +129,11 @@ private val STRIP_WIDTH = 76.dp
 @LightPreview
 @androidx.compose.runtime.Composable
 private fun ChordDiagramLightPreview() = PreviewSurface(dark = false) {
-    ChordDiagram("C", Instrument.VIOLAO, Voicings.Shape(listOf(-1, 3, 2, 0, 1, 0)), null, MaterialTheme.colorScheme.onSurface)
+    ChordDiagram("C", Instrument.ACOUSTIC_GUITAR, Voicings.Shape(listOf(-1, 3, 2, 0, 1, 0)), null, MaterialTheme.colorScheme.onSurface)
 }
 
 @DarkPreview
 @androidx.compose.runtime.Composable
 private fun ChordDiagramDarkPreview() = PreviewSurface(dark = true) {
-    ChordDiagram("F", Instrument.VIOLAO, Voicings.Shape(listOf(1, 3, 3, 2, 1, 1)), null, MaterialTheme.colorScheme.onSurface)
+    ChordDiagram("F", Instrument.ACOUSTIC_GUITAR, Voicings.Shape(listOf(1, 3, 3, 2, 1, 1)), null, MaterialTheme.colorScheme.onSurface)
 }
