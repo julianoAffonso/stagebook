@@ -32,7 +32,7 @@ class StageKeyboardTest {
         val state = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look(instrument = Instrument.KEYBOARD))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onKeyboardHintSeen = { seen++ }) } }
         compose.onNodeWithText("teclado · capo na 2ª").assertExists()
-        compose.onNodeWithText("A", useUnmergedTree = true).assertExists()   // the sounding key
+        compose.onNodeWithText("Tom A", useUnmergedTree = true).assertExists()   // the sounding key
         compose.onNodeWithText("Esta cifra usa capo na 2ª casa", substring = true).assertExists()
         assertEquals(1, seen)
     }

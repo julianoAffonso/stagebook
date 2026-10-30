@@ -99,7 +99,7 @@ private const val DISABLED_ALPHA = 0.38f
 @Composable
 private fun ActionButtonSamples() {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        ActionButton("Palco", onClick = {}, icon = AppIcons.Play)
+        ActionButton("Palco", onClick = {}, icon = AppIcons.Slideshow)
         ActionButton("Importar da internet", onClick = {}, icon = AppIcons.Public, tone = ButtonTone.Tonal)
         ActionButton("Excluir setlist", onClick = {}, icon = AppIcons.Delete, tone = ButtonTone.Danger)
         ActionButton("Cancelar", onClick = {}, tone = ButtonTone.Quiet)

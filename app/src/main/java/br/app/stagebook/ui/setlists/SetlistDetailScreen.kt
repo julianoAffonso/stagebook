@@ -191,7 +191,7 @@ fun SetlistDetailScreen(
                 ) {
                     // small play: the stage from the start (tapping a song opens on it)
                     IconButton(onClick = { onPlay(0) }, enabled = items.isNotEmpty()) {
-                        Icon(AppIcons.Play, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
+                        Icon(AppIcons.Slideshow, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
                     }
                     // rename and delete in the ⋮ (Google's pattern): the setlist name doesn't get cut on phones
                     OverflowMenu(
@@ -297,7 +297,7 @@ private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () ->
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
         // both secondary: side by side at the start (stretched, Share floated in the middle)
         ActionButton(stringResource(R.string.sets_add_songs), onAddSongs, icon = AppIcons.Add, tone = ButtonTone.Tonal)
-        ActionButton(stringResource(R.string.share_title), onShare, icon = AppIcons.Upload, tone = ButtonTone.Tonal, enabled = hasSongs)
+        ActionButton(stringResource(R.string.share_title), onShare, icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = hasSongs)
     }
 }
 

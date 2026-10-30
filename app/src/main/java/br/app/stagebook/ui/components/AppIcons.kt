@@ -20,11 +20,8 @@ object AppIcons {
     /** Same, with the even-odd rule: an inner shape cuts a hole in the outer one (rings, letters with a hole). */
     private fun holedIcon(name: String, vararg paths: String): ImageVector =
         ImageVector.Builder(name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
-            .apply {
-                paths.forEach {
-                    addPath(pathData = PathParser().parsePathString(it).toNodes(), fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd)
-                }
-            }
+            // one path: the even-odd rule only cuts holes between shapes of the same path
+            .addPath(pathData = PathParser().parsePathString(paths.joinToString(" ")).toNodes(), fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd)
             .build()
 
     val Edit by lazy {
@@ -135,6 +132,18 @@ object AppIcons {
             "autocolumns",
             "M12,2a10,10 0,1 0,0.01 0zM12,4a8,8 0,1 1,-0.01 0z",
             "M11,7h2l3.5,10h-2l-0.8,-2.3h-3.4L9.5,17h-2zM10.9,13h2.2L12,9.7z",
+        )
+    }
+    // share: Android's standard symbol (an up arrow read as "upload a file")
+    val Share by lazy {
+        icon("share", "M18,16.08c-0.76,0 -1.44,0.3 -1.96,0.77L8.91,12.7c0.05,-0.23 0.09,-0.46 0.09,-0.7s-0.04,-0.47 -0.09,-0.7l7.05,-4.11c0.54,0.5 1.25,0.81 2.04,0.81 1.66,0 3,-1.34 3,-3s-1.34,-3 -3,-3 -3,1.34 -3,3c0,0.24 0.04,0.47 0.09,0.7L8.04,9.81C7.5,9.31 6.79,9 6,9c-1.66,0 -3,1.34 -3,3s1.34,3 3,3c0.79,0 1.5,-0.31 2.04,-0.81l7.12,4.16c-0.05,0.21 -0.08,0.43 -0.08,0.65 0,1.61 1.31,2.92 2.92,2.92 1.61,0 2.92,-1.31 2.92,-2.92s-1.31,-2.92 -2.92,-2.92z")
+    }
+    // pedal: a page turner box with two buttons (Bluetooth said nothing about the USB MIDI pedal)
+    val Pedal by lazy {
+        holedIcon(
+            "pedal",
+            "M4,8h16a2,2 0,0 1,2 2v6a2,2 0,0 1,-2 2H4a2,2 0,0 1,-2 -2v-6a2,2 0,0 1,2 -2z",
+            "M8,11a2,2 0,1 0,0.01 0z", "M16,11a2,2 0,1 0,0.01 0z",
         )
     }
     // coffee cup: the support button (a generic icon, no brand)
