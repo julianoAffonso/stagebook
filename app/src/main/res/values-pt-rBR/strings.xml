@@ -53,6 +53,7 @@
     <string name="editor_lyrics">Letra</string>
     <string name="editor_auto_meta">Deixou artista ou ano em branco? Ao salvar, o app completa sozinho pela internet.</string>
     <string name="editor_delete">Excluir música</string>
+    <string name="editor_chord_label">Acorde:</string>
     <string name="editor_sections">Seção:</string>
     <string name="editor_discard_confirm">Sair sem salvar? O que você digitou ou importou vai se perder.</string>
     <string name="editor_discard">Sair sem salvar</string>

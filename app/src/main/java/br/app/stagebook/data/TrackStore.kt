@@ -42,7 +42,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
         val shown = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
             if (c.moveToFirst()) c.getString(0) else null
         }.orEmpty()
-        val byName = shown.substringAfterLast('.', "").lowercase()
+        val byName = shown.ifEmpty { uri.lastPathSegment.orEmpty() }.substringAfterLast('.', "").lowercase()   // file:// has no display name
         if (byName in FORMATS) return byName
         return when (context.contentResolver.getType(uri)) {
             "audio/ogg", "application/ogg", "audio/vorbis" -> "ogg"

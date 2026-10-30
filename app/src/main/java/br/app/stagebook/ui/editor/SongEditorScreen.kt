@@ -127,7 +127,7 @@ fun SongEditorRoute(
         onCapo = viewModel::setCapo,
         onTempo = viewModel::setTempo,
         look = look,
-        track = viewModel.track.takeIf { look.playerMode && viewModel.canPickTrack },
+        track = viewModel.track.takeIf { look.playerMode },
         onPickTrack = { picker.launch(TrackStore.MIME) },
         onRemoveTrack = viewModel::removeTrack,
     )
@@ -235,6 +235,7 @@ fun SongEditorScreen(
                         chords = look.chords,
                     ) {
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
+                        // in the details, for new songs too (user, 30/10); only with the player on
                         if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
                         if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
                     }
@@ -417,8 +418,8 @@ private fun SongDataFields(
 
 /** Backing track of the song (T29, user's decision): picked here, so the stage shows the play button only on songs with one. */
 @Composable
-private fun TrackRow(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+private fun TrackRow(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
         Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
             Text(stringResource(R.string.stage_backing_track), style = MaterialTheme.typography.bodyLarge)
@@ -442,7 +443,8 @@ private fun SectionBar(onPick: (Sections.Kind) -> Unit, modifier: Modifier = Mod
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(AppIcons.ListBulleted, stringResource(R.string.editor_sections), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        // a short label says what the row is (an icon alone said nothing, user 30/10)
+        Text(stringResource(R.string.editor_sections), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val names = rememberSectionNames(true)
         SECTION_SHORTCUTS.forEach { kind ->
             SuggestionChip(onClick = { onPick(kind) }, label = { Text(names.label(Sections.Header(kind, "", "", kind.pt)), style = MaterialTheme.typography.titleSmall) })
@@ -458,7 +460,7 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(AppIcons.MusicNote, stringResource(R.string.editor_chords), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.editor_chord_label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         chords.forEach { c -> SuggestionChip(onClick = { onPick(c) }, label = { Text(c, style = MaterialTheme.typography.titleSmall) }) }
         SuggestionChip(onClick = onNew, icon = { Icon(AppIcons.Add, null) }, label = { Text(stringResource(R.string.editor_chord_new), style = MaterialTheme.typography.titleSmall) })
     }

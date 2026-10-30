@@ -123,4 +123,27 @@ class EditorFlowTest {
         compose.onNodeWithText("Refrão").performClick()
         assertEquals("linha um\n\n[Refrão]\n", texts.last())
     }
+
+    @Test
+    fun `a new song can get a backing track, and keeps it when saved`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+            val scope = CoroutineScope(Dispatchers.IO)
+            val repo = LibraryRepository(context, scope)
+            withTimeout(5_000) { repo.loaded.first { it } }
+            val tracks = br.app.stagebook.data.TrackStore(context)
+            val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks)
+            withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
+            val audio = java.io.File(context.cacheDir, "minha-faixa.ogg").apply { writeBytes(ByteArray(16)) }
+            assertTrue(vm.attachTrack(android.net.Uri.fromFile(audio)))
+            vm.onTitle("Música nova com faixa")
+            vm.save()
+            val saved = repo.library.value.songs.single { it.title == "Música nova com faixa" }
+            assertEquals(vm.track, saved.track)
+            assertTrue(tracks.file(saved.track).exists())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
