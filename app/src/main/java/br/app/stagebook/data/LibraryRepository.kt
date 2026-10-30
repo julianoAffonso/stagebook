@@ -89,7 +89,7 @@ class LibraryRepository @Inject constructor(
 
     private fun readOrNull(f: File): Library? =
         if (!f.exists()) null
-        else try { f.inputStream().buffered(64 * 1024).use { LibraryCodec.decode(it, ::newId) } } catch (e: Exception) { Log.w(TAG, "não li ${f.name}", e); null }
+        else try { f.inputStream().buffered(64 * 1024).use { LibraryCodec.decode(it, ::newId) } } catch (e: Exception) { Log.w(TAG, "couldn't read ${f.name}", e); null }
 
     /** Changes memory right away (the screen reacts at once) and saves next. Before loading, waits for the file. */
     private fun mutate(change: (Library) -> Library) {

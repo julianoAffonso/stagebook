@@ -16,7 +16,9 @@ import java.net.ServerSocket
 import java.net.Socket
 import kotlin.concurrent.thread
 
-/** Banda na rede local: a chave do par sai igual dos dois lados e o pedido de entrada só grava com Autorizar. */
+/**
+ * Band on the local network: the pair key comes out the same on both sides and a join request only saves with Allow.
+ */
 class BandTest {
     private class Device(val name: String) {
         val keys = BandCrypto.newKeyPair()
@@ -39,7 +41,7 @@ class BandTest {
         assertNull(ShareCode.decrypt(cb, msg))
     }
 
-    // b pede para entrar pelo aparelho de a; [answer] é o que o usuário de a toca
+    // b asks to join through a's device; [answer] is what a's user taps
     private fun join(a: Device, b: Device, answer: Boolean, aKnowsB: Boolean = false): BandSession.JoinResult {
         val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
         var asked = 0
@@ -100,7 +102,7 @@ class BandTest {
         assertFalse(a.trusted.isNotEmpty() || b.trusted.isNotEmpty())
     }
 
-    // b manda um pacote para a; [bIsMember]: a tem b na banda
+    // b sends a package to a; [bIsMember]: a has b in the band
     private fun sendPackage(a: Device, b: Device, bIsMember: Boolean): Pair<Boolean, String?> {
         val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
         var got: String? = null
@@ -164,7 +166,7 @@ class BandTest {
             return r
         }
         assertEquals("falta:setlist", conduct(member = true, onStage = false))
-        // no palco quem acompanha continua respondendo: é ali que ele está de propósito
+        // on stage a follower keeps answering: that's where they are on purpose
         assertEquals("falta:setlist", conduct(member = true, onStage = true))
         assertNull(conduct(member = false, onStage = false))
     }

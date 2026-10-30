@@ -7,7 +7,7 @@ import br.app.stagebook.ui.editor.insertSection
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Atalhos de seção do editor: onde o título entra e onde o cursor fica (| = cursor). */
+/** Editor section shortcuts: where the title goes and where the cursor ends up (| = cursor). */
 class SectionInsertTest {
     private fun at(marked: String) = TextFieldValue(marked.replace("|", ""), TextRange(marked.indexOf('|')))
     private fun show(v: TextFieldValue) = v.text.substring(0, v.selection.start) + "|" + v.text.substring(v.selection.start)

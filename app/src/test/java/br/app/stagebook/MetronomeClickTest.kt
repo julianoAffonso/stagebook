@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Som do metrônomo (T33d): cada clique na amostra exata, sem escorregar, e o 1 do compasso mais agudo. */
+/** Metronome sound (T33d): each click on the exact sample, without drifting, and beat 1 of the bar higher. */
 class MetronomeClickTest {
     private val normal = ShortArray(10) { 100 }
     private val accent = ShortArray(10) { 200 }
@@ -16,7 +16,7 @@ class MetronomeClickTest {
     @Test fun `clicks land on the right sample even across chunks`() {
         val spb = 50L
         val all = ShortArray(400)
-        // em pedaços de 37 amostras (como o áudio escreve), juntando tudo
+        // in chunks of 37 samples (the way the audio writes), joining everything
         var pos = 0L
         while (pos < all.size) {
             val chunk = ShortArray(minOf(37, all.size - pos.toInt()))
@@ -27,7 +27,7 @@ class MetronomeClickTest {
         for (beat in 0 until 8) {
             val at = beat * 50
             assertEquals(if (beat % 4 == 0) 200.toShort() else 100.toShort(), all[at])
-            assertEquals(0.toShort(), all[at + 10])   // o clique acabou: silêncio até o próximo
+            assertEquals(0.toShort(), all[at + 10])   // the click ended: silence until the next one
         }
     }
 

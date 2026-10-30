@@ -17,7 +17,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Menu ⋮ das listas e das barras de cima: abre fechado, a ação escolhida roda e o menu fecha. */
+/** ⋮ menu on lists and top bars: starts closed, the chosen action runs and the menu closes. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class OverflowMenuTest {

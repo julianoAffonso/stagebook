@@ -24,7 +24,7 @@ class VoicingsTest {
 
     @Test fun `several shapes and slash bass`() {
         assertTrue(Voicings.shapes("G", Instrument.ACOUSTIC_GUITAR).size >= 4)
-        // D/F#: o baixo é F#, na corda mais grave que toca
+        // D/F#: the bass is F#, on the lowest string that plays
         val s = Voicings.shapes("D/F#", Instrument.ACOUSTIC_GUITAR).first().frets
         val low = s.indexOfFirst { it >= 0 }
         assertEquals(6, (intArrayOf(40, 45, 50, 55, 59, 64)[low] + s[low]) % 12)
@@ -39,7 +39,7 @@ class VoicingsTest {
 
     @Test fun `barre only when fingers run out`() {
         assertEquals(true, Voicings.needsBarre(intArrayOf(1, 3, 3, 2, 1, 1)))     // F
-        assertEquals(false, Voicings.needsBarre(intArrayOf(0, 2, 3, 2)))         // G no ukulele: três dedos
+        assertEquals(false, Voicings.needsBarre(intArrayOf(0, 2, 3, 2)))         // G on ukulele: three fingers
         assertEquals(false, Voicings.needsBarre(intArrayOf(-1, 0, 2, 2, 2, 0)))  // A
     }
 
@@ -51,12 +51,12 @@ class VoicingsTest {
     }
 
     @Test fun `the chosen shape goes and comes back through the ChordPro define`() {
-        val shape = Voicings.Shape(listOf(-1, 3, 5, 5, 5, 3))   // C com pestana na 3ª
+        val shape = Voicings.Shape(listOf(-1, 3, 5, 5, 5, 3))   // C with a barre on the 3rd
         val line = Voicings.define(Instrument.ACOUSTIC_GUITAR, "C", shape)
         assertEquals("{define-guitar: C base-fret 3 frets x 1 3 3 3 1}", line)
         val text = Voicings.saveDefine("[C]oi", Instrument.ACOUSTIC_GUITAR, "C", line)
-        assertEquals(shape, Voicings.savedShape(text, Instrument.ELECTRIC_GUITAR, "C"))   // violão e guitarra: mesmos desenhos
-        // trocar a escolha não duplica a linha
+        assertEquals(shape, Voicings.savedShape(text, Instrument.ELECTRIC_GUITAR, "C"))   // acoustic and electric guitar: same diagrams
+        // changing the choice doesn't duplicate the line
         val again = Voicings.saveDefine(text, Instrument.ACOUSTIC_GUITAR, "C", Voicings.define(Instrument.ACOUSTIC_GUITAR, "C", Voicings.Shape(listOf(-1, 3, 2, 0, 1, 0))))
         assertEquals(1, again.lines().count { it.startsWith("{define-guitar: C ") })
     }

@@ -22,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.net.InetSocketAddress
 
-/** Versão nova do app oferecida sozinha ao abrir, fora do palco, sem insistir no mesmo dia. */
+/** New app version offered on its own on open, off stage, without insisting on the same day. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class AppUpdateOfferTest {

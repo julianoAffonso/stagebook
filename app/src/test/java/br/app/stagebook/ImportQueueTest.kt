@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Importar em lote as que faltam do QR: cada uma entra no lugar dela; sem achar num site, passa para o próximo. */
+/** Batch import of the QR's missing songs: each takes its place; when not found on a site, moves to the next. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class ImportQueueTest {
@@ -41,7 +41,7 @@ class ImportQueueTest {
         q.saved(b)
         assertEquals(listOf(a, b, c), repo.library.value.setlist(set)!!.items)
         assertEquals("Quarta", q.state.value!!.current!!.title)
-        q.skip()   // a quarta fica de fora e a fila acaba
+        q.skip()   // the fourth is left out and the queue ends
         assertNull(q.state.value)
         assertEquals(listOf(a, b, c), repo.library.value.setlist(set)!!.items)
     }
@@ -55,7 +55,7 @@ class ImportQueueTest {
         assertEquals("Dois", q.nextSite()?.name)
         q.tryNextSite()
         assertEquals("site:dois.net Música A Banda", Uri.parse(q.searchUrl()).getQueryParameter("q"))
-        assertNull(q.nextSite())   // era o último
+        assertNull(q.nextSite())   // it was the last one
         q.skip()
         assertEquals("site:www.um.com.br Música B", Uri.parse(q.searchUrl()).getQueryParameter("q"))
     }

@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Rolagem automática (T15): o ▶ liga, tocar na tela pausa sem mudar de música, e −/+ mudam a velocidade. */
+/** Auto-scroll (T15): ▶ starts it, tapping the screen pauses without changing songs, and −/+ change the speed. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class StageAutoScrollTest {
@@ -40,29 +40,29 @@ class StageAutoScrollTest {
                 StageScreen(state, song, page, { s, p -> song = s; page = p }, onAutoScroll = { level = it })
             }
         }
-        // relógio parado (quadro a quadro): esperando a tela, o teste andaria o tempo até a rolagem chegar ao fim
+        // clock stopped (frame by frame): waiting for idle, the test would move time until scrolling reached the end
         compose.mainClock.autoAdvance = false
         fun frames(n: Int) = repeat(n) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
         fun open() { compose.onNodeWithContentDescription("Rolagem automática").performClick(); frames(3) }
-        // play na janelinha: ela fecha e a letra rola; tocar na tela pausa, sem mudar de música
+        // play in the small window: it closes and the lyrics scroll; tapping the screen pauses, without changing songs
         open()
         compose.onNodeWithContentDescription("Rolar sozinho").performClick()
         frames(60)
         compose.onRoot().performTouchInput { click(centerRight.copy(x = centerRight.x - 50f)) }
         frames(10)
         assertEquals(0, song)
-        // sem drift: a posição da pausa virou o passo 1 (o próximo pedal parte dela)
+        // no drift: the pause position became step 1 (the next pedal press starts from it)
         assertEquals(1, page)
         open()
         compose.onNodeWithContentDescription("Rolar sozinho").assertExists()
-        // de novo: rolando, o ícone ao lado do relógio vira pause e para na hora
+        // again: while scrolling, the icon next to the clock becomes pause and stops right away
         compose.onNodeWithContentDescription("Rolar sozinho").performClick()
         frames(30)
         compose.onNodeWithContentDescription("Rolagem automática").assertDoesNotExist()
         compose.onNodeWithContentDescription("Pausar a rolagem").performClick()
         frames(10)
         compose.onNodeWithContentDescription("Rolagem automática").assertExists()
-        // o × fecha sem mudar nada
+        // × closes without changing anything
         open()
         compose.onNodeWithContentDescription("Fechar").performClick()
         frames(5)

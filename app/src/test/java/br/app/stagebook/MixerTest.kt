@@ -24,13 +24,13 @@ class MixerTest {
     @Test fun `stereo pair follows the first channel - fader - EQ and normalization together`() {
         val cfg = MixerConfig(channels = 4)
             .withStrip(0) { it.copy(stereo = true, gainDb = -6f, eq = true, norm = NormMode.VOLUME) }
-            .withStrip(1) { it.copy(gainDb = 6f) }   // ignorado: segue o canal 1
+            .withStrip(1) { it.copy(gainDb = 6f) }   // ignored: follows channel 1
         val p = Mixer.plan(cfg, 4, mapOf(0 to Measure(lufs = -20f, peak = 0.5f)))
         assertEquals(listOf(0..1, 2..2, 3..3), cfg.groups(4))
         assertEquals(p.gains[0], p.gains[1])
         assertEquals(Mixer.lin(-6f), p.gains[0], 1e-6f)
         assertEquals(0b11, p.eqMask)
-        assertEquals(Mixer.lin(4f), p.norms[0], 1e-4f)   // -20 LUFS → -16: +4 dB (o pico -6 dB deixa)
+        assertEquals(Mixer.lin(4f), p.norms[0], 1e-4f)   // -20 LUFS → -16: +4 dB (the -6 dB peak allows it)
         assertEquals(p.norms[0], p.norms[1])
         assertEquals(1f, route(p, 0, 0)); assertEquals(1f, route(p, 1, 1))
     }
@@ -59,7 +59,7 @@ class MixerTest {
             .withStrip(0) { it.copy(name = "Backing", stereo = true) }
             .withStrip(2) { it.copy(name = "Click", stereo = true) }
             .withOutput(2, 6)
-            .withStrip(3) { it.copy(on = false) }   // dentro do par: segue o canal 3
+            .withStrip(3) { it.copy(on = false) }   // inside the pair: follows channel 3
         val p = Mixer.plan(cfg, 4)
         assertEquals(1f, route(p, 6, 2)); assertEquals(1f, route(p, 7, 3))
         assertEquals(0f, route(p, 2, 2))
@@ -71,7 +71,8 @@ class MixerTest {
     @Test fun `each interface keeps its own routing`() {
         val usb = MixerConfig(channels = 2, output = br.app.stagebook.domain.OutputInfo("usb:1234:5678", "Interface USB", 10)).withOutput(1, 6)
         assertEquals(1f, route(Mixer.plan(usb, 2), 6, 1))
-        // na saída do aparelho, o canal 2 continua na saída 2 (direita): o que foi escolhido para a interface USB não vale ali
+        // on the device output, channel 2 stays on output 2 (right): what was chosen for the USB interface doesn't
+        // apply there
         val device = usb.copy(output = br.app.stagebook.domain.OutputInfo())
         assertEquals(1f, route(Mixer.plan(device, 2), 1, 1))
         assertEquals(6, usb.outputOf(1))
@@ -80,6 +81,6 @@ class MixerTest {
 
     @Test fun `file with fewer channels than the mixer uses only the ones it has`() {
         val cfg = MixerConfig(channels = 8).withStrip(0) { it.copy(stereo = true) }
-        assertEquals(listOf(0..0), cfg.groups(1))   // par sem o segundo canal fica sozinho
+        assertEquals(listOf(0..0), cfg.groups(1))   // a pair without the second channel stays alone
     }
 }

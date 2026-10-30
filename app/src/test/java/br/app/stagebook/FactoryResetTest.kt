@@ -20,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.random.Random
 
-/** Apagar tudo (T26): só depois de digitar o código; dá para salvar o arquivo antes. */
+/** Erase everything (T26): only after typing the code; you can save the file first. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class FactoryResetTest {
@@ -38,10 +38,10 @@ class FactoryResetTest {
         var reset = 0
         var backup = 0
         compose.setContent { StagebookTheme { FactoryResetDialog({ backup++ }, { reset++ }, {}, code = "4827") } }
-        val apagar = compose.onAllNodesWithText("Apagar tudo")[1]   // [0] é o título da janela
-        apagar.assertIsNotEnabled()
+        val eraseButton = compose.onAllNodesWithText("Apagar tudo")[1]   // [0] is the window title
+        eraseButton.assertIsNotEnabled()
         compose.onNodeWithText("Código").performTextInput("4821")
-        apagar.assertIsNotEnabled()
+        eraseButton.assertIsNotEnabled()
         compose.onNodeWithText("4821").performTextInput("")
         compose.onNodeWithText("Salvar arquivo antes (com tudo)").performClick()
         assertEquals(1, backup)
@@ -52,9 +52,9 @@ class FactoryResetTest {
         var reset = 0
         compose.setContent { StagebookTheme { FactoryResetDialog({}, { reset++ }, {}, code = "4827") } }
         compose.onNodeWithText("Código").performTextInput("4827")
-        val apagar = compose.onAllNodesWithText("Apagar tudo")[1]
-        apagar.assertIsEnabled()
-        apagar.performClick()
+        val eraseButton = compose.onAllNodesWithText("Apagar tudo")[1]
+        eraseButton.assertIsEnabled()
+        eraseButton.performClick()
         assertEquals(1, reset)
     }
 }

@@ -56,9 +56,9 @@ class HarmonicFieldTest {
         assertEquals("IVsus2", HarmonicField.degreeIn("Csus2", "G"))
         assertEquals("ii7(9)", HarmonicField.degreeIn("Am7(9)", "G"))
         assertEquals("I6", HarmonicField.degreeIn("G6", "G"))
-        assertNull(HarmonicField.degreeIn("D7(b9)", "G"))   // Eb não é de G
-        assertNull(HarmonicField.degreeIn("C/Bb", "G"))     // o baixo Bb não é de G
+        assertNull(HarmonicField.degreeIn("D7(b9)", "G"))   // Eb isn't in G
+        assertNull(HarmonicField.degreeIn("C/Bb", "G"))     // the Bb bass isn't in G
         assertEquals("V7", HarmonicField.degreeIn("D7/F#", "G"))
-        assertNull(HarmonicField.degreeIn("Caug", "G"))     // G# não é de G
+        assertNull(HarmonicField.degreeIn("Caug", "G"))     // G# isn't in G
     }
 }

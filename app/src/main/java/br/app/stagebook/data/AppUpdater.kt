@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** What's published in the latest GitHub release (publicar.sh saves it with the APK). */
+/** What's published in the latest GitHub release (publish.sh saves it with the APK). */
 @Serializable
 data class PublishedVersion(val versionCode: Long, val versionName: String)
 
@@ -55,7 +55,7 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
         last.get()?.let { (at, p) -> if (SystemClock.elapsedRealtime() - at < maxAgeMs) return p }
         return withContext(on) {
             runCatching { json.decodeFromString<PublishedVersion>(get(versionUrl) { input, _ -> input.bufferedReader().readText() }) }
-                .onFailure { Log.w(TAG, "não li a versão publicada", it) }
+                .onFailure { Log.w(TAG, "couldn't read the published version", it) }
                 .getOrNull()
                 ?.also { last.set(SystemClock.elapsedRealtime() to it) }
         }
@@ -86,9 +86,9 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
         val info = context.packageManager.getPackageArchiveInfo(part.path, 0)
         if (info?.packageName != context.packageName || PackageInfoCompat.getLongVersionCode(info) <= installedCode) {
             part.delete()
-            throw IOException("o arquivo baixado não é uma versão mais nova do Stagebook")
+            throw IOException("the downloaded file isn't a newer Stagebook version")
         }
-        if (!part.renameTo(apk)) throw IOException("não consegui guardar o arquivo baixado")
+        if (!part.renameTo(apk)) throw IOException("couldn't save the downloaded file")
         apk
     }
 

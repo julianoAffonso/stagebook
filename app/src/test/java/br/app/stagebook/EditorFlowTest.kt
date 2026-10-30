@@ -35,7 +35,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Editor: não perde o que foi digitado (Cancelar sem querer, Android fechando o app). */
+/** Editor: doesn't lose what was typed (accidental Cancel, Android closing the app). */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
@@ -50,7 +50,7 @@ class EditorFlowTest {
     fun `with something typed, back asks before leaving`() {
         var left = 0
         screen(SongEditorUiState(loading = false, title = "Hazard", text = "letra nova", unsaved = true)) { left++ }
-        compose.onNodeWithContentDescription("Voltar").performClick()   // o voltar do cabeçalho é o cancelar
+        compose.onNodeWithContentDescription("Voltar").performClick()   // the header's back is cancel
         compose.onNodeWithText("Sair sem salvar?", substring = true).assertExists()
         assertEquals(0, left)
         compose.onNodeWithText("Sair sem salvar").performClick()
@@ -61,7 +61,7 @@ class EditorFlowTest {
     fun `with nothing changed, back leaves right away`() {
         var left = 0
         screen(SongEditorUiState(loading = false, title = "Hazard", text = "letra")) { left++ }
-        compose.onNodeWithContentDescription("Voltar").performClick()   // o voltar do cabeçalho é o cancelar
+        compose.onNodeWithContentDescription("Voltar").performClick()   // the header's back is cancel
         assertEquals(1, left)
     }
 
@@ -80,7 +80,7 @@ class EditorFlowTest {
             withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             vm.onText("letra digitada e ainda não salva")
             assertTrue(vm.uiState.unsaved)
-            // processo morto: só o SavedStateHandle sobrevive (o Android o devolve à tela nova)
+            // process killed: only the SavedStateHandle survives (Android hands it back to the new screen)
             val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo))
             withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
             assertEquals("letra digitada e ainda não salva", again.uiState.text)

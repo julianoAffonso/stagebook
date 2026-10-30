@@ -4,7 +4,7 @@ import br.app.stagebook.domain.LyricsCleaner
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// Letras inventadas para o teste (sem conteúdo com direito autoral).
+// Lyrics made up for the test (no copyrighted content).
 class LyricsCleanerTest {
     private val english = listOf(
         "I walked along the river in the night",
@@ -27,7 +27,7 @@ class LyricsCleanerTest {
 
     @Test
     fun `line by line translation with Portuguese first keeps only the English`() {
-        // como a página traducao.html do letras.mus.br mostra: tradução em cima, original embaixo
+        // the way letras.mus.br's traducao.html page shows it: translation on top, original below
         val mixed = english.indices.flatMap { listOf(portuguese[it], english[it]) }.joinToString("\n")
         assertEquals(english.joinToString("\n"), LyricsCleaner.clean(mixed))
     }

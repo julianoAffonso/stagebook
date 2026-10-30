@@ -8,7 +8,7 @@ import org.junit.Test
 class PageMetaTest {
     @Test
     fun `letras mus br on the translation page`() {
-        // valores lidos do site em 18/10/2026 (Chrome)
+        // values read from the site on 18/10/2026 (Chrome)
         val p = PageData(
             title = "Hazard", artist = "LETRAS.MUS.BR - Letras de músicas", site = "www.letras.mus.br",
             ldName = "Hazard", ldArtist = "Richard Marx",

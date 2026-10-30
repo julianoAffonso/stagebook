@@ -246,7 +246,7 @@ class SettingsViewModel @Inject constructor(
                 _install.trySend(Unit)
                 UpdateState.Ready
             } catch (e: IOException) {
-                Log.w("stagebook", "atualização não baixou", e)
+                Log.w("stagebook", "update download failed", e)
                 UpdateState.DownloadFailed
             }
         }

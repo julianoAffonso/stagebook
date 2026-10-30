@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Metrônomo do palco (T33c): começa no BPM da música (sem BPM, 100), conta 1-2-3-4 e o ícone vira stop. */
+/** Stage metronome (T33c): starts at the song's BPM (no BPM, 100), counts 1-2-3-4 and the icon becomes stop. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class StageMetronomeTest {

@@ -51,7 +51,7 @@ final class UsbLink {
     String open(UsbManager um, UsbDevice d) {
         dev = d;
         conn = um.openDevice(d);
-        if (conn == null) return "não consegui abrir a interface USB";
+        if (conn == null) return "couldn't open the USB interface";
         byte[] raw = conn.getRawDescriptors();
 
         int curIf = -1, curAlt = -1, curSub = -1, outIf = -1, outAlt = -1;
@@ -85,7 +85,7 @@ final class UsbLink {
             }
             p += len;
         }
-        if (ep < 0 || channels == 0) return "não achei a saída de áudio da interface USB";
+        if (ep < 0 || channels == 0) return "couldn't find the USB interface audio output";
 
         for (int i = 0; i < d.getInterfaceCount(); i++) {
             UsbInterface x = d.getInterface(i);
@@ -95,7 +95,7 @@ final class UsbLink {
             if (x.getAlternateSetting() == outAlt) streaming = x;
             if (x.getAlternateSetting() == 0) idle = x;
         }
-        if (streaming == null) return "interface de streaming não encontrada";
+        if (streaming == null) return "streaming interface not found";
         // Claims ALL audio interfaces: if Android keeps the USB sound card, its driver touches the same interface when
         // another app plays and drops the stream.
         for (int i = 0; i < d.getInterfaceCount(); i++) {
@@ -103,7 +103,7 @@ final class UsbLink {
             if (x.getInterfaceClass() != 1 || x.getAlternateSetting() != 0 || x.getId() == outIf) continue;
             if (conn.claimInterface(x, true)) others.add(x);
         }
-        if (!conn.claimInterface(streaming, true)) return "não consegui assumir a interface USB (outro app usando?)";
+        if (!conn.claimInterface(streaming, true)) return "couldn't claim the USB interface (another app using it?)";
         outIfNum = outIf;
         outAltNum = outAlt;
         if (!conn.setInterface(streaming)) return "a interface USB recusou o modo de streaming";
@@ -119,7 +119,7 @@ final class UsbLink {
     String describe() {
         return "ep=0x" + Integer.toHexString(ep) + " if" + outIfNum + "/alt" + outAltNum
                 + " +" + others.size() + " ifs " + channels + "ch subslot=" + subslot
-                + (inEp >= 0 ? " fb=0x" + Integer.toHexString(inEp) + "/" + inChannels + "ch" : " sem-fb")
+                + (inEp >= 0 ? " fb=0x" + Integer.toHexString(inEp) + "/" + inChannels + "ch" : " no-fb")
                 + " bits=" + bitRes + " maxPkt=" + maxPacket;
     }
 

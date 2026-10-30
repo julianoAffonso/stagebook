@@ -26,7 +26,7 @@ class MidiDecoderTest {
 
     @Test fun `running status and clock in between`() {
         val d = MidiDecoder("")
-        // CC 80 canal 2, depois sem repetir o status, com um clock (F8) entre os bytes
+        // CC 80 channel 2, then without repeating the status, with a clock (F8) between the bytes
         val p = d.feed(bytes(0xB1, 80, 0xF8, 127, 80, 0))
         assertEquals(listOf(true, false), p.map { it.down })
         assertEquals(2, MidiCode.channel(p[0].code))

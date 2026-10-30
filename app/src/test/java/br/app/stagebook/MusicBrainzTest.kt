@@ -10,14 +10,14 @@ import org.junit.Before
 import org.junit.Test
 import java.net.InetSocketAddress
 
-/** Busca de artista e ano: com a rede travada, o "carregando" não passa do prazo. */
+/** Artist and year lookup: with a stuck network, "loading" doesn't go past the deadline. */
 class MusicBrainzTest {
     private lateinit var server: HttpServer
 
     @Before fun start() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/lento") { ex ->
-            Thread.sleep(5_000)   // servidor que demora a responder (Wi-Fi ruim)
+            Thread.sleep(5_000)   // server slow to answer (bad Wi-Fi)
             ex.sendResponseHeaders(200, -1)
             ex.close()
         }

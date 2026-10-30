@@ -20,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 
-/** A biblioteca no disco: falha de gravação não derruba o app, arquivo estragado volta da cópia. */
+/** The library on disk: a write failure doesn't crash the app, a corrupted file comes back from the copy. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class LibraryRepositoryTest {
@@ -36,7 +36,7 @@ class LibraryRepositoryTest {
     @Test
     fun `failing write (disk) does not crash the app and the song stays in memory`() {
         val r = repo()
-        File(dir, "stagebook.json.tmp").apply { deleteRecursively(); mkdirs() }   // não dá para criar o temporário
+        File(dir, "stagebook.json.tmp").apply { deleteRecursively(); mkdirs() }   // can't create the temp file
         r.saveSong(Song(title = "Hazard", text = "letra"))
         waitWrites()
         assertEquals(emptyList<Throwable>(), crashes)
@@ -51,7 +51,7 @@ class LibraryRepositoryTest {
         waitWrites()
         r.saveSong(Song(title = "Segunda", text = "b"))
         waitWrites()
-        File(dir, "stagebook.json").writeText("{ isto não é json")   // desligou no meio de outra coisa
+        File(dir, "stagebook.json").writeText("{ isto não é json")   // powered off in the middle of something else
         val again = repo()
         assertTrue("abre a cópia anterior", again.findSong("Primeira", "") != null)
         assertTrue("o estragado fica guardado", dir.listFiles()!!.any { it.name.startsWith("stagebook.corrompido.") })

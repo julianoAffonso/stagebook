@@ -6,7 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Versões diferentes da mesma música: aceitar a recebida nunca apaga a cifra de quem recebe. */
+/** Different versions of the same song: accepting theirs never deletes the receiver's chords. */
 class SongMergeTest {
     private val mine = "{key: G}\n[G]Linha um da can[D]ção\n[Em]Linha dois\nLinha três"
 

@@ -28,7 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** "Padronizar seções da biblioteca": do botão até a letra gravada. */
+/** "Standardize library sections": from the button to the saved lyrics. */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
@@ -49,7 +49,7 @@ class NormalizeFlowTest {
 
     @Test
     fun `mark sections only touches lyrics without titles and says how many changed`() = runBlocking {
-        Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())   // o trabalho saiu da thread principal
+        Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())   // the work left the main thread
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
@@ -61,7 +61,7 @@ class NormalizeFlowTest {
         val vm = SettingsViewModel(repo, context, br.app.stagebook.data.AppUpdater(context), br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)))
         vm.normalizeSections()
         assertEquals(SettingsMessage.Normalized(1, 1), withTimeout(5_000) { vm.messages.first() })
-        // títulos que já existem ficam como estão (o palco mostra na língua do app)
+        // existing titles stay as they are (the stage shows them in the app's language)
         assertEquals("Chorus:\nlinha\n\nVerse 2\noutra", repo.findSong("A", "")!!.text)
         assertEquals("{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num", repo.findSong("E", "")!!.text)
         Dispatchers.resetMain()

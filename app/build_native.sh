@@ -1,13 +1,13 @@
 #!/bin/bash
-# Motor de áudio nativo: o mesmo comando do motor validado (só o alvo é Android 9, API 28, para
-# o Fire HD 10 e aparelhos simples). Não trocar por CMake/ndk-build: as opções padrão deles mudam o código gerado
-# de um motor de tempo real. A prova de que o som é o mesmo é o simulador (tools/engine-sim), não o hash do .so.
-#   build_native.sh <pasta de saída>   -> <pasta>/<abi>/libstagebook_audio.so
+# Native audio engine: the same command as the validated engine (only the target is Android 9, API 28, for the
+# Fire HD 10 and simpler devices). Don't switch to CMake/ndk-build: their default flags change the code generated for
+# a real-time engine. The proof that the sound is the same is the simulator (tools/engine-sim), not the .so hash.
+#   build_native.sh <output folder>   -> <folder>/<abi>/libstagebook_audio.so
 set -euo pipefail
 OUT=$1
 cd "$(dirname "$0")/src/main/cpp"
 SDK=${ANDROID_HOME:-$HOME/Library/Android/sdk}
-HOST=$([ "$(uname)" = Darwin ] && echo darwin-x86_64 || echo linux-x86_64)   # Mac aqui, Linux na verificação do GitHub
+HOST=$([ "$(uname)" = Darwin ] && echo darwin-x86_64 || echo linux-x86_64)   # Mac here, Linux in the GitHub check
 BIN=$SDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/$HOST/bin
 STB=third_party
 build() {   # <abi> <compilador>

@@ -24,7 +24,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Tocar num acorde do palco abre o desenho dele; tocar na letra continua virando a página. */
+/** Tapping a chord on stage opens its diagram; tapping the lyrics still turns the page. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
@@ -45,7 +45,7 @@ class StageChordTapTest {
         }
     }
 
-    // o acorde G fica em cima do começo da primeira linha de letra
+    // the G chord sits above the start of the first lyrics line
     private fun tapFirstChord() {
         val lyric = compose.onNodeWithText("Primeira linha", substring = true).fetchSemanticsNode().boundsInRoot
         compose.onRoot().performTouchInput { click(Offset(lyric.left + 6f, lyric.top + 6f)) }

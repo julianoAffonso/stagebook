@@ -23,7 +23,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Modo essencial (T19): as quatro partes desligadas; mexer numa parte tira do modo; desligar religa o que é padrão. */
+/**
+ * Essential mode (T19): all four parts off; touching a part leaves the mode; turning it off brings back the defaults.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class EssentialModeTest {
@@ -31,8 +33,8 @@ class EssentialModeTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     @Test fun `essential only with all four off`() {
-        assertFalse(Look().essential)   // app novo: tudo ligado, o player também
-        assertFalse(Look().anyOff)        // e por isso nenhum aviso ao abrir
+        assertFalse(Look().essential)   // new app: everything on, the player too
+        assertFalse(Look().anyOff)        // and so no alert on open
         assertTrue(Look(extrasOn = false).anyOff)
         assertTrue(Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = false).essential)
         assertFalse(Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = true).essential)
@@ -60,7 +62,7 @@ class EssentialModeTest {
         vm.setEssential(false)
         val back = until { it.bandOn }
         assertTrue(back.internetOn && back.extrasOn)
-        assertFalse(back.playerMode)   // o player continua como estava no modo (desligado)
+        assertFalse(back.playerMode)   // the player stays as it was in the mode (off)
     }
 
     @Test fun `without extras the chord window keeps the diagram and shapes - no sound or Details`() {
@@ -86,7 +88,7 @@ class EssentialModeTest {
         assertTrue(conduct.role.value is br.app.stagebook.data.BandConduct.Role.Conducting)
         repo.updateLook { it.copy(bandOn = false) }
         withTimeout(5_000) { conduct.role.first { it == br.app.stagebook.data.BandConduct.Role.None } }
-        kotlinx.coroutines.delay(300)   // o envio que já tinha saído não traz a condução de volta
+        kotlinx.coroutines.delay(300)   // a send already on its way doesn't bring leading back
         assertEquals(br.app.stagebook.data.BandConduct.Role.None, conduct.role.value)
         assertFalse(link.running.value)
     }
@@ -123,12 +125,12 @@ class EssentialModeTest {
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(5_000) { repo.library.first { ok(it.look) } }.look
         vm.setEssential(true)
         until { it.essential }
-        repo.updateLook { it.copy(essentialAlertOff = true) }   // "Não mostrar de novo"
+        repo.updateLook { it.copy(essentialAlertOff = true) }   // "Don't show again"
         until { it.essentialAlertOff }
-        vm.setExtrasOn(true)   // religar uma parte também sai do modo
+        vm.setExtrasOn(true)   // turning a part back on also leaves the mode
         assertFalse(until { it.extrasOn }.essentialAlertOff)
         vm.setEssential(true)
-        assertFalse(until { it.essential }.essentialAlertOff)   // ligou de novo: o aviso volta
+        assertFalse(until { it.essential }.essentialAlertOff)   // turned on again: the alert comes back
     }
 
     @Test fun `alert with don't show again - ok returns the checkbox`() {
