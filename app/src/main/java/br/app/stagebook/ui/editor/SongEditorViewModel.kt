@@ -70,27 +70,39 @@ class SongEditorViewModel @Inject constructor(
     var uiState by mutableStateOf(SongEditorUiState())
         private set
 
-    /** The song's backing track ("" = none); only an existing song can get one (the file is named after its id). */
-    var track by mutableStateOf(route.songId?.let(repository::song)?.track.orEmpty())
+    // a new song gets its id now (kept across rotation): the backing track file is named after it, so a new song can
+    // get one too (user, 30/10)
+    private val songId: String = route.songId ?: savedStateHandle.get<String>(KEY_NEW_ID) ?: repository.newId().also { savedStateHandle[KEY_NEW_ID] = it }
+
+    /** The song's backing track ("" = none). */
+    var track by mutableStateOf(savedStateHandle.get<String>(KEY_TRACK) ?: route.songId?.let(repository::song)?.track.orEmpty())
         private set
-    val canPickTrack get() = route.songId != null
 
     /** Links the chosen file right away (copied into the app); saving reads the song again, so it's kept. */
     suspend fun attachTrack(uri: android.net.Uri): Boolean {
-        val id = route.songId ?: return false
-        val name = tracks.copy(id, uri) ?: return false
+        val name = tracks.copy(songId, uri) ?: return false
         val old = track
-        repository.updateSong(id) { it.copy(track = name) }
+        // a saved song keeps it right away; a new one takes it when saved
+        if (route.songId != null) repository.updateSong(songId) { it.copy(track = name) }
         if (old != name) tracks.remove(old)
-        track = name
+        keepTrack(name)
         return true
     }
 
     fun removeTrack() {
-        val id = route.songId ?: return
-        repository.updateSong(id) { it.copy(track = "") }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(track = "") }
         tracks.remove(track)
-        track = ""
+        keepTrack("")
+    }
+
+    private fun keepTrack(name: String) {
+        track = name
+        savedStateHandle[KEY_TRACK] = name
+    }
+
+    // a new song left without saving: the backing track copied for it goes away
+    override fun onCleared() {
+        if (route.songId == null && !finished) tracks.remove(track)
     }
 
     private val done = Channel<EditorExit>(Channel.BUFFERED)
@@ -164,10 +176,10 @@ class SongEditorViewModel @Inject constructor(
         val title = s.title.trim()
         if (title.isEmpty()) { uiState = s.copy(error = EditorError.TITLE_EMPTY); return }
         val other = repository.findSong(title, s.author.trim())
-        if (other != null && other.id != route.songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return }
+        if (other != null && other.id != songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = route.songId.orEmpty(), title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // chords are saved as ChordPro
+        val id = repository.saveSong(base.copy(id = songId, track = track, title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // chords are saved as ChordPro
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         finished = true
         // batch importing into a setlist: the song takes its place and the queue moves on
@@ -189,5 +201,7 @@ class SongEditorViewModel @Inject constructor(
 
     private companion object {
         const val KEY_FIELDS = "editor_fields"
+        const val KEY_NEW_ID = "editor_new_id"
+        const val KEY_TRACK = "editor_track"
     }
 }

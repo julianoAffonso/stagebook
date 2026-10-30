@@ -167,8 +167,9 @@ class ScreenshotTest {
     }
 
     // T27: song details open (new song)
+    // new song with the player on: the backing track is in the details too
     @Test fun editorDataTablet() = shoot("tablet_4_editor_dados") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", chordSong), {}, {}, {}, {}, {}, {}, {})
+        SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", chordSong), {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "")
     }
 
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
