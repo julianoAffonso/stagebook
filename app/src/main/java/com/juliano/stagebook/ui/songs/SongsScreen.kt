@@ -149,12 +149,13 @@ fun SongsScreen(
                         pluralStringResource(R.plurals.songs_selected, selected.size, selected.size),
                         style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
                     )
-                    ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Upload)
+                    ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Upload, tone = ButtonTone.Tonal)
                 }
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
+                // secundário no começo, a ação principal no fim (como nos apps do Google)
                 // importar dos sites (com internet), ler o QR ou digitar o código: um botão, um menu
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync)
+                ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
             }
             AnimatedVisibility(!online) {
                 Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {

@@ -1301,7 +1301,7 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
         Text(stringResource(R.string.about_support_text), style = MaterialTheme.typography.bodyMedium)
         // o botão só aparece com o link de doação preenchido (AppLinks.DONATE)
         if (AppLinks.DONATE.startsWith("https://")) {
-            ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Favorite)
+            ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Favorite, tone = ButtonTone.Tonal)
         }
     }
 }

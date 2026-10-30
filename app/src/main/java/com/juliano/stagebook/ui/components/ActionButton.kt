@@ -35,9 +35,9 @@ import com.juliano.stagebook.ui.theme.Spacing
 enum class ButtonTone { Primary, Tonal, Danger, Quiet }
 
 /**
- * Botão de ação do app (regra da T35, pedido do usuário: "botões com fundo parecem dos anos 2000"): **sem fundo**, ícone +
- * texto, como nos apps do Google. A cor diz a importância ([ButtonTone]): Primary = destaque, Tonal = cor do texto,
- * Danger = vermelho, Quiet = apagado. Ao tocar, a onda na forma de pílula e um leve afundar (o "morph" do Expressive).
+ * Botão de ação do app, no padrão dos apps do Google (regra da T35, decisão do usuário): **a única ação principal da tela**
+ * ([ButtonTone.Primary]) tem fundo cheio; as outras são ícone + texto **sem fundo** (Tonal = cor do texto, Danger = vermelho,
+ * Quiet = apagado). A principal encosta no fim do espaço; as outras, no começo. Ao tocar, a onda em pílula e um leve afundar (o "morph" do Expressive).
  */
 @Composable
 fun ActionButton(
@@ -52,8 +52,9 @@ fun ActionButton(
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.95f else 1f, label = "press")
     val corner by animateIntAsState(if (pressed) 30 else 50, label = "corner")
-    // sem fundo, um botão esticado deixaria o texto boiando no meio: ele encosta no começo do espaço (como nos apps do Google)
-    Box(modifier, contentAlignment = Alignment.CenterStart) {
+    // como nos apps do Google: numa fileira, o secundário encosta no começo e a ação principal no fim (Cancelar … OK); um
+    // botão esticado nunca deixa o texto boiando no meio
+    Box(modifier, contentAlignment = if (tone == ButtonTone.Primary) Alignment.CenterEnd else Alignment.CenterStart) {
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -63,7 +64,7 @@ fun ActionButton(
         shape = RoundedCornerShape(percent = corner),
         colors = toneColors(tone),
         interactionSource = interaction,
-        contentPadding = PaddingValues(horizontal = Spacing.s),
+        contentPadding = PaddingValues(horizontal = if (tone == ButtonTone.Primary) Spacing.l else Spacing.s),
     ) {
         if (icon != null) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -77,11 +78,12 @@ fun ActionButton(
 @Composable
 private fun toneColors(tone: ButtonTone): ButtonColors {
     val c = MaterialTheme.colorScheme
+    // a ação principal da tela: pílula cheia, como o "Escrever" do Gmail ou o "Salvar" das telas do Google
+    if (tone == ButtonTone.Primary) return ButtonDefaults.buttonColors()
     val content = when (tone) {
-        ButtonTone.Primary -> c.primary
         ButtonTone.Tonal -> c.onSurface
         ButtonTone.Danger -> c.error
-        ButtonTone.Quiet -> c.onSurfaceVariant
+        else -> c.onSurfaceVariant
     }
     return ButtonDefaults.buttonColors(
         containerColor = Color.Transparent,
