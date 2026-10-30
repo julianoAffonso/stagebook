@@ -49,8 +49,9 @@ class ChordPlayer @Inject constructor() {
             synchronized(lock) {
                 if (mine != latest) { t.release(); return@launch }   // a newer tap came meanwhile
                 track?.let { runCatching { it.stop() }; it.release() }
+                // a track the system didn't set up throws on play: no sound this time, never a crash
+                if (runCatching { t.play() }.isFailure) { t.release(); track = null; return@launch }
                 track = t
-                t.play()
             }
         }
     }
