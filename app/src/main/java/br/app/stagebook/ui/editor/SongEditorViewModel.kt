@@ -150,22 +150,10 @@ class SongEditorViewModel @Inject constructor(
      * Moves [semitones] half steps up or down: rewrites the chords and the saved key (chords above the lyrics become
      * ChordPro first).
      */
-    fun transpose(semitones: Int) {
-        // no saved key: saves the one computed from the chords first, so the key moves with the chart
-        val base = Chords.fromChordsOverLyrics(uiState.text).let { t ->
-            if (Chords.key(t).isNotEmpty()) t else Chords.detectKey(t).takeIf { it.isNotEmpty() }?.let { Chords.setDirective(t, "key", it) } ?: t
-        }
-        update(text = Chords.transpose(base, semitones))
-    }
+    fun transpose(semitones: Int) = update(text = Chords.transposeSong(uiState.text, semitones))
 
     /** Capo: the chord diagrams stay the same (the sounding key changes). 0 removes the directive. */
-    fun setCapo(capo: Int) {
-        val now = capo.coerceIn(0, 12)
-        // the tablature stays in frets without a capo: the capo goes up, the frets go up with it (user's decision,
-        // 29/10)
-        val shifted = br.app.stagebook.domain.Tablature.shift(uiState.text, now - Chords.capo(uiState.text))
-        update(text = Chords.setDirective(shifted, "capo", now.takeIf { it > 0 }?.toString().orEmpty()))
-    }
+    fun setCapo(capo: Int) = update(text = Chords.withCapo(uiState.text, capo))
 
     /** BPM in the song details (empty removes it); the metronome starts at it. */
     fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))

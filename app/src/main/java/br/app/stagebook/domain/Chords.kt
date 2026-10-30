@@ -246,6 +246,27 @@ object Chords {
         return if (newKey.isNotEmpty()) setDirective(tabbed, "key", newKey) else tabbed
     }
 
+    /**
+     * Moves the song [semitones] half steps (editor and stage): chords above the lyrics become ChordPro first and, with
+     * no saved key, the one computed from the chords is saved first so the key moves with the chart.
+     */
+    fun transposeSong(text: String, semitones: Int): String {
+        val base = fromChordsOverLyrics(text).let { t ->
+            if (key(t).isNotEmpty()) t else detectKey(t).takeIf { it.isNotEmpty() }?.let { setDirective(t, "key", it) } ?: t
+        }
+        return transpose(base, semitones)
+    }
+
+    /**
+     * Capo on fret [capo] (0 removes the directive): the chord diagrams stay the same, the sounding key changes. The
+     * tablature stays in frets without a capo: the capo goes up, the frets go up with it (user's decision, 29/10).
+     */
+    fun withCapo(text: String, capo: Int): String {
+        val now = capo.coerceIn(0, 12)
+        val shifted = Tablature.shift(text, now - capo(text))
+        return setDirective(shifted, "capo", now.takeIf { it > 0 }?.toString().orEmpty())
+    }
+
     // ---- key from the chords (import without {key}) ----
 
     private enum class Quality { MAJOR, MINOR, DIM }

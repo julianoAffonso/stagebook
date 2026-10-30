@@ -579,6 +579,16 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stageBadgesPhone() = shoot("celular_7_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
 
+    // a tap on "Key G" opens − and + for key and capo, without leaving the stage
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun stageKeyCapoPhone() {
+        compose.setContent { StagebookTheme { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) } }
+        compose.onNodeWithText("Tom G", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/celular_7_palco_tom_capo.png")
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun stageChordsPhone() = shoot("celular_7_palco_cifra") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
