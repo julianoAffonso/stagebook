@@ -99,7 +99,13 @@ class WebEditorServer @Inject constructor(
         else if (want) _address.value = addressOf(server?.localPort ?: 0)
     }
 
+    private val slots = java.util.concurrent.Semaphore(MAX_CONNECTIONS)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val serveDispatcher = Dispatchers.IO.limitedParallelism(MAX_CONNECTIONS)
+
     private fun start() {
+        // uploads left behind by a closed app (or a cut connection) go away when the editor comes back
+        java.io.File(context.cacheDir, "web").listFiles()?.forEach { it.delete() }
         val socket = (PORT until PORT + 10).firstNotNullOfOrNull { port ->
             runCatching { ServerSocket().apply { reuseAddress = true; bind(InetSocketAddress(port)) } }.getOrNull()
         } ?: run { Log.w(TAG, "no free port"); return }
@@ -115,7 +121,10 @@ class WebEditorServer @Inject constructor(
         serverJob = scope.launch {
             while (isActive) {
                 val client = runCatching { socket.accept() }.getOrNull() ?: break
-                launch { serve(client) }
+                // a few at a time, on their own threads: a flood of connections can't hold the app's other work
+                // (library saves, band); the rest is closed right away (audit 30/10)
+                if (!slots.tryAcquire()) { runCatching { client.close() }; continue }
+                launch(serveDispatcher) { try { serve(client) } finally { slots.release() } }
             }
         }
     }
@@ -136,7 +145,7 @@ class WebEditorServer @Inject constructor(
     private fun serve(client: Socket) = client.use { s ->
         s.soTimeout = TIMEOUT_MS
         val response = runCatching {
-            val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, ::maxBody)
+            val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, { routes.gate(it, isBig(it.path)) }, ::maxBody)
             try {
                 routes.handle(req)
             } finally {
@@ -149,7 +158,11 @@ class WebEditorServer @Inject constructor(
     // backups and backing tracks are big: they go to a file; everything else is a small text
     private fun isBig(path: String) = path == "/api/backup/inspect" || (path.startsWith("/api/songs/") && path.endsWith("/track"))
 
-    private fun maxBody(path: String): Long = if (isBig(path)) MAX_FILE else MAX_BODY.toLong()
+    private fun maxBody(path: String): Long = when {
+        path == "/api/backup/inspect" -> MAX_FILE
+        isBig(path) -> br.app.stagebook.data.TrackStore.MAX_BYTES   // a backing track: the same limit as in the app
+        else -> MAX_BODY.toLong()
+    }
 
     private fun bodyFile(path: String): java.io.File? =
         if (isBig(path)) java.io.File(context.cacheDir, "web").apply { mkdirs() }.let { java.io.File.createTempFile("upload", ".part", it) } else null
@@ -182,6 +195,7 @@ class WebEditorServer @Inject constructor(
         private const val TIMEOUT_MS = 15_000
         const val MAX_BODY = 2 * 1024 * 1024   // a pasted chord sheet or a few ChordPro files
         const val MAX_FILE = 1024L * 1024 * 1024   // a backup with all the backing tracks
+        const val MAX_CONNECTIONS = 8
         const val IDLE_MS = 5 * 60_000L
         private const val IDLE_CHECK_MS = 30_000L
 
@@ -189,7 +203,7 @@ class WebEditorServer @Inject constructor(
         val WEB_STRINGS = mapOf(
             "title" to R.string.web_title,
             "ask" to R.string.web_ask,
-            "asking" to R.string.web_asking,
+            "askingCode" to R.string.web_asking_code,
             "denied" to R.string.web_denied,
             "busy" to R.string.web_busy,
             "connected" to R.string.web_connected,

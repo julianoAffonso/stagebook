@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
                 // "Chrome · Windows wants to edit" (editor on the computer, T37): also never on stage; the browser waits
                 val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
                 if (!onStage && requests.isEmpty()) webRequests.firstOrNull()?.let { r ->
-                    br.app.stagebook.ui.web.WebRequestDialog(r.name) { ok -> webEditor.auth.answer(r.id, ok) }
+                    br.app.stagebook.ui.web.WebRequestDialog(r.name, r.ip, r.code) { ok -> webEditor.auth.answer(r.id, ok) }
                 }
             }
         }

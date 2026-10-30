@@ -257,8 +257,9 @@ async function ask() {
   const r = await post("/api/ask", { name: computerName() });
   if (!r) return offline();
   if (r.status === 429) { say("gate-text", t.busy); $("ask").disabled = false; return; }
-  const { id } = await r.json();
-  say("gate-text", fill(t.asking, "Stagebook"));
+  const { id, code } = await r.json();
+  // the same code shows on the tablet: the musician allows only if they match
+  say("gate-text", fill(t.askingCode, code));
   // waits for the answer on the tablet (the request expires after 2 minutes: then it asks again)
   for (;;) {
     await new Promise((ok) => setTimeout(ok, 1500));

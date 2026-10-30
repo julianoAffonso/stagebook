@@ -26,19 +26,31 @@ class WebEditorRoutes(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /**
+     * Before any body is read: the address check for everything, and for a big upload (backup, backing track) the
+     * Stagebook header and an approved computer's key. A stranger can't make the tablet write a file (audit 30/10).
+     */
+    fun gate(req: HttpRequest, big: Boolean): Int? = when {
+        !hostIsAddress(req.headers["host"].orEmpty()) -> 403
+        big && req.headers["x-stagebook"] != "1" -> 403
+        big && auth.device(req.cookie(COOKIE)) == null -> 401
+        else -> null
+    }
+
     fun handle(req: HttpRequest): HttpResponse {
         if (!hostIsAddress(req.headers["host"].orEmpty())) return HttpResponse.status(403)
-        onAccess()   // any access from the computer keeps the editor on (the open page pings every minute)
         if (!req.path.startsWith("/api/")) {
             return if (req.method == "GET" && (req.path == "/" || req.path == "/index.html")) HttpResponse.html(page()) else HttpResponse.status(404)
         }
         if (req.headers["x-stagebook"] != "1") return HttpResponse.status(403)
         when (req.path) {
-            "/api/ping" -> return HttpResponse.status(204)
             "/api/strings" -> if (req.method == "GET") return HttpResponse.json(200, JsonObject(strings().mapValues { JsonPrimitive(it.value) }).toString())
             "/api/ask" -> return ask(req)
         }
         val device = auth.device(req.cookie(COOKIE)) ?: return HttpResponse.status(401)
+        // only an approved computer keeps the editor on (a stranger pinging it would keep it on all show; audit 30/10)
+        onAccess()
+        if (req.path == "/api/ping") return HttpResponse.status(204)
         if (req.path == "/api/session" && req.method == "GET") {
             return HttpResponse.json(200, buildJsonObject { put("name", device.name); put("app", deviceName()) }.toString())
         }
@@ -49,7 +61,8 @@ class WebEditorRoutes(
     private fun ask(req: HttpRequest): HttpResponse = when (req.method) {
         "POST" -> {
             val name = runCatching { json.parseToJsonElement(req.text()).jsonObject["name"]?.jsonPrimitive?.content }.getOrNull().orEmpty()
-            auth.ask(name)?.let { HttpResponse.json(200, buildJsonObject { put("id", it.id) }.toString()) } ?: HttpResponse.status(429)
+            // the code shows on the page and on the tablet: the musician allows only if they match
+            auth.ask(name, req.remote)?.let { HttpResponse.json(200, buildJsonObject { put("id", it.id); put("code", it.code) }.toString()) } ?: HttpResponse.status(429)
         }
         "GET" -> when (val p = auth.poll(req.query["id"].orEmpty())) {
             WebEditorAuth.Poll.Waiting -> HttpResponse.json(202, "{}")

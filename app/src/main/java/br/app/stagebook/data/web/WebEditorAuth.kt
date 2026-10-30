@@ -29,9 +29,12 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     @Serializable
     data class Device(val id: String, val name: String, val hash: String, val since: Long)
 
-    /** A browser asking to come in, waiting for the answer on the tablet. */
+    /**
+     * A browser asking to come in, waiting for the answer on the tablet: its network address and a short [code] the
+     * page shows too, so a stranger can't pass for the musician's computer just by sending the same name.
+     */
     @Immutable
-    data class Request(val id: String, val name: String, val at: Long)
+    data class Request(val id: String, val name: String, val at: Long, val ip: String = "", val code: String = "")
 
     private sealed interface Answer {
         data class Approved(val key: String) : Answer
@@ -53,6 +56,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     private val _requests = MutableStateFlow<List<Request>>(emptyList())
     val requests: StateFlow<List<Request>> = _requests
     private val answers = mutableMapOf<String, Answer>()
+    private val deniedUntil = mutableMapOf<String, Long>()   // address → when it may ask again
 
     /** The computer for this cookie key, or null (unknown or removed). */
     fun device(key: String?): Device? {
@@ -61,12 +65,17 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
         return _devices.value.firstOrNull { MessageDigest.isEqual(it.hash.toByteArray(), hash.toByteArray()) }
     }
 
-    /** A browser asks to come in: a new request on the tablet (at most [MAX_WAITING] at a time). Null = too many. */
+    /**
+     * A browser asks to come in: a new request on the tablet (at most [MAX_WAITING] at a time, one per address; an
+     * address that was denied waits [DENIED_MS] before asking again). Null = refused for now.
+     */
     @Synchronized
-    fun ask(name: String): Request? {
+    fun ask(name: String, ip: String = ""): Request? {
         expire()
+        if ((deniedUntil[ip] ?: 0L) > now()) return null
+        _requests.value.firstOrNull { it.ip == ip && ip.isNotEmpty() }?.let { return it }   // asking again: the same request
         if (_requests.value.size >= MAX_WAITING) return null
-        val r = Request(token(12), name.take(MAX_NAME).ifBlank { "?" }, now())
+        val r = Request(token(12), name.take(MAX_NAME).ifBlank { "?" }, now(), ip, (1000 + random.nextInt(9000)).toString())
         _requests.update { it + r }
         return r
     }
@@ -81,7 +90,10 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
             _devices.update { it + Device(token(8), r.name, hash(key), now()) }
             save()
             Answer.Approved(key)
-        } else Answer.Denied
+        } else {
+            if (r.ip.isNotEmpty()) deniedUntil[r.ip] = now() + DENIED_MS
+            Answer.Denied
+        }
     }
 
     /** What the waiting browser gets: the key (once), "denied", or null while nobody answered. */
@@ -111,6 +123,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     private fun expire() {
         val limit = now() - REQUEST_TTL_MS
         _requests.update { list -> list.filter { it.at >= limit } }
+        deniedUntil.values.removeAll { it <= now() }
     }
 
     private fun token(bytes: Int): String = ByteArray(bytes).also(random::nextBytes).let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
@@ -129,6 +142,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
         const val MAX_WAITING = 3
         const val MAX_NAME = 60
         const val REQUEST_TTL_MS = 2 * 60_000L
+        const val DENIED_MS = 5 * 60_000L
 
         fun hash(key: String): String =
             MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }

@@ -83,9 +83,11 @@ fun WebEditorDetail(on: Boolean, ui: WebEditorUi, onSwitch: (Boolean) -> Unit, o
 
 /** "Chrome · Windows wants to edit": Allow / Deny (never on stage: the show isn't interrupted). */
 @Composable
-fun WebRequestDialog(name: String, onAnswer: (Boolean) -> Unit) {
+fun WebRequestDialog(name: String, ip: String, code: String, onAnswer: (Boolean) -> Unit) {
+    // the address and the code the computer shows: a stranger can copy the name, not the code on your screen
     QuestionDialog(
-        stringResource(R.string.web_request_title, name), stringResource(R.string.web_request_text),
+        stringResource(R.string.web_request_title, name),
+        stringResource(R.string.web_request_text) + "\n\n" + stringResource(R.string.web_request_code, ip, code),
         stringResource(R.string.web_allow), { onAnswer(true) },
         stringResource(R.string.web_deny), { onAnswer(false) },
         icon = AppIcons.Computer,
