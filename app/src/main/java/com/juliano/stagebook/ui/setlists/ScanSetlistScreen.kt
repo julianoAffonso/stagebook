@@ -494,10 +494,10 @@ private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean,
     )
 }
 
-// ação dentro de uma linha da conferência: botão pequeno com ícone (texto colorido sozinho não parece clicável)
+// ação dentro de uma linha da conferência: ícone + texto sem fundo (padrão dos botões do app, T35)
 @Composable
 private fun RowAction(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
-    androidx.compose.material3.FilledTonalButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.m, vertical = Spacing.xs)) {
+    TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.m, vertical = Spacing.xs)) {
         Icon(icon, null, Modifier.size(18.dp))
         Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = Spacing.s))
     }
