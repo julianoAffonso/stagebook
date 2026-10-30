@@ -129,4 +129,16 @@ class WebEditorTest {
         assertEquals(false, SettingsSection.WEB_EDITOR.shown(essential))
         assertEquals(true, SettingsSection.WEB_EDITOR.shown(br.app.stagebook.data.model.Look()))
     }
+
+    @Test fun `with no access for 5 minutes the editor is idle, any access or ping keeps it on`() {
+        val timer = br.app.stagebook.data.web.IdleTimer(br.app.stagebook.data.web.WebEditorServer.IDLE_MS) { clock }
+        val r = WebEditorRoutes(auth, { "" }, { emptyMap() }, { "Tablet" }, onAccess = timer::touch)
+        clock += 4 * 60_000L
+        assertEquals(false, timer.expired())
+        assertEquals(204, r.handle(req("GET", "/api/ping")).status)   // the open page, every minute
+        clock += 4 * 60_000L
+        assertEquals(false, timer.expired())
+        clock += 2 * 60_000L
+        assertEquals(true, timer.expired())
+    }
 }

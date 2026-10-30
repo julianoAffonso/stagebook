@@ -22,16 +22,19 @@ class WebEditorRoutes(
     private val strings: () -> Map<String, String>,
     private val deviceName: () -> String,
     private val api: (HttpRequest, WebEditorAuth.Device) -> HttpResponse? = { _, _ -> null },
+    private val onAccess: () -> Unit = {},
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun handle(req: HttpRequest): HttpResponse {
         if (!hostIsAddress(req.headers["host"].orEmpty())) return HttpResponse.status(403)
+        onAccess()   // any access from the computer keeps the editor on (the open page pings every minute)
         if (!req.path.startsWith("/api/")) {
             return if (req.method == "GET" && (req.path == "/" || req.path == "/index.html")) HttpResponse.html(page()) else HttpResponse.status(404)
         }
         if (req.headers["x-stagebook"] != "1") return HttpResponse.status(403)
         when (req.path) {
+            "/api/ping" -> return HttpResponse.status(204)
             "/api/strings" -> if (req.method == "GET") return HttpResponse.json(200, JsonObject(strings().mapValues { JsonPrimitive(it.value) }).toString())
             "/api/ask" -> return ask(req)
         }

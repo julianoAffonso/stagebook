@@ -779,7 +779,7 @@
     <string name="settings_web_editor">Edit on the computer</string>
     <string name="settings_web_editor_card">In the browser</string>
     <string name="settings_web_editor_switch">Turn on the editor</string>
-    <string name="settings_web_editor_help">Edit songs and setlists on the computer\'s browser, on the same Wi-Fi. Only on while Stagebook is open; closing the app turns it off.</string>
+    <string name="settings_web_editor_help">Edit songs and setlists on the computer\'s browser, on the same Wi-Fi. It turns itself off after 5 minutes without use on the computer, or when the app closes.</string>
     <string name="settings_web_editor_open">On the computer, open this address in the browser:</string>
     <string name="settings_web_editor_no_wifi">Connect to a Wi-Fi network (or turn on the hotspot) to use the editor.</string>
     <string name="settings_web_editor_devices">Authorized computers</string>
