@@ -570,9 +570,9 @@ fun StageScreen(
                 )
             }
         }
-            // after the artist, in this order (user's request, 29/10): backing track and capo lit in the accent color,
-            // then the key; on phones they go to the artist line, otherwise the title gets shorter
-            if (metaInline && look.playerMode && song.track.isNotEmpty()) TrackBadge()
+            // after the artist (user's request, 29/10): capo lit in the accent color, then the key; on phones they go
+            // to the artist line, otherwise the title gets shorter. No backing track badge: the play only shows when
+            // there is one (T29)
             if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
@@ -582,8 +582,7 @@ fun StageScreen(
         }
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        val hasTrack = look.playerMode && song.track.isNotEmpty()
-        if (!metaInline && (song.meta.isNotEmpty() || ((hasKey || hasTrack) && !song.missing))) {
+        if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
@@ -593,7 +592,6 @@ fun StageScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (hasTrack) TrackBadge(Modifier.padding(end = Spacing.m))
                 if (!song.missing && hasKey) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
             }
         }
@@ -1386,11 +1384,6 @@ private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, key
     }
 }
 
-/** The song has a backing track: the first icon after the artist, lit in the accent color. */
-@Composable
-private fun TrackBadge(modifier: Modifier = Modifier) {
-    Icon(AppIcons.QueueMusic, stringResource(R.string.stage_backing_track), modifier, tint = MaterialTheme.colorScheme.primary)
-}
 
 @Composable
 private fun EditLineButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
