@@ -309,7 +309,7 @@ class ScreenshotTest {
         val items = listOf(
             com.juliano.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado", at = now - 600_000),
             com.juliano.stagebook.data.BandInbox.Item("2", "b", "Tablet do Beto", "LETRAS3\n12\nShow de sábado", at = now - 60_000),
-            com.juliano.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "LETRAS3\n8\nEnsaio", at = now - 300_000),
+            com.juliano.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "LETRAS3\n8\nEnsaio", at = now - 300_000, updated = true),
         )
         compose.setContent { StagebookTheme { com.juliano.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_2_recebidos_versoes.png")
