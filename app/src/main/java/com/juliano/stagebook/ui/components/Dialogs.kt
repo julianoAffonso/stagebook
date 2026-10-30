@@ -102,6 +102,7 @@ fun InfoDialog(
     onDismiss: () -> Unit,
     extra: Pair<String, () -> Unit>? = null,
     neverAgain: ((Boolean) -> Unit)? = null,
+    content: (@Composable () -> Unit)? = null,   // abaixo do texto (lista, link)
 ) {
     var never by rememberSaveable { mutableStateOf(false) }
     AlertDialog(
@@ -110,6 +111,7 @@ fun InfoDialog(
         text = {
             androidx.compose.foundation.layout.Column {
                 Text(message, style = MaterialTheme.typography.bodyLarge)
+                content?.invoke()
                 if (neverAgain != null) {
                     androidx.compose.foundation.layout.Row(
                         Modifier.fillMaxWidth().padding(top = com.juliano.stagebook.ui.theme.Spacing.m)

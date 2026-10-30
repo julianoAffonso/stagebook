@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.home
 
+import com.juliano.stagebook.ui.settings.SettingsSection
 import com.juliano.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
@@ -94,7 +95,6 @@ fun HomeScreen(
     val banner = inbox.lastOrNull { !it.seen }
     val essential by homeVm.essential.collectAsStateWithLifecycle()
     val alert by homeVm.alert.collectAsStateWithLifecycle()
-    alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen) }
     var listOpen by rememberSaveable { mutableStateOf(false) }
     val badges = mapOf(
         HomeTab.SONGS to inbox.count { it.setName.isEmpty() },
@@ -108,18 +108,22 @@ fun HomeScreen(
     val tabs = rememberSaveableStateHolder()
     // Ajustes abre sempre na lista do começo (não na última seção vista): cada toque no ícone é uma visita nova
     var settingsVisit by rememberSaveable { mutableIntStateOf(0) }
+    var settingsStart by rememberSaveable { mutableStateOf<SettingsSection?>(null) }   // link do aviso: abre direto na seção
     val onTab: (HomeTab) -> Unit = { t ->
         if (t == HomeTab.SETTINGS) {
             tabs.removeState("${HomeTab.SETTINGS}$settingsVisit")
             settingsVisit++
+            settingsStart = null
         }
         tab = t
     }
+    val openEssential = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.ESSENTIAL }
+    alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
         Column(m) {
             // modo essencial: lembrete discreto de que tem coisa desligada; o toque abre os Ajustes (a seção é a primeira)
             if (tab != HomeTab.SETTINGS && essential) {
-                EssentialBanner({ onTab(HomeTab.SETTINGS) }, Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
+                EssentialBanner(openEssential, Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
             }
             if (tab != HomeTab.SETTINGS && banner != null) {
                 InboxBanner(
@@ -135,7 +139,7 @@ fun HomeScreen(
                             received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                         )
                         HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
-                        HomeTab.SETTINGS -> SettingsRoute()
+                        HomeTab.SETTINGS -> SettingsRoute(settingsStart)
                     }
                 }
             }
@@ -242,9 +246,9 @@ fun EssentialBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** Aviso ao abrir: modo essencial inteiro ou a lista do que foi desligado, com "Não mostrar de novo". */
+/** Aviso ao abrir: o que está desligado, em lista, e o link que leva direto a Ajustes → Modo essencial. */
 @Composable
-fun EssentialAlert(look: com.juliano.stagebook.data.model.Look, onDismiss: () -> Unit, onNeverAgain: (Boolean) -> Unit) {
+fun EssentialAlert(look: com.juliano.stagebook.data.model.Look, onDismiss: () -> Unit, onNeverAgain: (Boolean) -> Unit, onOpen: () -> Unit = {}) {
     val off = listOfNotNull(
         R.string.essential_band.takeIf { !look.bandOn },
         R.string.essential_internet.takeIf { !look.internetOn },
@@ -254,7 +258,21 @@ fun EssentialAlert(look: com.juliano.stagebook.data.model.Look, onDismiss: () ->
     val all = off.size == 4
     com.juliano.stagebook.ui.components.InfoDialog(
         stringResource(if (all) R.string.essential_alert_title else R.string.essential_alert_some_title),
-        if (all) stringResource(R.string.essential_alert_text) else stringResource(R.string.essential_alert_some_text, off.joinToString(", ")),
+        stringResource(if (all) R.string.essential_alert_text else R.string.essential_alert_some_text),
         onDismiss = onDismiss, neverAgain = onNeverAgain,
-    )
+    ) {
+        Column(Modifier.padding(top = Spacing.s)) {
+            off.forEach { Text("•  $it", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = Spacing.s)) }
+            Row(Modifier.padding(top = Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.essential_alert_relink), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.essential_alert_route),
+                    style = MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpen)
+                        .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+                )
+            }
+        }
+    }
 }
