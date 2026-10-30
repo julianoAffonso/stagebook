@@ -43,8 +43,7 @@ object QrPayload {
         set.items.mapNotNull { id -> library.song(id)?.let { Entry(clean(it.title), clean(it.author)) } }
 
     /** Titles (by key) that appear more than once in the library: only those carry the artist. */
-    private fun repeatedTitles(library: Library): Set<String> =
-        library.songs.groupingBy { TextKey.of(it.title) }.eachCount().filterValues { it > 1 }.keys
+    private fun repeatedTitles(library: Library): Set<String> = TitleKeys.of(library.songs).repeated   // worked out once per library
 
     /** The QR text (before compressing). */
     fun text(set: Setlist, library: Library, name: String = set.name, extra: List<Entry> = emptyList()): String {
