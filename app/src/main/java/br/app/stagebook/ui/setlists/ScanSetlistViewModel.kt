@@ -285,6 +285,7 @@ class ScanSetlistViewModel @Inject constructor(
         }
         carried = came
         incoming = other
+        finished = false   // a new review can be created once
         _ui.value = ScanUi.Review(parsed.name, rows, songsOnly)
     }
 
@@ -303,8 +304,13 @@ class ScanSetlistViewModel @Inject constructor(
 
     fun scanAgain() { if (code.isEmpty()) _ui.value = ScanUi.Scanning() else fetch() }
 
+    // a double tap on Create / Add would make two setlists and save the songs twice: only the first one counts
+    private var finished = false
+
     /** Loose songs: the ones that came and aren't here go into the library; returns how many. */
     fun addSongs(): Int {
+        if (finished) return 0
+        finished = true
         carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text))) }
         (_ui.value as? ScanUi.Review)?.let(::applyIncoming)
         done()
@@ -319,7 +325,9 @@ class ScanSetlistViewModel @Inject constructor(
 
     // the carried ones go into the library now; returns the setlist and, in its order, each row's id (null = missing)
     private fun createWithSlots(replaceId: String?): Pair<String, List<String?>>? {
+        if (finished) return null
         val ui = _ui.value as? ScanUi.Review ?: return null
+        finished = true
         val slots = ui.rows.mapIndexed { i, r ->
             r.chosen ?: carried[i]?.let { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text))) }
         }
