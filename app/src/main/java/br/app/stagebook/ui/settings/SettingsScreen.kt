@@ -120,6 +120,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.layout
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
@@ -552,7 +555,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview),
         ) {
-            StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds())
+            StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(font), R.string.settings_preview_size_text)
         }
     }
     // turn pages (default) or scroll the lyrics; in both the pedal and a tap move one step
@@ -583,19 +586,20 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         }
     }
     if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns), help = stringResource(R.string.settings_columns_help)) {
+        // "Split into columns: Automatic | Never | Always", each with a picture of the page (lines whole or in two blocks)
         val options = listOf(
-            StageColumns.AUTO to R.string.settings_columns_auto,
-            // "1 column"/"2 columns": bare numbers next to "Automatic" said nothing
-            StageColumns.ONE to R.string.settings_columns_one_short,
-            StageColumns.TWO to R.string.settings_columns_two_short,
+            Triple(StageColumns.AUTO, R.string.settings_columns_auto, AppIcons.AutoColumns),
+            Triple(StageColumns.ONE, R.string.settings_columns_never, AppIcons.OneColumn),
+            Triple(StageColumns.TWO, R.string.settings_columns_always, AppIcons.TwoColumns),
         )
         // pill ends, like the buttons in the rest of the app (Material 3 Expressive)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            options.forEachIndexed { i, (c, label) ->
+            options.forEachIndexed { i, (c, label, icon) ->
                 SegmentedButton(
                     selected = look.columns == c,
                     onClick = { actions.onColumns(c) },
                     shape = SegmentedButtonDefaults.itemShape(i, options.size, baseShape = CircleShape),
+                    icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(SegmentedButtonDefaults.IconSize)) },
                 ) { Text(stringResource(label)) }
             }
         }
@@ -614,7 +618,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
 
 /** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
 @Composable
-private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier) {
+private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier, @StringRes sample: Int = R.string.settings_preview_text) {
     val style = TextStyle(
         color = Color(look.fg),
         fontSize = font.sp,
@@ -625,7 +629,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier)
     )
     ChordText(
         lyricsAnnotated(
-            stringResource(R.string.settings_preview_text),
+            stringResource(sample),
             rememberSectionNames(look.translateSections),
             Color(look.sectionColor),
             look.showSections,
@@ -636,6 +640,24 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier)
         chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
         modifier = modifier,
     )
+}
+
+/**
+ * The sample as a miniature of the stage: one fixed reduction, chosen so that even at [Look.MAX_FONT] the whole sample
+ * fits in the box (height and width). The size still grows with the slider, in the same proportion, and nothing gets cut. Lines don't
+ * wrap, so the height grows exactly with [font].
+ */
+private fun Modifier.stageMiniature(font: Float) = layout { measurable, constraints ->
+    val sample = measurable.measure(Constraints())
+    val growth = Look.MAX_FONT / font
+    val scale = minOf(1f, constraints.maxHeight / (sample.height * growth), constraints.maxWidth / (sample.width * growth))
+    layout(constraints.maxWidth, constraints.maxHeight) {
+        sample.placeWithLayer(0, 0) {
+            scaleX = scale
+            scaleY = scale
+            transformOrigin = TransformOrigin(0f, 0f)
+        }
+    }
 }
 
 /**
