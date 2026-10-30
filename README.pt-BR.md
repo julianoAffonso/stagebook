@@ -48,7 +48,8 @@ O app sai em inglês e português do Brasil. Fala outra língua e toca? O passo 
 
 ## Para quem programa
 Kotlin, Jetpack Compose e um motor de áudio em C. `./gradlew assembleDebug` compila e
-`./gradlew testDebugUnitTest` roda os testes (Java 21). As versões são publicadas pelo GitHub Actions.
+`./gradlew testDebugUnitTest` roda os testes (Java 21). As versões são publicadas pelo GitHub Actions. Todo mundo aqui segue o
+[Código de Conduta](CODE_OF_CONDUCT.pt-BR.md).
 
 ## Licença
 Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Pode usar à vontade, até em show pago,

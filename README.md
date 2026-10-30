@@ -48,7 +48,8 @@ The app ships in English and Brazilian Portuguese. Do you play and speak another
 
 ## For developers
 Kotlin, Jetpack Compose and an audio engine in C. `./gradlew assembleDebug` builds and `./gradlew testDebugUnitTest`
-runs the tests (Java 21). Releases are published by GitHub Actions.
+runs the tests (Java 21). Releases are published by GitHub Actions. Everyone here follows the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 Source available under **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Use it as you like, paid gigs included,
