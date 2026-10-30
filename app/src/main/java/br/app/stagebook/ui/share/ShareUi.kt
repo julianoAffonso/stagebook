@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -283,21 +284,27 @@ fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, Str
     )
 }
 
-/** The big code (to read out), its QR (for a photo or "Scan QR"), Copy, and what went along. */
+/**
+ * The big code (to read out) with Copy right beside it (icon only), then its QR, smaller, for whoever prefers a photo
+ * or "Scan QR" (user's layout of 30/10: the words come first, the title says "type"), and what went along.
+ */
 @Composable
 fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = Spacing.s)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SelectionContainer {
+                Text(ShareCode.display(sent.code), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            IconButton(onClick = onCopy) { Icon(AppIcons.Copy, stringResource(R.string.share_copy)) }
+        }
         sent.qr?.let { img ->
             Image(
                 bitmap = img,
                 contentDescription = stringResource(R.string.share_code_qr),
-                modifier = Modifier.widthIn(max = 260.dp).fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small).background(Color.White),
+                modifier = Modifier.widthIn(max = 200.dp).fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.small).background(Color.White),
             )
+            Text(stringResource(R.string.share_qr_or), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        SelectionContainer {
-            Text(ShareCode.display(sent.code), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
-        }
-        ActionButton(stringResource(R.string.share_copy), onCopy, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
         Text(pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs), style = MaterialTheme.typography.bodyMedium)
         sent.joined.forEach { name ->
             Text(stringResource(R.string.share_joined, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)

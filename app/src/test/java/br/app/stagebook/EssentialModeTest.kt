@@ -109,7 +109,7 @@ class EssentialModeTest {
                 br.app.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {}, internetOn = false)
             }
         }
-        compose.onNodeWithText("QR na tela").assertExists()
+        compose.onNodeWithText("QR sem internet").assertExists()
         compose.onNodeWithText("Enviar pela internet").assertDoesNotExist()
         compose.onNodeWithText("Sem internet", substring = true).assertDoesNotExist()
     }

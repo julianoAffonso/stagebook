@@ -688,7 +688,7 @@
         <item quantity="other">Enviado para %1$d aparelhos da banda</item>
     </plurals>
     <string name="share_band_failed">Não deu para mandar para a banda. Confira o Wi-Fi ou a internet e tente de novo.</string>
-    <string name="share_qr">QR na tela</string>
+    <string name="share_qr">QR sem internet</string>
     <string name="share_qr_hint">Quem está do lado lê com a câmera. Só os títulos.</string>
     <string name="share_internet">Enviar pela internet</string>
     <string name="share_internet_hint">Aparecem 3 palavras e um QR para quem vai receber. Valem por 12 horas.</string>
@@ -711,10 +711,11 @@
         <item quantity="one">%1$d música grande demais não foi.</item>
         <item quantity="other">%1$d músicas grandes demais não foram.</item>
     </plurals>
-    <string name="share_sent_hint">No outro aparelho, vá em Importar → Digitar as 3 palavras, ou Importar → Ler QR e aponte para este QR. Valem por 12 horas.</string>
+    <string name="share_sent_hint">No outro aparelho, vá em Importar → Digitar as 3 palavras. Valem por 12 horas.</string>
     <string name="share_send_code">Mandar por mensagem</string>
     <string name="share_message_songs">Músicas no Stagebook. Para receber, vá em Importar → Digitar as 3 palavras e digite %1$s. Vale por 12 horas.</string>
     <string name="share_joined">%1$s aceitou e agora é da banda</string>
+    <string name="share_qr_or">Se preferir, leia este QR em Importar → Ler QR.</string>
     <string name="share_copy">Copiar as palavras</string>
     <string name="share_copied">Palavras copiadas</string>
     <string name="share_code_qr">QR das palavras. Tire uma foto ou leia em Importar → Ler QR.</string>
