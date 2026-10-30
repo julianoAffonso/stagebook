@@ -1,26 +1,31 @@
-# Builds, signs and publishes a release when a version tag (v0.1.<commit count>) is pushed by ./publish.sh.
-# The signing key lives only in the repository secrets: this job writes it to a temporary file and deletes it at the
-# end. The release carries two fixed-name files the app reads from releases/latest/download/.
+# Publishing a version is a button on GitHub, nothing runs on a local machine: Actions → Release → Run workflow, on
+# main. With "publish" unchecked it's a dry run (builds, signs, checks and keeps the APK as an artifact); checked, it
+# also creates the v0.1.<commit count> tag and the release with the two fixed-name files the app reads from
+# releases/latest/download/. The signing key lives only in the repository secrets: it's written to a temporary file
+# and deleted at the end. With the repository private the app can't download the release (it needs a login).
 name: Release
 on:
-  push:
-    tags: ["v*"]
-  workflow_dispatch:   # dry run by hand: builds, signs and checks, keeps the APK as an artifact, publishes nothing
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the release (unchecked = dry run)
+        type: boolean
+        default: false
 
 permissions:
-  contents: write   # create the release
+  contents: write   # create the tag and the release
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
+      # only main gets published
+      - if: inputs.publish && github.ref != 'refs/heads/main'
+        run: { echo "Publish from main (this run is on $GITHUB_REF_NAME)."; exit 1; }
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # the version comes from the commit count
-      # only what is on main gets published
-      - if: github.ref_type == 'tag'
-        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -42,6 +47,7 @@ jobs:
             > ~/.android/stagebook-release.properties
       - run: ./gradlew testDebugUnitTest lintDebug assembleRelease
       - name: Check signature and version
+        id: version
         run: |
           APK=app/build/outputs/apk/release/app-release.apk
           TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
@@ -51,25 +57,28 @@ jobs:
           badging=$("$TOOLS/aapt" dump badging "$APK" | head -1)
           code=$(sed -E "s/.*versionCode='([0-9]+)'.*/\1/" <<<"$badging")
           name=$(sed -E "s/.*versionName='([^']+)'.*/\1/" <<<"$badging")
-          # the tag must match the version built from this commit
-          if [ "$GITHUB_REF_TYPE" = tag ]; then test "$GITHUB_REF_NAME" = "v${name%% *}"; fi
           mkdir -p out
           cp "$APK" out/stagebook.apk
           printf '{"versionCode":%s,"versionName":"%s"}\n' "$code" "$name" > out/stagebook-version.json
-      - if: github.ref_type != 'tag'
+          echo "tag=v${name%% *}" >> "$GITHUB_OUTPUT"
+      - if: ${{ !inputs.publish }}
         uses: actions/upload-artifact@v4
         with:
           name: stagebook-dry-run
           path: out/
       - name: Publish
-        if: github.ref_type == 'tag'
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "Tag $TAG already exists: nothing new to publish."; exit 1
+          fi
           # notes: the commit titles since the previous release
-          last=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
-          notes=$(git log --format='- %s' ${last:+$last..}"$GITHUB_REF_NAME")
-          gh release create "$GITHUB_REF_NAME" out/stagebook.apk out/stagebook-version.json \
-            --title "Stagebook ${GITHUB_REF_NAME#v}" --notes "$notes" --latest
+          last=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          notes=$(git log --format='- %s' ${last:+$last..}HEAD)
+          gh release create "$TAG" out/stagebook.apk out/stagebook-version.json \
+            --target "$GITHUB_SHA" --title "Stagebook ${TAG#v}" --notes "$notes" --latest
       - if: always()
         run: rm -f ~/.android/stagebook-release.jks ~/.android/stagebook-release.properties
