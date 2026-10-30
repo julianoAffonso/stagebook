@@ -59,7 +59,14 @@ android {
     buildFeatures { compose = true }
 
     // screenshots of the screens (Robolectric + Roborazzi): ./gradlew recordRoborazziDebug
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // captures folder (T39): -PshotsLang=en and -PshotsDir=<folder> reach the screenshot tests
+        unitTests.all { test ->
+            test.systemProperty("shots.lang", project.findProperty("shotsLang")?.toString().orEmpty())
+            test.systemProperty("shots.dir", project.findProperty("shotsDir")?.toString().orEmpty())
+        }
+    }
 
     // audio engine (player): comes ready from build_native.sh, the same command as the validated engine
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("native").get().asFile)
