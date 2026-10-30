@@ -358,7 +358,7 @@
     <string name="metro_count">Count in 1-2-3-4</string>
     <string name="metro_glow_color">Glow color</string>
     <string name="metro_help">On stage, the icon next to the clock opens the metronome. It starts at the song\'s BPM, or 100 if it has none.</string>
-    <string name="metro_in_settings">Count-in, sound and glow are in Settings → Metronome</string>
+    <string name="metro_in_settings">Count-in, sound and glow are in Settings → Stage look</string>
     <string name="metro_short_count">count-in</string>
     <string name="metro_short_sound">sound</string>
     <string name="metro_short_silent">silent</string>
