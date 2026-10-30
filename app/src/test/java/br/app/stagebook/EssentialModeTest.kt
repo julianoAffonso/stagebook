@@ -153,7 +153,7 @@ class EssentialModeTest {
             }
         }
         compose.onNodeWithText("•  Banda na rede").assertExists()
-        compose.onNodeWithText("•  Extras do palco").assertExists()
+        compose.onNodeWithText("•  Metrônomo e extras dos acordes").assertExists()
         compose.onNodeWithText("•  Internet").assertDoesNotExist()
         compose.onNodeWithText("Ajustes → Modo essencial").performClick()
         assertTrue(opened)

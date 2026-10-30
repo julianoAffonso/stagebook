@@ -198,7 +198,7 @@
     <string name="essential_internet_detail">3 palavras, recebidos da banda, versão nova do app, BPM e dados da música</string>
     <string name="essential_player">Player de faixas</string>
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
-    <string name="essential_extras">Extras do palco</string>
+    <string name="essential_extras">Metrônomo e extras dos acordes</string>
     <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo e Now Playing</string>
     <string name="essential_on_short">Ligado</string>
     <string name="essential_off_short">Desligado</string>
@@ -230,10 +230,10 @@
     <string name="instrument_cavaquinho">Cavaquinho</string>
     <string name="instrument_keyboard">Teclado</string>
     <string name="settings_chord_tap">Mostrar o desenho ao tocar no acorde</string>
-    <string name="settings_chord_list">Acordes da música</string>
-    <string name="settings_chord_list_none">Não</string>
-    <string name="settings_chord_list_top">No topo</string>
-    <string name="settings_chord_list_bottom">No fim</string>
+    <string name="settings_chord_list">Lista de acordes</string>
+    <string name="settings_chord_list_none">Esconder</string>
+    <string name="settings_chord_list_top">Início</string>
+    <string name="settings_chord_list_bottom">Fim</string>
     <string name="stage_chord_hide">Esconder %1$s da lista</string>
     <string name="stage_chord_hide_confirm">Esconder %1$s da lista de acordes desta música?</string>
     <string name="stage_chord_hide_ok">Esconder</string>
@@ -280,7 +280,7 @@
     <string name="backup_open">Abrir arquivo</string>
     <string name="backup_open_ok">Abrir</string>
     <string name="backup_songs_how">As músicas do arquivo:</string>
-    <string name="backup_merge">Somar às minhas</string>
+    <string name="backup_merge">Juntar com as minhas</string>
     <string name="backup_replace">Substituir as minhas</string>
     <string name="backup_merge_help">Entram só as músicas e os setlists que você não tem; os seus ficam como estão.</string>
     <string name="backup_replace_help">Suas músicas e setlists são trocados pelos do arquivo.</string>
@@ -338,7 +338,7 @@
     <string name="stage_keyboard_capo_hint">Esta cifra usa capo na %1$dª casa. Os acordes aparecem ajustados para o teclado, para você tocar junto com a banda.</string>
     <string name="settings_chord_play">Som do acorde</string>
     <string name="settings_chord_play_arpeggio">Dedilhado</string>
-    <string name="settings_chord_play_chord">Junto</string>
+    <string name="settings_chord_play_chord">Acorde cheio</string>
     <string name="settings_chord_play_both">Os dois</string>
     <string name="announce_title">Now Playing</string>
     <string name="announce_switch">Enviar a música atual para OBS e outros</string>
@@ -426,7 +426,7 @@
     <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
     <string name="settings_colors">Cores</string>
     <string name="settings_columns">Dividir em colunas</string>
-    <string name="settings_stage_mode">Como passar a letra</string>
+    <string name="settings_stage_mode">Como avançar na tela</string>
     <string name="settings_stage_mode_pages">Virar página</string>
     <string name="settings_stage_mode_scroll">Rolar</string>
     <string name="settings_stage_mode_help">Virar página mostra uma página por vez, em uma ou duas colunas. Rolar mostra a letra numa coluna só, e cada toque ou pedal leva até a primeira linha que não cabia. Essa linha acende por um instante.</string>
@@ -536,9 +536,9 @@
     <string name="mixer_unmute">Ligar o canal</string>
     <string name="mixer_db">%1$+.1f dB</string>
     <string name="mixer_db_mute">mudo</string>
-    <string name="mixer_norm">Normalizar</string>
+    <string name="mixer_norm">Igualar o volume</string>
     <string name="mixer_norm_none">Não</string>
-    <string name="mixer_norm_volume">Volume</string>
+    <string name="mixer_norm_volume">Média</string>
     <string name="mixer_norm_peak">Pico</string>
     <string name="mixer_output_in">Saída em: %1$s</string>
     <string name="mixer_out_device">saída do aparelho</string>
@@ -556,7 +556,7 @@
     <string name="mixer_norm_about">Sobre a normalização</string>
     <string name="mixer_edit">Editar o canal</string>
     <string name="mixer_done">Pronto</string>
-    <string name="mixer_eq_switch">Passar pelo equalizador</string>
+    <string name="mixer_eq_switch">Equalizador ligado</string>
     <string name="mixer_center_one">Tocar no meio, igual na esquerda e na direita</string>
     <string name="mixer_center_pair">Juntar os dois lados em mono</string>
     <string name="mixer_center_short">Mono</string>
