@@ -374,7 +374,17 @@ private fun SongDataFields(
         trailingIcon = { IconButton(onClick = onCollapse) { Icon(AppIcons.DropUp, stringResource(R.string.editor_data_close)) } },
         isError = uiState.error != null,
         supportingText = uiState.error?.let { e ->
-            { Text(stringResource(if (e == EditorError.TITLE_EMPTY) R.string.editor_error_title_empty else R.string.editor_error_title_taken)) }
+            {
+                Text(
+                    stringResource(
+                        when (e) {
+                            EditorError.TITLE_EMPTY -> R.string.editor_error_title_empty
+                            EditorError.TITLE_TAKEN -> R.string.editor_error_title_taken
+                            EditorError.NOT_SONG -> R.string.not_song
+                        },
+                    ),
+                )
+            }
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),

@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class ImportProblem { NOT_FOUND, UNREADABLE }
+enum class ImportProblem { NOT_FOUND, UNREADABLE, NOT_SONG }
 
 /** What came out of a page (or pasted text): the song ready to review, a problem, or the tablature question first. */
 sealed interface PageImport {
@@ -63,6 +63,10 @@ class PageImporter @Inject constructor(
             lyrics
         }
         if (text.lines().size < 3) return PageImport.Problem(ImportProblem.NOT_FOUND)
+        // only lyrics and chords come in (the same filter as the band, plus the look of verses)
+        if (!br.app.stagebook.domain.BandContent.isPlainText(text) || text.length > br.app.stagebook.domain.BandContent.MAX_TEXT ||
+            !br.app.stagebook.domain.BandContent.looksLikeLyrics(Chords.stripChords(text))
+        ) return PageImport.Problem(ImportProblem.NOT_SONG)
         // BPM from the page (or written in the text): saved in the song, the metronome starts at it
         val bpm = ChordImport.bpmOf(page.bpm, page.chordText.ifBlank { page.text })
         if (bpm > 0 && Chords.tempo(text) == 0) text = Chords.setDirective(text, "tempo", bpm.toString())

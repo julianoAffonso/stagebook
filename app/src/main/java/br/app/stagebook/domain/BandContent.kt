@@ -30,6 +30,20 @@ object BandContent {
         title.isNotBlank() && title.length <= MAX_TITLE && author.length <= MAX_TITLE && year.length <= MAX_YEAR &&
             text.length <= MAX_TEXT && isPlainText(title) && isPlainText(author) && isPlainText(year) && isPlainText(text)
 
+    /**
+     * Looks like lyrics or a chord chart (imports, user's request of 30/10: nothing unrelated comes in): at least 3
+     * lines, and most of them short, as verses are (a page of prose or a document has long paragraphs).
+     */
+    fun looksLikeLyrics(text: String): Boolean {
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("{") }
+        if (lines.size < 3) return false
+        val short = lines.count { it.length <= SHORT_LINE }
+        return short >= lines.size * SHORT_SHARE
+    }
+
+    private const val SHORT_LINE = 90
+    private const val SHORT_SHARE = 0.7
+
     /** The setlist text (QR format): size, plain text and readable as a setlist. */
     fun listOk(text: String): Boolean = text.length <= MAX_LIST && isPlainText(text) && QrPayload.parse(text) != null
 }

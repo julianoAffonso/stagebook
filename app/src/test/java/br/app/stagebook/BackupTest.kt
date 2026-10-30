@@ -36,7 +36,7 @@ class BackupTest {
 
     @Test fun `everything checked - songs with zoom, setlist, track and settings come back the same`() = runBlocking {
         val (repo, tracks, backup) = setup()
-        tracks.file("faixa.ogg").writeBytes(byteArrayOf(1, 2, 3))
+        tracks.file("faixa.ogg").writeBytes(OGG)
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "linha", zoom = 1.4f, track = "faixa.ogg"))
         repo.updateLook { it.copy(fontSp = 44f) }
         context.getSharedPreferences("player", 0).edit().putFloat("volume", 0.7f).putString("perfil", "Interface X").commit()
@@ -55,7 +55,7 @@ class BackupTest {
         val song = repo.song(id)!!
         assertEquals(1.4f, song.zoom)
         assertEquals("faixa.ogg", song.track)
-        assertTrue(tracks.file("faixa.ogg").readBytes().contentEquals(byteArrayOf(1, 2, 3)))
+        assertTrue(tracks.file("faixa.ogg").readBytes().contentEquals(OGG))
         assertEquals(44f, repo.library.value.look.fontSp)
         assertEquals(0.7f, context.getSharedPreferences("player", 0).getFloat("volume", 0f))
         assertEquals("Interface X", context.getSharedPreferences("player", 0).getString("perfil", null))
@@ -101,3 +101,6 @@ class BackupTest {
         assertEquals(listOf("Asa Branca", "Garota de Ipanema"), show.items.map { id -> repo.song(id)!!.title })
     }
 }
+
+// a backing track has to be real audio to come back from a backup (checked by its first bytes)
+private val OGG = "OggS".toByteArray() + byteArrayOf(1, 2, 3)

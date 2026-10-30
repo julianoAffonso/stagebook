@@ -1,5 +1,6 @@
 package br.app.stagebook.data
 
+import br.app.stagebook.domain.AudioFormat
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -21,13 +22,32 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
 
     fun file(name: String): File = File(dir, name)
 
-    /** Copies the chosen track; returns the saved name, or null if it isn't OGG/MP3/WAV or couldn't be read. */
+    /**
+     * Copies the chosen track; returns the saved name, or null if it isn't really OGG/MP3/WAV (checked by its first
+     * bytes, not only the name), is bigger than [MAX_BYTES] or couldn't be read.
+     */
     suspend fun copy(songId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
-        val ext = extensionOf(uri) ?: return@withContext null
-        val name = "${songId.take(36)}-${System.currentTimeMillis()}.$ext"
-        val tmp = File(dir, "$name.part")
+        if (extensionOf(uri) == null) return@withContext null
+        val tmp = File(dir, "${songId.take(36)}-${System.currentTimeMillis()}.part")
         try {
-            context.contentResolver.openInputStream(uri)?.use { input -> tmp.outputStream().use { input.copyTo(it) } } ?: return@withContext null
+            val head = ByteArray(AudioFormat.HEADER)
+            var size = 0L
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tmp.outputStream().use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        if (size < head.size) System.arraycopy(buf, 0, head, size.toInt(), minOf(n.toLong(), head.size - size).toInt())
+                        size += n
+                        if (size > MAX_BYTES) throw IOException("too big")
+                        out.write(buf, 0, n)
+                    }
+                }
+            } ?: return@withContext null
+            // the real format names the file (a .mp3 that is a WAV is kept as .wav)
+            val ext = AudioFormat.of(head) ?: throw IOException("not audio")
+            val name = tmp.name.removeSuffix(".part") + ".$ext"
             if (!tmp.renameTo(File(dir, name))) throw IOException("rename failed")
             name
         } catch (e: IOException) {
@@ -54,6 +74,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
 
     companion object {
         val FORMATS = setOf("ogg", "mp3", "wav")
+        const val MAX_BYTES = 200L * 1024 * 1024   // a long multitrack OGG is well under this
         val MIME = arrayOf("audio/ogg", "application/ogg", "audio/mpeg", "audio/wav", "audio/x-wav", "audio/*")
     }
 }

@@ -820,5 +820,10 @@
     <string name="web_backup_hint">Um backup de Ajustes → Biblioteca e backup. Escolha o que entra.</string>
     <string name="web_receive_done">Pronto. Já está na biblioteca.</string>
     <string name="web_restore_needs">Escolha pelo menos uma parte.</string>
+    <string name="not_song">Isso não parece letra nem cifra. O Stagebook guarda só letras e cifras, em texto.</string>
+    <plurals name="backup_skipped">
+        <item quantity="one">%1$d música ficou de fora: não era letra nem cifra.</item>
+        <item quantity="other">%1$d músicas ficaram de fora: não eram letra nem cifra.</item>
+    </plurals>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
 </resources>
