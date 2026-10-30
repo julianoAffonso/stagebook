@@ -133,4 +133,23 @@ class WebEditorMoreTest {
         assertEquals(200, call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["library"],"replace":false}""").status)
         assertEquals(listOf("Do backup"), repo.library.value.songs.map { it.title })
     }
+
+    @Test fun `a second track for the same song leaves no orphan file, and turning off drops a waiting backup`() = runBlocking {
+        val tracks = TrackStore(context)
+        val backup = Backup(context, repo, tracks)
+        val id = repo.saveSong(Song(title = "Duas faixas"))
+        val api = WebEditorApi(repo, tracks = { tracks }, backup = { backup }, workDir = { context.cacheDir })
+        call(api, "PUT", "/api/songs/$id/track?name=a.ogg", file = File(context.cacheDir, "a.part").apply { writeBytes("OggS".toByteArray() + ByteArray(8)) })
+        val first = repo.song(id)!!.track
+        call(api, "PUT", "/api/songs/$id/track?name=b.ogg", file = File(context.cacheDir, "b.part").apply { writeBytes("OggS".toByteArray() + ByteArray(8)) })
+        assertTrue(!tracks.file(first).exists())   // the first one went away
+        assertTrue(tracks.file(repo.song(id)!!.track).exists())
+        val file = File(context.cacheDir, "wait.part")
+        file.outputStream().use { backup.write(it, setOf(Backup.Part.LIBRARY)) }
+        call(api, "POST", "/api/backup/inspect", file = file)
+        val waiting = context.cacheDir.listFiles()!!.filter { it.name.startsWith("backup-") }
+        assertEquals(1, waiting.size)
+        api.clear()
+        assertTrue(waiting.none { it.exists() })
+    }
 }

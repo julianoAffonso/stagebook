@@ -1,5 +1,6 @@
 package br.app.stagebook.data.web
 
+import kotlinx.coroutines.sync.withLock
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
@@ -23,18 +24,24 @@ import kotlin.coroutines.resume
 @Singleton
 class WebPageReader @Inject constructor(@ApplicationContext private val context: Context) {
     /** The script's result for [url] (as evaluateJavascript returns it), or null if the page didn't load in time. */
-    suspend fun read(url: String, script: String = ExtractScript.SOURCE): String? = withContext(Dispatchers.Main) {
-        var view: WebView? = null
-        try {
-            withTimeoutOrNull(TIMEOUT_MS) { load(url, script) { view = it } }
-        } finally {
-            view?.apply { stopLoading(); destroy() }
+    // one hidden page at a time: each WebView costs tens of MB on the Fire, and searches/imports can come together
+    private val oneAtATime = kotlinx.coroutines.sync.Mutex()
+    private val main = Handler(Looper.getMainLooper())
+
+    suspend fun read(url: String, script: String = ExtractScript.SOURCE): String? = oneAtATime.withLock {
+        withContext(Dispatchers.Main) {
+            var view: WebView? = null
+            try {
+                withTimeoutOrNull(TIMEOUT_MS) { load(url, script) { view = it } }
+            } finally {
+                main.removeCallbacksAndMessages(null)   // a pending read never runs on a destroyed page
+                view?.apply { stopLoading(); destroy() }
+            }
         }
     }
 
     @SuppressLint("SetJavaScriptEnabled")   // the extraction is a script on the page, as in the import browser
     private suspend fun load(url: String, script: String, created: (WebView) -> Unit): String? = suspendCancellableCoroutine { cont ->
-        val main = Handler(Looper.getMainLooper())
         val web = WebView(context).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true

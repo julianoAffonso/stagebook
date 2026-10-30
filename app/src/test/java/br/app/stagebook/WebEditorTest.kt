@@ -172,4 +172,10 @@ class WebEditorTest {
         clock += WebEditorAuth.DENIED_MS + 1
         assertTrue(auth.ask("Chrome · Windows", "192.168.0.20") != null)
     }
+
+    @Test fun `the key cookie lasts 90 days and each visit renews it`() {
+        val key = approvedKey()
+        val cookie = routes.handle(req("GET", "/api/session", cookie = key)).headers.getValue("Set-Cookie")
+        assertTrue(cookie, "${WebEditorRoutes.COOKIE}=$key" in cookie && "Max-Age=${90L * 24 * 3600}" in cookie && "HttpOnly" in cookie)
+    }
 }
