@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,6 +24,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class EssentialModeTest {
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     @Test fun `essencial so com as quatro desligadas`() {
@@ -53,5 +56,16 @@ class EssentialModeTest {
         val back = until { it.bandOn }
         assertTrue(back.internetOn && back.extrasOn)
         assertFalse(back.playerMode)   // o player continua como estava no modo (desligado)
+    }
+
+    @Test fun `sem os extras a janela do acorde fica com o desenho e as variacoes - sem som nem Detalhes`() {
+        compose.setContent {
+            com.juliano.stagebook.ui.theme.StagebookTheme {
+                com.juliano.stagebook.ui.stage.ChordShapePopup("G", com.juliano.stagebook.data.model.Instrument.VIOLAO, "[G]linha", {}, {}, extras = false)
+            }
+        }
+        compose.onNodeWithContentDescription("Tocar").assertDoesNotExist()
+        compose.onNodeWithText("Detalhes").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Próxima variação").assertExists()
     }
 }

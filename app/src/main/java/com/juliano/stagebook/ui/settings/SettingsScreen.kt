@@ -386,6 +386,12 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     ABOUT(R.string.settings_about, AppIcons.Info),   // sempre por último: o app, atualizar, privacidade, código, apoio
 }
 
+/** Modo essencial (T19): a seção do que está desligado some da lista. */
+fun SettingsSection.shown(look: Look): Boolean = when (this) {
+    SettingsSection.METRONOME -> look.extrasOn
+    else -> true
+}
+
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
@@ -447,7 +453,7 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
         Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(R.string.settings_title), Modifier.padding(top = Spacing.s, bottom = Spacing.s))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                SettingsSection.entries.forEach { s ->
+                SettingsSection.entries.filter { it.shown(uiState.look) }.forEach { s ->
                     SongListItem(
                         title = stringResource(s.title),
                         subtitle = summary(s, uiState, band),
@@ -678,7 +684,8 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
         SettingsCard(stringResource(R.string.settings_chord_shapes), help = stringResource(R.string.settings_instrument_help) + "\n\n" + stringResource(R.string.settings_chord_list_help)) {
             InstrumentPicker(look.instrument, actions.onInstrument)
             SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
-            // como o acorde soa ao tocar em "Tocar" no desenho (T20)
+            // como o acorde soa ao tocar em "Tocar" no desenho (T20); no modo essencial o som não existe (T19)
+            if (look.extrasOn) {
             Text(stringResource(R.string.settings_chord_play), style = MaterialTheme.typography.bodyLarge)
             val playModes = listOf(
                 com.juliano.stagebook.data.model.ChordPlayMode.ARPEGGIO to R.string.settings_chord_play_arpeggio,
@@ -693,6 +700,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                         shape = SegmentedButtonDefaults.itemShape(i, playModes.size, baseShape = CircleShape),
                     ) { Text(stringResource(label)) }
                 }
+            }
             }
             Text(stringResource(R.string.settings_chord_list), style = MaterialTheme.typography.bodyLarge)
             val places = listOf(
@@ -1213,8 +1221,8 @@ private fun ScreenDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
     }
-    // Now Playing: o "grito" do palco para OBS e outros (T23)
-    SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
+    // Now Playing: o "grito" do palco para OBS e outros (T23); extra do palco (T19)
+    if (look.extrasOn) SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
         SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce)
     }
 }
