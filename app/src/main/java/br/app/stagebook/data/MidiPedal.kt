@@ -1,5 +1,6 @@
 package br.app.stagebook.data
 
+import kotlinx.coroutines.flow.first
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
@@ -80,6 +81,11 @@ class MidiPedal @Inject constructor(
     private var started = false
     @Volatile private var usbOn = false
     private var reconnect: Job? = null
+    // the reconnect loop only tries with the app in front: closed or with the screen off for hours, it waits (audit
+    // 30/10: it called Bluetooth every 30 s forever)
+    private val inFront = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    fun setForeground(on: Boolean) { inFront.value = on }
     // attempt in progress: Android can take up to ~30 s to give up on an out-of-range pedal
     @Volatile private var lastTry = 0L
     private var scanStop: Job? = null
@@ -172,6 +178,7 @@ class MidiPedal @Inject constructor(
         }
         reconnect = scope.launch {
             while (true) {
+                inFront.first { it }
                 val now = System.currentTimeMillis()
                 if (!btConnected() && canConnect() && now - lastTry > CONNECT_TIMEOUT_MS) {
                     lastTry = now

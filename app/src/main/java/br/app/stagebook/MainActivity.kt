@@ -112,12 +112,14 @@ class MainActivity : ComponentActivity() {
         if (repository.library.value.look.internetOn) updateOffer.onEnter()
         band.setForeground(true)   // band on the network: only with the app in front
         webEditor.setForeground(true)   // editor on the computer: only with the app open (T37)
+        midi.setForeground(true)   // the saved Bluetooth pedal is looked for only with the app in front
         bandInternet.onAppOpen()   // band over the internet: checks the inbox once, on open
     }
 
     override fun onStop() {
         band.setForeground(false)
         webEditor.setForeground(false)
+        midi.setForeground(false)
         super.onStop()
     }
 
