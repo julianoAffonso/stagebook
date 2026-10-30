@@ -433,6 +433,18 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneList() = shoot("celular_5_ajustes") { HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it) } }
 
+    // T37: editor on the computer on, with the address and one authorized computer
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneWebEditor() = shoot("celular_5_ajustes_editor_web") {
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(
+                settings.copy(look = settings.look.copy(webEditorOn = true)),
+                SettingsActions(web = br.app.stagebook.ui.web.WebEditorUi("http://192.168.0.10:8090", listOf(br.app.stagebook.ui.web.WebDeviceUi("1", "Chrome · Windows")))),
+                it, section = SettingsSection.WEB_EDITOR,
+            )
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun settingsPhonePedal() = shoot("celular_5_ajustes_pedal") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PEDAL) }

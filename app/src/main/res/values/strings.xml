@@ -775,4 +775,27 @@
         <item quantity="other">Received from the band (%1$d)</item>
     </plurals>
     <string name="scan_from">Sent by %1$s</string>
+    <!-- editor on the computer (T37); the web_ texts are the page's -->
+    <string name="settings_web_editor">Editor on the computer</string>
+    <string name="settings_web_editor_card">In the browser</string>
+    <string name="settings_web_editor_switch">Turn on the editor</string>
+    <string name="settings_web_editor_help">Edit songs and setlists on the computer\'s browser, on the same Wi-Fi. Only on while Stagebook is open; closing the app turns it off.</string>
+    <string name="settings_web_editor_open">On the computer, open this address in the browser:</string>
+    <string name="settings_web_editor_no_wifi">Connect to a Wi-Fi network (or turn on the hotspot) to use the editor.</string>
+    <string name="settings_web_editor_devices">Authorized computers</string>
+    <string name="settings_web_editor_none">None yet. The first time, Stagebook asks before letting a computer in.</string>
+    <string name="settings_web_editor_remove">Remove %1$s</string>
+    <string name="settings_web_editor_on_short">On</string>
+    <string name="settings_web_editor_off_short">Off</string>
+    <string name="web_request_title">%1$s wants to edit</string>
+    <string name="web_request_text">A computer on this network wants to open the editor. Allow only if it\'s yours. Next time it won\'t ask.</string>
+    <string name="web_allow">Allow</string>
+    <string name="web_deny">Deny</string>
+    <string name="web_title">Stagebook editor</string>
+    <string name="web_ask">Ask to come in</string>
+    <string name="web_asking">Waiting for the answer on %1$s…</string>
+    <string name="web_denied">Not allowed. Ask again if it was a mistake.</string>
+    <string name="web_busy">Too many requests at once. Try again in a minute.</string>
+    <string name="web_connected">Connected to %1$s</string>
+    <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
 </resources>

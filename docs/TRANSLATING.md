@@ -27,3 +27,7 @@ Think of a bandmate explaining at rehearsal, not a manual.
 - **No ad talk** ("amazing", "powerful", "experience").
 - **Don't translate names:** Stagebook, Now Playing, OBS, ChordPro.
 - **Lyrics sections** (Chorus, Verse, Bridge…) use the word musicians in that language write on their charts.
+
+## The editor on the computer
+The texts starting with `web_` are the web editor's page (Settings → Editor on the computer). They are in the same
+`strings.xml` and the page follows the app's language, so translating the file translates the editor too.

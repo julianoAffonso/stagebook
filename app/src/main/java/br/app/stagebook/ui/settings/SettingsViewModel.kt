@@ -206,10 +206,14 @@ class SettingsViewModel @Inject constructor(
      * stays as it was: it starts off).
      */
     fun setEssential(on: Boolean) {
-        repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode).copy(essentialAlertOff = false) }
+        repository.updateLook {
+            it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode)
+                .copy(essentialAlertOff = false, webEditorOn = if (on) false else it.webEditorOn)
+        }
         if (on) br.app.stagebook.player.StagePlayer.turnOff()
     }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
+    fun setWebEditorOn(on: Boolean) = repository.updateLook { it.copy(webEditorOn = on) }
     fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
     fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }
     fun setSectionScale(s: Float) = repository.updateLook { it.copy(sectionScale = s.coerceIn(Look.MIN_SECTION_SCALE, Look.MAX_SECTION_SCALE)) }

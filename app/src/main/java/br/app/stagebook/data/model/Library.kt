@@ -157,7 +157,8 @@ data class Look(
     val bandOn: Boolean = true,       // band on the network: search, sending to the band, Lead the band
     val internetOn: Boolean = true,   // 3 words, band inbox, resends, new version, BPM and song details
     val extrasOn: Boolean = true,     // stage: chord sound, Details (harmonic field), metronome, Now Playing
-    val essentialAlertOff: Boolean = false,   // "Don't show again" on the alert on open; touching any part clears the mark
+    val essentialAlertOff: Boolean = false,
+    val webEditorOn: Boolean = false,   // editor on the computer (T37): off by default, essential mode turns it off   // "Don't show again" on the alert on open; touching any part clears the mark
     // player mixer (Settings → Player): app-wide, applies to every backing track; per song only the measurement
     val mixer: br.app.stagebook.domain.MixerConfig = br.app.stagebook.domain.MixerConfig(),
     // import: the sites for each kind; the first in each list is the default (where the importer opens)
