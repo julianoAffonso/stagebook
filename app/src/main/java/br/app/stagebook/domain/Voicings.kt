@@ -15,8 +15,8 @@ object Voicings {
 
     // afinações em notas MIDI, da corda mais grave (no braço) para a mais aguda
     private val tunings = mapOf(
-        Instrument.VIOLAO to intArrayOf(40, 45, 50, 55, 59, 64),     // E A D G B E
-        Instrument.GUITARRA to intArrayOf(40, 45, 50, 55, 59, 64),
+        Instrument.ACOUSTIC_GUITAR to intArrayOf(40, 45, 50, 55, 59, 64),     // E A D G B E
+        Instrument.ELECTRIC_GUITAR to intArrayOf(40, 45, 50, 55, 59, 64),
         Instrument.UKULELE to intArrayOf(67, 60, 64, 69),            // G C E A (sol agudo)
         Instrument.CAVAQUINHO to intArrayOf(62, 67, 71, 74),         // D G B D
     )

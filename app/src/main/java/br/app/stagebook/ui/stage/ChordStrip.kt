@@ -66,7 +66,7 @@ fun ChordStrip(
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(0.dp)) {
         items.forEach { (c, shape, keys) ->
             Box {
-                ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.TECLADO) 46.dp else 56.dp, compact = true)
+                ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true)
                 // × discreto: tira o acorde da lista desta música (o palco pede confirmação)
                 Box(
                     Modifier.align(Alignment.TopEnd).size(28.dp).clip(CircleShape).clickable { onHide(c) },

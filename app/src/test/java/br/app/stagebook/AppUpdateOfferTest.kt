@@ -35,7 +35,7 @@ class AppUpdateOfferTest {
 
     @Before fun start() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/versao") { ex ->
+        server.createContext("/version") { ex ->
             val b = version.toByteArray()
             ex.sendResponseHeaders(if (version.isEmpty()) 404 else 200, if (b.isEmpty()) -1 else b.size.toLong())
             ex.responseBody.use { it.write(b) }
@@ -48,7 +48,7 @@ class AppUpdateOfferTest {
     private val order by lazy { br.app.stagebook.data.UpdateOrder(context).apply { today = { day } } }
 
     private fun offer(): AppUpdateOffer {
-        val updater = AppUpdater(context).apply { versionUrl = "http://127.0.0.1:${server.address.port}/versao" }
+        val updater = AppUpdater(context).apply { versionUrl = "http://127.0.0.1:${server.address.port}/version" }
         return AppUpdateOffer(updater, gate, order, scope, Dispatchers.IO)
     }
 

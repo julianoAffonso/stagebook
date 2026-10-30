@@ -124,6 +124,6 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
         // última versão publicada no GitHub Releases: "latest/download" sempre aponta para o release mais novo
         const val RELEASES = "https://github.com/julianoAffonso/stagebook/releases/latest/download/"
         const val APK_URL = RELEASES + "stagebook.apk"
-        const val VERSION_URL = RELEASES + "stagebook-versao.json"
+        const val VERSION_URL = RELEASES + "stagebook-version.json"
     }
 }

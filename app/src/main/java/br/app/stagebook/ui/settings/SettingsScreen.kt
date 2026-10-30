@@ -736,11 +736,11 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
 @Composable
 private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Unit) {
     val names = mapOf(
-        Instrument.VIOLAO to R.string.instrument_violao,
-        Instrument.GUITARRA to R.string.instrument_guitarra,
+        Instrument.ACOUSTIC_GUITAR to R.string.instrument_acoustic_guitar,
+        Instrument.ELECTRIC_GUITAR to R.string.instrument_electric_guitar,
         Instrument.UKULELE to R.string.instrument_ukulele,
         Instrument.CAVAQUINHO to R.string.instrument_cavaquinho,
-        Instrument.TECLADO to R.string.instrument_teclado,
+        Instrument.KEYBOARD to R.string.instrument_keyboard,
     )
     OptionDropdown(stringResource(R.string.settings_instrument), Instrument.entries, selected, onSelect, nameOf = { stringResource(names.getValue(it)) })
 }

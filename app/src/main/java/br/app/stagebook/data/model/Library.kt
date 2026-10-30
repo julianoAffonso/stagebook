@@ -46,11 +46,11 @@ enum class StageFont {
 
 /** Instrumento dos desenhos de acorde. Violão e guitarra têm a mesma afinação (mesmos desenhos). */
 enum class Instrument(val chordPro: String) {
-    @SerialName("violao") VIOLAO("guitar"),
-    @SerialName("guitarra") GUITARRA("guitar"),
+    @SerialName("violao") ACOUSTIC_GUITAR("guitar"),
+    @SerialName("guitarra") ELECTRIC_GUITAR("guitar"),
     @SerialName("ukulele") UKULELE("ukulele"),
     @SerialName("cavaquinho") CAVAQUINHO("cavaquinho"),
-    @SerialName("teclado") TECLADO("keyboard"),
+    @SerialName("teclado") KEYBOARD("keyboard"),
 }
 
 /** Como o acorde tocado no palco soa: dedilhado, junto (batida) ou os dois. */
@@ -143,7 +143,7 @@ data class Look(
     val translateSections: Boolean = true,
     val font: StageFont = StageFont.DEFAULT,        // fonte da letra
     val chordFont: StageFont = StageFont.DEFAULT,   // fonte dos acordes
-    val instrument: Instrument = Instrument.VIOLAO,   // desenhos de acorde (popup e lista)
+    val instrument: Instrument = Instrument.ACOUSTIC_GUITAR,   // desenhos de acorde (popup e lista)
     val chordList: ChordListPlace = ChordListPlace.NONE,
     val chordTap: Boolean = true,
     // modo player (faixas, saída USB, mixer): desligado, nada do player carrega — nem o motor, nem a USB, nem o serviço.

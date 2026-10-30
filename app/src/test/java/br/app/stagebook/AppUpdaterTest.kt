@@ -39,7 +39,7 @@ class AppUpdaterTest {
     @Before fun start() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/versao") { ex ->
+        server.createContext("/version") { ex ->
             val b = version.toByteArray()
             ex.sendResponseHeaders(if (version.isEmpty()) 404 else 200, if (b.isEmpty()) -1 else b.size.toLong())
             ex.responseBody.use { it.write(b) }
@@ -57,7 +57,7 @@ class AppUpdaterTest {
     }
 
     private fun updater() = AppUpdater(context).apply {
-        versionUrl = "http://127.0.0.1:${server.address.port}/versao"
+        versionUrl = "http://127.0.0.1:${server.address.port}/version"
         apkUrl = "http://127.0.0.1:${server.address.port}/apk"
     }
 

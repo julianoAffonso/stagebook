@@ -1,7 +1,7 @@
 #!/bin/bash
 # Publica uma versão no GitHub Releases (julianoAffonso/stagebook), com dois arquivos de nomes fixos:
 #   stagebook.apk           — app (release compactado, assinado com a chave de ~/.android/stagebook-release.*)
-#   stagebook-versao.json   — versionCode/versionName do stagebook.apk; o app (Ajustes → Atualizar o app e o
+#   stagebook-version.json   — versionCode/versionName do stagebook.apk; o app (Ajustes → Atualizar o app e o
 #                             aviso de versão nova) lê os dois por releases/latest/download/, sempre o mais novo
 # Com o repositório privado o release sai, mas o app não consegue baixar (precisa de login): abrir o
 # repositório antes de distribuir.
@@ -39,13 +39,13 @@ tag="v${name%% *}"   # v0.1.<nº de commits>
 out=app/build/publicar
 rm -rf "$out" && mkdir -p "$out"
 cp "$APK" "$out/stagebook.apk"
-printf '{"versionCode":%s,"versionName":"%s"}\n' "$code" "$name" > "$out/stagebook-versao.json"
+printf '{"versionCode":%s,"versionName":"%s"}\n' "$code" "$name" > "$out/stagebook-version.json"
 # o release aponta para o commit: ele precisa estar no GitHub
 git push -q origin HEAD
 # notas: os commits desde o último release (só os títulos)
 last=$(git describe --tags --abbrev=0 2>/dev/null || true)
 notes=$(git log --format='- %s' ${last:+$last..}HEAD)
-gh release create "$tag" "$out/stagebook.apk" "$out/stagebook-versao.json" \
+gh release create "$tag" "$out/stagebook.apk" "$out/stagebook-version.json" \
     --target "$(git rev-parse HEAD)" --title "Stagebook ${name%% *}" --notes "$notes" --latest
 git fetch -q --tags
 echo "publicado: $name ($tag)"

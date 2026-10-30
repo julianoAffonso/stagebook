@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VoicingsTest {
-    private fun first(chord: String, i: Instrument = Instrument.VIOLAO) =
+    private fun first(chord: String, i: Instrument = Instrument.ACOUSTIC_GUITAR) =
         Voicings.shapes(chord, i).first().frets.joinToString("") { if (it < 0) "x" else it.toString() }
 
     @Test fun `violão começa pelas formas conhecidas`() {
@@ -23,9 +23,9 @@ class VoicingsTest {
     }
 
     @Test fun `várias variações e baixo invertido`() {
-        assertTrue(Voicings.shapes("G", Instrument.VIOLAO).size >= 4)
+        assertTrue(Voicings.shapes("G", Instrument.ACOUSTIC_GUITAR).size >= 4)
         // D/F#: o baixo é F#, na corda mais grave que toca
-        val s = Voicings.shapes("D/F#", Instrument.VIOLAO).first().frets
+        val s = Voicings.shapes("D/F#", Instrument.ACOUSTIC_GUITAR).first().frets
         val low = s.indexOfFirst { it >= 0 }
         assertEquals(6, (intArrayOf(40, 45, 50, 55, 59, 64)[low] + s[low]) % 12)
     }
@@ -52,12 +52,12 @@ class VoicingsTest {
 
     @Test fun `forma escolhida vai e volta pelo define do ChordPro`() {
         val shape = Voicings.Shape(listOf(-1, 3, 5, 5, 5, 3))   // C com pestana na 3ª
-        val line = Voicings.define(Instrument.VIOLAO, "C", shape)
+        val line = Voicings.define(Instrument.ACOUSTIC_GUITAR, "C", shape)
         assertEquals("{define-guitar: C base-fret 3 frets x 1 3 3 3 1}", line)
-        val text = Voicings.saveDefine("[C]oi", Instrument.VIOLAO, "C", line)
-        assertEquals(shape, Voicings.savedShape(text, Instrument.GUITARRA, "C"))   // violão e guitarra: mesmos desenhos
+        val text = Voicings.saveDefine("[C]oi", Instrument.ACOUSTIC_GUITAR, "C", line)
+        assertEquals(shape, Voicings.savedShape(text, Instrument.ELECTRIC_GUITAR, "C"))   // violão e guitarra: mesmos desenhos
         // trocar a escolha não duplica a linha
-        val again = Voicings.saveDefine(text, Instrument.VIOLAO, "C", Voicings.define(Instrument.VIOLAO, "C", Voicings.Shape(listOf(-1, 3, 2, 0, 1, 0))))
+        val again = Voicings.saveDefine(text, Instrument.ACOUSTIC_GUITAR, "C", Voicings.define(Instrument.ACOUSTIC_GUITAR, "C", Voicings.Shape(listOf(-1, 3, 2, 0, 1, 0))))
         assertEquals(1, again.lines().count { it.startsWith("{define-guitar: C ") })
     }
 }
