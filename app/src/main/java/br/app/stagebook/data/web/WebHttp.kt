@@ -53,13 +53,22 @@ class HttpError(val status: Int) : Exception("HTTP $status")
 object WebHttp {
     const val MAX_HEAD = 16 * 1024
 
+    const val HEAD_DEADLINE_MS = 10_000L
+
     /**
      * Reads one request. [maxBody] decides, by path, how big the body can be (backing tracks are bigger); [toFile]
-     * gives a file for paths whose body goes to disk instead of memory.
+     * gives a file for paths whose body goes to disk instead of memory; [gate] sees the head before any body is read
+     * and can refuse it (a big upload is never written before the sender is known; audit 30/10).
      */
-    fun read(input: InputStream, remote: String = "", toFile: (String) -> java.io.File? = { null }, maxBody: (String) -> Long): HttpRequest {
+    fun read(
+        input: InputStream,
+        remote: String = "",
+        toFile: (String) -> java.io.File? = { null },
+        gate: (HttpRequest) -> Int? = { null },
+        maxBody: (String) -> Long,
+    ): HttpRequest {
         val stream = if (input is BufferedInputStream) input else BufferedInputStream(input)
-        val head = readHead(stream).split("\r\n")
+        val head = readHead(stream, System.currentTimeMillis() + HEAD_DEADLINE_MS).split("\r\n")
         val first = head.first().split(' ')
         if (first.size < 3 || !first[2].startsWith("HTTP/1.")) throw HttpError(400)
         val target = first[1]
@@ -68,6 +77,7 @@ object WebHttp {
         val length = headers["content-length"]?.toLongOrNull() ?: 0L
         if (length < 0) throw HttpError(400)
         if (length > maxBody(decode(path))) throw HttpError(413)
+        gate(HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, remote = remote))?.let { throw HttpError(it) }
         val file = toFile(decode(path))
         if (file != null) {
             file.outputStream().use { out ->
@@ -82,14 +92,17 @@ object WebHttp {
             }
             return HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, ByteArray(0), remote, file)
         }
-        val body = ByteArray(length.toInt())
-        var read = 0
-        while (read < body.size) {
-            val n = stream.read(body, read, body.size - read)
+        // in chunks, as it arrives: a client announcing 2 MB and sending nothing doesn't get 2 MB set aside
+        val body = ByteArrayOutputStream(minOf(length, 64L * 1024).toInt())
+        val buf = ByteArray(16 * 1024)
+        var left = length
+        while (left > 0) {
+            val n = stream.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
             if (n < 0) throw HttpError(400)
-            read += n
+            body.write(buf, 0, n)
+            left -= n
         }
-        return HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, body, remote)
+        return HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, body.toByteArray(), remote)
     }
 
     fun write(output: OutputStream, response: HttpResponse) {
@@ -108,12 +121,14 @@ object WebHttp {
         output.flush()
     }
 
-    private fun readHead(stream: InputStream): String {
+    // the whole head has a deadline (one byte every few seconds would otherwise hold the connection for days)
+    private fun readHead(stream: InputStream, deadline: Long): String {
         val out = ByteArrayOutputStream()
         var last4 = 0
         while (true) {
             val b = stream.read()
             if (b < 0) throw HttpError(400)
+            if (System.currentTimeMillis() > deadline) throw HttpError(408)
             out.write(b)
             if (out.size() > MAX_HEAD) throw HttpError(431)
             last4 = (last4 shl 8) or b
@@ -136,9 +151,11 @@ private fun reason(status: Int) = when (status) {
     403 -> "Forbidden"
     404 -> "Not Found"
     405 -> "Method Not Allowed"
+    408 -> "Request Timeout"
     409 -> "Conflict"
     413 -> "Payload Too Large"
     429 -> "Too Many Requests"
     431 -> "Request Header Fields Too Large"
+    503 -> "Service Unavailable"
     else -> "Error"
 }

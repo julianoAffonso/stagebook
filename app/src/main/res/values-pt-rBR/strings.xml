@@ -790,11 +790,12 @@
     <string name="settings_web_editor_off_short">Desligado</string>
     <string name="web_request_title">%1$s quer editar</string>
     <string name="web_request_text">Um computador nesta rede quer abrir o editor. Autorize só se for seu. Na próxima vez não pergunta.</string>
+    <string name="web_request_code">Endereço %1$s · código %2$s. Autorize só se o computador mostrar o mesmo código.</string>
     <string name="web_allow">Autorizar</string>
     <string name="web_deny">Recusar</string>
     <string name="web_title">Editor do Stagebook</string>
     <string name="web_ask">Pedir para entrar</string>
-    <string name="web_asking">Esperando a resposta no %1$s…</string>
+    <string name="web_asking_code">No tablet, confira o código %1$s e autorize.</string>
     <string name="web_denied">Não autorizado. Peça de novo se foi engano.</string>
     <string name="web_busy">Muitos pedidos ao mesmo tempo. Tente de novo em um minuto.</string>
     <string name="web_connected">Conectado ao %1$s</string>

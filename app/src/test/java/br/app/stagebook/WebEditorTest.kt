@@ -64,6 +64,16 @@ class WebEditorTest {
         assertEquals(413, (e as HttpError).status)
     }
 
+    @Test fun `a refused head never gets its body written to a file`() {
+        var fileAsked = false
+        val raw = "POST /api/backup/inspect HTTP/1.1\r\nHost: 192.168.0.10:8090\r\nContent-Length: 5\r\n\r\nhello"
+        val e = runCatching {
+            WebHttp.read(ByteArrayInputStream(raw.toByteArray()), toFile = { fileAsked = true; null }, gate = { 401 }) { 100L }
+        }.exceptionOrNull()
+        assertEquals(401, (e as HttpError).status)
+        assertEquals(false, fileAsked)
+    }
+
     @Test fun `writes status, length and extra headers`() {
         val out = ByteArrayOutputStream()
         WebHttp.write(out, br.app.stagebook.data.web.HttpResponse.json(200, "{}", mapOf("Set-Cookie" to "a=b")))
@@ -130,15 +140,36 @@ class WebEditorTest {
         assertEquals(true, SettingsSection.WEB_EDITOR.shown(br.app.stagebook.data.model.Look()))
     }
 
-    @Test fun `with no access for 5 minutes the editor is idle, any access or ping keeps it on`() {
+    @Test fun `with no access for 5 minutes the editor is idle, only an approved computer keeps it on`() {
         val timer = br.app.stagebook.data.web.IdleTimer(br.app.stagebook.data.web.WebEditorServer.IDLE_MS) { clock }
         val r = WebEditorRoutes(auth, { "" }, { emptyMap() }, { "Tablet" }, onAccess = timer::touch)
+        val key = approvedKey()
         clock += 4 * 60_000L
-        assertEquals(false, timer.expired())
-        assertEquals(204, r.handle(req("GET", "/api/ping")).status)   // the open page, every minute
-        clock += 4 * 60_000L
-        assertEquals(false, timer.expired())
+        assertEquals(401, r.handle(req("GET", "/api/ping")).status)   // a stranger's ping doesn't count
         clock += 2 * 60_000L
         assertEquals(true, timer.expired())
+        timer.touch()
+        clock += 4 * 60_000L
+        assertEquals(204, r.handle(req("GET", "/api/ping", cookie = key)).status)   // the open page, every minute
+        clock += 4 * 60_000L
+        assertEquals(false, timer.expired())
+    }
+
+    @Test fun `a big upload is refused before its body unless it comes from an approved computer`() {
+        val key = approvedKey()
+        assertEquals(401, routes.gate(req("POST", "/api/backup/inspect"), big = true))
+        assertEquals(403, routes.gate(req("POST", "/api/backup/inspect", cookie = key, header = false), big = true))
+        assertEquals(null, routes.gate(req("POST", "/api/backup/inspect", cookie = key), big = true))
+        assertEquals(403, routes.gate(req("GET", "/", host = "evil.example"), big = false))
+    }
+
+    @Test fun `the request shows a code, one per address, and a denied address waits`() {
+        val first = auth.ask("Chrome · Windows", "192.168.0.20")!!
+        assertEquals(4, first.code.length)
+        assertEquals(first.id, auth.ask("Chrome · Windows", "192.168.0.20")!!.id)   // asking again: the same request
+        auth.answer(first.id, false)
+        assertEquals(null, auth.ask("Chrome · Windows", "192.168.0.20"))
+        clock += WebEditorAuth.DENIED_MS + 1
+        assertTrue(auth.ask("Chrome · Windows", "192.168.0.20") != null)
     }
 }

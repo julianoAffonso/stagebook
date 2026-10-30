@@ -792,11 +792,12 @@
     <string name="settings_web_editor_off_short">Off</string>
     <string name="web_request_title">%1$s wants to edit</string>
     <string name="web_request_text">A computer on this network wants to open the editor. Allow only if it\'s yours. Next time it won\'t ask.</string>
+    <string name="web_request_code">Address %1$s · code %2$s. Allow only if the computer shows the same code.</string>
     <string name="web_allow">Allow</string>
     <string name="web_deny">Deny</string>
     <string name="web_title">Stagebook editor</string>
     <string name="web_ask">Ask to come in</string>
-    <string name="web_asking">Waiting for the answer on %1$s…</string>
+    <string name="web_asking_code">On the tablet, check code %1$s and allow.</string>
     <string name="web_denied">Not allowed. Ask again if it was a mistake.</string>
     <string name="web_busy">Too many requests at once. Try again in a minute.</string>
     <string name="web_connected">Connected to %1$s</string>
