@@ -184,7 +184,8 @@ fun StageRoute(
     // the song on screen tells the player which backing track to play; the output notice shows once
     val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
     LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
-    LaunchedEffect(index, uiState.loading) { if (!uiState.loading) viewModel.songShown(index) }
+    // the position on screen (clamped): a setlist that shrank must not send the band a song past its end
+    LaunchedEffect(index, uiState.loading) { if (!uiState.loading) viewModel.songShown(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0))) }
     // first play: warns and asks to skip battery saving (once) and, on Android 13+, the player notification
     var askBattery by rememberSaveable { mutableStateOf(false) }
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.togglePlay() }

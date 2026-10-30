@@ -318,15 +318,20 @@ async function loadList() {
   const r = await api("/api/songs").catch(() => null);
   if (!r || r.status !== 200) return offline();
   songs = await r.json();
+  // the search key once per load (not per song per keystroke: ~4000 normalizations on every letter with 2000 songs)
+  songs.forEach((s) => (s.k = plain(s.title + " " + s.author)));
   drawList();
   drawSetAdd();
 }
 
+const MAX_ROWS = 300;   // the list draws at most this many; the search narrows it
+
 function drawList() {
   const q = plain($("search").value.trim());
-  const shown = songs.filter((s) => !q || plain(s.title).includes(q) || plain(s.author).includes(q));
-  $("songs").replaceChildren(...shown.map((s) => {
+  const shown = songs.filter((s) => !q || s.k.includes(q));
+  $("songs").replaceChildren(...shown.slice(0, MAX_ROWS).map((s) => {
     const el = li(s.title, [s.author, s.year, s.key].filter(Boolean).join(" · "), () => open(s.id));
+    el.dataset.id = s.id;
     if (current && current.id === s.id) el.className = "on";
     return el;
   }));
@@ -357,7 +362,12 @@ function fillForm(song) {
   dirty = false;
   drawTrack();
   drawKeyCapo();
-  drawList();
+  markOpen();
+}
+
+// only the highlight moves when a song opens (the whole list used to be rebuilt)
+function markOpen() {
+  document.querySelectorAll("#songs li").forEach((el) => el.classList.toggle("on", !!current && el.dataset.id === current.id));
 }
 
 function drawTrack() {
@@ -429,7 +439,9 @@ async function sendTrack(file) {
   say("status", t.saved);
 }
 
-$("search").oninput = drawList;
+// the list redraws a moment after typing stops, not on every letter
+let searchTimer = 0;
+$("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(drawList, 150); };
 $("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "" }); };
 $("save").onclick = save;
 $("delete").onclick = removeSong;
@@ -511,7 +523,7 @@ function drawSetAdd() {
   if (!currentSet) return;
   const inSet = new Set(currentSet.songs.map((s) => s.id));
   const q = plain($("set-add-search").value.trim());
-  const shown = songs.filter((s) => !inSet.has(s.id) && (!q || plain(s.title).includes(q) || plain(s.author).includes(q))).slice(0, 50);
+  const shown = songs.filter((s) => !inSet.has(s.id) && (!q || s.k.includes(q))).slice(0, 50);
   $("set-add").replaceChildren(...shown.map((s) => li("+ " + s.title, s.author, () => {
     currentSet.songs.push({ id: s.id, title: s.title, author: s.author });
     dirty = true;

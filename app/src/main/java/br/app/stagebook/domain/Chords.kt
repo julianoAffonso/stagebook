@@ -19,6 +19,10 @@ object Chords {
     private val bracket = Regex("""\[([^\[\]]*)]""")
     private val directive = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*}\s*$""")
     // marks that can be on a chord line without making it a lyrics line
+    // built once: these ran per line (twice per line in the editor preview, on every keystroke; audit 30/10)
+    private val SPACES = Regex("\\s+")
+    private val WORDS = Regex("\\S+")
+    private val DOUBLE_SPACES = Regex(" {2,}")
     private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?""", RegexOption.IGNORE_CASE)
 
     /** Is the whole text a chord? (`G`, `F#m7/E`, `Cm7(b5)`, `G7M`, `Bb`) */
@@ -78,7 +82,7 @@ object Chords {
     private const val HIDE = "x_hide_chords"
 
     fun hiddenChords(text: String): Set<String> =
-        directive(text, HIDE).orEmpty().split(Regex("\\s+")).filter { it.isNotEmpty() }.toSet()
+        directive(text, HIDE).orEmpty().split(SPACES).filter { it.isNotEmpty() }.toSet()
 
     fun setHiddenChords(text: String, chords: Set<String>): String = setDirective(text, HIDE, chords.joinToString(" "))
 
@@ -91,7 +95,7 @@ object Chords {
      * `[Intro] G D`.
      */
     fun isChordLine(line: String): Boolean {
-        val tokens = line.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val tokens = line.trim().split(SPACES).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
         val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
         return body.any(::isChord) && body.all { isChord(it) || chordLineExtras.matches(it) }
@@ -129,7 +133,7 @@ object Chords {
     }
 
     private fun positions(chordLine: String): List<Pair<Int, String>> =
-        Regex("\\S+").findAll(chordLine).map { it.range.first to it.value }.toList()
+        WORDS.findAll(chordLine).map { it.range.first to it.value }.toList()
 
     private fun merge(chordLine: String, lyric: String): String {
         val sb = StringBuilder(lyric.trimEnd())
@@ -321,7 +325,7 @@ object Chords {
         if (isDirective(line)) return@mapNotNull null
         val hadChord = bracket.findAll(line).any { isChord(it.groupValues[1]) }
         val clean = bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "" else b.value }
-        if (hadChord && clean.isBlank()) null else clean.replace(Regex(" {2,}"), " ").trimEnd()
+        if (hadChord && clean.isBlank()) null else clean.replace(DOUBLE_SPACES, " ").trimEnd()
     }.joinToString("\n")
 
     /** Does the song have any chord? */
