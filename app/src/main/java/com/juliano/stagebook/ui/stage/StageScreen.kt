@@ -327,6 +327,7 @@ fun StageScreen(
             onSave = { define -> onSaveShape(song.id, chord, define) },
             onDismiss = { shownChord = null },
             onPlay = { notes -> onPlayChord(notes, look.instrument == com.juliano.stagebook.data.model.Instrument.TECLADO) },
+            extras = look.extrasOn,
         )
     }
     // zoom ao vivo durante a pinça; grava na música quando a mão para
@@ -937,7 +938,7 @@ fun StageScreen(
             // rolar: ▶/⏸ da rolagem automática e a velocidade (−/+), na linha do relógio (fora da letra)
             // um ícone só (aceso enquanto rola); a janelinha tem o play e a velocidade (pedido do usuário, 29/10)
             // metrônomo: tocando, o ícone vira stop e pisca no tempo (mais forte no 1); parado, abre a janelinha
-            run {
+            if (look.extrasOn) {   // modo essencial (T19): sem o metrônomo
                 var metroDialog by remember { mutableStateOf(false) }
                 Box {
                     IconButton(onClick = { if (metroOn) metroOn = false else metroDialog = true }) {

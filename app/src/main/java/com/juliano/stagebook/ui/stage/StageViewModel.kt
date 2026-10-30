@@ -47,7 +47,7 @@ class StageViewModel @Inject constructor(
     /** Now Playing: a música da vez para OBS e outros (se ligado em Ajustes → Tela). */
     fun announce(index: Int) {
         val lib = repository.library.value
-        if (!lib.look.announce) { announcer.stop(); return }
+        if (!lib.look.announce || !lib.look.extrasOn) { announcer.stop(); return }   // Now Playing é extra do palco (T19)
         val set = route.setId?.let(lib::setlist)
         val ids = set?.items ?: listOfNotNull(route.songId)
         val song = ids.getOrNull(index)?.let(lib::song) ?: return

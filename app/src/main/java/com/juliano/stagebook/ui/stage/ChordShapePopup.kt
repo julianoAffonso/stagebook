@@ -48,6 +48,7 @@ fun ChordShapePopup(
     onSave: (define: String) -> Unit,
     onDismiss: () -> Unit,
     onPlay: (notes: List<Int>) -> Unit = {},
+    extras: Boolean = true,   // modo essencial (T19): sem o som e sem os Detalhes; o desenho e as variações ficam
 ) {
     // com capo, o desenho é o da cifra mas a nota que soa sobe (T18/T20): o som toca a nota real
     val capo = remember(songText, instrument) { if (instrument == Instrument.TECLADO) 0 else Chords.capo(songText) }   // teclado não usa capo
@@ -96,7 +97,7 @@ fun ChordShapePopup(
                         keySets.getOrNull(i),
                         MaterialTheme.colorScheme.onSurface,
                     )
-                    Surface(
+                    if (extras) Surface(
                         onClick = { onPlay(if (keyboard) keySets[i].map { it + capo } else Voicings.midi(shapes[i], instrument, capo)) },
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = PLAY_ALPHA),
@@ -137,7 +138,7 @@ fun ChordShapePopup(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
-                    TextButton(onClick = { details = true }) { Text(stringResource(R.string.chord_details)) }
+                    if (extras) TextButton(onClick = { details = true }) { Text(stringResource(R.string.chord_details)) }
                     TextButton(onClick = {
                         onSave(if (keyboard) Voicings.defineKeys(chord, keySets[i]) else Voicings.define(instrument, chord, shapes[i]))
                         onDismiss()
