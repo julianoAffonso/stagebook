@@ -21,6 +21,8 @@ object Sizes {
     val swipeTrigger = 56.dp    // row opened by dragging: only the icon button (24) + margin (16) on each side
     val swatch = 48.dp
     val fontPreview = 160.dp    // fixed box for the lyrics size preview (doesn't push the screen)
+    val fontPreviewWide = 300.dp   // the same box on a wide screen (tablet): the sample stays near its real size
+    val wideScreen = 600.dp
     val settingsList = 360.dp   // settings section list on tablets
     val contentMax = 840.dp     // max content width on a tablet in landscape
     val pageDot = 28.dp         // numbered page dot in the stage footer
