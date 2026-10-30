@@ -1,5 +1,6 @@
 package br.app.stagebook
 
+import org.junit.Assert.assertEquals
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -72,5 +73,27 @@ class EditorTabsTest {
         compose.onNodeWithText("G").assertExists()
         compose.onNodeWithContentDescription("Subir meio tom").performClick()
         org.junit.Assert.assertEquals(1, moved)
+    }
+
+    @Test fun `backing track is picked in the song details - choose, then change or remove`() {
+        var picked = 0
+        var removed = 0
+        var track by androidx.compose.runtime.mutableStateOf("")
+        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
+        compose.setContent {
+            StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = track, onPickTrack = { picked++ }, onRemoveTrack = { removed++ }) }
+        }
+        compose.onNodeWithText("Escolher").performClick()
+        assertEquals(1, picked)
+        track = "song-1.ogg"
+        compose.onNodeWithText("Trocar").assertExists()
+        compose.onNodeWithContentDescription("Remover o backing track").performClick()
+        assertEquals(1, removed)
+    }
+
+    @Test fun `no track row when the song can't take one (new song or player off)`() {
+        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = null) } }
+        compose.onNodeWithText("Escolher").assertDoesNotExist()
     }
 }

@@ -80,7 +80,7 @@
     <string name="set_reorder">Drag to change the order</string>
 
     <!-- pick songs -->
-    <string name="pick_title">Add to setlist</string>
+    <string name="pick_title">Songs</string>
     <string name="pick_in_set">Already in the setlist</string>
     <string name="pick_add_short">Add (%1$d)</string>
 
@@ -178,6 +178,10 @@
     <string name="stage_track_pick">Choose this song\'s backing track</string>
     <string name="stage_track_change">Change the backing track</string>
     <string name="stage_track_remove">Remove the backing track</string>
+    <string name="editor_track_none">None for this song</string>
+    <string name="editor_track_set">Chosen. On stage, play shows up.</string>
+    <string name="editor_track_pick">Choose</string>
+    <string name="editor_track_change">Change</string>
     <string name="stage_track_bad">This file won\'t work. Use OGG, MP3 or WAV.</string>
     <string name="stage_backing_track">Backing track</string>
     <string name="settings_player_on_short">On</string>

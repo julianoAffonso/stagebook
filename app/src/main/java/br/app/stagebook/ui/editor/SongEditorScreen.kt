@@ -1,5 +1,13 @@
 package br.app.stagebook.ui.editor
 
+import br.app.stagebook.ui.components.ButtonTone
+import br.app.stagebook.ui.components.ActionButton
+import br.app.stagebook.ui.components.LocalAppMessage
+import br.app.stagebook.data.TrackStore
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import br.app.stagebook.domain.LyricsView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.width
@@ -96,6 +104,14 @@ fun SongEditorRoute(
             }
         }
     }
+    val look = viewModel.look.collectAsStateWithLifecycle().value
+    val message = LocalAppMessage.current
+    val trackBad = stringResource(R.string.stage_track_bad)
+    val scope = rememberCoroutineScope()
+    // the backing track (OGG, MP3 or WAV) is copied into the app when coming back from the Android picker
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch { if (!viewModel.attachTrack(uri)) message.show(trackBad, long = true) }
+    }
     SongEditorScreen(
         uiState = viewModel.uiState,
         onTitle = viewModel::onTitle,
@@ -109,7 +125,10 @@ fun SongEditorRoute(
         onTranspose = viewModel::transpose,
         onCapo = viewModel::setCapo,
         onTempo = viewModel::setTempo,
-        look = viewModel.look.collectAsStateWithLifecycle().value,
+        look = look,
+        track = viewModel.track.takeIf { look.playerMode && viewModel.canPickTrack },
+        onPickTrack = { picker.launch(TrackStore.MIME) },
+        onRemoveTrack = viewModel::removeTrack,
     )
 }
 
@@ -129,6 +148,9 @@ fun SongEditorScreen(
     onCapo: (Int) -> Unit = {},
     look: Look = Look(),
     onTempo: (String) -> Unit = {},
+    track: String? = null,   // the song's backing track file ("" = none); null = can't pick here (new song or player off)
+    onPickTrack: () -> Unit = {},
+    onRemoveTrack: () -> Unit = {},
 ) {
     var deleting by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
@@ -177,16 +199,15 @@ fun SongEditorScreen(
                 Column {
                     // fixed header with Save: at hand anywhere in the lyrics (back is cancel)
                     ScreenHeader(
-                        title = stringResource(
-                            when (uiState.mode) {
-                                EditorMode.NEW -> R.string.editor_new
-                                EditorMode.EDIT -> R.string.editor_edit
-                                EditorMode.IMPORTED_NEW -> R.string.editor_imported_new
-                                EditorMode.IMPORTED_UPDATE -> R.string.editor_imported_update
-                            },
-                        ),
+                        // the title is short (it was cut on phones); the import note goes in the subtitle
+                        title = stringResource(if (uiState.mode == EditorMode.EDIT || uiState.mode == EditorMode.IMPORTED_UPDATE) R.string.editor_edit else R.string.editor_new),
+                        subtitle = when (uiState.mode) {
+                            EditorMode.IMPORTED_NEW -> stringResource(R.string.editor_imported_new)
+                            EditorMode.IMPORTED_UPDATE -> stringResource(R.string.editor_imported_update)
+                            else -> ""
+                        },
                         onBack = cancel,
-                        modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s),
+                        modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s, bottom = Spacing.s),
                     ) {
                         // stage preview (the lit eye = showing the preview; tapping again goes back to the text)
                         IconButton(onClick = { previewing = !previewing }) {
@@ -212,6 +233,7 @@ fun SongEditorScreen(
                         chords = look.chords,
                     ) {
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
+                        if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
                         if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
                     }
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
@@ -389,6 +411,23 @@ private fun SongDataFields(
         )
     }
     Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** Backing track of the song (T29, user's decision): picked here, so the stage shows the play button only on songs with one. */
+@Composable
+private fun TrackRow(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.stage_backing_track), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(if (has) R.string.editor_track_set else R.string.editor_track_none),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (has) IconButton(onClick = onRemove) { Icon(AppIcons.Delete, stringResource(R.string.stage_track_remove)) }
+        ActionButton(stringResource(if (has) R.string.editor_track_change else R.string.editor_track_pick), onPick, tone = ButtonTone.Tonal)
+    }
 }
 
 @Composable

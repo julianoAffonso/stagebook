@@ -76,12 +76,12 @@ class EditorFlowTest {
             val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "letra antiga"))
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val handle = SavedStateHandle(mapOf("songId" to id, "fromImport" to false))
-            val vm = SongEditorViewModel(repo, meta, ImportDraft(), handle, br.app.stagebook.data.ImportQueue(repo))
+            val vm = SongEditorViewModel(repo, meta, ImportDraft(), handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
             withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             vm.onText("letra digitada e ainda não salva")
             assertTrue(vm.uiState.unsaved)
             // process killed: only the SavedStateHandle survives (Android hands it back to the new screen)
-            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo))
+            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
             withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
             assertEquals("letra digitada e ainda não salva", again.uiState.text)
             assertTrue(again.uiState.unsaved)

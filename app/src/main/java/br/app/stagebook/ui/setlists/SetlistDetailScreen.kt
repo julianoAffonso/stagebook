@@ -295,8 +295,9 @@ fun SetlistDetailScreen(
 @Composable
 private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        ActionButton(stringResource(R.string.sets_add_songs), onAddSongs, Modifier.weight(1f), icon = AppIcons.Add, tone = ButtonTone.Tonal)
-        ActionButton(stringResource(R.string.share_title), onShare, Modifier.weight(1f), icon = AppIcons.Upload, tone = ButtonTone.Tonal, enabled = hasSongs)
+        // both secondary: side by side at the start (stretched, Share floated in the middle)
+        ActionButton(stringResource(R.string.sets_add_songs), onAddSongs, icon = AppIcons.Add, tone = ButtonTone.Tonal)
+        ActionButton(stringResource(R.string.share_title), onShare, icon = AppIcons.Upload, tone = ButtonTone.Tonal, enabled = hasSongs)
     }
 }
 
