@@ -198,7 +198,7 @@
     <string name="essential_internet_detail">3 words, received from the band, new app version, BPM and song details</string>
     <string name="essential_player">Track player</string>
     <string name="essential_player_detail">Backing tracks, USB audio interface and mixer</string>
-    <string name="essential_extras">Stage extras</string>
+    <string name="essential_extras">Metronome and chord extras</string>
     <string name="essential_extras_detail">Chord sound and details, metronome and Now Playing</string>
     <string name="essential_on_short">On</string>
     <string name="essential_off_short">Off</string>
@@ -230,10 +230,10 @@
     <string name="instrument_cavaquinho">Cavaquinho</string>
     <string name="instrument_keyboard">Keyboard</string>
     <string name="settings_chord_tap">Show the diagram when you tap a chord</string>
-    <string name="settings_chord_list">Song chords</string>
-    <string name="settings_chord_list_none">No</string>
-    <string name="settings_chord_list_top">At the top</string>
-    <string name="settings_chord_list_bottom">At the end</string>
+    <string name="settings_chord_list">Chord list</string>
+    <string name="settings_chord_list_none">Hide</string>
+    <string name="settings_chord_list_top">Start</string>
+    <string name="settings_chord_list_bottom">End</string>
     <string name="stage_chord_hide">Hide %1$s from the list</string>
     <string name="stage_chord_hide_confirm">Hide %1$s from this song\'s chord list?</string>
     <string name="stage_chord_hide_ok">Hide</string>
@@ -280,7 +280,7 @@
     <string name="backup_open">Open file</string>
     <string name="backup_open_ok">Open</string>
     <string name="backup_songs_how">Songs in the file:</string>
-    <string name="backup_merge">Add to mine</string>
+    <string name="backup_merge">Join with mine</string>
     <string name="backup_replace">Replace mine</string>
     <string name="backup_merge_help">Only the songs and setlists you don\'t have come in. Yours stay as they are.</string>
     <string name="backup_replace_help">Your songs and setlists are swapped for the file\'s.</string>
@@ -338,7 +338,7 @@
     <string name="stage_keyboard_capo_hint">This chart uses a capo on fret %1$d. Chords are shifted for keyboard so you play along with the band.</string>
     <string name="settings_chord_play">Chord sound</string>
     <string name="settings_chord_play_arpeggio">Picked</string>
-    <string name="settings_chord_play_chord">Strummed</string>
+    <string name="settings_chord_play_chord">Full chord</string>
     <string name="settings_chord_play_both">Both</string>
     <string name="announce_title">Now Playing</string>
     <string name="announce_switch">Send the current song to OBS and others</string>
@@ -426,7 +426,7 @@
     <string name="settings_font_help">Applies to every song. On stage, pinching changes only the open song.</string>
     <string name="settings_colors">Colors</string>
     <string name="settings_columns">Split into columns</string>
-    <string name="settings_stage_mode">Moving through the lyrics</string>
+    <string name="settings_stage_mode">Moving on screen</string>
     <string name="settings_stage_mode_pages">Turn pages</string>
     <string name="settings_stage_mode_scroll">Scroll</string>
     <string name="settings_stage_mode_help">Turn pages shows one page at a time, in one or two columns. Scroll shows the lyrics in one column, and each tap or pedal press moves to the first line that didn\'t fit. That line lights up for a moment.</string>
@@ -538,9 +538,9 @@
     <string name="mixer_unmute">Unmute the channel</string>
     <string name="mixer_db">%1$+.1f dB</string>
     <string name="mixer_db_mute">muted</string>
-    <string name="mixer_norm">Normalize</string>
+    <string name="mixer_norm">Even out the volume</string>
     <string name="mixer_norm_none">No</string>
-    <string name="mixer_norm_volume">Loudness</string>
+    <string name="mixer_norm_volume">Average</string>
     <string name="mixer_norm_peak">Peak</string>
     <string name="mixer_output_in">Output on: %1$s</string>
     <string name="mixer_out_device">device output</string>
@@ -558,7 +558,7 @@
     <string name="mixer_norm_about">About normalizing</string>
     <string name="mixer_edit">Edit the channel</string>
     <string name="mixer_done">Done</string>
-    <string name="mixer_eq_switch">Go through the EQ</string>
+    <string name="mixer_eq_switch">Equalizer on</string>
     <string name="mixer_center_one">Play in the center, same on left and right</string>
     <string name="mixer_center_pair">Fold both sides to mono</string>
     <string name="mixer_center_short">Mono</string>
