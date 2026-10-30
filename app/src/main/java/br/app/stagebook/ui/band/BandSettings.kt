@@ -51,14 +51,17 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
             Text(band.name, style = MaterialTheme.typography.titleLarge)
             ActionButton(stringResource(R.string.band_rename), { renaming = true }, icon = AppIcons.Edit, tone = ButtonTone.Tonal)
         }
+        // band members already show in their own card (marked when online): this one lists only who can still join
+        val newcomers = band.nearby.filter { !it.member }
+        val online = band.nearby.filter { it.member }.associateBy { it.id }
         if (lan) SettingsCard(stringResource(R.string.band_nearby)) {
             when {
                 !band.wifi -> Text(stringResource(R.string.band_no_wifi), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                band.nearby.isEmpty() -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                newcomers.isEmpty() -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     if (band.searching) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                     Text(stringResource(R.string.band_searching), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                else -> band.nearby.forEach { NearbyRow(it, actions.onJoin) }
+                else -> newcomers.forEach { NearbyRow(it, actions.onJoin) }
             }
         }
         SettingsCard(stringResource(R.string.band_members)) {
@@ -68,7 +71,19 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
             band.members.forEach { m ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Icon(AppIcons.Check, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text(m.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(start = Spacing.s))
+                    Column(Modifier.weight(1f).padding(start = Spacing.s)) {
+                        Text(m.name, style = MaterialTheme.typography.bodyLarge)
+                        val here = online[m.id]
+                        when {
+                            !lan || here == null -> Unit
+                            // another app version: nothing works between the two until both update to the same one
+                            here.otherVersion != null -> Text(
+                                stringResource(R.string.band_other_version, here.otherVersion), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            else -> Text(stringResource(R.string.band_online), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     IconButton(onClick = { removing = m.id }) { Icon(AppIcons.Delete, stringResource(R.string.band_remove, m.name)) }
                 }
             }
@@ -90,37 +105,36 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
     }
 }
 
-// a device on the network: already in the band, or "Ask to join" (and the request's state)
+// a device on the network that isn't in the band: name and state on the left, "Ask to join" on the same row at the end
 @Composable
 private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(peer.name, style = MaterialTheme.typography.bodyLarge)
-        when {
-            // another app version: nothing works between the two until both update to the same one
-            peer.otherVersion != null -> Text(
-                stringResource(R.string.band_other_version, peer.otherVersion), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-            )
-            peer.member -> Text(stringResource(R.string.band_is_member), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-            peer.join == BandLink.Join.WAITING -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                Text(stringResource(R.string.band_waiting), style = MaterialTheme.typography.bodySmall)
-            }
-            else -> {
-                peer.join?.let { j ->
-                    Text(
-                        stringResource(
-                            when (j) {
-                                BandLink.Join.DENIED -> R.string.band_denied
-                                BandLink.Join.BUSY -> R.string.band_busy
-                                BandLink.Join.VERSION -> R.string.band_version_join
-                                else -> R.string.band_failed
-                            },
-                        ),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                    )
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(peer.name, style = MaterialTheme.typography.bodyLarge)
+            when {
+                // another app version: nothing works between the two until both update to the same one
+                peer.otherVersion != null -> Text(
+                    stringResource(R.string.band_other_version, peer.otherVersion), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+                )
+                peer.join == BandLink.Join.WAITING -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.band_waiting), style = MaterialTheme.typography.bodySmall)
                 }
-                ActionButton(stringResource(R.string.band_join), { onJoin(peer.id) }, icon = AppIcons.Add, tone = ButtonTone.Tonal)
+                peer.join != null -> Text(
+                    stringResource(
+                        when (peer.join) {
+                            BandLink.Join.DENIED -> R.string.band_denied
+                            BandLink.Join.BUSY -> R.string.band_busy
+                            BandLink.Join.VERSION -> R.string.band_version_join
+                            else -> R.string.band_failed
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+                )
             }
+        }
+        if (peer.otherVersion == null && peer.join != BandLink.Join.WAITING) {
+            ActionButton(stringResource(R.string.band_join), { onJoin(peer.id) }, icon = AppIcons.Add, tone = ButtonTone.Tonal)
         }
     }
 }
