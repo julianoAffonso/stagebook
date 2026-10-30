@@ -543,8 +543,12 @@ fun StageScreen(
                     Icon(AppIcons.Back, stringResource(R.string.action_back), tint = fg.copy(alpha = 0.6f))
                 }
             }
+            // position in the setlist, with the setlist icon so it isn't read as a page number (the dots are pages)
             if (uiState.songs.size > 1) {
-                Text("${index + 1}/${uiState.songs.size}", style = MaterialTheme.typography.titleMedium, color = fg.copy(alpha = 0.6f))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Icon(AppIcons.QueueMusic, null, Modifier.size(18.dp), tint = fg.copy(alpha = 0.6f))
+                    Text("${index + 1}/${uiState.songs.size}", style = MaterialTheme.typography.titleMedium, color = fg.copy(alpha = 0.6f))
+                }
             }
             Text(
                 if (song.missing) stringResource(R.string.set_item_missing) else song.title,
@@ -894,7 +898,8 @@ fun StageScreen(
             }
             SideEffect { autoAvailable = scrollMode && !song.missing && maxScroll > 0 }
             // player (player mode only): transparent play/pause in the bottom right corner, over the lyrics
-            if (look.playerMode && !song.missing) {
+            // only songs with a backing track show the button (T29, user's decision); the track is picked in the editor
+            if (look.playerMode && !song.missing && song.track.isNotEmpty()) {
                 TrackButton(
                     hasTrack = song.track.isNotEmpty(),
                     playing = playing,

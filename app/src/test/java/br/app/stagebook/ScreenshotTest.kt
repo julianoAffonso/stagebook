@@ -565,6 +565,12 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("Escolher o backing track desta música").assertDoesNotExist()
     }
 
+    @Test fun `player on - song without a backing track shows no track button`() {
+        compose.setContent { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
+        compose.onNodeWithContentDescription("Escolher o backing track desta música").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
+    }
+
     @Test fun `player on - song with a backing track shows play`() {
         compose.setContent { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
         compose.onNodeWithContentDescription("Tocar o backing track").assertExists()

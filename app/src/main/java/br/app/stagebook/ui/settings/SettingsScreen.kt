@@ -502,7 +502,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
         stringResource(R.string.metro_short_count).takeIf { ui.look.metroCount },
         stringResource(if (ui.look.metroSound) R.string.metro_short_sound else R.string.metro_short_silent),
         stringResource(R.string.metro_short_glow).takeIf { ui.look.metroGlow },
-    ).joinToString(" · ")
+    ).joinToString(" · ").replaceFirstChar { it.titlecase() }   // starts with a capital, like the other summaries
     SettingsSection.LANGUAGE -> languageLabel(ui.language)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()

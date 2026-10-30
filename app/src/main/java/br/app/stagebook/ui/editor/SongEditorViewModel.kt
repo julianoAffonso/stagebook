@@ -59,6 +59,7 @@ class SongEditorViewModel @Inject constructor(
     importDraft: ImportDraft,
     private val savedStateHandle: SavedStateHandle,
     private val importQueue: ImportQueue,
+    private val tracks: br.app.stagebook.data.TrackStore,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SongEditor>()
     private val draft = if (route.fromImport) importDraft.take() else null
@@ -68,6 +69,29 @@ class SongEditorViewModel @Inject constructor(
 
     var uiState by mutableStateOf(SongEditorUiState())
         private set
+
+    /** The song's backing track ("" = none); only an existing song can get one (the file is named after its id). */
+    var track by mutableStateOf(route.songId?.let(repository::song)?.track.orEmpty())
+        private set
+    val canPickTrack get() = route.songId != null
+
+    /** Links the chosen file right away (copied into the app); saving reads the song again, so it's kept. */
+    suspend fun attachTrack(uri: android.net.Uri): Boolean {
+        val id = route.songId ?: return false
+        val name = tracks.copy(id, uri) ?: return false
+        val old = track
+        repository.updateSong(id) { it.copy(track = name) }
+        if (old != name) tracks.remove(old)
+        track = name
+        return true
+    }
+
+    fun removeTrack() {
+        val id = route.songId ?: return
+        repository.updateSong(id) { it.copy(track = "") }
+        tracks.remove(track)
+        track = ""
+    }
 
     private val done = Channel<EditorExit>(Channel.BUFFERED)
     private var finished = false   // double tap on Save/Delete: only the first counts
