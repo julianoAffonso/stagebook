@@ -3,6 +3,8 @@ package com.juliano.stagebook.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.juliano.stagebook.data.LibraryRepository
+import com.juliano.stagebook.data.model.Look
+import com.juliano.stagebook.data.model.anyOff
 import com.juliano.stagebook.data.model.essential
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,9 +21,9 @@ class HomeViewModel @Inject constructor(private val repository: LibraryRepositor
     val essential: StateFlow<Boolean> = repository.library.map { it.look.essential }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.essential)
 
-    /** Aviso ao abrir o app no modo essencial: uma vez por abertura, até marcar "Não mostrar de novo". */
-    val alert: StateFlow<Boolean> = combine(repository.library, alerted) { lib, seen -> lib.look.essential && !lib.look.essentialAlertOff && !seen }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    /** Aviso ao abrir com alguma parte desligada (o que está desligado vem no Look; null = sem aviso): uma vez por abertura, até "Não mostrar de novo". */
+    val alert: StateFlow<Look?> = combine(repository.library, alerted) { lib, seen -> lib.look.takeIf { it.anyOff && !it.essentialAlertOff && !seen } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun alertSeen(neverAgain: Boolean) {
         alerted.value = true

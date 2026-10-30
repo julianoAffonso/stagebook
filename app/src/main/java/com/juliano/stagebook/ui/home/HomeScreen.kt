@@ -94,12 +94,7 @@ fun HomeScreen(
     val banner = inbox.lastOrNull { !it.seen }
     val essential by homeVm.essential.collectAsStateWithLifecycle()
     val alert by homeVm.alert.collectAsStateWithLifecycle()
-    if (alert) {
-        com.juliano.stagebook.ui.components.InfoDialog(
-            stringResource(R.string.essential_alert_title), stringResource(R.string.essential_alert_text),
-            onDismiss = { homeVm.alertSeen(false) }, neverAgain = homeVm::alertSeen,
-        )
-    }
+    alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen) }
     var listOpen by rememberSaveable { mutableStateOf(false) }
     val badges = mapOf(
         HomeTab.SONGS to inbox.count { it.setName.isEmpty() },
@@ -245,4 +240,21 @@ fun EssentialBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
         Icon(AppIcons.Eco, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
         Text(stringResource(R.string.essential_banner), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+/** Aviso ao abrir: modo essencial inteiro ou a lista do que foi desligado, com "Não mostrar de novo". */
+@Composable
+fun EssentialAlert(look: com.juliano.stagebook.data.model.Look, onDismiss: () -> Unit, onNeverAgain: (Boolean) -> Unit) {
+    val off = listOfNotNull(
+        R.string.essential_band.takeIf { !look.bandOn },
+        R.string.essential_internet.takeIf { !look.internetOn },
+        R.string.essential_player.takeIf { !look.playerMode },
+        R.string.essential_extras.takeIf { !look.extrasOn },
+    ).map { stringResource(it) }
+    val all = off.size == 4
+    com.juliano.stagebook.ui.components.InfoDialog(
+        stringResource(if (all) R.string.essential_alert_title else R.string.essential_alert_some_title),
+        if (all) stringResource(R.string.essential_alert_text) else stringResource(R.string.essential_alert_some_text, off.joinToString(", ")),
+        onDismiss = onDismiss, neverAgain = onNeverAgain,
+    )
 }
