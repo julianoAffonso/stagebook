@@ -106,10 +106,12 @@ class Backup @Inject constructor(
      */
     suspend fun restore(input: InputStream, parts: Set<Part>, replace: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         skipped = 0
-        runCatching {
+        // each track goes straight to a .part file next to the others, never all of them in memory (a backup with 30
+        // tracks of 15 MB used to need ~450 MB of heap and closed the app on the Fire; audit 30/10)
+        val partFiles = mutableMapOf<String, java.io.File>()
+        val ok = runCatching {
             var songs: Songs? = null
             var settings: JsonObject? = null
-            val trackFiles = mutableMapOf<String, ByteArray>()
             ZipInputStream(input).use { zip ->
                 generateSequence { zip.nextEntry }.forEach { e ->
                     when {
@@ -118,22 +120,19 @@ class Backup @Inject constructor(
                         e.name.startsWith(TRACKS_DIR) && Part.TRACKS in parts -> {
                             // only the file name (never an outside folder: "../")
                             val name = e.name.removePrefix(TRACKS_DIR).substringAfterLast('/')
-                            if (name.isNotEmpty() && !name.startsWith(".")) {
-                                // only real audio, of a sane size (checked inside, like a track picked by hand)
-                                val bytes = zip.readBytes()
-                                if (bytes.size <= TrackStore.MAX_BYTES && br.app.stagebook.domain.AudioFormat.of(bytes.copyOf(minOf(bytes.size, br.app.stagebook.domain.AudioFormat.HEADER))) != null) trackFiles[name] = bytes
-                            }
+                            if (name.isNotEmpty() && !name.startsWith(".")) streamTrack(zip, name)?.let { partFiles[name] = it }
                         }
                     }
                 }
             }
             if (Part.LIBRARY in parts) songs?.let { s ->
-                trackFiles.forEach { (name, bytes) -> tracks.file(name).writeBytes(bytes) }
+                // the tracks take their place only now, each one swapped in by a rename
+                partFiles.forEach { (name, part) -> tracks.file(name).delete(); part.renameTo(tracks.file(name)) }
                 val keepTracks = Part.TRACKS in parts
                 // the same filter as the band: a "song" that isn't song text stays out (user's request of 30/10)
                 val allowed = s.songs.filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
                 skipped = s.songs.size - allowed.size
-                val songs = allowed.map { if (keepTracks && it.track in trackFiles) it else it.copy(track = "") }
+                val songs = allowed.map { if (keepTracks && it.track in partFiles) it else it.copy(track = "") }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
             }
             if (Part.SETTINGS in parts) settings?.let { st ->
@@ -142,6 +141,34 @@ class Backup @Inject constructor(
             }
             true
         }.getOrDefault(false)
+        partFiles.values.forEach { it.delete() }   // what wasn't used (or a failed restore) leaves nothing behind
+        ok
+    }
+
+    /**
+     * One track of the backup to `<name>.part` in the tracks folder, in chunks: only real audio (its first bytes) of a
+     * sane size, checked like a track picked by hand. Null (and nothing left on disk) otherwise.
+     */
+    private fun streamTrack(zip: ZipInputStream, name: String): java.io.File? {
+        val part = java.io.File(tracks.file(name).parentFile, "$name.part")
+        val head = ByteArray(br.app.stagebook.domain.AudioFormat.HEADER)
+        var size = 0L
+        val good = runCatching {
+            part.outputStream().use { out ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = zip.read(buf)
+                    if (n < 0) break
+                    if (size < head.size) System.arraycopy(buf, 0, head, size.toInt(), minOf(n.toLong(), head.size - size).toInt())
+                    size += n
+                    if (size > TrackStore.MAX_BYTES) return@runCatching false
+                    out.write(buf, 0, n)
+                }
+            }
+            br.app.stagebook.domain.AudioFormat.of(head) != null
+        }.getOrDefault(false)
+        if (!good) part.delete()
+        return part.takeIf { good }
     }
 
     // SharedPreferences ↔ JSON, with each value's type (text, yes/no, int/long/float, list of texts)
