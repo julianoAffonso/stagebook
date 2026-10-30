@@ -42,6 +42,7 @@ class ImportViewModel @Inject constructor(
     private val draft: ImportDraft,
     savedStateHandle: SavedStateHandle,
     private val queue: ImportQueue,
+    private val deezer: com.juliano.stagebook.data.DeezerBpm,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<Importer>()
     val initialQuery = route.query
@@ -136,6 +137,10 @@ class ImportViewModel @Inject constructor(
             if (meta.title.isNotEmpty()) musicBrainz.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { m ->
                 if (artist.isBlank()) artist = m.artist
                 if (m.year.isNotEmpty()) year = m.year
+            }
+            // sem BPM na página nem no texto: o Deezer sugere (o músico confere nos Dados da música)
+            if (Chords.tempo(text) == 0 && meta.title.isNotEmpty()) deezer.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { bpm ->
+                text = Chords.setDirective(text, "tempo", bpm.toString())
             }
             draft.put(ImportDraft.Draft(meta.title, artist, year, text))
             _uiState.update { it.copy(busy = false) }
