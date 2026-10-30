@@ -86,4 +86,24 @@ class ContentGuardTest {
         assertEquals(listOf("Boa"), repo.library.value.songs.map { it.title })
         assertEquals(1, backup.skipped)
     }
+
+    @Test fun `a backup track that isn't audio stays out and leaves no file behind`() = runBlocking {
+        val repo = repo()
+        val tracks = TrackStore(context)
+        val backup = Backup(context, repo, tracks)
+        tracks.file("boa.ogg").writeBytes("OggS".toByteArray() + ByteArray(64))
+        tracks.file("foto.mp3").writeBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte()) + ByteArray(64))
+        repo.saveSong(Song(title = "Com faixa boa", text = "uma\nduas\ntrês", track = "boa.ogg"))
+        repo.saveSong(Song(title = "Com foto", text = "uma\nduas\ntrês", track = "foto.mp3"))
+        val file = File(context.cacheDir, "tracks.stagebook")
+        file.outputStream().use { backup.write(it, setOf(Backup.Part.LIBRARY, Backup.Part.TRACKS)) }
+        repo.restore(emptyList(), emptyList())
+        tracks.file("boa.ogg").delete(); tracks.file("foto.mp3").delete()
+        assertTrue(file.inputStream().use { backup.restore(it, setOf(Backup.Part.LIBRARY, Backup.Part.TRACKS)) })
+        val byTitle = repo.library.value.songs.associateBy { it.title }
+        assertEquals("boa.ogg", byTitle.getValue("Com faixa boa").track)
+        assertEquals("", byTitle.getValue("Com foto").track)
+        assertTrue(tracks.file("boa.ogg").exists())
+        assertTrue(tracks.file("boa.ogg").parentFile!!.listFiles()!!.none { it.name.endsWith(".part") })
+    }
 }
