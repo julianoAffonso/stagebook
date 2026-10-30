@@ -102,7 +102,8 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
                             Column(Modifier.weight(1f)) {
                                 Text(if (group.size > 1) item.fromName else itemText(item), style = MaterialTheme.typography.bodyLarge)
                                 Text(
-                                    timeOf(item.at) + if (group.size > 1 && i == 0) " · " + stringResource(R.string.inbox_latest) else "",
+                                    (if (item.updated) stringResource(R.string.inbox_updated_at, timeOf(item.at)) else timeOf(item.at)) +
+                                        if (group.size > 1 && i == 0) " · " + stringResource(R.string.inbox_latest) else "",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
