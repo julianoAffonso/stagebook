@@ -430,8 +430,6 @@
     <string name="settings_stage_mode_scroll">Rolar</string>
     <string name="settings_stage_mode_help">Virar página mostra uma página por vez, em uma ou duas colunas. Rolar mostra a letra numa coluna só, e cada toque ou pedal leva até a primeira linha que não cabia. Essa linha acende por um instante.</string>
     <string name="settings_columns_auto">Automático</string>
-    <string name="settings_columns_one">1</string>
-    <string name="settings_columns_two">2</string>
     <string name="settings_columns_one_short">1 coluna</string>
     <string name="settings_columns_two_short">2 colunas</string>
     <string name="settings_columns_help">Automático escolhe para cada música. Usa 2 colunas quando a letra não cabe numa página e as frases são curtas. O pedal vira as duas colunas juntas.</string>
