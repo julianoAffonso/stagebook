@@ -858,8 +858,10 @@ fun StageScreen(
                                 style = content.style,
                                 chordStyle = content.chordStyle,
                                 modifier = if (!scrollMode) Modifier.fillMaxSize()
+                                // the scroll moves the text's own layer: the song is drawn once and only slides (offset
+                                // redrew the whole song, every chord included, on every frame of auto-scroll; audit 30/10)
                                 else Modifier.fillMaxWidth().clipToBounds().wrapContentHeight(Alignment.Top, unbounded = true)
-                                    .offset { IntOffset(0, -scrollY.value.roundToInt()) },
+                                    .graphicsLayer { translationY = -scrollY.value },
                                 onTextLayout = { laid = it; hit.laidOut(content, column, it) },
                             )
                             // the chord list, over the space reserved for it
