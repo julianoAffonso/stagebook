@@ -358,7 +358,7 @@
     <string name="metro_count">Contagem 1-2-3-4 antes</string>
     <string name="metro_glow_color">Cor do brilho</string>
     <string name="metro_help">No palco, o ícone ao lado do relógio abre o metrônomo. Ele começa no BPM da música, ou em 100 se ela não tiver.</string>
-    <string name="metro_in_settings">Contagem, som e brilho ficam em Ajustes → Metrônomo</string>
+    <string name="metro_in_settings">Contagem, som e brilho ficam em Ajustes → Visual do palco</string>
     <string name="metro_short_count">contagem</string>
     <string name="metro_short_sound">som</string>
     <string name="metro_short_silent">sem som</string>

@@ -393,12 +393,10 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     PLAYER(R.string.settings_player, AppIcons.Play),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
-    METRONOME(R.string.metro_title, AppIcons.Metronome),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
     BAND(R.string.settings_band, AppIcons.Group),
     WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
-    LANGUAGE(R.string.settings_language, AppIcons.Translate),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
     ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
@@ -406,7 +404,6 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 
 /** Essential mode (T19): the section of what is turned off leaves the list. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
-    SettingsSection.METRONOME -> look.extrasOn
     SettingsSection.PLAYER -> look.playerMode
     SettingsSection.BAND -> look.bandOn || look.internetOn   // the band also works over the internet (same members)
     SettingsSection.WEB_EDITOR -> !look.essential   // essential mode turns the editor on the computer off (T37)
@@ -511,12 +508,6 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.PEDAL -> if (ui.look.pedalName.isEmpty()) stringResource(R.string.settings_pedal_none_short)
     else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
-    SettingsSection.METRONOME -> listOfNotNull(
-        stringResource(R.string.metro_short_count).takeIf { ui.look.metroCount },
-        stringResource(if (ui.look.metroSound) R.string.metro_short_sound else R.string.metro_short_silent),
-        stringResource(R.string.metro_short_glow).takeIf { ui.look.metroGlow },
-    ).joinToString(" · ").replaceFirstChar { it.titlecase() }   // starts with a capital, like the other summaries
-    SettingsSection.LANGUAGE -> languageLabel(ui.language)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.WEB_EDITOR -> stringResource(if (ui.look.webEditorOn) R.string.settings_web_editor_on_short else R.string.settings_web_editor_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
@@ -538,8 +529,6 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
-            SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
-            SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
             SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
@@ -626,6 +615,8 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         FontPicker(look.font, actions.onFontFamily)
         LegibilityWarnings(look)
     }
+    // the stage metronome lives with the rest of the stage (user's decision of 30/10); off in essential mode
+    if (look.extrasOn) MetronomeDetail(look, actions)
 }
 
 /** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
@@ -1359,6 +1350,8 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.app_name)) {
         Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge)
     }
+    // the language lives here (user's decision of 30/10: a whole screen for one field was too much)
+    LanguageDetail(uiState.language, actions)
     if (uiState.look.internetOn) UpdateDetail(uiState, actions)   // checking for a new version uses the internet (T19)
     SettingsCard(stringResource(R.string.about_privacy)) {
         Text(stringResource(R.string.about_privacy_text), style = MaterialTheme.typography.bodyMedium)

@@ -253,7 +253,7 @@ class ScreenshotTest {
     }
 
     @Test fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.METRONOME) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 30f)), SettingsActions(), it, section = SettingsSection.LYRICS) }
     }
 
     // T20: with a capo, the window explains the shape and has Play
@@ -494,7 +494,7 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneLanguage() = shoot("celular_5_ajustes_lingua") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LANGUAGE) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.ABOUT) }
     }
 
     // MIDI pedal: a USB one plugged in and a saved Bluetooth one out of range; button test with a MIDI message
