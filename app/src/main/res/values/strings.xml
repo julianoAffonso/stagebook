@@ -706,8 +706,8 @@
     <string name="share_failed">Couldn\'t send</string>
     <string name="share_failed_text">The service didn\'t answer. Check your internet and try again, or use the QR.</string>
     <plurals name="share_sent_songs">
-        <item quantity="one">%1$d song sent.</item>
-        <item quantity="other">%1$d songs sent.</item>
+        <item quantity="one">Sending %1$d song.</item>
+        <item quantity="other">Sending %1$d songs.</item>
     </plurals>
     <plurals name="share_skipped">
         <item quantity="one">%1$d song was too big and didn\'t go.</item>
