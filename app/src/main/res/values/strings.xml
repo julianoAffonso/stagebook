@@ -133,8 +133,8 @@
     <string name="about_tagline">Letras, cifras e backing tracks para tocar ao vivo, sozinho ou com a banda.</string>
     <string name="about_privacy">Privacidade</string>
     <string name="about_privacy_text">Suas músicas, setlists e ajustes ficam neste aparelho. O que vai para a banda ou pelas 3 palavras vai cifrado: o serviço no meio do caminho não consegue ler. O app não tem conta, propaganda nem rastreio.</string>
-    <string name="about_open_source">Código aberto</string>
-    <string name="about_open_source_text">O Stagebook é gratuito e o código é aberto: qualquer um pode ver como funciona e ajudar.</string>
+    <string name="about_open_source">Código disponível</string>
+    <string name="about_open_source_text">O Stagebook é gratuito e o código está disponível: qualquer um pode ver como funciona, usar (inclusive em shows pagos) e ajudar. Só não vale usar o código para fazer um app concorrente (licença PolyForm Shield).</string>
     <string name="about_see_code">Ver o código</string>
     <string name="conduct_start">Conduzir a banda</string>
     <string name="conduct_conducting">Conduzindo · %1$s</string>

@@ -31,3 +31,11 @@ O release é assinado por uma chave que não está no repositório.
 
 ## Instalar
 Pelos [Releases](../../releases) deste repositório (o app avisa e instala as versões novas sozinho).
+
+## Licença
+Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)): qualquer uso, inclusive em shows pagos,
+mudanças e redistribuição; só não vale usar o código para fazer um produto concorrente.
+`Required Notice: Copyright Stagebook (https://stagebook.app.br)`
+
+Decodificadores de áudio de terceiros, em `app/src/main/cpp/third_party` (cada um com a licença no próprio arquivo):
+stb_vorbis (domínio público ou MIT), dr_mp3 e dr_wav (domínio público ou MIT-0).
