@@ -585,8 +585,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
     if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns), help = stringResource(R.string.settings_columns_help)) {
         val options = listOf(
             StageColumns.AUTO to R.string.settings_columns_auto,
-            StageColumns.ONE to R.string.settings_columns_one,
-            StageColumns.TWO to R.string.settings_columns_two,
+            // "1 column"/"2 columns": bare numbers next to "Automatic" said nothing
+            StageColumns.ONE to R.string.settings_columns_one_short,
+            StageColumns.TWO to R.string.settings_columns_two_short,
         )
         // pill ends, like the buttons in the rest of the app (Material 3 Expressive)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

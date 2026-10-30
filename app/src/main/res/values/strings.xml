@@ -430,8 +430,6 @@
     <string name="settings_stage_mode_scroll">Scroll</string>
     <string name="settings_stage_mode_help">Turn pages shows one page at a time, in one or two columns. Scroll shows the lyrics in one column, and each tap or pedal press moves to the first line that didn\'t fit. That line lights up for a moment.</string>
     <string name="settings_columns_auto">Automatic</string>
-    <string name="settings_columns_one">1</string>
-    <string name="settings_columns_two">2</string>
     <string name="settings_columns_one_short">1 column</string>
     <string name="settings_columns_two_short">2 columns</string>
     <string name="settings_columns_help">Automatic picks for each song. It uses 2 columns when the lyrics don\'t fit on one page and the lines are short enough. The pedal turns both columns together.</string>
