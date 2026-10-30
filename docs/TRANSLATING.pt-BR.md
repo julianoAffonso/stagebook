@@ -31,3 +31,7 @@ Pense em alguém da banda explicando no ensaio, não num manual.
 ## Português do Brasil
 O app é em **pt-BR** (`values-pt-rBR`). Sem "ecrã", "telemóvel" ou "utilizador". Português de Portugal seria outra
 tradução, em `values-pt-rPT`.
+
+## O editor no computador
+Os textos que começam com `web_` são da página do editor web (Ajustes → Editor no computador). Ficam no mesmo
+`strings.xml` e a página segue o idioma do app: traduzindo o arquivo, o editor sai traduzido junto.

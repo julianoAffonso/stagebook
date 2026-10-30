@@ -146,6 +146,8 @@ object AppIcons {
             "M8,11a2,2 0,1 0,0.01 0z", "M16,11a2,2 0,1 0,0.01 0z",
         )
     }
+    // computer: the editor on the computer (T37)
+    val Computer by lazy { icon("computer", "M20,18c1.1,0 1.99,-0.9 1.99,-2L22,6c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2H0v2h24v-2h-4zM4,6h16v10H4V6z") }
     // coffee cup: the support button (a generic icon, no brand)
     val Coffee by lazy {
         icon("coffee", "M20,3H4v10c0,2.21 1.79,4 4,4h6c2.21,0 4,-1.79 4,-4v-3h2c1.11,0 2,-0.89 2,-2V5C22,3.89 21.11,3 20,3zM20,8h-2V5h2V8zM4,19h16v2H4V19z")

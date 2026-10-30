@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stagebook</title>
+<style>
+  /* the app's colors (dark, mint accent); nothing loaded from outside: works without internet */
+  :root { --bg: #121212; --surface: #1E1E1E; --text: #E6E6E6; --muted: #9A9A9A; --accent: #4AF6CD; --on-accent: #00382C; --error: #FF6B6B; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 28px; margin: 0 0 24px; }
+  .card { background: var(--surface); border-radius: 28px; padding: 24px; }
+  .muted { color: var(--muted); }
+  .error { color: var(--error); }
+  button { font: inherit; border: 0; border-radius: 999px; padding: 12px 24px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Stagebook</h1>
+  <section class="card" id="gate" hidden>
+    <p id="gate-text" class="muted"></p>
+    <button id="ask"></button>
+  </section>
+  <section class="card" id="app" hidden>
+    <p id="connected"></p>
+  </section>
+  <p id="offline" class="error" hidden></p>
+</main>
+<script>
+"use strict";
+// every call carries X-Stagebook: the app refuses /api without it (a page from another site can't send it)
+const api = (path, options = {}) =>
+  fetch(path, { ...options, headers: { "X-Stagebook": "1", "Content-Type": "application/json", ...(options.headers || {}) }, credentials: "same-origin" });
+let t = {};
+const fill = (text, ...args) => args.reduce((s, a, i) => s.replace(`%${i + 1}$s`, a), text || "");
+const show = (id) => ["gate", "app"].forEach((s) => (document.getElementById(s).hidden = s !== id));
+
+// the computer's name on the tablet's question: browser and system, from the browser itself
+function computerName() {
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
+  const os = /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "";
+  return os ? `${browser} · ${os}` : browser;
+}
+
+async function start() {
+  try {
+    t = await (await api("/api/strings")).json();
+  } catch (e) {
+    return offline();
+  }
+  document.title = t.title;
+  document.getElementById("title").textContent = t.title;
+  document.getElementById("ask").textContent = t.ask;
+  document.getElementById("ask").onclick = ask;
+  const r = await api("/api/session").catch(() => null);
+  if (!r) return offline();
+  if (r.status === 200) return connected(await r.json());
+  show("gate");
+}
+
+async function ask() {
+  const button = document.getElementById("ask");
+  const text = document.getElementById("gate-text");
+  button.disabled = true;
+  text.className = "muted";
+  const r = await api("/api/ask", { method: "POST", body: JSON.stringify({ name: computerName() }) }).catch(() => null);
+  if (!r) return offline();
+  if (r.status === 429) { text.textContent = t.busy; button.disabled = false; return; }
+  const { id } = await r.json();
+  text.textContent = fill(t.asking, "Stagebook");
+  // waits for the answer on the tablet (the request expires after 2 minutes: then it asks again)
+  for (;;) {
+    await new Promise((ok) => setTimeout(ok, 1500));
+    const p = await api(`/api/ask?id=${encodeURIComponent(id)}`).catch(() => null);
+    if (!p) return offline();
+    if (p.status === 202) continue;
+    if (p.status === 200) return start();
+    text.textContent = t.denied;
+    text.className = "error";
+    button.disabled = false;
+    return;
+  }
+}
+
+function connected(session) {
+  document.getElementById("connected").textContent = fill(t.connected, session.app);
+  show("app");
+}
+
+function offline() {
+  const el = document.getElementById("offline");
+  el.textContent = t.offline || "Stagebook?";
+  el.hidden = false;
+}
+
+start();
+</script>
+</body>
+</html>

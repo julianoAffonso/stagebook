@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var band: BandLink
     @Inject lateinit var stageGate: StageGate
     @Inject lateinit var bandInternet: BandInternet
+    @Inject lateinit var webEditor: br.app.stagebook.data.web.WebEditorServer
     @Inject lateinit var conduct: br.app.stagebook.data.BandConduct   // created here so a follower answers right away
     private val pedal = PedalInput()
 
@@ -96,6 +97,11 @@ class MainActivity : ComponentActivity() {
                 val requests by band.requests.collectAsStateWithLifecycle()
                 val onStage by stageGate.onStage.collectAsStateWithLifecycle()
                 if (!onStage) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
+                // "Chrome · Windows wants to edit" (editor on the computer, T37): also never on stage; the browser waits
+                val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
+                if (!onStage && requests.isEmpty()) webRequests.firstOrNull()?.let { r ->
+                    br.app.stagebook.ui.web.WebRequestDialog(r.name) { ok -> webEditor.auth.answer(r.id, ok) }
+                }
             }
         }
     }
@@ -105,11 +111,13 @@ class MainActivity : ComponentActivity() {
         // new app version: checks in the background and asks off stage (not in essential mode without internet, T19)
         if (repository.library.value.look.internetOn) updateOffer.onEnter()
         band.setForeground(true)   // band on the network: only with the app in front
+        webEditor.setForeground(true)   // editor on the computer: only with the app open (T37)
         bandInternet.onAppOpen()   // band over the internet: checks the inbox once, on open
     }
 
     override fun onStop() {
         band.setForeground(false)
+        webEditor.setForeground(false)
         super.onStop()
     }
 

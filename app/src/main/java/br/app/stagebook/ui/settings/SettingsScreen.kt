@@ -8,6 +8,9 @@ import br.app.stagebook.ui.band.BandViewModel
 import br.app.stagebook.ui.band.BandUi
 import br.app.stagebook.ui.band.BandDetail
 import br.app.stagebook.ui.band.BandActions
+import br.app.stagebook.ui.web.WebEditorDetail
+import br.app.stagebook.ui.web.WebEditorUi
+import br.app.stagebook.ui.web.WebEditorViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
@@ -222,6 +225,8 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
     val bandVm: BandViewModel = hiltViewModel()
     val band by bandVm.ui.collectAsStateWithLifecycle()
     val bandActions = remember(bandVm) { bandVm.actions() }
+    val webVm: WebEditorViewModel = hiltViewModel()
+    val web by webVm.ui.collectAsStateWithLifecycle()
     DisposableEffect(section == SettingsSection.BAND) {
         val open = section == SettingsSection.BAND
         bandVm.screenOpen(open)
@@ -274,6 +279,9 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onMonitoring = { monitoring = it },
                 band = band,
                 bandActions = bandActions,
+                web = web,
+                onWebEditorOn = viewModel::setWebEditorOn,
+                onWebRemove = webVm::remove,
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -351,6 +359,10 @@ data class SettingsActions(
     // Settings → Band: the band state (BandViewModel) and what the screen does
     val band: BandUi = BandUi(),
     val bandActions: BandActions = BandActions(),
+    // Settings → Editor on the computer (T37)
+    val web: WebEditorUi = WebEditorUi(),
+    val onWebEditorOn: (Boolean) -> Unit = {},
+    val onWebRemove: (String) -> Unit = {},
     val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
@@ -382,6 +394,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     METRONOME(R.string.metro_title, AppIcons.Metronome),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
     BAND(R.string.settings_band, AppIcons.Group),
+    WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
     LANGUAGE(R.string.settings_language, AppIcons.Translate),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
@@ -394,6 +407,7 @@ fun SettingsSection.shown(look: Look): Boolean = when (this) {
     SettingsSection.METRONOME -> look.extrasOn
     SettingsSection.PLAYER -> look.playerMode
     SettingsSection.BAND -> look.bandOn || look.internetOn   // the band also works over the internet (same members)
+    SettingsSection.WEB_EDITOR -> !look.essential   // essential mode turns the editor on the computer off (T37)
     else -> true
 }
 
@@ -502,6 +516,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     ).joinToString(" · ").replaceFirstChar { it.titlecase() }   // starts with a capital, like the other summaries
     SettingsSection.LANGUAGE -> languageLabel(ui.language)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
+    SettingsSection.WEB_EDITOR -> stringResource(if (ui.look.webEditorOn) R.string.settings_web_editor_on_short else R.string.settings_web_editor_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
     SettingsSection.ABOUT -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
@@ -519,6 +534,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
+            SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
             SettingsSection.LANGUAGE -> LanguageDetail(uiState.language, actions)
