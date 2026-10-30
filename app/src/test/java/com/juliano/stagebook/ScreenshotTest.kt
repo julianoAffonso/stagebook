@@ -306,10 +306,12 @@ class ScreenshotTest {
 
     @Test fun essentialAlertTablet() = shoot("tablet_1_aviso_essencial") {
         HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
-        com.juliano.stagebook.ui.components.InfoDialog(
-            androidx.compose.ui.res.stringResource(R.string.essential_alert_title), androidx.compose.ui.res.stringResource(R.string.essential_alert_text),
-            onDismiss = {}, neverAgain = {},
-        )
+        com.juliano.stagebook.ui.home.EssentialAlert(Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false), {}, {})
+    }
+
+    @Test fun someOffAlertTablet() = shoot("tablet_1_aviso_desligadas") {
+        HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+        com.juliano.stagebook.ui.home.EssentialAlert(Look(bandOn = false, extrasOn = false), {}, {})
     }
 
     @Test fun essentialBannerTablet() = shoot("tablet_1_musicas_essencial") {

@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.juliano.stagebook.data.AppUpdater
 import com.juliano.stagebook.data.LibraryRepository
 import com.juliano.stagebook.data.model.Look
+import com.juliano.stagebook.data.model.anyOff
 import com.juliano.stagebook.data.model.essential
 import com.juliano.stagebook.ui.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +31,9 @@ class EssentialModeTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     @Test fun `essencial so com as quatro desligadas`() {
-        assertFalse(Look().essential)   // app novo: tudo ligado menos o player
+        assertFalse(Look().essential)   // app novo: tudo ligado, o player também
+        assertFalse(Look().anyOff)        // e por isso nenhum aviso ao abrir
+        assertTrue(Look(extrasOn = false).anyOff)
         assertTrue(Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = false).essential)
         assertFalse(Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = true).essential)
     }

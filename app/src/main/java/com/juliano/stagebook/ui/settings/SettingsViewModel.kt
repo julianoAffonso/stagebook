@@ -1,6 +1,5 @@
 package com.juliano.stagebook.ui.settings
 
-import com.juliano.stagebook.data.model.keepingEssentialAlert
 import com.juliano.stagebook.data.model.ImportSite
 import com.juliano.stagebook.data.model.Instrument
 import com.juliano.stagebook.data.model.ChordListPlace
@@ -194,16 +193,17 @@ class SettingsViewModel @Inject constructor(
     fun setMixer(mixer: com.juliano.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
 
     fun setPlayerMode(on: Boolean) {
-        repository.updateLook { it.copy(playerMode = on).keepingEssentialAlert() }
+        repository.updateLook { it.copy(playerMode = on).copy(essentialAlertOff = false) }
         if (!on) com.juliano.stagebook.player.StagePlayer.turnOff()   // desligado, nada do player fica rodando
     }
-    fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on).keepingEssentialAlert() }
-    fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on).keepingEssentialAlert() }
-    fun setExtrasOn(on: Boolean) = repository.updateLook { it.copy(extrasOn = on).keepingEssentialAlert() }
+    fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on).copy(essentialAlertOff = false) }
+    fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on).copy(essentialAlertOff = false) }
+    fun setExtrasOn(on: Boolean) = repository.updateLook { it.copy(extrasOn = on).copy(essentialAlertOff = false) }
 
+    // mexer em qualquer parte apaga o "Não mostrar de novo": o aviso ao abrir volta com a lista nova
     /** Ligar desliga as quatro (player incluso); desligar religa banda, internet e extras (o player continua como estava: começa desligado). */
     fun setEssential(on: Boolean) {
-        repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode).keepingEssentialAlert() }
+        repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode).copy(essentialAlertOff = false) }
         if (on) com.juliano.stagebook.player.StagePlayer.turnOff()
     }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
