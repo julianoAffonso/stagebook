@@ -264,7 +264,7 @@
     <string name="backup_save_where">Keep it on Drive, on a computer, or send it in a message. Sending just the lyrics? Uncheck the backing tracks, they make the file big.</string>
     <string name="backup_open_card">Open file</string>
     <string name="backup_open_info">Shows what the file has so you can choose. Old .json files open too.</string>
-    <string name="backup_open_merge">Add brings in only the songs and setlists you don\'t have. Yours stay as they are.</string>
+    <string name="backup_open_merge">Join brings in only the songs and setlists you don\'t have. Yours stay as they are.</string>
     <string name="backup_open_replace">Replace swaps your songs and setlists for the file\'s. Use it to restore a backup or move to a new device.</string>
     <string name="backup_open_other_device">The file\'s settings replace the ones here. On another device, approve the band again in Settings → Band.</string>
     <string name="backup_share_card">Other ways to share</string>
@@ -534,7 +534,7 @@
     <!-- player mixer (Settings → Player) -->
     <string name="mixer_title">Mixer</string>
     <string name="mixer_monitor">Monitor live levels</string>
-    <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here. Tap a channel name to pick its output, normalize, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
+    <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here. Tap a channel name to pick its output, even out the volume, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
     <string name="mixer_channels">Channels in the backing tracks</string>
     <string name="mixer_channel">Channel %1$d</string>
     <string name="mixer_pair">Channels %1$d and %2$d</string>
@@ -560,7 +560,7 @@
     <string name="mixer_output_one">Output %1$d</string>
     <string name="mixer_output_pair">Outputs %1$d-%2$d</string>
     <string name="mixer_eq">EQ</string>
-    <string name="mixer_norm_about">About normalizing</string>
+    <string name="mixer_norm_about">About evening out the volume</string>
     <string name="mixer_edit">Edit the channel</string>
     <string name="mixer_done">Done</string>
     <string name="mixer_eq_switch">Equalizer on</string>
@@ -568,7 +568,7 @@
     <string name="mixer_center_pair">Fold both sides to mono</string>
     <string name="mixer_center_short">Mono</string>
     <string name="mixer_join">Pair with channel %1$d as stereo</string>
-    <string name="mixer_norm_help">Evens out this channel\'s volume across songs, so you don\'t ride the fader on each one.\n• No: plays as recorded.\n• Loudness: all at the same perceived loudness (LUFS), peaks under -1 dB. Good for the backing.\n• Peak: all with the same peak (-6 dB). Good for click and guide.\nThe app measures each backing track once, before play.</string>
+    <string name="mixer_norm_help">Evens out this channel\'s volume across songs, so you don\'t ride the fader on each one.\n• No: plays as recorded.\n• Average: all at the same perceived loudness (LUFS), peaks under -1 dB. Good for the backing.\n• Peak: all with the same peak (-6 dB). Good for click and guide.\nThe app measures each backing track once, before play.</string>
     <string name="eq_title">Equalizer</string>
     <string name="eq_on">Equalizer on</string>
     <string name="eq_help">One curve, applied to each channel marked with EQ, each on its own. A limiter catches the peaks.</string>
