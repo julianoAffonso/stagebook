@@ -27,7 +27,7 @@ class WebEditorStartTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(webEditorOn = true) }
-        WebEditorServer(context, repo, DeviceIdentity(context), WebEditorAuth(context))
+        WebEditorServer(context, repo, DeviceIdentity(context), WebEditorAuth(context), { error("not used") })
         assertEquals(false, withTimeout(5_000) { repo.library.first { !it.look.webEditorOn } }.look.webEditorOn)
     }
 }

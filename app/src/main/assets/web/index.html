@@ -6,28 +6,78 @@
 <title>Stagebook</title>
 <style>
   /* the app's colors (dark, mint accent); nothing loaded from outside: works without internet */
-  :root { --bg: #121212; --surface: #1E1E1E; --text: #E6E6E6; --muted: #9A9A9A; --accent: #4AF6CD; --on-accent: #00382C; --error: #FF6B6B; }
+  :root { --bg: #121212; --surface: #1E1E1E; --raised: #2A2A2A; --line: #3A3A3A; --text: #E6E6E6; --muted: #9A9A9A;
+          --accent: #4AF6CD; --on-accent: #00382C; --selected: #263451; --error: #FF6B6B; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
-  h1 { font-size: 28px; margin: 0 0 24px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 24px 16px; }
+  header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 24px; }
+  h1 { font-size: 28px; margin: 0; }
   .card { background: var(--surface); border-radius: 28px; padding: 24px; }
   .muted { color: var(--muted); }
   .error { color: var(--error); }
-  button { font: inherit; border: 0; border-radius: 999px; padding: 12px 24px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
-  button:disabled { opacity: .5; cursor: default; }
+  button { font: inherit; border: 0; border-radius: 999px; padding: 10px 24px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
+  button.text { background: none; color: var(--text); padding: 10px 12px; }
+  button.outline { background: none; color: var(--text); border: 1px solid var(--line); }
+  button.icon { background: none; color: var(--text); width: 40px; height: 40px; padding: 0; font-size: 22px; line-height: 40px; }
+  button:disabled { opacity: .4; cursor: default; }
+  input, textarea { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; width: 100%; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
   [hidden] { display: none !important; }
+  #app { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 800px) { #app { grid-template-columns: 1fr; } }
+  #list-card { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; max-height: calc(100vh - 32px); }
+  #songs { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+  #songs li { padding: 10px 14px; border-radius: 16px; cursor: pointer; }
+  #songs li:hover { background: var(--raised); }
+  #songs li.on { background: var(--selected); }
+  #songs .sub { font-size: 13px; color: var(--muted); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  .row > div { flex: 1; min-width: 120px; }
+  .grow { flex: 3 !important; }
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper b { min-width: 72px; text-align: center; font-weight: 600; }
+  textarea { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; min-height: 55vh; resize: vertical; line-height: 1.6; }
+  .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; }
+  #form { display: flex; flex-direction: column; gap: 16px; }
 </style>
 </head>
 <body>
 <main>
-  <h1 id="title">Stagebook</h1>
+  <header><h1 id="title">Stagebook</h1><span id="connected" class="muted"></span></header>
   <section class="card" id="gate" hidden>
     <p id="gate-text" class="muted"></p>
     <button id="ask"></button>
   </section>
-  <section class="card" id="app" hidden>
-    <p id="connected"></p>
+  <section id="app" hidden>
+    <div class="card" id="list-card">
+      <button id="new" class="outline"></button>
+      <input id="search" type="search">
+      <ul id="songs"></ul>
+      <p id="list-empty" class="muted" hidden></p>
+    </div>
+    <div class="card">
+      <p id="pick" class="muted"></p>
+      <form id="form" hidden onsubmit="return false">
+        <div class="row">
+          <div class="grow"><label for="f-title" data-t="titleField"></label><input id="f-title"></div>
+          <div class="grow"><label for="f-author" data-t="artist"></label><input id="f-author"></div>
+          <div><label for="f-year" data-t="year"></label><input id="f-year" inputmode="numeric" maxlength="4"></div>
+          <div><label for="f-tempo" data-t="bpm"></label><input id="f-tempo" inputmode="numeric" maxlength="3"></div>
+        </div>
+        <div class="row">
+          <div class="stepper"><span data-t="key"></span><button class="icon" id="key-down">−</button><b id="key"></b><button class="icon" id="key-up">+</button></div>
+          <div class="stepper"><span data-t="capo"></span><button class="icon" id="capo-down">−</button><b id="capo"></b><button class="icon" id="capo-up">+</button></div>
+        </div>
+        <div><label for="f-text" data-t="lyrics"></label><textarea id="f-text" spellcheck="false"></textarea></div>
+        <div class="actions">
+          <button class="text" id="delete"></button>
+          <span id="status" class="muted"></span>
+          <button id="save"></button>
+        </div>
+      </form>
+    </div>
   </section>
   <p id="offline" class="error" hidden></p>
 </main>
@@ -36,9 +86,14 @@
 // every call carries X-Stagebook: the app refuses /api without it (a page from another site can't send it)
 const api = (path, options = {}) =>
   fetch(path, { ...options, headers: { "X-Stagebook": "1", "Content-Type": "application/json", ...(options.headers || {}) }, credentials: "same-origin" });
+const $ = (id) => document.getElementById(id);
 let t = {};
-const fill = (text, ...args) => args.reduce((s, a, i) => s.replace(`%${i + 1}$s`, a), text || "");
-const show = (id) => ["gate", "app"].forEach((s) => (document.getElementById(s).hidden = s !== id));
+const fill = (text, ...args) => args.reduce((s, a, i) => s.replace(`%${i + 1}$s`, a).replace(`%${i + 1}$d`, a), text || "");
+const show = (id) => ["gate", "app"].forEach((s) => ($(s).hidden = s !== id));
+
+let songs = [];
+let current = null;   // the song open in the form ({id:""} = new)
+let dirty = false;
 
 // the computer's name on the tablet's question: browser and system, from the browser itself
 function computerName() {
@@ -55,9 +110,10 @@ async function start() {
     return offline();
   }
   document.title = t.title;
-  document.getElementById("title").textContent = t.title;
-  document.getElementById("ask").textContent = t.ask;
-  document.getElementById("ask").onclick = ask;
+  $("title").textContent = t.title;
+  document.querySelectorAll("[data-t]").forEach((el) => (el.textContent = t[el.dataset.t]));
+  $("ask").textContent = t.ask;
+  $("ask").onclick = ask;
   const r = await api("/api/session").catch(() => null);
   if (!r) return offline();
   if (r.status === 200) return connected(await r.json());
@@ -65,8 +121,7 @@ async function start() {
 }
 
 async function ask() {
-  const button = document.getElementById("ask");
-  const text = document.getElementById("gate-text");
+  const button = $("ask"), text = $("gate-text");
   button.disabled = true;
   text.className = "muted";
   const r = await api("/api/ask", { method: "POST", body: JSON.stringify({ name: computerName() }) }).catch(() => null);
@@ -88,20 +143,154 @@ async function ask() {
   }
 }
 
-function connected(session) {
-  document.getElementById("connected").textContent = fill(t.connected, session.app);
+async function connected(session) {
+  $("connected").textContent = fill(t.connected, session.app);
+  $("new").textContent = "+ " + t.newSong;
+  $("search").placeholder = t.search;
+  $("pick").textContent = t.pick;
+  $("save").textContent = t.save;
+  $("delete").textContent = t.delete;
+  $("key-down").title = t.keyDown; $("key-up").title = t.keyUp;
+  $("capo-down").title = t.capoDown; $("capo-up").title = t.capoUp;
   show("app");
+  await loadList();
+}
+
+// ---- song list ----
+async function loadList() {
+  const r = await api("/api/songs").catch(() => null);
+  if (!r || r.status !== 200) return offline();
+  songs = await r.json();
+  drawList();
+}
+
+const plain = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+function drawList() {
+  const q = plain($("search").value.trim());
+  const shown = songs.filter((s) => !q || plain(s.title).includes(q) || plain(s.author).includes(q));
+  const ul = $("songs");
+  ul.replaceChildren(...shown.map((s) => {
+    const li = document.createElement("li");
+    if (current && current.id === s.id) li.className = "on";
+    const title = document.createElement("div");
+    title.textContent = s.title;
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = [s.author, s.year, s.key].filter(Boolean).join(" · ");
+    li.append(title, sub);
+    li.onclick = () => open(s.id);
+    return li;
+  }));
+  $("list-empty").hidden = shown.length > 0;
+  $("list-empty").textContent = songs.length ? t.notFound : t.noSongs;
+}
+
+// ---- the form ----
+const leaveOk = () => !dirty || confirm(t.unsaved);
+
+async function open(id) {
+  if (!leaveOk()) return;
+  const r = await api(`/api/songs/${encodeURIComponent(id)}`).catch(() => null);
+  if (!r || r.status !== 200) return loadList();
+  fillForm(await r.json());
+}
+
+function fillForm(song) {
+  current = song;
+  $("f-title").value = song.title;
+  $("f-author").value = song.author;
+  $("f-year").value = song.year;
+  $("f-tempo").value = song.tempo;
+  $("f-text").value = song.text;
+  $("delete").hidden = !song.id;
+  $("form").hidden = false;
+  $("pick").hidden = true;
+  setStatus("");
+  dirty = false;
+  drawKeyCapo();
+  drawList();
+}
+
+// key and capo shown from the text's {key} and {capo}, like the app
+function directive(name) {
+  const m = $("f-text").value.match(new RegExp(`^\\s*\\{\\s*${name}\\s*:\\s*([^}]*)\\}`, "mi"));
+  return m ? m[1].trim() : "";
+}
+
+function drawKeyCapo() {
+  $("key").textContent = directive("key") || "–";
+  const capo = parseInt(directive("capo") || "0", 10) || 0;
+  $("capo").textContent = capo ? fill(t.capoFret, capo) : "0";
+  $("capo-down").disabled = capo <= 0;
+  $("capo-up").disabled = capo >= 12;
+}
+
+async function changeText(path, body) {
+  const r = await api(path, { method: "POST", body: JSON.stringify({ text: $("f-text").value, ...body }) }).catch(() => null);
+  if (!r || r.status !== 200) return offline();
+  $("f-text").value = (await r.json()).text;
+  dirty = true;
+  drawKeyCapo();
+}
+
+function setStatus(text, error = false) {
+  $("status").textContent = text;
+  $("status").className = error ? "error" : "muted";
+}
+
+async function save() {
+  const body = {
+    title: $("f-title").value, author: $("f-author").value, year: $("f-year").value,
+    tempo: $("f-tempo").value, text: $("f-text").value,
+  };
+  const id = current && current.id;
+  const r = await api(id ? `/api/songs/${encodeURIComponent(id)}` : "/api/songs", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
+  if (!r) return offline();
+  if (r.status === 409) {
+    const { error } = await r.json();
+    return setStatus(error === "title_empty" ? t.titleEmpty : t.titleTaken, true);
+  }
+  if (r.status !== 200) return setStatus(t.offline, true);
+  const saved = (await r.json()).id;
+  dirty = false;
+  await loadList();
+  await open(saved);
+  setStatus(t.saved);
+}
+
+async function remove() {
+  if (!current || !current.id || !confirm(fill(t.deleteConfirm, current.title))) return;
+  await api(`/api/songs/${encodeURIComponent(current.id)}`, { method: "DELETE" }).catch(() => null);
+  dirty = false;
+  current = null;
+  $("form").hidden = true;
+  $("pick").hidden = false;
+  await loadList();
+}
+
+$("search").oninput = drawList;
+$("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "" }); };
+$("save").onclick = save;
+$("delete").onclick = remove;
+$("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
+$("key-up").onclick = () => changeText("/api/transpose", { semitones: 1 });
+$("capo-down").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) - 1 });
+$("capo-up").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) + 1 });
+["f-title", "f-author", "f-year", "f-tempo", "f-text"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-text") drawKeyCapo(); }));
+// Ctrl+S / Cmd+S saves
+document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s" && !$("form").hidden) { e.preventDefault(); save(); } });
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+function offline() {
+  const el = $("offline");
+  el.textContent = t.offline || "Stagebook?";
+  el.hidden = false;
 }
 
 // while this page is open, it tells the tablet every minute: the editor turns itself off after 5 minutes without access,
 // but not with the page open
 setInterval(() => api("/api/ping").catch(() => {}), 60000);
-
-function offline() {
-  const el = document.getElementById("offline");
-  el.textContent = t.offline || "Stagebook?";
-  el.hidden = false;
-}
 
 start();
 </script>
