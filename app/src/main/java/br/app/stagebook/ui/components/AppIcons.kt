@@ -110,6 +110,10 @@ object AppIcons {
     val PlayRounded by lazy { icon("playrounded", "M8,19.14V4.86c0,-0.8 0.88,-1.28 1.55,-0.84l11.2,7.14c0.62,0.39 0.62,1.29 0,1.69l-11.2,7.14C8.88,20.42 8,19.94 8,19.14z") }
     val PauseRounded by lazy { icon("pauserounded", "M8,19c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2v10c0,1.1 0.9,2 2,2zM14,7v10c0,1.1 0.9,2 2,2s2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2z") }
     // metronome: trapezoid body and tilted pendulum
+    // slideshow (a screen with play): the editor's stage preview, Google's "present" symbol (an eye reads as show/hide)
+    val Slideshow by lazy {
+        icon("slideshow", "M10,8v8l5,-4 -5,-4zM19,3L5,3c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2L21,5c0,-1.1 -0.9,-2 -2,-2zM19,19L5,19L5,5h14v14z")
+    }
     // coffee cup: the support button (a generic icon, no brand)
     val Coffee by lazy {
         icon("coffee", "M20,3H4v10c0,2.21 1.79,4 4,4h6c2.21,0 4,-1.79 4,-4v-3h2c1.11,0 2,-0.89 2,-2V5C22,3.89 21.11,3 20,3zM20,8h-2V5h2V8zM4,19h16v2H4V19z")
