@@ -19,7 +19,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -173,23 +172,16 @@ fun MixerChannelForm(
         NormDropdown(strip, onChange, Modifier.fillMaxWidth())
         HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
         OutputDropdown(output, pair, outputs, onOutput, Modifier.fillMaxWidth())
-        OptionSwitch(stringResource(R.string.mixer_eq_switch), strip.eq) { onChange(strip.copy(eq = it)) }
-        OptionSwitch(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center) {
+        SwitchRow(stringResource(R.string.mixer_eq_switch), strip.eq, { onChange(strip.copy(eq = it)) })
+        SwitchRow(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center, {
             onChange(strip.copy(center = it))
-        }
+        })
         // une este canal físico com o seguinte num par estéreo (no par, separa de novo)
         if (canPair) {
-            OptionSwitch(stringResource(R.string.mixer_join, first + 2), strip.stereo) { onChange(strip.copy(stereo = it)) }
+            SwitchRow(stringResource(R.string.mixer_join, first + 2), strip.stereo, { onChange(strip.copy(stereo = it)) })
         }
     }
 }
-
-@Composable
-private fun OptionSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) =
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
 
 @Composable
 private fun NameField(strip: MixChannel, title: String, onChange: (MixChannel) -> Unit, modifier: Modifier) = OutlinedTextField(

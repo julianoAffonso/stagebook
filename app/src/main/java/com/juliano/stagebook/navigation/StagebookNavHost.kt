@@ -3,7 +3,16 @@ package com.juliano.stagebook.navigation
 import com.juliano.stagebook.ui.setlists.ScanSetlistRoute
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.juliano.stagebook.ui.components.LocalAppMessage
+import com.juliano.stagebook.ui.components.rememberAppMessage
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavDestination.Companion.hasRoute
 import kotlinx.coroutines.flow.Flow
@@ -50,9 +59,13 @@ fun StagebookNavHost(
     }
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
     // a faixa do "Quem conduz" fica embaixo de qualquer tela (o palco inclusive) enquanto o modo estiver ligado
+    // avisos curtos (snackbar) de qualquer tela, no rodapé, acima da faixa do "Quem conduz"
+    val message = rememberAppMessage()
+    CompositionLocalProvider(LocalAppMessage provides message) {
     androidx.compose.foundation.layout.Column {
+    Box(Modifier.weight(1f)) {
     NavHost(
-        modifier = androidx.compose.ui.Modifier.weight(1f),
+        modifier = Modifier.fillMaxSize(),
         navController = nav,
         startDestination = Home,
         enterTransition = { fadeIn() },
@@ -112,7 +125,10 @@ fun StagebookNavHost(
             )
         }
     }
+    SnackbarHost(message.host, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+    }
     com.juliano.stagebook.ui.band.ConductRoute()
+    }
     }
 }
 

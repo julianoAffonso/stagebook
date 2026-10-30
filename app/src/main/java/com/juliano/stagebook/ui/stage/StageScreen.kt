@@ -1,5 +1,7 @@
 package com.juliano.stagebook.ui.stage
 
+import com.juliano.stagebook.ui.components.QuestionDialog
+import com.juliano.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
 import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
@@ -20,7 +22,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
-import android.widget.Toast
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -166,12 +167,14 @@ fun StageRoute(
     // escolher a faixa da música (OGG, MP3 ou WAV): copiada para o app ao voltar do seletor do Android
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val message = LocalAppMessage.current
+    val trackBad = stringResource(R.string.stage_track_bad)
     var pickingFor by rememberSaveable { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val id = pickingFor
         pickingFor = null
         if (uri != null && id != null) scope.launch {
-            if (!viewModel.attachTrack(id, uri)) Toast.makeText(context, R.string.stage_track_bad, Toast.LENGTH_LONG).show()
+            if (!viewModel.attachTrack(id, uri)) message.show(trackBad, long = true)
         }
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
@@ -204,16 +207,14 @@ fun StageRoute(
             }
             onPlay()
         }
-        AlertDialog(
-            onDismissRequest = { answer(false) },
-            title = { Text(stringResource(R.string.player_battery_title)) },
-            text = { Text(stringResource(R.string.player_battery_text)) },
-            confirmButton = { TextButton(onClick = { answer(true) }) { Text(stringResource(R.string.player_battery_ok)) } },
-            dismissButton = { TextButton(onClick = { answer(false) }) { Text(stringResource(R.string.player_battery_later)) } },
+        QuestionDialog(
+            stringResource(R.string.player_battery_title), stringResource(R.string.player_battery_text),
+            stringResource(R.string.player_battery_ok), { answer(true) },
+            stringResource(R.string.player_battery_later), { answer(false) },
         )
     }
     LaunchedEffect(playerUi.message) {
-        if (playerUi.message.isNotEmpty()) Toast.makeText(context, playerUi.message, Toast.LENGTH_LONG).show()
+        if (playerUi.message.isNotEmpty()) message.show(playerUi.message, long = true)
     }
     if (!uiState.loading && uiState.songs.isNotEmpty()) {
         StageScreen(

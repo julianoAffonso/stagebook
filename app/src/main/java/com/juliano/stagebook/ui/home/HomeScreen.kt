@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.home
 
+import com.juliano.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
 import androidx.compose.foundation.layout.Column
@@ -74,11 +75,12 @@ fun HomeScreen(
     // o que a banda mandou: aviso no topo das abas (o mais novo ainda não dispensado), número no ícone e a lista
     val inbox by inboxVm.items.collectAsStateWithLifecycle()
     val hasBand by inboxVm.hasBand.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val message = LocalAppMessage.current
+    val syncing = androidx.compose.ui.res.stringResource(R.string.import_syncing)
     val onSync: (() -> Unit)? = if (hasBand) {
         {
             inboxVm.syncNow()
-            android.widget.Toast.makeText(context, R.string.import_syncing, android.widget.Toast.LENGTH_SHORT).show()
+            message.show(syncing)
         }
     } else null
     val banner = inbox.lastOrNull { !it.seen }

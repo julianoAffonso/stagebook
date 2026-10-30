@@ -53,7 +53,7 @@ import com.juliano.stagebook.R
 import com.juliano.stagebook.ui.share.CloudDialog
 import com.juliano.stagebook.ui.share.CloudUi
 import com.juliano.stagebook.ui.share.ShareSheet
-import com.juliano.stagebook.ui.share.BandResultToast
+import com.juliano.stagebook.ui.share.BandResultMessage
 import com.juliano.stagebook.ui.share.rememberCodeActions
 import com.juliano.stagebook.ui.components.InfoDialog
 import com.juliano.stagebook.ui.components.ActionButton
@@ -100,7 +100,7 @@ fun SetlistDetailRoute(
     val cloud by viewModel.cloud.collectAsStateWithLifecycle()
     val codeActions = rememberCodeActions()
     val bandOnline by viewModel.bandOnline.collectAsStateWithLifecycle()
-    BandResultToast(viewModel.bandResult)
+    BandResultMessage(viewModel.bandResult)
     SetlistDetailScreen(
         uiState = uiState,
         qr = qr,

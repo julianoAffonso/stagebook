@@ -2,7 +2,7 @@ package com.juliano.stagebook.ui.songs
 
 import com.juliano.stagebook.ui.share.rememberCodeActions
 import com.juliano.stagebook.ui.share.ShareSheet
-import com.juliano.stagebook.ui.share.BandResultToast
+import com.juliano.stagebook.ui.share.BandResultMessage
 import com.juliano.stagebook.ui.share.ImportButton
 import com.juliano.stagebook.ui.share.CodeActions
 import com.juliano.stagebook.ui.share.CloudDialog
@@ -70,7 +70,7 @@ fun SongsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val online by viewModel.online.collectAsStateWithLifecycle()
-    BandResultToast(viewModel.bandResult)
+    BandResultMessage(viewModel.bandResult)
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
     SongsScreen(

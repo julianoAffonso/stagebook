@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.importer
 
+import com.juliano.stagebook.ui.components.QuestionDialog
 import androidx.core.net.toUri
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.rememberUpdatedState
@@ -78,12 +79,10 @@ fun ImportRoute(
     LaunchedEffect(viewModel) { viewModel.openEditor.collect { if (viewModel.queueState.value != null) onOpenEditorQueued(it) else onOpenEditor(it) } }
     // a página tem tablatura: importar junto? (pergunta a cada vez)
     if (uiState.askTab) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { viewModel.answerTab(false) },
-            title = { Text(stringResource(R.string.import_tab_title)) },
-            text = { Text(stringResource(R.string.import_tab_message)) },
-            confirmButton = { TextButton(onClick = { viewModel.answerTab(true) }) { Text(stringResource(R.string.import_tab_yes)) } },
-            dismissButton = { TextButton(onClick = { viewModel.answerTab(false) }) { Text(stringResource(R.string.import_tab_no)) } },
+        QuestionDialog(
+            stringResource(R.string.import_tab_title), stringResource(R.string.import_tab_message),
+            stringResource(R.string.import_tab_yes), { viewModel.answerTab(true) },
+            stringResource(R.string.import_tab_no), { viewModel.answerTab(false) },
         )
     }
     ImportScreen(
