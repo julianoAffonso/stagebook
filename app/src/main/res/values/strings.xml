@@ -798,5 +798,8 @@
     <string name="web_denied">Not allowed. Ask again if it was a mistake.</string>
     <string name="web_busy">Too many requests at once. Try again in a minute.</string>
     <string name="web_connected">Connected to %1$s</string>
+    <string name="web_saved">Saved</string>
+    <string name="web_pick">Pick a song from the list or create a new one.</string>
+    <string name="web_unsaved">There are unsaved changes. Leave anyway?</string>
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
 </resources>

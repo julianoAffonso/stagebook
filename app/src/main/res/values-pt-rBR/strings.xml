@@ -796,5 +796,8 @@
     <string name="web_denied">Não autorizado. Peça de novo se foi engano.</string>
     <string name="web_busy">Muitos pedidos ao mesmo tempo. Tente de novo em um minuto.</string>
     <string name="web_connected">Conectado ao %1$s</string>
+    <string name="web_saved">Salvo</string>
+    <string name="web_pick">Escolha uma música na lista ou crie uma nova.</string>
+    <string name="web_unsaved">Tem mudanças sem salvar. Sair mesmo assim?</string>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
 </resources>

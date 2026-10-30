@@ -38,6 +38,7 @@ class WebEditorServer @Inject constructor(
     private val repository: LibraryRepository,
     private val identity: DeviceIdentity,
     val auth: WebEditorAuth,
+    metadata: javax.inject.Provider<br.app.stagebook.data.SongMetadata>,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var server: ServerSocket? = null
@@ -51,7 +52,10 @@ class WebEditorServer @Inject constructor(
     private val idle = IdleTimer(IDLE_MS)
     private var idleJob: Job? = null
 
-    val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value }, onAccess = idle::touch)
+    // saving with no artist or year fills them in from MusicBrainz, as in the app's editor
+    private val api = WebEditorApi(repository, afterSave = { metadata.get().completeLater(it) })
+
+    val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value }, api::handle, onAccess = idle::touch)
 
     init {
         // every app start begins with the editor off (user's decision of 30/10): it's turned on on purpose, each time
@@ -160,6 +164,32 @@ class WebEditorServer @Inject constructor(
             "busy" to R.string.web_busy,
             "connected" to R.string.web_connected,
             "offline" to R.string.web_offline,
+            "saved" to R.string.web_saved,
+            "pick" to R.string.web_pick,
+            "unsaved" to R.string.web_unsaved,
+            // the app's own texts, so the page says the same as the tablet (and is translated with it)
+            "songs" to R.string.tab_songs,
+            "search" to R.string.songs_search,
+            "newSong" to R.string.songs_new,
+            "noSongs" to R.string.songs_empty_title,
+            "notFound" to R.string.songs_not_found,
+            "titleField" to R.string.editor_title,
+            "artist" to R.string.editor_author,
+            "year" to R.string.editor_year,
+            "bpm" to R.string.editor_tempo,
+            "key" to R.string.editor_key,
+            "capo" to R.string.editor_capo,
+            "capoFret" to R.string.editor_capo_fret,
+            "keyDown" to R.string.editor_transpose_down,
+            "keyUp" to R.string.editor_transpose_up,
+            "capoDown" to R.string.editor_capo_down,
+            "capoUp" to R.string.editor_capo_up,
+            "lyrics" to R.string.editor_lyrics,
+            "save" to R.string.action_save,
+            "delete" to R.string.action_delete,
+            "deleteConfirm" to R.string.songs_delete_confirm,
+            "titleEmpty" to R.string.editor_error_title_empty,
+            "titleTaken" to R.string.editor_error_title_taken,
         )
     }
 }
