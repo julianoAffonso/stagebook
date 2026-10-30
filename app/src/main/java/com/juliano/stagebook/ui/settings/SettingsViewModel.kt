@@ -1,5 +1,6 @@
 package com.juliano.stagebook.ui.settings
 
+import com.juliano.stagebook.data.model.keepingEssentialAlert
 import com.juliano.stagebook.data.model.ImportSite
 import com.juliano.stagebook.data.model.Instrument
 import com.juliano.stagebook.data.model.ChordListPlace
@@ -193,16 +194,16 @@ class SettingsViewModel @Inject constructor(
     fun setMixer(mixer: com.juliano.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
 
     fun setPlayerMode(on: Boolean) {
-        repository.updateLook { it.copy(playerMode = on) }
+        repository.updateLook { it.copy(playerMode = on).keepingEssentialAlert() }
         if (!on) com.juliano.stagebook.player.StagePlayer.turnOff()   // desligado, nada do player fica rodando
     }
-    fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on) }
-    fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on) }
-    fun setExtrasOn(on: Boolean) = repository.updateLook { it.copy(extrasOn = on) }
+    fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on).keepingEssentialAlert() }
+    fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on).keepingEssentialAlert() }
+    fun setExtrasOn(on: Boolean) = repository.updateLook { it.copy(extrasOn = on).keepingEssentialAlert() }
 
     /** Ligar desliga as quatro (player incluso); desligar religa banda, internet e extras (o player continua como estava: começa desligado). */
     fun setEssential(on: Boolean) {
-        repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode) }
+        repository.updateLook { it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode).keepingEssentialAlert() }
         if (on) com.juliano.stagebook.player.StagePlayer.turnOff()
     }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }

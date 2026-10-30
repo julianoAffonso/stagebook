@@ -389,6 +389,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 /** Modo essencial (T19): a seção do que está desligado some da lista. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
     SettingsSection.METRONOME -> look.extrasOn
+    SettingsSection.PLAYER -> look.playerMode
     SettingsSection.BAND -> look.bandOn || look.internetOn   // a banda vale também pela internet (os mesmos membros)
     else -> true
 }
@@ -1058,17 +1059,14 @@ private fun EssentialDetail(look: Look, actions: SettingsActions) {
     }
 }
 
-/** Modo player: desligado, o app é só letra e cifra e nada do player gasta CPU ou memória. */
+/** Player: a seção só aparece com ele ligado; liga e desliga só no Modo essencial (pedido do usuário, 29/10). */
 @Composable
 private fun PlayerDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_player), help = stringResource(R.string.settings_player_mode_help)) {
-        SwitchRow(stringResource(R.string.settings_player_mode), look.playerMode, actions.onPlayerMode)
         UsbRequirements()
     }
-    if (look.playerMode) {
-        MixerCard(look.mixer, actions)
-        EqCard(look.mixer, actions)
-    }
+    MixerCard(look.mixer, actions)
+    EqCard(look.mixer, actions)
 }
 
 @Composable

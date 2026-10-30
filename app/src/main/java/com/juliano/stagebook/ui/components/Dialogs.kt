@@ -1,6 +1,8 @@
 package com.juliano.stagebook.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -89,14 +91,38 @@ fun QuestionDialog(
     )
 }
 
-/** Aviso com título e um botão de ok; [extra] é um segundo botão opcional (texto e ação). */
+/**
+ * Aviso com título e um botão de ok; [extra] é um segundo botão opcional (texto e ação). Com [neverAgain], aparece a
+ * caixa "Não mostrar de novo" e o ok devolve se ela ficou marcada.
+ */
 @Composable
-fun InfoDialog(title: String, message: String, onDismiss: () -> Unit, extra: Pair<String, () -> Unit>? = null) {
+fun InfoDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    extra: Pair<String, () -> Unit>? = null,
+    neverAgain: ((Boolean) -> Unit)? = null,
+) {
+    var never by rememberSaveable { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { Text(message, style = MaterialTheme.typography.bodyLarge) },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_ok)) } },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                Text(message, style = MaterialTheme.typography.bodyLarge)
+                if (neverAgain != null) {
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.fillMaxWidth().padding(top = com.juliano.stagebook.ui.theme.Spacing.m)
+                            .toggleable(never, role = androidx.compose.ui.semantics.Role.Checkbox) { never = it },
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.Checkbox(checked = never, onCheckedChange = null)
+                        Text(stringResource(R.string.action_never_again), Modifier.padding(start = com.juliano.stagebook.ui.theme.Spacing.s), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { if (neverAgain != null) neverAgain(never) else onDismiss() }) { Text(stringResource(R.string.action_ok)) } },
         dismissButton = extra?.let { (label, action) -> { TextButton(onClick = action) { Text(label) } } },
     )
 }

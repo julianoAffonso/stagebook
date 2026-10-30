@@ -93,6 +93,13 @@ fun HomeScreen(
     } else null
     val banner = inbox.lastOrNull { !it.seen }
     val essential by homeVm.essential.collectAsStateWithLifecycle()
+    val alert by homeVm.alert.collectAsStateWithLifecycle()
+    if (alert) {
+        com.juliano.stagebook.ui.components.InfoDialog(
+            stringResource(R.string.essential_alert_title), stringResource(R.string.essential_alert_text),
+            onDismiss = { homeVm.alertSeen(false) }, neverAgain = homeVm::alertSeen,
+        )
+    }
     var listOpen by rememberSaveable { mutableStateOf(false) }
     val badges = mapOf(
         HomeTab.SONGS to inbox.count { it.setName.isEmpty() },
