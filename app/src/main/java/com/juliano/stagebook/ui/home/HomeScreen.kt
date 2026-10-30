@@ -14,6 +14,12 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -70,6 +76,7 @@ fun HomeScreen(
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},
     inboxVm: InboxViewModel = hiltViewModel(),
+    homeVm: HomeViewModel = hiltViewModel(),
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.SONGS) }
     // o que a banda mandou: aviso no topo das abas (o mais novo ainda não dispensado), número no ícone e a lista
@@ -84,6 +91,7 @@ fun HomeScreen(
         }
     } else null
     val banner = inbox.lastOrNull { !it.seen }
+    val essential by homeVm.essential.collectAsStateWithLifecycle()
     var listOpen by rememberSaveable { mutableStateOf(false) }
     val badges = mapOf(
         HomeTab.SONGS to inbox.count { it.setName.isEmpty() },
@@ -106,6 +114,10 @@ fun HomeScreen(
     }
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
         Column(m) {
+            // modo essencial: lembrete discreto de que tem coisa desligada; o toque abre os Ajustes (a seção é a primeira)
+            if (tab != HomeTab.SETTINGS && essential) {
+                EssentialBanner({ onTab(HomeTab.SETTINGS) }, Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
+            }
             if (tab != HomeTab.SETTINGS && banner != null) {
                 InboxBanner(
                     banner, onOpen = { onOpenReceived(banner.id) }, onLater = { inboxVm.later(banner.id) },
@@ -213,3 +225,16 @@ private fun barColors() = ShortNavigationBarItemDefaults.colors(
     selectedIconColor = MaterialTheme.colorScheme.primary,
     selectedTextColor = MaterialTheme.colorScheme.primary,
 )
+
+/** "Modo essencial ligado": uma linha discreta no topo das abas, sem fundo. */
+@Composable
+fun EssentialBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onClick).padding(horizontal = Spacing.s, vertical = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+    ) {
+        Icon(AppIcons.Eco, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.essential_banner), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
