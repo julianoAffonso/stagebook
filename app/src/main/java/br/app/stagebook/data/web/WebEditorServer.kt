@@ -41,6 +41,11 @@ class WebEditorServer @Inject constructor(
     metadata: javax.inject.Provider<br.app.stagebook.data.SongMetadata>,
     importer: javax.inject.Provider<br.app.stagebook.data.PageImporter>,
     pages: javax.inject.Provider<WebPageReader>,
+    cloud: javax.inject.Provider<br.app.stagebook.data.SetlistCloud>,
+    bandInternet: javax.inject.Provider<br.app.stagebook.data.BandInternet>,
+    inbox: javax.inject.Provider<br.app.stagebook.data.BandInbox>,
+    backup: javax.inject.Provider<br.app.stagebook.data.Backup>,
+    tracks: javax.inject.Provider<br.app.stagebook.data.TrackStore>,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var server: ServerSocket? = null
@@ -57,8 +62,15 @@ class WebEditorServer @Inject constructor(
     // saving with no artist or year fills them in from MusicBrainz, as in the app's editor
     private val api = WebEditorApi(
         repository, afterSave = { metadata.get().completeLater(it) },
-        importer = { importer.get() }, readPage = { pages.get().read(it) },
+        importer = { importer.get() }, readPage = { url, script -> pages.get().read(url, script ?: br.app.stagebook.data.ExtractScript.SOURCE) },
+        receiver = { receiver },
+        band = { WebEditorApi.Band({ inbox.get().items.value }, { bandInternet.get().syncNow() }) },
+        backup = { backup.get() }, tracks = { tracks.get() },
+        workDir = { java.io.File(context.cacheDir, "web").apply { mkdirs() } },
     )
+    private val receiver by lazy {
+        WebReceive(repository, { cloud.get().receive(it) }, { code, ok -> bandInternet.get().accepted(code, ok.from) }, { inbox.get().remove(it) })
+    }
 
     val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value }, api::handle, onAccess = idle::touch)
 
@@ -124,11 +136,23 @@ class WebEditorServer @Inject constructor(
     private fun serve(client: Socket) = client.use { s ->
         s.soTimeout = TIMEOUT_MS
         val response = runCatching {
-            val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty()) { MAX_BODY }
-            routes.handle(req)
+            val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, ::maxBody)
+            try {
+                routes.handle(req)
+            } finally {
+                req.file?.delete()   // whoever keeps it (a backup waiting for its parts) moved it away first
+            }
         }.getOrElse { e -> HttpResponse.status((e as? HttpError)?.status ?: 400) }
         runCatching { WebHttp.write(s.getOutputStream(), response) }
     }
+
+    // backups and backing tracks are big: they go to a file; everything else is a small text
+    private fun isBig(path: String) = path == "/api/backup/inspect" || (path.startsWith("/api/songs/") && path.endsWith("/track"))
+
+    private fun maxBody(path: String): Long = if (isBig(path)) MAX_FILE else MAX_BODY.toLong()
+
+    private fun bodyFile(path: String): java.io.File? =
+        if (isBig(path)) java.io.File(context.cacheDir, "web").apply { mkdirs() }.let { java.io.File.createTempFile("upload", ".part", it) } else null
 
     // the address the computer types: the Wi-Fi's (or the hotspot's) IPv4
     private fun addressOf(port: Int): String {
@@ -157,6 +181,7 @@ class WebEditorServer @Inject constructor(
         const val PORT = 8090
         private const val TIMEOUT_MS = 15_000
         const val MAX_BODY = 2 * 1024 * 1024   // a pasted chord sheet or a few ChordPro files
+        const val MAX_FILE = 1024L * 1024 * 1024   // a backup with all the backing tracks
         const val IDLE_MS = 5 * 60_000L
         private const val IDLE_CHECK_MS = 30_000L
 
@@ -195,6 +220,50 @@ class WebEditorServer @Inject constructor(
             "deleteConfirm" to R.string.songs_delete_confirm,
             "titleEmpty" to R.string.editor_error_title_empty,
             "titleTaken" to R.string.editor_error_title_taken,
+            "setlists" to R.string.tab_setlists,
+            "newSet" to R.string.sets_new,
+            "setName" to R.string.sets_name,
+            "setNameHint" to R.string.sets_name_hint,
+            "noSets" to R.string.sets_empty_title,
+            "emptySet" to R.string.set_empty_title,
+            "setDeleteConfirm" to R.string.sets_delete_confirm,
+            "remove" to R.string.set_remove,
+            "addCount" to R.string.pick_add_short,
+            "track" to R.string.stage_backing_track,
+            "trackNone" to R.string.editor_track_none,
+            "trackPick" to R.string.editor_track_pick,
+            "trackChange" to R.string.editor_track_change,
+            "trackRemove" to R.string.stage_track_remove,
+            "trackBad" to R.string.stage_track_bad,
+            "fromInternet" to R.string.import_from_sites,
+            "go" to R.string.import_go,
+            "typeWords" to R.string.sets_type_code,
+            "codeNotFound" to R.string.scan_code_not_found,
+            "codeOffline" to R.string.scan_code_offline,
+            "newer" to R.string.scan_newer,
+            "which" to R.string.scan_which,
+            "leaveOut" to R.string.scan_leave_out,
+            "rowHave" to R.string.scan_song_have,
+            "rowNew" to R.string.scan_song_new,
+            "rowCame" to R.string.scan_carried_row,
+            "rowMissing" to R.string.scan_missing_row,
+            "create" to R.string.scan_create,
+            "syncBand" to R.string.import_sync_band,
+            "syncing" to R.string.import_syncing,
+            "received" to R.string.inbox_title,
+            "open" to R.string.inbox_open,
+            "openFile" to R.string.backup_open_card,
+            "merge" to R.string.backup_merge,
+            "replace" to R.string.backup_replace,
+            "partLibrary" to R.string.backup_part_library,
+            "partTracks" to R.string.backup_part_tracks,
+            "partSettings" to R.string.backup_part_settings,
+            "restored" to R.string.backup_restored,
+            "bandNone" to R.string.web_band_none,
+            "receiveTitle" to R.string.web_receive_title,
+            "backupHint" to R.string.web_backup_hint,
+            "receiveDone" to R.string.web_receive_done,
+            "restoreNeeds" to R.string.web_restore_needs,
             "import" to R.string.import_menu,
             "imported" to R.string.editor_imported_new,
             "unreadable" to R.string.import_unreadable,

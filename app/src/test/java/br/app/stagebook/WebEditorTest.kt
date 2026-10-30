@@ -50,7 +50,7 @@ class WebEditorTest {
 
     @Test fun `reads a request with headers, query and body`() {
         val raw = "POST /api/ask?id=a%20b HTTP/1.1\r\nHost: 192.168.0.10:8090\r\nContent-Length: 5\r\nCookie: x=1\r\n\r\nhello"
-        val r = WebHttp.read(ByteArrayInputStream(raw.toByteArray())) { 100 }
+        val r = WebHttp.read(ByteArrayInputStream(raw.toByteArray())) { 100L }
         assertEquals("POST", r.method)
         assertEquals("/api/ask", r.path)
         assertEquals("a b", r.query["id"])
@@ -60,7 +60,7 @@ class WebEditorTest {
 
     @Test fun `refuses a body bigger than the limit`() {
         val raw = "POST /x HTTP/1.1\r\nContent-Length: 500\r\n\r\n"
-        val e = runCatching { WebHttp.read(ByteArrayInputStream(raw.toByteArray())) { 100 } }.exceptionOrNull()
+        val e = runCatching { WebHttp.read(ByteArrayInputStream(raw.toByteArray())) { 100L } }.exceptionOrNull()
         assertEquals(413, (e as HttpError).status)
     }
 
