@@ -5,9 +5,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Bolinhas do rodapé do palco: todas quando cabem; senão primeira, atual com vizinhas, "…" e última. */
+/** Stage footer dots: all when they fit; otherwise first, current with neighbors, "…" and last. */
 class PageSlotsTest {
-    // em números de página (1 = primeira), "…" no lugar dos null, para ler como na tela
+    // as page numbers (1 = first), "…" in place of the nulls, to read like on screen
     private fun shown(current: Int, count: Int, capacity: Int) =
         PageSlots.of(current - 1, count, capacity).joinToString(" ") { it?.let { i -> "${i + 1}" } ?: "…" }
 

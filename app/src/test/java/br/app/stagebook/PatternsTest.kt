@@ -27,7 +27,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Padrões de uso do app (T35): aviso curto é snackbar, chave muda tocando na linha toda, pergunta tem duas respostas. */
+/**
+ * App usage patterns (T35): a short message is a snackbar, a switch toggles from the whole row, a question has two
+ * answers.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class PatternsTest {
@@ -50,7 +53,7 @@ class PatternsTest {
         compose.onNodeWithText("copiar").performClick()
         compose.onNodeWithText("Código copiado").assertExists()
         compose.onNodeWithText("enviar").performClick()
-        compose.mainClock.advanceTimeBy(2_000)   // o anterior sai com animação antes do seguinte entrar
+        compose.mainClock.advanceTimeBy(2_000)   // the previous one animates out before the next one comes in
         compose.onNodeWithText("Mandado para 2 aparelhos").assertExists()
         compose.onNodeWithText("Código copiado").assertDoesNotExist()
     }

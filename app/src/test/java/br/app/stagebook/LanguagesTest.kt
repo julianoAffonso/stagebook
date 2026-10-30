@@ -33,7 +33,7 @@ class LanguagesTest {
         assertEquals(AppLanguage.SYSTEM, Languages.get(context))
     }
 
-    /** Toda língua oferecida tem a tradução completa: nenhum texto da base (inglês) faltando. */
+    /** Every offered language has a complete translation: no base (English) text missing. */
     @Test fun `offered translations are complete`() {
         val names = Regex("""<(string|plurals) name="([^"]+)"(?![^>]*translatable="false")""")
         fun keys(f: File) = names.findAll(f.readText()).map { it.groupValues[2] }.toSet()

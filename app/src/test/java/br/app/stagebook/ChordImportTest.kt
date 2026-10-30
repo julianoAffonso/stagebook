@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChordImportTest {
-    // cifra inventada, no formato dos sites (acordes na linha de cima, intro, tablatura)
+    // made-up chart, in the sites' format (chords on the line above, intro, tablature)
     private val page = listOf(
         "Tom: G",
         "[Intro] G  D  Em  C",
@@ -35,7 +35,7 @@ class ChordImportTest {
         assertFalse(cp, cp.contains("Tom:"))
         assertTrue(cp, cp.contains("[G]Saio cedo pela [D]rua"))
         assertTrue(cp, cp.contains("[Em]Pra você [C]ouvir"))
-        // "[Intro] G D Em C": o título numa linha, os acordes na de baixo
+        // "[Intro] G D Em C": the title on one line, the chords on the next
         assertTrue(cp, cp.contains("[Intro]\n[G] [D] [Em] [C]"))
     }
 
@@ -55,7 +55,7 @@ class ChordImportTest {
         assertEquals(5, ChordImport.capoOf("Capotasto al 5º tasto"))
         assertEquals(2, ChordImport.capoOf("Capotraste na 2ª casa"))
         assertEquals(0, ChordImport.capoOf("sem capo aqui"))
-        // "Tom" no meio da letra não é o tom
+        // "Tom" in the middle of the lyrics isn't the key
         assertEquals("", ChordImport.keyOf("o Tom chegou cedo"))
     }
 }

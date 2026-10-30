@@ -6,12 +6,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Compatibilidade de importação: o arquivo de biblioteca exportado no formato v1 e o QR de setlist no formato atual
- * abrem no Stagebook. Mudar o formato da biblioteca ou do QR não pode quebrar estes testes.
+ * Import compatibility: the library file exported in format v1 and the setlist QR in the current format open in
+ * Stagebook. Changing the library or QR format must not break these tests.
  */
 class ImportCompatTest {
     @Test fun `library file in format v1 imports`() {
-        // formato exato do arquivo v1 (LibraryCodec.encodeSongs, encodeDefaults + prettyPrint), letra fictícia
+        // exact format of the v1 file (LibraryCodec.encodeSongs, encodeDefaults + prettyPrint), made-up lyrics
         val exported = """
             {
                 "version": 1,
@@ -41,7 +41,7 @@ class ImportCompatTest {
 
     @Test fun `setlist QR in the current format is read`() {
         val text = "LETRAS3\n2\nShow de sábado\nCanção A\nCanção B\tArtista B"
-        // bytes do QR: "L3" + deflate sem cabeçalho zlib
+        // QR bytes: "L3" + deflate without a zlib header
         val bytes = QrPayload.pack(text)
         assertEquals("L3", String(bytes, 0, 2, Charsets.ISO_8859_1))
         val inflater = java.util.zip.Inflater(true).apply { setInput(bytes, 2, bytes.size - 2) }

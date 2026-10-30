@@ -22,15 +22,15 @@ class LyricsViewTest {
     }
 
     @Test fun `a changed word keeps the chords before and after it`() {
-        // o D estava no começo de "rua": o trecho antes dele não mudou, então fica no começo de "avenida"
+        // the D was at the start of "rua": the stretch before it didn't change, so it stays at the start of "avenida"
         val edited = LyricsView.view(song).replace("pela rua", "pela avenida")
         assertEquals(
             "{key: G}\n[Intro]\n[G] [D]\n\n[Verso 1]\n[G]Saio cedo pela [D]avenida\n[Em]Onde a estrada vai [C]dar",
             LyricsView.merge(song, edited),
         )
-        // o fim igual segura o acorde do fim
+        // the same ending holds the last chord
         val end = LyricsView.view(song).replace("Onde a estrada", "Para onde a estrada")
-        // o Em do começo não tem trecho igual antes; o C segura pelo fim igual
+        // the opening Em has no equal stretch before it; the C holds by the same ending
         assertEquals(true, LyricsView.merge(song, end).contains("Para onde a estrada vai [C]dar"))
     }
 

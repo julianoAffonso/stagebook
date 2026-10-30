@@ -53,8 +53,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Fotos das telas para conferir o visual sem aparelho: `./gradlew recordRoborazziDebug`
- * grava em app/build/outputs/roborazzi. Tablet = Fire HD 10 deitado; celular = S26.
+ * Screenshots to check the look without a device: `./gradlew recordRoborazziDebug` saves to
+ * app/build/outputs/roborazzi. Tablet = Fire HD 10 in landscape; phone = S26.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -91,7 +91,7 @@ class ScreenshotTest {
 
     @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
-    // sem internet: Importar indisponível, com a nuvem cortada e o aviso
+    // no internet: Import unavailable, with the crossed cloud and the notice
     @Test @Config(qualifiers = PHONE)
     fun homeSongsOfflinePhone() = shoot("celular_1_musicas_sem_internet") {
         HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, online = false) }
@@ -127,7 +127,7 @@ class ScreenshotTest {
         SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {})
     }
 
-    // importador: a página da web fica em branco no teste (WebView sem rede); confere a barra de cima e o botão
+    // importer: the web page stays blank in the test (WebView without network); checks the top bar and the button
     @Test fun importTablet() = shoot("tablet_10_importar") { ImportScreen(ImportUiState(), "Hazard", {}, {}, {}) }
 
     @Test @Config(qualifiers = PHONE)
@@ -138,24 +138,24 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.IMPORTED_NEW, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {})
     }
 
-    /** Editando a letra: a faixa de atalhos das seções aparece no topo. */
+    /** Editing the lyrics: the section shortcut strip shows at the top. */
     @Test @Config(qualifiers = PHONE)
     fun editorChordsPhone() = shoot("celular_4_editor_cifra") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
-    // perfil só letra: o editor não mostra nada de cifra
+    // lyrics only profile: the editor shows no chords
     @Test @Config(qualifiers = PHONE)
     fun editorLyricsOnlyPhone() = shoot("celular_4_editor_so_letra") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(chords = false))
     }
 
-    // T18: com capo, o editor diz o desenho e o tom que soa
+    // T18: with a capo, the editor states the shape and the sounding key
     @Test fun editorCapoTablet() = shoot("tablet_4_editor_capo") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
-    // T27: dados da música abertos (música nova)
+    // T27: song details open (new song)
     @Test fun editorDataTablet() = shoot("tablet_4_editor_dados") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", chordSong), {}, {}, {}, {}, {}, {}, {})
     }
@@ -164,7 +164,7 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
-    /** Desenho do acorde tocado no palco (outra janela), em cada instrumento. */
+    /** Diagram of the chord tapped on stage (another window), on each instrument. */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     private fun chordPopup(name: String, chord: String, instrument: br.app.stagebook.data.model.Instrument) {
         compose.setContent {
@@ -176,7 +176,7 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/$name.png")
     }
 
-    // T15: o ícone de rolagem na linha do relógio abre a janelinha com o play e a velocidade
+    // T15: the scroll icon on the clock line opens the small window with play and speed
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun autoScrollDialog() {
         compose.setContent {
@@ -187,7 +187,7 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_palco_rolagem_auto.png")
     }
 
-    // rolando: o ícone ao lado do relógio vira pause
+    // scrolling: the icon next to the clock becomes pause
     @Test fun autoScrollRunning() {
         compose.setContent {
             StagebookTheme { StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 0, { _, _ -> }, onBack = {}) }
@@ -200,7 +200,7 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/tablet_6_palco_rolando.png")
     }
 
-    // T25: backup em Ajustes → Biblioteca e a escolha das partes (tudo marcado)
+    // T25: backup in Settings → Library and the choice of parts (all checked)
     @Test fun settingsLibraryBackup() = shoot("tablet_5_ajustes_backup") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LIBRARY) }
     }
@@ -221,7 +221,7 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_5_apagar_tudo.png")
     }
 
-    // T33c: o metrônomo ao lado do relógio e a janelinha
+    // T33c: the metronome next to the clock and its small window
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun metronomeDialog() {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
@@ -244,7 +244,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
-    // T20: com capo, a janela explica o desenho e tem o Tocar
+    // T20: with a capo, the window explains the shape and has Play
     @Test fun chordPopupCapo() {
         compose.setContent {
             StagebookTheme {
@@ -256,7 +256,7 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("build/outputs/roborazzi/tablet_6_acorde_tocar.png")
     }
 
-    // desenho que começa acima da 1ª casa: o número da casa à esquerda (A com pestana na 5ª)
+    // a diagram starting above the 1st fret: the fret number on the left (A with a barre on the 5th)
     @Test fun chordDiagramHighFret() = shoot("acorde_casa_5") {
         androidx.compose.foundation.layout.Box(Modifier.padding(32.dp)) {
             br.app.stagebook.ui.components.ChordDiagram(
@@ -267,12 +267,12 @@ class ScreenshotTest {
         }
     }
 
-    // teclado com cifra de capo: acordes no tom que soa, o aviso no topo e a mensagem da primeira vez
+    // keyboard with a capo chart: chords in the sounding key, the notice at the top and the first-time message
     @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.KEYBOARD)), 0, 0, { _, _ -> }, onBack = {})
     }
 
-    // T21: a segunda tela do acorde (campo harmônico)
+    // T21: the chord's second screen (harmonic field)
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun chordDetails() {
         compose.setContent {
@@ -304,7 +304,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
     }
 
-    // T03: o app em inglês (a base), para conferir a tradução
+    // T03: the app in English (the base), to check the translation
     @Test @Config(qualifiers = "en-w1280dp-h800dp-land-hdpi")
     fun englishSongsTablet() = shoot("ingles_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
@@ -336,7 +336,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SCREEN) }
     }
 
-    // T11: o mesmo setlist mandado por dois membros fica junto na caixa
+    // T11: the same setlist sent by two members stays together in the inbox
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun inboxVersions() {
         val now = System.currentTimeMillis()
@@ -355,7 +355,7 @@ class ScreenshotTest {
     @Test fun chordPopupCavaquinho() = chordPopup("tablet_6_acorde_cavaquinho", "D", br.app.stagebook.data.model.Instrument.CAVAQUINHO)
     @Test fun chordPopupElectricGuitar() = chordPopup("tablet_6_acorde_guitarra", "A", br.app.stagebook.data.model.Instrument.ELECTRIC_GUITAR)
 
-    /** Versão nova do app oferecida ao abrir (outra janela). */
+    /** New app version offered on open (another window). */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun updateOfferTablet() {
         compose.setContent {
@@ -396,8 +396,8 @@ class ScreenshotTest {
         }
     }
 
-    // a faixa no contexto: embaixo do palco de quem acompanha, com a música da vez faltando para o baixo
-    // T28: títulos de seção maiores, com fundo leve, e o tamanho ajustável em Ajustes → Seções da letra
+    // the strip in context: below a follower's stage, with the current song missing for the bass player. T28: bigger
+    // section titles, with a light background, and the size adjustable in Settings → Lyrics sections
     @Test fun settingsSectionsTablet() = shoot("tablet_5_ajustes_secoes") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SECTIONS) }
     }
@@ -438,7 +438,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PEDAL) }
     }
 
-    // pedal com o botão que dá play/pause no backing track (modo player ligado)
+    // pedal with the button that plays/pauses the backing track (player mode on)
     @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
     fun settingsPhonePedalPlay() = shoot("jornada_pedal_play_pause") {
         val st = settings.copy(
@@ -453,7 +453,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.CHORDS) }
     }
 
-    // tela inteira de Ajustes → Cifras (alta, sem rolar): instrumento, desenho ao tocar e lista de acordes
+    // the whole Settings → Chords screen (tall, no scrolling): instrument, diagram on tap and chord list
     @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
     fun settingsPhoneChordsFull() = shoot("celular_5_ajustes_cifras_inteira") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
@@ -461,7 +461,7 @@ class ScreenshotTest {
         }
     }
 
-    // acorde preto no fundo preto: o aviso de ilegível aparece
+    // black chord on a black background: the hard-to-read warning shows
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneChordsIllegible() = shoot("celular_5_ajustes_cifras_ilegivel") {
         val dark = settings.copy(look = settings.look.copy(chordColor = 0xFF000000.toInt()))
@@ -473,7 +473,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LANGUAGE) }
     }
 
-    // pedal MIDI: um USB ligado e um Bluetooth guardado fora do alcance; teste de botão com uma mensagem MIDI
+    // MIDI pedal: a USB one plugged in and a saved Bluetooth one out of range; button test with a MIDI message
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneMidi() = shoot("celular_5_ajustes_pedal_midi") {
         val code = br.app.stagebook.domain.MidiCode.of(0xB0, 64)
@@ -500,7 +500,7 @@ class ScreenshotTest {
         look = Look(fontSp = 34f),
     )
 
-    // T13: modo rolar, no 2º passo (a letra rolou até a 1ª linha que não cabia)
+    // T13: scroll mode, at the 2nd step (the lyrics scrolled to the 1st line that didn't fit)
     @Test fun stageScrollTablet() = shoot("tablet_6_palco_rolar") {
         StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 1, { _, _ -> }, onBack = {})
     }
@@ -511,7 +511,7 @@ class ScreenshotTest {
         }
     }
 
-    // T22: tablatura no palco (letra de máquina, cabendo na coluna)
+    // T22: tablature on stage (monospace, fitting the column)
     private val tabSong = "{key: G}\n[Intro]\n{start_of_tab}\ne|-----------------0-----3-----5-----7-----8-----10----12-----|\nB|-------1-----3-----5-----6-----8-----10----12----13---------|\nG|---0-----2-----4-----5-----7-----9-----11----12-------------|\n{end_of_tab}\n\n[Verso 1]\n[G]Saio cedo pela [D]rua sem saber"
 
     @Test fun stageTabTablet() = shoot("tablet_6_palco_tab") {
@@ -525,7 +525,7 @@ class ScreenshotTest {
 
     @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
-    // cifra inventada (nada de letra de verdade): acordes em cima, linha só de acordes, seção ChordPro e comentário
+    // made-up chart (no real lyrics): chords above, a chords-only line, a ChordPro section and a comment
     private val chordSong = """
         {key: G}
         {capo: 2}
@@ -550,7 +550,7 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
-    // T08/T09: backing track e capo acesos, primeiro depois do artista; o tom depois
+    // T08/T09: backing track and capo lit, first after the artist; the key after
     private val stageBadges = stage.copy(
         songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, track = "faixa.ogg")),
         look = stage.look.copy(chords = true, playerMode = true),
@@ -558,7 +558,7 @@ class ScreenshotTest {
 
     @Test fun stageBadgesTablet() = shoot("tablet_6_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
 
-    // T19: música com backing track e o player desligado no modo essencial: o play e o selo da faixa somem
+    // T19: song with a backing track and the player off in essential mode: the play button and track badge go away
     @Test fun `player off - song with a backing track has no play`() {
         compose.setContent { StageScreen(stageBadges.copy(look = stageBadges.look.copy(playerMode = false)), 0, 0, { _, _ -> }, onBack = {}) }
         compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
@@ -578,7 +578,7 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
-    // lista de acordes no topo, com o C numa variação escolhida (pestana na 3ª): a lista mostra a escolhida
+    // chord list at the top, with C in a chosen shape (barre on the 3rd): the list shows the chosen one
     private val chordSongDefined = "{define-guitar: C base-fret 3 frets x 1 3 3 3 1}\n" + chordSong
 
     @Test fun stageChordListTopTablet() = shoot("tablet_6_palco_acordes_topo") {
@@ -603,7 +603,8 @@ class ScreenshotTest {
         )
     }
 
-    // modo player: sem faixa (o botão escolhe o arquivo), com faixa parada e tocando (ícone de Backing track no topo)
+    // player mode: no track (the button picks the file), with a track stopped and playing (Backing track icon at the
+    // top)
     private val playerLook = Look(fontSp = 34f, playerMode = true)
 
     @Test fun stagePlayerNoTrackTablet() = shoot("tablet_11_player_sem_faixa") {
@@ -619,13 +620,13 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true)
     }
 
-    // ---- jornada: ligar uma faixa a uma música (celular) ----
+    // ---- journey: linking a track to a song (phone) ----
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack1Settings() = shoot("jornada_faixa_1_ajustes_player") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.PLAYER) }
     }
 
-    // ---- mixer (Ajustes → Player): arquivo de 4 canais, backing em par estéreo e click mono na saída 7 ----
+    // ---- mixer (Settings → Player): a 4-channel file, backing as a stereo pair and mono click on output 7 ----
     private val mixerLook = Look(
         playerMode = true,
         mixer = br.app.stagebook.domain.MixerConfig(
@@ -638,7 +639,7 @@ class ScreenshotTest {
             .withStrip(3) { it.copy(name = "Guia", on = false) },
     )
 
-    // tocando: medidores dos canais (o 2º lado do backing um pouco abaixo, o click batendo no pico) e o espectro
+    // playing: channel meters (the backing's 2nd side a bit lower, the click hitting the peak) and the spectrum
     private val mixerLevels = br.app.stagebook.domain.MixerLevels(
         br.app.stagebook.domain.Meters(
             listOf(-9f, -11f, -4f, -48f, -48f, -48f, -48f, -48f),
@@ -662,7 +663,7 @@ class ScreenshotTest {
                 }
             }
         }
-        // a explicação agora é o ⓘ ao lado do título do cartão
+        // the explanation is now the ⓘ next to the card title
         compose.onAllNodesWithContentDescription("Como funciona")[0].performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_4_explicacao.png")
@@ -684,7 +685,7 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/jornada_mixer_5_sobre_normalizar.png")
     }
 
-    // ---- ler o QR de um setlist: conferência (achadas, com dúvida, que faltam) ----
+    // ---- scanning a setlist QR: review (found, uncertain, missing) ----
     private val scanReview = br.app.stagebook.ui.setlists.ScanUi.Review(
         "Show de sábado",
         listOf(
@@ -702,7 +703,8 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
     }
 
-    // fila: importando as que faltam para o setlist, buscando no 1º site da lista (no Google, restrito ao site)
+    // queue: importing the missing ones for the setlist, searching the 1st site in the list (on Google, limited to the
+    // site)
     @Test @Config(qualifiers = PHONE)
     fun importQueuePhone() = shoot("jornada_qr_4_importar_fila") {
         ImportScreen(
@@ -715,7 +717,7 @@ class ScreenshotTest {
         )
     }
 
-    // ---- compartilhar: a folha (com e sem internet) e o código pronto ----
+    // ---- share: the sheet (with and without internet) and the ready code ----
     @Test @Config(qualifiers = PHONE)
     fun shareSheetPhone() = shoot("jornada_compartilhar_1_folha") {
         androidx.compose.foundation.layout.Column {
@@ -749,7 +751,7 @@ class ScreenshotTest {
         )
     }
 
-    // ---- músicas avulsas: seleção na aba Músicas e quem recebe ----
+    // ---- loose songs: selection on the Songs tab and the receiver ----
     @Test @Config(qualifiers = PHONE)
     fun songsSelectPhone() = shoot("jornada_musicas_1_selecao") {
         HomeScaffold(HomeTab.SONGS, {}) {
@@ -757,7 +759,7 @@ class ScreenshotTest {
         }
     }
 
-    // o menu Importar aberto na aba Músicas: sites, QR e código
+    // the Import menu open on the Songs tab: sites, QR and code
     @Test @Config(qualifiers = PHONE)
     fun importMenuPhone() {
         compose.setContent {
@@ -783,7 +785,8 @@ class ScreenshotTest {
         )
     }
 
-    // ---- banda na rede local: Ajustes → Banda (na rede: um da banda, um pedido esperando, um novo) ----
+    // ---- band on the local network: Settings → Band (on the network: one in the band, one request waiting, one new)
+    // ----
     private val bandSample = br.app.stagebook.ui.band.BandUi(
         name = "Meu tablet", wifi = true, searching = true,
         nearby = listOf(
@@ -805,7 +808,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it) }
     }
 
-    // ---- parte 2: mandar para a banda (folha) e o aviso nas abas com o número no ícone ----
+    // ---- part 2: sending to the band (sheet) and the notice on the tabs with the number on the icon ----
     @Test @Config(qualifiers = PHONE)
     fun shareBandPhone() = shoot("jornada_banda_3_compartilhar") {
         br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {}, band = 2)
@@ -912,7 +915,7 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
     }
 
-    /** Toque longo no play: o menu de trocar ou tirar a faixa (abre em outra janela). */
+    /** Long press on play: the menu to change or remove the track (opens in another window). */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack4Menu() {
@@ -936,7 +939,7 @@ class ScreenshotTest {
 
     @Test fun stageTabletLastPage() = shoot("tablet_7_palco_ultima") { StageScreen(stage, 0, -1, { _, _ -> }, onBack = {}) }
 
-    // Fire em pé
+    // Fire in portrait
     @Test @Config(qualifiers = TABLET_PORTRAIT)
     fun homeSongsTabletPortrait() = shoot("tablet_em_pe_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
@@ -947,9 +950,9 @@ class ScreenshotTest {
     fun stagePhone() = shoot("celular_7_palco") { StageScreen(stage, 0, 1, { _, _ -> }, onBack = {}) }
 }
 
-// Fire HD 10 (2019, 9ª geração): 1920x1200 a 1,5x (hdpi) = 1280x800 dp; o app esconde as barras
+// Fire HD 10 (2019, 9th gen): 1920x1200 at 1.5x (hdpi) = 1280x800 dp; the app hides the bars
 private const val TABLET = "pt-rBR-w1280dp-h800dp-land-hdpi"
 private const val TABLET_PORTRAIT = "pt-rBR-w800dp-h1280dp-port-hdpi"
 private const val PHONE = "pt-rBR-w412dp-h915dp-port-xxhdpi"
-private const val PHONE_TALL = "pt-rBR-w412dp-h3000dp-port-xxhdpi"     // a tela inteira, sem rolar
+private const val PHONE_TALL = "pt-rBR-w412dp-h3000dp-port-xxhdpi"     // the whole screen, no scrolling
 private const val TABLET_TALL = "pt-rBR-w1280dp-h2000dp-port-hdpi"

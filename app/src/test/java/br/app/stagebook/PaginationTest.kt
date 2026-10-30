@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PaginationTest {
-    // texto: estrofes de linhas com altura 10, separadas por uma linha em branco
+    // text: verses of lines 10 tall, separated by a blank line
     private fun lines(vararg stanzaSizes: Int): List<Line> =
         stanzaSizes.toList().flatMapIndexed { i, n -> (if (i > 0) listOf(Line(10, true)) else emptyList()) + List(n) { Line(10, false) } }
 
@@ -17,7 +17,7 @@ class PaginationTest {
 
     @Test
     fun `breaks between verses, never in the middle of one that fits whole`() {
-        // 4 + branco + 4 = 90; a terceira estrofe (4) não cabe mais
+        // 4 + blank + 4 = 90; the third verse (4) no longer fits
         assertEquals(listOf(0..8, 10..13), Pagination.paginate(lines(4, 4, 4), 90))
     }
 
@@ -35,7 +35,7 @@ class PaginationTest {
 
     @Test
     fun `two columns fill the left then the right, the pedal turns the sheet`() {
-        // estrofes de 4 linhas, coluna com 90 de altura (2 estrofes por coluna)
+        // 4-line verses, a column 90 tall (2 verses per column)
         val sheets = Pagination.sheets(lines(4, 4, 4, 4, 4), 90, 2)
         assertEquals(listOf(listOf(0..8, 10..18), listOf(20..23)), sheets)
         assertEquals(3, Pagination.sheets(lines(4, 4, 4, 4, 4), 90, 1).size)

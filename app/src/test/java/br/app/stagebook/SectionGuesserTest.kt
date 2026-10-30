@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-// Estrofes inventadas: só a estrutura importa.
+// Made-up verses: only the structure matters.
 class SectionGuesserTest {
     private val v1 = "primeira estrofe linha um\nprimeira estrofe linha dois"
     private val v2 = "segunda estrofe linha um\nsegunda estrofe linha dois"

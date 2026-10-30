@@ -377,7 +377,7 @@ class BandLink @Inject constructor(
         }
         val listener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(info: NsdServiceInfo) = Unit
-            override fun onRegistrationFailed(info: NsdServiceInfo, error: Int) { Log.w(TAG, "anúncio falhou: $error") }
+            override fun onRegistrationFailed(info: NsdServiceInfo, error: Int) { Log.w(TAG, "announcement failed: $error") }
             override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
             override fun onUnregistrationFailed(info: NsdServiceInfo, error: Int) = Unit
         }
@@ -393,7 +393,7 @@ class BandLink @Inject constructor(
         val listener = object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(type: String) = Unit
             override fun onDiscoveryStopped(type: String) = Unit
-            override fun onStartDiscoveryFailed(type: String, error: Int) { Log.w(TAG, "procura falhou: $error") }
+            override fun onStartDiscoveryFailed(type: String, error: Int) { Log.w(TAG, "discovery failed: $error") }
             override fun onStopDiscoveryFailed(type: String, error: Int) = Unit
             override fun onServiceFound(info: NsdServiceInfo) { synchronized(toResolve) { toResolve.addLast(info) }; resolveNext() }
             override fun onServiceLost(info: NsdServiceInfo) {

@@ -73,7 +73,7 @@ class AppUpdateOffer @Inject constructor(
             val apk = updater.download { _offer.value = UpdateOffer.Downloading(it) }
             UpdateOffer.Ready(apk)
         } catch (e: IOException) {
-            Log.w("stagebook", "versão nova não baixou", e)
+            Log.w("stagebook", "new version download failed", e)
             order.defer(code, remember = false)
             UpdateOffer.Failed
         }

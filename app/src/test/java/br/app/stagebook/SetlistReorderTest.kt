@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Arrastar pela alça muda a ordem do setlist (biblioteca reorderable). */
+/** Dragging by the handle changes the setlist order (reorderable library). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class SetlistReorderTest {
@@ -37,7 +37,7 @@ class SetlistReorderTest {
         }
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
-            repeat(20) { moveBy(Offset(0f, 8f)) }   // ~1,5 linha para baixo, devagar como um dedo
+            repeat(20) { moveBy(Offset(0f, 8f)) }   // ~1.5 lines down, slow like a finger
             up()
         }
         compose.waitForIdle()
@@ -56,7 +56,7 @@ class SetlistReorderTest {
         }
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
-            repeat(40) { moveBy(Offset(0f, 8f)) }   // ~2,5 linhas para baixo
+            repeat(40) { moveBy(Offset(0f, 8f)) }   // ~2.5 lines down
             up()
         }
         compose.waitForIdle()
@@ -77,7 +77,7 @@ class SetlistReorderTest {
         }
         compose.onNodeWithText("Música b").performClick()
         assertEquals(1, opened)
-        compose.onNodeWithContentDescription("Palco").performClick()   // play do topo: do começo
+        compose.onNodeWithContentDescription("Palco").performClick()   // top play: from the start
         assertEquals(0, opened)
     }
 }

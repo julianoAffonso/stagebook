@@ -10,7 +10,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A mesma pessoa mandando o mesmo setlist de novo: igual não duplica; com mudanças substitui e fica "atualizado". */
+/**
+ * The same person sending the same setlist again: identical doesn't duplicate; with changes it replaces and shows
+ * "updated".
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class InboxUpdateTest {

@@ -18,7 +18,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Tocar o acorde (T20): as notas do desenho (com capo, a nota real), o som em cada modo e o botão na janela do acorde. */
+/**
+ * Playing the chord (T20): the diagram's notes (with a capo, the real note), the sound in each mode and the button in
+ * the chord window.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class ChordPlayTest {
@@ -28,7 +31,7 @@ class ChordPlayTest {
         val g = Voicings.Shape(listOf(3, 2, 0, 0, 0, 3))
         assertEquals(listOf(43, 47, 50, 55, 59, 67), Voicings.midi(g, Instrument.ACOUSTIC_GUITAR))
         assertEquals(listOf(45, 49, 52, 57, 61, 69), Voicings.midi(g, Instrument.ACOUSTIC_GUITAR, capo = 2))
-        assertEquals(listOf(47, 50, 55, 59, 67), Voicings.midi(Voicings.Shape(listOf(-1, 2, 0, 0, 0, 3)), Instrument.ACOUSTIC_GUITAR))   // corda x não toca
+        assertEquals(listOf(47, 50, 55, 59, 67), Voicings.midi(Voicings.Shape(listOf(-1, 2, 0, 0, 0, 3)), Instrument.ACOUSTIC_GUITAR))   // string x is not played
     }
 
     @Test fun `picked takes longer than strummed - both is the longest - no clipping`() {
@@ -50,7 +53,7 @@ class ChordPlayTest {
         compose.onNodeWithText("O desenho é de G. Com capo na 2ª casa, soa A.").assertExists()
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertTrue(played!!.isNotEmpty())
-        assertTrue(played!!.all { it >= 40 + 2 })   // tudo pelo menos 2 casas acima da corda mais grave
+        assertTrue(played!!.all { it >= 40 + 2 })   // everything at least 2 frets above the lowest string
     }
 
     @Test fun `keyboard does not use capo - no notice and no higher note`() {
@@ -58,7 +61,7 @@ class ChordPlayTest {
         compose.setContent {
             StagebookTheme { ChordShapePopup("C", Instrument.KEYBOARD, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
         }
-        compose.onNodeWithText("O desenho é de", substring = true).assertDoesNotExist()   // teclado: sem a nota do desenho com capo
+        compose.onNodeWithText("O desenho é de", substring = true).assertDoesNotExist()   // keyboard: no diagram note with capo
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertEquals(Voicings.keys("C").first(), played)
     }

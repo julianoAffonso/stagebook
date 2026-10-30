@@ -29,14 +29,14 @@ class KeyDetectTest {
         val text = "{key: G}\n{capo: 2}\n[Verso]\n[G]linha"
         assertEquals("[Verso]\n[G]linha", Chords.hideMeta(text))
         assertEquals(text, Chords.withMeta("[Verso]\n[G]linha editada".replace(" editada", ""), text))
-        // sem tom nem capo: nada é acrescentado
+        // no key or capo: nothing is added
         assertEquals("[G]linha", Chords.withMeta("[G]linha", "[G]outra"))
     }
 
     @Test fun `song BPM - read from tempo, out of the lyrics field and back on save`() {
         val text = "{tempo: 120}\n{key: G}\n[G]linha"
         assertEquals(120, Chords.tempo(text))
-        assertEquals(0, Chords.tempo("{tempo: 900}\nx"))   // fora do razoável: sem BPM
+        assertEquals(0, Chords.tempo("{tempo: 900}\nx"))   // unreasonable: no BPM
         assertEquals("[G]linha", Chords.hideMeta(text))
         assertEquals(120, Chords.tempo(Chords.withMeta("[G]linha", text)))
     }
@@ -46,7 +46,7 @@ class KeyDetectTest {
         assertEquals(96, br.app.stagebook.domain.ChordImport.bpmOf("", "Intro\nBPM: 96\n[G]linha"))
         assertEquals(110, br.app.stagebook.domain.ChordImport.bpmOf("", "110 bpm\nletra"))
         assertEquals(72, br.app.stagebook.domain.ChordImport.bpmOf("", "{tempo: 72}\nletra"))
-        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("", "a letra fala de 120 caminhos"))   // número solto não é BPM
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("", "a letra fala de 120 caminhos"))   // a loose number isn't a BPM
         assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("999", ""))
     }
 
@@ -56,7 +56,7 @@ class KeyDetectTest {
         val minor = generateSequence("Am") { Chords.transposeKey(it, 1) }.take(4).toList()
         assertEquals(listOf("Am", "Bbm", "Bm", "Cm"), minor)
         assertEquals("E", Chords.transposeKey("F", -1))
-        // os acordes seguem a armadura do tom novo
+        // the chords follow the new key's signature
         assertEquals("{key: Eb}\n[Eb]um [Ab]dois [Bb]três", Chords.transpose("{key: D}\n[D]um [G]dois [A]três", 1))
         assertEquals("{key: F#}\n[F#]um [B]dois [C#]três", Chords.transpose("{key: F}\n[F]um [Bb]dois [C]três", 1))
     }

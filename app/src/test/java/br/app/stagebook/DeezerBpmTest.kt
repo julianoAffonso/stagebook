@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** BPM sugerido pelo Deezer: acha a faixa certa da busca e lê o BPM (0 ou absurdo = sem sugestão). */
+/** BPM suggested by Deezer: finds the right track in the search and reads the BPM (0 or absurd = no suggestion). */
 class DeezerBpmTest {
     private val deezer = DeezerBpm()
     private val search = """{"data":[
@@ -15,7 +15,7 @@ class DeezerBpmTest {
 
     @Test fun `picks the track with the same title and the right artist`() {
         assertEquals(33L, deezer.pickTrack(search, "Hazard", "Richard Marx"))
-        assertEquals(22L, deezer.pickTrack(search, "Hazard", ""))   // sem artista: a primeira com o mesmo título
+        assertEquals(22L, deezer.pickTrack(search, "Hazard", ""))   // no artist: the first with the same title
         assertNull(deezer.pickTrack(search, "Outra", "Richard Marx"))
     }
 

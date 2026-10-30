@@ -5,7 +5,7 @@ import br.app.stagebook.data.groupInbox
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Vários membros mandando setlist (T11): o mesmo setlist fica junto, o mais novo primeiro; nada some. */
+/** Several members sending a setlist (T11): the same setlist stays together, newest first; nothing goes missing. */
 class InboxGroupTest {
     private fun item(id: String, from: String, set: String, at: Long) = BandInbox.Item(id, from, from, "LETRAS3\n1\n$set\nMúsica", at = at)
 

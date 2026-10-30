@@ -43,7 +43,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Passar páginas e músicas no palco como o pedal faz, inclusive no meio da animação. */
+/** Turning pages and songs on stage the way the pedal does, including mid-animation. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class StageFlowTest {
@@ -59,14 +59,14 @@ class StageFlowTest {
             look = Look(fontSp = 34f),
         )
         var song by mutableIntStateOf(0)
-        var page by mutableIntStateOf(-1)   // última página da longa
+        var page by mutableIntStateOf(-1)   // last page of the long one
         compose.setContent {
             StagebookTheme { StageScreen(state, song, page, { s, p -> song = s; page = p }) }
         }
         compose.waitForIdle()
         compose.mainClock.autoAdvance = false
-        song = 1; page = 0                  // pedal: próxima música
-        repeat(30) { compose.mainClock.advanceTimeByFrame() }   // atravessa a animação de troca
+        song = 1; page = 0                  // pedal: next song
+        repeat(30) { compose.mainClock.advanceTimeByFrame() }   // goes through the song-change animation
         compose.mainClock.autoAdvance = true
         compose.onNodeWithText("curta estrofe 1 linha 1", substring = true).assertIsDisplayed()
     }
@@ -117,9 +117,9 @@ class StageFlowTest {
             pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_UP, 0))
             pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_UP, 0))
         }
-        back()                                   // da Curta para a última página da Longa
-        compose.mainClock.advanceTimeByFrame()   // um quadro: a Longa entrou, a contagem de páginas ainda não
-        back()                                   // pé rápido: volta uma página da Longa
+        back()                                   // from Short to the last page of Long
+        compose.mainClock.advanceTimeByFrame()   // one frame: Long came in, its page count not yet
+        back()                                   // fast foot: back one page of Long
         compose.mainClock.autoAdvance = true
         compose.waitForIdle()
         assertEquals("continua na Longa", 1, song)
@@ -148,11 +148,11 @@ class StageFlowTest {
             pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_UP, 0))
             pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_UP, 0))
         }
-        back()                                   // da Curta para a última página da Longa
-        // o zoom da Curta (pinça antes do pedal) é gravado e a lista de músicas chega de novo
+        back()                                   // from Short to the last page of Long
+        // Short's zoom (pinch before the pedal) is saved and the song list arrives again
         state = state.copy(songs = songs.map { if (it.id == "c") it.copy(zoom = 1.4f) else it })
         compose.mainClock.advanceTimeByFrame()
-        back()                                   // pé rápido: volta uma página da Longa
+        back()                                   // fast foot: back one page of Long
         compose.mainClock.autoAdvance = true
         compose.waitForIdle()
         assertEquals("continua na Longa", 1, song)
@@ -173,7 +173,7 @@ class StageFlowTest {
         compose.onRoot().performTouchInput {
             pinch(center - Offset(50f, 0f), center - Offset(250f, 0f), center + Offset(50f, 0f), center + Offset(250f, 0f), durationMillis = 400)
         }
-        compose.waitForIdle()   // deixa o fim do gesto ser processado antes de contar o tempo da gravação
+        compose.waitForIdle()   // let the end of the gesture be processed before counting the save time
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
         val (id, zoom) = saved!!
@@ -188,7 +188,7 @@ class StageFlowTest {
         val saved = mutableListOf<Float>()
         compose.setContent {
             StagebookTheme {
-                // como no app: gravar o zoom volta para a tela pela música atualizada
+                // like in the app: saving the zoom comes back to the screen through the updated song
                 StageScreen(StageUiState(false, songs, look = Look(fontSp = 34f)), 0, 0, { _, _ -> }, onZoom = { _, z ->
                     saved += z
                     songs = songs.map { it.copy(zoom = z) }
@@ -256,7 +256,7 @@ class StageFlowTest {
         assertEquals(1, swipeStage(1) { swipeUp(startY = centerY + height / 4f, endY = centerY - height / 4f) })
     }
 
-    // pedal Play/pause: só dá play com o modo player ligado e a música com backing track; nunca vira a página
+    // Play/pause pedal: only plays with player mode on and a song with a backing track; never turns the page
     private fun pressPlayPause(look: Look, track: String): Pair<Int, Int> {
         val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false, id = "1", track = track)), look = look)
         var page by mutableIntStateOf(0)
@@ -331,7 +331,7 @@ class StageFlowTest {
             pinch(center - Offset(50f, 0f), center - Offset(250f, 0f), center + Offset(50f, 0f), center + Offset(250f, 0f), durationMillis = 300)
         }
         compose.waitForIdle()
-        song = 1                                   // pedal antes dos 700 ms da gravação
+        song = 1                                   // pedal before the 700 ms of the save
         compose.waitForIdle()
         val (id, zoom) = saved!!
         assertEquals("a", id)
@@ -353,7 +353,7 @@ class StageFlowTest {
 
     @Test
     fun `heights measured in one pass are the same as measured line by line`() {
-        // letra inventada com títulos de seção (cor e tamanho próprios), linhas vazias e uma linha longa
+        // made-up lyrics with section titles (their own color and size), empty lines and a long line
         val text = "[Verso 1]\nprimeira linha curta\numa linha bem mais comprida que as outras para ocupar a largura toda da coluna e quebrar\n\n" +
             "[Refrão]\n[G]refrão [D]aqui com acordes em [Em]cima\n[C] [G]\n\n\nfim"
         val chords = br.app.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow)
@@ -371,7 +371,7 @@ class StageFlowTest {
             assertTrue("a linha com acordes tem de estar no teste", lines.any { it.getStringAnnotations(0, it.length).isNotEmpty() })
             for (width in listOf(1800, 600)) {
                 val one = lines.map { l ->
-                    // sozinha, do mesmo jeito que o palco monta a linha (linha com acordes tem altura maior)
+                    // alone, the same way the stage builds the line (a line with chords is taller)
                     val alone = joinLines(listOf(l))
                     measurer.measure(alone, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = width)).size.height
                 }
@@ -383,7 +383,7 @@ class StageFlowTest {
         compose.waitForIdle()
     }
 
-    // o Robolectric comum não quebra linha de texto: este precisa do desenho nativo (como as capturas)
+    // plain Robolectric doesn't wrap text lines: this one needs native drawing (like the screenshots)
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     fun `a wrapping line with chords becomes pieces and only the ones with a chord keep the space`() {
         val chords = br.app.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow)
@@ -400,13 +400,13 @@ class StageFlowTest {
             assertTrue("quebrou em pedaços: ${narrow.size}", narrow.size > 1)
             assertTrue(narrow.first().text.isChordLine())
             assertTrue(narrow.drop(1).none { it.text.isChordLine() })
-            assertEquals(setOf(0), narrow.map { it.source }.toSet())   // todos apontam para a mesma linha da letra
+            assertEquals(setOf(0), narrow.map { it.source }.toSet())   // all point to the same lyrics line
             assertEquals(sourced.single().text.text.replace(" ", ""), narrow.joinToString("") { it.text.text }.replace(" ", ""))
         }
         compose.waitForIdle()
     }
 
-    // ---- editar a partir do palco ----
+    // ---- editing from the stage ----
     private val lyric = "[Refrão]\nprimeira linha\nsegunda linha\n\nterceira linha"
 
     private fun stageWithEdit(onEdit: (String, Int) -> Unit, onPosition: (Int, Int) -> Unit = { _, _ -> }) = compose.setContent {
@@ -418,7 +418,7 @@ class StageFlowTest {
         }
     }
 
-    /** Segura no meio da 2ª linha mostrada, pela posição dela no texto desenhado. */
+    /** Holds in the middle of the 2nd line shown, by its position in the drawn text. */
     private fun holdSecondLine() {
         val node = compose.onNodeWithText("primeira linha", substring = true)
         val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
@@ -433,7 +433,7 @@ class StageFlowTest {
         stageWithEdit({ id, c -> edits += id to c })
         holdSecondLine()
         compose.onNodeWithText("Editar esta linha").assertIsDisplayed().performClick()
-        // "[Refrão]\n" tem 9 caracteres: a 2ª linha mostrada ("primeira linha") começa ali
+        // "[Refrão]\n" has 9 characters: the 2nd line shown ("primeira linha") starts there
         assertEquals(listOf("s1" to 9), edits)
     }
 

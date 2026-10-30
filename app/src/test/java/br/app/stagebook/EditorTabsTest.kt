@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Editor (T27): a letra com a tela toda e os dados da música recolhidos numa linha no topo. */
+/** Editor (T27): the lyrics take the whole screen and the song details are collapsed on one line at the top. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class EditorTabsTest {
@@ -29,7 +29,7 @@ class EditorTabsTest {
         val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título").assertExists()
-        // aberto, o resumo não aparece (repetiria o título): o ▲ do campo Título recolhe
+        // when open, the summary doesn't show (it would repeat the title): the ▲ in the Title field collapses
         compose.onNodeWithText("Música sem título").assertDoesNotExist()
         compose.onNodeWithContentDescription("Recolher os dados da música").performClick()
         compose.waitForIdle()
@@ -40,7 +40,7 @@ class EditorTabsTest {
     @Test fun `existing song opens collapsed with the summary - tapping opens the fields`() {
         compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título").assertDoesNotExist()
-        // o campo da letra não mostra {key}/{capo}: estão no resumo
+        // the lyrics field doesn't show {key}/{capo}: they're in the summary
         compose.onNodeWithText("{key: G}", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").performClick()
         compose.waitForIdle()

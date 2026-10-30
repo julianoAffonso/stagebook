@@ -19,10 +19,10 @@ class TablatureTest {
 
     @Test fun `moves frets up and down without moving the columns`() {
         assertEquals("e|---2---5---|", Tablature.shiftLine("e|---0---3---|", 2))
-        assertEquals("e|---10--12--|", Tablature.shiftLine("e|---8---10--|", 2))   // 8 vira 10: come um traço
-        assertEquals("e|---9---10--|", Tablature.shiftLine("e|---10--11--|", -1))  // 10 vira 9: devolve um traço
-        assertEquals("e|---11--|", Tablature.shiftLine("e|---0---|", -1))          // negativa sobe uma oitava (come um traço)
-        assertEquals("B|--5h7--|", Tablature.shiftLine("B|--3h5--|", 2))           // a corda B não é casa
+        assertEquals("e|---10--12--|", Tablature.shiftLine("e|---8---10--|", 2))   // 8 becomes 10: eats a dash
+        assertEquals("e|---9---10--|", Tablature.shiftLine("e|---10--11--|", -1))  // 10 becomes 9: gives a dash back
+        assertEquals("e|---11--|", Tablature.shiftLine("e|---0---|", -1))          // negative goes up an octave (eats a dash)
+        assertEquals("B|--5h7--|", Tablature.shiftLine("B|--3h5--|", 2))           // the B string isn't a fret
     }
 
     @Test fun `transposing the key takes the tab along`() {

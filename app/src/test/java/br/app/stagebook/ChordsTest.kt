@@ -15,20 +15,20 @@ class ChordsTest {
     }
 
     @Test fun `chords on the line above become ChordPro in the right column`() {
-        // cada acorde em cima da letra em que começa: G em "Hoje", D em "vou", Em em "Pra", C em "ouvir"
-        val cifra = listOf(
+        // each chord above the lyrics where it starts: G on "Hoje", D on "vou", Em on "Pra", C on "ouvir"
+        val chart = listOf(
             "G           D",
             "Hoje eu     vou cantar",
             "Em       C",
             "Pra você ouvir",
         ).joinToString("\n")
-        assertEquals("[G]Hoje eu     [D]vou cantar\n[Em]Pra você [C]ouvir", Chords.fromChordsOverLyrics(cifra))
+        assertEquals("[G]Hoje eu     [D]vou cantar\n[Em]Pra você [C]ouvir", Chords.fromChordsOverLyrics(chart))
     }
 
     @Test fun `chords-only line, label and section`() {
-        val cifra = "[Intro] G  D  Em  C\n\n[Refrão]\nG     D\nOh oh oh\nIntro: G D (2x)"
-        val out = Chords.fromChordsOverLyrics(cifra).split('\n')
-        // "[Intro] G D…" vira o título e, embaixo, os acordes
+        val chart = "[Intro] G  D  Em  C\n\n[Refrão]\nG     D\nOh oh oh\nIntro: G D (2x)"
+        val out = Chords.fromChordsOverLyrics(chart).split('\n')
+        // "[Intro] G D…" becomes the title and, below, the chords
         assertEquals("[Intro]", out[0])
         assertEquals("[G] [D] [Em] [C]", out[1])
         assertEquals("[Refrão]", out[3])
@@ -37,7 +37,7 @@ class ChordsTest {
     }
 
     @Test fun `chord after the end of the lyrics stays at the end`() {
-        // colunas 3 e 5, depois do fim de "Oi": ficam no fim, com o espaço entre eles
+        // columns 3 and 5, after the end of "Oi": they stay at the end, with the space between them
         assertEquals("Oi [G]  [D]", Chords.fromChordsOverLyrics("   G D\nOi"))
     }
 
@@ -52,7 +52,7 @@ class ChordsTest {
         assertEquals("Bb", Chords.transposeChord("A", 1, useFlats = true))
         assertEquals("G", Chords.transposeChord("A", -2))
         val song = "{key: C}\n[C]Hoje [G/B]eu [Am7]vou [F]lá"
-        val up = Chords.transpose(song, 3)   // C -> Eb: tom de bemol
+        val up = Chords.transpose(song, 3)   // C -> Eb: flat key
         assertEquals("Eb", Chords.key(up))
         assertTrue(up, up.contains("[Eb]Hoje [Bb/D]eu [Cm7]vou [Ab]lá"))
         assertEquals(song, Chords.transpose(Chords.transpose(song, 5), -5))
@@ -80,7 +80,7 @@ class ChordsTest {
         assertEquals(setOf("G", "D"), Chords.hiddenChords(t))
         assertEquals(listOf("C"), br.app.stagebook.ui.stage.stripChords(t))
         assertEquals("[G]a [D]b [C]c", Chords.setHiddenChords(t, emptySet()))
-        assertTrue(Chords.isDirective(t.lines().first()))   // o palco não mostra a linha
+        assertTrue(Chords.isDirective(t.lines().first()))   // the stage doesn't show the line
     }
 
     @Test fun `directives are saved, replaced and removed`() {

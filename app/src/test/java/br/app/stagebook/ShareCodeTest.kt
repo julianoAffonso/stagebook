@@ -9,7 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Código de envio pela internet: fácil de digitar, chave e canal saem dele, e só ele abre o pacote. */
+/** Internet sharing code: easy to type, the key and channel come from it, and only it opens the package. */
 class ShareCodeTest {
     @Test fun `new code has a number and two words and typed any way is the same`() {
         val code = ShareCode.generate()

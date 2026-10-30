@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 import java.net.InetSocketAddress
 
-/** Ajustes → Atualizar o app, com um "Drive" local no lugar do de verdade. */
+/** Settings → Update the app, with a local "Drive" in place of the real one. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
@@ -65,7 +65,7 @@ class AppUpdaterTest {
         SettingsViewModel(repo, context, u, br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)))
     }
 
-    /** Espera o estado da atualização chegar à tela (o uiState só anda com alguém olhando). */
+    /** Waits for the update state to reach the screen (uiState only moves with someone watching). */
     private suspend fun SettingsViewModel.waitUpdate(done: (UpdateState) -> Boolean): UpdateState =
         withTimeout(10_000) { uiState.first { done(it.update) }.update }
 
@@ -92,7 +92,7 @@ class AppUpdaterTest {
     }
 
     @Test fun `downloaded file that is not the app is not installed`() = runBlocking {
-        apk = ByteArray(200_000) { it.toByte() }   // página de erro, arquivo cortado…
+        apk = ByteArray(200_000) { it.toByte() }   // error page, cut file…
         val vm = vm(updater())
         vm.downloadUpdate()
         assertEquals(UpdateState.DownloadFailed, vm.waitUpdate { it == UpdateState.DownloadFailed })

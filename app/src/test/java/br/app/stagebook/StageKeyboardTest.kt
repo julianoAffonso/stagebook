@@ -16,7 +16,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Teclado com cifra de capo: acordes no tom que soa, o aviso no topo, a mensagem da primeira vez e a linha na janela. */
+/**
+ * Keyboard with a capo chart: chords in the sounding key, the notice at the top, the first-time message and the line in
+ * the window.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class StageKeyboardTest {
@@ -29,7 +32,7 @@ class StageKeyboardTest {
         val state = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look(instrument = Instrument.KEYBOARD))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onKeyboardHintSeen = { seen++ }) } }
         compose.onNodeWithText("teclado · capo na 2ª").assertExists()
-        compose.onNodeWithText("A", useUnmergedTree = true).assertExists()   // o tom que soa
+        compose.onNodeWithText("A", useUnmergedTree = true).assertExists()   // the sounding key
         compose.onNodeWithText("Esta cifra usa capo na 2ª casa", substring = true).assertExists()
         assertEquals(1, seen)
     }

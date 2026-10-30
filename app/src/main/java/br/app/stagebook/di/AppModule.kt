@@ -35,7 +35,7 @@ object AppModule {
     fun applicationScope(): CoroutineScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Default +
             // an unexpected error while saving or syncing in the background can't crash the app on stage
-            CoroutineExceptionHandler { _, e -> Log.e("stagebook", "erro em segundo plano", e) },
+            CoroutineExceptionHandler { _, e -> Log.e("stagebook", "background error", e) },
     )
 
     @Provides

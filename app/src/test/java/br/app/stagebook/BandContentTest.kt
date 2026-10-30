@@ -7,10 +7,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BandContentTest {
-    private val cifra = "{key: G}\n[Verso 1]\n[G]Saio cedo pela [D]rua\n[Em]Onde a estrada [C]vai dar"
+    private val chart = "{key: G}\n[Verso 1]\n[G]Saio cedo pela [D]rua\n[Em]Onde a estrada [C]vai dar"
 
     @Test fun `regular lyrics and chords pass`() {
-        assertTrue(SharedSong("Canção", "Banda", "1991", cifra).allowed())
+        assertTrue(SharedSong("Canção", "Banda", "1991", chart).allowed())
     }
 
     @Test fun `long tablature passes`() {
@@ -26,8 +26,8 @@ class BandContentTest {
     @Test fun `control characters and huge text are refused`() {
         assertFalse(SharedSong("Canção", text = "linha\u0000binário").allowed())
         assertFalse(SharedSong("Canção", text = "a ".repeat(BandContent.MAX_TEXT)).allowed())
-        assertFalse(SharedSong("", text = cifra).allowed())
-        assertFalse(SharedSong("T".repeat(BandContent.MAX_TITLE + 1), text = cifra).allowed())
+        assertFalse(SharedSong("", text = chart).allowed())
+        assertFalse(SharedSong("T".repeat(BandContent.MAX_TITLE + 1), text = chart).allowed())
     }
 
     @Test fun `setlist only passes in setlist format`() {

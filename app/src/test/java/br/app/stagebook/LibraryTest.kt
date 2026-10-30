@@ -64,9 +64,9 @@ class LibraryTest {
     fun `import does not duplicate and keeps same-title songs by different artists`() {
         val lib = Library(songs = listOf(Song("a", "It's My Life", "Bon Jovi", text = "velha", zoom = 1.4f)))
         val incoming = listOf(
-            Song(title = "Its my life", author = "bon jovi", text = "nova"),     // a mesma: atualiza
-            Song(title = "It's My Life", author = "Talk Talk", text = "outra"),  // outra música
-            Song(title = "It's My Life", author = "Talk Talk", text = "outra 2"), // repetida no arquivo: atualiza
+            Song(title = "Its my life", author = "bon jovi", text = "nova"),     // the same one: updates
+            Song(title = "It's My Life", author = "Talk Talk", text = "outra"),  // another song
+            Song(title = "It's My Life", author = "Talk Talk", text = "outra 2"), // repeated in the file: updates
         )
         val (merged, result) = lib.mergeSongs(incoming, newId)
         assertEquals(1, result.added)
@@ -75,7 +75,7 @@ class LibraryTest {
         assertEquals("nova", merged.songs[0].text)
         assertEquals("o zoom do palco continua", 1.4f, merged.songs[0].zoom)
         assertEquals("outra 2", merged.songs[1].text)
-        // importar o mesmo arquivo de novo não muda a quantidade
+        // importing the same file again doesn't change the count
         assertEquals(2, merged.mergeSongs(incoming, newId).first.songs.size)
     }
 
@@ -100,15 +100,15 @@ class LibraryTest {
             QrPayload.Parsed("Show de sábado", listOf(QrPayload.Entry("Hazard", ""), QrPayload.Entry("Malandragem", ""), QrPayload.Entry("It's My Life", "Bon Jovi"))),
             QrPayload.parse(text),
         )
-        // faltou um título: o leitor recusa em vez de criar o setlist incompleto
+        // a title is missing: the reader refuses instead of creating an incomplete setlist
         assertNull(QrPayload.parse("LETRAS3\n3\nShow\nHazard\nMalandragem"))
-        // o formato antigo não vale mais
+        // the old format no longer works
         assertNull(QrPayload.parse("LETRAS2\n1\nShow\nHazard"))
     }
 
     @Test
     fun `QR limit counts the compressed size, with the name and extra songs`() {
-        // títulos variados como os reais (repetitivos, o deflate comprimiria demais e o teste não diria nada)
+        // varied titles like real ones (repetitive ones would compress too much and the test would prove nothing)
         val rnd = kotlin.random.Random(5)
         fun word() = (1..rnd.nextInt(3, 9)).map { "abcdefghijklmnopqrstuvwxyzáéíõç"[rnd.nextInt(31)] }.joinToString("")
         val songs = (1..200).map { Song("s$it", (1..rnd.nextInt(1, 4)).joinToString(" ") { word() }, word()) }
@@ -149,11 +149,11 @@ class LibraryTest {
         keys = PedalAction.assign(keys, down, PedalAction.PREVIOUS)
         assertEquals(PedalAction.NEXT_SONG, PedalAction.of(a, keys))
         assertEquals(PedalAction.PREVIOUS, PedalAction.of(down, keys))
-        // teclas sem escolha seguem no padrão
+        // keys with no choice keep the default
         assertEquals(PedalAction.NEXT, PedalAction.of(android.view.KeyEvent.KEYCODE_SPACE, keys))
-        // escolher o próprio padrão tira a tecla da lista
+        // picking the default itself removes the key from the list
         assertEquals(setOf(a), PedalAction.assign(keys, down, PedalAction.NEXT).keys)
-        // a escolha fica gravada na biblioteca
+        // the choice is saved in the library
         val lib = Library(look = Look(pedalKeys = keys))
         assertEquals(keys, LibraryCodec.decode(LibraryCodec.encode(lib), newId).look.pedalKeys)
     }

@@ -27,7 +27,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Importar de um site de cifra: perfil letra e cifra entra em ChordPro (com tom e capo); só letra, sem acordes. */
+/**
+ * Import from a chord site: the lyrics and chords profile gets ChordPro (with key and capo); lyrics only, no chords.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class ImportChordsTest {
@@ -35,7 +37,7 @@ class ImportChordsTest {
 
     @After fun tearDown() = Dispatchers.resetMain()
 
-    // o que o script devolve numa página do Cifra Club (cifra inventada; sem título, para não ir ao MusicBrainz)
+    // what the script returns on a Cifra Club page (made-up chart; no title, so it doesn't go to MusicBrainz)
     private fun raw(): String {
         val page = buildJsonObject {
             put("title", ""); put("artist", "")
@@ -74,7 +76,7 @@ class ImportChordsTest {
         assertEquals(2, Chords.capo(text))
     }
 
-    // página com tablatura: pergunta; com a tab entra em bloco, sem ela some
+    // page with tablature: asks; with the tab it comes in as a block, without it it's gone
     private fun rawWithTab(): String {
         val page = buildJsonObject {
             put("title", ""); put("artist", "")

@@ -17,10 +17,10 @@ class ContrastTest {
 
     @Test fun `same or too similar warns, the rest passes`() {
         assertFalse(Contrast.legible(black, black))                       // mesma cor
-        assertFalse(Contrast.legible(0xFF333333.toInt(), black))          // cinza-escuro no preto
-        assertFalse(Contrast.legible(0xFFFFEB3B.toInt(), white))          // amarelo no branco
-        assertTrue(Contrast.legible(0xFFFFC107.toInt(), black))           // acorde âmbar no preto (padrão)
-        assertTrue(Contrast.legible(0xFF4AF6CD.toInt(), black))           // seção verde no preto (padrão)
-        assertTrue(Contrast.legible(black, 0xFFFFF8E1.toInt()))           // letra preta no creme
+        assertFalse(Contrast.legible(0xFF333333.toInt(), black))          // dark gray on black
+        assertFalse(Contrast.legible(0xFFFFEB3B.toInt(), white))          // yellow on white
+        assertTrue(Contrast.legible(0xFFFFC107.toInt(), black))           // amber chord on black (default)
+        assertTrue(Contrast.legible(0xFF4AF6CD.toInt(), black))           // green section on black (default)
+        assertTrue(Contrast.legible(black, 0xFFFFF8E1.toInt()))           // black lyrics on cream
     }
 }

@@ -99,11 +99,11 @@ public class PlayerService extends Service {
         public void run() {
             if (!running) return;
             if (deviceOut && !Engine.isRunning()) {
-                Log.w(TAG, "saída do aparelho caiu (" + Engine.status() + "): abrindo de novo");
+                Log.w(TAG, "device output dropped (" + Engine.status() + "): reopening");
                 releaseUsb();
                 connectUsb();
             } else if (link != null && !Engine.isRunning()) {
-                Log.w(TAG, "fluxo USB caiu (" + Engine.status() + "): reconectando");
+                Log.w(TAG, "USB stream dropped (" + Engine.status() + "): reconnecting");
                 releaseUsb();
                 connectUsb();
             } else if (link != null && Engine.feedback() == 1) {
@@ -132,7 +132,7 @@ public class PlayerService extends Service {
 
     void fbRetry() {
         fbRetries++;
-        Log.w(TAG, "relógio da interface não chegou: reconectando (" + fbRetries + "/" + FB_RETRIES + ")");
+        Log.w(TAG, "interface clock didn't arrive: reconnecting (" + fbRetries + "/" + FB_RETRIES + ")");
         releaseUsb();
         connectUsb();
     }

@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-/** Backup (T25): o que sai volta igual; cada parte só mexe no que é dela. */
+/** Backup (T25): what goes out comes back the same; each part only touches its own data. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class BackupTest {
@@ -45,7 +45,7 @@ class BackupTest {
         val bytes = out.toByteArray()
 
         assertEquals(Part.entries.toSet(), backup.inspect(ByteArrayInputStream(bytes))!!.parts)
-        // muda tudo e restaura
+        // changes everything and restores
         repo.restore(emptyList(), emptyList())
         repo.updateLook { it.copy(fontSp = 20f) }
         tracks.file("faixa.ogg").delete()
@@ -73,7 +73,7 @@ class BackupTest {
         val before = repo.library.value.songs
         repo.updateLook { it.copy(fontSp = 50f) }
         backup.restore(ByteArrayInputStream(bytes), setOf(Part.SETTINGS))
-        assertEquals(before, repo.library.value.songs)   // só ajustes: as músicas não mudam
+        assertEquals(before, repo.library.value.songs)   // settings only: the songs don't change
         backup.restore(ByteArrayInputStream(bytes), setOf(Part.LIBRARY))
         assertEquals("", repo.library.value.songs.single { it.title == "Com faixa" }.track)
     }
@@ -91,12 +91,12 @@ class BackupTest {
         repo.createSetlist("Show").let { id -> repo.addToSetlist(id, listOf(a, b)) }
         val out = ByteArrayOutputStream()
         backup.write(out, setOf(Part.LIBRARY))
-        // aqui: a Asa Branca foi editada e a Garota não existe mais
+        // here: Asa Branca was edited and Garota no longer exists
         repo.restore(listOf(Song(id = a, title = "Asa Branca", text = "editada aqui")), emptyList())
         backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY), replace = false)
         val songs = repo.library.value.songs
-        assertEquals("editada aqui", songs.single { it.title == "Asa Branca" }.text)   // a daqui fica
-        assertTrue(songs.any { it.title == "Garota de Ipanema" })                    // a que faltava entra
+        assertEquals("editada aqui", songs.single { it.title == "Asa Branca" }.text)   // the one here stays
+        assertTrue(songs.any { it.title == "Garota de Ipanema" })                    // the missing one comes in
         val show = repo.library.value.sets.single { it.name == "Show" }
         assertEquals(listOf("Asa Branca", "Garota de Ipanema"), show.items.map { id -> repo.song(id)!!.title })
     }

@@ -191,7 +191,7 @@ class MidiPedal @Inject constructor(
         try {
             m.openBluetoothDevice(device, { if (it == null) lastTry = 0 else attach(it) }, null)
         } catch (e: SecurityException) {
-            Log.w("stagebook", "pedal MIDI: sem permissão de Bluetooth", e)
+            Log.w("stagebook", "MIDI pedal: no Bluetooth permission", e)
         }
     }
 
@@ -218,7 +218,7 @@ class MidiPedal @Inject constructor(
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.w("stagebook", "pedal MIDI: procura falhou ($errorCode)")
+            Log.w("stagebook", "MIDI pedal: scan failed ($errorCode)")
             _state.value = _state.value.copy(scanning = false)
         }
     }
@@ -238,7 +238,7 @@ class MidiPedal @Inject constructor(
                 scanCallback,
             )
         } catch (e: SecurityException) {
-            Log.w("stagebook", "pedal MIDI: sem permissão para procurar", e)
+            Log.w("stagebook", "MIDI pedal: no permission to scan", e)
             _state.value = _state.value.copy(scanning = false)
             return
         }

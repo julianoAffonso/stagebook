@@ -21,7 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Ler o QR de um setlist: confere com a biblioteca, avisa o que falta e cria (ou substitui) o setlist. */
+/** Scanning a setlist QR: checks against the library, flags what's missing and creates (or replaces) the setlist. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class ScanSetlistTest {
@@ -96,7 +96,7 @@ class ScanSetlistTest {
         val items = repo.library.value.setlist(id)!!.items
         assertEquals(2, items.size)
         assertEquals(ids[1], items[0])
-        // sem tom na música recebida: o app grava o tom calculado pelos acordes (T17)
+        // no key in the received song: the app saves the key computed from the chords (T17)
         assertEquals("{key: C}\n[C]linha nova", repo.song(items[1])!!.text)
         assertEquals(before, repo.song(ids[1])!!.text)
     }
@@ -128,7 +128,7 @@ class ScanSetlistTest {
         assertTrue((vm.ui.value as ScanUi.Review).rows[0].differs)
         assertEquals(2, vm.changes(0).size)
         vm.addSongs()
-        assertEquals("[G]Primeira linha\n[C]Segunda linha", repo.song(ids[0])!!.text)   // não escolheu: a minha fica
+        assertEquals("[G]Primeira linha\n[C]Segunda linha", repo.song(ids[0])!!.text)   // didn't choose: mine stays
 
         vm.review(qr("", "Canção do Mar"), listOf(incoming))
         vm.useIncoming(0, true)
@@ -170,9 +170,9 @@ class ScanSetlistTest {
         val ab = br.app.stagebook.domain.BandCrypto.pairKey(a.private, ida, b.public, idb)
         val ba = br.app.stagebook.domain.BandCrypto.pairKey(b.private, idb, a.public, ida)
         val cb = br.app.stagebook.domain.BandCrypto.pairKey(c.private, idc, b.public, idb)
-        assertEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ba, idb))   // a manda para b; b procura na caixa dele
+        assertEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ba, idb))   // a sends to b; b looks in their inbox
         assertNotEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(cb, idb))
-        assertNotEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ab, ida))  // a caixa de cada um é separada
+        assertNotEquals(cloud.pairTopic(ab, idb), cloud.pairTopic(ab, ida))  // each one's inbox is separate
         val lines = listOf("""{"id":"x1","event":"message","message":"m"}""", """{"id":"x2","event":"keepalive"}""")
         assertEquals(listOf("x1" to "m"), br.app.stagebook.data.SetlistCloud.messagesWithIds(lines))
     }
@@ -182,11 +182,11 @@ class ScanSetlistTest {
         box.items.value.forEach { box.remove(it.id) }
         val v1 = qr("Show", "A")
         box.add("ana", "Ana", v1, emptyList())
-        box.add("ana", "Ana", v1, emptyList())          // chegou pelo Wi-Fi e pela internet
+        box.add("ana", "Ana", v1, emptyList())          // arrived over Wi-Fi and over the internet
         assertEquals(1, box.items.value.size)
-        box.add("ana", "Ana", qr("Show", "A", "B"), emptyList())   // corrigiu e mandou de novo
+        box.add("ana", "Ana", qr("Show", "A", "B"), emptyList())   // fixed it and sent again
         assertEquals(listOf("2"), box.items.value.map { it.text.split('\n')[1] })
-        box.add("beto", "Beto", qr("Show", "C"), emptyList())     // outra pessoa, mesmo nome: os dois ficam
+        box.add("beto", "Beto", qr("Show", "C"), emptyList())     // another person, same name: both stay
         assertEquals(2, box.items.value.size)
     }
 
@@ -201,7 +201,7 @@ class ScanSetlistTest {
     @Test fun `ask online only shows when the sender is in the band`() {
         val (_, vm, _) = setup()
         vm.review(qr("Show", "Noite Clara", "Não Tenho"), emptyList())
-        // veio pelo QR (ninguém da banda): não há a quem pedir pela internet
+        // came by QR (nobody from the band): no one to ask online
         assertEquals(null, vm.internetFrom.value)
     }
 

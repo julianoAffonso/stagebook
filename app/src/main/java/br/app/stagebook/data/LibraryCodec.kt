@@ -48,7 +48,7 @@ object LibraryCodec {
     /** Songs file version this app understands; a newer file is refused with a notice (no guessing). */
     const val SONGS_FILE_VERSION = 1
 
-    class NewerFileException : IllegalStateException("arquivo de uma versão mais nova do Stagebook")
+    class NewerFileException : IllegalStateException("file from a newer Stagebook version")
 
     fun decodeSongs(text: String): List<Song> = json.decodeFromString<SongsFile>(text).also {
         if (it.version > SONGS_FILE_VERSION) throw NewerFileException()

@@ -28,7 +28,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
         val tmp = File(dir, "$name.part")
         try {
             context.contentResolver.openInputStream(uri)?.use { input -> tmp.outputStream().use { input.copyTo(it) } } ?: return@withContext null
-            if (!tmp.renameTo(File(dir, name))) throw IOException("não renomeou")
+            if (!tmp.renameTo(File(dir, name))) throw IOException("rename failed")
             name
         } catch (e: IOException) {
             tmp.delete()
