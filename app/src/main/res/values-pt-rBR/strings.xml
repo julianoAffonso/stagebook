@@ -774,7 +774,7 @@
     </plurals>
     <string name="scan_from">Enviado por %1$s</string>
     <!-- editor on the computer (T37); the web_ texts are the page's -->
-    <string name="settings_web_editor">Editor no computador</string>
+    <string name="settings_web_editor">Editar no computador</string>
     <string name="settings_web_editor_card">No navegador</string>
     <string name="settings_web_editor_switch">Ligar o editor</string>
     <string name="settings_web_editor_help">Edite músicas e setlists no navegador do computador, no mesmo Wi-Fi. Só fica ligado com o Stagebook aberto. Fechar o app desliga.</string>
