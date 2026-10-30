@@ -1335,7 +1335,7 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
         Text(stringResource(R.string.about_support_text), style = MaterialTheme.typography.bodyMedium)
         // the button only shows when the donation link is filled in (AppLinks.DONATE)
         if (AppLinks.DONATE.startsWith("https://")) {
-            ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Favorite, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Coffee, tone = ButtonTone.Tonal)
         }
     }
 }
