@@ -543,12 +543,12 @@ fun StageScreen(
                     Icon(AppIcons.Back, stringResource(R.string.action_back), tint = fg.copy(alpha = 0.6f))
                 }
             }
-            // position in the setlist, with the setlist icon so it isn't read as a page number (the dots are pages)
+            // position in the setlist as "1 of 2" (user's choice, 30/10): "1/2" next to the page dots read as a page number
             if (uiState.songs.size > 1) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Icon(AppIcons.QueueMusic, null, Modifier.size(18.dp), tint = fg.copy(alpha = 0.6f))
-                    Text("${index + 1}/${uiState.songs.size}", style = MaterialTheme.typography.titleMedium, color = fg.copy(alpha = 0.6f))
-                }
+                Text(
+                    stringResource(R.string.stage_position, index + 1, uiState.songs.size),
+                    style = MaterialTheme.typography.titleMedium, color = fg.copy(alpha = 0.6f),
+                )
             }
             Text(
                 if (song.missing) stringResource(R.string.set_item_missing) else song.title,

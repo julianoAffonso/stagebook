@@ -107,6 +107,7 @@
     <!-- stage -->
     <string name="stage_exit_confirm">Leave the stage?</string>
     <string name="stage_exit">Leave</string>
+    <string name="stage_position">%1$d of %2$d</string>
     <string name="stage_next">Next: %1$s</string>
     <string name="stage_end">End of setlist</string>
     <string name="stage_edit">Edit the lyrics on this page</string>
