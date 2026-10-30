@@ -551,12 +551,15 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             valueRange = Look.MIN_FONT..Look.MAX_FONT,
             steps = (Look.MAX_FONT - Look.MIN_FONT).toInt() - 1,
         )
-        Surface(
-            color = Color(look.bg),
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview),
-        ) {
-            StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(font), R.string.settings_preview_size_text)
+        // on a wide screen the box is taller: the miniature (sized so 72 fits) stays close to the real size (30/10)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            Surface(
+                color = Color(look.bg),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview),
+            ) {
+                StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(font), R.string.settings_preview_size_text)
+            }
         }
     }
     // turn pages (default) or scroll the lyrics; in both the pedal and a tap move one step
