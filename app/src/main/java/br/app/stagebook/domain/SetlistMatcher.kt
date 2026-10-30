@@ -22,14 +22,15 @@ object SetlistMatcher {
 
     fun match(entry: QrPayload.Entry, library: List<Song>): QrMatch {
         val kt = TextKey.of(entry.title)
-        val sameTitle = library.filter { TextKey.of(it.title) == kt }
+        val keys = TitleKeys.of(library)   // the library's keys once, not again for every entry
+        val sameTitle = keys.byKey[kt].orEmpty()
         if (sameTitle.size == 1) return QrMatch.Found(sameTitle[0])
         if (sameTitle.size > 1) {
             val byArtist = sameTitle.filter { sameArtist(it.author, entry.artist) }
             return if (byArtist.size == 1) QrMatch.Found(byArtist[0]) else QrMatch.Similar(sameTitle.take(MAX_CANDIDATES))
         }
-        val similar = library
-            .map { it to similarity(TextKey.of(it.title), kt) }
+        val similar = keys.keyed
+            .map { (song, key) -> song to similarity(key, kt) }
             .filter { it.second >= SIMILAR_MIN }
             .sortedByDescending { it.second }
             .take(MAX_CANDIDATES)
