@@ -1,10 +1,8 @@
 package br.app.stagebook.data
 
 import br.app.stagebook.domain.StageAnnouncement
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -21,7 +19,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class StageAnnouncer @Inject constructor(private val link: BandLink) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
     private var job: Job? = null
 
     fun announce(a: StageAnnouncement) {

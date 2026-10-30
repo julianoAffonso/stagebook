@@ -23,10 +23,8 @@ import br.app.stagebook.domain.MixerLevels
 import br.app.stagebook.domain.Spectrum
 import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,7 +54,7 @@ class StagePlayer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: LibraryRepository,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = br.app.stagebook.data.backgroundScope(Dispatchers.Default)   // errors logged, never a crash on stage
     private val engine = Mutex()   // load and seek read the disk: off the UI thread and one at a time
     private val _ui = MutableStateFlow(PlayerUi())
     val ui: StateFlow<PlayerUi> = _ui
@@ -168,7 +166,12 @@ class StagePlayer @Inject constructor(
         prefs.getString(key, null)?.split(';')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 }
             ?.let { return Measure(it[0], it[1]) }
         val m = Engine.analyzeMask(f.absolutePath, mask) ?: return null
-        prefs.edit { putString(key, "${m[0]};${m[1]}") }
+        // measures of tracks no longer in the folder go away (the list only grew and went into every backup; audit 30/10)
+        val present = f.parentFile?.list()?.toSet().orEmpty()
+        prefs.edit {
+            prefs.all.keys.filter { it.substringBefore('|') !in present }.forEach { remove(it) }
+            putString(key, "${m[0]};${m[1]}")
+        }
         return Measure(m[0], m[1])
     }
 

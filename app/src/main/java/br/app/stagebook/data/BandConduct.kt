@@ -5,9 +5,7 @@ import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.Immutable
 import br.app.stagebook.domain.BandProtocol
 import br.app.stagebook.domain.Conduct
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -53,7 +51,7 @@ class BandConduct @Inject constructor(
     val openSong: SharedFlow<String> = _openSong
 
     @Volatile private var leftFrom: String? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
     private var searchedAt = -1   // the song for which a delivery failure already started the search (once per song)
 
     init {
