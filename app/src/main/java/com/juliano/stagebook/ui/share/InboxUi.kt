@@ -102,7 +102,7 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
                             Column(Modifier.weight(1f)) {
                                 Text(if (group.size > 1) item.fromName else itemText(item), style = MaterialTheme.typography.bodyLarge)
                                 Text(
-                                    (if (item.updated) stringResource(R.string.inbox_updated_at, timeOf(item.at)) else timeOf(item.at)) +
+                                    (if (item.updated) updatedOf(item.at) else timeOf(item.at)) +
                                         if (group.size > 1 && i == 0) " · " + stringResource(R.string.inbox_latest) else "",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -130,6 +130,15 @@ private fun timeOf(at: Long): String {
     val pattern = if (today) "HH:mm" else "dd/MM HH:mm"
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(at))
+}
+
+/** "atualizado às 21:18" (hoje) ou "atualizado em 29/10, 21:18" (outro dia). */
+@Composable
+private fun updatedOf(at: Long): String {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val time = java.text.SimpleDateFormat("HH:mm", locale).format(java.util.Date(at))
+    return if (android.text.format.DateUtils.isToday(at)) stringResource(R.string.inbox_updated_today, time)
+    else stringResource(R.string.inbox_updated_day, java.text.SimpleDateFormat("dd/MM", locale).format(java.util.Date(at)), time)
 }
 
 private val sample = BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado")
