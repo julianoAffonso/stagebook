@@ -1,5 +1,7 @@
 package br.app.stagebook.ui.stage
 
+import androidx.compose.foundation.clickable
+import br.app.stagebook.ui.components.KeyCapoControls
 import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
@@ -231,6 +233,8 @@ fun StageRoute(
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
             onRemoveTrack = viewModel::removeTrack,
             onHiddenChords = viewModel::setHiddenChords,
+            onTranspose = viewModel::transpose,
+            onCapo = viewModel::setCapo,
             onAutoScroll = viewModel::setAutoScroll,
             onMetronomeSound = viewModel::metronomeSound,
             onPlayChord = viewModel::playChord,
@@ -264,6 +268,8 @@ fun StageScreen(
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
+    onTranspose: (songId: String, semitones: Int) -> Unit = { _, _ -> },
+    onCapo: (songId: String, capo: Int) -> Unit = { _, _ -> },
     playing: Boolean = false,
     onTogglePlay: () -> Unit = {},
     onPickTrack: (songId: String) -> Unit = {},
@@ -573,7 +579,7 @@ fun StageScreen(
             // after the artist (user's request, 29/10): capo lit in the accent color, then the key; on phones they go
             // to the artist line, otherwise the title gets shorter. No backing track badge: the play only shows when
             // there is one (T29)
-            if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
+            if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo, onTranspose = { onTranspose(song.id, it) }, onCapo = { onCapo(song.id, it) })
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -592,7 +598,7 @@ fun StageScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (!song.missing && hasKey) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo)
+                if (!song.missing && hasKey) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo, onTranspose = { onTranspose(song.id, it) }, onCapo = { onCapo(song.id, it) })
             }
         }
 
@@ -1352,7 +1358,14 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
 }
 
 @Composable
-private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, keyboardCapo: Int = 0) {
+private fun SongKeyBadges(
+    text: String,
+    fg: Color,
+    showCapo: Boolean = true,
+    keyboardCapo: Int = 0,
+    onTranspose: (Int) -> Unit = {},
+    onCapo: (Int) -> Unit = {},
+) {
     val key = remember(text) { Chords.key(text) }
     // keyboard doesn't use a capo (user's request, 29/10): on its stage the capo doesn't show
     val capo = remember(text, showCapo) { if (showCapo) Chords.capo(text) else 0 }
@@ -1360,26 +1373,37 @@ private fun SongKeyBadges(text: String, fg: Color, showCapo: Boolean = true, key
     val sounds = Chords.soundingKey(key, capo)
     val keyDesc = stringResource(R.string.stage_key_desc, key)
     val capoDesc = if (key.isNotEmpty()) stringResource(R.string.stage_capo_sounds_desc, capo, sounds) else stringResource(R.string.stage_capo_desc, capo)
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
-        // the capo comes before the key and lit: it changes what you play, it can't go unnoticed (user's request,
-        // 29/10)
-        if (capo > 0) {
-            val accent = MaterialTheme.colorScheme.primary
-            Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
-                // written out ("Capo 2"): a fretboard icon with a bare number didn't say what it was
-                Text(stringResource(R.string.stage_capo_short, capo), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
-                // the key that sounds with the capo, in view (the diagrams stay the chart's)
-                if (key.isNotEmpty()) Text(" " + stringResource(R.string.stage_capo_sounds_short, sounds), style = MaterialTheme.typography.titleSmall, color = accent)
+    // a tap on the capo or the key opens − and + for both, without leaving the stage; each change is saved right away
+    var adjusting by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier.clip(MaterialTheme.shapes.small).clickable(onClickLabel = stringResource(R.string.stage_key_adjust)) { adjusting = true },
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // the capo comes before the key and lit: it changes what you play, it can't go unnoticed (user's request,
+            // 29/10)
+            if (capo > 0) {
+                val accent = MaterialTheme.colorScheme.primary
+                Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
+                    // written out ("Capo 2"): a fretboard icon with a bare number didn't say what it was
+                    Text(stringResource(R.string.stage_capo_short, capo), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
+                    // the key that sounds with the capo, in view (the diagrams stay the chart's)
+                    if (key.isNotEmpty()) Text(" " + stringResource(R.string.stage_capo_sounds_short, sounds), style = MaterialTheme.typography.titleSmall, color = accent)
+                }
+            }
+            if (key.isNotEmpty()) {
+                Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.stage_key_short, key), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+                }
+            }
+            // keyboard with the chart transposed by the capo: says why the key is different
+            if (keyboardCapo > 0) {
+                Text(stringResource(R.string.stage_keyboard_capo, keyboardCapo), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
         }
-        if (key.isNotEmpty()) {
-            Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.stage_key_short, key), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
-            }
-        }
-        // keyboard with the chart transposed by the capo: says why the key is different
-        if (keyboardCapo > 0) {
-            Text(stringResource(R.string.stage_keyboard_capo, keyboardCapo), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        DropdownMenu(expanded = adjusting, onDismissRequest = { adjusting = false }) {
+            KeyCapoControls(text, onTranspose, onCapo, Modifier.padding(horizontal = Spacing.m), showCapo = showCapo, stacked = true)
         }
     }
 }

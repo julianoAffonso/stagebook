@@ -146,6 +146,16 @@ class StageViewModel @Inject constructor(
 
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }
 
+    /** Key changed on stage ("Key G" menu): saved in the song right away, as in the editor. */
+    fun transpose(songId: String, semitones: Int) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.transposeSong(it.text, semitones)) }
+    }
+
+    /** Capo changed on stage: saved in the song right away. */
+    fun setCapo(songId: String, capo: Int) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.withCapo(it.text, capo)) }
+    }
+
     fun setZoom(songId: String, zoom: Float) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(zoom = zoom) }
     }

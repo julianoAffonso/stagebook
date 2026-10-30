@@ -77,6 +77,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import br.app.stagebook.R
 import br.app.stagebook.domain.Sections
 import br.app.stagebook.ui.components.AppIcons
+import br.app.stagebook.ui.components.KeyCapoControls
 import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.CenteredContent
@@ -235,7 +236,7 @@ fun SongEditorScreen(
                     ) {
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
                         if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
-                        if (look.chords) KeyCapoRow(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
+                        if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
                     }
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -460,60 +461,6 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
         Icon(AppIcons.MusicNote, stringResource(R.string.editor_chords), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         chords.forEach { c -> SuggestionChip(onClick = { onPick(c) }, label = { Text(c, style = MaterialTheme.typography.titleSmall) }) }
         SuggestionChip(onClick = onNew, icon = { Icon(AppIcons.Add, null) }, label = { Text(stringResource(R.string.editor_chord_new), style = MaterialTheme.typography.titleSmall) })
-    }
-}
-
-/**
- * The song's key and capo, both the same way (user's request, 29/10): − and + on the key transpose a half step
- * (rewriting the chords and the saved key); − and + on the capo change the fret (the chord diagrams stay the same).
- * With no saved key, shows the one computed from the chords, dimmed.
- */
-@Composable
-private fun KeyCapoRow(text: String, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, showCapo: Boolean = true) {
-    val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
-    val saved = remember(text) { Chords.key(text) }
-    val key = saved.ifEmpty { remember(text) { Chords.detectKey(text) } }
-    val capo = remember(text) { Chords.capo(text) }
-    Column {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // icon and name in view (user's request, 29/10)
-        Icon(AppIcons.MusicNote, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
-        IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
-        Text(
-            key.ifEmpty { "–" },
-            style = MaterialTheme.typography.titleMedium,
-            color = if (saved.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.widthIn(min = 32.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-        IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
-        Spacer(Modifier.weight(1f))
-        // keyboard doesn't use a capo (user's request, 29/10): no controls (the song's capo stays saved)
-        if (showCapo) {
-        Icon(AppIcons.Capo, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
-        IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
-        // no capo: a dimmed 0 (a "–" looked like a third minus button). "Fret 2" (user's request, 29/10); without a
-        // capo, just the dimmed 0
-        Text(
-            if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo),
-            style = MaterialTheme.typography.titleMedium,
-            color = if (capo == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-        )
-        IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
-        }
-    }
-    // with a capo: the diagrams stay the chart's, but the sound goes up (user's request, 29/10)
-    if (showCapo && capo > 0) {
-        val validKey = key.isNotEmpty() && Chords.isChord(key)
-        Text(
-            if (validKey) stringResource(R.string.editor_capo_sounds, key, capo, Chords.soundingKey(key, capo))
-            else stringResource(R.string.editor_capo_sounds_nokey, capo),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
     }
 }
 
