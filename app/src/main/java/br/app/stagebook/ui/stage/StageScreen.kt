@@ -380,7 +380,10 @@ fun StageScreen(
     var fitZoom by remember(index) { mutableFloatStateOf(Float.MAX_VALUE) }
     val sectionNames = rememberSectionNames(look.translateSections)
     val chordLook = remember(look.chords, look.chordScale, look.chordColor) { ChordLook(look.chords, look.chordScale, Color(look.chordColor)) }
-    val sourced = remember(shownText, look, sectionNames) { stageLines(shownText, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale) }
+    // keyed on what it uses, not the whole look (auto-scroll speed or a hint flag would redo the lyrics)
+    val sourced = remember(shownText, sectionNames, look.sectionColor, look.showSections, chordLook, look.sectionScale) {
+        stageLines(shownText, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale)
+    }
     val lines = remember(sourced) { sourced.map { it.text } }
     // holding a line shows a button to edit it (it doesn't open right away: during a show a resting thumb on the screen
     // can't take the lyrics away); it goes away by itself and on page turn
@@ -455,14 +458,17 @@ fun StageScreen(
     DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
     // the beat blink: on the icon and on the screen edge (user's request, 29/10), stronger on beat 1 of the bar
     val metroPulse = remember { androidx.compose.animation.core.Animatable(0f) }
-    LaunchedEffect(metroBeat) {
-        if (metroBeat < 0) { metroPulse.snapTo(0f); return@LaunchedEffect }
-        metroPulse.snapTo(if (metroBeat % 4 == 0) 1f else 0.6f)
-        metroPulse.animateTo(0f, tween(METRO_FLASH_MS))
+    // the beat is read here and in the draw phase only: reading it in composition recomposed the whole stage on every
+    // beat, for the whole show (audit 30/10)
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { metroBeat }.collectLatest { beat ->
+            if (beat < 0) { metroPulse.snapTo(0f); return@collectLatest }
+            metroPulse.snapTo(if (beat % 4 == 0) 1f else 0.6f)
+            metroPulse.animateTo(0f, tween(METRO_FLASH_MS))
+        }
     }
-    val metroAccent = metroBeat >= 0 && metroBeat % 4 == 0
+    val countIn by remember { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
     val metroColor = Color(look.metroGlowColor)
-    val glowPx = with(LocalDensity.current) { (if (metroAccent) METRO_GLOW_ACCENT else METRO_GLOW).toPx() }
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -876,9 +882,9 @@ fun StageScreen(
                 }
             }
             // metronome count-in (1 2 3 4) very big in the middle, before starting
-            if (metroOn && look.metroCount && metroBeat in 0 until METRO_COUNT) {
+            if (metroOn && look.metroCount && countIn > 0) {
                 Text(
-                    (metroBeat + 1).toString(),
+                    countIn.toString(),
                     // big enough for the band to see from across the stage
                     style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 200.sp, lineHeight = 200.sp),
                     color = MaterialTheme.colorScheme.primary,
@@ -956,7 +962,12 @@ fun StageScreen(
                 var metroDialog by remember { mutableStateOf(false) }
                 Box {
                     IconButton(onClick = { if (metroOn) metroOn = false else metroDialog = true }) {
-                        if (metroOn) Icon(AppIcons.Stop, stringResource(R.string.metro_stop), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f + 0.65f * metroPulse.value))
+                        // the blink in the layer (draw phase): the icon doesn't recompose on every frame of the flash
+                        if (metroOn) Icon(
+                            AppIcons.Stop, stringResource(R.string.metro_stop),
+                            Modifier.graphicsLayer { alpha = 0.35f + 0.65f * metroPulse.value },
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                         else Icon(AppIcons.Metronome, stringResource(R.string.metro_title), tint = fg.copy(alpha = 0.7f))
                     }
                     if (metroDialog) MetronomeDialog(
@@ -1020,7 +1031,8 @@ fun StageScreen(
                 if (a <= 0f || !look.metroGlow) return@drawBehind
                 val c = metroColor.copy(alpha = a * METRO_GLOW_ALPHA)
                 val clear = metroColor.copy(alpha = 0f)
-                val g = glowPx.coerceAtMost(size.minDimension / 2)
+                val accent = metroBeat >= 0 && metroBeat % 4 == 0   // beat 1 of the bar: wider glow
+                val g = (if (accent) METRO_GLOW_ACCENT else METRO_GLOW).toPx().coerceAtMost(size.minDimension / 2)
                 drawRect(Brush.verticalGradient(listOf(c, clear), 0f, g), size = androidx.compose.ui.geometry.Size(size.width, g))
                 drawRect(Brush.verticalGradient(listOf(clear, c), size.height - g, size.height), topLeft = Offset(0f, size.height - g), size = androidx.compose.ui.geometry.Size(size.width, g))
                 drawRect(Brush.horizontalGradient(listOf(c, clear), 0f, g), size = androidx.compose.ui.geometry.Size(g, size.height))

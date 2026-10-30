@@ -46,7 +46,8 @@ class ChordLook(val show: Boolean, val scale: Float, val color: Color)
  * Names of recognized sections in the app's language ([translate]), or as written in the song. The saved lyrics never
  * change: only what shows (user's decision, 24/10).
  */
-class SectionNames(private val names: Map<Sections.Kind, String>?) {
+// a data class: equal names are the same key, so the stage doesn't redo the lyrics on every recomposition (audit 30/10)
+data class SectionNames(private val names: Map<Sections.Kind, String>?) {
     fun label(h: Sections.Header): String = names?.get(h.kind)?.let { Sections.label(h, it) } ?: h.original
 }
 
