@@ -52,7 +52,7 @@ class ImportChordsTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(chords = chords) }
         val draft = ImportDraft()
-        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), com.juliano.stagebook.data.ImportQueue(repo))
+        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.DeezerBpm())
         vm.onExtracted(raw())
         withTimeout(5_000) { vm.openEditor.first() }
         draft.take()!!.text
@@ -91,7 +91,7 @@ class ImportChordsTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(chords = true) }
         val draft = ImportDraft()
-        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), com.juliano.stagebook.data.ImportQueue(repo))
+        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), com.juliano.stagebook.data.ImportQueue(repo), com.juliano.stagebook.data.DeezerBpm())
         vm.onExtracted(rawWithTab())
         withTimeout(5_000) { vm.uiState.first { it.askTab } }
         vm.answerTab(include)
