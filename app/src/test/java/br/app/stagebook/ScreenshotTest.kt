@@ -252,7 +252,9 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("$SHOTS_DIR/tablet_6_palco_metronomo_contagem.png")
     }
 
-    @Test fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
+    // the metronome is at the end of Stage look: a tall capture so it shows (it used to be its own section)
+    @Test @Config(qualifiers = TABLET_TALL)
+    fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 30f)), SettingsActions(), it, section = SettingsSection.LYRICS) }
     }
 
