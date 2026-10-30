@@ -70,15 +70,17 @@ fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library,
     var added = 0
     var replaced = 0
     var lyricsChanged = 0
+    val index = SongMatch.Index(songs.indices, { songs[it].title }, { songs[it].author })
     for (song in incoming) {
         if (song.title.isBlank()) continue
-        val i = songs.indexOfFirst { SongMatch.same(it.title, it.author, song.title, song.author) }
+        val i = index.find(song.title, song.author) ?: -1
         if (i >= 0) {
             if (songs[i].text != song.text) lyricsChanged++
             songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year })
             replaced++
         } else {
             songs += song.copy(id = newId())
+            index.add(songs.lastIndex)
             added++
         }
     }
