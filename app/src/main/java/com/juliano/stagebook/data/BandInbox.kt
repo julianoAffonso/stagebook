@@ -31,6 +31,7 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         val songs: List<SetlistCloud.SharedSong> = emptyList(),
         val at: Long = System.currentTimeMillis(),
         val seen: Boolean = false,
+        val updated: Boolean = false,   // a mesma pessoa mandou de novo com mudanças: "atualizado às 21:04"
     ) {
         /** Nome do setlist; vazio = músicas avulsas. */
         val setName: String get() = text.split('\n').getOrNull(2).orEmpty()
@@ -55,8 +56,9 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         val item = Item(UUID.randomUUID().toString(), fromId, fromName, text, songs.filter { it.allowed() }.take(com.juliano.stagebook.domain.BandContent.MAX_SONGS))
         _items.update { list ->
             if (list.any { it.fromId == fromId && it.text == text && it.songs == item.songs }) return@update list
-            val kept = if (item.setName.isEmpty()) list else list.filterNot { it.fromId == fromId && it.setName == item.setName }
-            (kept + item).takeLast(MAX)
+            val old = if (item.setName.isEmpty()) emptyList() else list.filter { it.fromId == fromId && it.setName == item.setName }
+            // a versão nova da mesma pessoa substitui a antiga e fica marcada como atualizada (e de novo não vista)
+            ((list - old.toSet()) + item.copy(updated = old.isNotEmpty())).takeLast(MAX)
         }
         save()
     }
