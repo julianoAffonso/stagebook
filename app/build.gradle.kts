@@ -22,11 +22,11 @@ val releaseKeyFile = file(System.getProperty("user.home") + "/.android/stagebook
 if (releaseKeyFile.exists()) releaseKeyFile.inputStream().use { releaseKey.load(it) }
 
 android {
-    namespace = "com.juliano.stagebook"
+    namespace = "br.app.stagebook"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.juliano.stagebook"
+        applicationId = "br.app.stagebook"
         minSdk = 28          // Android 9: Fire HD 10 (2019) e tablets mais simples
         targetSdk = 37
         versionCode = commits
