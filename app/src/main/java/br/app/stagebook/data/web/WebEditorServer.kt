@@ -129,9 +129,15 @@ class WebEditorServer @Inject constructor(
         }
     }
 
+    // open connections, closed when the editor turns off: an upload in progress stops instead of restoring a backup or
+    // replacing a track while the editor is "off" (audit 30/10)
+    private val clients = java.util.Collections.synchronizedSet(mutableSetOf<Socket>())
+
     private fun stop() {
         runCatching { server?.close() }
         server = null
+        synchronized(clients) { clients.toList() }.forEach { runCatching { it.close() } }
+        api.clear()
         serverJob?.cancel()
         idleJob?.cancel()
         _address.value = ""
@@ -143,16 +149,18 @@ class WebEditorServer @Inject constructor(
     }
 
     private fun serve(client: Socket) = client.use { s ->
+        clients += s
         s.soTimeout = TIMEOUT_MS
         val response = runCatching {
             val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, { routes.gate(it, isBig(it.path)) }, ::maxBody)
             try {
-                routes.handle(req)
+                if (server == null) HttpResponse.status(503) else routes.handle(req)   // turned off while it was arriving
             } finally {
                 req.file?.delete()   // whoever keeps it (a backup waiting for its parts) moved it away first
             }
         }.getOrElse { e -> HttpResponse.status((e as? HttpError)?.status ?: 400) }
         runCatching { WebHttp.write(s.getOutputStream(), response) }
+        clients -= s
     }
 
     // backups and backing tracks are big: they go to a file; everything else is a small text

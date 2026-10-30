@@ -52,7 +52,11 @@ class WebEditorRoutes(
         onAccess()
         if (req.path == "/api/ping") return HttpResponse.status(204)
         if (req.path == "/api/session" && req.method == "GET") {
-            return HttpResponse.json(200, buildJsonObject { put("name", device.name); put("app", deviceName()) }.toString())
+            // each visit renews the cookie: a computer in use keeps its key, a forgotten one loses it in 90 days
+            return HttpResponse.json(
+                200, buildJsonObject { put("name", device.name); put("app", deviceName()) }.toString(),
+                mapOf("Set-Cookie" to cookie(req.cookie(COOKIE).orEmpty())),
+            )
         }
         return api(req, device) ?: HttpResponse.status(404)
     }
@@ -70,7 +74,7 @@ class WebEditorRoutes(
             WebEditorAuth.Poll.Unknown -> HttpResponse.status(404)
             is WebEditorAuth.Poll.Approved -> HttpResponse.json(
                 200, "{}",
-                mapOf("Set-Cookie" to "$COOKIE=${p.key}; Path=/; Max-Age=$TEN_YEARS; HttpOnly; SameSite=Strict"),
+                mapOf("Set-Cookie" to cookie(p.key)),
             )
         }
         else -> HttpResponse.status(405)
@@ -78,7 +82,10 @@ class WebEditorRoutes(
 
     companion object {
         const val COOKIE = "stagebook_key"
-        private const val TEN_YEARS = 10L * 365 * 24 * 3600
+        // the key travels over plain HTTP on the local network: 90 days, renewed on each visit, instead of 10 years
+        private const val KEY_DAYS = 90L * 24 * 3600
+
+        private fun cookie(key: String) = "$COOKIE=$key; Path=/; Max-Age=$KEY_DAYS; HttpOnly; SameSite=Strict"
 
         /** "192.168.0.10:8090" yes; "evil.example:8090" no. */
         fun hostIsAddress(host: String): Boolean {

@@ -297,7 +297,16 @@ class WebEditorApi(
         return if (done) ok(json.encodeToString(RestoreDone(b.skipped))) else problem("unreadable")
     }
 
-    // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=
+    /** The editor turned off: a backup waiting for its parts goes away (it could be 1 GB). */
+    @Synchronized
+    fun clear() {
+        waitingBackup?.second?.delete()
+        waitingBackup = null
+    }
+
+    // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=.
+    // One at a time: two sends to the same song both read the old track and the first new file was never removed
+    @Synchronized
     private fun trackPut(id: String, req: HttpRequest): HttpResponse {
         val store = tracks() ?: return HttpResponse.status(404)
         val song = repository.song(id) ?: return HttpResponse.status(404)
