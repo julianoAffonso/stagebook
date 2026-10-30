@@ -119,17 +119,23 @@ class BandConduct @Inject constructor(
         _role.value = Role.None
     }
 
+    // sends overlap (song change, keep-alive, someone back on the Wi-Fi) and one can take 20 s on a weak Wi-Fi: only
+    // the newest writes its answers back and resends
+    private val newest = br.app.stagebook.domain.Newest()
+
     private suspend fun send(setId: String, msg: Conduct.Msg) {
         val members = link.onlineMembers.value.size
         if (_role.value !is Role.Conducting) return   // ended before sending: doesn't turn back on
+        val ticket = newest.ticket()
         _role.value = Role.Conducting(setId, msg)
         val replies = link.conduct(msg)
-        if (_role.value !is Role.Conducting) return   // encerrado enquanto mandava
+        if (_role.value !is Role.Conducting) return   // ended while sending
+        if (!newest.isNewest(ticket)) return   // a newer song went out meanwhile: this late answer would bring back the old one
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
         val noAnswer = (members - replies.size).coerceAtLeast(0)
         _role.value = Role.Conducting(setId, withLacks, noAnswer)
         // the missing songs changed: send again so everyone sees the same alert
-        if (withLacks.missing != msg.missing) link.conduct(withLacks)
+        if (withLacks.missing != msg.missing && newest.isNewest(ticket)) link.conduct(withLacks)
         // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)
         if (noAnswer > 0 && searchedAt != msg.index) { searchedAt = msg.index; link.burst(evenOnStage = true) }
     }
