@@ -46,7 +46,7 @@ fun HelpTip(text: String, modifier: Modifier = Modifier, label: String = stringR
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
-            Icon(AppIcons.Info, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(AppIcons.InfoOutline, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -65,7 +65,7 @@ fun HelpIcon(text: String, modifier: Modifier = Modifier) {
         modifier = modifier,
     ) {
         Icon(
-            AppIcons.Info,
+            AppIcons.InfoOutline,
             stringResource(R.string.help_how),
             Modifier.clip(CircleShape).clickable { scope.launch { state.show() } }.padding(Spacing.xs).size(20.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,

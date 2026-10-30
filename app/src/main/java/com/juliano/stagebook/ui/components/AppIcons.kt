@@ -88,6 +88,8 @@ object AppIcons {
     }
     val DropDown by lazy { icon("dropdown", "M7,10l5,5 5,-5z") }
     val DropUp by lazy { icon("dropup", "M7,14l5,-5 5,5z") }
+    // ⓘ vazado (só o contorno): explicações dos ajustes, discretas (pedido do usuário, 29/10)
+    val InfoOutline by lazy { icon("infooutline", "M11,7h2v2h-2zM11,11h2v6h-2zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z") }
     val ExpandMore by lazy { icon("expandmore", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6z") }
     val ExpandLess by lazy { icon("expandless", "M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z") }
     val ChevronLeft by lazy { icon("chevronleft", "M15.41,7.41L14,6l-6,6 6,6 1.41,-1.41L10.83,12z") }
