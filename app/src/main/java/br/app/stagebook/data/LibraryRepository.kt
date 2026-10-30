@@ -241,13 +241,17 @@ class LibraryRepository @Inject constructor(
         var added = 0
         var addedSets = 0
         mutate { lib ->
+            // the lambda can run again if the library changed meanwhile: the counts start over each time
+            added = 0
+            addedSets = 0
             val all = lib.songs.toMutableList()
+            val index = SongMatch.Index(all, { it.title }, { it.author })
             val idOf = HashMap<String, String>()   // id in the backup → id here
             for (s in songs) {
                 if (s.title.isBlank()) continue
-                val here = all.firstOrNull { SongMatch.same(it.title, it.author, s.title, s.author) }
+                val here = index.find(s.title, s.author)
                 if (here != null) idOf[s.id] = here.id
-                else { val n = s.copy(id = newId()); all += n; idOf[s.id] = n.id; added++ }
+                else { val n = s.copy(id = newId()); all += n; index.add(n); idOf[s.id] = n.id; added++ }
             }
             val names = lib.sets.map { it.name.trim().lowercase() }.toSet()
             val newSets = sets.filter { it.name.trim().lowercase() !in names }
