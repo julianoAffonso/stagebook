@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.components
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
@@ -14,6 +15,16 @@ object AppIcons {
     private fun icon(name: String, vararg paths: String): ImageVector =
         ImageVector.Builder(name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
             .apply { paths.forEach { addPath(pathData = PathParser().parsePathString(it).toNodes(), fill = SolidColor(Color.Black)) } }
+            .build()
+
+    /** Same, with the even-odd rule: an inner shape cuts a hole in the outer one (rings, letters with a hole). */
+    private fun holedIcon(name: String, vararg paths: String): ImageVector =
+        ImageVector.Builder(name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
+            .apply {
+                paths.forEach {
+                    addPath(pathData = PathParser().parsePathString(it).toNodes(), fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd)
+                }
+            }
             .build()
 
     val Edit by lazy {
@@ -113,6 +124,18 @@ object AppIcons {
     // slideshow (a screen with play): the editor's stage preview, Google's "present" symbol (an eye reads as show/hide)
     val Slideshow by lazy {
         icon("slideshow", "M10,8v8l5,-4 -5,-4zM19,3L5,3c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2L21,5c0,-1.1 -0.9,-2 -2,-2zM19,19L5,19L5,5h14v14z")
+    }
+    // stage columns: the lyrics as one block of lines (no split), in two side-by-side blocks, and an "A" in a ring
+    val OneColumn by lazy { icon("onecolumn", "M3,5h18v2H3zM3,9h18v2H3zM3,13h18v2H3zM3,17h12v2H3z") }
+    val TwoColumns by lazy {
+        icon("twocolumns", "M3,5h8v2H3zM3,9h8v2H3zM3,13h8v2H3zM3,17h6v2H3zM13,5h8v2h-8zM13,9h8v2h-8zM13,13h8v2h-8zM13,17h5v2h-5z")
+    }
+    val AutoColumns by lazy {
+        holedIcon(
+            "autocolumns",
+            "M12,2a10,10 0,1 0,0.01 0zM12,4a8,8 0,1 1,-0.01 0z",
+            "M11,7h2l3.5,10h-2l-0.8,-2.3h-3.4L9.5,17h-2zM10.9,13h2.2L12,9.7z",
+        )
     }
     // coffee cup: the support button (a generic icon, no brand)
     val Coffee by lazy {
