@@ -198,9 +198,11 @@
     <string name="essential_off_short">Desligado</string>
     <string name="essential_banner">Modo essencial ligado</string>
     <string name="essential_alert_title">Modo essencial ligado</string>
-    <string name="essential_alert_text">Banda na rede, internet, player de faixas e extras do palco estão desligados e não aparecem. Ficam letra, cifra, desenho dos acordes e pedal. Para religar: Ajustes → Modo essencial.</string>
+    <string name="essential_alert_text">Ficam letra, cifra, desenho dos acordes e pedal. Desligado e fora da tela:</string>
     <string name="essential_alert_some_title">Funções desligadas</string>
-    <string name="essential_alert_some_text">Desligado e fora da tela: %1$s. Para religar: Ajustes → Modo essencial.</string>
+    <string name="essential_alert_some_text">Desligado e fora da tela:</string>
+    <string name="essential_alert_relink">Para religar:</string>
+    <string name="essential_alert_route">Ajustes → Modo essencial</string>
     <string name="action_never_again">Não mostrar de novo</string>
     <string name="settings_player_off_short">Desligado</string>
     <string name="settings_player_mode_help">Toca o backing track de cada música (OGG, MP3 ou WAV, com quantos canais tiver) numa interface de áudio USB ou na saída do aparelho. Para desligar: Ajustes → Modo essencial → Player de faixas.</string>

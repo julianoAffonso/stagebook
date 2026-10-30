@@ -151,7 +151,7 @@ import com.juliano.stagebook.ui.theme.StagePalette
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel = hiltViewModel()) {   // start: seção aberta ao entrar (link do aviso)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -213,7 +213,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val midiPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         if (r.values.all { it }) viewModel.scanMidi()
     }
-    var section by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
+    var section by rememberSaveable { mutableStateOf(start) }
     // medidores do mixer: só com o modo player ligado, a seção Player aberta e a tela visível
     // banda: a procura na rede fica ligada enquanto Ajustes → Banda está aberto (para alguém novo achar este aparelho)
     val bandVm: BandViewModel = hiltViewModel()

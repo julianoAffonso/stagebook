@@ -142,4 +142,18 @@ class EssentialModeTest {
         compose.onNodeWithText("OK").performClick()
         assertEquals(true, answer)
     }
+
+    @Test fun `aviso lista o que esta desligado e o link leva aos Ajustes`() {
+        var opened = false
+        compose.setContent {
+            com.juliano.stagebook.ui.theme.StagebookTheme {
+                com.juliano.stagebook.ui.home.EssentialAlert(Look(bandOn = false, extrasOn = false), {}, {}, onOpen = { opened = true })
+            }
+        }
+        compose.onNodeWithText("•  Banda na rede").assertExists()
+        compose.onNodeWithText("•  Extras do palco").assertExists()
+        compose.onNodeWithText("•  Internet").assertDoesNotExist()
+        compose.onNodeWithText("Ajustes → Modo essencial").performClick()
+        assertTrue(opened)
+    }
 }
