@@ -1316,7 +1316,7 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
     }
 }
 
-// Sobre: o app, a atualização (procurar agora), privacidade em poucas linhas, o código aberto e o apoio (doação)
+// Sobre: o app, a atualização (procurar agora), privacidade em poucas linhas, o código disponível e o apoio (doação)
 @Composable
 private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.app_name)) {
