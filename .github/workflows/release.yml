@@ -22,7 +22,9 @@ jobs:
     steps:
       # only main gets published
       - if: inputs.publish && github.ref != 'refs/heads/main'
-        run: { echo "Publish from main (this run is on $GITHUB_REF_NAME)."; exit 1; }
+        run: |
+          echo "Publish from main (this run is on $GITHUB_REF_NAME)."
+          exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # the version comes from the commit count
