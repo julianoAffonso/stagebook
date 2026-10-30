@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 
 /** Metrônomo do palco (T33c): começa no BPM da música (sem BPM, 100), conta 1-2-3-4 e o ícone vira stop. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class StageMetronomeTest {
     @get:Rule val compose = createComposeRule()
 

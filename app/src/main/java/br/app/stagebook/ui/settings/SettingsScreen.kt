@@ -1186,8 +1186,6 @@ private fun languageLabel(l: AppLanguage): String = stringResource(
     when (l) {
         AppLanguage.SYSTEM -> R.string.language_system
         AppLanguage.PT -> R.string.language_pt
-        AppLanguage.ES -> R.string.language_es
-        AppLanguage.IT -> R.string.language_it
         AppLanguage.EN -> R.string.language_en
     },
 )

@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 
 /** Arrastar pela alça muda a ordem do setlist (biblioteca reorderable). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class SetlistReorderTest {
     @get:Rule val compose = createComposeRule()
 

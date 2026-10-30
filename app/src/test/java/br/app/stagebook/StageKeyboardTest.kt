@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 
 /** Teclado com cifra de capo: acordes no tom que soa, o aviso no topo, a mensagem da primeira vez e a linha na janela. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
 class StageKeyboardTest {
     @get:Rule val compose = createComposeRule()
 
@@ -42,6 +42,6 @@ class StageKeyboardTest {
 
     @Test fun `janela do acorde no teclado mostra o da cifra e o do teclado`() {
         compose.setContent { StagebookTheme { ChordShapePopup("A", Instrument.TECLADO, text, {}, {}) } }
-        compose.onNodeWithText("Na cifra: G (capo na 2ª casa). Para o teclado: A.").assertExists()
+        compose.onNodeWithText("Na cifra é G, com capo na 2ª casa. No teclado, toque A.").assertExists()
     }
 }

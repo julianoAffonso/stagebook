@@ -304,6 +304,15 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
     }
 
+    // T03: o app em inglês (a base), para conferir a tradução
+    @Test @Config(qualifiers = "en-w1280dp-h800dp-land-hdpi")
+    fun englishSongsTablet() = shoot("ingles_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+
+    @Test @Config(qualifiers = "en-w1280dp-h800dp-land-hdpi")
+    fun englishSettingsTablet() = shoot("ingles_2_ajustes_essencial") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
+    }
+
     @Test fun essentialAlertTablet() = shoot("tablet_1_aviso_essencial") {
         HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
         br.app.stagebook.ui.home.EssentialAlert(Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false), {}, {})
@@ -430,7 +439,7 @@ class ScreenshotTest {
     }
 
     // pedal com o botão que dá play/pause no backing track (modo player ligado)
-    @Test @Config(qualifiers = "w412dp-h2200dp-port-xxhdpi")
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
     fun settingsPhonePedalPlay() = shoot("jornada_pedal_play_pause") {
         val st = settings.copy(
             look = settings.look.copy(playerMode = true, pedalKeys = settings.look.pedalKeys + (android.view.KeyEvent.KEYCODE_B to PedalAction.PLAY_PAUSE)),
@@ -445,7 +454,7 @@ class ScreenshotTest {
     }
 
     // tela inteira de Ajustes → Cifras (alta, sem rolar): instrumento, desenho ao tocar e lista de acordes
-    @Test @Config(qualifiers = "w412dp-h2200dp-port-xxhdpi")
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
     fun settingsPhoneChordsFull() = shoot("celular_5_ajustes_cifras_inteira") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
             SettingsScreen(settings.copy(look = settings.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)), SettingsActions(), it, section = SettingsSection.CHORDS)
@@ -786,7 +795,7 @@ class ScreenshotTest {
         members = listOf(br.app.stagebook.ui.band.MemberUi("1", "Celular da Ana", 0)),
     )
 
-    @Test @Config(qualifiers = "w412dp-h1600dp-port-xxhdpi")
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h1600dp-port-xxhdpi")
     fun bandPhone() = shoot("jornada_banda_1_ajustes") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it, section = SettingsSection.BAND) }
     }
@@ -939,8 +948,8 @@ class ScreenshotTest {
 }
 
 // Fire HD 10 (2019, 9ª geração): 1920x1200 a 1,5x (hdpi) = 1280x800 dp; o app esconde as barras
-private const val TABLET = "w1280dp-h800dp-land-hdpi"
-private const val TABLET_EM_PE = "w800dp-h1280dp-port-hdpi"
-private const val PHONE = "w412dp-h915dp-port-xxhdpi"
-private const val PHONE_LONGO = "w412dp-h3000dp-port-xxhdpi"     // a tela inteira, sem rolar
-private const val TABLET_LONGO = "w1280dp-h2000dp-port-hdpi"
+private const val TABLET = "pt-rBR-w1280dp-h800dp-land-hdpi"
+private const val TABLET_EM_PE = "pt-rBR-w800dp-h1280dp-port-hdpi"
+private const val PHONE = "pt-rBR-w412dp-h915dp-port-xxhdpi"
+private const val PHONE_LONGO = "pt-rBR-w412dp-h3000dp-port-xxhdpi"     // a tela inteira, sem rolar
+private const val TABLET_LONGO = "pt-rBR-w1280dp-h2000dp-port-hdpi"

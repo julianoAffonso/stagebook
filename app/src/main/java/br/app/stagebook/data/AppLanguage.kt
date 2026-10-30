@@ -7,23 +7,22 @@ import android.os.LocaleList
 import androidx.core.content.edit
 import java.util.Locale
 
-/** Língua do app. [SYSTEM] = a do aparelho (cai no português, a base, se não houver tradução). */
+/** Língua do app. [SYSTEM] = a do aparelho (cai no inglês, a base, se não houver tradução). */
 enum class AppLanguage(val tag: String) {
     SYSTEM(""),
-    PT("pt"),
-    ES("es"),
-    IT("it"),
+    PT("pt-BR"),
     EN("en"),
 }
 
 /**
  * Escolha da língua, guardada no aparelho e aplicada antes de qualquer tela (`attachBaseContext` do app e da
- * Activity): fica fora da biblioteca, que só carrega depois. Português é a base (`values`); cada tradução é um
- * `values-<tag>` e só entra em [available] quando estiver completa (o `LanguagesTest` confere).
+ * Activity): fica fora da biblioteca, que só carrega depois. Inglês é a base (`values`) e o português do Brasil fica em
+ * `values-pt-rBR`; cada tradução nova é um `values-<tag>` e só entra em [available] quando estiver completa (o
+ * `LanguagesTest` confere). Como traduzir: `docs/traduzir.md`.
  */
 object Languages {
     /** As línguas oferecidas nos ajustes. Traduzir = criar `values-<tag>/strings.xml` e acrescentar aqui. */
-    val available: List<AppLanguage> = listOf(AppLanguage.SYSTEM, AppLanguage.PT)
+    val available: List<AppLanguage> = listOf(AppLanguage.SYSTEM, AppLanguage.PT, AppLanguage.EN)
 
     private const val PREFS = "lingua"
     private const val KEY = "lingua"

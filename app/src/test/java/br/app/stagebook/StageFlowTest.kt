@@ -45,7 +45,7 @@ import org.robolectric.annotation.Config
 
 /** Passar páginas e músicas no palco como o pedal faz, inclusive no meio da animação. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class StageFlowTest {
     @get:Rule val compose = createComposeRule()
 
