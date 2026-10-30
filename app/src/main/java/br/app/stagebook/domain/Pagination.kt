@@ -1,15 +1,14 @@
 package br.app.stagebook.domain
 
 /**
- * Divide a letra em páginas do palco (o pedal vira a página inteira, sem rolagem).
- * Quebra entre estrofes; o título de seção vai junto com a estrofe dele. Só uma estrofe maior que a
- * página é cortada, por linha.
+ * Splits the lyrics into stage pages (the pedal turns the whole page, no scrolling). Breaks between verses; a section
+ * title goes with its verse. Only a verse longer than the page is cut, by line.
  */
 object Pagination {
-    /** Uma linha da letra já medida na largura da tela (a altura conta a quebra automática). */
+    /** A lyrics line already measured at the screen width (the height counts automatic wrapping). */
     data class Line(val height: Int, val blank: Boolean)
 
-    /** Faixas de linhas de cada página (sem linhas em branco na borda). */
+    /** Line ranges for each page (no blank lines at the edges). */
     fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> {
         val blocks = blocks(lines)
         if (blocks.isEmpty()) return listOf(IntRange.EMPTY)
@@ -38,7 +37,7 @@ object Pagination {
                     start = block.first; end = block.last; used = h
                 }
                 else -> {
-                    // estrofe maior que a página: corta por linha
+                    // verse longer than the page: cut by line
                     flush()
                     for (i in block) {
                         val lh = lines[i].height
@@ -55,13 +54,13 @@ object Pagination {
     }
 
     /**
-     * Folhas do palco com `columns` colunas: as colunas são preenchidas em ordem (esquerda, depois
-     * direita), cada uma com a altura da página; o pedal vira a folha inteira.
+     * Stage sheets with `columns` columns: the columns fill in order (left, then right), each as tall as the page; the
+     * pedal turns the whole sheet.
      */
     fun sheets(lines: List<Line>, columnHeight: Int, columns: Int): List<List<IntRange>> =
         paginate(lines, columnHeight).chunked(columns.coerceAtLeast(1))
 
-    /** Estrofes: linhas seguidas não vazias. */
+    /** Verses: consecutive non-empty lines. */
     private fun blocks(lines: List<Line>): List<IntRange> {
         val out = ArrayList<IntRange>()
         var i = 0

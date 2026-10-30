@@ -24,9 +24,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Quem é este aparelho para a banda: o par de chaves (criado na primeira vez), o id que sai da chave pública e o nome que
- * os outros veem. A chave privada fica cifrada por uma chave do Android Keystore (que não sai do aparelho); sem Keystore
- * (testes), fica nas preferências do app, que só ele lê.
+ * Who this device is for the band: the key pair (created the first time), the id derived from the public key and the
+ * name the others see. The private key is encrypted by an Android Keystore key (which never leaves the device); without
+ * a Keystore (tests), it lives in the app's preferences, which only the app reads.
  */
 @Singleton
 class DeviceIdentity @Inject constructor(@ApplicationContext private val context: Context) {
@@ -34,7 +34,7 @@ class DeviceIdentity @Inject constructor(@ApplicationContext private val context
 
     private val keys: Pair<String, PrivateKey> by lazy { load() ?: create() }
 
-    /** Chave pública (Base64) e id. */
+    /** Public key (Base64) and id. */
     val publicKey: String get() = keys.first
     val id: String get() = BandCrypto.idOf(publicKey)
     val privateKey: PrivateKey get() = keys.second
@@ -50,17 +50,17 @@ class DeviceIdentity @Inject constructor(@ApplicationContext private val context
 
     fun hello() = BandProtocol.Hello(id, _name.value, publicKey, app = appVersion)
 
-    /** A versão do app (aparece para a banda quando as versões são diferentes). */
+    /** The app version (shown to the band when versions differ). */
     val appVersion: String by lazy {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty().substringBefore(' ')
     }
 
-    /** Já foi confirmado pelo usuário (Ajustes → Banda pergunta uma vez "Como a banda vai ver este aparelho?"). */
+    /** Already confirmed by the user (Settings → Band asks once "How should the band see this device?"). */
     val nameConfirmed: Boolean get() = prefs.contains(KEY_NAME)
 
     /**
-     * Sugestão de nome: o nome do aparelho que a pessoa deu nas configurações do Android (em muitos vem "Galaxy de Fulano"),
-     * lido sem permissão; sem ele, marca e modelo.
+     * Name suggestion: the device name the person set in Android settings (many come as "So-and-so's Galaxy"), read
+     * without permission; without it, brand and model.
      */
     fun defaultName(): String {
         val device = runCatching { Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME) }.getOrNull()
@@ -87,7 +87,7 @@ class DeviceIdentity @Inject constructor(@ApplicationContext private val context
         return pub to pair.private
     }
 
-    // AES-GCM com a chave do Keystore: o arquivo das preferências sozinho não abre a chave privada
+    // AES-GCM with the Keystore key: the preferences file alone doesn't open the private key
     private fun keystoreKey(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (ks.getKey(ALIAS, null) as? SecretKey)?.let { return it }

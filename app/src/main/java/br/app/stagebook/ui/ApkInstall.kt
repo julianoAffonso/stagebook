@@ -6,8 +6,8 @@ import android.net.Uri
 import android.provider.Settings
 
 /**
- * Abre o instalador do Android com o APK baixado. Na primeira vez o Android precisa liberar "instalar apps
- * desta fonte" para o Stagebook: abre essa tela em vez do instalador (depois é só tocar em instalar de novo).
+ * Opens the Android installer with the downloaded APK. The first time, Android must allow "install apps from this
+ * source" for Stagebook: opens that screen instead of the installer (then just tap install again).
  */
 fun Context.installApk(canInstall: Boolean, installer: Intent?) {
     if (!canInstall) {

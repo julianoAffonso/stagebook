@@ -12,12 +12,12 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
 
-/** Leitura e gravação do letras.json e do arquivo de biblioteca ({"songs":[...]}) usado para importar/exportar. */
+/** Reading and writing letras.json and the library file ({"songs":[...]}) used for import/export. */
 object LibraryCodec {
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json {
         ignoreUnknownKeys = true
-        coerceInputValues = true    // valor desconhecido (ex.: idioma de seção novo) cai no padrão
+        coerceInputValues = true    // unknown value (e.g. a new section language) falls back to the default
         encodeDefaults = true
         prettyPrint = true
         prettyPrintIndent = " "
@@ -37,15 +37,15 @@ object LibraryCodec {
 
     fun encode(library: Library): String = json.encodeToString(Library.serializer(), library)
 
-    /** Grava direto no arquivo, sem montar o texto de ~1 MB na memória (o Fire tem 2 GB). */
+    /** Writes straight to the file, without building the ~1 MB text in memory (the Fire has 2 GB). */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     fun encodeTo(library: Library, out: OutputStream) = json.encodeToStream(Library.serializer(), library, out)
 
-    /** Lê direto do arquivo (abrir o app sem segurar o texto inteiro antes de decodificar). */
+    /** Reads straight from the file (opening the app without holding the whole text before decoding). */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     fun decode(input: InputStream, newId: () -> String): Library = withIds(json.decodeFromStream(Library.serializer(), input), newId)
 
-    /** Versão do arquivo de músicas que este app entende; um arquivo mais novo é recusado com aviso (não adivinha). */
+    /** Songs file version this app understands; a newer file is refused with a notice (no guessing). */
     const val SONGS_FILE_VERSION = 1
 
     class NewerFileException : IllegalStateException("arquivo de uma versão mais nova do Stagebook")
@@ -58,12 +58,12 @@ object LibraryCodec {
         json.encodeToString(SongsFile.serializer(), SongsFile(songs = songs.sortedBy { TextKey.of(it.title) }))
 }
 
-/** [lyricsChanged]: das atualizadas, quantas tiveram a letra trocada pela do arquivo. */
+/** [lyricsChanged]: of the updated ones, how many had their lyrics replaced by the file's. */
 data class ImportResult(val added: Int, val replaced: Int, val lyricsChanged: Int = 0)
 
 /**
- * Importar uma biblioteca sem duplicar: a mesma música (título + artista, ver SongMatch) é atualizada,
- * as outras entram novas. O zoom do palco que a música já tinha é mantido.
+ * Importing a library without duplicating: the same song (title + artist, see SongMatch) is updated, the others come in
+ * as new. The stage zoom the song already had is kept.
  */
 fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library, ImportResult> {
     val songs = songs.toMutableList()

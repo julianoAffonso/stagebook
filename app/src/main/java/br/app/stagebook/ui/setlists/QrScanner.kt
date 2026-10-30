@@ -28,7 +28,7 @@ import br.app.stagebook.domain.QrPayload
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Câmera lendo QR (decodificação no aparelho, com ZXing; sem serviço do Google). */
+/** Camera reading QR (decoded on the device with ZXing; no Google service). */
 @Composable
 fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -36,8 +36,8 @@ fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
     val latest by rememberUpdatedState(onText)
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
-    // a câmera pode ficar pronta depois de a tela sair (Cancelar logo após liberar a permissão):
-    // aí ela não pode ser ligada, senão fica gastando bateria até o app ir para segundo plano
+    // the camera can be ready after the screen leaves (Cancel right after granting permission): then it can't be turned
+    // on, or it keeps draining battery until the app goes to the background
     val disposed = remember { AtomicBoolean(false) }
 
     AndroidView(
@@ -72,7 +72,7 @@ fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** Procura um QR no quadro (só o brilho, plano Y). */
+/** Looks for a QR in the frame (brightness only, Y plane). */
 private class QrAnalyzer(private val onText: (String) -> Unit) : ImageAnalysis.Analyzer {
     private val reader = QRCodeReader()
     private val hints = mapOf(
@@ -89,15 +89,15 @@ private class QrAnalyzer(private val onText: (String) -> Unit) : ImageAnalysis.A
             val source = PlanarYUVLuminanceSource(data, plane.rowStride, it.height, 0, 0, it.width, it.height, false)
             try {
                 val result = reader.decode(BinaryBitmap(HybridBinarizer(source)), hints)
-                // QR compactado: os bytes crus vêm nos segmentos binários, não no texto
+                // compressed QR: the raw bytes come in the binary segments, not in the text
                 @Suppress("UNCHECKED_CAST")
                 val bytes = (result.resultMetadata?.get(ResultMetadataType.BYTE_SEGMENTS) as? List<ByteArray>)
                     ?.fold(ByteArray(0)) { acc, b -> acc + b }
                 onText(QrPayload.unpack(bytes) ?: result.text)
             } catch (_: NotFoundException) {
-                // sem QR neste quadro
+                // no QR in this frame
             } catch (_: Exception) {
-                // QR borrado/parcial: tenta no próximo quadro
+                // blurry/partial QR: try the next frame
             } finally {
                 reader.reset()
             }

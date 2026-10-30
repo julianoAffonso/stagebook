@@ -40,12 +40,12 @@ data class SongEditorUiState(
     val year: String = "",
     val text: String = "",
     val error: EditorError? = null,
-    val unsaved: Boolean = false,   // algo digitado ou importado que ainda não foi salvo
+    val unsaved: Boolean = false,   // something typed or imported not saved yet
 ) {
     val canDelete get() = mode == EditorMode.EDIT || mode == EditorMode.IMPORTED_UPDATE
 }
 
-/** Como o editor sai: fechar, ou (importando em lote para um setlist) abrir a próxima música ou o setlist pronto. */
+/** How the editor exits: close, or (when batch importing into a setlist) open the next song or the finished setlist. */
 sealed interface EditorExit {
     data object Close : EditorExit
     data object NextImport : EditorExit
@@ -63,14 +63,14 @@ class SongEditorViewModel @Inject constructor(
     private val route = savedStateHandle.toRoute<SongEditor>()
     private val draft = if (route.fromImport) importDraft.take() else null
 
-    /** Aberta do palco: onde pôr o cursor na letra (-1 = em lugar nenhum, sem abrir o teclado). */
+    /** Opened from the stage: where to put the cursor in the lyrics (-1 = nowhere, without opening the keyboard). */
     val cursor = route.cursor
 
     var uiState by mutableStateOf(SongEditorUiState())
         private set
 
     private val done = Channel<EditorExit>(Channel.BUFFERED)
-    private var finished = false   // toque duplo em Salvar/Apagar: só o primeiro vale
+    private var finished = false   // double tap on Save/Delete: only the first counts
     val onDone = done.receiveAsFlow()
 
     init {
@@ -85,16 +85,17 @@ class SongEditorViewModel @Inject constructor(
                     song != null -> EditorMode.EDIT
                     else -> EditorMode.NEW
                 },
-                // importada por cima de uma que já existe: mantém o título de lá (é a chave do setlist)
+                // imported over an existing one: keeps that title (it's the setlist key)
                 title = song?.title ?: draft?.title.orEmpty(),
                 author = draft?.artist?.ifBlank { null } ?: song?.author.orEmpty(),
                 year = draft?.year?.ifBlank { null } ?: song?.year.orEmpty(),
-                // importada sem tom: o app calcula pelos acordes (o campo Tom mostra, e o usuário pode trocar)
+                // imported without a key: the app computes it from the chords (the Key field shows it, and the user can
+                // change it)
                 text = draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty(),
                 unsaved = draft != null,
             )
             original = loaded
-            // o Android fechou o app com a edição aberta (pouca memória no Fire): volta o que foi digitado
+            // Android closed the app with the edit open (low memory on the Fire): what was typed comes back
             val kept = savedStateHandle.get<Array<String>>(KEY_FIELDS)
             uiState = if (kept != null && kept.size == 4) loaded.edited(kept[0], kept[1], kept[2], kept[3]) else loaded
         }
@@ -118,27 +119,31 @@ class SongEditorViewModel @Inject constructor(
     fun onYear(v: String) = update(year = v.filter(Char::isDigit).take(4))
     fun onText(v: String) = update(text = v)
 
-    /** Aparência do palco (prévia do editor). */
+    /** Stage look (editor preview). */
     val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
 
-    /** Sobe ou desce [semitones] meios-tons: reescreve os acordes e o tom guardado (a cifra em cima vira ChordPro antes). */
+    /**
+     * Moves [semitones] half steps up or down: rewrites the chords and the saved key (chords above the lyrics become
+     * ChordPro first).
+     */
     fun transpose(semitones: Int) {
-        // sem tom guardado: grava o calculado pelos acordes antes, para o tom andar junto com a cifra
+        // no saved key: saves the one computed from the chords first, so the key moves with the chart
         val base = Chords.fromChordsOverLyrics(uiState.text).let { t ->
             if (Chords.key(t).isNotEmpty()) t else Chords.detectKey(t).takeIf { it.isNotEmpty() }?.let { Chords.setDirective(t, "key", it) } ?: t
         }
         update(text = Chords.transpose(base, semitones))
     }
 
-    /** Capotraste: os desenhos dos acordes ficam iguais (muda o tom que soa). 0 tira a diretiva. */
+    /** Capo: the chord diagrams stay the same (the sounding key changes). 0 removes the directive. */
     fun setCapo(capo: Int) {
         val now = capo.coerceIn(0, 12)
-        // a tablatura fica em casas sem capo: o capo sobe, as casas sobem junto (decisão do usuário, 29/10)
+        // the tablature stays in frets without a capo: the capo goes up, the frets go up with it (user's decision,
+        // 29/10)
         val shifted = br.app.stagebook.domain.Tablature.shift(uiState.text, now - Chords.capo(uiState.text))
         update(text = Chords.setDirective(shifted, "capo", now.takeIf { it > 0 }?.toString().orEmpty()))
     }
 
-    /** BPM nos dados da música (vazio tira); o metrônomo começa nele. */
+    /** BPM in the song details (empty removes it); the metronome starts at it. */
     fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))
 
     fun save() {
@@ -148,12 +153,12 @@ class SongEditorViewModel @Inject constructor(
         if (title.isEmpty()) { uiState = s.copy(error = EditorError.TITLE_EMPTY); return }
         val other = repository.findSong(title, s.author.trim())
         if (other != null && other.id != route.songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return }
-        // parte da música gravada para não perder o que o editor não mostra (ex.: zoom do palco)
+        // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = route.songId.orEmpty(), title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // a cifra é guardada em ChordPro
-        metadata.completeLater(id)   // artista ou ano em branco: o MusicBrainz completa sozinho
+        val id = repository.saveSong(base.copy(id = route.songId.orEmpty(), title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // chords are saved as ChordPro
+        metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         finished = true
-        // importando em lote para um setlist: a música entra no lugar dela e a fila anda
+        // batch importing into a setlist: the song takes its place and the queue moves on
         val queue = importQueue.state.value
         if (route.fromImport && queue != null) {
             importQueue.saved(id)

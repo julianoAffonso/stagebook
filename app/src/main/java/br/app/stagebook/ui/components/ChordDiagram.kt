@@ -28,9 +28,9 @@ import br.app.stagebook.ui.theme.PianoBlack
 import br.app.stagebook.ui.theme.PianoWhite
 
 /**
- * Como montar o acorde: o braço (cordas na vertical, casas na horizontal, bolinhas onde apertar, "o" corda solta,
- * "x" não toca, número da casa quando não começa na primeira) ou o teclado com as notas acesas.
- * [shape] para cordas, [keys] (notas MIDI) para o teclado. Sem margem própria: o [modifier] posiciona.
+ * How to play the chord: the neck (strings vertical, frets horizontal, dots where to press, "o" open string, "x" not
+ * played, fret number when it doesn't start on the first) or the keyboard with the notes lit. [shape] for strings,
+ * [keys] (MIDI notes) for keyboard. No margin of its own: the [modifier] places it.
  */
 @Composable
 fun ChordDiagram(
@@ -42,7 +42,7 @@ fun ChordDiagram(
     modifier: Modifier = Modifier,
     width: Dp = 160.dp,
     accent: Color = MaterialTheme.colorScheme.primary,
-    compact: Boolean = false,   // lista de acordes do palco: menor, com a mesma largura para todos
+    compact: Boolean = false,   // stage chord list: smaller, with the same width for all
 ) {
     Column(
         if (compact) modifier.width(STRIP_WIDTH) else modifier,
@@ -61,7 +61,7 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
     Canvas(Modifier.size(width, width * 1.15f)) {
         if (shape == null) return@Canvas
         val frets = 5
-        // margens iguais dos dois lados: a grade fica no meio, embaixo do nome (a da esquerda guarda o número da casa)
+        // equal margins on both sides: the grid sits in the middle, under the name (the left one holds the fret number)
         val left = size.width * 0.18f
         val right = size.width * 0.82f
         val top = size.height * 0.16f
@@ -70,13 +70,13 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         val row = (bottom - top) / frets
         val base = shape.baseFret
         val thin = 1.5.dp.toPx()
-        // casas e cordas; a pestana do braço (nut) grossa quando começa na primeira casa
+        // frets and strings; the nut is thick when it starts on the first fret
         for (i in 0..frets) drawLine(color, Offset(left, top + i * row), Offset(right, top + i * row), if (i == 0 && base == 1) 5.dp.toPx() else thin)
         for (s in 0 until strings) drawLine(color, Offset(left + s * gap, top), Offset(left + s * gap, bottom), thin)
-        // número da casa colado à esquerda da grade, na altura da primeira casa do desenho
+        // fret number right left of the grid, at the height of the diagram's first fret
         if (base > 1) {
             val laid = measurer.measure("$base", label)
-            drawText(laid, topLeft = Offset(left - laid.size.width - 14.dp.toPx(), top + (row - laid.size.height) / 2))   // longe da bolinha da pestana
+            drawText(laid, topLeft = Offset(left - laid.size.width - 14.dp.toPx(), top + (row - laid.size.height) / 2))   // away from the barre dot
         }
         val dot = minOf(gap, row) * 0.28f
         shape.frets.forEachIndexed { s, f ->
@@ -87,7 +87,7 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
                 else -> drawCircle(color, dot, Offset(x, top + (f - base + 0.5f) * row))
             }
         }
-        // pestana só quando a forma precisa dela (mais de 4 notas apertadas): a barra na menor casa
+        // barre only when the shape needs it (more than 4 fretted notes): the bar on the lowest fret
         val pressed = shape.frets.withIndex().filter { it.value > 0 }
         val lo = pressed.minOfOrNull { it.value }
         val atLo = pressed.filter { it.value == lo }
@@ -106,7 +106,7 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
 @Composable
 private fun Keyboard(keys: List<Int>, accent: Color, width: Dp) {
     Canvas(Modifier.size(width * 1.5f, width * 0.6f)) {
-        // duas oitavas a partir do Dó da nota mais grave; teclas como num piano, as do acorde na cor de destaque
+        // two octaves from the C of the lowest note; keys like a piano, the chord's ones in the accent color
         val start = ((keys.minOrNull() ?: 60) / 12) * 12
         val range = start until start + 24
         val whites = range.filter { it % 12 !in BLACK }

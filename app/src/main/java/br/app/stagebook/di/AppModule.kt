@@ -16,12 +16,12 @@ import java.util.concurrent.Executors
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-/** Escopo que vive o app inteiro: gravações e buscas que não podem morrer quando a tela fecha. */
+/** Scope that lives as long as the app: saves and fetches that can't die when the screen closes. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope
 
-/** Uma linha só, de baixa prioridade: trabalho de fundo (sincronia, procurar versão) não rouba o palco do Fire. */
+/** A single low-priority thread: background work (sync, version check) doesn't steal the stage from the Fire. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class LowPriority
@@ -34,7 +34,7 @@ object AppModule {
     @ApplicationScope
     fun applicationScope(): CoroutineScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Default +
-            // erro inesperado numa gravação ou na sincronia em segundo plano não pode derrubar o app no palco
+            // an unexpected error while saving or syncing in the background can't crash the app on stage
             CoroutineExceptionHandler { _, e -> Log.e("stagebook", "erro em segundo plano", e) },
     )
 

@@ -19,10 +19,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * "Quem conduz" / "acompanha" (pela rede local, [BandLink.conduct]). Quem conduz liga com o setlist ([start]: cada um diz
- * o que falta), troca de música ([open]) e encerra ([end]); as faltas de todos vão em cada mensagem, então a banda inteira
- * vê o alerta. Quem acompanha não liga nada: a primeira mensagem já o coloca acompanhando e a música abre sozinha
- * ([openSong]); [leave] para de acompanhar até quem conduz começar de novo.
+ * "Lead the band" / "follow" (over the local network, [BandLink.conduct]). The leader starts with the setlist ([start]:
+ * each one says what's missing), changes songs ([open]) and ends ([end]); everyone's missing songs go in every message,
+ * so the whole band sees the alert. A follower turns nothing on: the first message already makes them follow and the
+ * song opens by itself ([openSong]); [leave] stops following until the leader starts again.
  */
 @Singleton
 class BandConduct @Inject constructor(
@@ -33,14 +33,14 @@ class BandConduct @Inject constructor(
     sealed interface Role {
         data object None : Role
 
-        /** [noAnswer]: da banda online, quem não respondeu (outra versão, fora do app). */
+        /** [noAnswer]: band members online who didn't answer (another version, outside the app). */
         @Immutable
         data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0) : Role
 
-        /** [songId]: a música da vez aqui (null = falta aqui); [at]: última notícia de quem conduz (relógio do aparelho). */
+        /** [songId]: the current song here (null = missing here); [at]: last news from the leader (device clock). */
         @Immutable
         data class Following(val fromId: String, val msg: Conduct.Msg, val songId: String?, val at: Long = System.currentTimeMillis()) : Role {
-            /** Sem notícia há mais de [GONE_MS]: quem conduz sumiu (bateria, app fechado, fora do Wi-Fi). */
+            /** No news for more than [GONE_MS]: the leader is gone (battery, app closed, off the Wi-Fi). */
             fun gone(now: Long = System.currentTimeMillis()) = now - at > GONE_MS
         }
     }
@@ -49,22 +49,23 @@ class BandConduct @Inject constructor(
     val role: StateFlow<Role> = _role.asStateFlow()
 
     private val _openSong = MutableSharedFlow<String>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    /** Quem acompanha: a música para abrir no palco agora. */
+    /** Follower: the song to open on stage now. */
     val openSong: SharedFlow<String> = _openSong
 
     @Volatile private var leftFrom: String? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var searchedAt = -1   // a música em que a falha de entrega já ligou a procura (uma vez por música)
+    private var searchedAt = -1   // the song for which a delivery failure already started the search (once per song)
 
     init {
         link.conductHandler = ::onMessage
-        // modo essencial (T19): "Banda na rede" desligada encerra o Quem conduz (conduzindo ou acompanhando) e a faixa some
+        // essential mode (T19): "Band on the network" off ends Lead the band (leading or following) and the strip goes
+        // away
         scope.launch {
             repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { on ->
                 if (!on) when (_role.value) { is Role.Conducting -> end(); is Role.Following -> leave(); Role.None -> Unit }
             }
         }
-        // conduzindo: sinal de vida a cada 3 min (a música da vez de novo; quem acompanha não pula de música por isso)
+        // leading: a sign of life every 3 min (the current song again; followers don't change songs because of it)
         scope.launch {
             while (true) {
                 kotlinx.coroutines.delay(ALIVE_MS)
@@ -72,7 +73,8 @@ class BandConduct @Inject constructor(
                 send(now.setId, now.msg.copy(type = Conduct.OPEN))
             }
         }
-        // conduzindo: alguém da banda voltou para o Wi-Fi (achado numa procura curta) → recebe a música da vez, sem toque
+        // leading: a band member came back to the Wi-Fi (found in a short search) → gets the current song, no tap
+        // needed
         scope.launch {
             var before = emptySet<String>()
             link.onlineMembers.collect { peers ->
@@ -84,7 +86,10 @@ class BandConduct @Inject constructor(
         }
     }
 
-    /** Liga com o setlist: pergunta a todos o que falta (o alerta aparece antes da primeira música) e procura a banda. */
+    /**
+     * Starts with the setlist: asks everyone what's missing (the alert shows before the first song) and searches for
+     * the band.
+     */
     fun start(setId: String, set: String, songs: List<Conduct.Item>, index: Int = 0) {
         searchedAt = -1
         _role.value = Role.Conducting(setId, Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index))
@@ -92,14 +97,14 @@ class BandConduct @Inject constructor(
         scope.launch { send(setId, (_role.value as Role.Conducting).msg) }
     }
 
-    /** Quem conduz mudou de música no palco do setlist [setId]. */
+    /** The leader changed songs on the stage of setlist [setId]. */
     fun open(setId: String, index: Int) {
         val now = _role.value as? Role.Conducting ?: return
         if (now.setId != setId || (now.msg.index == index && now.msg.type == Conduct.OPEN)) return
         scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, index = index)) }
     }
 
-    /** "Procurar a banda": 30 s de procura no palco; quem aparecer recebe a música da vez. */
+    /** "Look for the band": 30 s of search on stage; whoever shows up gets the current song. */
     fun search() = link.burst(evenOnStage = true)
 
     fun end() {
@@ -108,7 +113,7 @@ class BandConduct @Inject constructor(
         scope.launch { link.conduct(now.copy(type = Conduct.END, missing = emptyList())) }
     }
 
-    /** Quem acompanha: para de seguir (volta se quem conduz começar de novo com [start]). */
+    /** Follower: stops following (comes back if the leader starts again with [start]). */
     fun leave() {
         leftFrom = (_role.value as? Role.Following)?.fromId
         _role.value = Role.None
@@ -116,20 +121,20 @@ class BandConduct @Inject constructor(
 
     private suspend fun send(setId: String, msg: Conduct.Msg) {
         val members = link.onlineMembers.value.size
-        if (_role.value !is Role.Conducting) return   // encerrado antes de mandar: não religa
+        if (_role.value !is Role.Conducting) return   // ended before sending: doesn't turn back on
         _role.value = Role.Conducting(setId, msg)
         val replies = link.conduct(msg)
         if (_role.value !is Role.Conducting) return   // encerrado enquanto mandava
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
         val noAnswer = (members - replies.size).coerceAtLeast(0)
         _role.value = Role.Conducting(setId, withLacks, noAnswer)
-        // as faltas mudaram: manda de novo para todos verem o mesmo alerta
+        // the missing songs changed: send again so everyone sees the same alert
         if (withLacks.missing != msg.missing) link.conduct(withLacks)
-        // alguém não recebeu: uma procura curta por música (pode ter trocado de endereço no Wi-Fi)
+        // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)
         if (noAnswer > 0 && searchedAt != msg.index) { searchedAt = msg.index; link.burst(evenOnStage = true) }
     }
 
-    // quem acompanha: chega pela rede (outra linha de execução); responde o que falta aqui
+    // follower: arrives over the network (another thread); answers what's missing here
     private fun onMessage(from: BandProtocol.Hello, msg: Conduct.Msg): Conduct.Lack? {
         if (msg.type == Conduct.END) {
             if ((_role.value as? Role.Following)?.fromId == from.id) _role.value = Role.None

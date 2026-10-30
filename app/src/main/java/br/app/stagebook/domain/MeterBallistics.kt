@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import kotlin.math.log10
 import kotlin.math.max
 
-/** O que cada barra mostra, em dBFS: o nível (cai devagar) e a marca do maior pico recente. */
+/** What each bar shows, in dBFS: the level (falls slowly) and the mark of the highest recent peak. */
 @Immutable
 data class Meters(val levelDb: List<Float>, val holdDb: List<Float>) {
     companion object {
@@ -14,14 +14,14 @@ data class Meters(val levelDb: List<Float>, val holdDb: List<Float>) {
 
         fun toDb(linear: Float, floor: Float = FLOOR_DB): Float = if (linear <= 0f) floor else max(floor, 20f * log10(linear))
 
-        /** Posição na barra, de 0 (FLOOR_DB) a 1 (TOP_DB). */
+        /** Position on the bar, from 0 (FLOOR_DB) to 1 (TOP_DB). */
         fun fraction(db: Float): Float = ((db - FLOOR_DB) / (TOP_DB - FLOOR_DB)).coerceIn(0f, 1f)
     }
 }
 
 /**
- * Balística de medidor de pico: a barra sobe na hora e cai 24 dB/s; a marca do pico fica parada 1 s e
- * depois cai também. Assim um pico curto continua visível na tela atualizada ~15 vezes por segundo.
+ * Peak meter ballistics: the bar rises at once and falls 24 dB/s; the peak mark holds for 1 s and then falls too. That
+ * way a short peak stays visible on a screen updated ~15 times per second.
  */
 class MeterBallistics(private val size: Int, private val floor: Float = Meters.FLOOR_DB) {
     private val level = FloatArray(size) { floor }

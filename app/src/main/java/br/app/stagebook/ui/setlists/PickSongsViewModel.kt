@@ -35,7 +35,7 @@ class PickSongsViewModel @Inject constructor(
     private val setId = savedStateHandle.toRoute<PickSongs>().setId
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
-    // ordem em que foram marcadas = ordem em que entram no setlist
+    // order they were checked = order they go into the setlist
     private val selected = savedStateHandle.getStateFlow(KEY_SELECTED, ArrayList<String>())
 
     @OptIn(FlowPreview::class)
@@ -52,16 +52,16 @@ class PickSongsViewModel @Inject constructor(
     fun onQueryChange(q: String) { query.value = q }
 
     private val _limit = MutableStateFlow(false)
-    /** A música marcada passaria do que o QR aguenta: não entrou, e o aviso pede um setlist novo. */
+    /** The checked song would go over what the QR can hold: it didn't go in, and the notice asks for a new setlist. */
     val limit: StateFlow<Boolean> = _limit
 
-    /** Marca ou desmarca; true só quando a música acabou de ser marcada. */
+    /** Checks or unchecks; true only when the song was just checked. */
     fun toggle(id: String): Boolean {
         val cur = selected.value
         if (id !in cur) {
             val lib = repository.library.value
             val set = lib.setlist(setId)
-            // a conta a cada música marcada (as já no setlist + as marcadas + esta), pelo tamanho real do QR
+            // the count for each checked song (those already in the setlist + checked + this one), by the real QR size
             if (set != null && !QrPayload.fits(set, lib, extraIds = (cur + id).filterNot { it in set.items })) {
                 _limit.value = true
                 return false

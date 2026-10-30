@@ -23,33 +23,33 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** O que está publicado no último release do GitHub (o publicar.sh grava junto com o APK). */
+/** What's published in the latest GitHub release (publicar.sh saves it with the APK). */
 @Serializable
 data class PublishedVersion(val versionCode: Long, val versionName: String)
 
 /**
- * Atualização do app pelo último release do GitHub: lê a versão publicada, baixa o APK e abre o
- * instalador do Android (ele sempre pede o toque em "Instalar").
+ * App update from the latest GitHub release: reads the published version, downloads the APK and opens the Android
+ * installer (it always asks for the "Install" tap).
  */
 @Singleton
 class AppUpdater @Inject constructor(@ApplicationContext private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    // endereços dos arquivos fixos (os testes trocam por um servidor local)
+    // fixed file addresses (tests swap them for a local server)
     internal var apkUrl = APK_URL
     internal var versionUrl = VERSION_URL
 
-    // a versão não muda com o app aberto (atualizar reinicia o processo): pergunta ao sistema uma vez só
+    // the version doesn't change with the app open (updating restarts the process): ask the system only once
     val installedCode: Long by lazy {
         PackageInfoCompat.getLongVersionCode(context.packageManager.getPackageInfo(context.packageName, 0))
     }
 
-    // última leitura (hora, conteúdo): na mesma abertura as duas atualizações usam a mesma
+    // last read (time, content): in the same launch both updates use the same one
     private val last = AtomicReference<Pair<Long, PublishedVersion>?>(null)
 
     /**
-     * O que está publicado, ou null sem internet / sem resposta. Reaproveita uma leitura de até [maxAgeMs]
-     * (0 = lê agora, como no "Procurar atualização" dos Ajustes).
+     * What's published, or null with no internet / no answer. Reuses a read up to [maxAgeMs] old (0 = read now, like
+     * "Check for updates" in Settings).
      */
     suspend fun published(on: CoroutineContext = Dispatchers.IO, maxAgeMs: Long = 10 * 60 * 1000L): PublishedVersion? {
         last.get()?.let { (at, p) -> if (SystemClock.elapsedRealtime() - at < maxAgeMs) return p }
@@ -62,8 +62,8 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     }
 
     /**
-     * Baixa o APK publicado e confere que é o Stagebook e mais novo que o instalado. `progress` vai de
-     * 0 a 100. Lança IOException se não baixar ou não conferir.
+     * Downloads the published APK and checks it's Stagebook and newer than the installed one. `progress` goes from 0 to
+     * 100. Throws IOException if it doesn't download or doesn't check out.
      */
     suspend fun download(progress: (Int) -> Unit): File = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "atualizacao").apply { mkdirs() }
@@ -92,15 +92,15 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
         apk
     }
 
-    /** Abre o instalador do Android com o APK baixado. */
+    /** Opens the Android installer with the downloaded APK. */
     fun installIntent(apk: File): Intent = Intent(Intent.ACTION_VIEW)
         .setDataAndType(FileProvider.getUriForFile(context, "${context.packageName}.updates", apk), APK_MIME)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** O Android deixa este app instalar o APK, ou ainda precisa liberar "instalar apps desta fonte". */
+    /** Whether Android lets this app install the APK, or it still needs to allow "install apps from this source". */
     fun canInstall(): Boolean = context.packageManager.canRequestPackageInstalls()
 
-    /** Apaga o APK de uma atualização já instalada (ou abandonada). */
+    /** Deletes the APK of an update already installed (or abandoned). */
     fun clean() {
         File(context.cacheDir, "atualizacao").deleteRecursively()
     }
@@ -121,7 +121,7 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     private companion object {
         const val TAG = "stagebook"
         const val APK_MIME = "application/vnd.android.package-archive"
-        // última versão publicada no GitHub Releases: "latest/download" sempre aponta para o release mais novo
+        // latest version published on GitHub Releases: "latest/download" always points to the newest release
         const val RELEASES = "https://github.com/julianoAffonso/stagebook/releases/latest/download/"
         const val APK_URL = RELEASES + "stagebook.apk"
         const val VERSION_URL = RELEASES + "stagebook-version.json"

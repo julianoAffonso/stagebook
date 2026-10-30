@@ -27,8 +27,8 @@ import br.app.stagebook.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
- * Explicação escondida, como um "alt": uma linha discreta (ⓘ + [label]) e, ao tocar, um balão com o [text]. Fica até
- * tocar fora. Para as explicações longas dos ajustes não ocuparem a tela.
+ * Hidden explanation, like an "alt": a quiet line (ⓘ + [label]) and, on tap, a bubble with the [text]. Stays until
+ * tapping outside. So long settings explanations don't take over the screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +52,7 @@ fun HelpTip(text: String, modifier: Modifier = Modifier, label: String = stringR
     }
 }
 
-/** Só o ⓘ (ao lado do título de um cartão): ao tocar, o balão com o [text]. */
+/** Just the ⓘ (next to a card's title): on tap, the bubble with the [text]. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpIcon(text: String, modifier: Modifier = Modifier) {

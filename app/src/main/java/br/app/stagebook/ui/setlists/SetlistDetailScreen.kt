@@ -110,7 +110,7 @@ fun SetlistDetailRoute(
         cloud = cloud,
         onSendInternet = viewModel::sendInternet,
         onDismissCloud = viewModel::dismissCloud,
-        // o código vai por qualquer app de mensagem do aparelho (WhatsApp, e-mail, SMS…)
+        // the code goes through any messaging app on the device (WhatsApp, email, SMS…)
         onCopyCode = codeActions.copy,
         band = bandOnline,
         onSendBand = viewModel::sendBand,
@@ -126,7 +126,7 @@ fun SetlistDetailRoute(
         onMove = viewModel::move,
         onEditSong = onEditSong,
         onRemove = viewModel::remove,
-        onDeleteSetlist = viewModel::delete,   // o setlist some e o LaunchedEffect acima volta
+        onDeleteSetlist = viewModel::delete,   // the setlist goes away and the LaunchedEffect above comes back
     )
 }
 
@@ -136,7 +136,7 @@ fun SetlistDetailScreen(
     qr: QrUi?,
     onBack: () -> Unit,
     onRename: (String) -> Unit,
-    onPlay: (start: Int) -> Unit,   // toque numa música: abre o palco nela
+    onPlay: (start: Int) -> Unit,   // tap on a song: opens the stage on it
     onAddSongs: () -> Unit,
     onShowQr: () -> Unit,
     onHideQr: () -> Unit,
@@ -159,11 +159,11 @@ fun SetlistDetailScreen(
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
-    var sharing by rememberSaveable { mutableStateOf(false) }   // a folha "Compartilhar" aberta
+    var sharing by rememberSaveable { mutableStateOf(false) }   // the "Share" sheet open
     var deleting by rememberSaveable { mutableStateOf(false) }
-    var removing by rememberSaveable { mutableStateOf<Int?>(null) }   // posição da música a tirar (confirma antes)
-    // cópia local: a lista muda na hora durante o arrasto; a ordem é gravada uma vez, ao soltar (gravar a
-    // cada posição regravava a biblioteca várias vezes por arrasto), e a ordem salva volta pelo uiState
+    var removing by rememberSaveable { mutableStateOf<Int?>(null) }   // position of the song to remove (confirms first)
+    // local copy: the list changes right away during the drag; the order is saved once, on release (saving at every
+    // position rewrote the library several times per drag), and the saved order comes back through uiState
     var items by remember(uiState.items) { mutableStateOf(uiState.items) }
     val latestItems by rememberUpdatedState(items)
     val dragStart = remember { DragStart() }
@@ -189,14 +189,15 @@ fun SetlistDetailScreen(
                     onBack = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                 ) {
-                    // play pequeno: o palco do começo (tocar numa música abre nela)
+                    // small play: the stage from the start (tapping a song opens on it)
                     IconButton(onClick = { onPlay(0) }, enabled = items.isNotEmpty()) {
                         Icon(AppIcons.Play, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
                     }
-                    // renomear e apagar no ⋮ (padrão do Google): o nome do setlist não corta no celular
+                    // rename and delete in the ⋮ (Google's pattern): the setlist name doesn't get cut on phones
                     OverflowMenu(
                         listOf(
-                            // só com alguém da banda: manda o setlist e abre o palco; a banda acompanha as trocas de música
+                            // only with a band member: sends the setlist and opens the stage; the band follows the song
+                            // changes
                             *listOfNotNull(
                                 MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { band > 0 && items.isNotEmpty() },
                             ).toTypedArray(),
@@ -225,7 +226,8 @@ fun SetlistDetailScreen(
                                         modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
                                         titleStyle = MaterialTheme.typography.titleLarge,
                                         inline = wide,
-                                        // padrão do YouTube Music: a alça de arrastar no começo da linha e o ⋮ sozinho na ponta
+                                        // YouTube Music pattern: the drag handle at the start of the row and the ⋮
+                                        // alone at the end
                                         leading = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 IconButton(
@@ -241,7 +243,7 @@ fun SetlistDetailScreen(
                                             }
                                         },
                                         trailing = {
-                                            // editar a música e tirar do setlist no ⋮ (padrão do Google)
+                                            // edit the song and remove from the setlist in the ⋮ (Google's pattern)
                                             OverflowMenu(
                                                 buildList {
                                                     if (!item.missing) add(MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEditSong(item.songId) }))
@@ -268,7 +270,7 @@ fun SetlistDetailScreen(
     removing?.let { at ->
         items.getOrNull(at)?.let { item ->
             val title = if (item.missing) stringResource(R.string.set_item_missing) else item.title
-            // a repository só tira se ainda for a mesma música nessa posição
+            // the repository only removes it if it's still the same song at that position
             ConfirmDialog(stringResource(R.string.set_remove_confirm, title), stringResource(R.string.set_remove), { onRemove(at, item.songId) }, { removing = null })
         } ?: run { removing = null }
     }
@@ -289,7 +291,7 @@ fun SetlistDetailScreen(
     cloud?.let { CloudDialog(it, onDismissCloud, onShareCode, onCopyCode) }
 }
 
-/** Músicas e Compartilhar lado a lado (o palco abre tocando numa música da lista). */
+/** Songs and Share side by side (the stage opens by tapping a song in the list). */
 @Composable
 private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -356,7 +358,7 @@ private fun SetlistDetailDarkPreview() = StagebookTheme(darkTheme = true) {
     SetlistDetailScreen(previewState, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {})
 }
 
-/** De onde saiu a música sendo arrastada (gravada uma vez, ao soltar). */
+/** Where the dragged song came from (saved once, on release). */
 private class DragStart {
     var key: String? = null
     var index = -1

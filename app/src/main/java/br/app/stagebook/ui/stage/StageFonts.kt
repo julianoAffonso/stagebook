@@ -4,7 +4,7 @@ import android.graphics.Typeface
 import androidx.compose.ui.text.font.FontFamily
 import br.app.stagebook.data.model.StageFont
 
-/** A família de fonte do Android para cada opção dos ajustes. */
+/** The Android font family for each settings option. */
 val StageFont.family: FontFamily
     get() = when (this) {
         StageFont.DEFAULT -> FontFamily.SansSerif

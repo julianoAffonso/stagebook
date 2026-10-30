@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import br.app.stagebook.R
 
-/** Campo de busca arredondado, sem sublinhado, com lupa e botão de limpar. */
+/** Rounded search field, no underline, with a magnifier and a clear button. */
 @Composable
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     TextField(

@@ -13,14 +13,17 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-/** Um aparelho na rede agora: se já é da banda e, se este aparelho pediu para entrar por ele, como está o pedido. */
+/**
+ * A device on the network now: whether it's already in the band and, if this device asked to join through it, the
+ * request's state.
+ */
 @Immutable
 data class NearbyUi(val id: String, val name: String, val member: Boolean, val join: BandLink.Join? = null, val otherVersion: String? = null)
 
 @Immutable
 data class MemberUi(val id: String, val name: String, val since: Long)
 
-/** Ajustes → Banda: este aparelho, quem está na rede agora e quem é da banda. */
+/** Settings → Band: this device, who is on the network now and who is in the band. */
 @Immutable
 data class BandUi(
     val name: String = "",
@@ -31,7 +34,7 @@ data class BandUi(
     val members: List<MemberUi> = emptyList(),
 )
 
-/** O que a tela da banda faz. */
+/** What the band screen does. */
 class BandActions(
     val onName: (String) -> Unit = {},
     val onJoin: (String) -> Unit = {},
@@ -68,6 +71,6 @@ class BandViewModel @Inject constructor(
         onRemove = link::remove,
     )
 
-    /** Ajustes → Banda aberto: este aparelho aparece para quem quer entrar. */
+    /** Settings → Band open: this device shows up for whoever wants to join. */
     fun screenOpen(open: Boolean) = link.setScreenOpen(open)
 }

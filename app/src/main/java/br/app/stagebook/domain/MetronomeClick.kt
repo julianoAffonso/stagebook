@@ -5,8 +5,8 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * O som do metrônomo, amostra a amostra: cada clique começa na amostra exata do tempo (sem acumular atraso ao longo da
- * música). [render] preenche um pedaço do áudio a partir de [fromSample]; o primeiro tempo de cada compasso soa mais agudo.
+ * The metronome sound, sample by sample: each click starts on the beat's exact sample (no delay builds up over the
+ * song). [render] fills a chunk of audio from [fromSample]; the first beat of each bar sounds higher.
  */
 object MetronomeClick {
     const val RATE = 48_000
@@ -17,7 +17,7 @@ object MetronomeClick {
 
     fun samplesPerBeat(bpm: Int, rate: Int = RATE): Long = rate * 60L / bpm.coerceAtLeast(1)
 
-    /** Um clique curto: seno com queda rápida (soa como o "tic" de um metrônomo). */
+    /** A short click: a sine with a fast decay (sounds like a metronome's "tick"). */
     fun click(accent: Boolean, rate: Int = RATE): ShortArray {
         val n = rate * CLICK_MS / 1000
         val hz = if (accent) ACCENT_HZ else NORMAL_HZ
@@ -27,11 +27,11 @@ object MetronomeClick {
         }
     }
 
-    /** Preenche [out] (silêncio + cliques) com o áudio das amostras [fromSample] até [fromSample] + out.size. */
+    /** Fills [out] (silence + clicks) with the audio for samples [fromSample] to [fromSample] + out.size. */
     fun render(out: ShortArray, fromSample: Long, spb: Long, normal: ShortArray, accent: ShortArray, beatsPerBar: Int = 4) {
         out.fill(0)
         val end = fromSample + out.size
-        // o clique que começou antes deste pedaço ainda pode estar tocando
+        // a click that started before this chunk may still be sounding
         var beat = maxOf(0L, (fromSample - normal.size) / spb)
         while (beat * spb < end) {
             val start = beat * spb

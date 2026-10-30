@@ -33,14 +33,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Uma música da biblioteca que pode entrar no setlist lido. */
+/** A library song that can go into the scanned setlist. */
 @Immutable
 data class SongRef(val id: String, val title: String, val author: String)
 
 /**
- * Uma linha da conferência: a música do setlist, o que achou na biblioteca e a escolhida (null = fica de fora).
- * [found] = achou sem dúvida; senão, [candidates] são as parecidas para o usuário escolher. [carried] = não está na
- * biblioteca, mas veio junto com o setlist (pela internet): entra na biblioteca ao criar.
+ * A review row: the setlist's song, what was found in the library and the chosen one (null = left out). [found] = found
+ * without doubt; otherwise [candidates] are the similar ones for the user to pick. [carried] = not in the library, but
+ * came with the setlist (online): goes into the library on create.
  */
 @Immutable
 data class ScanRow(
@@ -50,10 +50,10 @@ data class ScanRow(
     val candidates: List<SongRef>,
     val chosen: String?,
     val carried: Boolean = false,
-    val fromBand: Boolean = false,   // a banda tinha (pedida na conferência)
-    val differs: Boolean = false,    // já tenho, mas a que chegou é outra versão: o usuário escolhe
-    val lyricsOnly: Boolean = false, // perfil letra e cifra, mas a que chegou veio sem cifra
-    val wantChords: Boolean = false, // recusou a só-letra: vai buscar com cifra nos sites (fila de importação)
+    val fromBand: Boolean = false,   // the band had it (asked during the review)
+    val differs: Boolean = false,    // I have it, but the one that arrived is another version: the user chooses
+    val lyricsOnly: Boolean = false, // lyrics and chords profile, but the one that arrived has no chords
+    val wantChords: Boolean = false, // refused the lyrics-only one: goes to find it with chords on the sites (import queue)
     val useIncoming: Boolean = false,
 )
 
@@ -62,24 +62,24 @@ enum class ScanProblem { NOT_SETLIST, INCOMPLETE, NEWER }
 enum class CodeProblem { NOT_FOUND, OFFLINE, NEWER }
 
 sealed interface ScanUi {
-    /** Câmera aberta; [problem] = o último QR lido não serviu. */
+    /** Camera open; [problem] = the last QR scanned didn't work. */
     data class Scanning(val problem: ScanProblem? = null) : ScanUi
 
-    /** Buscando pelo código da internet, ou o que deu errado. */
+    /** Fetching by the internet code, or what went wrong. */
     data class Fetching(val problem: CodeProblem? = null) : ScanUi
 
-    /** [songsOnly]: vieram músicas avulsas (sem nome de setlist): só entram na biblioteca, nenhum setlist é criado. */
+    /** [songsOnly]: loose songs came (no setlist name): they only go into the library, no setlist is created. */
     @Immutable
     data class Review(val name: String, val rows: List<ScanRow>, val songsOnly: Boolean = false) : ScanUi {
-        /** As que vão ficar de fora: sem escolha e sem ter vindo junto. */
+        /** The ones that will be left out: no choice and not carried along. */
         val missing: List<ScanRow> get() = rows.filter { it.chosen == null && !it.carried }
     }
 }
 
 /**
- * Lê o setlist (QR de outro aparelho, ou o código da internet: o mesmo formato do QR) e confere com a
- * biblioteca deste aparelho antes de criar. Toda música que não for achada é avisada antes de criar: um setlist de 15
- * nunca vira 12 em silêncio. As músicas que vieram junto só entram no lugar das que faltam (as daqui nunca mudam).
+ * Reads the setlist (QR from another device, or the internet code: same format as the QR) and checks it against this
+ * device's library before creating. Every song not found is flagged before creating: a 15-song setlist never silently
+ * becomes 12. Songs carried along only fill in for missing ones (the ones here never change).
  */
 @HiltViewModel
 class ScanSetlistViewModel @Inject constructor(
@@ -93,19 +93,21 @@ class ScanSetlistViewModel @Inject constructor(
     private val trust: br.app.stagebook.data.BandTrust,
     private val connectivity: br.app.stagebook.data.Connectivity,
 ) : ViewModel() {
-    /** Quem mandou, se for da banda (o pedido pela internet vai para a caixa dele). */
+    /** The sender, if they're in the band (the online request goes to their inbox). */
     private fun senderId(): String? = (inbox.get(route.inbox)?.fromId ?: sender?.id)?.takeIf(trust::isMember)
 
-    /** Nome de quem mandou, quando dá para pedir pela internet as que faltam (é da banda e há internet); senão null. */
+    /**
+     * Sender's name, when the missing ones can be asked for online (in the band and there's internet); otherwise null.
+     */
     val internetFrom: StateFlow<String?> = combine(connectivity.online, repository.library.map { it.look.internetOn }) { a, b -> a && b }.map { on ->
         if (!on) null else senderId()?.let { id -> trust.member(id)?.name ?: fromName.ifBlank { null } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val internetAsked = Channel<Boolean>(Channel.BUFFERED)
-    /** Resultado do pedido pela internet (true = foi). */
+    /** Result of the online request (true = sent). */
     val internetResult = internetAsked.receiveAsFlow()
 
-    /** Pede pela internet a quem mandou as músicas que faltam (T12); elas chegam depois em "Recebidos da banda". */
+    /** Asks the sender online for the missing songs (T12); they arrive later in "Received from the band". */
     fun askInternet() {
         val ui = _ui.value as? ScanUi.Review ?: return
         val id = senderId() ?: return
@@ -114,22 +116,22 @@ class ScanSetlistViewModel @Inject constructor(
         viewModelScope.launch { internetAsked.send(bandInternet.requestSongs(id, missing)) }
     }
 
-    // quem mandou pelas 3 palavras: ao aceitar, vira da banda (e recebe o meu "ok")
+    // who sent through the 3 words: on accepting, they join the band (and get my "ok")
     private var sender: br.app.stagebook.domain.BandProtocol.Hello? = null
-    /** Quantos da banda estão na rede agora ("Pedir à banda" só aparece com alguém e com música faltando). */
+    /** How many band members are on the network now ("Ask the band" only shows with someone and with missing songs). */
     val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private val _asking = MutableStateFlow(false)
     val asking: StateFlow<Boolean> = _asking
 
     private val bandAnswer = Channel<Pair<Int, Int>>(Channel.BUFFERED)
-    /** (quantas a banda tinha, quantas foram pedidas), para o aviso. */
+    /** (how many the band had, how many were asked for), for the notice. */
     val bandResult = bandAnswer.receiveAsFlow()
 
-    /** A conferência com música faltando está aberta: procura a banda (fechou, para). */
+    /** The review with missing songs is open: search for the band (closed, it stops). */
     fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
 
-    /** Pede à banda as que faltam; as que chegarem entram como "veio da banda", no lugar delas. */
+    /** Asks the band for the missing ones; the ones that arrive come in as "from the band", in their place. */
     fun askBand() {
         val ui = _ui.value as? ScanUi.Review ?: return
         if (_asking.value) return
@@ -157,7 +159,7 @@ class ScanSetlistViewModel @Inject constructor(
     var code: String = route.code
         private set
 
-    /** Veio da banda (caixa de entrada): quem mandou, para o título; conferido, sai da caixa. */
+    /** Came from the band (inbox): the sender, for the title; once reviewed, it leaves the inbox. */
     val fromName: String = inbox.get(route.inbox)?.fromName.orEmpty()
     private fun done() {
         if (route.inbox.isNotEmpty()) inbox.remove(route.inbox)
@@ -167,17 +169,17 @@ class ScanSetlistViewModel @Inject constructor(
     private val _ui = MutableStateFlow<ScanUi>(if (code.isEmpty() && route.inbox.isEmpty()) ScanUi.Scanning() else ScanUi.Fetching())
     val ui: StateFlow<ScanUi> = _ui
 
-    // músicas que vieram junto, por linha da conferência
+    // songs carried along, per review row
     private var carried: Map<Int, SetlistCloud.SharedSong> = emptyMap()
-    // outra versão de uma música que já tenho, por linha (só usada se o usuário escolher)
+    // another version of a song I already have, per row (only used if the user chooses it)
     private var incoming: Map<Int, SetlistCloud.SharedSong> = emptyMap()
 
-    // as só-letra recusadas, por linha (para voltar atrás em "Aceitar só a letra")
+    // the refused lyrics-only ones, per row (to undo "Accept lyrics only")
     private var declined: Map<Int, SetlistCloud.SharedSong> = emptyMap()
 
     /**
-     * A que chegou só com a letra (perfil letra e cifra): [on] = não aceitar e buscar com cifra nos sites (ela fica como
-     * "falta" e entra na fila de "Importar as que faltam"); false = aceitar só a letra de novo.
+     * The one that came with lyrics only (lyrics and chords profile): [on] = don't accept and search with chords on the
+     * sites (it stays "missing" and joins the "Import the missing ones" queue); false = accept the lyrics only again.
      */
     fun searchWithChords(index: Int, on: Boolean) {
         val ui = _ui.value as? ScanUi.Review ?: return
@@ -191,7 +193,7 @@ class ScanSetlistViewModel @Inject constructor(
         _ui.value = ui.copy(rows = ui.rows.mapIndexed { i, r -> if (i == index) r.copy(carried = !on, wantChords = on) else r })
     }
 
-    /** O que muda da minha para a recebida, na linha [index] (para "Ver o que muda"). */
+    /** What changes from mine to theirs, on row [index] (for "See what changes"). */
     fun changes(index: Int): List<SongMerge.Change> {
         val ui = _ui.value as? ScanUi.Review ?: return emptyList()
         val mine = ui.rows.getOrNull(index)?.chosen?.let(repository::song) ?: return emptyList()
@@ -199,12 +201,12 @@ class ScanSetlistViewModel @Inject constructor(
         return SongMerge.changes(mine.text, theirs.text)
     }
 
-    /** Manter a minha (false) ou usar a recebida (true) na linha [index]. */
+    /** Keep mine (false) or use theirs (true) on row [index]. */
     fun useIncoming(index: Int, use: Boolean) = _ui.update { ui ->
         if (ui !is ScanUi.Review) ui else ui.copy(rows = ui.rows.mapIndexed { i, r -> if (i == index) r.copy(useIncoming = use) else r })
     }
 
-    // as recebidas escolhidas entram por cima das minhas, sem apagar a minha cifra
+    // the chosen received ones go over mine, without deleting my chords
     private fun applyIncoming(ui: ScanUi.Review) {
         ui.rows.forEachIndexed { i, r ->
             val theirs = incoming[i] ?: return@forEachIndexed
@@ -222,7 +224,7 @@ class ScanSetlistViewModel @Inject constructor(
         }
     }
 
-    /** Busca o setlist pelo código (de novo, depois de um erro). */
+    /** Fetches the setlist by the code (again, after an error). */
     fun fetch() {
         _ui.value = ScanUi.Fetching()
         viewModelScope.launch {
@@ -235,13 +237,13 @@ class ScanSetlistViewModel @Inject constructor(
         }
     }
 
-    /** Texto de um QR lido pela câmera (já descompactado). */
+    /** Text of a QR scanned by the camera (already decompressed). */
     fun onText(text: String) {
         if (_ui.value !is ScanUi.Scanning) return
-        // QR de um código da internet (foto do diálogo de quem enviou): busca pelo código
+        // QR of an internet code (photo of the sender's dialog): fetch by the code
         ShareCode.fromQr(text)?.let { code = it; fetch(); return }
         if (QrPayload.parse(text) == null) {
-            // começa como QR de setlist mas não fecha a conta: leitura cortada, ler de novo; de formato mais novo: atualizar
+            // starts like a setlist QR but the count doesn't match: cut scan, scan again; newer format: update
             _ui.value = ScanUi.Scanning(
                 when {
                     QrPayload.isNewer(text) -> ScanProblem.NEWER
@@ -265,12 +267,13 @@ class ScanSetlistViewModel @Inject constructor(
         }
         val rows = parsed.songs.mapIndexed { i, e ->
             val m = SetlistMatcher.match(e, library)
-            // músicas avulsas: a parecida não é a mesma — a que veio entra como nova (no setlist, o usuário escolhe)
+            // loose songs: a similar one isn't the same, so the one that came goes in as new (in a setlist, the user
+            // chooses)
             val c = if (m is QrMatch.Missing || (songsOnly && m is QrMatch.Similar)) came(e) else null
             if (c != null) came[i] = c
             when {
                 m is QrMatch.Found -> {
-                    // já tenho: se veio outra versão junto, a linha pergunta (a minha fica, a não ser que eu escolha)
+                    // I have it: if another version came along, the row asks (mine stays unless I choose otherwise)
                     val theirs = came(e)?.takeIf { !SongMerge.same(it.text, m.song.text) }
                     if (theirs != null) other[i] = theirs
                     ScanRow(e.title, e.artist, true, listOf(m.song.ref()), m.song.id, differs = theirs != null)
@@ -287,20 +290,20 @@ class ScanSetlistViewModel @Inject constructor(
 
     private fun Song.ref() = SongRef(id, title, author)
 
-    // no perfil letra e cifra, avisa a música que chegou só com a letra (falta a cifra)
+    // in the lyrics and chords profile, flag a song that arrived with lyrics only (chords missing)
     private fun noChords(s: SetlistCloud.SharedSong) =
         repository.library.value.look.chords && !br.app.stagebook.domain.Chords.hasChords(s.text)
 
     fun setName(name: String) = _ui.update { if (it is ScanUi.Review) it.copy(name = name) else it }
 
-    /** Escolhe a música de uma linha com dúvida (null = deixa de fora). */
+    /** Picks the song for an uncertain row (null = leave out). */
     fun choose(index: Int, songId: String?) = _ui.update { ui ->
         if (ui !is ScanUi.Review) ui else ui.copy(rows = ui.rows.mapIndexed { i, r -> if (i == index) r.copy(chosen = songId) else r })
     }
 
     fun scanAgain() { if (code.isEmpty()) _ui.value = ScanUi.Scanning() else fetch() }
 
-    /** Músicas avulsas: as que vieram e não estão aqui entram na biblioteca; devolve quantas. */
+    /** Loose songs: the ones that came and aren't here go into the library; returns how many. */
     fun addSongs(): Int {
         carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text))) }
         (_ui.value as? ScanUi.Review)?.let(::applyIncoming)
@@ -308,13 +311,13 @@ class ScanSetlistViewModel @Inject constructor(
         return carried.size
     }
 
-    /** Já existe um setlist com esse nome (sem ligar para acento e caixa)? */
+    /** Is there already a setlist with this name (ignoring accents and case)? */
     fun existing(name: String): String? = repository.library.value.sets.firstOrNull { TextKey.of(it.name) == TextKey.of(name) }?.id
 
-    /** Cria o setlist (ou troca as músicas do que tem o mesmo nome, se [replaceId]) e devolve o id. */
+    /** Creates the setlist (or replaces the songs of the one with the same name, if [replaceId]) and returns the id. */
     fun create(replaceId: String? = null): String? = createWithSlots(replaceId)?.first
 
-    // as que vieram junto entram na biblioteca agora; devolve o setlist e, na ordem dele, o id de cada linha (null = falta)
+    // the carried ones go into the library now; returns the setlist and, in its order, each row's id (null = missing)
     private fun createWithSlots(replaceId: String?): Pair<String, List<String?>>? {
         val ui = _ui.value as? ScanUi.Review ?: return null
         val slots = ui.rows.mapIndexed { i, r ->
@@ -328,8 +331,8 @@ class ScanSetlistViewModel @Inject constructor(
     }
 
     /**
-     * Cria o setlist com as achadas (e as que vieram junto) e começa a importar as que faltam, uma a uma, no lugar delas
-     * (fila guiada no importador). As que ficaram com dúvida e sem escolha continuam de fora.
+     * Creates the setlist with the found ones (and the carried ones) and starts importing the missing ones, one by one,
+     * in their place (guided queue in the importer). Uncertain ones with no choice stay out.
      */
     fun createAndImport(replaceId: String? = null): Boolean {
         val ui = _ui.value as? ScanUi.Review ?: return false
@@ -341,7 +344,7 @@ class ScanSetlistViewModel @Inject constructor(
         return missing.isNotEmpty()
     }
 
-    // "Criar outro" com o nome já usado: "Show (2)", "Show (3)"…
+    // "Create another" with a name already in use: "Show (2)", "Show (3)"…
     private fun uniqueName(name: String): String {
         if (existing(name) == null) return name
         var n = 2

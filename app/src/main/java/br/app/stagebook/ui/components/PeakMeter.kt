@@ -20,10 +20,10 @@ import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Barra de pico vertical (dBFS, de -48 a +3), com a marca do maior pico recente. `levelDb` e `holdDb`
- * são lidos só no desenho: a barra redesenha a cada leitura sem recompor a tela. Acima de 0 dBFS, a
- * parte de cima fica na cor de erro (a saída recebe cortado). [vertical] = false: barra deitada, crescendo para a
- * direita (ao lado do fader deitado do celular).
+ * Vertical peak bar (dBFS, from -48 to +3), with the mark of the highest recent peak. `levelDb` and `holdDb` are read
+ * only when drawing: the bar redraws on every reading without recomposing the screen. Above 0 dBFS the top turns the
+ * error color (the output gets clipped). [vertical] = false: horizontal bar, growing right (next to the phone's
+ * horizontal fader).
  */
 @Composable
 fun PeakMeter(

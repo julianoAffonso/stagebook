@@ -28,8 +28,8 @@ import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Linha de lista (música, setlist, item do setlist): cartão arredondado com ripple ao tocar.
- * `inline`: título e subtítulo na mesma linha (tablet: mais músicas na tela sem diminuir a letra).
+ * List row (song, setlist, setlist item): rounded card with ripple on tap. `inline`: title and subtitle on the same
+ * line (tablet: more songs on screen without shrinking the text).
  */
 @Composable
 fun SongListItem(
@@ -42,7 +42,7 @@ fun SongListItem(
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     inline: Boolean = false,
-    onLongClick: (() -> Unit)? = null,   // segurar: seleção (compartilhar várias), onde a lista tiver
+    onLongClick: (() -> Unit)? = null,   // hold: selection (share several), where the list supports it
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -58,7 +58,7 @@ fun SongListItem(
         ) {
             leading?.invoke()
             if (inline) {
-                // o título tem prioridade; o que não couber do artista/ano vira "…"
+                // the title has priority; whatever doesn't fit of the artist/year becomes "…"
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (subtitle.isNotEmpty()) {
@@ -89,11 +89,11 @@ fun SongListItem(
     }
 }
 
-/** Tablet (ou celular deitado): listas em linha única. */
+/** Tablet (or phone in landscape): single-line lists. */
 @Composable
 fun wideLists(): Boolean = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } >= 600.dp
 
-/** Número da música no setlist, na cor de destaque e sem fundo (largura fixa: os títulos ficam alinhados). */
+/** Song number in the setlist, in the accent color with no background (fixed width: the titles line up). */
 @Composable
 fun NumberBadge(number: Int, modifier: Modifier = Modifier) {
     Box(modifier.width(40.dp), contentAlignment = Alignment.Center) {

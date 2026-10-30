@@ -28,16 +28,16 @@ import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Bordas que as telas respeitam: o app esconde as barras do sistema, então só a câmera nas laterais (celular
- * deitado); em cima o conteúdo sobe até o topo (no S26 a folga da câmera em pé desperdiçava espaço).
+ * Edges the screens respect: the app hides the system bars, so only the camera on the sides (phone in landscape); on
+ * top the content goes up to the edge (on the S26 the camera gap in portrait wasted space).
  */
 val ScreenInsets: WindowInsets
     @Composable get() = WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal)
 
 /**
- * Cabeçalho de tela: voltar (opcional), título grande, subtítulo e ações à direita. No celular o subtítulo
- * corre numa linha própria abaixo do cabeçalho, na largura toda (entre o título e os ícones ele ficava
- * espremido em várias linhas); no tablet fica embaixo do título.
+ * Screen header: back (optional), big title, subtitle and actions on the right. On phones the subtitle runs on its own
+ * line below the header, full width (between the title and the icons it got squeezed onto several lines); on tablets it
+ * sits under the title.
  */
 @Composable
 fun ScreenHeader(
@@ -60,15 +60,15 @@ fun ScreenHeader(
             Column(Modifier.weight(1f)) {
                 Text(
                     title,
-                    // padrão do Google: tela principal com título grande; tela interna (com a seta) no celular com o
-                    // título menor da barra de cima, para não ocupar duas linhas; no tablet sempre grande (cabe)
+                    // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones has
+                    // the top bar's smaller title, so it doesn't take two lines; on tablets always big (it fits)
                     style = when {
                         wide -> MaterialTheme.typography.headlineLarge
                         onBack != null -> MaterialTheme.typography.titleLarge
                         else -> MaterialTheme.typography.headlineMedium
                     },
                     color = MaterialTheme.colorScheme.onBackground,
-                    // barra de cima da tela interna no celular: uma linha só, com "…" (como o Google faz)
+                    // inner screen top bar on phones: a single line, with "…" (like Google does)
                     maxLines = if (!wide && onBack != null) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -77,7 +77,7 @@ fun ScreenHeader(
             actions()
         }
         if (!wide && subtitle.isNotEmpty()) {
-            // alinhado com o título (depois do botão de voltar)
+            // aligned with the title (after the back button)
             Subtitle(subtitle, Modifier.padding(start = if (onBack != null) Sizes.touch + Spacing.s else 0.dp))
         }
     }
@@ -88,7 +88,7 @@ private fun Subtitle(text: String, modifier: Modifier = Modifier) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
 }
 
-/** Conteúdo centralizado com largura máxima: no tablet deitado as linhas não ficam esticadas demais. */
+/** Centered content with a max width: on a tablet in landscape the lines aren't stretched too far. */
 @Composable
 fun CenteredContent(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {

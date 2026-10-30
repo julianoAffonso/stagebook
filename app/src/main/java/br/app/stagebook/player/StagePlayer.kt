@@ -39,14 +39,17 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** O que o palco mostra do player: tocando, esperando a saída USB para tocar, e o aviso atual (vazio = nenhum). */
+/**
+ * What the stage shows from the player: playing, waiting for the USB output to play, and the current notice (empty =
+ * none).
+ */
 @Immutable
 data class PlayerUi(val playing: Boolean = false, val waiting: Boolean = false, val message: String = "")
 
 /**
- * Ponte do palco com o motor. Nada do player sobe antes do primeiro play: nem o serviço, nem a biblioteca nativa.
- * A música aberta só anota o backing track; ele é carregado no play (ou ao trocar de música com o player já ligado).
- * No fim do backing track, para e volta ao início, esperando o próximo play.
+ * The stage's bridge to the engine. Nothing from the player starts before the first play: not the service, not the
+ * native library. The open song only notes the backing track; it's loaded on play (or when changing songs with the
+ * player already on). At the end of the backing track, it stops and goes back to the start, waiting for the next play.
  */
 @Singleton
 class StagePlayer @Inject constructor(
@@ -54,21 +57,21 @@ class StagePlayer @Inject constructor(
     private val repository: LibraryRepository,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val engine = Mutex()   // load e seek leem o disco: fora da tela e um de cada vez
+    private val engine = Mutex()   // load and seek read the disk: off the UI thread and one at a time
     private val _ui = MutableStateFlow(PlayerUi())
     val ui: StateFlow<PlayerUi> = _ui
 
-    @Volatile private var wanted: File? = null    // backing track da música aberta
-    @Volatile private var loaded: File? = null    // o que está no motor
+    @Volatile private var wanted: File? = null    // backing track of the open song
+    @Volatile private var loaded: File? = null    // what's in the engine
     private var durationMs = -1L
     private var endWatch: Job? = null
 
     @Volatile private var mixer = MixerConfig()
-    private val measures = mutableMapOf<Int, Measure>()   // do backing track carregado, por canal do mixer
+    private val measures = mutableMapOf<Int, Measure>()   // of the loaded backing track, per mixer channel
 
     init {
         instance = this
-        // mudou o mixer nos Ajustes: mede o que faltar e aplica na hora (só com o player ligado)
+        // the mixer changed in Settings: measure what's missing and apply right away (only with the player on)
         scope.launch {
             repository.library.map { it.look.mixer }.distinctUntilChanged().collect {
                 mixer = it
@@ -77,7 +80,7 @@ class StagePlayer @Inject constructor(
         }
     }
 
-    /** Música aberta no palco (null = sem backing track): para o que estiver tocando e anota a nova. */
+    /** Song open on stage (null = no backing track): stops whatever is playing and notes the new one. */
     fun open(track: File?) {
         if (track == wanted) return
         wanted = track
@@ -85,7 +88,7 @@ class StagePlayer @Inject constructor(
         if (PlayerService.running) scope.launch { load() }
     }
 
-    /** Pedir para sair da economia de bateria (tocar com a tela apagada)? Só uma vez, e só se ainda não saiu. */
+    /** Ask to skip battery saving (play with the screen off)? Only once, and only if it hasn't yet. */
     fun needsBatteryAsk(): Boolean {
         val pm = context.getSystemService(PowerManager::class.java)
         return !prefs.getBoolean(KEY_BATTERY_ASKED, false) && !pm.isIgnoringBatteryOptimizations(context.packageName)
@@ -121,7 +124,7 @@ class StagePlayer @Inject constructor(
         }
     }
 
-    /** Desliga o player (fechar o modo player): libera USB, motor e serviço. */
+    /** Turns off the player (closing player mode): releases USB, engine and service. */
     fun shutdown() {
         pause()
         loaded = null
@@ -137,15 +140,15 @@ class StagePlayer @Inject constructor(
         loaded = f
         measures.clear()
         if (durationMs < 0) return@withLock false
-        // arquivo com mais canais que o mixer mostra: o mixer passa a mostrar todos
+        // file with more channels than the mixer shows: the mixer starts showing all of them
         val lanes = Engine.lanes()
         if (lanes > mixer.channels) repository.updateLook { it.copy(mixer = it.mixer.copy(channels = lanes)) }
         measureAndApply()
         true
     }
 
-    // Normalização: mede (ou lê do cache) cada canal do mixer que normaliza, e manda a mistura ao motor.
-    // Com o engine travado: roda antes do play, então a música nunca começa num volume e pula para outro.
+    // Normalization: measures (or reads from cache) each mixer channel that normalizes, and sends the mix to the
+    // engine. With the engine locked: it runs before play, so a song never starts at one volume and jumps to another.
     private fun measureAndApply() {
         val f = loaded ?: return
         val lanes = Engine.lanes()
@@ -169,8 +172,8 @@ class StagePlayer @Inject constructor(
         return Measure(m[0], m[1])
     }
 
-    // Toca só com a saída pronta (USB ou do aparelho); sem ela, o play fica esperando (o serviço avisa quando
-    // conectar). Também retoma depois de uma reconexão: parar o motor zera o play dele, mas não a posição.
+    // Only plays with the output ready (USB or device); without it, play waits (the service notifies when it connects).
+    // Also resumes after a reconnection: stopping the engine resets its play, but not the position.
     private fun startIfConnected() {
         val ui = _ui.value
         if (!(ui.waiting || ui.playing) || !PlayerService.connected || loaded == null || loaded != wanted) return
@@ -191,7 +194,7 @@ class StagePlayer @Inject constructor(
 
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
-        // outra saída conectada: os Ajustes passam a mostrar o roteamento dela, e o motor a usá-lo
+        // another output connected: Settings start showing its routing, and the engine starts using it
         val out = OutputInfo(PlayerService.outputKey, PlayerService.outputName, PlayerService.outputCount)
         if (PlayerService.connected && out.key.isNotEmpty() && out != mixer.output) {
             repository.updateLook { it.copy(mixer = it.mixer.copy(output = out)) }
@@ -199,7 +202,8 @@ class StagePlayer @Inject constructor(
         if (PlayerService.connected) {
             startIfConnected()
         } else if (_ui.value.playing) {
-            // a saída caiu tocando: o motor segura a posição e o serviço reconecta sozinho em até 5 s
+            // the output dropped while playing: the engine holds the position and the service reconnects by itself
+            // within 5 s
             _ui.update { it.copy(playing = false, waiting = true) }
         }
     }
@@ -207,19 +211,19 @@ class StagePlayer @Inject constructor(
     companion object {
         const val END_POLL_MS = 250L
         private const val KEY_BATTERY_ASKED = "batteryAsked"
-        const val END_MARGIN_MS = 300L   // o fim real chega quando o último pacote sai; antes disso, já é fim
+        const val END_MARGIN_MS = 300L   // the real end comes when the last packet goes out; before that, it's already the end
 
         @Volatile private var instance: StagePlayer? = null
 
-        /** Modo player desligado nos Ajustes: se o player chegou a subir, desliga tudo. */
+        /** Player mode turned off in Settings: if the player had started, turn everything off. */
         fun turnOff() { instance?.shutdown() }
 
-        private const val METER_MS = 66L          // ~15 leituras por segundo
-        private const val METER_IDLE_MS = 500L    // player desligado: só confere se ligou
+        private const val METER_MS = 66L          // ~15 reads per second
+        private const val METER_IDLE_MS = 500L    // player off: only check whether it turned on
 
         /**
-         * Medidores ao vivo para os Ajustes (canais e espectro). O motor só mede enquanto alguém coleta e o player está
-         * ligado; ao parar de coletar, a medição desliga. Nada disso carrega o motor com o player desligado.
+         * Live meters for Settings (channels and spectrum). The engine only measures while someone collects and the
+         * player is on; when collecting stops, measuring turns off. None of this loads the engine with the player off.
          */
         fun liveLevels(): Flow<MixerLevels> = flow {
             val meters = MeterBallistics(MixerConfig.MAX)
@@ -249,9 +253,9 @@ class StagePlayer @Inject constructor(
             }
         }.flowOn(Dispatchers.Default)
 
-        private const val PEAK_OUTS = 4   // peaks() do motor: 4 saídas e depois o espectro
+        private const val PEAK_OUTS = 4   // the engine's peaks(): 4 outputs and then the spectrum
 
-        /** O serviço mudou de estado (conectou, caiu, desligou): chamado na thread principal. */
+        /** The service changed state (connected, dropped, turned off): called on the main thread. */
         @JvmStatic
         fun onServiceChanged() { instance?.serviceChanged() }
     }

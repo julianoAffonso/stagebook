@@ -27,8 +27,8 @@ import br.app.stagebook.ui.components.PreviewSurface
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Apagar tudo (como sair da loja): avisa o que se perde, oferece salvar o arquivo antes e só libera depois de digitar o
- * código mostrado (um toque sem querer nunca apaga nada).
+ * Erase everything (like fresh from the store): says what is lost, offers to save the file first and only enables after
+ * typing the code shown (an accidental tap never erases anything).
  */
 @Composable
 fun FactoryResetDialog(onBackupFirst: () -> Unit, onReset: () -> Unit, onDismiss: () -> Unit, code: String = rememberSaveable { ResetCode.generate() }) {

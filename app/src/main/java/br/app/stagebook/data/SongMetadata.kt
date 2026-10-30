@@ -6,7 +6,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Ao salvar uma música sem artista ou sem ano, completa sozinho pelo MusicBrainz (sem travar a tela). */
+/** When saving a song without an artist or year, fills them in from MusicBrainz (without blocking the screen). */
 @Singleton
 class SongMetadata @Inject constructor(
     private val repository: LibraryRepository,
@@ -25,7 +25,7 @@ class SongMetadata @Inject constructor(
     }
 }
 
-/** Letra importada esperando revisão no editor (a rota de navegação leva só ids, não a letra). */
+/** Imported lyrics waiting for review in the editor (the navigation route carries only ids, not the lyrics). */
 @Singleton
 class ImportDraft @Inject constructor() {
     data class Draft(val title: String, val artist: String, val year: String, val text: String)

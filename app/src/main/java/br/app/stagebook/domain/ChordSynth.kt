@@ -8,9 +8,10 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * O som do acorde tocado no palco, gerado aqui (sem arquivos de áudio). Cordas (violão, guitarra, ukulele, cavaquinho):
- * Karplus-Strong, a corda dedilhada clássica; teclado: alguns harmônicos com queda. [ChordPlayMode]: dedilhado (uma nota
- * de cada vez), junto (as cordas quase juntas, como uma batida) ou os dois (dedilhado e depois junto).
+ * The sound of the chord tapped on stage, generated here (no audio files). Strings (acoustic and electric guitar,
+ * ukulele, cavaquinho): Karplus-Strong, the classic plucked string; keyboard: a few decaying harmonics.
+ * [ChordPlayMode]: picked (one note at a time), strummed (the strings almost together, like a strum) or both (picked
+ * then strummed).
  */
 object ChordSynth {
     const val RATE = 44_100
@@ -21,7 +22,7 @@ object ChordSynth {
 
     fun hz(midi: Int): Double = 440.0 * 2.0.pow((midi - 69) / 12.0)
 
-    /** As notas (MIDI, da mais grave para a mais aguda) tocadas no modo escolhido; [keyboard] = som de teclado. */
+    /** The notes (MIDI, lowest to highest) played in the chosen mode; [keyboard] = keyboard sound. */
     fun render(notes: List<Int>, mode: ChordPlayMode, keyboard: Boolean, rate: Int = RATE): ShortArray {
         if (notes.isEmpty()) return ShortArray(0)
         val starts = ArrayList<Pair<Double, Int>>()   // (segundos, nota)
@@ -39,13 +40,13 @@ object ChordSynth {
             val voice = if (keyboard) keyNote(hz(note), rate) else pluck(hz(note), rate, random)
             for (i in voice.indices) if (from + i < total) mix[from + i] += voice[i]
         }
-        // o acorde junto soma várias cordas: o volume cai para não estourar
+        // the strummed chord adds several strings: the volume drops so it doesn't clip
         val peak = mix.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-9)
         val gain = VOLUME / maxOf(peak, 0.5)
         return ShortArray(total) { (mix[it] * gain * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort() }
     }
 
-    // corda dedilhada (Karplus-Strong): ruído num laço do tamanho do período, filtrado a cada volta
+    // plucked string (Karplus-Strong): noise in a loop one period long, filtered on each pass
     private fun pluck(hz: Double, rate: Int, random: Random): DoubleArray {
         val n = (RING_S * rate).toInt()
         val period = (rate / hz).toInt().coerceAtLeast(2)
@@ -62,7 +63,7 @@ object ChordSynth {
         return out
     }
 
-    // nota de teclado: fundamental e dois harmônicos, com ataque rápido e queda
+    // keyboard note: fundamental and two harmonics, with a fast attack and decay
     private fun keyNote(hz: Double, rate: Int): DoubleArray {
         val n = (RING_S * rate).toInt()
         return DoubleArray(n) { k ->

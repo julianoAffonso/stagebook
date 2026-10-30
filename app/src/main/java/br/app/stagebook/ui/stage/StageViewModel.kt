@@ -44,10 +44,10 @@ class StageViewModel @Inject constructor(
     private val chordPlayer: br.app.stagebook.data.ChordPlayer,
     private val announcer: br.app.stagebook.data.StageAnnouncer,
 ) : ViewModel() {
-    /** Now Playing: a música da vez para OBS e outros (se ligado em Ajustes → Tela). */
+    /** Now Playing: the current song for OBS and others (if on in Settings → Screen). */
     fun announce(index: Int) {
         val lib = repository.library.value
-        if (!lib.look.announce || !lib.look.extrasOn) { announcer.stop(); return }   // Now Playing é extra do palco (T19)
+        if (!lib.look.announce || !lib.look.extrasOn) { announcer.stop(); return }   // Now Playing is a stage extra (T19)
         val set = route.setId?.let(lib::setlist)
         val ids = set?.items ?: listOfNotNull(route.songId)
         val song = ids.getOrNull(index)?.let(lib::song) ?: return
@@ -60,29 +60,32 @@ class StageViewModel @Inject constructor(
         )
     }
 
-    /** Toca o acorde do palco no jeito escolhido em Ajustes (dedilhado, junto ou os dois). */
+    /** Plays the stage chord the way chosen in Settings (picked, strummed or both). */
     fun playChord(notes: List<Int>, keyboard: Boolean) = chordPlayer.play(notes, repository.library.value.look.chordPlay, keyboard)
 
-    /** Clique do metrônomo pela saída normal (null = parado ou só visual). */
+    /** Metronome click on the regular output (null = stopped or visual only). */
     fun metronomeSound(bpm: Int?) { if (bpm != null) metronome.start(bpm) else metronome.stop() }
 
-    /** Música na tela (posição no setlist): conduzindo este setlist, a banda abre a mesma. */
+    /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
         route.setId?.let { conduct.open(it, index) }
         announce(index)
     }
 
-    /** Tocando (ou esperando a saída USB para tocar) e o aviso do player. */
+    /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
 
     fun togglePlay() = player.toggle()
     fun needsBatteryAsk() = player.needsBatteryAsk()
     fun batteryAsked() = player.batteryAsked()
 
-    /** Música na tela: o player anota o backing track dela (e para o da anterior). */
+    /** Song on screen: the player notes its backing track (and stops the previous one's). */
     fun showSong(track: String) = player.open(track.takeIf { it.isNotEmpty() }?.let(tracks::file))
 
-    /** Liga a faixa escolhida à música (copiada para o app); a anterior é apagada. Falso se o arquivo não serve. */
+    /**
+     * Links the chosen track to the song (copied into the app); the previous one is deleted. False if the file won't
+     * work.
+     */
     suspend fun attachTrack(songId: String, uri: android.net.Uri): Boolean {
         val name = tracks.copy(songId, uri) ?: return false
         val old = repository.song(songId)?.track.orEmpty()
@@ -98,18 +101,18 @@ class StageViewModel @Inject constructor(
         tracks.remove(old)
     }
 
-    init { stageGate.enter() }   // segura a sincronia com o Drive enquanto o palco está aberto
+    init { stageGate.enter() }   // holds the Drive sync while the stage is open
     override fun onCleared() {
-        player.pause()   // sair do palco para o backing track
+        player.pause()   // leaving the stage stops the backing track
         metronome.stop()
         chordPlayer.stop()
         announcer.stop()
         stageGate.leave()
-        // sair do palco NÃO encerra o "Quem conduz" (pedido do usuário): no show a pessoa sai para conferir algo e a banda
-        // continua junto; só o "Encerrar" solta todos
+        // leaving the stage does NOT end "Lead the band" (user's request): during a show someone steps out to check
+        // something and the band stays together; only "End" releases everyone
     }
     private val route = savedStateHandle.toRoute<Stage>()
-    /** Música em que o palco abre (posição no setlist). */
+    /** Song the stage opens on (position in the setlist). */
     val start: Int = route.start
 
     val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
@@ -125,20 +128,20 @@ class StageViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
 
-    /** Variação do acorde escolhida no palco: vai na música como {define} do ChordPro (troca a anterior). */
+    /** Chord shape picked on stage: goes into the song as a ChordPro {define} (replaces the previous one). */
     fun saveShape(songId: String, chord: String, define: String) {
         if (songId.isEmpty()) return
         val instrument = repository.library.value.look.instrument
         repository.updateSong(songId) { it.copy(text = Voicings.saveDefine(it.text, instrument, chord, define)) }
     }
 
-    /** Acordes tirados da lista de acordes desta música (o × no palco); vazio devolve todos. */
+    /** Chords taken off this song's chord list (the × on stage); empty brings them all back. */
     fun setHiddenChords(songId: String, hidden: Set<String>) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.setHiddenChords(it.text, hidden)) }
     }
 
-    /** Zoom da pinça, gravado na música (vale em qualquer setlist, como no another app). */
-    /** Velocidade da rolagem automática (−/+ no palco), gravada nos ajustes. */
+    /** Pinch zoom, saved in the song (applies in any setlist, like another app). */
+    /** Auto-scroll speed (−/+ on stage), saved in settings. */
     fun keyboardCapoHintSeen() = repository.updateLook { it.copy(keyboardCapoHintSeen = true) }
 
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }

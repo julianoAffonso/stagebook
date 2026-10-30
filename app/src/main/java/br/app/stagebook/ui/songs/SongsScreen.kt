@@ -82,7 +82,7 @@ fun SongsRoute(
         onQueryChange = { query = it },
         onNewSong = { onEditSong(null) },
         onImport = { onImport(query) },
-        // achou o que procurava: na volta do palco a lista vem inteira
+        // found what they were looking for: coming back from the stage the whole list shows
         onOpen = { query = ""; onOpenSong(it) },
         onEdit = onEditSong,
         onDelete = viewModel::delete,
@@ -118,7 +118,7 @@ fun SongsScreen(
     onShareSongs: (List<String>) -> Unit = {},
     onDismissCloud: () -> Unit = {},
     codeActions: CodeActions = CodeActions({}, { _, _ -> }),
-    initialSelection: List<String> = emptyList(),   // prints e testes
+    initialSelection: List<String> = emptyList(),   // screenshots and tests
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     band: Int = 0,
@@ -130,7 +130,7 @@ fun SongsScreen(
 ) {
     val wide = wideLists()
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
-    // seleção para compartilhar várias: segurar uma música (ou ⋮ → Compartilhar) começa; voltar ou ✕ termina
+    // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
     var selected by rememberSaveable { mutableStateOf(initialSelection) }
     var sharing by rememberSaveable { mutableStateOf(false) }
     val selecting = selected.isNotEmpty()
@@ -145,7 +145,7 @@ fun SongsScreen(
             )
             SearchField(query, onQueryChange, stringResource(R.string.songs_search))
             if (selecting) {
-                // barra da seleção no lugar de Nova/Importar: quantas, Compartilhar e sair
+                // selection bar in place of New/Import: how many, Share and exit
                 Row(Modifier.padding(vertical = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     IconButton(onClick = { selected = emptyList() }) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
                     Text(
@@ -155,8 +155,8 @@ fun SongsScreen(
                     ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Upload, tone = ButtonTone.Tonal)
                 }
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                // secundário no começo, a ação principal no fim (como nos apps do Google)
-                // importar dos sites (com internet), ler o QR ou digitar o código: um botão, um menu
+                // secondary at the start, the main action at the end (like Google's apps). Import from sites (with
+                // internet), scan the QR or type the code: one button, one menu.
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
             }
@@ -182,14 +182,15 @@ fun SongsScreen(
                                 onClick = { if (selecting) toggle(song.id) else onOpen(song.id) },
                                 onLongClick = { toggle(song.id) },
                                 leading = if (selecting) { { Checkbox(song.id in selected, { toggle(song.id) }) } } else null,
-                                // só o sumiço ao apagar: entrar e deslocar animavam dezenas de linhas a cada letra da busca
+                                // animate only the removal on delete: enter and move animated dozens of rows on every
+                                // search letter
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
                                 trailing = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(AppIcons.Play, contentDescription = stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
-                                        // editar e apagar no ⋮ (padrão do Google), à vista na linha
+                                        // edit and delete in the ⋮ (Google's pattern), visible on the row
                                         OverflowMenu(
                                             listOf(
                                                 MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEdit(song.id) }),

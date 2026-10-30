@@ -75,9 +75,9 @@ fun ImportRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val queue by viewModel.queueState.collectAsStateWithLifecycle()
-    // na fila, o importador fica embaixo do editor (cancelar volta para a mesma música)
+    // in the queue, the importer sits below the editor (cancel goes back to the same song)
     LaunchedEffect(viewModel) { viewModel.openEditor.collect { if (viewModel.queueState.value != null) onOpenEditorQueued(it) else onOpenEditor(it) } }
-    // a página tem tablatura: importar junto? (pergunta a cada vez)
+    // the page has tablature: import it too? (asks every time)
     if (uiState.askTab) {
         QuestionDialog(
             stringResource(R.string.import_tab_title), stringResource(R.string.import_tab_message),
@@ -90,7 +90,7 @@ fun ImportRoute(
         initialQuery = viewModel.initialQuery,
         home = viewModel.home,
         urlFor = viewModel::urlFor,
-        // sair no meio da fila: para a fila e abre o setlist com o que já entrou
+        // leaving mid-queue: stops the queue and opens the setlist with what came in
         onClose = { viewModel.queueState.value?.let { q -> viewModel.queueStop(); onSetlistReady(q.setId) } ?: onClose() },
         onExtracted = viewModel::onExtracted,
         onProblemShown = viewModel::problemShown,
@@ -105,7 +105,7 @@ fun ImportRoute(
     )
 }
 
-/** Navegador dentro do app: o vocalista abre a página da letra e toca "Importar esta letra". */
+/** Browser inside the app: the singer opens the lyrics page and taps "Import these lyrics". */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ImportScreen(
@@ -117,7 +117,8 @@ fun ImportScreen(
     modifier: Modifier = Modifier,
     home: String = ImportViewModel.HOME,
     urlFor: (String) -> String = { ImportViewModel.urlFor(it) },
-    // importação em lote para um setlist (fila): a busca da música da vez e o failover entre os sites da lista
+    // batch import for a setlist (queue): the search for the current song and the failover between the sites in the
+    // list
     queue: ImportQueue.State? = null,
     startUrl: String? = null,
     queueSite: () -> String = { "" },
@@ -128,25 +129,26 @@ fun ImportScreen(
     onQueueDone: (setId: String) -> Unit = {},
 ) {
     val latestQueue by rememberUpdatedState(queue)
-    // só a busca que a fila abriu decide o failover (uma busca que o usuário digitou não)
+    // only the search the queue opened decides the failover (a search the user typed doesn't)
     var queueQuery by remember { mutableStateOf(startUrl?.let { it.toUri().getQueryParameter("q") }) }
     fun loadQueue(view: WebView?, url: String) { queueQuery = url.toUri().getQueryParameter("q"); view?.loadUrl(url) }
-    var exhausted by rememberSaveable { mutableStateOf(false) }   // nenhum site da lista tem a música da vez
+    var exhausted by rememberSaveable { mutableStateOf(false) }   // no site in the list has the current song
     val context = LocalContext.current
     var address by rememberSaveable { mutableStateOf(initialQuery) }
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
-    // o primeiro WebView do app carrega o Chromium inteiro (até ~1 s no Fire): a tela aparece primeiro
-    // (barra de endereço e "carregando") e o navegador é criado no quadro seguinte
+    // the app's first WebView loads all of Chromium (up to ~1 s on the Fire): the screen shows first (address bar and
+    // "loading") and the browser is created on the next frame
     var webView by remember { mutableStateOf<WebView?>(null) }
     fun newWebView() =
         WebView(context).apply {
-            settings.javaScriptEnabled = true   // a extração da letra roda como script na página
+            settings.javaScriptEnabled = true   // lyrics extraction runs as a script on the page
             settings.domStorageEnabled = true
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) { address = url }
-                // fila: a busca no Google restrita ao site não trouxe nada do site → tenta o próximo da lista sozinho
+                // queue: the Google search limited to the site brought nothing from it → tries the next one in the list
+                // on its own
                 override fun onPageFinished(view: WebView, url: String) {
                     if (latestQueue == null || !isGoogleSearch(url) || url.toUri().getQueryParameter("q") != queueQuery) return
                     val host = queueHost()
@@ -164,10 +166,10 @@ fun ImportScreen(
             }
         }
     LaunchedEffect(Unit) {
-        withFrameNanos { }   // deixa a tela aparecer antes
+        withFrameNanos { }   // let the screen show first
         webView = newWebView().also { it.loadUrl(startUrl ?: if (initialQuery.isBlank()) home else urlFor(initialQuery)) }
     }
-    // sites de letra têm anúncios e scripts: com o app em segundo plano ou a tela apagada, param
+    // lyrics sites have ads and scripts: with the app in the background or the screen off, they stop
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(webView, lifecycle) {
         val webView = webView ?: return@DisposableEffect onDispose { }
@@ -220,7 +222,7 @@ fun ImportScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                 ) {
-                    // seta de voltar, como em todas as telas internas (padrão do Google Fotos)
+                    // back arrow, like on every inner screen (Google Photos pattern)
                     IconButton(onClick = onClose) { Icon(AppIcons.Back, stringResource(R.string.action_back)) }
                     TextField(
                         value = address,
@@ -254,7 +256,7 @@ fun ImportScreen(
                         onStop = { onQueueStop(q.setId) },
                     )
                 }
-                // uso pessoal: o app não guarda nem distribui músicas (aviso curto, dá para fechar)
+                // personal use: the app doesn't store or distribute songs (short notice, can be closed)
                 var notice by rememberSaveable { mutableStateOf(true) }
                 AnimatedVisibility(notice) {
                     Row(Modifier.fillMaxWidth().padding(start = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -271,7 +273,7 @@ fun ImportScreen(
     }
 }
 
-/** Progresso da página: lido aqui dentro, cada atualização (dezenas por página) só recompõe a barra. */
+/** Page progress: read in here, each update (dozens per page) only recomposes the bar. */
 @Composable
 private fun PageProgress(progress: () -> Int) {
     val p = progress()
@@ -280,7 +282,7 @@ private fun PageProgress(progress: () -> Int) {
     }
 }
 
-// a faixa da fila: para qual setlist, qual música (2 de 5), em qual site está buscando; Pular e Parar
+// the queue strip: for which setlist, which song (2 of 5), which site it's searching; Skip and Stop
 @Composable
 private fun QueueBar(q: ImportQueue.State, site: String, exhausted: Boolean, onSkip: () -> Unit, onStop: () -> Unit) {
     val item = q.current ?: return
@@ -305,7 +307,7 @@ private fun QueueBar(q: ImportQueue.State, site: String, exhausted: Boolean, onS
 
 private fun isGoogleSearch(url: String): Boolean = url.toUri().let { it.host.orEmpty().contains("google.") && it.path == "/search" }
 
-// quantos resultados da busca levam ao site (direto ou pelo /url?q= do Google); só leitura, nada é clicado
+// how many search results lead to the site (directly or through Google's /url?q=); read only, nothing is clicked
 private fun resultsScript(host: String) = """
     (function(h){
       return Array.from(document.querySelectorAll('a[href]')).filter(function(a){

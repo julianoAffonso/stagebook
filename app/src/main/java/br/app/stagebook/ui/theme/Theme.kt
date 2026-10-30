@@ -10,11 +10,11 @@ private val StagebookShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(28.dp),      // cartões (Material 3 Expressive: cantos bem redondos)
+    large = RoundedCornerShape(28.dp),      // cards (Material 3 Expressive: very round corners)
     extraLarge = RoundedCornerShape(32.dp),
 )
 
-/** O app é escuro (palco); o claro existe para os previews e para quem preferir. */
+/** The app is dark (stage); light exists for the previews and for those who prefer it. */
 @Composable
 fun StagebookTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     MaterialTheme(

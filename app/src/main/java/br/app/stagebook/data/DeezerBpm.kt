@@ -22,17 +22,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * BPM sugerido pela API pública do Deezer (gratuita, sem conta nem chave), quando a importação não trouxe (decisão do
- * usuário, 29/10). Só vão o título e o artista da música. O número é calculado por máquina (pode vir o dobro ou a metade):
- * é uma sugestão nos Dados da música, que o músico confere. Sem achar a faixa ou sem BPM (0), não preenche nada.
+ * BPM suggested by Deezer's public API (free, no account or key), when the import didn't bring one (user's decision,
+ * 29/10). Only the song's title and artist go out. The number is computed by machine (it can be double or half): it's a
+ * suggestion in Song details, which the musician checks. If the track isn't found or has no BPM (0), nothing is filled
+ * in.
  */
 @Singleton
 class DeezerBpm @Inject constructor() {
-    internal var endpoint = "https://api.deezer.com/"   // os testes trocam por um servidor local
+    internal var endpoint = "https://api.deezer.com/"   // tests swap it for a local server
     private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** O BPM em [ms] no máximo (a rede travada não segura a importação); null sem resposta ou sem dado. */
+    /** The BPM within [ms] at most (a stuck network doesn't hold up the import); null with no answer or no data. */
     suspend fun lookupWithin(title: String, artist: String, ms: Long): Int? {
         if (title.isBlank()) return null
         val job = io.async { lookup(title, artist) }
@@ -45,7 +46,7 @@ class DeezerBpm @Inject constructor() {
         return get("${endpoint}track/$id")?.let(::bpmOf)
     }
 
-    /** A faixa da busca que é a música (mesmo título; com artista, ele desempata); null se nenhuma bate. */
+    /** The search track that is the song (same title; with an artist, it breaks the tie); null if none matches. */
     internal fun pickTrack(searchJson: String, title: String, artist: String): Long? = runCatching {
         val data = json.parseToJsonElement(searchJson).jsonObject["data"]?.jsonArray ?: return null
         data.map { it.jsonObject }.firstOrNull { t ->
@@ -54,7 +55,7 @@ class DeezerBpm @Inject constructor() {
         }?.get("id")?.jsonPrimitive?.longOrNull
     }.getOrNull()
 
-    /** O BPM da faixa, arredondado; null se não tem (0) ou se sai do razoável. */
+    /** The track's BPM, rounded; null if it has none (0) or it's unreasonable. */
     internal fun bpmOf(trackJson: String): Int? = runCatching {
         val bpm = json.parseToJsonElement(trackJson).jsonObject["bpm"]?.jsonPrimitive?.doubleOrNull ?: return null
         Math.round(bpm).toInt().takeIf { it in Chords.MIN_TEMPO..Chords.MAX_TEMPO }

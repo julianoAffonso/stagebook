@@ -5,20 +5,20 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * "Quem conduz": um aparelho da banda manda o setlist e a música da vez; quem acompanha abre a música sozinho, sem precisar
- * ter o setlist, só a música. Antes de começar, quem conduz manda [CHECK] e cada um responde o que falta; as faltas de
- * todos voltam em cada mensagem ([Msg.missing]) para a banda inteira ver o alerta, senão a música começa e alguém fica sem
- * letra. Viaja cifrado como [BandProtocol.Kind.CONDUCT].
+ * "Lead the band": a band device sends the setlist and the current song; followers open the song by themselves, without
+ * needing the setlist, only the song. Before starting, the leader sends [CHECK] and each one answers what's missing;
+ * everyone's missing songs come back in every message ([Msg.missing]) so the whole band sees the alert, otherwise the
+ * song starts and someone has no lyrics. Travels encrypted as [BandProtocol.Kind.CONDUCT].
  */
 object Conduct {
-    const val CHECK = "check"   // este é o setlist: o que te falta?
-    const val OPEN = "open"     // abram a música [Msg.index]
-    const val END = "end"       // acabou: cada um volta a ser só ele
+    const val CHECK = "check"   // this is the setlist: what are you missing?
+    const val OPEN = "open"     // open song [Msg.index]
+    const val END = "end"       // it's over: each one is on their own again
 
     @Serializable
     data class Item(val title: String, val artist: String = "")
 
-    /** O que falta para alguém da banda ([who] = nome do aparelho). */
+    /** What a band member is missing ([who] = device name). */
     @Serializable
     data class Lack(val who: String, val titles: List<String>)
 
@@ -39,22 +39,25 @@ object Conduct {
     fun decode(body: String): Msg? = runCatching { json.decodeFromString(Msg.serializer(), body) }.getOrNull()
         ?.takeIf { it.type in setOf(CHECK, OPEN, END) && it.songs.size <= MAX_SONGS }
 
-    /** A música na biblioteca de quem acompanha. Só "achada" conta: parecida vira falta, para o alerta errar para o lado seguro. */
+    /**
+     * The song in the follower's library. Only "found" counts: similar becomes missing, so the alert errs on the safe
+     * side.
+     */
     fun find(item: Item, library: List<Song>): Song? =
         (SetlistMatcher.match(QrPayload.Entry(item.title, item.artist), library) as? QrMatch.Found)?.song
 
     fun missing(songs: List<Item>, library: List<Song>): List<String> = songs.filter { find(it, library) == null }.map { it.title }
 
-    /** As faltas que valem para a música [index] (para o alerta na hora de abrir). */
+    /** The missing songs that apply to song [index] (for the alert when opening). */
     fun missingAt(msg: Msg, index: Int): List<String> {
         val title = msg.songs.getOrNull(index)?.title ?: return emptyList()
         return msg.missing.filter { title in it.titles }.map { it.who }
     }
 
-    /** O que quem acompanha responde: as músicas do setlist que não estão aqui (lista vazia = tem todas). */
+    /** What the follower answers: the setlist songs not here (empty list = has them all). */
     fun lackFor(me: String, msg: Msg, library: List<Song>): Lack = Lack(me, missing(msg.songs, library))
 
-    /** As faltas que valem o alerta (quem tem tudo fica de fora), na ordem dos nomes. */
+    /** The missing songs worth an alert (whoever has everything is left out), ordered by name. */
     fun lacks(replies: Collection<Lack>): List<Lack> = replies.filter { it.titles.isNotEmpty() }.sortedBy { it.who }
 
     const val MAX_SONGS = 200

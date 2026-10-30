@@ -12,8 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Faixas de Backing track: ao ligar uma faixa à música, o arquivo é **copiado para o app** (não quebra se o original
- * for movido ou apagado). Só OGG, MP3 e WAV, os formatos do motor.
+ * Backing track files: when a track is linked to a song, the file is **copied into the app** (it doesn't break if the
+ * original is moved or deleted). Only OGG, MP3 and WAV, the engine's formats.
  */
 @Singleton
 class TrackStore @Inject constructor(@ApplicationContext private val context: Context) {
@@ -21,7 +21,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
 
     fun file(name: String): File = File(dir, name)
 
-    /** Copia a faixa escolhida; devolve o nome guardado, ou null se não for OGG/MP3/WAV ou não deu para ler. */
+    /** Copies the chosen track; returns the saved name, or null if it isn't OGG/MP3/WAV or couldn't be read. */
     suspend fun copy(songId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
         val ext = extensionOf(uri) ?: return@withContext null
         val name = "${songId.take(36)}-${System.currentTimeMillis()}.$ext"

@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.theme.Spacing
 
-/** Véu com "carregando" por cima da tela, entrando e saindo com fade. */
+/** "Loading" veil over the screen, fading in and out. */
 @Composable
 fun LoadingOverlay(visible: Boolean, message: String, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible = visible, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {

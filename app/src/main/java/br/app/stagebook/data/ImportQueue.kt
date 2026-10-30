@@ -11,17 +11,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Importar em lote as músicas de um setlist que faltam na biblioteca (vindas do QR): uma fila guiada. O importador
- * abre já buscando a música da vez no 1º site da lista do perfil (Ajustes → Importação); não achou, "Tentar em" passa
- * para o próximo site da lista (failover, na ordem do usuário). O usuário confere a página e importa como sempre: o app
- * não baixa nada sozinho. Salva, a música entra no setlist no lugar que tinha no QR.
+ * Batch import of a setlist's songs missing from the library (coming from the QR): a guided queue. The importer opens
+ * already searching for the current song on the first site in the profile's list (Settings → Import); if not found,
+ * "Try on" moves to the next site in the list (failover, in the user's order). The user checks the page and imports as
+ * usual: the app downloads nothing on its own. Once saved, the song goes into the setlist at the place it had in the
+ * QR.
  */
 @Singleton
 class ImportQueue @Inject constructor(private val repository: LibraryRepository) {
     @Immutable
     data class Item(val title: String, val artist: String, val slot: Int)
 
-    /** [slots]: o setlist na ordem do QR (id ou null = falta); [site]: em qual site da lista a busca está. */
+    /** [slots]: the setlist in QR order (id or null = missing); [site]: which site in the list the search is on. */
     @Immutable
     data class State(val setId: String, val setName: String, val slots: List<String?>, val pending: List<Item>, val total: Int, val site: Int = 0) {
         val current: Item? get() = pending.firstOrNull()
@@ -35,22 +36,22 @@ class ImportQueue @Inject constructor(private val repository: LibraryRepository)
         _state.value = if (missing.isEmpty()) null else State(setId, setName, slots, missing, missing.size)
     }
 
-    /** Os sites do perfil atual (cifra ou só letra), na ordem do usuário. */
+    /** The current profile's sites (chords or lyrics only), in the user's order. */
     fun sites(): List<ImportSite> = repository.library.value.look.let { if (it.chords) it.chordSites else it.lyricSites }
 
-    /** Busca da música da vez no site da vez (Google restrito ao site: vale para qualquer site da lista). */
+    /** Search for the current song on the current site (Google limited to the site: works for any site in the list). */
     fun searchUrl(): String? {
         val s = _state.value ?: return null
         val item = s.current ?: return null
         return searchUrl(item, sites().getOrNull(s.site))
     }
 
-    /** O próximo site da lista, para o botão "Tentar em"; null se este já é o último. */
+    /** The next site in the list, for the "Try on" button; null if this is the last one. */
     fun nextSite(): ImportSite? = _state.value?.let { sites().getOrNull(it.site + 1) }
 
     fun tryNextSite() = _state.update { s -> if (s == null || s.site + 1 >= sites().size) s else s.copy(site = s.site + 1) }
 
-    /** A música da vez foi salva: entra no setlist no lugar dela e a fila anda. */
+    /** The current song was saved: it takes its place in the setlist and the queue moves on. */
     fun saved(songId: String) {
         val s = _state.value ?: return
         val item = s.current ?: return
@@ -59,7 +60,7 @@ class ImportQueue @Inject constructor(private val repository: LibraryRepository)
         advance(s.copy(slots = slots))
     }
 
-    /** Pula a música da vez (fica de fora do setlist). */
+    /** Skips the current song (it's left out of the setlist). */
     fun skip() { _state.value?.let(::advance) }
 
     fun stop() { _state.value = null }

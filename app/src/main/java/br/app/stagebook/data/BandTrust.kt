@@ -14,8 +14,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Os aparelhos "da banda": quem foi autorizado na rede local (ou aceitou pelas 3 palavras, parte 3). A mesma confiança vale
- * nos dois caminhos e fica guardada até alguém remover; remover vale na hora (a chave do par deixa de ser usada).
+ * The "band" devices: whoever was allowed on the local network (or accepted through the 3 words, part 3). The same
+ * trust applies on both paths and stays saved until someone removes it; removing applies right away (the pair key stops
+ * being used).
  */
 @Singleton
 class BandTrust @Inject constructor(@ApplicationContext context: Context) {
@@ -33,7 +34,7 @@ class BandTrust @Inject constructor(@ApplicationContext context: Context) {
 
     fun member(id: String) = _members.value.firstOrNull { it.id == id }
 
-    /** Grava (ou atualiza o nome de) um aparelho da banda. */
+    /** Saves (or updates the name of) a band device. */
     fun add(id: String, name: String, key: String) {
         _members.update { list ->
             val old = list.firstOrNull { it.id == id }

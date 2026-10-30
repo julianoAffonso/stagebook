@@ -7,18 +7,18 @@ import java.io.BufferedReader
 import java.io.Writer
 
 /**
- * A conversa entre dois aparelhos na rede local: uma linha JSON por mensagem. **Versão:** os dois mandam [VERSION] no
- * [Hello]; diferente, quem recebe responde [Kind.VERSION] e ninguém tenta adivinhar o formato do outro (a tela pede para
- * atualizar). Toda mudança de formato aumenta [VERSION]. Os dois começam com [Hello] (quem é: id,
- * nome e chave pública). Sem confiança, quem chega pede [Kind.JOIN] e o outro responde [Kind.ACCEPTED] ou [Kind.DENIED]
- * (o usuário decide, como no Bluetooth). Com confiança, [Kind.PACKAGE] leva um setlist ou músicas cifrados com a chave do
- * par; quem recebe responde [Kind.OK].
+ * The conversation between two devices on the local network: one JSON line per message. **Version:** both send
+ * [VERSION] in the [Hello]; if different, the receiver answers [Kind.VERSION] and nobody tries to guess the other's
+ * format (the screen asks to update). Every format change bumps [VERSION]. Both start with [Hello] (who they are: id,
+ * name and public key). Without trust, the newcomer asks [Kind.JOIN] and the other answers [Kind.ACCEPTED] or
+ * [Kind.DENIED] (the user decides, like Bluetooth). With trust, [Kind.PACKAGE] carries a setlist or songs encrypted
+ * with the pair key; the receiver answers [Kind.OK].
  */
 object BandProtocol {
     const val SERVICE_TYPE = "_stagebook._tcp."
     const val VERSION = 2   // 2: "Quem conduz" (Kind.CONDUCT)
 
-    /** Quem é o aparelho: id, nome, chave pública, a versão do protocolo ([v]) e a do app ([app], para a tela). */
+    /** Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). */
     @Serializable
     data class Hello(val id: String, val name: String, val key: String, val v: Int = VERSION, val app: String = "")
 
@@ -26,14 +26,14 @@ object BandProtocol {
         const val JOIN = "join"
         const val ACCEPTED = "accepted"
         const val DENIED = "denied"
-        const val BUSY = "busy"   // o outro está no palco: nada interrompe o show; pedir de novo depois
-        const val PACKAGE = "package"   // setlist ou músicas, cifrado com a chave do par (só entre aparelhos da banda)
+        const val BUSY = "busy"   // the other one is on stage: nothing interrupts the show; ask again later
+        const val PACKAGE = "package"   // setlist or songs, encrypted with the pair key (only between band devices)
         const val OK = "ok"
-        const val ASK = "ask"         // "quem tem estas músicas?" (lista cifrada); a resposta vem em ANSWER, também cifrada
+        const val ASK = "ask"         // "who has these songs?" (encrypted list); the answer comes in ANSWER, also encrypted
         const val ANSWER = "answer"
-        const val CODE_ACK = "code_ack" // o "ok" das 3 palavras entregue na rede local (ainda não somos da banda um do outro)
-        const val VERSION = "version"   // estamos em versões diferentes do protocolo: atualizem para a mesma
-        const val CONDUCT = "conduct"   // "Quem conduz": setlist e música da vez (Conduct.Msg cifrada); a resposta vem em ANSWER
+        const val CODE_ACK = "code_ack" // the 3 words "ok" delivered on the local network (we aren't in each other's band yet)
+        const val VERSION = "version"   // we're on different protocol versions: update to the same one
+        const val CONDUCT = "conduct"   // "Lead the band": setlist and current song (encrypted Conduct.Msg); the answer comes in ANSWER
     }
 
     @Serializable
@@ -45,7 +45,7 @@ object BandProtocol {
 
     fun write(out: Writer, msg: Message) { out.write(json.encodeToString(msg) + "\n"); out.flush() }
 
-    /** O [Hello] do outro lado, conferido: o id tem de ser o da chave que ele mandou. Null se não for. */
+    /** The [Hello] from the other side, checked: the id must match the key they sent. Null if it doesn't. */
     fun readHello(input: BufferedReader): Hello? = runCatching {
         val h = json.decodeFromString<Hello>(input.readLine() ?: return null)
         h.takeIf { BandCrypto.publicKey(it.key) != null && BandCrypto.idOf(it.key) == it.id && it.name.length <= MAX_NAME }

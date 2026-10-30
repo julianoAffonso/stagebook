@@ -1,28 +1,28 @@
 package br.app.stagebook.domain
 
 /**
- * Mesma música, versões diferentes (chegou da banda ou pelas 3 palavras): "letra de quem canta, acorde de quem toca".
- * Quem recebe escolhe música a música; aceitar a recebida nunca apaga a cifra de quem recebe.
+ * Same song, different versions (came from the band or through the 3 words): "the singer's lyrics, the player's
+ * chords". The receiver chooses song by song; accepting theirs never deletes the receiver's chords.
  */
 object SongMerge {
     enum class Kind { REMOVED, ADDED }
 
-    /** Uma linha que muda na letra: sai a minha ([Kind.REMOVED]) ou entra a recebida ([Kind.ADDED]). */
+    /** A line that changes in the lyrics: mine leaves ([Kind.REMOVED]) or theirs comes in ([Kind.ADDED]). */
     data class Change(val kind: Kind, val text: String)
 
     private fun norm(text: String) = text.replace("\r", "").split('\n').map { it.trimEnd() }.dropLastWhile { it.isEmpty() }
 
-    /** A mesma versão (espaço no fim da linha e linha em branco no fim não contam). */
+    /** The same version (trailing spaces and a trailing blank line don't count). */
     fun same(a: String, b: String) = norm(a) == norm(b)
 
     /**
-     * A versão recebida aceita: se ela veio só com a letra e a minha tem cifra, a letra nova entra **com os meus acordes**
-     * (nos trechos que não mudaram); senão, a recebida inteira.
+     * The received version accepted: if it came with lyrics only and mine has chords, the new lyrics come in **with my
+     * chords** (in the stretches that didn't change); otherwise, theirs whole.
      */
     fun accept(mine: String, incoming: String): String =
         if (Chords.hasChords(mine) && !Chords.hasChords(incoming)) LyricsView.merge(mine, LyricsView.view(incoming)) else incoming
 
-    /** As linhas da letra (sem os acordes) que mudam da minha para a recebida, na ordem. Vazio = só a cifra muda. */
+    /** The lyrics lines (without chords) that change from mine to theirs, in order. Empty = only the chords change. */
     fun changes(mine: String, incoming: String): List<Change> {
         val a = LyricsView.view(mine).split('\n').map { it.trimEnd() }
         val b = LyricsView.view(incoming).split('\n').map { it.trimEnd() }

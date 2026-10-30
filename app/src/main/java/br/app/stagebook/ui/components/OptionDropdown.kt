@@ -18,8 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 
 /**
- * Lista suspensa (combo) de uma escolha: uma linha só, no lugar de uma lista de botões de rádio. [styleOf] deixa
- * cada opção (e o campo, com a escolhida) num estilo próprio — a fonte aparece escrita nela mesma.
+ * Single-choice dropdown: one line, instead of a list of radio buttons. [styleOf] gives each option (and the field,
+ * with the chosen one) its own style, so a font shows written in itself.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

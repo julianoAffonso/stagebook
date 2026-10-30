@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import br.app.stagebook.R
 
-/** Pergunta "tem certeza?"; o botão de confirmar fica vermelho quando apaga algo. */
+/** Asks "are you sure?"; the confirm button turns red when it deletes something. */
 @Composable
 fun ConfirmDialog(
     message: String,
@@ -38,7 +38,7 @@ fun ConfirmDialog(
     )
 }
 
-/** Pede um nome (setlist). Vazio vale: quem chamou decide o padrão. */
+/** Asks for a name (setlist). Empty is fine: the caller decides the default. */
 @Composable
 fun TextInputDialog(
     title: String,
@@ -67,8 +67,8 @@ fun TextInputDialog(
 }
 
 /**
- * Pergunta com duas respostas que fazem coisas diferentes ("Importar junto" / "Só a cifra"). Tocar fora
- * da janela vale [onOutside] (padrão: a resposta [noLabel]).
+ * Question with two answers that do different things ("Import it too" / "Chords only"). Tapping outside the window
+ * means [onOutside] (default: the [noLabel] answer).
  */
 @Composable
 fun QuestionDialog(
@@ -92,8 +92,8 @@ fun QuestionDialog(
 }
 
 /**
- * Aviso com título e um botão de ok; [extra] é um segundo botão opcional (texto e ação). Com [neverAgain], aparece a
- * caixa "Não mostrar de novo" e o ok devolve se ela ficou marcada.
+ * Notice with a title and an ok button; [extra] is an optional second button (text and action). With [neverAgain], the
+ * "Don't show again" checkbox shows and ok returns whether it was checked.
  */
 @Composable
 fun InfoDialog(
@@ -102,7 +102,7 @@ fun InfoDialog(
     onDismiss: () -> Unit,
     extra: Pair<String, () -> Unit>? = null,
     neverAgain: ((Boolean) -> Unit)? = null,
-    content: (@Composable () -> Unit)? = null,   // abaixo do texto (lista, link)
+    content: (@Composable () -> Unit)? = null,   // below the text (list, link)
 ) {
     var never by rememberSaveable { mutableStateOf(false) }
     AlertDialog(

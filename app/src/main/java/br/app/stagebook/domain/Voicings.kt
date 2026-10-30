@@ -3,33 +3,35 @@ package br.app.stagebook.domain
 import br.app.stagebook.data.model.Instrument
 
 /**
- * Como montar um acorde no instrumento: posições nas cordas (violão/guitarra, ukulele, cavaquinho) ou as notas
- * no teclado, da mais fácil para a mais difícil. Geradas pelas notas do acorde ([ChordTheory]), sem tabela pronta.
+ * How to play a chord on the instrument: string positions (acoustic/electric guitar, ukulele, cavaquinho) or keyboard
+ * notes, from easiest to hardest. Generated from the chord's notes ([ChordTheory]), with no ready-made table.
  */
 object Voicings {
-    /** Uma forma no braço: casa de cada corda, da mais grave para a mais aguda (-1 = não toca, 0 = solta). */
+    /** A shape on the neck: each string's fret, from lowest to highest (-1 = not played, 0 = open). */
     data class Shape(val frets: List<Int>) {
-        /** Primeira casa do desenho: 1 se cabe nas 4 primeiras casas, senão a menor casa apertada. */
+        /** First fret of the diagram: 1 if it fits in the first 4 frets, otherwise the lowest fretted one. */
         val baseFret: Int get() = frets.filter { it > 0 }.let { f -> if (f.isEmpty() || f.max() <= 4) 1 else f.min() }
     }
 
-    // afinações em notas MIDI, da corda mais grave (no braço) para a mais aguda
+    // tunings in MIDI notes, from the lowest string (on the neck) to the highest
     private val tunings = mapOf(
         Instrument.ACOUSTIC_GUITAR to intArrayOf(40, 45, 50, 55, 59, 64),     // E A D G B E
         Instrument.ELECTRIC_GUITAR to intArrayOf(40, 45, 50, 55, 59, 64),
-        Instrument.UKULELE to intArrayOf(67, 60, 64, 69),            // G C E A (sol agudo)
+        Instrument.UKULELE to intArrayOf(67, 60, 64, 69),            // G C E A (high G)
         Instrument.CAVAQUINHO to intArrayOf(62, 67, 71, 74),         // D G B D
     )
 
     fun strings(i: Instrument): Int = tunings[i]?.size ?: 0
 
-    /** As notas (MIDI) que o desenho faz soar, da corda grave para a aguda; [capo] sobe tudo (a nota real com capo). */
+    /**
+     * The notes (MIDI) the diagram sounds, from low string to high; [capo] raises everything (the real note with capo).
+     */
     fun midi(shape: Shape, instrument: Instrument, capo: Int = 0): List<Int> {
         val tuning = tunings[instrument] ?: return emptyList()
         return shape.frets.mapIndexedNotNull { i, f -> if (f < 0 || i >= tuning.size) null else tuning[i] + f + capo }
     }
 
-    /** Formas do acorde no instrumento de cordas, das mais fáceis para as mais difíceis (vazio no teclado). */
+    /** The chord's shapes on a string instrument, from easiest to hardest (empty on keyboard). */
     fun shapes(chord: String, instrument: Instrument, max: Int = 12): List<Shape> {
         val tuning = tunings[instrument] ?: return emptyList()
         val notes = ChordTheory.notes(chord) ?: return emptyList()
@@ -59,36 +61,39 @@ object Voicings {
         return found.entries.sortedBy { it.value }.take(max).map { Shape(it.key) }
     }
 
-    /** Nota de cada forma é possível de tocar? Devolve a dificuldade (menor = mais fácil) ou null se não serve. */
+    /** Is each shape's note playable? Returns the difficulty (lower = easier) or null if it won't work. */
     private fun score(f: IntArray, tuning: IntArray, notes: ChordTheory.Notes, six: Boolean): Double? {
         val n = f.size
         val sounding = f.indices.filter { f[it] >= 0 }
         if (sounding.size < (if (six) 4 else n)) return null
-        // corda abafada só nas graves, em sequência (ninguém abafa uma corda do meio)
+        // muted strings only on the low side, in a row (nobody mutes a middle string)
         if (six) {
             val firstSounding = sounding.first()
             if (sounding.size != n - firstSounding) return null
         }
         val pcs = sounding.map { (tuning[it] + f[it]) % 12 }.toSet()
         if (!pcs.containsAll(notes.essential)) return null
-        // no violão a nota mais grave é o baixo do acorde (a tônica, ou o baixo depois da barra)
+        // on guitar the lowest note is the chord's bass (the root, or the bass after the slash)
         if (six && (tuning[sounding.first()] + f[sounding.first()]) % 12 != notes.bass) return null
         val fretted = sounding.filter { f[it] > 0 }
         val lo = fretted.minOfOrNull { f[it] } ?: 0
         val hi = fretted.maxOfOrNull { f[it] } ?: 0
         if (hi - lo > 3) return null
-        // pestana só quando faltam dedos (mais de 4 notas apertadas): a menor casa em várias cordas, sem corda solta
-        // no meio, vira um dedo só
+        // barre only when fingers run out (more than 4 fretted notes): the lowest fret across several strings, with no
+        // open string in between, becomes a single finger
         val fingers = if (fretted.size <= 4) fretted.size else if (needsBarre(f)) 1 + fretted.count { f[it] > lo } else fretted.size
         if (fingers > 4) return null
         val muted = n - sounding.size
         val open = sounding.count { f[it] == 0 }
         val noFifth = if ((notes.root + 7) % 12 in notes.tones && (notes.root + 7) % 12 !in pcs) 0.5 else 0.0
-        // abertura dos dedos (da menor à maior casa) pesa: x50232 é tocável, mas ninguém monta D assim
+        // finger stretch (lowest to highest fret) counts: x50232 is playable, but nobody plays D that way
         return lo * 3.0 + muted * 2.0 + fingers + (hi - lo) - open * 0.5 + noFifth
     }
 
-    /** A forma precisa de pestana? Mais de 4 notas apertadas e a menor casa em várias cordas, sem solta no meio. */
+    /**
+     * Does the shape need a barre? More than 4 fretted notes and the lowest fret across several strings, with no open
+     * string in between.
+     */
     fun needsBarre(f: IntArray): Boolean {
         val fretted = f.indices.filter { f[it] > 0 }
         if (fretted.size <= 4) return false
@@ -97,7 +102,7 @@ object Voicings {
         return atLo.size >= 2 && (atLo.first()..atLo.last()).none { f[it] == 0 }
     }
 
-    /** Teclado: as notas do acorde (MIDI), em posição fundamental e nas inversões. */
+    /** Keyboard: the chord's notes (MIDI), in root position and inversions. */
     fun keys(chord: String): List<List<Int>> {
         val notes = ChordTheory.notes(chord) ?: return emptyList()
         val upper = (notes.tones - notes.bass).sortedBy { (it - notes.root + 12) % 12 }
@@ -109,22 +114,22 @@ object Voicings {
         }.distinct()
     }
 
-    // ---- {define} do ChordPro: a forma escolhida guardada na música ----
+    // ---- ChordPro {define}: the chosen shape saved in the song ----
 
-    /** `{define-guitar: G base-fret 1 frets 3 2 0 0 0 3}` (casas relativas à base, x = não toca). */
+    /** `{define-guitar: G base-fret 1 frets 3 2 0 0 0 3}` (frets relative to the base, x = not played). */
     fun define(instrument: Instrument, chord: String, shape: Shape): String {
         val base = shape.baseFret
         val frets = shape.frets.joinToString(" ") { if (it < 0) "x" else if (it == 0) "0" else (it - base + 1).toString() }
         return "{define-${instrument.chordPro}: $chord base-fret $base frets $frets}"
     }
 
-    /** `{define-keyboard: C keys 0 4 7}` (notas a partir da primeira, em semitons). */
+    /** `{define-keyboard: C keys 0 4 7}` (notes from the first one, in semitones). */
     fun defineKeys(chord: String, keys: List<Int>): String =
         "{define-keyboard: $chord keys ${keys.joinToString(" ") { (it - keys.first()).toString() }}}"
 
     private val defineLine = Regex("""^\s*\{\s*define-(\w+)\s*:\s*(\S+)\s+(.*)}\s*$""")
 
-    /** A forma guardada na música para o acorde, se houver (corda) — null se não houver. */
+    /** The shape saved in the song for the chord, if any (strings); null if there isn't one. */
     fun savedShape(text: String, instrument: Instrument, chord: String): Shape? {
         val m = text.lineSequence().mapNotNull { defineLine.matchEntire(it) }
             .firstOrNull { it.groupValues[1] == instrument.chordPro && it.groupValues[2] == chord } ?: return null
@@ -136,7 +141,7 @@ object Voicings {
         return if (frets.size == strings(instrument)) Shape(frets) else null
     }
 
-    /** As notas guardadas na música para o acorde no teclado, se houver. */
+    /** The notes saved in the song for the chord on keyboard, if any. */
     fun savedKeys(text: String, chord: String): List<Int>? {
         val m = text.lineSequence().mapNotNull { defineLine.matchEntire(it) }
             .firstOrNull { it.groupValues[1] == "keyboard" && it.groupValues[2] == chord } ?: return null
@@ -148,7 +153,7 @@ object Voicings {
         return rel.map { first + it }
     }
 
-    /** Grava (troca) a forma escolhida na música, no começo do texto. */
+    /** Saves (replaces) the chosen shape in the song, at the start of the text. */
     fun saveDefine(text: String, instrument: Instrument, chord: String, line: String): String {
         val lines = text.split('\n').filterNot { l ->
             defineLine.matchEntire(l)?.let { it.groupValues[1] == instrument.chordPro && it.groupValues[2] == chord } == true

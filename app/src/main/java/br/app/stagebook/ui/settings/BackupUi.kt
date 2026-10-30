@@ -32,8 +32,8 @@ import br.app.stagebook.ui.components.PreviewSurface
 import br.app.stagebook.ui.theme.Spacing
 
 /**
- * Escolher as partes do backup (fazer ou restaurar): todas marcadas por padrão, o usuário tira o que não quer. [available]:
- * as que o arquivo tem (na restauração); [warning]: o aviso de que substitui o que está no aparelho.
+ * Choosing the backup parts (save or restore): all checked by default, the user unchecks what they don't want.
+ * [available]: the ones the file has (on restore); [warning]: the notice that it replaces what's on the device.
  */
 @Composable
 fun BackupPartsDialog(
@@ -45,7 +45,7 @@ fun BackupPartsDialog(
     warning: String? = null,
 ) {
     var chosen by rememberSaveable { mutableStateOf(available.map { it.name }.toSet()) }
-    // músicas do arquivo: somar às daqui (padrão, seguro) ou substituir
+    // songs in the file: add to the ones here (default, safe) or replace
     var replace by rememberSaveable { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -83,7 +83,7 @@ fun BackupPartsDialog(
     )
 }
 
-/** As caixas de marcar de cada parte do backup (no cartão do backup e na janela da restauração). */
+/** The checkboxes for each backup part (on the backup card and in the restore window). */
 @Composable
 fun BackupPartsChecks(available: Set<Backup.Part>, chosen: Set<Backup.Part>, onChange: (Backup.Part, Boolean) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {

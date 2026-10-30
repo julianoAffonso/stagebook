@@ -1,12 +1,12 @@
 package br.app.stagebook.domain
 
 /**
- * Modo rolagem do palco: cada aperto do pedal rola até a primeira linha que não cabia inteira (nenhuma linha fica cortada
- * entre um passo e outro). [Step.markY]/[Step.markHeight]: onde fica, na tela, a linha em que a parte nova começa, para
- * acender por um instante e o olho achar onde continuar. O último passo para no fim da música.
+ * Stage scroll mode: each pedal press scrolls to the first line that didn't fit whole (no line is cut between one step
+ * and the next). [Step.markY]/[Step.markHeight]: where, on screen, the line where the new part starts sits, to light it
+ * for a moment so the eye finds where to continue. The last step stops at the end of the song.
  *
- * [anchor]: onde a rolagem automática pausou. Os passos seguintes partem dali (sem drift: o próximo pedal vai para a
- * primeira linha que não cabia a partir da posição real, não de um passo calculado lá do começo).
+ * [anchor]: where auto-scroll paused. The following steps start from there (no drift: the next pedal press goes to the
+ * first line that didn't fit from the real position, not from a step computed from the start).
  */
 object ScrollSteps {
     data class Step(val offset: Int, val markY: Int, val markHeight: Int)
@@ -24,13 +24,14 @@ object ScrollSteps {
         var anchored = stop == 0
         while (pos < max) {
             var i = lines.indices.firstOrNull { tops[it] + lines[it].height > pos + viewport } ?: break
-            // o destaque vai na primeira linha com texto (pula as linhas em branco entre estrofes)
+            // the highlight goes on the first line with text (skips the blank lines between verses)
             while (i < lines.lastIndex && lines[i].blank) i++
             var next = tops[i]
-            if (next <= pos) next = pos + viewport   // uma linha maior que a tela: rola a tela inteira
+            if (next <= pos) next = pos + viewport   // a line taller than the screen: scrolls the whole screen
             next = next.coerceAtMost(max)
             if (next <= pos) break
-            // passou do ponto da pausa: ele entra como passo (sem destaque: a letra não se mexe) e a conta segue dali
+            // past the pause point: it comes in as a step (no highlight: the lyrics don't move) and the count goes on
+            // from there
             if (!anchored && next >= stop) {
                 anchored = true
                 if (next != stop) { out += Step(stop, 0, 0); pos = stop; continue }

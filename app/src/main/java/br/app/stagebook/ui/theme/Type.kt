@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.sp
 
 private val Base = Typography()
 
-/** Tipografia M3 com pesos mais marcados: títulos de música e de tela se destacam do resto. */
+/** M3 typography with stronger weights: song and screen titles stand out from the rest. */
 internal val StagebookTypography = Typography(
     displaySmall = Base.displaySmall.copy(fontWeight = FontWeight.Bold),
     headlineLarge = Base.headlineLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),

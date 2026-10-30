@@ -1,12 +1,14 @@
 package br.app.stagebook.domain
 
 /**
- * As notas de um acorde a partir do nome (`G`, `Am7`, `C7(9)`, `F#m7(b5)`, `D/F#`, `A4`, `G7M`), em classes de
- * altura (0 = C … 11 = B). Segue o costume brasileiro de cifra: `9` sozinho é nona adicionada (sem sétima),
- * `4` é suspenso de quarta, `7M` é sétima maior.
+ * A chord's notes from its name (`G`, `Am7`, `C7(9)`, `F#m7(b5)`, `D/F#`, `A4`, `G7M`), as pitch classes (0 = C … 11 =
+ * B). Follows the Brazilian chord chart convention: a lone `9` is an added ninth (no seventh), `4` is a suspended
+ * fourth, `7M` is a major seventh.
  */
 object ChordTheory {
-    /** [root] e [bass] em 0..11; [tones] = todas as notas; [essential] = as que não podem faltar (a quinta pode). */
+    /**
+     * [root] and [bass] in 0..11; [tones] = all notes; [essential] = the ones that can't be missing (the fifth can).
+     */
     data class Notes(val root: Int, val bass: Int, val tones: Set<Int>, val essential: Set<Int>)
 
     private val names = mapOf("C" to 0, "D" to 2, "E" to 4, "F" to 5, "G" to 7, "A" to 9, "B" to 11)
@@ -24,7 +26,7 @@ object ChordTheory {
         val bass = if (m.groupValues[4].isNotEmpty()) pc(m.groupValues[4], m.groupValues[5]) else root
         var s = m.groupValues[3].replace("♯", "#").replace("♭", "b")
 
-        // intervalos a partir da tônica (semitons)
+        // intervals from the root (semitones)
         var third: Int? = 4
         var fifth = 7
         var fifthEssential = false
@@ -40,7 +42,7 @@ object ChordTheory {
             take("aug") || take("+") -> { fifth = 8; fifthEssential = true }
             take("min") || (s.startsWith("m") && !s.startsWith("maj") && take("m")) -> third = 3
         }
-        // o resto, em qualquer ordem: 7, 7M, 6, 9, 11, 13, sus, add, (b5), (#5), (9), 5 (power chord)…
+        // the rest, in any order: 7, 7M, 6, 9, 11, 13, sus, add, (b5), (#5), (9), 5 (power chord)…
         val rest = Regex("""maj7|7M|M|add9|add11|add13|add2|add4|sus2|sus4|sus|b13|#11|b9|#9|b5|#5|-5|5-|5\+|13|11|9|7|6|5|4|2""")
         var power = false
         Regex("""[()\s,]""").replace(s, " ").split(' ').filter { it.isNotEmpty() }.forEach { part ->

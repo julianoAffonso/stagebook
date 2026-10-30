@@ -15,12 +15,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * O que a banda mandou e ainda não foi conferido (setlist ou músicas avulsas). Fica guardado até conferir ou descartar —
- * também se o app fechar. As abas avisam (como e-mail novo); no palco nada aparece.
+ * What the band sent and hasn't been reviewed yet (setlist or loose songs). Kept until reviewed or discarded, even if
+ * the app closes. The tabs show a notice (like new email); on stage nothing shows.
  */
 @Singleton
 class BandInbox @Inject constructor(@ApplicationContext context: Context) {
-    /** [text]: a lista no formato do QR (sem nome = músicas avulsas); [seen]: o aviso já foi dispensado ("Agora não"). */
+    /** [text]: the list in QR format (no name = loose songs); [seen]: the notice was already dismissed ("Not now"). */
     @Immutable
     @Serializable
     data class Item(
@@ -31,12 +31,12 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         val songs: List<SetlistCloud.SharedSong> = emptyList(),
         val at: Long = System.currentTimeMillis(),
         val seen: Boolean = false,
-        val updated: Boolean = false,   // a mesma pessoa mandou de novo com mudanças: "atualizado às 21:04"
+        val updated: Boolean = false,   // the same person sent again with changes: "updated at 21:04"
     ) {
-        /** Nome do setlist; vazio = músicas avulsas. */
+        /** Setlist name; empty = loose songs. */
         val setName: String get() = text.split('\n').getOrNull(2).orEmpty()
         val songCount: Int get() = text.split('\n').getOrNull(1)?.trim()?.toIntOrNull() ?: songs.size
-        /** Veio de uma versão mais nova do Stagebook: só dá para conferir depois de atualizar. */
+        /** Came from a newer Stagebook: it can only be reviewed after updating. */
         val newer: Boolean get() = text == SetlistCloud.NEWER
     }
 
@@ -47,17 +47,17 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
     val items: StateFlow<List<Item>> = _items
 
     /**
-     * Guarda o que chegou. O mesmo envio chegando duas vezes (pelo Wi-Fi e pela internet) não repete; o mesmo setlist da
-     * mesma pessoa substitui o antigo (ela corrigiu e mandou de novo: não vale conferir a versão velha).
+     * Keeps what arrived. The same send arriving twice (over Wi-Fi and the internet) doesn't repeat; the same setlist
+     * from the same person replaces the old one (they fixed it and sent again: no point reviewing the old version).
      */
     fun add(fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>) {
-        // tudo o que vem da banda (rede local ou internet) passa aqui: só setlist e músicas em texto puro
+        // everything from the band (local network or internet) passes here: only setlists and songs in plain text
         if (!br.app.stagebook.domain.BandContent.listOk(text)) return
         val item = Item(UUID.randomUUID().toString(), fromId, fromName, text, songs.filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS))
         _items.update { list ->
             if (list.any { it.fromId == fromId && it.text == text && it.songs == item.songs }) return@update list
             val old = if (item.setName.isEmpty()) emptyList() else list.filter { it.fromId == fromId && it.setName == item.setName }
-            // a versão nova da mesma pessoa substitui a antiga e fica marcada como atualizada (e de novo não vista)
+            // the same person's new version replaces the old one and is marked updated (and unseen again)
             ((list - old.toSet()) + item.copy(updated = old.isNotEmpty())).takeLast(MAX)
         }
         save()
@@ -75,14 +75,14 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
 
     private companion object {
         const val KEY = "items"
-        const val MAX = 30   // a caixa não cresce sem limite
+        const val MAX = 30   // the inbox doesn't grow without limit
     }
 }
 
 /**
- * Recebidos agrupados (T11): o mesmo setlist (pelo nome) mandado por mais de um membro fica junto, o mais novo primeiro,
- * para a pessoa escolher qual usar ou comparar; setlists diferentes ficam cada um no seu grupo, sem um apagar o outro.
- * Músicas avulsas ficam sozinhas. Grupos na ordem do mais recente.
+ * Grouped received items (T11): the same setlist (by name) sent by more than one member stays together, newest first,
+ * so the person can pick which to use or compare; different setlists each stay in their own group, without one deleting
+ * the other. Loose songs stay alone. Groups ordered by most recent.
  */
 fun groupInbox(items: List<BandInbox.Item>): List<List<BandInbox.Item>> =
     items.groupBy { if (it.setName.isEmpty()) "#" + it.id else it.setName.trim().lowercase() }

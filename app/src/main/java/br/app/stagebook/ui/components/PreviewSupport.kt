@@ -17,7 +17,7 @@ annotation class LightPreview
 @Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 annotation class DarkPreview
 
-/** Fundo do tema para os previews dos componentes. */
+/** Theme background for component previews. */
 @Composable
 internal fun PreviewSurface(dark: Boolean, content: @Composable () -> Unit) {
     StagebookTheme(darkTheme = dark) {

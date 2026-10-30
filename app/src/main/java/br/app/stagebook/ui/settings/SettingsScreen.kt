@@ -151,12 +151,12 @@ import br.app.stagebook.ui.theme.StagePalette
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel = hiltViewModel()) {   // start: seção aberta ao entrar (link do aviso)
+fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel = hiltViewModel()) {   // start: section open on entry (link from the alert)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
-    // backup: escolhe as partes (todas marcadas), depois onde salvar o arquivo .stagebook
+    // backup: pick the parts (all checked), then where to save the .stagebook file
     var backupParts by remember { mutableStateOf(br.app.stagebook.data.Backup.Part.entries.toSet()) }
     val backupSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(br.app.stagebook.data.Backup.MIME)) { uri ->
         uri?.let { viewModel.backupTo(it, backupParts) }
@@ -189,7 +189,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                     SettingsMessage.NotBackup -> r.getString(R.string.backup_not_backup)
                     SettingsMessage.RestoreFailed -> r.getString(R.string.backup_restore_failed)
                     is SettingsMessage.Restored -> {
-                        // língua e aparência valem ao abrir a tela de novo
+                        // language and look apply when the screen opens again
                         if (m.restart) (context as? android.app.Activity)?.recreate()
                         r.getString(R.string.backup_restored)
                     }
@@ -197,7 +197,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
             )
         }
     }
-    // teste do pedal: enquanto os ajustes estão abertos, qualquer botão aparece no cartão do pedal
+    // pedal test: while settings are open, any button shows on the pedal card
     PedalHandler { p ->
         val ignored = p.code in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE)
         if (ignored) return@PedalHandler false
@@ -205,17 +205,17 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
         true
     }
 
-    // instalar: na primeira vez o Android precisa liberar "instalar apps desta fonte" para o Stagebook
+    // install: the first time, Android must allow "install apps from this source" for Stagebook
     val install: () -> Unit = { context.installApk(viewModel.canInstall(), viewModel.installIntent()) }
     LaunchedEffect(viewModel) { viewModel.install.collect { install() } }
 
-    // pedal MIDI Bluetooth: a procura pede a permissão do Bluetooth (ou da localização, no Android 9 a 11)
+    // Bluetooth MIDI pedal: searching asks for the Bluetooth permission (or location, on Android 9 to 11)
     val midiPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         if (r.values.all { it }) viewModel.scanMidi()
     }
     var section by rememberSaveable { mutableStateOf(start) }
-    // medidores do mixer: só com o modo player ligado, a seção Player aberta e a tela visível
-    // banda: a procura na rede fica ligada enquanto Ajustes → Banda está aberto (para alguém novo achar este aparelho)
+    // mixer meters: only with player mode on, the Player section open and the screen visible. Band: the network search
+    // stays on while Settings → Band is open (so someone new can find this device).
     val bandVm: BandViewModel = hiltViewModel()
     val band by bandVm.ui.collectAsStateWithLifecycle()
     val bandActions = remember(bandVm) { bandVm.actions() }
@@ -224,7 +224,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
         bandVm.screenOpen(open)
         onDispose { if (open) bandVm.screenOpen(false) }
     }
-    // chave "Monitorar": começa desligada e não fica salva
+    // "Monitor" switch: starts off and isn't saved
     var monitoring by remember { mutableStateOf(false) }
     val levels = remember { mutableStateOf(MixerLevels.SILENT) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -274,7 +274,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
-                        (context as? Activity)?.recreate()   // as telas voltam já na língua nova
+                        (context as? Activity)?.recreate()   // the screens come back in the new language
                     }
                 },
                 onKeepScreenOn = viewModel::setKeepScreenOn,
@@ -313,7 +313,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
     }
 }
 
-/** Todas as interações da tela de ajustes (fica um parâmetro só em vez de onze). */
+/** Every interaction on the settings screen (one parameter instead of eleven). */
 data class SettingsActions(
     val onFont: (Float) -> Unit = {},
     val onTextColor: (Int) -> Unit = {},
@@ -343,9 +343,9 @@ data class SettingsActions(
     val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onPlayerMode: (Boolean) -> Unit = {},
     val onMixer: (MixerConfig) -> Unit = {},
-    val mixerLevels: () -> MixerLevels = { MixerLevels.SILENT },   // lido só no desenho dos medidores
+    val mixerLevels: () -> MixerLevels = { MixerLevels.SILENT },   // read only when drawing the meters
     val monitoring: Boolean = false,
-    // Ajustes → Banda: o estado da banda (BandViewModel) e o que a tela faz
+    // Settings → Band: the band state (BandViewModel) and what the screen does
     val band: BandUi = BandUi(),
     val bandActions: BandActions = BandActions(),
     val onMonitoring: (Boolean) -> Unit = {},
@@ -369,9 +369,9 @@ data class SettingsActions(
     val onInstallUpdate: () -> Unit = {},
 )
 
-/** Seções dos ajustes: lista à esquerda no tablet, uma tela por seção no celular. */
+/** Settings sections: list on the left on tablets, one screen per section on phones. */
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
-    ESSENTIAL(R.string.essential_title, AppIcons.Eco),   // primeiro: muda o app inteiro
+    ESSENTIAL(R.string.essential_title, AppIcons.Eco),   // first: changes the whole app
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
     CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     PLAYER(R.string.settings_player, AppIcons.Play),
@@ -383,14 +383,14 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     LANGUAGE(R.string.settings_language, AppIcons.Translate),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
-    ABOUT(R.string.settings_about, AppIcons.Info),   // sempre por último: o app, atualizar, privacidade, código, apoio
+    ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
 }
 
-/** Modo essencial (T19): a seção do que está desligado some da lista. */
+/** Essential mode (T19): the section of what is turned off leaves the list. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
     SettingsSection.METRONOME -> look.extrasOn
     SettingsSection.PLAYER -> look.playerMode
-    SettingsSection.BAND -> look.bandOn || look.internetOn   // a banda vale também pela internet (os mesmos membros)
+    SettingsSection.BAND -> look.bandOn || look.internetOn   // the band also works over the internet (same members)
     else -> true
 }
 
@@ -409,7 +409,7 @@ fun SettingsScreen(
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             if (maxWidth >= Sizes.contentMax) {
-                // tablet deitado: lista fixa à esquerda, seção aberta à direita
+                // tablet in landscape: fixed list on the left, open section on the right
                 val open = section ?: SettingsSection.LYRICS
                 Row(Modifier.fillMaxSize()) {
                     SectionList(uiState, open, onSection, Modifier.width(Sizes.settingsList).fillMaxHeight(), band = actions.band)
@@ -419,7 +419,7 @@ fun SettingsScreen(
                             .fillMaxHeight()
                             .padding(horizontal = Spacing.m),
                     ) {
-                        // cabeçalho fixo; só o conteúdo rola
+                        // fixed header; only the content scrolls
                         ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             SectionDetail(open, uiState, actions)
@@ -480,7 +480,7 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
     }
 }
 
-/** Resumo de cada seção na lista (o que está valendo agora). */
+/** Summary of each section in the list (what applies right now). */
 @Composable
 private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): String = when (s) {
     SettingsSection.BAND -> if (band.members.isEmpty()) stringResource(R.string.settings_band_none)
@@ -535,10 +535,10 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
 
 @Composable
 private fun LyricsDetail(look: Look, actions: SettingsActions) {
-    // o tamanho muda ao vivo na prévia e só grava ao soltar o controle
+    // the size changes live in the preview and only saves on release
     var font by remember(look.fontSp) { mutableFloatStateOf(look.fontSp) }
     SettingsCard(stringResource(R.string.settings_font_card), help = stringResource(R.string.settings_font_help)) {
-        // controle em cima e prévia de altura fixa embaixo: mudar o tamanho não mexe na tela
+        // control on top and a fixed-height preview below: changing the size doesn't move the screen
         Text(stringResource(R.string.settings_font_value, font.roundToInt()), style = MaterialTheme.typography.headlineSmall)
         Slider(
             value = font,
@@ -555,7 +555,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds())
         }
     }
-    // virar página (padrão) ou rolar a letra; nos dois o pedal e o toque andam um passo
+    // turn pages (default) or scroll the lyrics; in both the pedal and a tap move one step
     SettingsCard(stringResource(R.string.settings_stage_mode), help = stringResource(R.string.settings_stage_mode_help) + "\n\n" + stringResource(R.string.settings_auto_scroll_help)) {
         val modes = listOf(
             br.app.stagebook.data.model.StageMode.PAGES to R.string.settings_stage_mode_pages,
@@ -588,7 +588,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
             StageColumns.ONE to R.string.settings_columns_one,
             StageColumns.TWO to R.string.settings_columns_two,
         )
-        // pontas em pílula, como os botões do resto do app (Material 3 Expressive)
+        // pill ends, like the buttons in the rest of the app (Material 3 Expressive)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             options.forEachIndexed { i, (c, label) ->
                 SegmentedButton(
@@ -605,13 +605,13 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
         SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
-        // a fonte da letra no mesmo cartão (combo, escrita na própria fonte)
+        // the lyrics font on the same card (dropdown, written in the font itself)
         FontPicker(look.font, actions.onFontFamily)
         LegibilityWarnings(look)
     }
 }
 
-/** Prévia do palco com a aparência escolhida (letra, seção e acordes), no tamanho [font]. */
+/** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
 @Composable
 private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier) {
     val style = TextStyle(
@@ -638,8 +638,8 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier)
 }
 
 /**
- * Avisa quando uma cor do palco vai sumir no fundo (igual ou parecida demais, contraste abaixo de
- * [Contrast.LEGIBLE]): letra, títulos de seção e acordes (só se aparecem). Só avisa; a escolha é do usuário.
+ * Warns when a stage color will vanish into the background (same or too similar, contrast below [Contrast.LEGIBLE]):
+ * lyrics, section titles and chords (only if shown). Only a warning; the choice is the user's.
  */
 @Composable
 private fun LegibilityWarnings(look: Look) {
@@ -658,7 +658,7 @@ private fun LegibilityWarnings(look: Look) {
 
 @Composable
 private fun ChordsDetail(look: Look, actions: SettingsActions) {
-    // o tamanho muda ao vivo na prévia e só grava ao soltar o controle
+    // the size changes live in the preview and only saves on release
     var scale by remember(look.chordScale) { mutableFloatStateOf(look.chordScale) }
     SettingsCard(stringResource(R.string.settings_chords), help = stringResource(R.string.settings_chords_show_help)) {
         SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
@@ -674,19 +674,19 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             Text(stringResource(R.string.settings_chords_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
             FontPicker(look.chordFont, actions.onChordFont)
-            // a prévia logo depois do que ela mostra (tamanho, cor, fonte)
+            // the preview right after what it shows (size, color, font)
             Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
                 StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds())
             }
             LegibilityWarnings(look)
         }
     }
-    // os desenhos dos acordes num cartão próprio (só no perfil letra e cifra), com um exemplo do instrumento
+    // chord diagrams on their own card (only in the lyrics and chords profile), with a sample for the instrument
     if (look.chords) {
         SettingsCard(stringResource(R.string.settings_chord_shapes), help = stringResource(R.string.settings_instrument_help) + "\n\n" + stringResource(R.string.settings_chord_list_help)) {
             InstrumentPicker(look.instrument, actions.onInstrument)
             SwitchRow(stringResource(R.string.settings_chord_tap), look.chordTap, actions.onChordTap)
-            // como o acorde soa ao tocar em "Tocar" no desenho (T20); no modo essencial o som não existe (T19)
+            // how the chord sounds when tapping "Play" on the diagram (T20); in essential mode there is no sound (T19)
             if (look.extrasOn) {
             Text(stringResource(R.string.settings_chord_play), style = MaterialTheme.typography.bodyLarge)
             val playModes = listOf(
@@ -719,7 +719,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                     ) { Text(stringResource(label)) }
                 }
             }
-            // exemplo: o G no instrumento escolhido, como aparece no palco
+            // sample: G on the chosen instrument, as it shows on stage
             ChordDiagram(
                 "G",
                 look.instrument,
@@ -732,7 +732,7 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     }
 }
 
-/** O instrumento dos desenhos de acorde, num combo (violão e guitarra mostram os mesmos). */
+/** The instrument for chord diagrams, in a dropdown (acoustic and electric guitar show the same). */
 @Composable
 private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Unit) {
     val names = mapOf(
@@ -745,7 +745,7 @@ private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Uni
     OptionDropdown(stringResource(R.string.settings_instrument), Instrument.entries, selected, onSelect, nameOf = { stringResource(names.getValue(it)) })
 }
 
-/** A fonte do palco num combo: o campo e cada opção escritos na própria fonte. */
+/** The stage font in a dropdown: the field and each option written in the font itself. */
 @Composable
 private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
     val names = mapOf(
@@ -764,7 +764,7 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
     )
 }
 
-/** A prévia dos acordes não passa deste tamanho (a letra grande não caberia na caixa). */
+/** The chord preview doesn't go over this size (large lyrics wouldn't fit the box). */
 private const val PREVIEW_FONT = 30f
 
 @Composable
@@ -775,7 +775,7 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
         ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
         if (look.showSections) {
-            // o tamanho muda ao vivo na prévia e só grava ao soltar o controle (como o dos acordes)
+            // the size changes live in the preview and only saves on release (like the chords one)
             var scale by remember(look.sectionScale) { mutableFloatStateOf(look.sectionScale) }
             Text(stringResource(R.string.settings_sections_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
@@ -824,7 +824,7 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
     }
     SettingsCard(stringResource(R.string.settings_pedal_test_card)) {
         val key = uiState.lastKey
-        // como no another app: o botão apertado por último pode ser ligado a outro comando do palco
+        // like another app: the last button pressed can be set to another stage command
         if (key != null) PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -862,14 +862,14 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
 }
 
 @Composable
-// o mesmo nome no "Último botão" e na lista de botões configurados
+// the same name in "Last button" and in the list of custom buttons
 private fun pedalKeyName(key: PedalKeyUi): String = if (key.keyCode != 0) pedalKeyName(key.keyCode) else key.name
 
-/** Nome do botão: a tecla como o Android chama (PAGE_DOWN) ou a mensagem MIDI. */
+/** Button name: the key as Android calls it (PAGE_DOWN) or the MIDI message. */
 @Composable
 private fun pedalKeyName(code: Int): String {
     if (!MidiCode.isMidi(code)) {
-        // tecla sem nome conhecido pelo Android: vem só o número
+        // key with no name known to Android: only the number
         val name = KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_")
         return name.toIntOrNull()?.let { stringResource(R.string.pedal_key_code, it) } ?: name
     }
@@ -943,7 +943,7 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
     },
 )
 
-/** Os botões ligados a outro comando, sempre à vista: tocar troca o comando, ✕ volta aquele botão ao padrão. */
+/** Buttons set to another command, always visible: tapping changes the command, ✕ resets that button to default. */
 @Composable
 private fun PedalKeysCard(keys: Map<Int, PedalAction>, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_pedal_keys)) {
@@ -969,7 +969,7 @@ private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalActio
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
-            // nome em cima, comando embaixo: o nome do MIDI é longo e quebrava a linha no celular
+            // name on top, command below: the MIDI name is long and wrapped the line on phones
             Column(Modifier.weight(1f).padding(vertical = Spacing.xs)) {
                 Text(name, style = MaterialTheme.typography.bodyLarge)
                 Text(pedalActionLabel(action), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
@@ -984,16 +984,16 @@ private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalActio
     }
 }
 
-/** Escolha do comando do botão (combo, cabe também no celular). */
+/** Picking the button's command (dropdown, fits on phones too). */
 @Composable
 private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> Unit) =
     OptionDropdown(stringResource(R.string.settings_pedal_command), PedalAction.entries, selected, onSelect, nameOf = { pedalActionLabel(it) })
 
-/** Sites de importação: o primeiro de cada lista é o padrão (onde o importador abre); dá para tirar e acrescentar. */
+/** Import sites: the first in each list is the default (where the importer opens); you can remove and add. */
 @Composable
 private fun ImportSitesDetail(look: Look, actions: SettingsActions) {
     SiteListCard(stringResource(R.string.settings_lyric_sites), look.lyricSites) { actions.onSites(false, it) }
-    // cifra só no perfil letra e cifra
+    // chords only in the lyrics and chords profile
     if (look.chords) SiteListCard(stringResource(R.string.settings_chord_sites), look.chordSites) { actions.onSites(true, it) }
 }
 
@@ -1003,7 +1003,7 @@ private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List
     SettingsCard(title, help = stringResource(R.string.settings_sites_help)) {
         sites.forEachIndexed { i, site ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // o padrão é o primeiro: escolher outro o põe no topo
+                // the default is the first one: picking another moves it to the top
                 RadioButton(selected = i == 0, onClick = { onChange(listOf(site) + (sites - site)) })
                 Column(Modifier.weight(1f)) {
                     Text(site.name, style = MaterialTheme.typography.bodyLarge)
@@ -1021,7 +1021,7 @@ private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List
     }
 }
 
-/** Acrescentar um site: endereço (o nome sai do domínio se ficar em branco). */
+/** Adding a site: address (the name comes from the domain if left blank). */
 @Composable
 private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
     var address by rememberSaveable { mutableStateOf("") }
@@ -1045,7 +1045,7 @@ private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
     )
 }
 
-/** Modo essencial (T19): uma chave para tudo e uma para cada parte; mexer numa parte já tira do modo essencial. */
+/** Essential mode (T19): one switch for everything and one for each part; touching a part leaves essential mode. */
 @Composable
 private fun EssentialDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.essential_title), help = stringResource(R.string.essential_help)) {
@@ -1059,7 +1059,9 @@ private fun EssentialDetail(look: Look, actions: SettingsActions) {
     }
 }
 
-/** Player: a seção só aparece com ele ligado; liga e desliga só no Modo essencial (pedido do usuário, 29/10). */
+/**
+ * Player: the section only shows when it's on; it's turned on and off only in Essential mode (user's request, 29/10).
+ */
 @Composable
 private fun PlayerDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_player), help = stringResource(R.string.settings_player_mode_help)) {
@@ -1073,7 +1075,7 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
 private fun eqLabel(hz: Int) =
     if (hz < 1000) stringResource(R.string.eq_hz, hz) else stringResource(R.string.eq_khz, (hz / 1000f).toString().removeSuffix(".0"))
 
-// requisitos da saída USB: escondidos, no mesmo balão das outras explicações
+// USB output requirements: hidden, in the same bubble as the other explanations
 @Composable
 private fun UsbRequirements() = HelpTip(
     stringResource(R.string.settings_player_requirements_text),
@@ -1084,20 +1086,21 @@ private fun UsbRequirements() = HelpTip(
 private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
     val onMixer = actions.onMixer
     val levels = actions.mixerLevels
-    var editing by rememberSaveable { mutableIntStateOf(-1) }   // canal em edição (o primeiro do par); -1 = nenhum
+    var editing by rememberSaveable { mutableIntStateOf(-1) }   // channel being edited (the first of the pair); -1 = none
     SettingsCard(stringResource(R.string.mixer_title), help = stringResource(R.string.mixer_help) + "\n\n" + stringResource(R.string.mixer_routes_help)) {
         OptionDropdown(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
         )
         SwitchRow(stringResource(R.string.mixer_monitor), actions.monitoring, actions.onMonitoring)
-        // de qual saída é o roteamento mostrado (a em uso ou a última usada)
+        // which output the shown routing belongs to (the one in use or the last used)
         Text(
             pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
             style = MaterialTheme.typography.titleSmall,
         )
         val groups = mixer.groups()
-        // celular: um canal por linha, fader deitado; tablet: faixas estreitas lado a lado, fader de pé (como numa mesa)
+        // phone: one channel per row, horizontal fader; tablet: narrow strips side by side, vertical fader (like a
+        // mixing desk)
         BoxWithConstraints {
             val upright = maxWidth >= 600.dp
             val columns = if (upright) (maxWidth / 150.dp).toInt().coerceIn(4, MixerConfig.MAX) else 1
@@ -1150,8 +1153,8 @@ private fun EqCard(mixer: MixerConfig, actions: SettingsActions) {
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
         val range = -MixerConfig.EQ_RANGE_DB..MixerConfig.EQ_RANGE_DB
-        // faders de pé lado a lado (celular e tablet), como um equalizador gráfico, com o espectro ao vivo por trás (já
-        // com a curva do EQ somada: o motor mede antes do EQ). Cada fader no centro da sua quinta parte.
+        // vertical faders side by side (phone and tablet), like a graphic EQ, with the live spectrum behind (with the
+        // EQ curve added: the engine measures before the EQ). Each fader centered in its fifth.
         val response = remember(mixer.eqDb, mixer.eqOn) {
             if (mixer.eqOn) Spectrum.eqResponseDb(mixer.eqDb) else FloatArray(Spectrum.BINS)
         }
@@ -1197,7 +1200,7 @@ private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
     }
 }
 
-/** Metrônomo (o palco tem só o BPM e o play): contagem, som, brilho na borda e a cor dele. */
+/** Metronome (the stage only has BPM and play): count-in, sound, edge glow and its color. */
 @Composable
 private fun MetronomeDetail(look: Look, actions: SettingsActions) {
     fun set(count: Boolean = look.metroCount, sound: Boolean = look.metroSound, glow: Boolean = look.metroGlow, color: Int = look.metroGlowColor) =
@@ -1218,7 +1221,7 @@ private fun ScreenDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
     }
-    // Now Playing: o "grito" do palco para OBS e outros (T23); extra do palco (T19)
+    // Now Playing: the stage's "shout" to OBS and others (T23); a stage extra (T19)
     if (look.extrasOn) SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
         SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce)
     }
@@ -1233,7 +1236,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             style = MaterialTheme.typography.bodyLarge,
         )
     }
-    // um formato só, o .stagebook (pedido do usuário, 29/10), com a explicação à vista (sem esconder em "Como funciona")
+    // one format only, .stagebook (user's request, 29/10), with the explanation visible (not hidden in "How it works")
     SettingsCard(stringResource(R.string.backup_save_card)) {
         var chosen by rememberSaveable { mutableStateOf(br.app.stagebook.data.Backup.Part.entries.map { it.name }.toSet()) }
         val parts = br.app.stagebook.data.Backup.Part.entries.filter { it.name in chosen }.toSet()
@@ -1251,11 +1254,11 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.fillMaxWidth(), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
         InfoText(stringResource(R.string.backup_open_other_device))
     }
-    // as outras formas de mandar músicas e setlists ficam em outras telas: aqui só o mapa
+    // the other ways to send songs and setlists live on other screens: here only the map
     SettingsCard(stringResource(R.string.backup_share_card)) {
         InfoText(stringResource(R.string.backup_share_info))
     }
-    // apagar tudo, por último e em vermelho; a janela oferece salvar o arquivo antes e pede o código
+    // erase everything, last and in red; the window offers to save the file first and asks for the code
     var resetting by rememberSaveable { mutableStateOf(false) }
     SettingsCard(stringResource(R.string.reset_title)) {
         InfoText(stringResource(R.string.reset_info))
@@ -1270,7 +1273,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
     }
 }
 
-/** Parágrafo explicativo dos cartões (à vista, em tom mais baixo que o texto principal). */
+/** Explanation paragraph for the cards (visible, in a softer tone than the main text). */
 @Composable
 private fun InfoText(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1314,13 +1317,13 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
     }
 }
 
-// Sobre: o app, a atualização (procurar agora), privacidade em poucas linhas, o código disponível e o apoio (doação)
+// About: the app, updating (check now), privacy in a few lines, the available code and support (donation)
 @Composable
 private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.app_name)) {
         Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge)
     }
-    if (uiState.look.internetOn) UpdateDetail(uiState, actions)   // procurar versão nova usa a internet (T19)
+    if (uiState.look.internetOn) UpdateDetail(uiState, actions)   // checking for a new version uses the internet (T19)
     SettingsCard(stringResource(R.string.about_privacy)) {
         Text(stringResource(R.string.about_privacy_text), style = MaterialTheme.typography.bodyMedium)
     }
@@ -1330,7 +1333,7 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     }
     SettingsCard(stringResource(R.string.about_support)) {
         Text(stringResource(R.string.about_support_text), style = MaterialTheme.typography.bodyMedium)
-        // o botão só aparece com o link de doação preenchido (AppLinks.DONATE)
+        // the button only shows when the donation link is filled in (AppLinks.DONATE)
         if (AppLinks.DONATE.startsWith("https://")) {
             ActionButton(stringResource(R.string.about_donate), { actions.onOpenLink(AppLinks.DONATE) }, icon = AppIcons.Favorite, tone = ButtonTone.Tonal)
         }

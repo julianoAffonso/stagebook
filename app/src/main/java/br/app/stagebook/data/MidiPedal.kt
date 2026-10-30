@@ -49,13 +49,13 @@ data class MidiState(
     val scanning: Boolean = false,
     val found: List<MidiFound> = emptyList(),
     val bluetoothOff: Boolean = false,
-    val searched: Boolean = false,   // já procurou nesta abertura dos ajustes (para dizer "nada achado")
+    val searched: Boolean = false,   // already searched in this visit to settings (to say "nothing found")
 )
 
 /**
- * Pedal MIDI, como no another app: aparelho USB entra sozinho ao ligar o cabo; o Bluetooth (BLE MIDI) é
- * procurado em Ajustes uma vez, fica guardado e o app reconecta sozinho quando ele volta (ou cai no show).
- * Cada mensagem vira um [PedalPress] com código MIDI, e o comando sai da escolha feita nos ajustes.
+ * MIDI pedal, like another app: a USB device comes in by itself when plugged in; Bluetooth (BLE MIDI) is searched once
+ * in Settings, saved, and the app reconnects by itself when it comes back (or drops during the show). Each message
+ * becomes a [PedalPress] with a MIDI code, and the command comes from the choice made in settings.
  */
 @Singleton
 class MidiPedal @Inject constructor(
@@ -68,26 +68,26 @@ class MidiPedal @Inject constructor(
     private val bluetooth = context.getSystemService(BluetoothManager::class.java)?.adapter
 
     private val _presses = MutableSharedFlow<PedalPress>(extraBufferCapacity = 64)
-    /** Apertos vindos do MIDI (chegam na linha do MIDI; quem coleta passa para a tela). */
+    /** Presses coming from MIDI (they arrive on the MIDI thread; the collector passes them to the screen). */
     val presses: SharedFlow<PedalPress> = _presses
 
     private val _state = MutableStateFlow(MidiState(supported = manager != null))
     val state: StateFlow<MidiState> = _state.asStateFlow()
 
-    // aparelhos abertos, pelo id do Android; as portas ficam abertas enquanto o aparelho existir
+    // open devices, by Android id; the ports stay open while the device exists
     private val open = HashMap<Int, MidiDevice>()
     private val lock = Any()
     private var started = false
     @Volatile private var usbOn = false
     private var reconnect: Job? = null
-    // tentativa em andamento: o Android pode levar até ~30 s para desistir de um pedal fora do alcance
+    // attempt in progress: Android can take up to ~30 s to give up on an out-of-range pedal
     @Volatile private var lastTry = 0L
     private var scanStop: Job? = null
 
     private val callback = object : MidiManager.DeviceCallback() {
         override fun onDeviceAdded(info: MidiDeviceInfo) {
-            // só USB, e só com a chave ligada; o Bluetooth é aberto por openBluetoothDevice (ele aparece aqui
-            // também, e abriria duas vezes) e os virtuais são de outros apps
+            // USB only, and only with the switch on; Bluetooth is opened by openBluetoothDevice (it shows up here too,
+            // and would open twice) and virtual ones belong to other apps
             if (info.type == MidiDeviceInfo.TYPE_USB && usbOn) openDevice(info)
         }
 
@@ -97,7 +97,7 @@ class MidiPedal @Inject constructor(
         }
     }
 
-    /** Uma vez, ao abrir o app: escuta USB e reconecta o pedal Bluetooth guardado. */
+    /** Once, on app open: listens for USB and reconnects the saved Bluetooth pedal. */
     fun start() {
         val m = manager ?: return
         if (started) return
@@ -111,7 +111,7 @@ class MidiPedal @Inject constructor(
         }
     }
 
-    /** Liga: abre os pedais USB já ligados. Desliga: fecha todos e não abre os que chegarem. */
+    /** On: opens USB pedals already plugged in. Off: closes them all and doesn't open new arrivals. */
     private fun setUsb(on: Boolean) {
         val m = manager ?: return
         usbOn = on
@@ -134,15 +134,15 @@ class MidiPedal @Inject constructor(
     private fun attach(device: MidiDevice?) {
         device ?: return
         val info = device.info
-        // a chave foi desligada enquanto o USB abria
+        // the switch was turned off while USB was opening
         if (info.type == MidiDeviceInfo.TYPE_USB && !usbOn) { runCatching { device.close() }; return }
         val name = info.properties.getString(MidiDeviceInfo.PROPERTY_NAME).orEmpty()
-        // porta de SAÍDA do aparelho = o que ele manda para o tablet
+        // the device's OUTPUT port = what it sends to the tablet
         info.ports.filter { it.type == android.media.midi.MidiDeviceInfo.PortInfo.TYPE_OUTPUT }.forEach { port ->
             val decoder = MidiDecoder(name)
             device.openOutputPort(port.portNumber)?.connect(object : MidiReceiver() {
                 override fun onSend(msg: ByteArray, offset: Int, count: Int, timestamp: Long) {
-                    // o decodificador é de uma porta só, e a porta entrega em ordem numa linha só
+                    // the decoder is per port, and the port delivers in order on a single thread
                     decoder.feed(msg, offset, count).forEach { _presses.tryEmit(it) }
                 }
             })
@@ -161,7 +161,7 @@ class MidiPedal @Inject constructor(
 
     private fun btConnected() = synchronized(lock) { open.values.any { it.info.type == MidiDeviceInfo.TYPE_BLUETOOTH } }
 
-    /** Enquanto houver pedal guardado: se ele não estiver aberto, tenta de novo a cada pouco (desligou, saiu do alcance). */
+    /** While there's a saved pedal: if it isn't open, try again every so often (turned off, out of range). */
     private fun keepConnected(address: String) {
         reconnect?.cancel()
         if (address.isEmpty()) {
@@ -182,7 +182,7 @@ class MidiPedal @Inject constructor(
         }
     }
 
-    @SuppressLint("MissingPermission")   // canConnect() confere antes
+    @SuppressLint("MissingPermission")   // canConnect() checks first
     private fun connectBluetooth(address: String) {
         val m = manager ?: return
         val adapter = bluetooth ?: return
@@ -197,10 +197,10 @@ class MidiPedal @Inject constructor(
 
     // ---- procurar (Ajustes) ----
 
-    /** Permissões que a procura e a conexão Bluetooth pedem nesta versão do Android. */
+    /** Permissions the Bluetooth search and connection ask for on this Android version. */
     fun permissions(): Array<String> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
-        else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)   // Android 9 a 11 (o Fire): procurar BLE exige a localização
+        else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)   // Android 9 to 11 (the Fire): BLE search requires location
 
     fun hasPermissions() = permissions().all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
 
@@ -223,7 +223,7 @@ class MidiPedal @Inject constructor(
         }
     }
 
-    /** Procura pedais BLE MIDI por alguns segundos (só os que anunciam o serviço MIDI). */
+    /** Searches for BLE MIDI pedals for a few seconds (only the ones advertising the MIDI service). */
     @SuppressLint("MissingPermission")
     fun scan() {
         val adapter = bluetooth
@@ -254,7 +254,7 @@ class MidiPedal @Inject constructor(
         _state.value = _state.value.copy(scanning = false)
     }
 
-    /** Guarda o pedal escolhido; a conexão (e as reconexões) vêm de [keepConnected]. */
+    /** Saves the chosen pedal; the connection (and reconnections) come from [keepConnected]. */
     fun choose(found: MidiFound) {
         stopScan()
         repository.updateLook { it.copy(midiBtAddress = found.address, midiBtName = found.name) }

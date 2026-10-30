@@ -13,7 +13,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Toca o acorde do palco pela saída normal (não passa pelo motor das backing tracks); um novo toque troca o anterior. */
+/**
+ * Plays the stage chord on the regular output (doesn't go through the backing track engine); a new tap replaces the
+ * previous one.
+ */
 @Singleton
 class ChordPlayer @Inject constructor() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

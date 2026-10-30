@@ -15,9 +15,9 @@ import br.app.stagebook.domain.Spectrum
 import kotlin.math.cos
 
 /**
- * Espectro ao vivo atrás dos faders do EQ: uma onda preenchida, com cada faixa na altura do seu nível
- * e na posição horizontal da sua frequência na linha dos faders (`Spectrum.x`). `levelsDb` é lido só no
- * desenho: redesenha sem recompor a tela. Com `active` falso (lido também no desenho) não desenha nada.
+ * Live spectrum behind the EQ faders: a filled wave, with each band at the height of its level and at the horizontal
+ * position of its frequency on the fader row (`Spectrum.x`). `levelsDb` is read only when drawing: it redraws without
+ * recomposing the screen. With `active` false (also read when drawing) it draws nothing.
  */
 @Composable
 fun SpectrumView(
@@ -32,7 +32,7 @@ fun SpectrumView(
         if (levels.size != Spectrum.BINS) return@Canvas
         val xs = FloatArray(Spectrum.BINS) { Spectrum.x(Spectrum.centers[it]) * size.width }
         val ys = FloatArray(Spectrum.BINS) { size.height * (1f - Spectrum.fraction(levels[it])) }
-        // curva suave: liga os pontos médios entre faixas vizinhas com curvas de 2º grau
+        // smooth curve: joins the midpoints between neighboring bands with quadratic curves
         val line = Path().apply {
             moveTo(xs[0], ys[0])
             for (i in 1 until Spectrum.BINS) {
@@ -55,7 +55,7 @@ private const val FILL_ALPHA = 0.22f
 private const val LINE_ALPHA = 0.7f
 
 private val sample = List(Spectrum.BINS) { b ->
-    // forma de música: graves fortes, médios, agudos caindo
+    // music-like shape: strong lows, mids, falling highs
     -18f - b * 0.6f + 6f * cos(b / 5f).toFloat()
 }
 

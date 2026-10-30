@@ -6,11 +6,14 @@ import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-/** Normalização de um canal (ou par): não mexe, volume percebido (LUFS) ou pico. */
+/** Normalizing a channel (or pair): leave it, perceived loudness (LUFS) or peak. */
 @Serializable
 enum class NormMode { NONE, VOLUME, PEAK }
 
-/** Um canal do mixer. Nos canais 1, 3, 5 e 7, [stereo] junta o canal com o seguinte num par (o seguinte segue este). */
+/**
+ * A mixer channel. On channels 1, 3, 5 and 7, [stereo] joins the channel with the next one as a pair (the next follows
+ * this one).
+ */
 @Immutable
 @Serializable
 data class MixChannel(
@@ -19,11 +22,13 @@ data class MixChannel(
     val on: Boolean = true,
     val norm: NormMode = NormMode.NONE,
     val eq: Boolean = false,
-    val center: Boolean = false,   // divide igual para os dois lados, ignorando o lado em que veio gravado
+    val center: Boolean = false,   // splits equally to both sides, ignoring the side it was recorded on
     val stereo: Boolean = false,
 )
 
-/** Uma saída de áudio: a do aparelho ou uma interface USB ([key] = "usb:vid:pid"), com o nome e quantas saídas tem. */
+/**
+ * An audio output: the device's or a USB interface ([key] = "usb:vid:pid"), with its name and how many outputs it has.
+ */
 @Immutable
 @Serializable
 data class OutputInfo(val key: String = DEVICE, val name: String = "", val count: Int = 2) {
@@ -33,8 +38,8 @@ data class OutputInfo(val key: String = DEVICE, val name: String = "", val count
 }
 
 /**
- * Mixer do app (vale para todos os backing tracks): um canal por canal do arquivo. Sem configuração, cada canal vai
- * para a saída de mesmo número, sem ganho, sem normalização e sem EQ: nada é adivinhado.
+ * The app's mixer (applies to every backing track): one channel per channel in the file. With no setup, each channel
+ * goes to the output with the same number, with no gain, no normalization and no EQ: nothing is guessed.
  */
 @Immutable
 @Serializable
@@ -43,17 +48,17 @@ data class MixerConfig(
     val strips: List<MixChannel> = List(MAX) { MixChannel() },
     val eqOn: Boolean = false,
     val eqDb: List<Float> = List(EQ_BANDS) { 0f },
-    // a saída em uso (ou a última usada): é a que os Ajustes mostram e editam
+    // the output in use (or the last used): the one Settings shows and edits
     val output: OutputInfo = OutputInfo(),
-    // roteamento guardado por saída (chave da OutputInfo): a primeira saída de cada canal; -1 = a de mesmo número
+    // routing saved per output (OutputInfo key): each channel's first output; -1 = the one with the same number
     val routes: Map<String, List<Int>> = emptyMap(),
 ) {
     fun strip(i: Int): MixChannel = strips.getOrElse(i) { MixChannel() }
 
-    /** Primeira saída (0 = saída 1) do canal [i] na saída [key]; sem escolha, a de mesmo número. */
+    /** First output (0 = output 1) of channel [i] on output [key]; with no choice, the one with the same number. */
     fun outputOf(i: Int, key: String = output.key): Int = routes[key]?.getOrNull(i)?.takeIf { it >= 0 } ?: i
 
-    /** Escolhe a saída do canal [i] na saída em uso; as das outras interfaces ficam como estão. */
+    /** Picks channel [i]'s output on the output in use; the other interfaces stay as they are. */
     fun withOutput(i: Int, out: Int): MixerConfig {
         val now = routes[output.key].orEmpty()
         return copy(routes = routes + (output.key to List(MAX) { if (it == i) out else now.getOrElse(it) { -1 } }))
@@ -62,7 +67,7 @@ data class MixerConfig(
     fun withStrip(i: Int, change: (MixChannel) -> MixChannel): MixerConfig =
         copy(strips = List(MAX) { if (it == i) change(strip(it)) else strip(it) })
 
-    /** Canais do mixer: cada um sozinho ou um par (primeiro, último) quando o primeiro é estéreo. */
+    /** Mixer channels: each alone or a pair (first, last) when the first is stereo. */
     fun groups(lanes: Int = channels): List<IntRange> {
         val out = mutableListOf<IntRange>()
         var i = 0
@@ -79,12 +84,14 @@ data class MixerConfig(
         const val EQ_BANDS = 5
         val EQ_FREQ = listOf(80, 250, 1000, 3500, 10000)
         const val EQ_RANGE_DB = 12f
-        const val MIN_DB = -60f   // fader no fim = mudo
+        const val MIN_DB = -60f   // fader at the bottom = muted
         const val MAX_DB = 6f
     }
 }
 
-/** Medidores ao vivo do mixer: cada canal do arquivo (já com a balística) e o espectro dos canais com EQ. */
+/**
+ * The mixer's live meters: each channel in the file (with ballistics already) and the spectrum of the channels with EQ.
+ */
 @Immutable
 data class MixerLevels(val meters: Meters, val spectrumDb: List<Float>, val live: Boolean) {
     companion object {
@@ -92,24 +99,27 @@ data class MixerLevels(val meters: Meters, val spectrumDb: List<Float>, val live
     }
 }
 
-/** Medição de um canal ou par num backing track: volume (LUFS) e pico (linear, 1 = 0 dBFS). */
+/** Measurement of a channel or pair in a backing track: loudness (LUFS) and peak (linear, 1 = 0 dBFS). */
 data class Measure(val lufs: Float, val peak: Float)
 
-/** O que o motor recebe: ganho e normalização de cada canal do arquivo, canais com EQ e a matriz [saída][canal]. */
+/**
+ * What the engine gets: gain and normalization for each channel in the file, EQ channels and the [output][channel]
+ * matrix.
+ */
 class MixPlan(val gains: FloatArray, val norms: FloatArray, val eqMask: Int, val route: FloatArray)
 
 object Mixer {
-    const val TARGET_LUFS = -16f        // volume: igual entre músicas
-    const val TARGET_PEAK_DB = -6f      // pico: igual entre músicas (click, guia)
-    const val CEILING_DB = -1f          // volume nunca passa de -1 dBFS de pico
+    const val TARGET_LUFS = -16f        // loudness: even across songs
+    const val TARGET_PEAK_DB = -6f      // peak: even across songs (click, guide)
+    const val CEILING_DB = -1f          // loudness never goes over -1 dBFS peak
     const val MAX_BOOST_DB = 15f
     const val MAX_CUT_DB = -24f
-    private val HALF = sqrt(0.5f)       // canal mono nos dois lados: mesmo volume percebido
+    private val HALF = sqrt(0.5f)       // mono channel on both sides: same perceived loudness
 
     fun db(lin: Float): Float = (20 * log10(lin.coerceAtLeast(1e-9f).toDouble())).toFloat()
     fun lin(db: Float): Float = 10f.pow(db / 20f)
 
-    /** Ganho (dB) da normalização; sem medição ainda, nada. */
+    /** Normalization gain (dB); with no measurement yet, none. */
     fun normDb(mode: NormMode, m: Measure?): Float {
         if (m == null || mode == NormMode.NONE) return 0f
         val g = when (mode) {
@@ -119,10 +129,10 @@ object Mixer {
         return g.coerceIn(MAX_CUT_DB, MAX_BOOST_DB)
     }
 
-    /** Bits dos canais do arquivo de um canal do mixer (para medir o par junto). */
+    /** Bits of the file channels for a mixer channel (to measure the pair together). */
     fun mask(group: IntRange): Int = group.fold(0) { m, c -> m or (1 shl c) }
 
-    /** A mistura para um arquivo com [lanes] canais; [measures] por canal do mixer (chave: o primeiro canal). */
+    /** The mix for a file with [lanes] channels; [measures] per mixer channel (key: the first channel). */
     fun plan(cfg: MixerConfig, lanes: Int, measures: Map<Int, Measure> = emptyMap(), key: String = cfg.output.key): MixPlan {
         val n = MixerConfig.MAX
         val gains = FloatArray(n) { 1f }
@@ -139,7 +149,8 @@ object Mixer {
                 norms[c] = norm
                 if (s.eq) eq = eq or (1 shl c)
                 if (s.center) {
-                    // par: soma dos dois lados no meio; mono: o canal e a saída vizinha do mesmo par de saídas
+                    // pair: both sides summed in the middle; mono: the channel and the neighboring output of the same
+                    // output pair
                     val left = if (g.count() == 2) base else base - base % 2
                     val w = if (g.count() == 2) 0.5f else HALF
                     for (o in left..minOf(left + 1, n - 1)) route[o * n + c] = w

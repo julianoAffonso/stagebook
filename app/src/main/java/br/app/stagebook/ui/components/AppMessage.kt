@@ -10,8 +10,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Aviso curto do app: um snackbar só, no rodapé da tela (acima da faixa do "Quem conduz"), no padrão
- * dos apps do Google. Toda tela avisa por aqui (nunca Toast): `LocalAppMessage.current.show(...)`.
+ * The app's short message: a single snackbar at the bottom of the screen (above the "Lead the band" strip), in Google's
+ * app pattern. Every screen shows messages here (never Toast): `LocalAppMessage.current.show(...)`.
  */
 class AppMessage(val host: SnackbarHostState, private val scope: CoroutineScope) {
     fun show(text: String, long: Boolean = false) {
@@ -28,7 +28,7 @@ fun rememberAppMessage(): AppMessage {
     return remember(scope) { AppMessage(SnackbarHostState(), scope) }
 }
 
-/** Sem a raiz do app (Preview, teste de um componente sozinho), o aviso não aparece. */
+/** Without the app root (Preview, testing a component alone), the message doesn't show. */
 val LocalAppMessage = staticCompositionLocalOf<AppMessage> {
     AppMessage(SnackbarHostState(), CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined))
 }

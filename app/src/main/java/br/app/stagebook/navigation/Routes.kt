@@ -2,7 +2,7 @@ package br.app.stagebook.navigation
 
 import kotlinx.serialization.Serializable
 
-// Rotas levam só ids; cada tela busca o resto no repositório.
+// Routes carry only ids; each screen fetches the rest from the repository.
 
 @Serializable
 object Home
@@ -11,7 +11,7 @@ object Home
 data class SongEditor(
     val songId: String? = null,
     val fromImport: Boolean = false,
-    val cursor: Int = -1,   // aberta do palco: posição na letra da linha que o usuário segurou
+    val cursor: Int = -1,   // opened from the stage: position in the lyrics of the line the user held
 )
 
 @Serializable
@@ -20,16 +20,16 @@ data class SetlistDetail(val setId: String)
 @Serializable
 data class PickSongs(val setId: String)
 
-/** Ler o QR de um setlist, ou buscar pelo [code] da internet, e conferir antes de criar. */
+/** Scan a setlist QR, or fetch by the internet [code], and check before creating. */
 @Serializable
-data class ScanSetlist(val code: String = "", val inbox: String = "")   // inbox: o que a banda mandou (caixa de entrada)
+data class ScanSetlist(val code: String = "", val inbox: String = "")   // inbox: what the band sent
 
 @Serializable
 data class Stage(
     val setId: String? = null,
     val songId: String? = null,
-    val start: Int = 0,   // setlist: abre o palco nesta música (a que o usuário tocou na lista)
+    val start: Int = 0,   // setlist: opens the stage on this song (the one the user tapped in the list)
 )
 
 @Serializable
-data class Importer(val query: String = "", val queued: Boolean = false)   // queued: importando em lote para um setlist
+data class Importer(val query: String = "", val queued: Boolean = false)   // queued: batch importing into a setlist

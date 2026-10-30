@@ -3,12 +3,12 @@ package br.app.stagebook.domain
 import br.app.stagebook.data.model.Song
 
 /**
- * Busca da lista de músicas e do "adicionar ao setlist". Normalizar texto (acentos, caixa) é caro no
- * Fire: as chaves são feitas uma vez por versão da biblioteca, e cada tecla só procura nelas.
+ * Search for the song list and "add to setlist". Normalizing text (accents, case) is expensive on the Fire: keys are
+ * built once per library version, and each keystroke only searches them.
  */
 class SongSearch private constructor(private val entries: List<Pair<Song, String>>) {
 
-    /** Em ordem de título; com a busca vazia, todas. */
+    /** In title order; with an empty search, all of them. */
     fun find(query: String): List<Song> {
         val key = TextKey.of(query)
         return if (key.isEmpty()) entries.map { it.first } else entries.filter { it.second.contains(key) }.map { it.first }

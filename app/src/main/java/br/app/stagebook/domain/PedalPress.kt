@@ -1,18 +1,18 @@
 package br.app.stagebook.domain
 
 /**
- * Um aperto do pedal, venha ele como tecla (pedal Bluetooth comum) ou como mensagem MIDI (USB ou Bluetooth).
- * [code] é o keyCode do Android ou, para MIDI, o código de [MidiCode]; é a chave da escolha de comando nos ajustes.
+ * A pedal press, whether it comes as a key (regular Bluetooth pedal) or a MIDI message (USB or Bluetooth). [code] is
+ * Android's keyCode or, for MIDI, the [MidiCode] code; it's the key for the command choice in settings.
  */
 data class PedalPress(
     val code: Int,
     val down: Boolean,
     val repeat: Int = 0,
-    val device: String = "",   // nome do aparelho externo que mandou; vazio = o próprio tablet
-    val name: String = "",     // nome da tecla (só teclado; o do MIDI sai de MidiCode na tela)
+    val device: String = "",   // name of the external device that sent it; empty = the tablet itself
+    val name: String = "",     // key name (keyboard only; the MIDI one comes from MidiCode on screen)
 )
 
-/** Códigos dos botões MIDI, acima de qualquer keyCode do Android: tipo + canal + número (CC, nota ou programa). */
+/** MIDI button codes, above any Android keyCode: type + channel + number (CC, note or program). */
 object MidiCode {
     private const val BASE = 0x1000000
 
@@ -28,19 +28,19 @@ object MidiCode {
         else -> Kind.NOTE
     }
 
-    /** Canal como o músico conta (1 a 16). */
+    /** Channel the way musicians count (1 to 16). */
     fun channel(code: Int): Int = ((code shr 8) and 0x0F) + 1
 
     fun number(code: Int): Int = code and 0x7F
 }
 
 /**
- * Lê o fluxo de bytes MIDI de um aparelho e devolve os apertos. Entende "running status" (mensagens seguidas sem
- * repetir o status, comum em BLE MIDI), ignora clock/realtime e SysEx. Botão de pedal:
- * - CC: valor ≥ 64 aperta, < 64 solta (pedais mandam 127 e 0);
- * - nota: Note On com velocidade aperta; Note Off ou velocidade 0 solta;
- * - Program Change: só aperta (não tem soltar).
- * Um segundo "aperta" sem soltar no meio vem como repetição, como o pé apoiado no teclado.
+ * Reads a device's MIDI byte stream and returns the presses. Understands "running status" (consecutive messages without
+ * repeating the status, common in BLE MIDI), ignores clock/realtime and SysEx. Pedal button:
+ * - CC: value ≥ 64 presses, < 64 releases (pedals send 127 and 0);
+ * - note: Note On with velocity presses; Note Off or velocity 0 releases;
+ * - Program Change: only presses (it has no release).
+ * A second "press" without a release in between comes as a repeat, like a foot resting on the keyboard.
  */
 class MidiDecoder(private val device: String) {
     private var status = 0
@@ -54,10 +54,10 @@ class MidiDecoder(private val device: String) {
         for (i in offset until offset + length) {
             val b = bytes[i].toInt() and 0xFF
             when {
-                b >= 0xF8 -> Unit                                   // realtime (clock etc.): pode vir no meio de tudo
+                b >= 0xF8 -> Unit                                   // realtime (clock etc.): can come in the middle of anything
                 b == 0xF0 -> { sysex = true; status = 0 }
                 b == 0xF7 -> sysex = false
-                b >= 0xF0 -> { status = 0; sysex = false }          // comuns do sistema: sem botão
+                b >= 0xF0 -> { status = 0; sysex = false }          // system common: no button
                 b >= 0x80 -> { status = b; count = 0; sysex = false }
                 sysex || status == 0 -> Unit
                 else -> {
@@ -83,11 +83,11 @@ class MidiDecoder(private val device: String) {
             0xC0 -> true
             else -> return null
         }
-        // nota sai como Note On (0x90) dos dois jeitos: a mesma tecla aperta e solta
+        // a note comes out as Note On (0x90) both ways: the same key presses and releases
         val code = MidiCode.of(if (type == 0x80) 0x90 or (status and 0x0F) else status, data[0])
         if (type == 0xC0) return PedalPress(code, down = true, device = device)
         val repeat = if (down && !held.add(code)) 1 else 0
-        if (!down && !held.remove(code)) return null   // soltar sem ter apertado (CC indo de 0 a 63): nada
+        if (!down && !held.remove(code)) return null   // releasing without having pressed (CC going from 0 to 63): nothing
         return PedalPress(code, down, repeat, device)
     }
 }

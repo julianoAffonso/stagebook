@@ -1,39 +1,39 @@
 package br.app.stagebook.player;
 
-// Ponte JNI para o motor nativo (engine.c).
+// JNI bridge to the native engine (engine.c).
 final class Engine {
     static { System.loadLibrary("stagebook_audio"); }
 
     static native boolean start(int fd, int ep, int maxPacket, int channels, int subslot, int intf, int alt,
                                 int inEp, int inMaxPacket, int inFrameBytes);
     static native void stop();
-    // sem interface USB: toca pela saída do aparelho (AAudio, 48 kHz estéreo); falso se o Android não abriu
+    // no USB interface: plays on the device's output (AAudio, 48 kHz stereo); false if Android didn't open it
     static native boolean startDevice();
     static native long load(String path);
     static native void play();
     static native void pause();
     static native void seek(long ms);
     static native long position();
-    // equalizador do backing: 5 bandas (80, 250, 1k, 3,5k, 10k Hz), ganhos em dB
+    // backing equalizer: 5 bands (80, 250, 1k, 3.5k, 10k Hz), gains in dB
     static native void setEq(boolean on, float[] gainsDb);
-    // {lufs do backing (1/2), pico do backing, pico do click (3/4)} ou null
+    // {backing lufs (1/2), backing peak, click peak (3/4)} or null
     static native float[] analyze(String path);
-    // a mistura (só por canal): gains/norms por canal da fonte (8), eqMask = canais com EQ (cada um separado),
-    // route[saída * 8 + canal]; sem chamar, cada canal vai para a saída de mesmo número com ganho 1
+    // the mix (per channel only): gains/norms per source channel (8), eqMask = channels with EQ (each separate),
+    // route[output * 8 + channel]; without calling, each channel goes to the output with the same number at gain 1
     static native void setMix(float[] gains, float[] norms, int eqMask, float[] route);
-    // canais da fonte da faixa carregada (até 8)
+    // source channels of the loaded track (up to 8)
     static native int lanes();
-    // {lufs, pico} dos canais em mask (cada canal ou par do mixer)
+    // {lufs, peak} of the channels in mask (each mixer channel or pair)
     static native float[] analyzeMask(String path, int mask);
     static native boolean isRunning();
     static native String status();
-    // relógio da interface pela entrada: 1 travado, 0 esperando, -1 sem entrada
+    // interface clock through the input: 1 locked, 0 waiting, -1 no input
     static native int feedback();
-    // medidores ao vivo (só leem o sinal): desligado, o motor faz o mesmo de antes
+    // live meters (they only read the signal): when off, the engine does the same as before
     static native void setMeter(boolean on);
-    // picos lineares desde a leitura anterior: {canal 1, 2, 3, 4, faixas 80, 250, 1k, 3,5k, 10k do backing}
+    // linear peaks since the previous read: {channel 1, 2, 3, 4, backing bands 80, 250, 1k, 3.5k, 10k}
     static native float[] peaks();
-    // picos de cada canal do arquivo (depois do fader, normalização e EQ) desde a última leitura: medidores do mixer
+    // peaks of each file channel (after fader, normalization and EQ) since the last read: mixer meters
     static native float[] lanePeaks();
 
     private Engine() {}

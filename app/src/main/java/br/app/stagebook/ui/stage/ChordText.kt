@@ -16,8 +16,8 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 
 /**
- * Texto do palco com os acordes: cada acorde (marca [CHORD_TAG]) é desenhado no espaço em cima da letra
- * marcada, que o [joinLines] reservou. Usado no palco e na prévia dos ajustes.
+ * Stage text with chords: each chord (marked with [CHORD_TAG]) is drawn in the space above the marked letter, which
+ * [joinLines] reserved. Used on stage and in the settings preview.
  */
 @Composable
 fun ChordText(

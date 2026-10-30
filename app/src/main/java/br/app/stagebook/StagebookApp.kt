@@ -7,6 +7,6 @@ import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class StagebookApp : Application() {
-    // textos lidos fora das telas (avisos, mensagens) também na língua escolhida
+    // texts read outside the screens (notices, messages) also use the chosen language
     override fun attachBaseContext(base: Context) = super.attachBaseContext(Languages.wrap(base))
 }

@@ -2,7 +2,7 @@ package br.app.stagebook.ui.theme
 
 import androidx.compose.ui.unit.dp
 
-/** Grade de 8dp. */
+/** 8dp grid. */
 object Spacing {
     val xs = 4.dp
     val s = 8.dp
@@ -13,17 +13,17 @@ object Spacing {
 }
 
 object Sizes {
-    val touch = 48.dp           // alvo mínimo de toque
-    val fader = 200.dp          // altura do fader de pé (mixer e EQ no tablet)
-    val meter = 8.dp            // largura da barra dos medidores ao vivo
-    val button = 56.dp          // botões principais (dedo no palco, tablet longe)
-    val row = 72.dp             // linha de música
-    val swipeTrigger = 56.dp    // linha aberta pelo arraste: só o botão do ícone (24) + margem (16) de cada lado
+    val touch = 48.dp           // minimum touch target
+    val fader = 200.dp          // vertical fader height (mixer and EQ on tablets)
+    val meter = 8.dp            // width of the live meter bar
+    val button = 56.dp          // main buttons (finger on stage, tablet far away)
+    val row = 72.dp             // song row
+    val swipeTrigger = 56.dp    // row opened by dragging: only the icon button (24) + margin (16) on each side
     val swatch = 48.dp
-    val fontPreview = 160.dp    // caixa fixa da prévia do tamanho da letra (não empurra a tela)
-    val settingsList = 360.dp   // lista de seções dos ajustes no tablet
-    val contentMax = 840.dp     // largura máxima do conteúdo no tablet deitado
-    val pageDot = 28.dp         // bolinha numerada das páginas no rodapé do palco
-    val swipe = 64.dp           // arrastar no palco: a partir daqui, vira a página para o lado do arraste
-    val railBreakpoint = 600.dp // a partir daqui, menu lateral em vez de barra embaixo
+    val fontPreview = 160.dp    // fixed box for the lyrics size preview (doesn't push the screen)
+    val settingsList = 360.dp   // settings section list on tablets
+    val contentMax = 840.dp     // max content width on a tablet in landscape
+    val pageDot = 28.dp         // numbered page dot in the stage footer
+    val swipe = 64.dp           // dragging on stage: from here on, turns the page toward the drag
+    val railBreakpoint = 600.dp // from here on, side rail instead of a bottom bar
 }

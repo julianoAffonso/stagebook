@@ -15,9 +15,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manda o Now Playing (a música da vez) na rede local para programas de live e projeção ([StageAnnouncement]): na hora em que ela muda e depois a
- * cada 10 s, enquanto o palco está aberto. Um pacote pequeno por vez (custo desprezível). Só com rede local ligada (Wi-Fi,
- * cabo ou o ponto de acesso do celular, pedido do usuário, 29/10): sem ela, nem tenta.
+ * Sends Now Playing (the current song) on the local network to live and projection apps ([StageAnnouncement]): when it
+ * changes and then every 10 s, while the stage is open. One small packet at a time (negligible cost). Only with a local
+ * network on (Wi-Fi, cable or the phone's hotspot, user's request, 29/10): without it, it doesn't even try.
  */
 @Singleton
 class StageAnnouncer @Inject constructor(private val link: BandLink) {

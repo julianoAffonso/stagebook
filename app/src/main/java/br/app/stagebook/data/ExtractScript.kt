@@ -1,22 +1,22 @@
 package br.app.stagebook.data
 
 /**
- * Script rodado na página aberta no navegador de importação. Devolve um JSON com a letra e as pistas
- * de título/artista (ver PageData). Ordem: texto selecionado > sites conhecidos > maior bloco de texto.
+ * Script run on the page open in the import browser. Returns JSON with the lyrics and the title/artist hints (see
+ * PageData). Order: selected text > known sites > largest text block.
  *
- * Cifra (Cifra Club): `chordText` traz o bloco com os acordes na linha de cima (com a tablatura, se houver: o app pergunta
- * se ela entra), `key` e `capo` o
- * que a página diz; `text` continua só a letra. Em outros sites a cifra, se houver, está no próprio `text`.
+ * Chords (Cifra Club): `chordText` carries the block with the chords on the line above (with the tablature, if any: the
+ * app asks whether it comes in), `key` and `capo` what the page says; `text` stays lyrics only. On other sites the
+ * chords, if any, are in `text` itself.
  *
- * Letras.mus.br: na página normal a letra está em .lyric-original; na de tradução (traducao.html)
- * cada verso traz a tradução e o original em .romanization — fica só o original.
+ * Letras.mus.br: on the normal page the lyrics are in .lyric-original; on the translation page (traducao.html) each
+ * line carries the translation and the original in .romanization, and only the original is kept.
  */
 object ExtractScript {
     val SOURCE = """
 (function(){
 function q(s){return document.querySelector(s);}
 function t(e){return e?(e.innerText||'').trim():'';}
-// texto de um nó com quebras: <br> = linha, <p> = estrofe (funciona em nós fora da tela)
+// a node's text with breaks: <br> = line, <p> = verse (works on nodes off screen)
 function txt(n){
   if(n.nodeType===3) return n.nodeValue.replace(/\s+/g,' ');
   if(n.nodeType!==1) return '';
@@ -65,10 +65,10 @@ var ld={};Array.prototype.forEach.call(document.querySelectorAll('script[type="a
    var a=n.byArtist||n.composer||n.author||n.lyricist; if(a&&!ld.artist)ld.artist=(Array.isArray(a)?a[0]:a).name||'';
    if(n.datePublished&&!ld.date)ld.date=String(n.datePublished);}});});}catch(e){}});
 var og=(q('meta[property="og:title"]')||{}).content||'';
-// tom e capotraste escritos na página (Cifra Club e parecidos), se o site não os deu acima
+// key and capo written on the page (Cifra Club and the like), if the site didn't give them above
 var bt=(document.body&&document.body.innerText)||''; var km=bt.match(/Tom:\s*([A-G][#b]?m?)/); if(!ky&&km)ky=km[1];
 var cm=bt.match(/Capotraste na \d+/i); if(!cp&&cm)cp=cm[0];
-// BPM escrito na página (qualquer site): "120 BPM", "BPM: 120", "Tempo: 120"
+// BPM written on the page (any site): "120 BPM", "BPM: 120", "Tempo: 120"
 var bm=bt.match(/(\d{2,3})\s*bpm\b/i)||bt.match(/\b(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})\b/i); var bp=bm?bm[1]:'';
 return JSON.stringify({title:ti,artist:ar,text:x,chordText:ch,key:ky,capo:cp,bpm:bp,site:h,ldName:ld.name||'',ldArtist:ld.artist||'',ldDate:ld.date||'',
  ogTitle:og,docTitle:document.title});
