@@ -18,7 +18,7 @@ enum class AppLanguage(val tag: String) {
  * Language choice, saved on the device and applied before any screen (`attachBaseContext` of the app and the Activity):
  * kept outside the library, which only loads later. English is the base (`values`) and Brazilian Portuguese lives in
  * `values-pt-rBR`; each new translation is a `values-<tag>` and only joins [available] when complete (`LanguagesTest`
- * checks). How to translate: `docs/traduzir.md`.
+ * checks). How to translate: `docs/TRANSLATING.md`.
  */
 object Languages {
     /** The languages offered in settings. Translating = creating `values-<tag>/strings.xml` and adding it here. */
