@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** What's published in the latest GitHub release (publish.sh saves it with the APK). */
+/** What's published in the latest GitHub release (the Release workflow saves it with the APK). */
 @Serializable
 data class PublishedVersion(val versionCode: Long, val versionName: String)
 

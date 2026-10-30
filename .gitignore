@@ -4,16 +4,16 @@ build/
 local.properties
 *.iml
 .idea/
-# letras (conteúdo com direitos autorais) nunca vão para o git: chegam ao app por importação
+# lyrics (copyrighted content) never go into git: they reach the app through import
 *.json
-# chaves de assinatura nunca vão para o git (o código é público)
+# signing keys never go into git (the code is public)
 *.jks
 *.keystore
-# memórias e skills herdadas dos apps anteriores, completas (têm dados pessoais): só neste Mac
+# memories and skills inherited from the earlier apps, complete (they have personal data): only on this Mac
 .claude/local/
 
-# letras de teste com direitos autorais: fora do git
+# copyrighted test lyrics: out of git
 /carga/
-.claude/auditoria-pendente
+.claude/audit-pending
 !.claude/settings.json
 .DS_Store
