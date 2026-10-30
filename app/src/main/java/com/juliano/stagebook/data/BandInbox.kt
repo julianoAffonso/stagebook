@@ -76,3 +76,14 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         const val MAX = 30   // a caixa não cresce sem limite
     }
 }
+
+/**
+ * Recebidos agrupados (T11): o mesmo setlist (pelo nome) mandado por mais de um membro fica junto, o mais novo primeiro,
+ * para a pessoa escolher qual usar ou comparar; setlists diferentes ficam cada um no seu grupo, sem um apagar o outro.
+ * Músicas avulsas ficam sozinhas. Grupos na ordem do mais recente.
+ */
+fun groupInbox(items: List<BandInbox.Item>): List<List<BandInbox.Item>> =
+    items.groupBy { if (it.setName.isEmpty()) "#" + it.id else it.setName.trim().lowercase() }
+        .values.map { g -> g.sortedByDescending { it.at } }
+        .sortedByDescending { g -> g.first().at }
+
