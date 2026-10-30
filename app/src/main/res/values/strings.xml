@@ -334,7 +334,7 @@
     <string name="chord_keyboard_capo">The chart says %1$s, with the capo on fret %2$d. On keyboard, play %3$s.</string>
     <string name="stage_keyboard_capo">keyboard · capo on %1$d</string>
     <string name="stage_keyboard_capo_hint">This chart uses a capo on fret %1$d. Chords are shifted for keyboard so you play along with the band.</string>
-    <string name="settings_chord_play">When you play a chord</string>
+    <string name="settings_chord_play">Chord sound</string>
     <string name="settings_chord_play_arpeggio">Picked</string>
     <string name="settings_chord_play_chord">Strummed</string>
     <string name="settings_chord_play_both">Both</string>
