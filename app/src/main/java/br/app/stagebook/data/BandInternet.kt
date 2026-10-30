@@ -86,7 +86,10 @@ class BandInternet @Inject constructor(
      * One of my sends through the 3 words: kept for 30 days to collect the "ok"s of whoever accepts (also on the local
      * network).
      */
-    fun remember(code: String) = save(KEY_CODES, MyCode.serializer(), myCodes() + MyCode(code, now() + KEEP_MS))
+    fun remember(code: String) {
+        // under the same lock as the sync: the sync writes its lists back at the end and would drop this (audit 30/10)
+        scope.launch { lock.withLock { save(KEY_CODES, MyCode.serializer(), myCodes() + MyCode(code, now() + KEEP_MS)) } }
+    }
 
     /**
      * I accepted a send through the words: the sender joins the band; my "ok" goes now and repeats until they confirm.
@@ -94,8 +97,11 @@ class BandInternet @Inject constructor(
     fun accepted(code: String, from: BandProtocol.Hello?) {
         from ?: return
         trust.add(from.id, from.name, from.key)
-        save(KEY_ACCEPTED, Accepted.serializer(), accepted().filterNot { it.code == code } + Accepted(code, from.id, now() + KEEP_MS))
-        scope.launch { cloud.ack(code) }
+        // the "ok" waits for a running sync instead of being overwritten by its end (lost when the first ack failed)
+        scope.launch {
+            lock.withLock { save(KEY_ACCEPTED, Accepted.serializer(), accepted().filterNot { it.code == code } + Accepted(code, from.id, now() + KEEP_MS)) }
+            cloud.ack(code)
+        }
     }
 
     /** The "ok"s for one of my sends: whoever accepted joins the band (and gets a welcome). Returns the new names. */
