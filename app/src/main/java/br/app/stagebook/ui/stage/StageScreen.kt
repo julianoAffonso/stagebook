@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.stage
 
+import br.app.stagebook.ui.components.AppMenu
 import androidx.compose.foundation.clickable
 import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -1260,7 +1261,7 @@ private fun TrackButton(
                 tint = fg.copy(alpha = if (hasTrack) 0.85f else 0.5f),
             )
         }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; onRemove() })
         }

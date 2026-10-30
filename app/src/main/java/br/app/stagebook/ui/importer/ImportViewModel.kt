@@ -1,9 +1,8 @@
 package br.app.stagebook.ui.importer
 
+import br.app.stagebook.data.ImportProblem
+import br.app.stagebook.data.PageImport
 import androidx.core.net.toUri
-import br.app.stagebook.domain.Chords
-import br.app.stagebook.domain.ChordImport
-import br.app.stagebook.domain.Tablature
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
@@ -14,9 +13,6 @@ import br.app.stagebook.data.ImportDraft
 import br.app.stagebook.data.ImportQueue
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.MusicBrainz
-import br.app.stagebook.domain.LyricsCleaner
-import br.app.stagebook.domain.PageData
-import br.app.stagebook.domain.PageMeta
 import br.app.stagebook.navigation.Importer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -26,10 +22,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
-enum class ImportProblem { NOT_FOUND, UNREADABLE }
 
 @Immutable
 /** [askTab]: the page has tablature and the app asks whether it comes in (T22, user's decision: ask every time). */
@@ -38,11 +32,10 @@ data class ImportUiState(val busy: Boolean = false, val problem: ImportProblem? 
 @HiltViewModel
 class ImportViewModel @Inject constructor(
     private val repository: LibraryRepository,
-    private val musicBrainz: MusicBrainz,
+    private val importer: br.app.stagebook.data.PageImporter,
     private val draft: ImportDraft,
     savedStateHandle: SavedStateHandle,
     private val queue: ImportQueue,
-    private val deezer: br.app.stagebook.data.DeezerBpm,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<Importer>()
     val initialQuery = route.query
@@ -74,8 +67,6 @@ class ImportViewModel @Inject constructor(
     private val opened = Channel<String?>(Channel.BUFFERED)
     val openEditor = opened.receiveAsFlow()
 
-    private val json = Json { ignoreUnknownKeys = true }
-
     /** `raw` is what evaluateJavascript returns: the script's JSON string, in quotes. */
     fun onExtracted(raw: String?) {
         if (extracting) return   // double tap on Import opened the editor twice
@@ -99,62 +90,25 @@ class ImportViewModel @Inject constructor(
     }
 
     private suspend fun extract(raw: String?, withTab: Boolean? = null) {
-        run {
-            val parsed = runCatching { json.decodeFromString<PageData>(json.decodeFromString<String>(raw.orEmpty())) }.getOrNull()
-            if (parsed == null) { _uiState.update { it.copy(problem = ImportProblem.UNREADABLE) }; return }
-            // tablature on the page: ask first (the answer comes back through answerTab)
-            if (withTab == null && (Tablature.hasTab(parsed.chordText) || Tablature.hasTab(parsed.text))) {
-                pendingTab = raw
+        // one engine for the app and the editor on the computer (PageImporter)
+        when (val r = importer.fromScript(raw, withTab)) {
+            PageImport.AskTab -> {
+                pendingTab = raw   // the answer comes back through answerTab
                 _uiState.update { it.copy(askTab = true) }
-                return
             }
-            val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
-            val page = parsed.copy(text = tab(parsed.text), chordText = tab(parsed.chordText))
-            // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics
-            // only
-            val chordSource = page.chordText.ifBlank { page.text }
-            var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
-                ChordImport.toChordPro(chordSource, page.key, page.capo)
-            } else {
-                // lyrics only: no chords, but the page's key and capo are kept (hidden in this profile; not lost if the
-                // profile changes or the song goes to someone who plays)
-                var lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
-                val capo = ChordImport.capoOf(page.capo, page.chordText)
-                val key = ChordImport.keyOf(page.key, page.chordText)
-                if (capo > 0) lyrics = Chords.setDirective(lyrics, "capo", capo.toString())
-                if (key.isNotEmpty()) lyrics = Chords.setDirective(lyrics, "key", key)
-                lyrics
+            is PageImport.Problem -> _uiState.update { it.copy(problem = r.problem) }
+            is PageImport.Song -> {
+                _uiState.update { it.copy(busy = true) }
+                draft.put(ImportDraft.Draft(r.title, r.artist, r.year, r.text))
+                _uiState.update { it.copy(busy = false) }
+                opened.send(repository.findSong(r.title, r.artist)?.id)
             }
-            if (text.lines().size < 3) { _uiState.update { it.copy(problem = ImportProblem.NOT_FOUND) }; return }
-            // BPM from the page (or written in the text): saved in the song, the metronome starts at it
-            val bpm = ChordImport.bpmOf(page.bpm, page.chordText.ifBlank { page.text })
-            if (bpm > 0 && Chords.tempo(text) == 0) text = Chords.setDirective(text, "tempo", bpm.toString())
-            _uiState.update { it.copy(busy = true) }
-            val meta = PageMeta.pick(page)
-            var artist = meta.artist
-            var year = PageMeta.yearOf(page)
-            // year of the first release on MusicBrainz (the site usually lacks it); on a poor connection it doesn't
-            // keep the singer on "loading" for more than 8 s
-            val net = repository.library.value.look.internetOn   // essential mode (T19): no lookups
-            if (net && meta.title.isNotEmpty()) musicBrainz.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { m ->
-                if (artist.isBlank()) artist = m.artist
-                if (m.year.isNotEmpty()) year = m.year
-            }
-            // no BPM on the page or in the text: Deezer suggests one (the musician checks it in Song details)
-            if (net && Chords.tempo(text) == 0 && meta.title.isNotEmpty()) deezer.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { bpm ->
-                text = Chords.setDirective(text, "tempo", bpm.toString())
-            }
-            draft.put(ImportDraft.Draft(meta.title, artist, year, text))
-            _uiState.update { it.copy(busy = false) }
-            opened.send(repository.findSong(meta.title, artist)?.id)
         }
     }
 
     fun problemShown() = _uiState.update { it.copy(problem = null) }
 
     companion object {
-        private const val LOOKUP_TIMEOUT_MS = 8_000L
-
         /** Address, domain or a Google search for "<word> <text>" (lyrics or chords, depending on the profile). */
         fun urlFor(q: String, word: String = "letra"): String {
             val s = q.trim()

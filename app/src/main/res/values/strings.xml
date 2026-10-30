@@ -219,7 +219,7 @@
     <string name="settings_site_add">Add site</string>
     <string name="settings_site_add_ok">Add</string>
     <string name="settings_site_remove">Remove %1$s</string>
-    <string name="import_needs_internet">No internet. For now you can only import by scanning a QR.</string>
+    <string name="import_needs_internet">No internet right now. You can import with a QR.</string>
     <string name="import_personal_use">For personal use. What you import stays on this device only.</string>
     <string name="settings_chord_shapes">Chord diagrams</string>
     <string name="settings_instrument">Instrument</string>
@@ -802,5 +802,19 @@
     <string name="web_saved">Saved</string>
     <string name="web_pick">Pick a song from the list or create a new one.</string>
     <string name="web_unsaved">There are unsaved changes. Leave anyway?</string>
+    <string name="web_paste_title">Paste the chords</string>
+    <string name="web_paste_hint">Copy the chords on the site and paste them here. Chords above the lyrics become ChordPro.</string>
+    <string name="web_convert">Convert</string>
+    <string name="web_url_title">Page address</string>
+    <string name="web_url_hint">Paste the chords page address. The tablet opens the page and brings the song.</string>
+    <string name="web_fetch">Bring the song</string>
+    <string name="web_reading">The tablet is opening the page…</string>
+    <string name="web_files_title">Files</string>
+    <string name="web_files_hint">Drop .txt, .pro or .chordpro files here, several at once. Each one becomes a song.</string>
+    <string name="web_files_pick">Choose files</string>
+    <string name="web_files_done">Imported: %1$d. Already in the library: %2$d.</string>
+    <string name="web_not_found">Didn\'t find lyrics there.</string>
+    <string name="web_no_internet">The tablet has no internet (or essential mode is on).</string>
+    <string name="web_bad_address">Use an address that starts with http:// or https://.</string>
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
 </resources>

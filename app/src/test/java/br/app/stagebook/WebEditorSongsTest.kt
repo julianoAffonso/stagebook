@@ -35,7 +35,7 @@ class WebEditorSongsTest {
     @Before fun setUp() = runBlocking {
         repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
-        api = WebEditorApi(repo) { completed += it }
+        api = WebEditorApi(repo, afterSave = { completed += it })
     }
 
     private fun call(method: String, path: String, body: String = "") = api.handle(HttpRequest(method, path, body = body.toByteArray()), device)!!
@@ -92,5 +92,54 @@ class WebEditorSongsTest {
         assertTrue("{key: A}" in up && "[A]linha [E]outra" in up)
         val capo = call("POST", "/api/capo", """{"text":"{key: G}\n[G]linha","capo":3}""").text()
         assertTrue("{capo: 3}" in capo)
+    }
+
+    // the app's import engine behind the editor on the computer (T37f); no lookups on the internet in the tests
+    private fun importing(page: String? = null): WebEditorApi {
+        val engine = br.app.stagebook.data.PageImporter(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm())
+        return WebEditorApi(repo, importer = { engine }, readPage = { page })
+    }
+
+    private fun import(api: WebEditorApi, body: String) = api.handle(HttpRequest("POST", "/api/import", body = body.toByteArray()), device)!!
+
+    @Test fun `pasted chords become ChordPro with key and BPM, ready to review and not saved yet`() {
+        repo.updateLook { it.copy(internetOn = false) }
+        val text = "Tom: G\nBPM: 92\nG       D\nSaio cedo pela rua\nEm      C\nOnde a estrada vai dar\nG  D\nfim"
+        val r = import(importing(), """{"text":${kotlinx.serialization.json.JsonPrimitive(text)},"title":"Estrada"}""")
+        assertEquals(200, r.status)
+        val body = r.text()
+        assertTrue(body, "\"status\":\"song\"" in body && "\"title\":\"Estrada\"" in body)
+        assertTrue(body, "[G]" in body && "\"tempo\":\"92\"" in body)
+        assertTrue(repo.library.value.songs.isEmpty())   // only Save saves, like the app
+    }
+
+    @Test fun `a ChordPro file brings its own title and artist`() {
+        repo.updateLook { it.copy(internetOn = false) }
+        val text = "{title: Noite clara}\n{artist: Outra Banda}\n[Am]uma\n[C]duas\n[G]três"
+        val body = import(importing(), """{"text":${kotlinx.serialization.json.JsonPrimitive(text)},"title":"arquivo"}""").text()
+        assertTrue(body, "\"title\":\"Noite clara\"" in body && "\"author\":\"Outra Banda\"" in body && "{title" !in body)
+    }
+
+    @Test fun `tablature asks first, then comes in with the answer`() {
+        repo.updateLook { it.copy(internetOn = false) }
+        val text = "G       D\nlinha um\ne|---0---3---|\nB|---1---0---|\nG|---0---0---|\nD|---2---0---|\nEm      C\nlinha dois\nG       D\nlinha três"
+        val json = kotlinx.serialization.json.JsonPrimitive(text)
+        assertTrue("\"status\":\"askTab\"" in import(importing(), """{"text":$json}""").text())
+        val answered = import(importing(), """{"text":$json,"withTab":false}""").text()
+        assertTrue(answered, "\"status\":\"song\"" in answered && "e|---" !in answered)
+    }
+
+    @Test fun `a page address is read by the tablet with the same extraction`() {
+        val page = kotlinx.serialization.json.JsonPrimitive("""{"text":"","chordText":"G       D\nSaio cedo pela rua\nEm      C\nOnde a estrada vai dar\nG\nfim","key":"G"}""").toString()
+        val r = import(importing(page), """{"url":"https://www.cifraclub.com.br/x/y/"}""")
+        assertEquals(200, r.status)
+        assertTrue(r.text(), "[G]" in r.text())
+    }
+
+    @Test fun `page address refused offline, with a bad address or an unreadable page`() {
+        assertEquals("""{"error":"bad_address"}""", import(importing("x"), """{"url":"file:///etc/hosts"}""").text())
+        assertEquals("""{"error":"unreadable"}""", import(importing(null), """{"url":"https://example.com"}""").text())
+        repo.updateLook { it.copy(internetOn = false) }
+        assertEquals("""{"error":"offline"}""", import(importing("x"), """{"url":"https://example.com"}""").text())
     }
 }

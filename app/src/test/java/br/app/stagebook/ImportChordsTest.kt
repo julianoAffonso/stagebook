@@ -54,7 +54,7 @@ class ImportChordsTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(chords = chords) }
         val draft = ImportDraft()
-        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.DeezerBpm())
+        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm()), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(raw())
         withTimeout(5_000) { vm.openEditor.first() }
         draft.take()!!.text
@@ -93,7 +93,7 @@ class ImportChordsTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(chords = true) }
         val draft = ImportDraft()
-        val vm = ImportViewModel(repo, MusicBrainz(), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.DeezerBpm())
+        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm()), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(rawWithTab())
         withTimeout(5_000) { vm.uiState.first { it.askTab } }
         vm.answerTab(include)

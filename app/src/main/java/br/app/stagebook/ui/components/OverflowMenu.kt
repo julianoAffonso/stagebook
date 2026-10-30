@@ -29,7 +29,7 @@ fun OverflowMenu(actions: List<MenuAction>, modifier: Modifier = Modifier) {
     var open by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
         IconButton(onClick = { open = true }) { Icon(AppIcons.MoreVert, stringResource(R.string.action_more)) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             actions.forEach { a ->
                 val color = if (a.danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 DropdownMenuItem(

@@ -39,6 +39,8 @@ class WebEditorServer @Inject constructor(
     private val identity: DeviceIdentity,
     val auth: WebEditorAuth,
     metadata: javax.inject.Provider<br.app.stagebook.data.SongMetadata>,
+    importer: javax.inject.Provider<br.app.stagebook.data.PageImporter>,
+    pages: javax.inject.Provider<WebPageReader>,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var server: ServerSocket? = null
@@ -53,7 +55,10 @@ class WebEditorServer @Inject constructor(
     private var idleJob: Job? = null
 
     // saving with no artist or year fills them in from MusicBrainz, as in the app's editor
-    private val api = WebEditorApi(repository, afterSave = { metadata.get().completeLater(it) })
+    private val api = WebEditorApi(
+        repository, afterSave = { metadata.get().completeLater(it) },
+        importer = { importer.get() }, readPage = { pages.get().read(it) },
+    )
 
     val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value }, api::handle, onAccess = idle::touch)
 
@@ -151,7 +156,7 @@ class WebEditorServer @Inject constructor(
         private const val TAG = "WebEditor"
         const val PORT = 8090
         private const val TIMEOUT_MS = 15_000
-        const val MAX_BODY = 2 * 1024 * 1024
+        const val MAX_BODY = 2 * 1024 * 1024   // a pasted chord sheet or a few ChordPro files
         const val IDLE_MS = 5 * 60_000L
         private const val IDLE_CHECK_MS = 30_000L
 
@@ -190,6 +195,26 @@ class WebEditorServer @Inject constructor(
             "deleteConfirm" to R.string.songs_delete_confirm,
             "titleEmpty" to R.string.editor_error_title_empty,
             "titleTaken" to R.string.editor_error_title_taken,
+            "import" to R.string.import_menu,
+            "imported" to R.string.editor_imported_new,
+            "unreadable" to R.string.import_unreadable,
+            "tabTitle" to R.string.import_tab_title,
+            "tabYes" to R.string.import_tab_yes,
+            "tabNo" to R.string.import_tab_no,
+            "pasteTitle" to R.string.web_paste_title,
+            "pasteHint" to R.string.web_paste_hint,
+            "convert" to R.string.web_convert,
+            "urlTitle" to R.string.web_url_title,
+            "urlHint" to R.string.web_url_hint,
+            "fetch" to R.string.web_fetch,
+            "reading" to R.string.web_reading,
+            "filesTitle" to R.string.web_files_title,
+            "filesHint" to R.string.web_files_hint,
+            "filesPick" to R.string.web_files_pick,
+            "filesDone" to R.string.web_files_done,
+            "notFound" to R.string.web_not_found,
+            "noInternet" to R.string.web_no_internet,
+            "badAddress" to R.string.web_bad_address,
         )
     }
 }

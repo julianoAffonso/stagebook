@@ -41,6 +41,13 @@
   textarea { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; min-height: 55vh; resize: vertical; line-height: 1.6; }
   .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; }
   #form { display: flex; flex-direction: column; gap: 16px; }
+  #import { display: flex; flex-direction: column; gap: 24px; }
+  #import h3 { margin: 0 0 4px; font-size: 17px; }
+  #import p { margin: 0 0 8px; }
+  #import textarea { min-height: 30vh; }
+  .drop { border: 2px dashed var(--line); border-radius: 16px; padding: 24px; text-align: center; }
+  .drop.over { border-color: var(--accent); }
+  .question { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -53,12 +60,32 @@
   <section id="app" hidden>
     <div class="card" id="list-card">
       <button id="new" class="outline"></button>
+      <button id="import-open" class="outline"></button>
       <input id="search" type="search">
       <ul id="songs"></ul>
       <p id="list-empty" class="muted" hidden></p>
     </div>
     <div class="card">
       <p id="pick" class="muted"></p>
+      <!-- the app's import engine, run by the tablet: paste, page address, files -->
+      <div id="import" hidden>
+        <div>
+          <h3 data-t="pasteTitle"></h3><p class="muted" data-t="pasteHint"></p>
+          <textarea id="paste" spellcheck="false"></textarea>
+          <div class="actions"><span></span><button id="convert"></button></div>
+        </div>
+        <div>
+          <h3 data-t="urlTitle"></h3><p class="muted" data-t="urlHint"></p>
+          <div class="row"><div class="grow"><input id="url" type="url" placeholder="https://"></div><button id="fetch"></button></div>
+        </div>
+        <div>
+          <h3 data-t="filesTitle"></h3>
+          <div class="drop" id="drop"><p class="muted" data-t="filesHint"></p><button class="outline" id="files-pick"></button>
+            <input id="files" type="file" multiple accept=".txt,.pro,.chordpro,.cho,.crd,text/plain" hidden></div>
+        </div>
+        <div class="question" id="tab-question" hidden><span data-t="tabTitle"></span><button id="tab-yes" class="outline"></button><button id="tab-no" class="outline"></button></div>
+        <p id="import-status" class="muted"></p>
+      </div>
       <form id="form" hidden onsubmit="return false">
         <div class="row">
           <div class="grow"><label for="f-title" data-t="titleField"></label><input id="f-title"></div>
@@ -149,6 +176,12 @@ async function connected(session) {
   $("search").placeholder = t.search;
   $("pick").textContent = t.pick;
   $("save").textContent = t.save;
+  $("import-open").textContent = t.import;
+  $("convert").textContent = t.convert;
+  $("fetch").textContent = t.fetch;
+  $("files-pick").textContent = t.filesPick;
+  $("tab-yes").textContent = t.tabYes;
+  $("tab-no").textContent = t.tabNo;
   $("delete").textContent = t.delete;
   $("key-down").title = t.keyDown; $("key-up").title = t.keyUp;
   $("capo-down").title = t.capoDown; $("capo-up").title = t.capoUp;
@@ -206,6 +239,7 @@ function fillForm(song) {
   $("delete").hidden = !song.id;
   $("form").hidden = false;
   $("pick").hidden = true;
+  $("import").hidden = true;
   setStatus("");
   dirty = false;
   drawKeyCapo();
@@ -268,6 +302,71 @@ async function remove() {
   $("pick").hidden = false;
   await loadList();
 }
+
+// ---- import (the same engine as the app's import browser, run by the tablet) ----
+function showImport() {
+  if (!leaveOk()) return;
+  current = null; dirty = false;
+  $("form").hidden = true; $("pick").hidden = true; $("import").hidden = false;
+  $("tab-question").hidden = true; importStatus("");
+  drawList();
+}
+
+function importStatus(text, error = false) {
+  $("import-status").textContent = text;
+  $("import-status").className = error ? "error" : "muted";
+}
+
+const importErrors = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress });
+
+// sends to the tablet; "askTab" asks the tablature question here and sends again with the answer
+async function runImport(body) {
+  $("tab-question").hidden = true;
+  const r = await api("/api/import", { method: "POST", body: JSON.stringify(body) }).catch(() => null);
+  if (!r) return offline();
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 409) return importStatus(importErrors()[data.error] || t.unreadable, true);
+  if (data.status === "askTab") {
+    $("tab-question").hidden = false;
+    $("tab-yes").onclick = () => runImport({ ...body, withTab: true });
+    $("tab-no").onclick = () => runImport({ ...body, withTab: false });
+    return;
+  }
+  // like the app: the song opens in the editor to check, and is only saved with Save
+  fillForm({ id: "", title: data.title, author: data.author, year: data.year, tempo: data.tempo, text: data.text });
+  dirty = true;
+  setStatus(t.imported);
+}
+
+$("import-open").onclick = showImport;
+$("convert").onclick = () => { if ($("paste").value.trim()) runImport({ text: $("paste").value }); };
+$("fetch").onclick = () => {
+  if (!$("url").value.trim()) return;
+  importStatus(t.reading);
+  runImport({ url: $("url").value });
+};
+
+// files: each one becomes a song right away (a ChordPro file brings its own title; otherwise the file name)
+async function importFiles(list) {
+  let added = 0, existing = 0;
+  for (const file of list) {
+    const text = await file.text();
+    const title = file.name.replace(/\.[^.]+$/, "");
+    const r = await api("/api/import", { method: "POST", body: JSON.stringify({ text, title, withTab: true }) }).catch(() => null);
+    if (!r || r.status !== 200) continue;
+    const d = await r.json();
+    if (d.status !== "song") continue;
+    const s = await api("/api/songs", { method: "POST", body: JSON.stringify({ title: d.title || title, author: d.author, year: d.year, tempo: d.tempo, text: d.text }) }).catch(() => null);
+    if (s && s.status === 200) added++; else if (s && s.status === 409) existing++;
+  }
+  importStatus(fill(t.filesDone, added, existing));
+  await loadList();
+}
+$("files-pick").onclick = () => $("files").click();
+$("files").onchange = () => { importFiles([...$("files").files]); $("files").value = ""; };
+$("drop").ondragover = (e) => { e.preventDefault(); $("drop").classList.add("over"); };
+$("drop").ondragleave = () => $("drop").classList.remove("over");
+$("drop").ondrop = (e) => { e.preventDefault(); $("drop").classList.remove("over"); importFiles([...e.dataTransfer.files]); };
 
 $("search").oninput = drawList;
 $("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "" }); };
