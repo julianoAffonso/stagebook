@@ -29,7 +29,7 @@ import javax.inject.Inject
 
 enum class EditorMode { NEW, EDIT, IMPORTED_NEW, IMPORTED_UPDATE }
 
-enum class EditorError { TITLE_EMPTY, TITLE_TAKEN }
+enum class EditorError { TITLE_EMPTY, TITLE_TAKEN, NOT_SONG }
 
 @Immutable
 data class SongEditorUiState(
@@ -177,6 +177,8 @@ class SongEditorViewModel @Inject constructor(
         if (title.isEmpty()) { uiState = s.copy(error = EditorError.TITLE_EMPTY); return }
         val other = repository.findSong(title, s.author.trim())
         if (other != null && other.id != songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return }
+        // only song text is saved (the same filter as the band: size, no file disguised as text)
+        if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
         val id = repository.saveSong(base.copy(id = songId, track = track, title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.fromChordsOverLyrics(s.text)))   // chords are saved as ChordPro

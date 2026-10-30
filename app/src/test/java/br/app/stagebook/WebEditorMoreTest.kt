@@ -109,7 +109,7 @@ class WebEditorMoreTest {
         val tracks = TrackStore(context)
         val id = repo.saveSong(Song(title = "Com faixa"))
         val api = WebEditorApi(repo, tracks = { tracks }, workDir = { context.cacheDir })
-        val upload = File(context.cacheDir, "upload.part").apply { writeBytes(ByteArray(32)) }
+        val upload = File(context.cacheDir, "upload.part").apply { writeBytes("OggS".toByteArray() + ByteArray(28)) }
         val r = call(api, "PUT", "/api/songs/$id/track?name=minha.ogg", file = upload)
         assertEquals(200, r.status)
         val name = repo.song(id)!!.track
@@ -130,7 +130,7 @@ class WebEditorMoreTest {
         val info = call(api, "POST", "/api/backup/inspect", file = file).text()
         assertTrue(info, "\"parts\":[\"library\"]" in info && "\"songs\":1" in info)
         val token = Regex("\"token\":\"([^\"]+)\"").find(info)!!.groupValues[1]
-        assertEquals(204, call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["library"],"replace":false}""").status)
+        assertEquals(200, call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["library"],"replace":false}""").status)
         assertEquals(listOf("Do backup"), repo.library.value.songs.map { it.title })
     }
 }

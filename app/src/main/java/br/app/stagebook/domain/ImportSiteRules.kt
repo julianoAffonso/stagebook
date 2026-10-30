@@ -4,11 +4,13 @@ package br.app.stagebook.domain
 object ImportSiteRules {
     private val host = Regex("""^(?:https?://)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(/.*)?$""", RegexOption.IGNORE_CASE)
 
-    /** Full address (https://…/) or null if it doesn't look like a site. */
+    /**
+     * The site's address (https://domain/) or null if it doesn't look like a site. Only the domain is kept (user's
+     * request of 30/10): a path or a page typed in is dropped, the list holds lyrics and chord sites, not links.
+     */
     fun normalize(input: String): String? {
         val m = host.matchEntire(input.trim()) ?: return null
-        val path = m.groupValues[2].ifEmpty { "/" }
-        return "https://" + m.groupValues[1].lowercase() + path
+        return "https://" + m.groupValues[1].lowercase() + "/"
     }
 
     /** Site name from the domain: "www.cifras.com.br" → "Cifras". */

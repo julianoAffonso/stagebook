@@ -822,5 +822,10 @@
     <string name="web_backup_hint">A backup from Settings → Library and backup. Pick what comes in.</string>
     <string name="web_receive_done">Done. It\'s in the library.</string>
     <string name="web_restore_needs">Pick at least one part.</string>
+    <string name="not_song">This doesn\'t look like lyrics or chords. Stagebook keeps only song lyrics and chords, as text.</string>
+    <plurals name="backup_skipped">
+        <item quantity="one">%1$d song stayed out: it wasn\'t lyrics or chords.</item>
+        <item quantity="other">%1$d songs stayed out: they weren\'t lyrics or chords.</item>
+    </plurals>
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
 </resources>

@@ -219,7 +219,7 @@ const li = (title, sub, onclick) => {
   if (onclick) el.onclick = onclick;
   return el;
 };
-const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad });
+const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad, not_song: t.notSong });
 
 let songs = [], sets = [];
 let current = null;   // the song open in the form ({id:""} = new)
@@ -396,7 +396,7 @@ async function save() {
   if (!r) return offline();
   if (r.status === 409) {
     const { error } = await r.json();
-    return say("status", error === "title_empty" ? t.titleEmpty : t.titleTaken, "error");
+    return say("status", { title_empty: t.titleEmpty, title_taken: t.titleTaken, not_song: t.notSong }[error] || t.titleTaken, "error");
   }
   if (r.status !== 200) return say("status", t.offline, "error");
   const saved = (await r.json()).id;
@@ -699,9 +699,10 @@ async function restore(replace) {
   if (!parts.length) return say("backup-status", t.restoreNeeds, "error");
   if (replace && !confirm(t.replace + "?")) return;
   const r = await post("/api/backup/restore", { token: backupToken, parts, replace });
-  if (!r || r.status !== 204) return say("backup-status", t.unreadable, "error");
+  if (!r || r.status !== 200) return say("backup-status", t.unreadable, "error");
+  const { skipped } = await r.json();
   $("backup-parts").hidden = true;
-  say("backup-status", t.restored, "ok");
+  say("backup-status", skipped ? `${t.restored}. ${t.notSong} (${skipped})` : t.restored, "ok");
   await Promise.all([loadList(), loadSets()]);
 }
 $("backup-merge").onclick = () => restore(false);

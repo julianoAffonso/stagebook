@@ -197,7 +197,9 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                     is SettingsMessage.Restored -> {
                         // language and look apply when the screen opens again
                         if (m.restart) (context as? android.app.Activity)?.recreate()
-                        r.getString(R.string.backup_restored)
+                        // what wasn't song text stayed out: said, not hidden
+                        if (m.skipped > 0) r.getString(R.string.backup_restored) + " " + r.getQuantityString(R.plurals.backup_skipped, m.skipped, m.skipped)
+                        else r.getString(R.string.backup_restored)
                     }
                 },
             )

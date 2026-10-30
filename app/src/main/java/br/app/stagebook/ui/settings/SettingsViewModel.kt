@@ -87,7 +87,7 @@ sealed interface SettingsMessage {
     data object BackupFailed : SettingsMessage
     data object NotBackup : SettingsMessage
     data object RestoreFailed : SettingsMessage
-    data class Restored(val restart: Boolean) : SettingsMessage
+    data class Restored(val restart: Boolean, val skipped: Int = 0) : SettingsMessage
 }
 
 @HiltViewModel
@@ -129,7 +129,7 @@ class SettingsViewModel @Inject constructor(
         _pendingRestore.value = null
         val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } }.getOrDefault(false)
         // settings restored (language, look): the screen opens again so they apply
-        _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(br.app.stagebook.data.Backup.Part.SETTINGS in parts))
+        _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(br.app.stagebook.data.Backup.Part.SETTINGS in parts, backup.skipped))
     }
 
     private val lastKey = MutableStateFlow<PedalKeyUi?>(null)

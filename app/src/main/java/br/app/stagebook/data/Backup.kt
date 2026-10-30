@@ -80,6 +80,10 @@ class Backup @Inject constructor(
         }
     }
 
+    /** Songs left out by the last [restore] because they weren't song text. */
+    @Volatile var skipped = 0
+        private set
+
     suspend fun inspect(input: InputStream): Contents? = withContext(Dispatchers.IO) {
         runCatching {
             var manifest: Manifest? = null
@@ -101,6 +105,7 @@ class Backup @Inject constructor(
      * what's missing comes in). Settings replace the ones here.
      */
     suspend fun restore(input: InputStream, parts: Set<Part>, replace: Boolean = true): Boolean = withContext(Dispatchers.IO) {
+        skipped = 0
         runCatching {
             var songs: Songs? = null
             var settings: JsonObject? = null
@@ -113,7 +118,11 @@ class Backup @Inject constructor(
                         e.name.startsWith(TRACKS_DIR) && Part.TRACKS in parts -> {
                             // only the file name (never an outside folder: "../")
                             val name = e.name.removePrefix(TRACKS_DIR).substringAfterLast('/')
-                            if (name.isNotEmpty() && !name.startsWith(".")) trackFiles[name] = zip.readBytes()
+                            if (name.isNotEmpty() && !name.startsWith(".")) {
+                                // only real audio, of a sane size (checked inside, like a track picked by hand)
+                                val bytes = zip.readBytes()
+                                if (bytes.size <= TrackStore.MAX_BYTES && br.app.stagebook.domain.AudioFormat.of(bytes.copyOf(minOf(bytes.size, br.app.stagebook.domain.AudioFormat.HEADER))) != null) trackFiles[name] = bytes
+                            }
                         }
                     }
                 }
@@ -121,7 +130,10 @@ class Backup @Inject constructor(
             if (Part.LIBRARY in parts) songs?.let { s ->
                 trackFiles.forEach { (name, bytes) -> tracks.file(name).writeBytes(bytes) }
                 val keepTracks = Part.TRACKS in parts
-                val songs = s.songs.map { if (keepTracks && it.track in trackFiles) it else it.copy(track = "") }
+                // the same filter as the band: a "song" that isn't song text stays out (user's request of 30/10)
+                val allowed = s.songs.filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
+                skipped = s.songs.size - allowed.size
+                val songs = allowed.map { if (keepTracks && it.track in trackFiles) it else it.copy(track = "") }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
             }
             if (Part.SETTINGS in parts) settings?.let { st ->

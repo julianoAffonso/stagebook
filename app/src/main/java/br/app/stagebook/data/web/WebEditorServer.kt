@@ -264,6 +264,7 @@ class WebEditorServer @Inject constructor(
             "backupHint" to R.string.web_backup_hint,
             "receiveDone" to R.string.web_receive_done,
             "restoreNeeds" to R.string.web_restore_needs,
+            "notSong" to R.string.not_song,
             "import" to R.string.import_menu,
             "imported" to R.string.editor_imported_new,
             "unreadable" to R.string.import_unreadable,

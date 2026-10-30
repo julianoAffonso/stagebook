@@ -79,6 +79,9 @@ class WebEditorApi(
     private data class TrackSet(val track: String)
 
     @Serializable
+    private data class RestoreDone(val skipped: Int)
+
+    @Serializable
     data class Received(val id: String, val from: String, val name: String, val count: Int, val updated: Boolean)
 
     @Serializable
@@ -150,6 +153,8 @@ class WebEditorApi(
         val d = runCatching { json.decodeFromString<SongData>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         val title = d.title.trim()
         if (title.isEmpty()) return problem("title_empty")
+        // the same filter as the band: only song text (size, no file disguised as text)
+        if (!br.app.stagebook.domain.BandContent.songOk(title, d.author.trim(), d.year.trim(), d.text)) return problem("not_song")
         val other = repository.findSong(title, d.author.trim())
         if (other != null && other.id != id) return problem("title_taken")
         // what the editor doesn't show stays (stage zoom, backing track)
@@ -186,7 +191,13 @@ class WebEditorApi(
         return when (found) {
             null -> problem(error)
             br.app.stagebook.data.PageImport.AskTab -> ok(json.encodeToString(ImportResult("askTab")))
-            is br.app.stagebook.data.PageImport.Problem -> problem(if (found.problem == br.app.stagebook.data.ImportProblem.NOT_FOUND) "not_found" else "unreadable")
+            is br.app.stagebook.data.PageImport.Problem -> problem(
+                when (found.problem) {
+                    br.app.stagebook.data.ImportProblem.NOT_FOUND -> "not_found"
+                    br.app.stagebook.data.ImportProblem.NOT_SONG -> "not_song"
+                    br.app.stagebook.data.ImportProblem.UNREADABLE -> "unreadable"
+                },
+            )
             is br.app.stagebook.data.PageImport.Song -> ok(
                 json.encodeToString(
                     ImportResult(
@@ -283,7 +294,7 @@ class WebEditorApi(
         val done = kotlinx.coroutines.runBlocking { file.inputStream().use { b.restore(it, parts, r.replace) } }
         file.delete()
         waitingBackup = null
-        return if (done) HttpResponse.status(204) else problem("unreadable")
+        return if (done) ok(json.encodeToString(RestoreDone(b.skipped))) else problem("unreadable")
     }
 
     // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=
