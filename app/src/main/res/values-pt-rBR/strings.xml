@@ -381,7 +381,7 @@
     <string name="settings_chords_show_help">Desligado, o palco mostra só a letra, mesmo nas músicas com cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
-    <string name="settings_translate_sections">Nomes de seção na língua do app</string>
+    <string name="settings_translate_sections">Nomes de seção no idioma do app</string>
     <string name="settings_translate_sections_help">Refrão, Chorus e {start_of_chorus} aparecem todos como Refrão. A letra guardada não muda. Desligado, aparece como está escrito.</string>
     <string name="settings_illegible_lyrics">A letra vai ficar ilegível neste fundo</string>
     <string name="settings_illegible_sections">Os títulos de seção vão ficar ilegíveis neste fundo</string>
@@ -460,9 +460,9 @@
     <string name="settings_pedal_cmd_play_pause">Play/pause do backing track</string>
     <string name="settings_pedal_cmd_none">Nada</string>
     <string name="settings_pedal_keys">Botões configurados</string>
-    <string name="settings_language">Língua</string>
-    <string name="settings_language_help">Quer o Stagebook na sua língua? Ajude a traduzir. O passo a passo está em Sobre → Ver o código.</string>
-    <string name="language_system">Automática (a do aparelho)</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_help">Quer o Stagebook no seu idioma? Ajude a traduzir. O passo a passo está em Sobre → Ver o código.</string>
+    <string name="language_system">Automático (o do aparelho)</string>
     <string name="pedal_key_code">Tecla %1$d</string>
     <string name="settings_pedal_keys_none">Nenhum botão mudado. Eles fazem o padrão, avançar e voltar a página. Para mudar um, aperte o botão e escolha o que ele faz em Configurar um botão.</string>
     <string name="settings_pedal_key_reset">Voltar %1$s ao padrão</string>

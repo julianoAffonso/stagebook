@@ -43,7 +43,7 @@ O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows,
 [Buy Me a Coffee](https://buymeacoffee.com/julianoaffonso)? Qualquer valor ajuda a manter o app.
 
 ## Traduzir
-O app sai em inglês e português do Brasil. Fala outra língua e toca? O passo a passo está em
+O app sai em inglês e português do Brasil. Fala outro idioma e toca? O passo a passo está em
 [docs/TRANSLATING.pt-BR.md](docs/TRANSLATING.pt-BR.md). Não precisa saber programar.
 
 ## Para quem programa
