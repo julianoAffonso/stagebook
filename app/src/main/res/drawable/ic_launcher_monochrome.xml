@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): only the alpha counts; the back page is lighter so the two pages read apart. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- the outline spans 30..82 x 19..86: scaled to the image's 54dp tall pages, centered -->
+    <group android:pivotX="56" android:pivotY="52.5" android:scaleX="0.8" android:scaleY="0.8" android:translateX="-2" android:translateY="1.5">
+        <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.55" android:pathData="M30,48 C30,38 35,33 44,29.5 L67,20.5 C70.5,19.2 72,20.5 72,24 L72,56 L30,73 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M44,55 C44,47 48,43 56,40 L78,31.5 C81,30.4 82,31.8 82,35 L82,59 C82,67 77,71 69,74.2 L47,82.6 C38,86 30,83 30,75 C30,69 35,66.5 40,68.6 C42.8,69.8 44,67.5 44,64 Z" />
+    </group>
+</vector>
