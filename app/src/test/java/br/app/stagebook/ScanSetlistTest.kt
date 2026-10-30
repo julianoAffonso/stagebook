@@ -58,6 +58,16 @@ class ScanSetlistTest {
         assertEquals("Show", repo.library.value.setlist(id)!!.name)
     }
 
+    @Test fun `a double tap on Create makes one setlist`() {
+        val (repo, vm, _) = setup()
+        vm.onText(qr("Show", "Noite Clara"))
+        val before = repo.library.value.sets.size
+        val first = vm.create()
+        assertEquals(null, vm.create())   // the second tap
+        assertTrue(first != null)
+        assertEquals(before + 1, repo.library.value.sets.size)
+    }
+
     @Test fun `a missing song shows before creating and is left out`() {
         val (repo, vm, ids) = setup()
         vm.onText(qr("Show", "Noite Clara", "Outra Coisa"))
@@ -74,6 +84,7 @@ class ScanSetlistTest {
         assertEquals(old, vm.existing("show"))
         assertEquals(old, vm.create(replaceId = old))
         assertEquals(listOf(ids[1]), repo.library.value.setlist(old)!!.items)
+        vm.review(qr("show", "Noite Clara"), emptyList())   // the same QR read again, this time "create another"
         val other = vm.create()!!
         assertNotEquals(old, other)
         assertEquals("show (2)", repo.library.value.setlist(other)!!.name)
