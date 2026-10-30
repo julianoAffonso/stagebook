@@ -54,7 +54,8 @@ fun WebEditorDetail(on: Boolean, ui: WebEditorUi, onSwitch: (Boolean) -> Unit, o
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         // card name isn't the screen's again ("Editor on the computer" twice)
         SettingsCard(stringResource(R.string.settings_web_editor_card), help = stringResource(R.string.settings_web_editor_help)) {
-            SwitchRow(stringResource(R.string.settings_web_editor_switch), on, onSwitch)
+            // said right on the switch: it starts off every time and turns itself off when unused
+            SwitchRow(stringResource(R.string.settings_web_editor_switch), on, onSwitch, detail = stringResource(R.string.settings_web_editor_switch_detail))
             if (on) {
                 if (ui.address.isEmpty()) {
                     Text(stringResource(R.string.settings_web_editor_no_wifi), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)

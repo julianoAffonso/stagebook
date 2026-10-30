@@ -779,7 +779,8 @@
     <string name="settings_web_editor">Edit on the computer</string>
     <string name="settings_web_editor_card">In the browser</string>
     <string name="settings_web_editor_switch">Turn on the editor</string>
-    <string name="settings_web_editor_help">Edit songs and setlists on the computer\'s browser, on the same Wi-Fi. It turns itself off after 5 minutes without use on the computer, or when the app closes.</string>
+    <string name="settings_web_editor_help">Edit songs and setlists on the computer\'s browser, on the same Wi-Fi. It starts off every time the app opens and turns itself off after 5 minutes without use on the computer, or when the app closes.</string>
+    <string name="settings_web_editor_switch_detail">Starts off every time the app opens. Turns itself off after 5 minutes without use.</string>
     <string name="settings_web_editor_open">On the computer, open this address in the browser:</string>
     <string name="settings_web_editor_no_wifi">Connect to a Wi-Fi network (or turn on the hotspot) to use the editor.</string>
     <string name="settings_web_editor_devices">Authorized computers</string>
