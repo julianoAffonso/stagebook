@@ -46,7 +46,7 @@ fun <T> OptionDropdown(
             colors = ExposedDropdownMenuDefaults.textFieldColors(),
             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
-        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             options.forEach { o ->
                 DropdownMenuItem(
                     text = { Text(nameOf(o), style = styleOf?.invoke(o) ?: MaterialTheme.typography.bodyLarge) },

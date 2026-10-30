@@ -15,6 +15,8 @@ import kotlinx.serialization.json.Json
 class WebEditorApi(
     private val repository: LibraryRepository,
     private val afterSave: (String) -> Unit = {},
+    private val importer: () -> br.app.stagebook.data.PageImporter? = { null },
+    private val readPage: suspend (String) -> String? = { null },
 ) {
     @Serializable
     data class SongItem(val id: String, val title: String, val author: String, val year: String, val key: String)
@@ -35,6 +37,14 @@ class WebEditorApi(
     @Serializable
     private data class Saved(val id: String)
 
+    /** Import from the computer: pasted text (with a title from the file name) or a page address. */
+    @Serializable
+    data class ImportRequest(val text: String = "", val title: String = "", val url: String = "", val withTab: Boolean? = null)
+
+    /** "song" (to review in the editor, not saved yet) or "askTab" (the tablature question first). */
+    @Serializable
+    data class ImportResult(val status: String, val title: String = "", val author: String = "", val year: String = "", val tempo: String = "", val text: String = "")
+
     @Serializable
     private data class Problem(val error: String)
 
@@ -54,6 +64,7 @@ class WebEditorApi(
             // − and + of the key and the capo, like the app's: the text stays in the browser until saving
             parts == listOf("transpose") && req.method == "POST" -> change(req) { Chords.transposeSong(it.text, it.semitones) }
             parts == listOf("capo") && req.method == "POST" -> change(req) { Chords.withCapo(it.text, it.capo) }
+            parts == listOf("import") && req.method == "POST" -> import(req)
             else -> null
         }
     }
@@ -84,6 +95,41 @@ class WebEditorApi(
     private fun change(req: HttpRequest, how: (TextChange) -> String): HttpResponse {
         val c = runCatching { json.decodeFromString<TextChange>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         return ok(json.encodeToString(TextChange(how(c))))
+    }
+
+    // the app's import engine: the same page or text gives the same song as in the import browser
+    private fun import(req: HttpRequest): HttpResponse {
+        val engine = importer() ?: return HttpResponse.status(404)
+        val r = runCatching { json.decodeFromString<ImportRequest>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        val result = kotlinx.coroutines.runBlocking {
+            if (r.url.isNotBlank()) {
+                val url = r.url.trim()
+                // the page is opened by the tablet over the internet: not in essential mode, only web addresses
+                if (!repository.library.value.look.internetOn) return@runBlocking null to "offline"
+                if (!url.startsWith("https://") && !url.startsWith("http://")) return@runBlocking null to "bad_address"
+                engine.fromScript(readPage(url) ?: return@runBlocking null to "unreadable", r.withTab) to ""
+            } else {
+                // a ChordPro file brings its own title and artist
+                val title = Chords.directive(r.text, "title") ?: r.title
+                engine.fromText(r.text, title, r.withTab) to ""
+            }
+        }
+        val (found, error) = result
+        return when (found) {
+            null -> problem(error)
+            br.app.stagebook.data.PageImport.AskTab -> ok(json.encodeToString(ImportResult("askTab")))
+            is br.app.stagebook.data.PageImport.Problem -> problem(if (found.problem == br.app.stagebook.data.ImportProblem.NOT_FOUND) "not_found" else "unreadable")
+            is br.app.stagebook.data.PageImport.Song -> ok(
+                json.encodeToString(
+                    ImportResult(
+                        "song", found.title,
+                        found.artist.ifBlank { Chords.directive(r.text, "artist") ?: Chords.directive(r.text, "subtitle").orEmpty() },
+                        found.year, Chords.directive(found.text, "tempo").orEmpty(),
+                        Chords.setDirective(Chords.setDirective(Chords.setDirective(Chords.setDirective(found.text, "tempo", ""), "title", ""), "artist", ""), "subtitle", ""),
+                    ),
+                ),
+            )
+        }
     }
 
     private fun ok(body: String) = HttpResponse.json(200, body)

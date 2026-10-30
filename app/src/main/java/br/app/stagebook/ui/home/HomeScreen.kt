@@ -267,7 +267,8 @@ fun EssentialAlert(look: br.app.stagebook.data.model.Look, onDismiss: () -> Unit
                 Text(stringResource(R.string.essential_alert_relink), style = MaterialTheme.typography.bodyLarge)
                 Text(
                     stringResource(R.string.essential_alert_route),
-                    style = MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
+                    // the accent color says it's a link; no underline (it ran into the "→" and read as one line, 30/10)
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpen)
                         .padding(horizontal = Spacing.xs, vertical = Spacing.xs),

@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.importer
 
+import br.app.stagebook.data.ImportProblem
 import br.app.stagebook.ui.components.QuestionDialog
 import androidx.core.net.toUri
 import androidx.compose.material3.TextButton

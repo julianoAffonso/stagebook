@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.share
 
+import br.app.stagebook.ui.components.AppMenu
 import br.app.stagebook.ui.components.LocalAppMessage
 import br.app.stagebook.ui.components.SwitchRow
 import android.content.ClipData
@@ -77,7 +78,7 @@ fun ImportButton(
     var typing by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
         ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             onSync?.let { sync ->
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.import_sync_band)) },

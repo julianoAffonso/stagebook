@@ -219,7 +219,7 @@
     <string name="settings_site_add">Adicionar site</string>
     <string name="settings_site_add_ok">Adicionar</string>
     <string name="settings_site_remove">Tirar %1$s</string>
-    <string name="import_needs_internet">Sem internet. Por enquanto, só dá para importar lendo QR.</string>
+    <string name="import_needs_internet">Sem internet agora. Dá para importar pelo QR.</string>
     <string name="import_personal_use">Para uso pessoal. O que você importa fica só neste aparelho.</string>
     <string name="settings_chord_shapes">Diagramas dos acordes</string>
     <string name="settings_instrument">Instrumento</string>
@@ -800,5 +800,19 @@
     <string name="web_saved">Salvo</string>
     <string name="web_pick">Escolha uma música na lista ou crie uma nova.</string>
     <string name="web_unsaved">Tem mudanças sem salvar. Sair mesmo assim?</string>
+    <string name="web_paste_title">Colar a cifra</string>
+    <string name="web_paste_hint">Copie a cifra no site e cole aqui. Os acordes em cima da letra viram ChordPro.</string>
+    <string name="web_convert">Converter</string>
+    <string name="web_url_title">Endereço da página</string>
+    <string name="web_url_hint">Cole o endereço da cifra. O tablet abre a página e traz a música.</string>
+    <string name="web_fetch">Trazer a música</string>
+    <string name="web_reading">O tablet está abrindo a página…</string>
+    <string name="web_files_title">Arquivos</string>
+    <string name="web_files_hint">Solte aqui arquivos .txt, .pro ou .chordpro, vários de uma vez. Cada um vira uma música.</string>
+    <string name="web_files_pick">Escolher arquivos</string>
+    <string name="web_files_done">Importadas: %1$d. Já estavam na biblioteca: %2$d.</string>
+    <string name="web_not_found">Não achei letra aí.</string>
+    <string name="web_no_internet">O tablet está sem internet (ou no Modo essencial).</string>
+    <string name="web_bad_address">Use um endereço que comece com http:// ou https://.</string>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
 </resources>
