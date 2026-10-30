@@ -27,7 +27,7 @@ class MusicBrainzTest {
 
     @After fun stop() = server.stop(0)
 
-    @Test fun `rede travada - desiste no prazo em vez de esperar a leitura da conexão`() {
+    @Test fun `stuck network - gives up on time instead of waiting for the connection read`() {
         val mb = MusicBrainz().apply { endpoint = "http://127.0.0.1:${server.address.port}/lento" }
         val started = System.currentTimeMillis()
         val r = runBlocking { mb.lookupWithin("Título", "Artista", 300) }

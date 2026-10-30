@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
 class EditorTabsTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `música nova abre com os dados à vista - tocar no resumo recolhe`() {
+    @Test fun `new song opens with the details shown - tapping the summary collapses`() {
         val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título").assertExists()
@@ -37,7 +37,7 @@ class EditorTabsTest {
         compose.onNodeWithText("Título").assertDoesNotExist()
     }
 
-    @Test fun `música existente abre recolhida com o resumo - tocar abre os campos`() {
+    @Test fun `existing song opens collapsed with the summary - tapping opens the fields`() {
         compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título").assertDoesNotExist()
         // o campo da letra não mostra {key}/{capo}: estão no resumo
@@ -47,7 +47,7 @@ class EditorTabsTest {
         compose.onNodeWithText("Título").assertExists()
     }
 
-    @Test fun `salvar sem título abre os dados com o erro`() {
+    @Test fun `saving without a title opens the details with the error`() {
         var state by mutableStateOf(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha"))
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         state = state.copy(title = "", error = EditorError.TITLE_EMPTY)
@@ -55,14 +55,14 @@ class EditorTabsTest {
         compose.onNodeWithText("Título").assertExists()
     }
 
-    @Test fun `aberto - dá para digitar o nome da música no campo Título`() {
+    @Test fun `open - you can type the song name in the Title field`() {
         var typed = ""
         compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), { typed = it }, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Título").performTextInput("Hazard")
         org.junit.Assert.assertEquals("Hazard", typed)
     }
 
-    @Test fun `tom igual ao capo - mostra o tom e + transpõe meio tom`() {
+    @Test fun `key works like capo - shows the key and + transposes a half step`() {
         var moved = 0
         compose.setContent {
             StagebookTheme {

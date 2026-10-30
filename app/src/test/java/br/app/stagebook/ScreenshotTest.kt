@@ -559,13 +559,13 @@ class ScreenshotTest {
     @Test fun stageBadgesTablet() = shoot("tablet_6_palco_capo_backing") { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
 
     // T19: música com backing track e o player desligado no modo essencial: o play e o selo da faixa somem
-    @Test fun `player desligado - musica com backing track fica sem o play`() {
+    @Test fun `player off - song with a backing track has no play`() {
         compose.setContent { StageScreen(stageBadges.copy(look = stageBadges.look.copy(playerMode = false)), 0, 0, { _, _ -> }, onBack = {}) }
         compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
         compose.onNodeWithContentDescription("Escolher o backing track desta música").assertDoesNotExist()
     }
 
-    @Test fun `player ligado - musica com backing track mostra o play`() {
+    @Test fun `player on - song with a backing track shows play`() {
         compose.setContent { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) }
         compose.onNodeWithContentDescription("Tocar o backing track").assertExists()
     }

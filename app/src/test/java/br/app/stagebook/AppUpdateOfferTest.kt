@@ -54,14 +54,14 @@ class AppUpdateOfferTest {
 
     private fun Job?.await() = runBlocking { withTimeout(10_000) { this@await?.join() } }
 
-    @Test fun `versão mais nova - oferece ao abrir`() {
+    @Test fun `newer version - offers it on open`() {
         version = """{"versionCode":999999,"versionName":"0.3.999 (abc1234)"}"""
         val o = offer()
         o.onEnter().await()
         assertEquals(UpdateOffer.Available("0.3.999 (abc1234)"), o.offer.value)
     }
 
-    @Test fun `mesma versão ou sem internet - nada a oferecer`() {
+    @Test fun `same version or no internet - nothing to offer`() {
         val installed = AppUpdater(context).installedCode
         version = """{"versionCode":$installed,"versionName":"igual"}"""
         val o = offer()
@@ -71,7 +71,7 @@ class AppUpdateOfferTest {
         offer().also { it.onEnter().await() }.let { assertNull(it.offer.value) }
     }
 
-    @Test fun `no palco - espera sair para perguntar`() {
+    @Test fun `on stage - waits until leaving to ask`() {
         version = """{"versionCode":999999,"versionName":"0.3.999"}"""
         gate.enter()
         val o = offer()
@@ -83,7 +83,7 @@ class AppUpdateOfferTest {
         assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
     }
 
-    @Test fun `agora não - a mesma versão só volta no dia seguinte`() {
+    @Test fun `not now - the same version only comes back the next day`() {
         version = """{"versionCode":999999,"versionName":"0.3.999"}"""
         val o = offer()
         o.onEnter().await()

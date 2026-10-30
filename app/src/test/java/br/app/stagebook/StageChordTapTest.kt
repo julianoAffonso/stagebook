@@ -52,7 +52,7 @@ class StageChordTapTest {
         compose.waitForIdle()
     }
 
-    @Test fun `tocar no acorde abre o desenho e Usar esta guarda a variação`() {
+    @Test fun `tapping a chord opens the diagram and Use this one keeps the shape`() {
         show(Look(fontSp = 34f))
         tapFirstChord()
         compose.onNodeWithText("Usar esta").performClick()
@@ -62,19 +62,19 @@ class StageChordTapTest {
         assertEquals("não virou a página", -1 to -1, position)
     }
 
-    @Test fun `com o desenho desligado nos ajustes o toque no acorde não abre nada`() {
+    @Test fun `with the diagram turned off in settings, tapping a chord opens nothing`() {
         show(Look(fontSp = 34f, chordTap = false))
         tapFirstChord()
         assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
     }
 
-    @Test fun `no perfil só letra o toque vira a página`() {
+    @Test fun `in the lyrics only profile, the tap turns the page`() {
         show(Look(fontSp = 34f, chords = false))
         tapFirstChord()
         assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
     }
 
-    @Test fun `toque longo no botão da faixa abre o menu dela e não oferece editar a linha`() {
+    @Test fun `long press on the track button opens its menu and does not offer editing the line`() {
         val withTrack = listOf(StageSong("Teste", "", "[G]Primeira linha de letra comprida\n[D]Segunda linha", false, id = "s1", track = "s1.ogg"))
         compose.setContent {
             StagebookTheme { StageScreen(StageUiState(loading = false, songs = withTrack, look = Look(fontSp = 34f, playerMode = true)), 0, 0, { _, _ -> }) }

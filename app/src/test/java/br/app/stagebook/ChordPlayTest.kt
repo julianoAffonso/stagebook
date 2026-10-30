@@ -24,14 +24,14 @@ import org.robolectric.annotation.Config
 class ChordPlayTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `notas do G aberto no violão - com capo 2 sobem um tom`() {
+    @Test fun `notes of open G on acoustic guitar - capo 2 raises them a whole step`() {
         val g = Voicings.Shape(listOf(3, 2, 0, 0, 0, 3))
         assertEquals(listOf(43, 47, 50, 55, 59, 67), Voicings.midi(g, Instrument.ACOUSTIC_GUITAR))
         assertEquals(listOf(45, 49, 52, 57, 61, 69), Voicings.midi(g, Instrument.ACOUSTIC_GUITAR, capo = 2))
         assertEquals(listOf(47, 50, 55, 59, 67), Voicings.midi(Voicings.Shape(listOf(-1, 2, 0, 0, 0, 3)), Instrument.ACOUSTIC_GUITAR))   // corda x não toca
     }
 
-    @Test fun `dedilhado demora mais que junto - os dois é o mais longo - sem estourar`() {
+    @Test fun `picked takes longer than strummed - both is the longest - no clipping`() {
         val notes = listOf(43, 47, 50, 55, 59, 67)
         val arp = ChordSynth.render(notes, ChordPlayMode.ARPEGGIO, keyboard = false)
         val chord = ChordSynth.render(notes, ChordPlayMode.CHORD, keyboard = false)
@@ -42,7 +42,7 @@ class ChordPlayTest {
         assertTrue(both.maxOf { kotlin.math.abs(it.toInt()) } < Short.MAX_VALUE)
     }
 
-    @Test fun `janela do acorde - o play sobre o desenho manda as notas e com capo explica o desenho`() {
+    @Test fun `chord window - play over the diagram sends the notes and with capo explains the diagram`() {
         var played: List<Int>? = null
         compose.setContent {
             StagebookTheme { ChordShapePopup("G", Instrument.ACOUSTIC_GUITAR, "{capo: 2}\n[G]linha", {}, {}, onPlay = { played = it }) }
@@ -53,7 +53,7 @@ class ChordPlayTest {
         assertTrue(played!!.all { it >= 40 + 2 })   // tudo pelo menos 2 casas acima da corda mais grave
     }
 
-    @Test fun `teclado não usa capo - nem aviso nem nota mais alta`() {
+    @Test fun `keyboard does not use capo - no notice and no higher note`() {
         var played: List<Int>? = null
         compose.setContent {
             StagebookTheme { ChordShapePopup("C", Instrument.KEYBOARD, "{capo: 2}\n[C]linha", {}, {}, onPlay = { played = it }) }
@@ -63,7 +63,7 @@ class ChordPlayTest {
         assertEquals(Voicings.keys("C").first(), played)
     }
 
-    @Test fun `Detalhes - grau no tom da música, o campo do acorde e onde mais aparece - e volta`() {
+    @Test fun `Details - degree in the song's key, the chord's field and where else it shows up - and back`() {
         compose.setContent { StagebookTheme { ChordShapePopup("C", Instrument.ACOUSTIC_GUITAR, "{key: G}\n[G]um [C]dois", {}, {}) } }
         compose.onNodeWithText("Detalhes").performClick()
         compose.onNodeWithText("Detalhes de C").assertExists()

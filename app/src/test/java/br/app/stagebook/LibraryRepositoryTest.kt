@@ -34,7 +34,7 @@ class LibraryRepositoryTest {
     private fun waitWrites() = Thread.sleep(400)
 
     @Test
-    fun `gravação falhando (disco) não derruba o app e a música continua na memória`() {
+    fun `failing write (disk) does not crash the app and the song stays in memory`() {
         val r = repo()
         File(dir, "stagebook.json.tmp").apply { deleteRecursively(); mkdirs() }   // não dá para criar o temporário
         r.saveSong(Song(title = "Hazard", text = "letra"))
@@ -45,7 +45,7 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `arquivo estragado - guarda o original e abre a versão anterior`() {
+    fun `corrupted file - keeps the original and opens the previous version`() {
         val r = repo()
         r.saveSong(Song(title = "Primeira", text = "a"))
         waitWrites()
@@ -58,7 +58,7 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `prévia do import conta as letras que seriam trocadas sem mudar nada`() = runBlocking {
+    fun `import preview counts the lyrics that would be replaced without changing anything`() = runBlocking {
         val r = repo()
         r.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "letra editada depois do backup"))
         r.saveSong(Song(title = "Africa", author = "Toto", text = "igual"))
@@ -75,7 +75,7 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `muitas mudanças seguidas acabam gravadas com o estado mais novo`() {
+    fun `many changes in a row end up saved with the newest state`() {
         val r = repo()
         repeat(30) { r.saveSong(Song(title = "Música $it", text = "letra $it")) }
         waitWrites()

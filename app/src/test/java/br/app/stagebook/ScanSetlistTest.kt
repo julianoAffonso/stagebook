@@ -48,7 +48,7 @@ class ScanSetlistTest {
         Triple(repo, ScanSetlistViewModel(repo, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), br.app.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.Connectivity(context)), ids)
     }
 
-    @Test fun `QR com todas as músicas cria o setlist na ordem do QR`() {
+    @Test fun `QR with every song creates the setlist in the QR order`() {
         val (repo, vm, ids) = setup()
         vm.onText(qr("Show", "Estrada Longa", "cancao do mar"))
         val review = vm.ui.value as ScanUi.Review
@@ -58,7 +58,7 @@ class ScanSetlistTest {
         assertEquals("Show", repo.library.value.setlist(id)!!.name)
     }
 
-    @Test fun `música que falta aparece antes de criar e fica de fora`() {
+    @Test fun `a missing song shows before creating and is left out`() {
         val (repo, vm, ids) = setup()
         vm.onText(qr("Show", "Noite Clara", "Outra Coisa"))
         val review = vm.ui.value as ScanUi.Review
@@ -67,7 +67,7 @@ class ScanSetlistTest {
         assertEquals(listOf(ids[1]), repo.library.value.setlist(id)!!.items)
     }
 
-    @Test fun `nome repetido - substituir troca as músicas e criar outro numera`() {
+    @Test fun `repeated name - replace swaps the songs and create another numbers it`() {
         val (repo, vm, ids) = setup()
         val old = repo.createSetlist("Show")
         vm.onText(qr("show", "Noite Clara"))
@@ -79,7 +79,7 @@ class ScanSetlistTest {
         assertEquals("show (2)", repo.library.value.setlist(other)!!.name)
     }
 
-    @Test fun `pela internet - a que falta vem junto e entra na biblioteca - a daqui não muda`() {
+    @Test fun `online - the missing one comes along and goes into the library - the one here does not change`() {
         val (repo, vm, ids) = setup()
         val before = repo.song(ids[1])!!.text
         vm.review(
@@ -101,7 +101,7 @@ class ScanSetlistTest {
         assertEquals(before, repo.song(ids[1])!!.text)
     }
 
-    @Test fun `músicas avulsas - só as novas entram na biblioteca e nenhum setlist é criado`() {
+    @Test fun `loose songs - only new ones go into the library and no setlist is created`() {
         val (repo, vm, ids) = setup()
         val sets = repo.library.value.sets.size
         val before = repo.song(ids[0])!!.text
@@ -120,7 +120,7 @@ class ScanSetlistTest {
         assertTrue(repo.library.value.songs.any { it.title == "Música Nova" && it.text == "{key: C}\n[C]nova" })
     }
 
-    @Test fun `outra versão - por padrão fica a minha - escolhendo a recebida entra sem perder a minha cifra`() {
+    @Test fun `another version - by default mine stays - choosing theirs comes in without losing my chords`() {
         val (repo, vm, ids) = setup()
         repo.updateSong(ids[0]) { it.copy(text = "[G]Primeira linha\n[C]Segunda linha") }
         val incoming = br.app.stagebook.data.SetlistCloud.SharedSong("Canção do Mar", "Banda", text = "Primeira linha\nSegunda linha corrigida")
@@ -138,7 +138,7 @@ class ScanSetlistTest {
         assertTrue(text.contains("Segunda linha corrigida"))
     }
 
-    @Test fun `modo cifra - recusar a que veio só com a letra manda para a fila de importação`() {
+    @Test fun `chords mode - refusing one that came with lyrics only sends it to the import queue`() {
         val (repo, _, ids) = setup()
         repo.updateLook { it.copy(chords = true) }
         val queue = br.app.stagebook.data.ImportQueue(repo)
@@ -158,7 +158,7 @@ class ScanSetlistTest {
         queue.stop()
     }
 
-    @Test fun `caixa pela internet - os dois do par acham o mesmo canal e um terceiro não`() {
+    @Test fun `online inbox - both in the pair find the same channel and a third one does not`() {
         val (repo, _, _) = setup()
         val cloud = br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context))
         val a = br.app.stagebook.domain.BandCrypto.newKeyPair()
@@ -177,7 +177,7 @@ class ScanSetlistTest {
         assertEquals(listOf("x1" to "m"), br.app.stagebook.data.SetlistCloud.messagesWithIds(lines))
     }
 
-    @Test fun `caixa - o mesmo envio não repete e o mesmo setlist da mesma pessoa substitui o antigo`() {
+    @Test fun `inbox - the same send does not repeat and the same setlist from the same person replaces the old one`() {
         val box = br.app.stagebook.data.BandInbox(context)
         box.items.value.forEach { box.remove(it.id) }
         val v1 = qr("Show", "A")
@@ -190,7 +190,7 @@ class ScanSetlistTest {
         assertEquals(2, box.items.value.size)
     }
 
-    @Test fun `QR cortado pede para ler de novo e QR de outra coisa avisa`() {
+    @Test fun `cut QR asks to scan again and a QR of something else warns`() {
         val (_, vm, _) = setup()
         vm.onText(listOf(QrPayload.HEADER, "3", "Show", "A").joinToString("\n"))
         assertEquals(ScanUi.Scanning(ScanProblem.INCOMPLETE), vm.ui.value)
@@ -198,14 +198,14 @@ class ScanSetlistTest {
         assertEquals(ScanUi.Scanning(ScanProblem.NOT_SETLIST), vm.ui.value)
     }
 
-    @Test fun `pedir pela internet só aparece quando quem mandou é da banda`() {
+    @Test fun `ask online only shows when the sender is in the band`() {
         val (_, vm, _) = setup()
         vm.review(qr("Show", "Noite Clara", "Não Tenho"), emptyList())
         // veio pelo QR (ninguém da banda): não há a quem pedir pela internet
         assertEquals(null, vm.internetFrom.value)
     }
 
-    @Test fun `quem mandou responde o pedido com as músicas que tem`() {
+    @Test fun `the sender answers the request with the songs they have`() {
         val (repo, _, ids) = setup()
         val link = bandLink(repo)
         val found = link.songsFor(listOf(br.app.stagebook.data.BandLink.Wanted(repo.song(ids[0])!!.title), br.app.stagebook.data.BandLink.Wanted("Não existe")))

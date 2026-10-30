@@ -26,7 +26,7 @@ class BandTest {
         val trusted = mutableListOf<BandProtocol.Hello>()
     }
 
-    @Test fun `os dois chegam à mesma chave do par sem mandá-la - outro aparelho não`() {
+    @Test fun `both reach the same pair key without sending it - another device does not`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         val c = Device("Intruso")
@@ -60,7 +60,7 @@ class BandTest {
         return r
     }
 
-    @Test fun `Autorizar grava a confiança nos dois aparelhos`() {
+    @Test fun `Allow saves the trust on both devices`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         assertEquals(BandSession.JoinResult.ACCEPTED, join(a, b, answer = true))
@@ -69,20 +69,20 @@ class BandTest {
         assertEquals("Tablet da Ana", b.trusted.single().name)
     }
 
-    @Test fun `Não autorizar não grava nada`() {
+    @Test fun `Don't allow saves nothing`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         assertEquals(BandSession.JoinResult.DENIED, join(a, b, answer = false))
         assertFalse(a.trusted.isNotEmpty() || b.trusted.isNotEmpty())
     }
 
-    @Test fun `quem já é da banda entra sem perguntar de novo`() {
+    @Test fun `a band member joins again without being asked`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         assertEquals(BandSession.JoinResult.ACCEPTED, join(a, b, answer = false, aKnowsB = true))
     }
 
-    @Test fun `no palco o pedido não pergunta nada - responde que está ocupado`() {
+    @Test fun `on stage the request asks nothing - answers busy`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         val server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
@@ -116,19 +116,19 @@ class BandTest {
         return ok to got?.let { body -> ShareCode.decrypt(BandCrypto.pairKey(a.keys.private, a.id, b.keys.public, b.id), body)?.decodeToString() }
     }
 
-    @Test fun `quem é da banda entrega o pacote e o outro abre com a chave do par`() {
+    @Test fun `a band member delivers the package and the other opens it with the pair key`() {
         val (ok, text) = sendPackage(Device("Tablet da Ana"), Device("Celular do Beto"), bIsMember = true)
         assertTrue(ok)
         assertEquals("setlist", text)
     }
 
-    @Test fun `quem não é da banda não entrega nada`() {
+    @Test fun `someone outside the band delivers nothing`() {
         val (ok, text) = sendPackage(Device("Tablet da Ana"), Device("Estranho"), bIsMember = false)
         assertFalse(ok)
         assertNull(text)
     }
 
-    @Test fun `pedir à banda - quem é da banda responde sozinho - quem não é não recebe resposta`() {
+    @Test fun `ask the band - members answer by themselves - outsiders get no answer`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         fun ask(member: Boolean): String? {
@@ -147,7 +147,7 @@ class BandTest {
         assertNull(ask(member = false))
     }
 
-    @Test fun `quem conduz - quem acompanha responde o que falta - e quem não é da banda não recebe`() {
+    @Test fun `lead the band - followers answer what they miss - and outsiders get nothing`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         fun conduct(member: Boolean, onStage: Boolean): String? {
@@ -169,7 +169,7 @@ class BandTest {
         assertNull(conduct(member = false, onStage = false))
     }
 
-    @Test fun `versões diferentes do protocolo - o pedido responde versão e nada é gravado`() {
+    @Test fun `different protocol versions - the request answers version and nothing is saved`() {
         val a = Device("Tablet da Ana")
         val b = Device("Celular do Beto")
         val newer = b.hello.copy(v = BandProtocol.VERSION + 1, app = "9.9")
@@ -182,7 +182,7 @@ class BandTest {
         assertTrue(a.trusted.isEmpty() && b.trusted.isEmpty())
     }
 
-    @Test fun `hello com id que não é da chave é recusado`() {
+    @Test fun `hello with an id that does not match the key is refused`() {
         val a = Device("Tablet da Ana")
         val fake = BandProtocol.Hello("0".repeat(32), "Falso", a.pub)
         val input = (kotlinx.serialization.json.Json.encodeToString(BandProtocol.Hello.serializer(), fake) + "\n").reader().buffered()

@@ -69,14 +69,14 @@ class AppUpdaterTest {
     private suspend fun SettingsViewModel.waitUpdate(done: (UpdateState) -> Boolean): UpdateState =
         withTimeout(10_000) { uiState.first { done(it.update) }.update }
 
-    @Test fun `versão publicada mais nova aparece para baixar`() = runBlocking {
+    @Test fun `newer published version shows up to download`() = runBlocking {
         version = """{"versionCode":999999,"versionName":"0.3.999 (abc1234)"}"""
         val vm = vm(updater())
         vm.checkUpdate()
         assertEquals(UpdateState.Available("0.3.999 (abc1234)"), vm.waitUpdate { it is UpdateState.Available })
     }
 
-    @Test fun `mesma versão do instalado - já está em dia`() = runBlocking {
+    @Test fun `same version as installed - already up to date`() = runBlocking {
         val installed = updater().installedCode
         version = """{"versionCode":$installed,"versionName":"igual"}"""
         val vm = vm(updater())
@@ -84,14 +84,14 @@ class AppUpdaterTest {
         assertEquals(UpdateState.UpToDate, vm.waitUpdate { it == UpdateState.UpToDate })
     }
 
-    @Test fun `sem a versão publicada - avisa para conferir a internet`() = runBlocking {
+    @Test fun `no published version found - says to check the internet`() = runBlocking {
         version = ""
         val vm = vm(updater())
         vm.checkUpdate()
         assertEquals(UpdateState.Offline, vm.waitUpdate { it == UpdateState.Offline })
     }
 
-    @Test fun `arquivo baixado que não é o app não é instalado`() = runBlocking {
+    @Test fun `downloaded file that is not the app is not installed`() = runBlocking {
         apk = ByteArray(200_000) { it.toByte() }   // página de erro, arquivo cortado…
         val vm = vm(updater())
         vm.downloadUpdate()

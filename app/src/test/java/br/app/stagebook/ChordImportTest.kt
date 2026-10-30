@@ -23,12 +23,12 @@ class ChordImportTest {
         "Pra você ouvir",
     ).joinToString("\n")
 
-    @Test fun `reconhece página com cifra e sem`() {
+    @Test fun `recognizes a page with and without chords`() {
         assertTrue(ChordImport.hasChords(page))
         assertFalse(ChordImport.hasChords("só letra\nsem acorde\nnenhum"))
     }
 
-    @Test fun `vira ChordPro com o tom, sem tablatura e sem a linha do tom`() {
+    @Test fun `becomes ChordPro with the key, without tablature and without the key line`() {
         val cp = ChordImport.toChordPro(page)
         assertEquals("G", Chords.key(cp))
         assertFalse(cp, cp.contains("E|"))
@@ -39,13 +39,13 @@ class ChordImportTest {
         assertTrue(cp, cp.contains("[Intro]\n[G] [D] [Em] [C]"))
     }
 
-    @Test fun `tom e capo vindos da página valem mais que o texto`() {
+    @Test fun `key and capo from the page win over the text`() {
         val cp = ChordImport.toChordPro(page, key = "A", capo = "Capotraste na 2ª casa")
         assertEquals("A", Chords.key(cp))
         assertEquals(2, Chords.capo(cp))
     }
 
-    @Test fun `tom e capo nas 4 línguas`() {
+    @Test fun `key and capo in the 4 languages`() {
         assertEquals("A", ChordImport.keyOf("Key: A"))
         assertEquals("Bb", ChordImport.keyOf("Tono: Bb"))
         assertEquals("F#m", ChordImport.keyOf("Tonalità: F#m"))

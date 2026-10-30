@@ -31,7 +31,7 @@ class StageAutoScrollTest {
     private val long = (1..40).joinToString("\n") { "Linha $it da letra de exemplo" }
     private val state = StageUiState(false, listOf(StageSong("Longa", "", long, false), StageSong("Outra", "", "x", false)), look = Look(stageMode = StageMode.SCROLL))
 
-    @Test fun `play rola sozinho - tocar na tela pausa e fica na mesma música`() {
+    @Test fun `play scrolls by itself - tapping the screen pauses and stays on the same song`() {
         var song by mutableIntStateOf(0)
         var level = 0
         var page by mutableIntStateOf(0)

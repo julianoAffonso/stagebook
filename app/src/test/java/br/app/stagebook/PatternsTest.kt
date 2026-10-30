@@ -33,7 +33,7 @@ import org.robolectric.annotation.Config
 class PatternsTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `aviso de qualquer tela aparece no snackbar da raiz e o seguinte troca o anterior`() {
+    @Test fun `a message from any screen shows in the root snackbar and the next one replaces it`() {
         compose.setContent {
             StagebookTheme {
                 val message = rememberAppMessage()
@@ -55,7 +55,7 @@ class PatternsTest {
         compose.onNodeWithText("Código copiado").assertDoesNotExist()
     }
 
-    @Test fun `chave com explicacao - tocar no texto tambem muda`() {
+    @Test fun `switch with an explanation - tapping the text also toggles`() {
         compose.setContent {
             StagebookTheme {
                 var on by remember { mutableStateOf(true) }
@@ -68,7 +68,7 @@ class PatternsTest {
         compose.onNode(androidx.compose.ui.test.isToggleable()).performClick().assertIsOn()
     }
 
-    @Test fun `pergunta - cada resposta faz a sua coisa`() {
+    @Test fun `question - each answer does its own thing`() {
         var answer: Boolean? = null
         compose.setContent {
             StagebookTheme {

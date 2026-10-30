@@ -24,7 +24,7 @@ class StageKeyboardTest {
 
     private val text = "{key: G}\n{capo: 2}\n[G]linha [C]outra"
 
-    @Test fun `teclado - tom que soa no topo e a mensagem só na primeira vez`() {
+    @Test fun `keyboard - sounding key at the top and the message only the first time`() {
         var seen = 0
         val state = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look(instrument = Instrument.KEYBOARD))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onKeyboardHintSeen = { seen++ }) } }
@@ -34,13 +34,13 @@ class StageKeyboardTest {
         assertEquals(1, seen)
     }
 
-    @Test fun `teclado - mensagem já vista não aparece de novo`() {
+    @Test fun `keyboard - a message already seen does not show again`() {
         val state = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look(instrument = Instrument.KEYBOARD, keyboardCapoHintSeen = true))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }) } }
         compose.onNodeWithText("Esta cifra usa capo na 2ª casa", substring = true).assertDoesNotExist()
     }
 
-    @Test fun `janela do acorde no teclado mostra o da cifra e o do teclado`() {
+    @Test fun `chord window on keyboard shows the chart's chord and the keyboard's`() {
         compose.setContent { StagebookTheme { ChordShapePopup("A", Instrument.KEYBOARD, text, {}, {}) } }
         compose.onNodeWithText("Na cifra é G, com capo na 2ª casa. No teclado, toque A.").assertExists()
     }

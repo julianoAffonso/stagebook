@@ -14,7 +14,7 @@ class SongSearchTest {
     )
 
     @Test
-    fun `ordem de título ignorando acento e caixa, busca por título ou artista`() {
+    fun `title order ignoring accents and case, search by title or artist`() {
         val s = SongSearch.of(songs)
         assertEquals(listOf("africa", "Billie Jean", "It's My Life", "Será"), s.find("").map { it.title })
         assertEquals(listOf("Será"), s.find("sera").map { it.title })

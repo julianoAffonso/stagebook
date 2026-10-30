@@ -52,7 +52,7 @@ class StageFlowTest {
     private fun stanzas(prefix: String, n: Int) = (1..n).joinToString("\n\n") { s -> (1..4).joinToString("\n") { "$prefix estrofe $s linha $it" } }
 
     @Test
-    fun `da última página de uma música longa para uma música curta`() {
+    fun `from the last page of a long song to a short song`() {
         val state = StageUiState(
             loading = false,
             songs = listOf(StageSong("Longa", "", stanzas("longa", 12), false), StageSong("Curta", "", stanzas("curta", 2), false)),
@@ -72,7 +72,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `voltar da primeira página cai na última da música anterior sem quebrar`() {
+    fun `going back from the first page lands on the last page of the previous song without breaking`() {
         val state = StageUiState(
             loading = false,
             songs = listOf(StageSong("Curta", "", stanzas("curta", 2), false), StageSong("Longa", "", stanzas("longa", 12), false)),
@@ -93,7 +93,7 @@ class StageFlowTest {
 
 
     @Test
-    fun `dois voltar seguidos logo depois de trocar de música não pulam a música do meio`() {
+    fun `two backs in a row right after changing songs do not skip the middle song`() {
         val state = StageUiState(
             loading = false,
             songs = listOf(
@@ -127,7 +127,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `zoom gravado no meio de apertos rápidos não perde aperto do pedal`() {
+    fun `zoom saved during fast presses does not lose a pedal press`() {
         val songs = listOf(
             StageSong("Primeira", "", stanzas("primeira", 2), false, id = "p"),
             StageSong("Longa", "", stanzas("longa", 12), false, id = "l"),
@@ -160,7 +160,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `pinça muda o zoom só desta música e grava`() {
+    fun `pinch changes the zoom of this song only and saves`() {
         val state = StageUiState(
             loading = false,
             songs = listOf(StageSong("Longa", "", stanzas("longa", 12), false, id = "a", zoom = 1f)),
@@ -183,7 +183,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `segunda e terceira pinça continuam funcionando depois de gravar`() {
+    fun `second and third pinch keep working after saving`() {
         var songs by mutableStateOf(listOf(StageSong("Longa", "", stanzas("longa", 12), false, id = "a", zoom = 1f)))
         val saved = mutableListOf<Float>()
         compose.setContent {
@@ -224,7 +224,7 @@ class StageFlowTest {
         return page
     }
 
-    @Test fun `a seta de voltar pergunta e sai do palco`() {
+    @Test fun `the back arrow asks and leaves the stage`() {
         val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))
         var back = 0
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = { back++ }) } }
@@ -240,19 +240,19 @@ class StageFlowTest {
         assertEquals(1, back)
     }
 
-    @Test fun `arrastar para a esquerda avança a página`() {
+    @Test fun `dragging left goes to the next page`() {
         assertEquals(1, swipeStage(0) { swipeLeft(startX = centerX + width / 4f, endX = centerX - width / 4f) })
     }
 
-    @Test fun `arrastar para a direita volta a página`() {
+    @Test fun `dragging right goes to the previous page`() {
         assertEquals(0, swipeStage(1) { swipeRight(startX = centerX - width / 4f, endX = centerX + width / 4f) })
     }
 
-    @Test fun `arrastar pouco não vira a página`() {
+    @Test fun `a short drag does not turn the page`() {
         assertEquals(1, swipeStage(1) { swipeLeft(startX = centerX + 20f, endX = centerX - 20f) })
     }
 
-    @Test fun `arrastar na vertical não vira a página`() {
+    @Test fun `a vertical drag does not turn the page`() {
         assertEquals(1, swipeStage(1) { swipeUp(startY = centerY + height / 4f, endY = centerY - height / 4f) })
     }
 
@@ -278,26 +278,26 @@ class StageFlowTest {
         return toggles to page
     }
 
-    @Test fun `pedal Play-pause dá play no backing track com o modo player`() {
+    @Test fun `Play-pause pedal plays the backing track in player mode`() {
         assertEquals(1 to 0, pressPlayPause(Look(fontSp = 34f, playerMode = true), "1.ogg"))
     }
 
-    @Test fun `pedal Play-pause não faz nada sem o modo player`() {
+    @Test fun `Play-pause pedal does nothing without player mode`() {
         assertEquals(0 to 0, pressPlayPause(Look(fontSp = 34f, playerMode = false), "1.ogg"))
     }
 
-    @Test fun `pedal Play-pause não faz nada na música sem backing track`() {
+    @Test fun `Play-pause pedal does nothing on a song without a backing track`() {
         assertEquals(0 to 0, pressPlayPause(Look(fontSp = 34f, playerMode = true), ""))
     }
 
-    @Test fun `tecla de mídia play-pause vira Play-pause e pode ser trocada nos ajustes`() {
+    @Test fun `media play-pause key becomes Play-pause and can be changed in settings`() {
         assertEquals(br.app.stagebook.domain.PedalAction.PLAY_PAUSE, br.app.stagebook.domain.PedalAction.of(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
         val custom = br.app.stagebook.domain.PedalAction.assign(emptyMap(), KeyEvent.KEYCODE_B, br.app.stagebook.domain.PedalAction.PLAY_PAUSE)
         assertEquals(br.app.stagebook.domain.PedalAction.PLAY_PAUSE, br.app.stagebook.domain.PedalAction.of(KeyEvent.KEYCODE_B, custom))
     }
 
     @Test
-    fun `pedal com o pé apoiado (tecla repetida) vira só uma página`() {
+    fun `pedal held down (repeated key) turns only one page`() {
         val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))
         var page by mutableIntStateOf(0)
         val pedal = PedalInput()
@@ -316,7 +316,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `pinça e o pedal troca de música antes de gravar - o zoom é gravado mesmo assim`() {
+    fun `pinch and the pedal changes song before saving - the zoom is saved anyway`() {
         val state = StageUiState(
             false,
             listOf(StageSong("Longa", "", stanzas("longa", 12), false, id = "a", zoom = 1f), StageSong("Curta", "", stanzas("curta", 2), false, id = "b")),
@@ -339,7 +339,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `larguras medidas de uma vez são as mesmas medidas uma a uma`() {
+    fun `widths measured at once are the same as measured one by one`() {
         val texts = listOf("Hazard", "linha bem mais comprida da letra", "É", "palavra-composta", "x").map(::AnnotatedString)
         compose.setContent {
             val measurer = rememberTextMeasurer()
@@ -352,7 +352,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `alturas medidas numa passada são as mesmas medidas linha a linha`() {
+    fun `heights measured in one pass are the same as measured line by line`() {
         // letra inventada com títulos de seção (cor e tamanho próprios), linhas vazias e uma linha longa
         val text = "[Verso 1]\nprimeira linha curta\numa linha bem mais comprida que as outras para ocupar a largura toda da coluna e quebrar\n\n" +
             "[Refrão]\n[G]refrão [D]aqui com acordes em [Em]cima\n[C] [G]\n\n\nfim"
@@ -385,7 +385,7 @@ class StageFlowTest {
 
     // o Robolectric comum não quebra linha de texto: este precisa do desenho nativo (como as capturas)
     @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
-    fun `linha com acordes que quebra vira pedaços e só os com acorde guardam o espaço`() {
+    fun `a wrapping line with chords becomes pieces and only the ones with a chord keep the space`() {
         val chords = br.app.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow)
         val sourced = br.app.stagebook.ui.stage.stageLines(
             "[G]uma linha comprida com acorde só no começo e que vai quebrar",
@@ -428,7 +428,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `segurar uma linha oferece editar e abre o editor nela`() {
+    fun `holding a line offers editing and opens the editor on it`() {
         val edits = mutableListOf<Pair<String, Int>>()
         stageWithEdit({ id, c -> edits += id to c })
         holdSecondLine()
@@ -438,7 +438,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `com o botão de editar aberto, tocar fora só fecha (não vira a página nem abre o editor)`() {
+    fun `with the edit button open, tapping outside only closes it (no page turn, no editor)`() {
         val edits = mutableListOf<Int>()
         val moves = mutableListOf<Int>()
         stageWithEdit({ _, c -> edits += c }, { s, _ -> moves += s })
@@ -451,7 +451,7 @@ class StageFlowTest {
     }
 
     @Test
-    fun `lápis do topo abre o editor no começo da página que está na tela`() {
+    fun `top pencil opens the editor at the start of the page on screen`() {
         val text = stanzas("longa", 12)
         var cursor = -2
         compose.setContent {

@@ -36,7 +36,7 @@ class NormalizeFlowTest {
     @get:Rule val compose = createComposeRule()
 
     @Test
-    fun `botão e confirmação chamam o marcar seções`() {
+    fun `button and confirmation call mark sections`() {
         var calls = 0
         compose.setContent {
             StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.SECTIONS) }
@@ -48,7 +48,7 @@ class NormalizeFlowTest {
     }
 
     @Test
-    fun `marcar seções só mexe em letra sem títulos e avisa quantas mudaram`() = runBlocking {
+    fun `mark sections only touches lyrics without titles and says how many changed`() = runBlocking {
         Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())   // o trabalho saiu da thread principal
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))

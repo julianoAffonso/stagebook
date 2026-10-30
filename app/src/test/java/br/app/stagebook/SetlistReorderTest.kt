@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
 class SetlistReorderTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `arrastar a primeira música para baixo da segunda`() {
+    @Test fun `drag the first song below the second`() {
         val moves = mutableListOf<Pair<Int, Int>>()
         val state = SetlistDetailUiState(
             loading = false,
@@ -44,7 +44,7 @@ class SetlistReorderTest {
         assertTrue("moves=$moves", moves.contains(0 to 1))
     }
 
-    @Test fun `arrastar por várias posições grava uma vez só, ao soltar`() {
+    @Test fun `dragging several positions saves once, on release`() {
         val moves = mutableListOf<Pair<Int, Int>>()
         val state = SetlistDetailUiState(
             loading = false,
@@ -65,7 +65,7 @@ class SetlistReorderTest {
         assertTrue(moves.single().second >= 2)
     }
 
-    @Test fun `tocar numa música do setlist abre o palco nela`() {
+    @Test fun `tapping a setlist song opens the stage on it`() {
         var opened = -1
         val state = SetlistDetailUiState(
             loading = false,

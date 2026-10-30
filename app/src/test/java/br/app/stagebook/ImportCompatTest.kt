@@ -10,7 +10,7 @@ import org.junit.Test
  * abrem no Stagebook. Mudar o formato da biblioteca ou do QR não pode quebrar estes testes.
  */
 class ImportCompatTest {
-    @Test fun `arquivo de biblioteca no formato v1 importa`() {
+    @Test fun `library file in format v1 imports`() {
         // formato exato do arquivo v1 (LibraryCodec.encodeSongs, encodeDefaults + prettyPrint), letra fictícia
         val exported = """
             {
@@ -39,7 +39,7 @@ class ImportCompatTest {
         assertEquals(1.2f, song.zoom)
     }
 
-    @Test fun `QR de setlist no formato atual é lido`() {
+    @Test fun `setlist QR in the current format is read`() {
         val text = "LETRAS3\n2\nShow de sábado\nCanção A\nCanção B\tArtista B"
         // bytes do QR: "L3" + deflate sem cabeçalho zlib
         val bytes = QrPayload.pack(text)
@@ -52,7 +52,7 @@ class ImportCompatTest {
         assertEquals(listOf("Canção A", "Canção B"), read?.songs?.map { it.title })
     }
 
-    @Test fun `a faixa do aparelho não vai na exportação`() {
+    @Test fun `the device's track is not exported`() {
         val lib = br.app.stagebook.data.model.Library(songs = listOf(br.app.stagebook.data.model.Song(id = "a", title = "T", text = "x", track = "a-1.ogg")))
         val out = LibraryCodec.encodeSongs(lib.songs.map { it.copy(track = "") })
         assertEquals("", LibraryCodec.decodeSongs(out).single().track)

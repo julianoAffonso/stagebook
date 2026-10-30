@@ -29,7 +29,7 @@ class ImportQueueTest {
         LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r -> withTimeout(5_000) { r.loaded.first { it } } }
     }
 
-    @Test fun `as importadas entram no lugar que tinham no QR`() {
+    @Test fun `imported songs take the place they had in the QR`() {
         val repo = repo()
         val a = repo.saveSong(Song(title = "Primeira"))
         val c = repo.saveSong(Song(title = "Terceira"))
@@ -46,7 +46,7 @@ class ImportQueueTest {
         assertEquals(listOf(a, b, c), repo.library.value.setlist(set)!!.items)
     }
 
-    @Test fun `sem achar no site passa para o próximo da lista do perfil e a próxima música volta ao primeiro`() {
+    @Test fun `not found on a site moves to the next one in the profile's list and the next song goes back to the first`() {
         val repo = repo()
         repo.updateLook { it.copy(chords = true, chordSites = listOf(ImportSite("Um", "https://www.um.com.br/"), ImportSite("Dois", "https://dois.net/"))) }
         val q = ImportQueue(repo)

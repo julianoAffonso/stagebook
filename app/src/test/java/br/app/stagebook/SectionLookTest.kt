@@ -16,18 +16,18 @@ class SectionLookTest {
     private fun headerStyle(scale: Float) =
         stageLines("[Refrão]\nlinha", SectionNames(null), Color.Cyan, true, chords, scale).first().text.spanStyles.single().item
 
-    @Test fun `o título da seção segue o tamanho escolhido nos ajustes`() {
+    @Test fun `the section title follows the size chosen in settings`() {
         assertEquals(1.2f.em, headerStyle(1.2f).fontSize)
         assertEquals(Look.DEFAULT_SECTION_SCALE.em, headerStyle(Look.DEFAULT_SECTION_SCALE).fontSize)
     }
 
-    @Test fun `o título da seção tem fundo leve na cor da seção`() {
+    @Test fun `the section title has a light background in the section color`() {
         val bg = headerStyle(1f).background
         assertNotEquals(Color.Unspecified, bg)
         assertEquals(Color.Cyan.copy(alpha = bg.alpha), bg)
     }
 
-    @Test fun `seções escondidas não desenham título`() {
+    @Test fun `hidden sections draw no title`() {
         val lines = stageLines("[Refrão]\nlinha", SectionNames(null), Color.Cyan, false, chords, 1.2f)
         assertEquals("linha", lines.first { it.text.isNotEmpty() }.text.text)
     }
