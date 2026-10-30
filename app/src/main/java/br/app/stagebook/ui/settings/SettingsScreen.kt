@@ -660,7 +660,8 @@ private fun LegibilityWarnings(look: Look) {
 private fun ChordsDetail(look: Look, actions: SettingsActions) {
     // the size changes live in the preview and only saves on release
     var scale by remember(look.chordScale) { mutableFloatStateOf(look.chordScale) }
-    SettingsCard(stringResource(R.string.settings_chords), help = stringResource(R.string.settings_chords_show_help)) {
+    // the card doesn't repeat the screen title ("Chords")
+    SettingsCard(stringResource(R.string.settings_chords_card), help = stringResource(R.string.settings_chords_show_help)) {
         SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
         if (look.chords) {
             Text(stringResource(R.string.settings_chords_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
@@ -865,13 +866,25 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
 // the same name in "Last button" and in the list of custom buttons
 private fun pedalKeyName(key: PedalKeyUi): String = if (key.keyCode != 0) pedalKeyName(key.keyCode) else key.name
 
-/** Button name: the key as Android calls it (PAGE_DOWN) or the MIDI message. */
+private val PEDAL_KEY_NAMES = mapOf(
+    KeyEvent.KEYCODE_PAGE_DOWN to "Page Down", KeyEvent.KEYCODE_PAGE_UP to "Page Up",
+    KeyEvent.KEYCODE_DPAD_DOWN to "↓", KeyEvent.KEYCODE_DPAD_UP to "↑", KeyEvent.KEYCODE_DPAD_LEFT to "←", KeyEvent.KEYCODE_DPAD_RIGHT to "→",
+    KeyEvent.KEYCODE_SPACE to "Space", KeyEvent.KEYCODE_ENTER to "Enter",
+    KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE to "Play/Pause", KeyEvent.KEYCODE_MEDIA_NEXT to "Next", KeyEvent.KEYCODE_MEDIA_PREVIOUS to "Previous",
+    KeyEvent.KEYCODE_VOLUME_UP to "Volume +", KeyEvent.KEYCODE_VOLUME_DOWN to "Volume −",
+)
+
+/** Button name: the key as printed on keyboards (Page Down), Android's name for the rest, or the MIDI message. */
 @Composable
 private fun pedalKeyName(code: Int): String {
     if (!MidiCode.isMidi(code)) {
         // key with no name known to Android: only the number
+        // the keys page-turner pedals send, named as printed on keyboards (and the same on every Android)
+        PEDAL_KEY_NAMES[code]?.let { return it }
         val name = KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_")
-        return name.toIntOrNull()?.let { stringResource(R.string.pedal_key_code, it) } ?: name
+        // PAGE_DOWN → "Page Down": the name printed on keyboards, not Android's constant
+        return name.toIntOrNull()?.let { stringResource(R.string.pedal_key_code, it) }
+            ?: name.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.titlecase() } }
     }
     val n = MidiCode.number(code)
     val ch = MidiCode.channel(code)
@@ -954,9 +967,7 @@ private fun PedalKeysCard(keys: Map<Int, PedalAction>, actions: SettingsActions)
         keys.forEach { (code, action) ->
             PedalKeyRow(pedalKeyName(code), action, { actions.onPedalAction(code, it) }, { actions.onPedalAction(code, PedalAction.default(code)) })
         }
-        TextButton(onClick = actions.onResetPedalKeys) {
-            Text(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size))
-        }
+        ActionButton(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size), actions.onResetPedalKeys, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
     }
 }
 
