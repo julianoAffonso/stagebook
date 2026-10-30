@@ -990,9 +990,10 @@ private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> 
 /** Import sites: the first in each list is the default (where the importer opens); you can remove and add. */
 @Composable
 private fun ImportSitesDetail(look: Look, actions: SettingsActions) {
-    SiteListCard(stringResource(R.string.settings_lyric_sites), look.lyricSites) { actions.onSites(false, it) }
-    // chords only in the lyrics and chords profile
+    // only the list for the user's profile: chord sites with lyrics and chords, lyrics sites with lyrics only (the
+    // importer opens the profile's default; the other list would just be noise)
     if (look.chords) SiteListCard(stringResource(R.string.settings_chord_sites), look.chordSites) { actions.onSites(true, it) }
+    else SiteListCard(stringResource(R.string.settings_lyric_sites), look.lyricSites) { actions.onSites(false, it) }
 }
 
 @Composable
