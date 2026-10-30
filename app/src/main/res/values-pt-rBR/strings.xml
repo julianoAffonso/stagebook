@@ -142,7 +142,7 @@
     <string name="conduct_start">Conduzir a banda</string>
     <string name="conduct_conducting">Conduzindo · %1$s</string>
     <string name="conduct_following">Acompanhando %1$s</string>
-    <string name="conduct_gone">%1$s sumiu há 10 minutos</string>
+    <string name="conduct_gone">%1$s desconectou há 10 minutos</string>
     <string name="conduct_missing_here">Você não tem "%1$s"</string>
     <string name="conduct_missing_now">Sem esta música: %1$s</string>
     <plurals name="conduct_no_answer">
@@ -740,7 +740,7 @@
     <string name="band_nearby">Na rede agora</string>
     <string name="band_no_wifi">Entre no Wi-Fi do lugar, ou no ponto de acesso de um celular, para achar a banda.</string>
     <string name="band_searching">Procurando… Abra Ajustes → Banda no outro aparelho também.</string>
-    <string name="band_online">Na rede agora</string>
+    <string name="band_online">Conectado</string>
     <string name="band_join">Pedir para entrar</string>
     <string name="band_waiting">Esperando o outro aparelho autorizar…</string>
     <string name="band_denied">Não autorizado</string>
@@ -815,5 +815,10 @@
     <string name="web_not_found">Não achei letra aí.</string>
     <string name="web_no_internet">O tablet está sem internet (ou no Modo essencial).</string>
     <string name="web_bad_address">Use um endereço que comece com http:// ou https://.</string>
+    <string name="web_band_none">Nada da banda ainda.</string>
+    <string name="web_receive_title">Recebido de alguém</string>
+    <string name="web_backup_hint">Um backup de Ajustes → Biblioteca e backup. Escolha o que entra.</string>
+    <string name="web_receive_done">Pronto. Já está na biblioteca.</string>
+    <string name="web_restore_needs">Escolha pelo menos uma parte.</string>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
 </resources>

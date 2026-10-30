@@ -97,7 +97,7 @@ class WebEditorSongsTest {
     // the app's import engine behind the editor on the computer (T37f); no lookups on the internet in the tests
     private fun importing(page: String? = null): WebEditorApi {
         val engine = br.app.stagebook.data.PageImporter(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm())
-        return WebEditorApi(repo, importer = { engine }, readPage = { page })
+        return WebEditorApi(repo, importer = { engine }, readPage = { _, _ -> page })
     }
 
     private fun import(api: WebEditorApi, body: String) = api.handle(HttpRequest("POST", "/api/import", body = body.toByteArray()), device)!!

@@ -16,6 +16,7 @@ data class HttpRequest(
     val headers: Map<String, String> = emptyMap(),   // names in lower case
     val body: ByteArray = ByteArray(0),
     val remote: String = "",
+    val file: java.io.File? = null,   // big bodies (backups, backing tracks) go straight to a file, not to memory
 ) {
     /** A cookie sent by the browser, or null. */
     fun cookie(name: String): String? = headers["cookie"].orEmpty().split(';')
@@ -52,8 +53,11 @@ class HttpError(val status: Int) : Exception("HTTP $status")
 object WebHttp {
     const val MAX_HEAD = 16 * 1024
 
-    /** Reads one request. [maxBody] decides, by path, how big the body can be (backing tracks are bigger). */
-    fun read(input: InputStream, remote: String = "", maxBody: (String) -> Int): HttpRequest {
+    /**
+     * Reads one request. [maxBody] decides, by path, how big the body can be (backing tracks are bigger); [toFile]
+     * gives a file for paths whose body goes to disk instead of memory.
+     */
+    fun read(input: InputStream, remote: String = "", toFile: (String) -> java.io.File? = { null }, maxBody: (String) -> Long): HttpRequest {
         val stream = if (input is BufferedInputStream) input else BufferedInputStream(input)
         val head = readHead(stream).split("\r\n")
         val first = head.first().split(' ')
@@ -63,7 +67,21 @@ object WebHttp {
         val path = target.substringBefore('?')
         val length = headers["content-length"]?.toLongOrNull() ?: 0L
         if (length < 0) throw HttpError(400)
-        if (length > maxBody(path)) throw HttpError(413)
+        if (length > maxBody(decode(path))) throw HttpError(413)
+        val file = toFile(decode(path))
+        if (file != null) {
+            file.outputStream().use { out ->
+                val buf = ByteArray(64 * 1024)
+                var left = length
+                while (left > 0) {
+                    val n = stream.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                    if (n < 0) { file.delete(); throw HttpError(400) }
+                    out.write(buf, 0, n)
+                    left -= n
+                }
+            }
+            return HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, ByteArray(0), remote, file)
+        }
         val body = ByteArray(length.toInt())
         var read = 0
         while (read < body.size) {

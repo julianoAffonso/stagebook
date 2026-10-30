@@ -142,7 +142,7 @@
     <string name="conduct_start">Lead the band</string>
     <string name="conduct_conducting">Leading · %1$s</string>
     <string name="conduct_following">Following %1$s</string>
-    <string name="conduct_gone">%1$s went quiet 10 minutes ago</string>
+    <string name="conduct_gone">%1$s disconnected 10 minutes ago</string>
     <string name="conduct_missing_here">You don\'t have \"%1$s\"</string>
     <string name="conduct_missing_now">Missing this song: %1$s</string>
     <plurals name="conduct_no_answer">
@@ -742,7 +742,7 @@
     <string name="band_nearby">On the network now</string>
     <string name="band_no_wifi">Get on the venue\'s Wi-Fi, or a phone\'s hotspot, to find the band.</string>
     <string name="band_searching">Searching… Open Settings → Band on the other device too.</string>
-    <string name="band_online">Online now</string>
+    <string name="band_online">Connected</string>
     <string name="band_join">Ask to join</string>
     <string name="band_waiting">Waiting for the other device to allow…</string>
     <string name="band_denied">Not allowed</string>
@@ -817,5 +817,10 @@
     <string name="web_not_found">Didn\'t find lyrics there.</string>
     <string name="web_no_internet">The tablet has no internet (or essential mode is on).</string>
     <string name="web_bad_address">Use an address that starts with http:// or https://.</string>
+    <string name="web_band_none">Nothing from the band yet.</string>
+    <string name="web_receive_title">Received from someone</string>
+    <string name="web_backup_hint">A backup from Settings → Library and backup. Pick what comes in.</string>
+    <string name="web_receive_done">Done. It\'s in the library.</string>
+    <string name="web_restore_needs">Pick at least one part.</string>
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
 </resources>

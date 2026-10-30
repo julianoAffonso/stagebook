@@ -7,47 +7,62 @@
 <style>
   /* the app's colors (dark, mint accent); nothing loaded from outside: works without internet */
   :root { --bg: #121212; --surface: #1E1E1E; --raised: #2A2A2A; --line: #3A3A3A; --text: #E6E6E6; --muted: #9A9A9A;
-          --accent: #4AF6CD; --on-accent: #00382C; --selected: #263451; --error: #FF6B6B; }
+          --accent: #4AF6CD; --on-accent: #00382C; --selected: #263451; --error: #FF6B6B; --warn: #FFB74D; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   main { max-width: 1280px; margin: 0 auto; padding: 24px 16px; }
-  header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 24px; }
+  header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
   h1 { font-size: 28px; margin: 0; }
-  .card { background: var(--surface); border-radius: 28px; padding: 24px; }
+  h3 { margin: 0 0 4px; font-size: 17px; }
+  .card { background: var(--surface); border-radius: 28px; padding: 24px; min-width: 0; }
   .muted { color: var(--muted); }
   .error { color: var(--error); }
+  .warn { color: var(--warn); }
+  .ok { color: var(--accent); }
+  p { margin: 0 0 8px; }
   button { font: inherit; border: 0; border-radius: 999px; padding: 10px 24px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
   button.text { background: none; color: var(--text); padding: 10px 12px; }
   button.outline { background: none; color: var(--text); border: 1px solid var(--line); }
-  button.icon { background: none; color: var(--text); width: 40px; height: 40px; padding: 0; font-size: 22px; line-height: 40px; }
+  button.icon { background: none; color: var(--text); width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 40px; }
   button:disabled { opacity: .4; cursor: default; }
-  input, textarea { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; width: 100%; }
-  input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input, textarea, select { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; width: 100%; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  input[type=checkbox] { width: auto; }
   label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  label.check { display: flex; gap: 8px; align-items: center; font-size: 16px; color: var(--text); }
   [hidden] { display: none !important; }
-  #app { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
-  @media (max-width: 800px) { #app { grid-template-columns: 1fr; } }
-  #list-card { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; max-height: calc(100vh - 32px); }
-  #songs { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
-  #songs li { padding: 10px 14px; border-radius: 16px; cursor: pointer; }
-  #songs li:hover { background: var(--raised); }
-  #songs li.on { background: var(--selected); }
-  #songs .sub { font-size: 13px; color: var(--muted); }
+  nav.tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 999px; padding: 4px; width: fit-content; margin-bottom: 16px; }
+  nav.tabs button { background: none; color: var(--text); padding: 8px 20px; }
+  nav.tabs button[aria-selected="true"] { background: var(--selected); font-weight: 600; }
+  .split { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+  .side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; max-height: calc(100vh - 32px); }
+  ul.list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+  ul.list li { padding: 10px 14px; border-radius: 16px; cursor: pointer; }
+  ul.list li:hover { background: var(--raised); }
+  ul.list li.on { background: var(--selected); }
+  .sub { font-size: 13px; color: var(--muted); }
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   .row > div { flex: 1; min-width: 120px; }
   .grow { flex: 3 !important; }
   .stepper { display: flex; align-items: center; gap: 4px; }
   .stepper b { min-width: 72px; text-align: center; font-weight: 600; }
-  textarea { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; min-height: 55vh; resize: vertical; line-height: 1.6; }
-  .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; }
-  #form { display: flex; flex-direction: column; gap: 16px; }
-  #import { display: flex; flex-direction: column; gap: 24px; }
-  #import h3 { margin: 0 0 4px; font-size: 17px; }
-  #import p { margin: 0 0 8px; }
-  #import textarea { min-height: 30vh; }
-  .drop { border: 2px dashed var(--line); border-radius: 16px; padding: 24px; text-align: center; }
+  textarea { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; resize: vertical; line-height: 1.6; }
+  #f-text { min-height: 55vh; }
+  .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; flex-wrap: wrap; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .blocks { display: flex; flex-direction: column; gap: 28px; }
+  .drop { border: 2px dashed var(--line); border-radius: 16px; padding: 20px; text-align: center; }
   .drop.over { border-color: var(--accent); }
   .question { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .track { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  ol.items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  ol.items li { display: flex; align-items: center; gap: 8px; background: var(--raised); border-radius: 14px; padding: 4px 4px 4px 14px; }
+  ol.items li .n { color: var(--accent); width: 24px; font-variant-numeric: tabular-nums; }
+  ol.items li .t { flex: 1; min-width: 0; }
+  .results li { cursor: pointer; }
+  .review li { cursor: default !important; }
 </style>
 </head>
 <body>
@@ -57,53 +72,129 @@
     <p id="gate-text" class="muted"></p>
     <button id="ask"></button>
   </section>
+
   <section id="app" hidden>
-    <div class="card" id="list-card">
-      <button id="new" class="outline"></button>
-      <button id="import-open" class="outline"></button>
-      <input id="search" type="search">
-      <ul id="songs"></ul>
-      <p id="list-empty" class="muted" hidden></p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-songs" aria-selected="true" data-t="songs"></button>
+      <button role="tab" id="tab-sets" aria-selected="false" data-t="setlists"></button>
+      <button role="tab" id="tab-import" aria-selected="false" data-t="import"></button>
+    </nav>
+
+    <!-- songs: list on the left, the editor on the right -->
+    <div class="split" id="view-songs">
+      <div class="card side">
+        <button id="new" class="outline"></button>
+        <input id="search" type="search">
+        <ul class="list" id="songs"></ul>
+        <p id="list-empty" class="muted" hidden></p>
+      </div>
+      <div class="card">
+        <p id="pick" class="muted"></p>
+        <form id="form" class="stack" hidden onsubmit="return false">
+          <div class="row">
+            <div class="grow"><label for="f-title" data-t="titleField"></label><input id="f-title"></div>
+            <div class="grow"><label for="f-author" data-t="artist"></label><input id="f-author"></div>
+            <div><label for="f-year" data-t="year"></label><input id="f-year" inputmode="numeric" maxlength="4"></div>
+            <div><label for="f-tempo" data-t="bpm"></label><input id="f-tempo" inputmode="numeric" maxlength="3"></div>
+          </div>
+          <div class="row">
+            <div class="stepper"><span data-t="key"></span><button class="icon" id="key-down">−</button><b id="key"></b><button class="icon" id="key-up">+</button></div>
+            <div class="stepper"><span data-t="capo"></span><button class="icon" id="capo-down">−</button><b id="capo"></b><button class="icon" id="capo-up">+</button></div>
+          </div>
+          <!-- backing track: only for a saved song (the file is named after it) -->
+          <div class="track" id="track-row" hidden>
+            <span data-t="track"></span><span id="track-name" class="muted"></span>
+            <button class="outline" id="track-pick"></button><button class="text" id="track-remove"></button>
+            <input id="track-file" type="file" accept=".ogg,.mp3,.wav,audio/*" hidden>
+          </div>
+          <div><label for="f-text" data-t="lyrics"></label><textarea id="f-text" spellcheck="false"></textarea></div>
+          <div class="actions">
+            <button class="text" id="delete"></button>
+            <span id="status" class="muted"></span>
+            <button id="save"></button>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="card">
-      <p id="pick" class="muted"></p>
-      <!-- the app's import engine, run by the tablet: paste, page address, files -->
-      <div id="import" hidden>
+
+    <!-- setlists: list on the left, the setlist on the right -->
+    <div class="split" id="view-sets" hidden>
+      <div class="card side">
+        <button id="set-new" class="outline"></button>
+        <ul class="list" id="sets"></ul>
+        <p id="sets-empty" class="muted" hidden></p>
+      </div>
+      <div class="card">
+        <p id="set-pick" class="muted"></p>
+        <div id="set-form" class="stack" hidden>
+          <div><label for="set-name" data-t="setName"></label><input id="set-name"></div>
+          <ol class="items" id="set-items"></ol>
+          <p id="set-empty" class="muted" hidden></p>
+          <div><label for="set-add-search" data-t="search"></label><input id="set-add-search" type="search"></div>
+          <ul class="list" id="set-add" style="max-height: 30vh"></ul>
+          <div class="actions">
+            <button class="text" id="set-delete"></button>
+            <span id="set-status" class="muted"></span>
+            <button id="set-save"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- import: the app's import, run by the tablet -->
+    <div class="card" id="view-import" hidden>
+      <div class="blocks">
         <div>
-          <h3 data-t="pasteTitle"></h3><p class="muted" data-t="pasteHint"></p>
-          <textarea id="paste" spellcheck="false"></textarea>
-          <div class="actions"><span></span><button id="convert"></button></div>
+          <h3 data-t="fromInternet"></h3>
+          <div class="row"><div class="grow"><input id="web-search" type="search"></div><button class="outline" id="web-go"></button></div>
+          <ul class="list results" id="results"></ul>
         </div>
         <div>
           <h3 data-t="urlTitle"></h3><p class="muted" data-t="urlHint"></p>
-          <div class="row"><div class="grow"><input id="url" type="url" placeholder="https://"></div><button id="fetch"></button></div>
+          <div class="row"><div class="grow"><input id="url" type="url" placeholder="https://"></div><button class="outline" id="fetch"></button></div>
         </div>
+        <div>
+          <h3 data-t="pasteTitle"></h3><p class="muted" data-t="pasteHint"></p>
+          <textarea id="paste" spellcheck="false" style="min-height: 24vh"></textarea>
+          <div class="actions"><span></span><button class="outline" id="convert"></button></div>
+        </div>
+        <div class="question" id="tab-question" hidden><span data-t="tabTitle"></span><button id="tab-yes" class="outline"></button><button id="tab-no" class="outline"></button></div>
+        <p id="import-status" class="muted"></p>
         <div>
           <h3 data-t="filesTitle"></h3>
           <div class="drop" id="drop"><p class="muted" data-t="filesHint"></p><button class="outline" id="files-pick"></button>
             <input id="files" type="file" multiple accept=".txt,.pro,.chordpro,.cho,.crd,text/plain" hidden></div>
+          <p id="files-status" class="muted"></p>
         </div>
-        <div class="question" id="tab-question" hidden><span data-t="tabTitle"></span><button id="tab-yes" class="outline"></button><button id="tab-no" class="outline"></button></div>
-        <p id="import-status" class="muted"></p>
+        <div>
+          <h3 data-t="typeWords"></h3>
+          <div class="row"><div class="grow"><input id="words" placeholder="47-violao-lua"></div><button class="outline" id="words-go"></button></div>
+          <div id="review" class="stack" hidden>
+            <div><label for="review-name" data-t="setName"></label><input id="review-name"></div>
+            <ol class="items review" id="review-rows"></ol>
+            <div class="actions"><span></span><button id="review-create"></button></div>
+          </div>
+          <p id="words-status" class="muted"></p>
+        </div>
+        <div>
+          <h3 data-t="received"></h3>
+          <div class="row"><button class="outline" id="band-sync"></button></div>
+          <ul class="list" id="band"></ul>
+          <p id="band-status" class="muted"></p>
+        </div>
+        <div>
+          <h3 data-t="openFile"></h3><p class="muted" data-t="backupHint"></p>
+          <button class="outline" id="backup-pick"></button>
+          <input id="backup-file" type="file" accept=".stagebook,.json" hidden>
+          <div id="backup-parts" class="stack" hidden>
+            <label class="check"><input type="checkbox" id="part-library" value="library"><span data-t="partLibrary"></span></label>
+            <label class="check"><input type="checkbox" id="part-tracks" value="tracks"><span data-t="partTracks"></span></label>
+            <label class="check"><input type="checkbox" id="part-settings" value="settings"><span data-t="partSettings"></span></label>
+            <div class="row"><button class="outline" id="backup-merge"></button><button id="backup-replace"></button></div>
+          </div>
+          <p id="backup-status" class="muted"></p>
+        </div>
       </div>
-      <form id="form" hidden onsubmit="return false">
-        <div class="row">
-          <div class="grow"><label for="f-title" data-t="titleField"></label><input id="f-title"></div>
-          <div class="grow"><label for="f-author" data-t="artist"></label><input id="f-author"></div>
-          <div><label for="f-year" data-t="year"></label><input id="f-year" inputmode="numeric" maxlength="4"></div>
-          <div><label for="f-tempo" data-t="bpm"></label><input id="f-tempo" inputmode="numeric" maxlength="3"></div>
-        </div>
-        <div class="row">
-          <div class="stepper"><span data-t="key"></span><button class="icon" id="key-down">−</button><b id="key"></b><button class="icon" id="key-up">+</button></div>
-          <div class="stepper"><span data-t="capo"></span><button class="icon" id="capo-down">−</button><b id="capo"></b><button class="icon" id="capo-up">+</button></div>
-        </div>
-        <div><label for="f-text" data-t="lyrics"></label><textarea id="f-text" spellcheck="false"></textarea></div>
-        <div class="actions">
-          <button class="text" id="delete"></button>
-          <span id="status" class="muted"></span>
-          <button id="save"></button>
-        </div>
-      </form>
     </div>
   </section>
   <p id="offline" class="error" hidden></p>
@@ -113,13 +204,26 @@
 // every call carries X-Stagebook: the app refuses /api without it (a page from another site can't send it)
 const api = (path, options = {}) =>
   fetch(path, { ...options, headers: { "X-Stagebook": "1", "Content-Type": "application/json", ...(options.headers || {}) }, credentials: "same-origin" });
+const post = (path, body) => api(path, { method: "POST", body: JSON.stringify(body) }).catch(() => null);
 const $ = (id) => document.getElementById(id);
 let t = {};
 const fill = (text, ...args) => args.reduce((s, a, i) => s.replace(`%${i + 1}$s`, a).replace(`%${i + 1}$d`, a), text || "");
 const show = (id) => ["gate", "app"].forEach((s) => ($(s).hidden = s !== id));
+const say = (id, text, kind = "muted") => { $(id).textContent = text || ""; $(id).className = kind; };
+const plain = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const li = (title, sub, onclick) => {
+  const el = document.createElement("li");
+  const a = document.createElement("div"); a.textContent = title;
+  el.append(a);
+  if (sub) { const b = document.createElement("div"); b.className = "sub"; b.textContent = sub; el.append(b); }
+  if (onclick) el.onclick = onclick;
+  return el;
+};
+const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad });
 
-let songs = [];
+let songs = [], sets = [];
 let current = null;   // the song open in the form ({id:""} = new)
+let currentSet = null;
 let dirty = false;
 
 // the computer's name on the tablet's question: browser and system, from the browser itself
@@ -148,14 +252,13 @@ async function start() {
 }
 
 async function ask() {
-  const button = $("ask"), text = $("gate-text");
-  button.disabled = true;
-  text.className = "muted";
-  const r = await api("/api/ask", { method: "POST", body: JSON.stringify({ name: computerName() }) }).catch(() => null);
+  $("ask").disabled = true;
+  say("gate-text", "");
+  const r = await post("/api/ask", { name: computerName() });
   if (!r) return offline();
-  if (r.status === 429) { text.textContent = t.busy; button.disabled = false; return; }
+  if (r.status === 429) { say("gate-text", t.busy); $("ask").disabled = false; return; }
   const { id } = await r.json();
-  text.textContent = fill(t.asking, "Stagebook");
+  say("gate-text", fill(t.asking, "Stagebook"));
   // waits for the answer on the tablet (the request expires after 2 minutes: then it asks again)
   for (;;) {
     await new Promise((ok) => setTimeout(ok, 1500));
@@ -163,9 +266,8 @@ async function ask() {
     if (!p) return offline();
     if (p.status === 202) continue;
     if (p.status === 200) return start();
-    text.textContent = t.denied;
-    text.className = "error";
-    button.disabled = false;
+    say("gate-text", t.denied, "error");
+    $("ask").disabled = false;
     return;
   }
 }
@@ -173,53 +275,64 @@ async function ask() {
 async function connected(session) {
   $("connected").textContent = fill(t.connected, session.app);
   $("new").textContent = "+ " + t.newSong;
+  $("set-new").textContent = "+ " + t.newSet;
   $("search").placeholder = t.search;
   $("pick").textContent = t.pick;
-  $("save").textContent = t.save;
-  $("import-open").textContent = t.import;
-  $("convert").textContent = t.convert;
-  $("fetch").textContent = t.fetch;
-  $("files-pick").textContent = t.filesPick;
-  $("tab-yes").textContent = t.tabYes;
-  $("tab-no").textContent = t.tabNo;
-  $("delete").textContent = t.delete;
+  $("set-pick").textContent = t.pick;
+  ["save", "set-save"].forEach((id) => ($(id).textContent = t.save));
+  ["delete", "set-delete"].forEach((id) => ($(id).textContent = t.delete));
   $("key-down").title = t.keyDown; $("key-up").title = t.keyUp;
   $("capo-down").title = t.capoDown; $("capo-up").title = t.capoUp;
+  $("track-remove").textContent = t.trackRemove;
+  $("set-name").placeholder = t.setNameHint;
+  $("web-search").placeholder = t.search;
+  ["web-go", "words-go"].forEach((id) => ($(id).textContent = t.go));
+  $("fetch").textContent = t.fetch;
+  $("convert").textContent = t.convert;
+  $("files-pick").textContent = t.filesPick;
+  $("tab-yes").textContent = t.tabYes; $("tab-no").textContent = t.tabNo;
+  $("review-create").textContent = t.create;
+  $("band-sync").textContent = t.syncBand;
+  $("backup-pick").textContent = t.openFile;
+  $("backup-merge").textContent = t.merge; $("backup-replace").textContent = t.replace;
   show("app");
-  await loadList();
+  await Promise.all([loadList(), loadSets()]);
 }
 
-// ---- song list ----
+// ---- tabs ----
+function tab(name) {
+  if (name !== "songs" && !leaveOk()) return;
+  for (const n of ["songs", "sets", "import"]) {
+    $("tab-" + n).setAttribute("aria-selected", String(n === name));
+    $("view-" + n).hidden = n !== name;
+  }
+  if (name === "import") loadBand();
+}
+$("tab-songs").onclick = () => tab("songs");
+$("tab-sets").onclick = () => tab("sets");
+$("tab-import").onclick = () => tab("import");
+
+// ---- songs ----
 async function loadList() {
   const r = await api("/api/songs").catch(() => null);
   if (!r || r.status !== 200) return offline();
   songs = await r.json();
   drawList();
+  drawSetAdd();
 }
-
-const plain = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 function drawList() {
   const q = plain($("search").value.trim());
   const shown = songs.filter((s) => !q || plain(s.title).includes(q) || plain(s.author).includes(q));
-  const ul = $("songs");
-  ul.replaceChildren(...shown.map((s) => {
-    const li = document.createElement("li");
-    if (current && current.id === s.id) li.className = "on";
-    const title = document.createElement("div");
-    title.textContent = s.title;
-    const sub = document.createElement("div");
-    sub.className = "sub";
-    sub.textContent = [s.author, s.year, s.key].filter(Boolean).join(" · ");
-    li.append(title, sub);
-    li.onclick = () => open(s.id);
-    return li;
+  $("songs").replaceChildren(...shown.map((s) => {
+    const el = li(s.title, [s.author, s.year, s.key].filter(Boolean).join(" · "), () => open(s.id));
+    if (current && current.id === s.id) el.className = "on";
+    return el;
   }));
   $("list-empty").hidden = shown.length > 0;
   $("list-empty").textContent = songs.length ? t.notFound : t.noSongs;
 }
 
-// ---- the form ----
 const leaveOk = () => !dirty || confirm(t.unsaved);
 
 async function open(id) {
@@ -239,11 +352,19 @@ function fillForm(song) {
   $("delete").hidden = !song.id;
   $("form").hidden = false;
   $("pick").hidden = true;
-  $("import").hidden = true;
-  setStatus("");
+  say("status", "");
   dirty = false;
+  drawTrack();
   drawKeyCapo();
   drawList();
+}
+
+function drawTrack() {
+  const has = !!(current && current.track);
+  $("track-row").hidden = !(current && current.id);
+  $("track-name").textContent = has ? current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓" : t.trackNone;
+  $("track-pick").textContent = has ? t.trackChange : t.trackPick;
+  $("track-remove").hidden = !has;
 }
 
 // key and capo shown from the text's {key} and {capo}, like the app
@@ -261,90 +382,205 @@ function drawKeyCapo() {
 }
 
 async function changeText(path, body) {
-  const r = await api(path, { method: "POST", body: JSON.stringify({ text: $("f-text").value, ...body }) }).catch(() => null);
+  const r = await post(path, { text: $("f-text").value, ...body });
   if (!r || r.status !== 200) return offline();
   $("f-text").value = (await r.json()).text;
   dirty = true;
   drawKeyCapo();
 }
 
-function setStatus(text, error = false) {
-  $("status").textContent = text;
-  $("status").className = error ? "error" : "muted";
-}
-
 async function save() {
-  const body = {
-    title: $("f-title").value, author: $("f-author").value, year: $("f-year").value,
-    tempo: $("f-tempo").value, text: $("f-text").value,
-  };
+  const body = { title: $("f-title").value, author: $("f-author").value, year: $("f-year").value, tempo: $("f-tempo").value, text: $("f-text").value };
   const id = current && current.id;
   const r = await api(id ? `/api/songs/${encodeURIComponent(id)}` : "/api/songs", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
   if (!r) return offline();
   if (r.status === 409) {
     const { error } = await r.json();
-    return setStatus(error === "title_empty" ? t.titleEmpty : t.titleTaken, true);
+    return say("status", error === "title_empty" ? t.titleEmpty : t.titleTaken, "error");
   }
-  if (r.status !== 200) return setStatus(t.offline, true);
+  if (r.status !== 200) return say("status", t.offline, "error");
   const saved = (await r.json()).id;
   dirty = false;
   await loadList();
   await open(saved);
-  setStatus(t.saved);
+  say("status", t.saved);
 }
 
-async function remove() {
+async function removeSong() {
   if (!current || !current.id || !confirm(fill(t.deleteConfirm, current.title))) return;
   await api(`/api/songs/${encodeURIComponent(current.id)}`, { method: "DELETE" }).catch(() => null);
   dirty = false;
   current = null;
   $("form").hidden = true;
   $("pick").hidden = false;
-  await loadList();
+  await Promise.all([loadList(), loadSets()]);
 }
 
-// ---- import (the same engine as the app's import browser, run by the tablet) ----
-function showImport() {
+// backing track: the file goes to the tablet as is; it keeps the format check (OGG, MP3 or WAV)
+async function sendTrack(file) {
+  if (!file || !current || !current.id) return;
+  const r = await fetch(`/api/songs/${encodeURIComponent(current.id)}/track?name=${encodeURIComponent(file.name)}`,
+    { method: "PUT", body: file, headers: { "X-Stagebook": "1", "Content-Type": "application/octet-stream" }, credentials: "same-origin" }).catch(() => null);
+  if (!r) return offline();
+  if (r.status !== 200) return say("status", r.status === 413 ? t.trackBad : (problems()[(await r.json().catch(() => ({}))).error] || t.trackBad), "error");
+  current.track = (await r.json()).track;
+  drawTrack();
+  say("status", t.saved);
+}
+
+$("search").oninput = drawList;
+$("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "" }); };
+$("save").onclick = save;
+$("delete").onclick = removeSong;
+$("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
+$("key-up").onclick = () => changeText("/api/transpose", { semitones: 1 });
+$("capo-down").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) - 1 });
+$("capo-up").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) + 1 });
+$("track-pick").onclick = () => $("track-file").click();
+$("track-file").onchange = () => { sendTrack($("track-file").files[0]); $("track-file").value = ""; };
+$("track-remove").onclick = async () => {
+  await api(`/api/songs/${encodeURIComponent(current.id)}/track`, { method: "DELETE" }).catch(() => null);
+  current.track = "";
+  drawTrack();
+};
+["f-title", "f-author", "f-year", "f-tempo", "f-text"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-text") drawKeyCapo(); }));
+// Ctrl+S / Cmd+S saves what's open
+document.addEventListener("keydown", (e) => {
+  if (!((e.ctrlKey || e.metaKey) && e.key === "s")) return;
+  if (!$("form").hidden && !$("view-songs").hidden) { e.preventDefault(); save(); }
+  else if (!$("set-form").hidden && !$("view-sets").hidden) { e.preventDefault(); saveSet(); }
+});
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+// ---- setlists ----
+async function loadSets() {
+  const r = await api("/api/sets").catch(() => null);
+  if (!r || r.status !== 200) return;
+  sets = await r.json();
+  $("sets").replaceChildren(...sets.map((s) => {
+    const el = li(s.name, String(s.count), () => openSet(s.id));
+    if (currentSet && currentSet.id === s.id) el.className = "on";
+    return el;
+  }));
+  $("sets-empty").hidden = sets.length > 0;
+  $("sets-empty").textContent = t.noSets;
+}
+
+async function openSet(id) {
   if (!leaveOk()) return;
-  current = null; dirty = false;
-  $("form").hidden = true; $("pick").hidden = true; $("import").hidden = false;
-  $("tab-question").hidden = true; importStatus("");
-  drawList();
+  const r = await api(`/api/sets/${encodeURIComponent(id)}`).catch(() => null);
+  if (!r || r.status !== 200) return loadSets();
+  showSet(await r.json());
 }
 
-function importStatus(text, error = false) {
-  $("import-status").textContent = text;
-  $("import-status").className = error ? "error" : "muted";
+function showSet(set) {
+  currentSet = set;
+  $("set-name").value = set.name;
+  $("set-form").hidden = false;
+  $("set-pick").hidden = true;
+  $("set-delete").hidden = !set.id;
+  say("set-status", "");
+  dirty = false;
+  drawSet();
+  drawSetAdd();
+  loadSets();
 }
 
-const importErrors = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress });
+function drawSet() {
+  const items = currentSet.songs;
+  $("set-items").replaceChildren(...items.map((s, i) => {
+    const el = document.createElement("li");
+    const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
+    const title = document.createElement("span"); title.className = "t"; title.textContent = s.title ? [s.title, s.author].filter(Boolean).join(" · ") : "–";
+    const up = document.createElement("button"); up.className = "icon"; up.textContent = "↑"; up.disabled = i === 0;
+    up.onclick = () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; dirty = true; drawSet(); };
+    const down = document.createElement("button"); down.className = "icon"; down.textContent = "↓"; down.disabled = i === items.length - 1;
+    down.onclick = () => { [items[i + 1], items[i]] = [items[i], items[i + 1]]; dirty = true; drawSet(); };
+    const x = document.createElement("button"); x.className = "icon"; x.textContent = "×"; x.title = t.remove;
+    x.onclick = () => { items.splice(i, 1); dirty = true; drawSet(); drawSetAdd(); };
+    el.append(n, title, up, down, x);
+    return el;
+  }));
+  $("set-empty").hidden = items.length > 0;
+  $("set-empty").textContent = t.emptySet;
+}
 
-// sends to the tablet; "askTab" asks the tablature question here and sends again with the answer
+// songs to add: the library minus what's already in the setlist, filtered by the search
+function drawSetAdd() {
+  if (!currentSet) return;
+  const inSet = new Set(currentSet.songs.map((s) => s.id));
+  const q = plain($("set-add-search").value.trim());
+  const shown = songs.filter((s) => !inSet.has(s.id) && (!q || plain(s.title).includes(q) || plain(s.author).includes(q))).slice(0, 50);
+  $("set-add").replaceChildren(...shown.map((s) => li("+ " + s.title, s.author, () => {
+    currentSet.songs.push({ id: s.id, title: s.title, author: s.author });
+    dirty = true;
+    drawSet();
+    drawSetAdd();
+  })));
+}
+
+async function saveSet() {
+  const body = { name: $("set-name").value, items: currentSet.songs.map((s) => s.id) };
+  const id = currentSet.id;
+  const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
+  if (!r || r.status !== 200) return offline();
+  const saved = (await r.json()).id;
+  dirty = false;
+  await openSet(saved);
+  say("set-status", t.saved);
+}
+
+$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [] }); };
+$("set-name").oninput = () => (dirty = true);
+$("set-add-search").oninput = drawSetAdd;
+$("set-save").onclick = saveSet;
+$("set-delete").onclick = async () => {
+  if (!currentSet.id || !confirm(fill(t.setDeleteConfirm, currentSet.name))) return;
+  await api(`/api/sets/${encodeURIComponent(currentSet.id)}`, { method: "DELETE" }).catch(() => null);
+  dirty = false;
+  currentSet = null;
+  $("set-form").hidden = true;
+  $("set-pick").hidden = false;
+  await loadSets();
+};
+
+// ---- import (the same engine as the app's import, run by the tablet) ----
+// "askTab" asks the tablature question here and sends again with the answer; the song opens in the editor to check
 async function runImport(body) {
   $("tab-question").hidden = true;
-  const r = await api("/api/import", { method: "POST", body: JSON.stringify(body) }).catch(() => null);
+  const r = await post("/api/import", body);
   if (!r) return offline();
   const data = await r.json().catch(() => ({}));
-  if (r.status === 409) return importStatus(importErrors()[data.error] || t.unreadable, true);
+  if (r.status === 409) return say("import-status", problems()[data.error] || t.unreadable, "error");
   if (data.status === "askTab") {
     $("tab-question").hidden = false;
     $("tab-yes").onclick = () => runImport({ ...body, withTab: true });
     $("tab-no").onclick = () => runImport({ ...body, withTab: false });
     return;
   }
-  // like the app: the song opens in the editor to check, and is only saved with Save
-  fillForm({ id: "", title: data.title, author: data.author, year: data.year, tempo: data.tempo, text: data.text });
+  say("import-status", "");
+  tab("songs");
+  fillForm({ id: "", title: data.title, author: data.author, year: data.year, tempo: data.tempo, text: data.text, track: "" });
   dirty = true;
-  setStatus(t.imported);
+  say("status", t.imported);
 }
 
-$("import-open").onclick = showImport;
-$("convert").onclick = () => { if ($("paste").value.trim()) runImport({ text: $("paste").value }); };
-$("fetch").onclick = () => {
-  if (!$("url").value.trim()) return;
-  importStatus(t.reading);
-  runImport({ url: $("url").value });
+$("web-go").onclick = async () => {
+  const q = $("web-search").value.trim();
+  if (!q) return;
+  say("import-status", t.reading);
+  const r = await post("/api/search", { q });
+  if (!r) return offline();
+  const data = await r.json().catch(() => []);
+  if (r.status === 409) return say("import-status", problems()[data.error] || t.unreadable, "error");
+  say("import-status", data.length ? "" : t.notFound);
+  $("results").replaceChildren(...data.map((x) => li(x.title, new URL(x.url).host.replace(/^www\./, ""), () => {
+    say("import-status", t.reading);
+    runImport({ url: x.url });
+  })));
 };
+$("convert").onclick = () => { if ($("paste").value.trim()) runImport({ text: $("paste").value }); };
+$("fetch").onclick = () => { if ($("url").value.trim()) { say("import-status", t.reading); runImport({ url: $("url").value }); } };
 
 // files: each one becomes a song right away (a ChordPro file brings its own title; otherwise the file name)
 async function importFiles(list) {
@@ -352,14 +588,14 @@ async function importFiles(list) {
   for (const file of list) {
     const text = await file.text();
     const title = file.name.replace(/\.[^.]+$/, "");
-    const r = await api("/api/import", { method: "POST", body: JSON.stringify({ text, title, withTab: true }) }).catch(() => null);
+    const r = await post("/api/import", { text, title, withTab: true });
     if (!r || r.status !== 200) continue;
     const d = await r.json();
     if (d.status !== "song") continue;
-    const s = await api("/api/songs", { method: "POST", body: JSON.stringify({ title: d.title || title, author: d.author, year: d.year, tempo: d.tempo, text: d.text }) }).catch(() => null);
+    const s = await post("/api/songs", { title: d.title || title, author: d.author, year: d.year, tempo: d.tempo, text: d.text });
     if (s && s.status === 200) added++; else if (s && s.status === 409) existing++;
   }
-  importStatus(fill(t.filesDone, added, existing));
+  say("files-status", fill(t.filesDone, added, existing));
   await loadList();
 }
 $("files-pick").onclick = () => $("files").click();
@@ -368,18 +604,108 @@ $("drop").ondragover = (e) => { e.preventDefault(); $("drop").classList.add("ove
 $("drop").ondragleave = () => $("drop").classList.remove("over");
 $("drop").ondrop = (e) => { e.preventDefault(); $("drop").classList.remove("over"); importFiles([...e.dataTransfer.files]); };
 
-$("search").oninput = drawList;
-$("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "" }); };
-$("save").onclick = save;
-$("delete").onclick = remove;
-$("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
-$("key-up").onclick = () => changeText("/api/transpose", { semitones: 1 });
-$("capo-down").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) - 1 });
-$("capo-up").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) + 1 });
-["f-title", "f-author", "f-year", "f-tempo", "f-text"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-text") drawKeyCapo(); }));
-// Ctrl+S / Cmd+S saves
-document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s" && !$("form").hidden) { e.preventDefault(); save(); } });
-window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+// 3 words and band: the same review as the app (mine stays; what came along goes in; similar ones are a choice)
+let review = null;
+function showReview(data, statusId) {
+  review = data;
+  $("review").hidden = false;
+  $("review-name").value = data.name;
+  $("review-name").parentElement.hidden = data.songsOnly;
+  $("review-rows").replaceChildren(...data.rows.map((row, i) => {
+    const el = document.createElement("li");
+    const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
+    const body = document.createElement("span"); body.className = "t";
+    const title = document.createElement("div"); title.textContent = [row.title, row.artist].filter(Boolean).join(" · ");
+    const sub = document.createElement("div"); sub.className = "sub";
+    sub.textContent = { have: t.rowHave, came: t.rowCame, missing: t.rowMissing, similar: t.which }[row.status];
+    if (row.status === "came") sub.className = "sub ok";
+    if (row.status === "missing") sub.className = "sub error";
+    body.append(title, sub);
+    if (row.status === "similar") {
+      const sel = document.createElement("select"); sel.dataset.row = i; sel.id = "choice-" + i;
+      sel.append(new Option(t.leaveOut, ""), ...row.candidates.map((c) => new Option([c.title, c.author].filter(Boolean).join(" · "), c.id)));
+      body.append(sel);
+    }
+    el.append(n, body);
+    return el;
+  }));
+  say(statusId, "");
+}
+$("words-go").onclick = async () => {
+  const code = $("words").value.trim();
+  if (!code) return;
+  const r = await post("/api/receive", { code });
+  if (!r) return offline();
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 409) return say("words-status", { not_found: t.codeNotFound, offline: t.codeOffline, newer: t.newer }[data.error] || t.codeNotFound, "error");
+  showReview(data, "words-status");
+};
+$("review-create").onclick = async () => {
+  if (!review) return;
+  const choices = {};
+  document.querySelectorAll("#review-rows select").forEach((s) => { if (s.value) choices[s.dataset.row] = s.value; });
+  const r = await post("/api/receive/create", { token: review.token, name: $("review-name").value, choices });
+  if (!r || r.status !== 200) return say("words-status", t.codeNotFound, "error");
+  review = null;
+  $("review").hidden = true;
+  say("words-status", t.receiveDone, "ok");
+  await Promise.all([loadList(), loadSets(), loadBand()]);
+};
+
+async function loadBand() {
+  const r = await api("/api/band").catch(() => null);
+  if (!r) return;
+  if (r.status === 409) { say("band-status", t.noInternet, "error"); $("band").replaceChildren(); return; }
+  const items = await r.json().catch(() => []);
+  say("band-status", items.length ? "" : t.bandNone);
+  $("band").replaceChildren(...items.map((x) => li(x.name || x.from, `${x.from} · ${x.count}`, async () => {
+    const o = await post("/api/band/open", { code: x.id });
+    if (!o || o.status !== 200) return say("band-status", t.codeNotFound, "error");
+    $("words").value = "";
+    showReview(await o.json(), "band-status");
+    $("review").scrollIntoView({ behavior: "smooth" });
+  })));
+}
+$("band-sync").onclick = async () => {
+  say("band-status", t.syncing);
+  await post("/api/band/sync", {});
+  setTimeout(loadBand, 4000);
+};
+
+// .stagebook file: the tablet keeps it while the page picks the parts, then merges or replaces
+let backupToken = null;
+$("backup-pick").onclick = () => $("backup-file").click();
+$("backup-file").onchange = async () => {
+  const file = $("backup-file").files[0];
+  $("backup-file").value = "";
+  if (!file) return;
+  say("backup-status", t.reading);
+  const r = await fetch("/api/backup/inspect", { method: "POST", body: file, headers: { "X-Stagebook": "1", "Content-Type": "application/octet-stream" }, credentials: "same-origin" }).catch(() => null);
+  if (!r) return offline();
+  const data = await r.json().catch(() => ({}));
+  if (r.status !== 200) return say("backup-status", data.error === "unreadable" ? t.unreadable : t.offline, "error");
+  if (data.newer) return say("backup-status", t.newer, "error");
+  backupToken = data.token;
+  for (const p of ["library", "tracks", "settings"]) {
+    const box = $("part-" + p);
+    box.checked = data.parts.includes(p) && p !== "settings";
+    box.disabled = !data.parts.includes(p);
+  }
+  $("backup-parts").hidden = false;
+  say("backup-status", `${t.songs}: ${data.songs}`);
+};
+async function restore(replace) {
+  const parts = ["library", "tracks", "settings"].filter((p) => $("part-" + p).checked);
+  if (!parts.length) return say("backup-status", t.restoreNeeds, "error");
+  if (replace && !confirm(t.replace + "?")) return;
+  const r = await post("/api/backup/restore", { token: backupToken, parts, replace });
+  if (!r || r.status !== 204) return say("backup-status", t.unreadable, "error");
+  $("backup-parts").hidden = true;
+  say("backup-status", t.restored, "ok");
+  await Promise.all([loadList(), loadSets()]);
+}
+$("backup-merge").onclick = () => restore(false);
+$("backup-replace").onclick = () => restore(true);
 
 function offline() {
   const el = $("offline");

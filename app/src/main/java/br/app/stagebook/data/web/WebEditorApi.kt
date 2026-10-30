@@ -16,8 +16,17 @@ class WebEditorApi(
     private val repository: LibraryRepository,
     private val afterSave: (String) -> Unit = {},
     private val importer: () -> br.app.stagebook.data.PageImporter? = { null },
-    private val readPage: suspend (String) -> String? = { null },
+    // opens a page out of sight on the tablet and runs a script on it (null = the import extraction)
+    private val readPage: suspend (url: String, script: String?) -> String? = { _, _ -> null },
+    private val receiver: () -> WebReceive? = { null },
+    private val band: () -> Band? = { null },
+    private val backup: () -> br.app.stagebook.data.Backup? = { null },
+    private val tracks: () -> br.app.stagebook.data.TrackStore? = { null },
+    private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir")) },
 ) {
+    /** The band, for Import → Sync with the band / Received from the band. */
+    class Band(val items: () -> List<br.app.stagebook.data.BandInbox.Item>, val sync: () -> Unit)
+
     @Serializable
     data class SongItem(val id: String, val title: String, val author: String, val year: String, val key: String)
 
@@ -29,6 +38,7 @@ class WebEditorApi(
         val year: String = "",
         val tempo: String = "",
         val text: String = "",
+        val track: String = "",   // the backing track file ("" = none); read only, changed by its own calls
     )
 
     @Serializable
@@ -36,6 +46,43 @@ class WebEditorApi(
 
     @Serializable
     private data class Saved(val id: String)
+
+    @Serializable
+    data class SearchRequest(val q: String = "")
+
+    @Serializable
+    data class ReceiveRequest(val code: String = "")
+
+    @Serializable
+    data class ReceiveCreate(val token: String = "", val name: String = "", val choices: Map<Int, String> = emptyMap())
+
+    @Serializable
+    private data class Created(val setlist: String)
+
+    @Serializable
+    data class SetItem(val id: String, val name: String, val count: Int)
+
+    /** A setlist with its songs in order; a song deleted from the library comes with an empty title. */
+    @Serializable
+    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList())
+
+    @Serializable
+    data class SetSave(val name: String = "", val items: List<String> = emptyList())
+
+    @Serializable
+    data class BackupInfo(val token: String, val parts: List<String>, val songs: Int, val newer: Boolean)
+
+    @Serializable
+    data class BackupRestore(val token: String = "", val parts: List<String> = emptyList(), val replace: Boolean = false)
+
+    @Serializable
+    private data class TrackSet(val track: String)
+
+    @Serializable
+    data class Received(val id: String, val from: String, val name: String, val count: Int, val updated: Boolean)
+
+    @Serializable
+    data class SearchResult(val title: String, val url: String)
 
     /** Import from the computer: pasted text (with a title from the file name) or a page address. */
     @Serializable
@@ -65,6 +112,27 @@ class WebEditorApi(
             parts == listOf("transpose") && req.method == "POST" -> change(req) { Chords.transposeSong(it.text, it.semitones) }
             parts == listOf("capo") && req.method == "POST" -> change(req) { Chords.withCapo(it.text, it.capo) }
             parts == listOf("import") && req.method == "POST" -> import(req)
+            parts == listOf("search") && req.method == "POST" -> search(req)
+            parts == listOf("receive") && req.method == "POST" -> receive(req)
+            parts == listOf("receive", "create") && req.method == "POST" -> receiveCreate(req)
+            parts == listOf("band") && req.method == "GET" -> bandItems()
+            parts == listOf("band", "sync") && req.method == "POST" -> bandSync()
+            parts == listOf("band", "open") && req.method == "POST" -> bandOpen(req)
+            parts == listOf("sets") && req.method == "GET" -> ok(json.encodeToString(repository.library.value.sets.map { SetItem(it.id, it.name, it.items.size) }))
+            parts == listOf("sets") && req.method == "POST" -> setCreate(req)
+            parts.size == 2 && parts[0] == "sets" -> when (req.method) {
+                "GET" -> repository.library.value.setlist(parts[1])?.let { ok(json.encodeToString(setData(it))) } ?: HttpResponse.status(404)
+                "PUT" -> setSave(parts[1], req)
+                "DELETE" -> if (repository.library.value.setlist(parts[1]) == null) HttpResponse.status(404) else { repository.deleteSetlist(parts[1]); HttpResponse.status(204) }
+                else -> HttpResponse.status(405)
+            }
+            parts == listOf("backup", "inspect") && req.method == "POST" -> backupInspect(req)
+            parts == listOf("backup", "restore") && req.method == "POST" -> backupRestore(req)
+            parts.size == 3 && parts[0] == "songs" && parts[2] == "track" -> when (req.method) {
+                "PUT" -> trackPut(parts[1], req)
+                "DELETE" -> trackDelete(parts[1])
+                else -> HttpResponse.status(405)
+            }
             else -> null
         }
     }
@@ -76,7 +144,7 @@ class WebEditorApi(
     )
 
     // the BPM has its own field: out of the text, so it isn't in two places
-    private fun data(s: Song) = SongData(s.id, s.title, s.author, s.year, Chords.directive(s.text, "tempo").orEmpty(), Chords.setDirective(s.text, "tempo", ""))
+    private fun data(s: Song) = SongData(s.id, s.title, s.author, s.year, Chords.directive(s.text, "tempo").orEmpty(), Chords.setDirective(s.text, "tempo", ""), s.track)
 
     private fun save(id: String?, req: HttpRequest): HttpResponse {
         val d = runCatching { json.decodeFromString<SongData>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
@@ -107,7 +175,7 @@ class WebEditorApi(
                 // the page is opened by the tablet over the internet: not in essential mode, only web addresses
                 if (!repository.library.value.look.internetOn) return@runBlocking null to "offline"
                 if (!url.startsWith("https://") && !url.startsWith("http://")) return@runBlocking null to "bad_address"
-                engine.fromScript(readPage(url) ?: return@runBlocking null to "unreadable", r.withTab) to ""
+                engine.fromScript(readPage(url, null) ?: return@runBlocking null to "unreadable", r.withTab) to ""
             } else {
                 // a ChordPro file brings its own title and artist
                 val title = Chords.directive(r.text, "title") ?: r.title
@@ -130,6 +198,140 @@ class WebEditorApi(
                 ),
             )
         }
+    }
+
+    // Import → From the internet, from the computer: the tablet searches (Google, as in the import browser) and keeps
+    // only the results from the sites in Settings → Import (chord sites in the chords profile, lyric sites otherwise)
+    private fun search(req: HttpRequest): HttpResponse {
+        val q = runCatching { json.decodeFromString<SearchRequest>(req.text()).q.trim() }.getOrNull().orEmpty()
+        if (q.isEmpty()) return HttpResponse.status(400)
+        val look = repository.library.value.look
+        if (!look.internetOn) return problem("offline")
+        val sites = if (look.chords) look.chordSites else look.lyricSites
+        val hosts = sites.mapNotNull { runCatching { java.net.URI(it.url).host?.removePrefix("www.") }.getOrNull() }
+        val url = "https://www.google.com/search?q=" + java.net.URLEncoder.encode((if (look.chords) "cifra " else "letra ") + q, "UTF-8")
+        val raw = kotlinx.coroutines.runBlocking { readPage(url, WebPageReader.resultsScript(hosts)) } ?: return problem("unreadable")
+        val found = runCatching { json.decodeFromString<List<SearchResult>>(json.decodeFromString<String>(raw)) }.getOrNull() ?: return problem("unreadable")
+        return ok(json.encodeToString(found))
+    }
+
+    // Import → Type the 3 words, from the computer: the review comes back here, creating is a second call
+    private fun receive(req: HttpRequest): HttpResponse {
+        val r = receiver() ?: return HttpResponse.status(404)
+        val code = runCatching { json.decodeFromString<ReceiveRequest>(req.text()).code }.getOrNull().orEmpty()
+        return when (val f = kotlinx.coroutines.runBlocking { r.fetch(code) }) {
+            is WebReceive.Fetched.Ok -> ok(json.encodeToString(f.review))
+            is WebReceive.Fetched.Problem -> problem(f.error)
+        }
+    }
+
+    private fun receiveCreate(req: HttpRequest): HttpResponse {
+        val r = receiver() ?: return HttpResponse.status(404)
+        val c = runCatching { json.decodeFromString<ReceiveCreate>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        val id = r.create(c.token, c.name, c.choices) ?: return problem("expired")
+        return ok(json.encodeToString(Created(id)))
+    }
+
+    // the band: what arrived (also shown in the app's Import menu) and "Sync now"; works over the network or the internet
+    private fun bandOff() = repository.library.value.look.let { !it.bandOn && !it.internetOn }
+
+    private fun bandItems(): HttpResponse {
+        val b = band() ?: return HttpResponse.status(404)
+        if (bandOff()) return problem("offline")
+        return ok(json.encodeToString(b.items().filterNot { it.newer }.map { Received(it.id, it.fromName, it.setName, it.songCount, it.updated) }))
+    }
+
+    private fun bandSync(): HttpResponse {
+        val b = band() ?: return HttpResponse.status(404)
+        if (bandOff()) return problem("offline")
+        b.sync()
+        return HttpResponse.status(204)
+    }
+
+    private fun bandOpen(req: HttpRequest): HttpResponse {
+        val b = band() ?: return HttpResponse.status(404)
+        val r = receiver() ?: return HttpResponse.status(404)
+        val id = runCatching { json.decodeFromString<ReceiveRequest>(req.text()).code }.getOrNull().orEmpty()
+        val item = b.items().firstOrNull { it.id == id } ?: return problem("not_found")
+        val review = r.fromInbox(item.id, item.text, item.songs) ?: return problem("not_found")
+        return ok(json.encodeToString(review))
+    }
+
+    // Import → Open a .stagebook file, from the computer: the file waits on the tablet while the page picks the parts
+    private var waitingBackup: Pair<String, java.io.File>? = null
+
+    @Synchronized
+    private fun backupInspect(req: HttpRequest): HttpResponse {
+        val b = backup() ?: return HttpResponse.status(404)
+        val upload = req.file ?: return HttpResponse.status(400)
+        val contents = kotlinx.coroutines.runBlocking { upload.inputStream().use { b.inspect(it) } } ?: return problem("unreadable")
+        waitingBackup?.second?.delete()
+        val token = java.util.UUID.randomUUID().toString()
+        val kept = java.io.File(workDir(), "backup-$token.stagebook")
+        if (!upload.renameTo(kept)) return problem("unreadable")
+        waitingBackup = token to kept
+        return ok(json.encodeToString(BackupInfo(token, contents.parts.map { it.name.lowercase() }, contents.songs, contents.newer)))
+    }
+
+    @Synchronized
+    private fun backupRestore(req: HttpRequest): HttpResponse {
+        val b = backup() ?: return HttpResponse.status(404)
+        val r = runCatching { json.decodeFromString<BackupRestore>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        val (token, file) = waitingBackup ?: return problem("expired")
+        if (token != r.token) return problem("expired")
+        val parts = r.parts.mapNotNull { p -> br.app.stagebook.data.Backup.Part.entries.firstOrNull { it.name.equals(p, ignoreCase = true) } }.toSet()
+        val done = kotlinx.coroutines.runBlocking { file.inputStream().use { b.restore(it, parts, r.replace) } }
+        file.delete()
+        waitingBackup = null
+        return if (done) HttpResponse.status(204) else problem("unreadable")
+    }
+
+    // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=
+    private fun trackPut(id: String, req: HttpRequest): HttpResponse {
+        val store = tracks() ?: return HttpResponse.status(404)
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        val upload = req.file ?: return HttpResponse.status(400)
+        val ext = req.query["name"].orEmpty().substringAfterLast('.', "").lowercase().filter(Char::isLetterOrDigit)
+        val named = java.io.File(workDir(), "track-${java.util.UUID.randomUUID()}.$ext")
+        if (!upload.renameTo(named)) return problem("unreadable")
+        try {
+            val name = kotlinx.coroutines.runBlocking { store.copy(id, android.net.Uri.fromFile(named)) } ?: return problem("format")
+            repository.updateSong(id) { it.copy(track = name) }
+            if (song.track != name) store.remove(song.track)
+            return ok(json.encodeToString(TrackSet(name)))
+        } finally {
+            named.delete()
+        }
+    }
+
+    private fun trackDelete(id: String): HttpResponse {
+        val store = tracks() ?: return HttpResponse.status(404)
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        repository.updateSong(id) { it.copy(track = "") }
+        store.remove(song.track)
+        return HttpResponse.status(204)
+    }
+
+    // setlists (T37d): the same as the Setlists tab; an empty name becomes the date and time, as in the app
+    private fun setData(set: br.app.stagebook.data.model.Setlist) = SetData(
+        set.id, set.name,
+        set.items.map { id -> repository.song(id)?.let { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text)) } ?: SongItem(id, "", "", "", "") },
+    )
+
+    private fun setCreate(req: HttpRequest): HttpResponse {
+        val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        val name = d.name.trim().ifEmpty { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
+        val id = repository.createSetlist(name)
+        if (d.items.isNotEmpty()) repository.setSetlistItems(id, d.items.filter { repository.song(it) != null })
+        return ok(json.encodeToString(Saved(id)))
+    }
+
+    private fun setSave(id: String, req: HttpRequest): HttpResponse {
+        if (repository.library.value.setlist(id) == null) return HttpResponse.status(404)
+        val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        if (d.name.isNotBlank()) repository.renameSetlist(id, d.name.trim())
+        repository.setSetlistItems(id, d.items.filter { repository.song(it) != null })
+        return ok(json.encodeToString(Saved(id)))
     }
 
     private fun ok(body: String) = HttpResponse.json(200, body)
