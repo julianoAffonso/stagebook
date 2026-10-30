@@ -417,7 +417,7 @@
     <string name="settings_pedal_disconnected">Desconectado. Ligue o pedal ou pareie de novo.</string>
     <string name="settings_pedal_connected_short">conectado</string>
     <string name="settings_pedal_disconnected_short">desconectado</string>
-    <string name="settings_pedal_test_card">Teste de botão</string>
+    <string name="settings_pedal_test_card">Configurar um botão</string>
     <string name="settings_pedal_from_device">de %1$s</string>
     <string name="settings_pedal_from_device_builtin">do próprio aparelho, não do pedal</string>
     <string name="settings_font_card">Tamanho da letra</string>
@@ -443,7 +443,7 @@
     <string name="settings_screen_on_short">Fica ligada com o app aberto</string>
     <string name="settings_screen_off_short">Apaga normalmente</string>
     <string name="settings_pair_pedal">Parear pedal</string>
-    <string name="settings_pedal_test">Aperte um botão do pedal para ver se ele está conectado.</string>
+    <string name="settings_pedal_test">Aperte um botão do pedal para ver qual é e escolher o que ele faz.</string>
     <string name="settings_pedal_last">Último botão: %1$s</string>
     <string name="settings_pedal_next">avança a página</string>
     <string name="settings_pedal_previous">volta a página</string>
@@ -463,7 +463,7 @@
     <string name="settings_language_help">Quer o Stagebook na sua língua? Ajude a traduzir. O passo a passo está em Sobre → Ver o código.</string>
     <string name="language_system">Automática (a do aparelho)</string>
     <string name="pedal_key_code">Tecla %1$d</string>
-    <string name="settings_pedal_keys_none">Nenhum botão mudado. Eles fazem o padrão, avançar e voltar a página. Para mudar um, aperte o botão e escolha o que ele faz em Teste de botão.</string>
+    <string name="settings_pedal_keys_none">Nenhum botão mudado. Eles fazem o padrão, avançar e voltar a página. Para mudar um, aperte o botão e escolha o que ele faz em Configurar um botão.</string>
     <string name="settings_pedal_key_reset">Voltar %1$s ao padrão</string>
     <string name="midi_cc">MIDI CC %1$d (canal %2$d)</string>
     <string name="midi_note">MIDI nota %1$d (canal %2$d)</string>
@@ -486,7 +486,7 @@
     <string name="settings_midi_found_none">Nenhum pedal MIDI achado. Confira se ele está ligado, perto e no modo MIDI Bluetooth.</string>
     <string name="settings_midi_usb_about">Sobre o pedal pelo USB</string>
     <string name="settings_midi_after">Depois de conectar</string>
-    <string name="settings_midi_help">Depois de conectar, aperte um botão do pedal e escolha o que ele faz em Teste de botão.</string>
+    <string name="settings_midi_help">Depois de conectar, aperte um botão do pedal e escolha o que ele faz em Configurar um botão.</string>
     <string name="settings_midi_location">Nesta versão do Android, a localização do aparelho precisa estar ligada para a procura achar o pedal.</string>
     <string name="settings_library">Biblioteca e backup</string>
     <string name="library_card">Sua biblioteca</string>

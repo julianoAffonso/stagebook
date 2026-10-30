@@ -417,7 +417,7 @@
     <string name="settings_pedal_disconnected">Disconnected. Turn the pedal on or pair it again.</string>
     <string name="settings_pedal_connected_short">connected</string>
     <string name="settings_pedal_disconnected_short">disconnected</string>
-    <string name="settings_pedal_test_card">Button test</string>
+    <string name="settings_pedal_test_card">Set up a button</string>
     <string name="settings_pedal_from_device">from %1$s</string>
     <string name="settings_pedal_from_device_builtin">from the device itself, not the pedal</string>
     <string name="settings_font_card">Lyrics size</string>
@@ -443,7 +443,7 @@
     <string name="settings_screen_on_short">Stays on while the app is open</string>
     <string name="settings_screen_off_short">Goes dark as usual</string>
     <string name="settings_pair_pedal">Pair pedal</string>
-    <string name="settings_pedal_test">Press a pedal button to see if it\'s connected.</string>
+    <string name="settings_pedal_test">Press a pedal button to see which it is and pick what it does.</string>
     <string name="settings_pedal_last">Last button: %1$s</string>
     <string name="settings_pedal_next">next page</string>
     <string name="settings_pedal_previous">previous page</string>
@@ -465,7 +465,7 @@
     <string name="language_pt" translatable="false">Português (Brasil)</string>
     <string name="language_en" translatable="false">English</string>
     <string name="pedal_key_code">Key %1$d</string>
-    <string name="settings_pedal_keys_none">No buttons changed. They do the default, next and previous page. To change one, press it and pick what it does in Button test.</string>
+    <string name="settings_pedal_keys_none">No buttons changed. They do the default, next and previous page. To change one, press it and pick what it does in Set up a button.</string>
     <string name="settings_pedal_key_reset">Reset %1$s to default</string>
     <string name="midi_cc">MIDI CC %1$d (channel %2$d)</string>
     <string name="midi_note">MIDI note %1$d (channel %2$d)</string>
@@ -488,7 +488,7 @@
     <string name="settings_midi_found_none">No MIDI pedal found. Check that it\'s on, close by and in Bluetooth MIDI mode.</string>
     <string name="settings_midi_usb_about">About the USB pedal</string>
     <string name="settings_midi_after">After connecting</string>
-    <string name="settings_midi_help">After connecting, press a pedal button and pick what it does in Button test.</string>
+    <string name="settings_midi_help">After connecting, press a pedal button and pick what it does in Set up a button.</string>
     <string name="settings_midi_location">On this Android version, location has to be on for the search to find the pedal.</string>
     <string name="settings_library">Library and backup</string>
     <string name="library_card">Your library</string>
