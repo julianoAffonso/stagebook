@@ -112,9 +112,10 @@ private fun Header(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs, if (centered) Alignment.CenterHorizontally else Alignment.Start),
     ) {
-        // upright, the header has a fixed height: the faders side by side start on the same line
+        // upright, the header has a fixed height: the faders side by side start on the same line (tall enough for the
+        // name, the channel and a two-line summary, which used to get cut)
         Column(
-            Modifier.weight(1f, fill = !centered).then(if (centered) Modifier.height(64.dp) else Modifier),
+            Modifier.weight(1f, fill = !centered).then(if (centered) Modifier.height(80.dp) else Modifier),
             horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             Text(strip.name.ifEmpty { title }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -189,7 +190,6 @@ private fun NameField(strip: MixChannel, title: String, onChange: (MixChannel) -
     onValueChange = { onChange(strip.copy(name = it.take(24))) },
     label = { Text(stringResource(R.string.mixer_name)) },
     placeholder = { Text(title) },
-    supportingText = { if (strip.name.isNotEmpty()) Text(title) },
     singleLine = true,
     modifier = modifier,
 )

@@ -472,12 +472,6 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
                         }) else null,
                     )
                 }
-                Text(
-                    stringResource(R.string.settings_version, uiState.version),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = Spacing.m),
-                )
             }
         }
     }
@@ -1087,7 +1081,8 @@ private fun EssentialDetail(look: Look, actions: SettingsActions) {
  */
 @Composable
 private fun PlayerDetail(look: Look, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_player), help = stringResource(R.string.settings_player_mode_help)) {
+    // "USB output", not "Player" again under the screen's own title
+    SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
     }
     MixerCard(look.mixer, actions)
@@ -1274,7 +1269,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         InfoText(stringResource(R.string.backup_open_info))
         InfoText(stringResource(R.string.backup_open_merge))
         InfoText(stringResource(R.string.backup_open_replace))
-        ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.fillMaxWidth(), icon = AppIcons.Upload, tone = ButtonTone.Tonal)
+        ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.fillMaxWidth(), icon = AppIcons.Folder, tone = ButtonTone.Tonal)
         InfoText(stringResource(R.string.backup_open_other_device))
     }
     // the other ways to send songs and setlists live on other screens: here only the map
