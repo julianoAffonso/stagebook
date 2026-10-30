@@ -283,7 +283,8 @@
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="inbox_versions">%1$s · %2$d versões</string>
     <string name="inbox_latest">mais nova</string>
-    <string name="inbox_updated_at">atualizado às %1$s</string>
+    <string name="inbox_updated_today">atualizado às %1$s</string>
+    <string name="inbox_updated_day">atualizado em %1$s, %2$s</string>
     <string name="inbox_versions_hint">Mais de um membro mandou o mesmo setlist: abra cada versão para conferir o que muda e escolha qual usar.</string>
     <string name="import_tab_title">Esta cifra tem tablatura</string>
     <string name="import_tab_message">Importar a tablatura junto? No palco ela aparece em letra de máquina, cabendo na tela. Dá para apagar depois no editor.</string>
