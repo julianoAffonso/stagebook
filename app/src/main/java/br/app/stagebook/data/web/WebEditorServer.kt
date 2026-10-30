@@ -47,12 +47,16 @@ class WebEditorServer @Inject constructor(
     private val _address = MutableStateFlow("")
     val address: StateFlow<String> = _address
 
-    val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value })
+    private val idle = IdleTimer(IDLE_MS)
+    private var idleJob: Job? = null
+
+    val routes = WebEditorRoutes(auth, ::page, ::strings, { identity.name.value }, onAccess = idle::touch)
 
     init {
         scope.launch {
             repository.library.map { it.look.webEditorOn && !it.look.essential }.distinctUntilChanged().collect { update() }
         }
+
     }
 
     fun setForeground(on: Boolean) {
@@ -74,6 +78,13 @@ class WebEditorServer @Inject constructor(
         } ?: run { Log.w(TAG, "no free port"); return }
         server = socket
         _address.value = addressOf(socket.localPort)
+        idle.touch()
+        idleJob = scope.launch {
+            while (isActive) {
+                kotlinx.coroutines.delay(IDLE_CHECK_MS)
+                if (idle.expired()) turnOff()
+            }
+        }
         serverJob = scope.launch {
             while (isActive) {
                 val client = runCatching { socket.accept() }.getOrNull() ?: break
@@ -86,7 +97,13 @@ class WebEditorServer @Inject constructor(
         runCatching { server?.close() }
         server = null
         serverJob?.cancel()
+        idleJob?.cancel()
         _address.value = ""
+    }
+
+    // switches it off in Settings too: to use it again, turn it on there
+    private fun turnOff() {
+        if (repository.library.value.look.webEditorOn) repository.updateLook { it.copy(webEditorOn = false) }
     }
 
     private fun serve(client: Socket) = client.use { s ->
@@ -125,6 +142,8 @@ class WebEditorServer @Inject constructor(
         const val PORT = 8090
         private const val TIMEOUT_MS = 15_000
         const val MAX_BODY = 2 * 1024 * 1024
+        const val IDLE_MS = 5 * 60_000L
+        private const val IDLE_CHECK_MS = 30_000L
 
         /** Texts the page uses, by the name it knows them. */
         val WEB_STRINGS = mapOf(

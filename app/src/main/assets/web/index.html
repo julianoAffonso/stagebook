@@ -93,6 +93,10 @@ function connected(session) {
   show("app");
 }
 
+// while this page is open, it tells the tablet every minute: the editor turns itself off after 5 minutes without access,
+// but not with the page open
+setInterval(() => api("/api/ping").catch(() => {}), 60000);
+
 function offline() {
   const el = document.getElementById("offline");
   el.textContent = t.offline || "Stagebook?";
