@@ -5,9 +5,7 @@ import androidx.core.content.edit
 import br.app.stagebook.domain.BandCrypto
 import br.app.stagebook.domain.BandProtocol
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -55,7 +53,7 @@ class BandInternet @Inject constructor(
 
     private val prefs = context.getSharedPreferences("band_net", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
     private val lock = Mutex()
 
     init {

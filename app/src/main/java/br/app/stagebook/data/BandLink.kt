@@ -16,10 +16,8 @@ import androidx.compose.runtime.Immutable
 import br.app.stagebook.domain.BandProtocol
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -69,7 +67,7 @@ class BandLink @Inject constructor(
 
     enum class Join { WAITING, ACCEPTED, DENIED, BUSY, VERSION, FAILED }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
 
     private val _peers = MutableStateFlow<List<Peer>>(emptyList())
     val peers: StateFlow<List<Peer>> = _peers
@@ -151,15 +149,17 @@ class BandLink @Inject constructor(
      * to catch up with whoever is on the same Wi-Fi. Never on stage (the search already respects that).
      */
     fun burst(ms: Long = BURST_MS, evenOnStage: Boolean = false) {
-        if (evenOnStage) { onStageSearch++; update() } else setScreenOpen(true)
+        if (evenOnStage) { onStageSearch.incrementAndGet(); update() } else setScreenOpen(true)
         scope.launch {
             kotlinx.coroutines.delay(ms)
-            if (evenOnStage) { onStageSearch = (onStageSearch - 1).coerceAtLeast(0); update() } else setScreenOpen(false)
+            if (evenOnStage) { onStageSearch.updateAndGet { (it - 1).coerceAtLeast(0) }; update() } else setScreenOpen(false)
         }
     }
 
     // only "Lead the band" searches on stage, and always briefly (burst): find whoever came back to the Wi-Fi
-    @Volatile private var onStageSearch = 0
+    // changed from the main thread and from IO: atomic, or a lost update kept the search (and the multicast lock) on
+    // during the show (audit 30/10)
+    private val onStageSearch = java.util.concurrent.atomic.AtomicInteger()
 
     /** Sends a setlist or songs to everyone in the band on the network now; returns the ids of who got it. */
     suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Set<String> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
@@ -310,7 +310,7 @@ class BandLink @Inject constructor(
     // the search turns on and off by itself, without touching the announcement: a screen that needs it open and off
     // stage
     private fun updateSearch() {
-        val want = _running.value && ((screenOpen && !stage.onStage.value) || onStageSearch > 0)
+        val want = _running.value && ((screenOpen && !stage.onStage.value) || onStageSearch.get() > 0)
         if (want && !searching) startSearch() else if (!want && searching) stopSearch()
     }
 
@@ -406,7 +406,7 @@ class BandLink @Inject constructor(
         runCatching { nsd.discoverServices(BandProtocol.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener) }
     }
 
-    private val names = mutableMapOf<String, String>()   // id → announced service name
+    private val names = java.util.concurrent.ConcurrentHashMap<String, String>()   // id → announced service name (NSD and IO threads)
 
     @Suppress("DEPRECATION")   // resolveService: the replacement (registerServiceInfoCallback) is Android 14 only
     private fun resolveNext() {
@@ -418,7 +418,8 @@ class BandLink @Inject constructor(
                     val id = info.attributes[ATTR_ID]?.decodeToString()
                     val name = info.attributes[ATTR_NAME]?.decodeToString().orEmpty().take(BandProtocol.MAX_NAME)
                     val host = info.host
-                    if (id != null && id != identity.id && host != null) {
+                    // a resolve that arrives after the search stopped doesn't bring back a device already gone
+                    if (id != null && id != identity.id && host != null && searching) {
                         names[id] = info.serviceName
                         val v = info.attributes[ATTR_V]?.decodeToString()?.toIntOrNull() ?: BandProtocol.VERSION
                         val app = info.attributes[ATTR_APP]?.decodeToString().orEmpty().take(20)

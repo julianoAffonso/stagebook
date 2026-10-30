@@ -5,10 +5,8 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import br.app.stagebook.data.model.ChordPlayMode
 import br.app.stagebook.domain.ChordSynth
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,7 +18,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ChordPlayer @Inject constructor() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = backgroundScope(Dispatchers.Default)   // errors logged, never a crash on stage
     private var job: Job? = null
     @Volatile private var track: AudioTrack? = null
 
