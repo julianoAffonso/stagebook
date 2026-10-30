@@ -107,6 +107,7 @@
     <!-- palco -->
     <string name="stage_exit_confirm">Sair do palco?</string>
     <string name="stage_exit">Sair</string>
+    <string name="stage_position">%1$d de %2$d</string>
     <string name="stage_next">Próxima: %1$s</string>
     <string name="stage_end">Fim do setlist</string>
     <string name="stage_edit">Editar a letra nesta página</string>
