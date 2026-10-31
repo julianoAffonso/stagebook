@@ -38,8 +38,9 @@ done
 achou=0
 while read -r serial estado _; do
     [ "$estado" = "device" ] || { [ -n "$serial" ] && echo "$serial: $estado (aceite a depuração na tela do aparelho ou pareie de novo)"; continue; }
-    fab=$("$ADB" -s "$serial" shell getprop ro.product.manufacturer | tr -d '\r' | tr '[:upper:]' '[:lower:]')
-    modelo=$("$ADB" -s "$serial" shell getprop ro.product.model | tr -d '\r')
+    # </dev/null: adb shell reads stdin, and inside the loop it would eat the other devices' lines
+    fab=$("$ADB" -s "$serial" shell getprop ro.product.manufacturer </dev/null | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+    modelo=$("$ADB" -s "$serial" shell getprop ro.product.model </dev/null | tr -d '\r')
     case "$fab" in
         tcl*) nome=TCL ;;
         samsung*) nome=S26 ;;

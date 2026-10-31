@@ -367,7 +367,9 @@ class BandLink @Inject constructor(
 
     private fun register(port: Int) {
         val info = NsdServiceInfo().apply {
-            serviceName = "Stagebook"
+            // the band name ("nxtpaper"), not a fixed "Stagebook": it's what Android shows when it asks which device to
+            // connect to (31/10). The others read the name and id from the attributes below, so nothing else changes
+            serviceName = identity.name.value.ifBlank { "Stagebook" }
             serviceType = BandProtocol.SERVICE_TYPE
             setPort(port)
             setAttribute(ATTR_ID, identity.id)

@@ -237,6 +237,14 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
         if (section == SettingsSection.ADVANCED) advancedVm.refresh()
         onPauseOrDispose { }
     }
+    // without the local network permission (where Android has it) the system hides this device from the band (the S26
+    // wasn't found, 31/10); asked again when Settings → Band opens, and the search restarts once it's given
+    val localNetwork = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) { bandVm.screenOpen(false); bandVm.screenOpen(true) }
+    }
+    LaunchedEffect(section == SettingsSection.BAND) {
+        if (section == SettingsSection.BAND && br.app.stagebook.needsLocalNetwork(context)) localNetwork.launch(br.app.stagebook.LOCAL_NETWORK)
+    }
     DisposableEffect(section == SettingsSection.BAND) {
         val open = section == SettingsSection.BAND
         bandVm.screenOpen(open)
