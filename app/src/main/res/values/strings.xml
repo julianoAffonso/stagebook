@@ -861,4 +861,6 @@
     <string name="settings_track_button">Track button on stage</string>
     <string name="settings_track_stops">Stop goes back to the start</string>
     <string name="settings_track_stops_detail">Off, the button pauses and the song goes on from where it stopped.</string>
+    <string name="eq_no_channel">On, it would change nothing. In the mixer, tap the channel to equalize and turn on \"Equalizer on\"; then turn the equalizer on here.</string>
+    <string name="eq_no_channel_title">No channel goes through the equalizer</string>
 </resources>

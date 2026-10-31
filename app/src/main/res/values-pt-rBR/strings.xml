@@ -859,4 +859,6 @@
     <string name="settings_track_button">Botão da faixa no palco</string>
     <string name="settings_track_stops">Parar volta ao início</string>
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
+    <string name="eq_no_channel">Ligado, ele não mudaria nada. No mixer, toque no canal que quer equalizar e ligue \"Equalizador ligado\"; depois ligue o equalizador aqui.</string>
+    <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
 </resources>

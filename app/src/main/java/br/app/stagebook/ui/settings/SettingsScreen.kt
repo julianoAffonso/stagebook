@@ -143,6 +143,7 @@ import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.CenteredContent
 import br.app.stagebook.ui.components.ColorSwatchRow
 import br.app.stagebook.ui.components.ConfirmDialog
+import br.app.stagebook.ui.components.InfoDialog
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.ScreenHeader
@@ -1213,7 +1214,13 @@ internal fun MixerCard(
 @Composable
 internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels, monitoring: Boolean) {
     SettingsCard(stringResource(R.string.eq_title), help = stringResource(R.string.eq_help)) {
-        SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { onMixer(mixer.copy(eqOn = it)) })
+        // turning it on with no channel going through it would change nothing: a notice, and the switch stays off until
+        // a channel is sent to the EQ (user, 31/10)
+        var noChannel by remember { mutableStateOf(false) }
+        SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { on ->
+            if (on && mixer.strips.take(mixer.channels).none { it.eq }) noChannel = true else onMixer(mixer.copy(eqOn = on))
+        })
+        if (noChannel) InfoDialog(stringResource(R.string.eq_no_channel_title), stringResource(R.string.eq_no_channel), { noChannel = false })
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
