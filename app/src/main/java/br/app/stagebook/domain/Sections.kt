@@ -27,13 +27,16 @@ object Sections {
     private val tail = Regex("^(.*?)\\s*(\\d+)?\\s*(\\(?\\s*(?:x\\s*\\d+|\\d+\\s*x|\\d+\\s*vezes)\\s*\\)?)?\\s*$")
     private val brackets = Regex("[\\])(\\[]")
     private val digits = Regex("(\\d+)")
+    private val tabPrefix = Regex("^tab(?:\\s*[-:]\\s*|\\s+)(?=\\S)")
 
     /** Is the whole line a section title? (only keyword, number and repeat; no lyrics) */
     fun detect(line: String): Header? {
         val t = line.trim()
         if (t.isEmpty() || t.length > 40) return null
         val inner = shape.matchEntire(t)?.groupValues?.get(1)?.replace(brackets, " ")?.trim() ?: return null
-        val m = tail.matchEntire(TextKey.of(inner)) ?: return null
+        // "[Tab - Intro]" is the Intro of a tab (Cifra Club's title): the "tab" word goes, the section stays (31/10)
+        val key = TextKey.of(inner).replace(tabPrefix, "")
+        val m = tail.matchEntire(key) ?: return null
         val word = m.groupValues[1].trim()
         val kind = Kind.entries.firstOrNull { word in it.keys } ?: return null
         val number = when {

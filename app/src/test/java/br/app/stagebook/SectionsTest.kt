@@ -41,4 +41,12 @@ class SectionsTest {
         val text = "Chorus:\nletra um\n\nVerse 2\nletra dois"
         assertEquals("[Refrão]\nletra um\n\n[Verso 2]\nletra dois", Sections.normalize(text, SectionLang.PT))
     }
+
+    // Cifra Club writes the tab's part as "[Tab - Intro]": the section is the Intro, the tab word is only the source
+    @org.junit.Test fun `a tab title keeps its section`() {
+        assertEquals(Sections.Kind.INTRO, Sections.detect("[Tab - Intro]")?.kind)
+        assertEquals(Sections.Kind.SOLO, Sections.detect("[Tab: Solo]")?.kind)
+        assertEquals(Sections.Kind.CHORUS, Sections.detect("[Tab Refrão]")?.kind)
+        assertEquals(null, Sections.detect("[Tab - Intro] and some lyrics here"))
+    }
 }
