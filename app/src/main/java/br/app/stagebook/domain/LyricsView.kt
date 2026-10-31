@@ -17,7 +17,7 @@ object LyricsView {
 
     // structure directives (sections, comments) belong to the lyrics and stay visible; the rest ({key}, {capo},
     // {define}…) is chords
-    private val structure = Regex("""^\s*\{\s*(start_of_\w+|end_of_\w+|so[cvb]|eo[cvb]|comment|c|ci)\s*(:.*)?}\s*$""", RegexOption.IGNORE_CASE)
+    private val structure = Regex("""^\s*\{\s*(start_of_\w+|end_of_\w+|so[cvb]|eo[cvb]|comment|c|ci)\s*(:.*)?\}\s*$""", RegexOption.IGNORE_CASE)
 
     private fun hidden(line: String) =
         (Chords.isDirective(line) && !structure.matches(line)) || (Chords.hasChords(line) && plain(line).isBlank())
