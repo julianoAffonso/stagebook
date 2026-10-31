@@ -1123,8 +1123,8 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
     }
-    MixerCard(look.mixer, actions)
-    EqCard(look.mixer, actions)
+    MixerCard(look.mixer, actions.onMixer, actions.mixerLevels, actions.monitoring, actions.onMonitoring)
+    EqCard(look.mixer, actions.onMixer, actions.mixerLevels, actions.monitoring)
 }
 
 @Composable
@@ -1139,16 +1139,21 @@ private fun UsbRequirements() = HelpTip(
 )
 
 @Composable
-private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
-    val onMixer = actions.onMixer
-    val levels = actions.mixerLevels
+internal fun MixerCard(
+    mixer: MixerConfig,
+    onMixer: (MixerConfig) -> Unit,
+    levels: () -> MixerLevels,   // read only when drawing the meters
+    monitoring: Boolean,
+    onMonitoring: (Boolean) -> Unit,
+) {
+    // also opened over the stage, with the song playing (user, 31/10: from Settings the track stopped)
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // channel being edited (the first of the pair); -1 = none
     SettingsCard(stringResource(R.string.mixer_title), help = stringResource(R.string.mixer_help) + "\n\n" + stringResource(R.string.mixer_routes_help)) {
         OptionDropdown(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
         )
-        SwitchRow(stringResource(R.string.mixer_monitor), actions.monitoring, actions.onMonitoring)
+        SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
         // which output the shown routing belongs to (the one in use or the last used)
         Text(
             pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
@@ -1173,7 +1178,7 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
                                 output = mixer.outputOf(g.first),
                                 outputs = mixer.output,
                                 meters = { levels().meters },
-                                showMeters = actions.monitoring,
+                                showMeters = monitoring,
                                 modifier = Modifier.weight(1f),
                                 upright = upright,
                             )
@@ -1200,9 +1205,7 @@ private fun MixerCard(mixer: MixerConfig, actions: SettingsActions) {
 }
 
 @Composable
-private fun EqCard(mixer: MixerConfig, actions: SettingsActions) {
-    val onMixer = actions.onMixer
-    val levels = actions.mixerLevels
+internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels, monitoring: Boolean) {
     SettingsCard(stringResource(R.string.eq_title), help = stringResource(R.string.eq_help)) {
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { onMixer(mixer.copy(eqOn = it)) })
         val setBand = { i: Int, v: Float ->
@@ -1217,7 +1220,7 @@ private fun EqCard(mixer: MixerConfig, actions: SettingsActions) {
         Box(Modifier.fillMaxWidth()) {
             SpectrumView(
                 { levels().spectrumDb.mapIndexed { b, v -> if (v <= Spectrum.FLOOR_DB) v else v + response[b] } },
-                active = { actions.monitoring && levels().live },
+                active = { monitoring && levels().live },
                 modifier = Modifier.matchParentSize().padding(vertical = Spacing.l),
             )
             Row(Modifier.fillMaxWidth()) {

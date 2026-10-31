@@ -152,6 +152,9 @@ class StageViewModel @Inject constructor(
     }
 
     /** Capo changed on stage: saved in the song right away. */
+    /** The single mixer (the same as Settings → Player), changed over the stage while the song plays. */
+    fun setMixer(mixer: br.app.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
+
     fun setCapo(songId: String, capo: Int) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.withCapo(it.text, capo)) }
     }
