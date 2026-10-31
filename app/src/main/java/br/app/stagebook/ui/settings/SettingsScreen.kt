@@ -127,6 +127,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.layout
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
 import br.app.stagebook.ui.installApk
@@ -229,6 +230,13 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
     val bandActions = remember(bandVm) { bandVm.actions() }
     val webVm: WebEditorViewModel = hiltViewModel()
     val web by webVm.ui.collectAsStateWithLifecycle()
+    val advancedVm: AdvancedViewModel = hiltViewModel()
+    val advanced by advancedVm.ui.collectAsStateWithLifecycle()
+    // read again every time the section opens and when coming back from Android's settings (battery request)
+    LifecycleResumeEffect(section == SettingsSection.ADVANCED) {
+        if (section == SettingsSection.ADVANCED) advancedVm.refresh()
+        onPauseOrDispose { }
+    }
     DisposableEffect(section == SettingsSection.BAND) {
         val open = section == SettingsSection.BAND
         bandVm.screenOpen(open)
@@ -284,6 +292,9 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 web = web,
                 onWebEditorOn = viewModel::setWebEditorOn,
                 onWebRemove = webVm::remove,
+                advanced = advanced,
+                onTweak = advancedVm::set,
+                onBatteryFree = { runCatching { context.startActivity(advancedVm.batteryRequest()) } },
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         Languages.set(context, lang)
@@ -365,6 +376,10 @@ data class SettingsActions(
     val web: WebEditorUi = WebEditorUi(),
     val onWebEditorOn: (Boolean) -> Unit = {},
     val onWebRemove: (String) -> Unit = {},
+    // Settings → Advanced (31/10)
+    val advanced: AdvancedUi = AdvancedUi(),
+    val onTweak: (br.app.stagebook.data.device.DeviceTweak, Boolean) -> Unit = { _, _ -> },
+    val onBatteryFree: () -> Unit = {},
     val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
@@ -399,6 +414,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
+    ADVANCED(R.string.settings_advanced, AppIcons.Tune),   // Android settings for playing without failures (31/10)
     ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
 }
 
@@ -513,6 +529,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
     SettingsSection.ABOUT -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
+    SettingsSection.ADVANCED -> stringResource(R.string.settings_advanced_short)
     SettingsSection.LIBRARY -> pluralStringResource(R.plurals.song_count, ui.songCount, ui.songCount) + " · " +
         pluralStringResource(R.plurals.set_count, ui.setCount, ui.setCount)
 }
@@ -532,6 +549,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
+            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree)
             SettingsSection.ABOUT -> AboutDetail(uiState, actions)
         }
     }

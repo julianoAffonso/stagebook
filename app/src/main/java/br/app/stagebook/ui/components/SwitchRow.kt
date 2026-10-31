@@ -19,9 +19,9 @@ import br.app.stagebook.ui.theme.Spacing
  * switch on the right, and tapping anywhere on the row also toggles.
  */
 @Composable
-fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, detail: String? = null) {
+fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, detail: String? = null, enabled: Boolean = true) {
     Row(
-        modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChange),
+        modifier.fillMaxWidth().toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onChange),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
@@ -29,7 +29,7 @@ fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, modi
             Text(label, style = MaterialTheme.typography.bodyLarge)
             detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 
