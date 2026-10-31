@@ -637,7 +637,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stageKeyCapoPhone() {
         compose.setContent { StagebookTheme { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) } }
-        compose.onNodeWithText(str(R.string.stage_key_short, "G"), useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription(str(R.string.stage_key_desc, "G"), useUnmergedTree = true).performClick()
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_7_palco_tom_capo.png")
     }
