@@ -259,6 +259,7 @@
     <string name="editor_capo">Capotraste</string>
     <string name="editor_capo_down">Capo uma casa abaixo</string>
     <string name="editor_capo_up">Capo uma casa acima</string>
+    <string name="stage_key_none_desc">Tom ainda não definido</string>
     <string name="stage_key_desc">Tom: %1$s</string>
     <string name="backup_save_card">Salvar arquivo</string>
     <string name="backup_save_info">Salva o que estiver marcado num arquivo .stagebook. Serve de backup, para trocar de aparelho ou para mandar a alguém.</string>
@@ -313,6 +314,7 @@
     <string name="stage_key_capo_title">Tom e capo</string>
     <string name="stage_key_capo_saved">Fica salvo na música.</string>
     <string name="stage_capo_short">Capo %1$d</string>
+    <string name="stage_key_none">Tom —</string>
     <string name="stage_key_short">Tom %1$s</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="inbox_versions">%1$s · %2$d versões</string>
