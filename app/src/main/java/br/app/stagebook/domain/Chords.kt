@@ -311,7 +311,7 @@ object Chords {
         return best
     }
 
-    /** No {key}: saves the key computed from the chords (only on import; whatever the user writes later wins). */
+    /** No {key}: saves the key computed from the chords (on import and on save in the editor; a key already written wins). */
     fun withDetectedKey(text: String): String =
         if (key(text).isNotEmpty()) text else detectKey(text).takeIf { it.isNotEmpty() }?.let { setDirective(text, "key", it) } ?: text
 
