@@ -31,17 +31,24 @@ for n in ET.fromstring(sys.stdin.read()).iter("node"):
 
 # toca no elemento cujo texto ou descrição é exatamente o pedido (de preferência clicável); se não houver, o que contém
 achar() {
-    nodes | python3 -c '
-import sys
+    dump | python3 -c '
+import re, sys, xml.etree.ElementTree as ET
 alvo = sys.argv[1].strip().lower()
-linhas = [l.rstrip("\n").split(" | ") for l in sys.stdin if l.strip()]
-def rotulos(p): return [p[1].strip().lower(), p[2].strip().lower()]
-def ok(p, exato): return (alvo in rotulos(p)) if exato else any(alvo in r for r in rotulos(p) if r)
+nodes = []
+for n in ET.fromstring(sys.stdin.read()).iter("node"):
+    t, d = n.get("text", ""), n.get("content-desc", "")
+    if not (t or d): continue
+    nums = re.findall(r"\d+", n.get("bounds"))
+    x1, y1, x2, y2 = map(int, nums)
+    nodes.append(((x1+x2)//2, (y1+y2)//2, t, d, n.get("clickable") == "true"))
 for exato in (True, False):
-    for clic in ("1", None):
-        for p in linhas:
-            if (clic is None or p[3].strip() == clic) and ok(p, exato):
-                print(f"{p[0].split()[0]} {p[0].split()[1]} | {p[1]} | {p[2]}"); sys.exit(0)
+    for clic in (True, None):
+        for x, y, t, d, c in nodes:
+            if clic and not c: continue
+            rot = [t.strip().lower(), d.strip().lower()]
+            ok = (alvo in rot) if exato else any(alvo in r for r in rot if r)
+            if ok:
+                print(f"{x} {y} | {t} | {d}"); sys.exit(0)
 sys.exit(1)' "$ARG"
 }
 
