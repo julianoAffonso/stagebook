@@ -143,7 +143,9 @@ fun stageLines(
 
 internal fun tabLine(raw: String, em: Float = TAB_EM): AnnotatedString = buildAnnotatedString {
     withAnnotation(TAB_TAG, "") {
-        withStyle(SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = em.em)) { append(raw) }
+        // the dashes show as box-drawing lines: one unbroken string per tab line, with the frets sitting on it (31/10).
+        // Monospace keeps every character the same width, so the frets stay in their columns
+        withStyle(SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = em.em)) { append(raw.replace('-', '\u2500')) }
     }
 }
 

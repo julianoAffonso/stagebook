@@ -44,7 +44,8 @@ class TablatureTest {
         val names = br.app.stagebook.ui.stage.SectionNames(null)
         val withChords = br.app.stagebook.ui.stage.stageLines(text, names, androidx.compose.ui.graphics.Color.Cyan, true, br.app.stagebook.ui.stage.ChordLook(true, 0.8f, androidx.compose.ui.graphics.Color.Yellow))
         val tabLines = withChords.filter { it.text.hasStringAnnotations(br.app.stagebook.ui.stage.TAB_TAG, 0, it.text.length) }
-        assertEquals(listOf("e|---0---3---|", "B|---1---0---|"), tabLines.map { it.text.text })
+        // the stage shows the strings as box-drawing lines; the saved text keeps the dashes
+        assertEquals(listOf("e|───0───3───|", "B|───1───0───|"), tabLines.map { it.text.text })
         val lyricsOnly = br.app.stagebook.ui.stage.stageLines(text, names, androidx.compose.ui.graphics.Color.Cyan, true, br.app.stagebook.ui.stage.ChordLook(false, 0.8f, androidx.compose.ui.graphics.Color.Yellow))
         assertTrue(lyricsOnly.none { it.text.text.contains("|---") })
     }
