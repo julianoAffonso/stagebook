@@ -133,8 +133,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     private val lastKey = MutableStateFlow<PedalKeyUi?>(null)
-    // changing the language recreates the screen (and this ViewModel with it, no need to listen for changes)
-    private val language = Languages.get(context)
+    // the language shown in the picker: kept here, not read once, because changing the language recreates the
+    // Activity and this ViewModel survives it (a value read at creation stayed stale: bug found on the TCL, 31/10)
+    private val language = MutableStateFlow(Languages.get(context))
     // input devices connected now (the pedal shows here when connected)
     private val inputManager = context.getSystemService(InputManager::class.java)
     private val devices = MutableStateFlow(connectedDevices())
@@ -173,7 +174,14 @@ class SettingsViewModel @Inject constructor(
             SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, shown, version, lib.look.pedalName in connected, up)
         },
         midi.state,
-    ) { s, m -> s.copy(midi = m, language = language) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+        language,
+    ) { s, m, lang -> s.copy(midi = m, language = lang) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+
+    /** Saves the language and updates the picker at once; the screen then recreates to apply it. */
+    fun setLanguage(lang: AppLanguage) {
+        Languages.set(context, lang)
+        language.value = lang
+    }
 
     private val _messages = Channel<SettingsMessage>(Channel.BUFFERED)
     val messages = _messages.receiveAsFlow()

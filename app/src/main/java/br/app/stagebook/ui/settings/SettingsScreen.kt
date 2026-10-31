@@ -297,7 +297,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onBatteryFree = { runCatching { context.startActivity(advancedVm.batteryRequest()) } },
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
-                        Languages.set(context, lang)
+                        viewModel.setLanguage(lang)
                         (context as? Activity)?.recreate()   // the screens come back in the new language
                     }
                 },
