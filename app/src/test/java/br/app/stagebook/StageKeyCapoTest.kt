@@ -37,7 +37,7 @@ class StageKeyCapoTest {
                 )
             }
         }
-        compose.onNodeWithText("Tom G", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("Tom: G", useUnmergedTree = true).performClick()
         compose.onNodeWithContentDescription("Subir meio tom").performClick()
         compose.onNodeWithContentDescription("Capo uma casa acima").performClick()
         assertEquals(listOf("s1" to 1), transposed)
@@ -46,7 +46,7 @@ class StageKeyCapoTest {
 
     @Test fun `keyboard - only the key, no capo controls`() {
         compose.setContent { StagebookTheme { StageScreen(StageUiState(false, listOf(song), look = Look(instrument = Instrument.KEYBOARD, keyboardCapoHintSeen = true)), 0, 0, { _, _ -> }) } }
-        compose.onNodeWithText("Tom A", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("Tom: A", useUnmergedTree = true).performClick()
         compose.onNodeWithContentDescription("Subir meio tom").assertExists()
         compose.onNodeWithContentDescription("Capo uma casa acima").assertDoesNotExist()
     }

@@ -259,7 +259,6 @@
     <string name="editor_capo">Capo</string>
     <string name="editor_capo_down">Capo one fret down</string>
     <string name="editor_capo_up">Capo one fret up</string>
-    <string name="stage_key_none_desc">Key not set yet</string>
     <string name="stage_key_desc">Key: %1$s</string>
     <string name="backup_save_card">Save file</string>
     <string name="backup_save_info">Saves what\'s checked to a .stagebook file. Use it as a backup, to switch devices or to send to someone.</string>
@@ -313,9 +312,6 @@
     <string name="stage_key_adjust">change key and capo</string>
     <string name="stage_key_capo_title">Key and capo</string>
     <string name="stage_key_capo_saved">Saved in the song.</string>
-    <string name="stage_capo_short">Capo %1$d</string>
-    <string name="stage_key_none">Key —</string>
-    <string name="stage_key_short">Key %1$s</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
     <string name="inbox_versions">%1$s · %2$d versions</string>
     <string name="inbox_latest">newest</string>

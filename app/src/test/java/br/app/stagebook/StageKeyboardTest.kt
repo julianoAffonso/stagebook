@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.ui.stage.ChordShapePopup
@@ -32,7 +33,7 @@ class StageKeyboardTest {
         val state = StageUiState(false, listOf(StageSong("Música", "", text, false)), look = Look(instrument = Instrument.KEYBOARD))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onKeyboardHintSeen = { seen++ }) } }
         compose.onNodeWithText("teclado · capo na 2ª").assertExists()
-        compose.onNodeWithText("Tom A", useUnmergedTree = true).assertExists()   // the sounding key
+        compose.onNodeWithContentDescription("Tom: A", useUnmergedTree = true).assertExists()   // the sounding key
         compose.onNodeWithText("Esta cifra usa capo na 2ª casa", substring = true).assertExists()
         assertEquals(1, seen)
     }

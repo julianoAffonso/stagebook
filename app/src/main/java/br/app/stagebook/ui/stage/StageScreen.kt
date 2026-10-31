@@ -594,8 +594,7 @@ fun StageScreen(
             }
         }
         // key and capo belong to chords: they don't show in the lyrics only profile
-        // the tom and capo icons show on every song with chords (31/10), with or without a key set
-        val hasKey = look.chords
+        val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
         if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -1439,11 +1438,9 @@ private fun SongKeyBadges(
     val key = remember(text) { Chords.key(text) }
     // keyboard doesn't use a capo (user's request, 29/10): on its stage the capo doesn't show
     val capo = remember(text, showCapo) { if (showCapo) Chords.capo(text) else 0 }
-    // the tom and capo icons always show on a song with chords (31/10: they were missing when the song had no key);
-    // with nothing set they say so: "Capo 0", "Tom —"
-    if (key.isEmpty() && !showCapo && keyboardCapo == 0) return
+    if (key.isEmpty() && capo == 0 && keyboardCapo == 0) return
     val sounds = Chords.soundingKey(key, capo)
-    val keyDesc = if (key.isEmpty()) stringResource(R.string.stage_key_none_desc) else stringResource(R.string.stage_key_desc, key)
+    val keyDesc = stringResource(R.string.stage_key_desc, key)
     val capoDesc = if (key.isNotEmpty()) stringResource(R.string.stage_capo_sounds_desc, capo, sounds) else stringResource(R.string.stage_capo_desc, capo)
     // a tap on the capo or the key opens − and + for both, without leaving the stage; each change is saved right away
     var adjusting by remember { mutableStateOf(false) }
@@ -1455,18 +1452,23 @@ private fun SongKeyBadges(
         ) {
             // the capo comes before the key and lit: it changes what you play, it can't go unnoticed (user's request,
             // 29/10)
-            if (showCapo || capo > 0) {
+            if (capo > 0) {
                 val accent = MaterialTheme.colorScheme.primary
                 Row(Modifier.clearAndSetSemantics { contentDescription = capoDesc }, verticalAlignment = Alignment.CenterVertically) {
-                    // written out ("Capo 2"): a fretboard icon with a bare number didn't say what it was
-                    Text(stringResource(R.string.stage_capo_short, capo), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
+                    // the fretboard icon (the editor's) with the number: no word, as on the rest of the stage (31/10)
+                    Icon(AppIcons.Capo, null, tint = accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(Spacing.xs))
+                    Text("$capo", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = accent)
                     // the key that sounds with the capo, in view (the diagrams stay the chart's)
                     if (key.isNotEmpty()) Text(" " + stringResource(R.string.stage_capo_sounds_short, sounds), style = MaterialTheme.typography.titleSmall, color = accent)
                 }
             }
-            Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
-                val label = if (key.isEmpty()) stringResource(R.string.stage_key_none) else stringResource(R.string.stage_key_short, key)
-                Text(label, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+            if (key.isNotEmpty()) {
+                Row(Modifier.clearAndSetSemantics { contentDescription = keyDesc }, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(AppIcons.MusicNote, null, tint = fg.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(Spacing.xs))
+                    Text(key, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+                }
             }
             // keyboard with the chart transposed by the capo: says why the key is different
             if (keyboardCapo > 0) {
