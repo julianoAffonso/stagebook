@@ -855,4 +855,8 @@
     <string name="tweak_debugging">Modo desenvolvedor e depuração por Wi-Fi</string>
     <string name="tweak_debugging_detail">Para testar pelo computador com o adb, sem abrir os ajustes do Android. Vem desligado.</string>
     <string name="stage_mixer_open">Abrir o mixer</string>
+    <string name="stage_stop">Parar o backing track e voltar ao início</string>
+    <string name="settings_track_button">Botão da faixa no palco</string>
+    <string name="settings_track_stops">Parar volta ao início</string>
+    <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
 </resources>

@@ -920,6 +920,7 @@ fun StageScreen(
                 TrackButton(
                     hasTrack = song.track.isNotEmpty(),
                     playing = playing,
+                    stops = look.trackStops,
                     fg = fg,
                     onClick = { if (song.track.isEmpty()) onPickTrack(song.id) else onTogglePlay() },
                     onChange = { onPickTrack(song.id) },
@@ -1261,6 +1262,7 @@ private class PageHit {
 private fun TrackButton(
     hasTrack: Boolean,
     playing: Boolean,
+    stops: Boolean,
     fg: Color,
     onClick: () -> Unit,
     onChange: () -> Unit,
@@ -1278,8 +1280,9 @@ private fun TrackButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                when { !hasTrack -> AppIcons.QueueMusic; playing -> AppIcons.Pause; else -> AppIcons.Play },
-                stringResource(when { !hasTrack -> R.string.stage_track_pick; playing -> R.string.stage_pause; else -> R.string.stage_play }),
+                // playing: stop (back to the start, the default) or pause, as chosen in Settings → Player
+                when { !hasTrack -> AppIcons.QueueMusic; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
+                stringResource(when { !hasTrack -> R.string.stage_track_pick; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
                 tint = fg.copy(alpha = if (hasTrack) 0.85f else 0.5f),
             )
         }

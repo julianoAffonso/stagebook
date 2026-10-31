@@ -21,11 +21,24 @@ import org.robolectric.annotation.Config
 class StageMixerTest {
     @get:Rule val compose = createComposeRule()
 
-    private fun stage(track: String, playerMode: Boolean = true) {
+    private fun stage(track: String, playerMode: Boolean = true, playing: Boolean = false, stops: Boolean = true) {
         val song = StageSong("Música", "", "[G]linha", false, id = "s1", track = track)
         compose.setContent {
-            StagebookTheme { StageScreen(StageUiState(false, listOf(song), look = Look(playerMode = playerMode)), 0, 0, { _, _ -> }) }
+            StagebookTheme {
+                StageScreen(StageUiState(false, listOf(song), look = Look(playerMode = playerMode, trackStops = stops)), 0, 0, { _, _ -> }, playing = playing)
+            }
         }
+    }
+
+    // live, the track button stops and goes back to the start; pausing is a choice in Settings → Player (user, 31/10)
+    @Test fun `playing, the track button stops by default`() {
+        stage(track = "s1.ogg", playing = true)
+        compose.onNodeWithContentDescription("Parar o backing track e voltar ao início").assertExists()
+    }
+
+    @Test fun `playing, the track button pauses when stop is turned off`() {
+        stage(track = "s1.ogg", playing = true, stops = false)
+        compose.onNodeWithContentDescription("Pausar o backing track").assertExists()
     }
 
     @Test fun `the mixer button opens the mixer over the stage`() {

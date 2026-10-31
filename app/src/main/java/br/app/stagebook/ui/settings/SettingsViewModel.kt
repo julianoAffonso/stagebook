@@ -235,6 +235,7 @@ class SettingsViewModel @Inject constructor(
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, Look.MAX_AUTO_SCROLL)) }
     fun setStageMode(m: br.app.stagebook.data.model.StageMode) = repository.updateLook { it.copy(stageMode = m) }
     fun setKeepScreenOn(on: Boolean) = repository.updateLook { it.copy(keepScreenOn = on) }
+    fun setTrackStops(on: Boolean) = repository.updateLook { it.copy(trackStops = on) }
 
     fun checkUpdate() {
         if (updateJob?.isActive == true) return

@@ -310,6 +310,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                     }
                 },
                 onKeepScreenOn = viewModel::setKeepScreenOn,
+                onTrackStops = viewModel::setTrackStops,
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
@@ -390,6 +391,7 @@ data class SettingsActions(
     val onBatteryFree: () -> Unit = {},
     val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
+    val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (br.app.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
@@ -1122,6 +1124,10 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     // "USB output", not "Player" again under the screen's own title
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
+    }
+    // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10)
+    SettingsCard(stringResource(R.string.settings_track_button)) {
+        SwitchRow(stringResource(R.string.settings_track_stops), look.trackStops, actions.onTrackStops, detail = stringResource(R.string.settings_track_stops_detail))
     }
     MixerCard(look.mixer, actions.onMixer, actions.mixerLevels, actions.monitoring, actions.onMonitoring)
     EqCard(look.mixer, actions.onMixer, actions.mixerLevels, actions.monitoring)
