@@ -26,8 +26,15 @@ object ChordImport {
 
     fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t -> capoText.find(t)?.groupValues?.get(1)?.toIntOrNull() ?: t.trim().toIntOrNull() }?.takeIf { it in 1..12 } ?: 0
 
+    // sites pad the chord lines with non-breaking and thin spaces; Java's \s doesn't see them, so the line read as
+    // lyrics and only the lyrics came in (user, 31/10)
+    private val oddSpaces = Regex("[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]")
+
+    /** The text with every kind of space as a plain one (and tabs as 4 spaces, keeping the columns). */
+    fun plainSpaces(text: String): String = text.replace(oddSpaces, " ").replace("\t", "    ")
+
     /** Does the page have chords? (two or more chords-only lines) */
-    fun hasChords(text: String): Boolean = text.lineSequence().count(Chords::isChordLine) >= 2
+    fun hasChords(text: String): Boolean = plainSpaces(text).lineSequence().count(Chords::isChordLine) >= 2
 
     /**
      * The page's chords as ChordPro. [key] and [capo] come from the page (text like "Tom: G", "Capotraste na 2ª casa"),
@@ -36,7 +43,7 @@ object ChordImport {
     fun toChordPro(text: String, key: String = "", capo: String = ""): String {
         // the "Tom: G" and "Capotraste na 2ª casa" lines become directives: removed before converting (otherwise the G
         // from the key line would land above the lyrics below)
-        val all = text.replace("\r", "").split('\n').map { it.replace(trailingSpace, "") }
+        val all = plainSpaces(text).replace("\r", "").split('\n').map { it.replace(trailingSpace, "") }
         // marked tablature blocks ({start_of_tab}…{end_of_tab}, T22) pass as they are; the rest is converted
         val inTab = Tablature.tabLines(all.joinToString("\n"))
         val parts = ArrayList<String>()
