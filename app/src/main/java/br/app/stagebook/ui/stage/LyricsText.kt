@@ -155,6 +155,8 @@ private val bracket = Regex("""\[([^\[\]]*)]""")
  * Line with chords. Chords only (intro, solo): the chords themselves, in their color. With lyrics: the lyrics, with
  * space above each drawn line (taller line height) and a [CHORD_TAG] mark on the letter under each chord; the stage
  * draws the chord there. A stretch too short for the chord is padded with spaces, or the next chord would cover it.
+ * The room is measured by width, not letters: "Csus4" in bold is wider than five letters of lyrics (user, 31/10: in A
+ * Little Respect the chords landed on top of each other).
  */
 internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     data class Seg(val chord: String?, var text: String)
@@ -180,8 +182,9 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     }
     segs.forEachIndexed { i, s ->
         val chord = s.chord ?: return@forEachIndexed
-        val need = chord.length + if (i < segs.lastIndex) 1 else 0
-        if (s.text.length < need) s.text = s.text.padEnd(need)
+        if (i == segs.lastIndex) return@forEachIndexed
+        val need = emWidth(chord) * look.scale * BOLD + CHORD_GAP
+        while (emWidth(s.text) < need) s.text += " "
     }
     // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
     return buildAnnotatedString {
@@ -199,6 +202,20 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
         }
     }
 }
+
+// rough width of text in em, by kind of letter (proportional font): enough to keep one chord off the next
+private const val BOLD = 1.1f
+private const val CHORD_GAP = 0.5f
+
+internal fun emWidth(text: String): Float = text.sumOf { c ->
+    when {
+        c == ' ' || c in "iljI.,;:'!|()" -> 0.28
+        c in "mwMW" -> 0.85
+        c.isUpperCase() || c == '#' -> 0.68
+        c.isDigit() -> 0.56
+        else -> 0.52
+    }
+}.toFloat()
 
 /** Position in the lyrics where line `line` starts (one per '\n'). */
 fun lineStart(text: String, line: Int): Int {

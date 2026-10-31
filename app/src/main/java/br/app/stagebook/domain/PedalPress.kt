@@ -40,14 +40,16 @@ object MidiCode {
  * - CC: value ≥ 64 presses, < 64 releases (pedals send 127 and 0);
  * - note: Note On with velocity presses; Note Off or velocity 0 releases;
  * - Program Change: only presses (it has no release).
- * A second "press" without a release in between comes as a repeat, like a foot resting on the keyboard.
+ * Many pedals send only the press (CC 127 or Note On every time, never the release): the same message again while
+ * "held" is a new press (user, 31/10: the pedal moved the song once and then never again). A CC going up through
+ * other values without a release (expression pedal, knob) comes as a repeat, so it doesn't fire on every step.
  */
 class MidiDecoder(private val device: String) {
     private var status = 0
     private val data = IntArray(2)
     private var count = 0
     private var sysex = false
-    private val held = HashSet<Int>()
+    private val held = HashMap<Int, Int>()   // code → value of the press (CC value or velocity)
 
     fun feed(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size): List<PedalPress> {
         val out = ArrayList<PedalPress>(1)
@@ -86,8 +88,12 @@ class MidiDecoder(private val device: String) {
         // a note comes out as Note On (0x90) both ways: the same key presses and releases
         val code = MidiCode.of(if (type == 0x80) 0x90 or (status and 0x0F) else status, data[0])
         if (type == 0xC0) return PedalPress(code, down = true, device = device)
-        val repeat = if (down && !held.add(code)) 1 else 0
-        if (!down && !held.remove(code)) return null   // releasing without having pressed (CC going from 0 to 63): nothing
+        val value = data[1]
+        val repeat = if (down) {
+            val before = held.put(code, value)
+            if (before == null || before == value || type == 0x90) 0 else 1
+        } else 0
+        if (!down && held.remove(code) == null) return null   // releasing without having pressed (CC going from 0 to 63): nothing
         return PedalPress(code, down, repeat, device)
     }
 }
