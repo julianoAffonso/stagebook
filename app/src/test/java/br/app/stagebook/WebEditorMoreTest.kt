@@ -142,12 +142,13 @@ class WebEditorMoreTest {
         call(api, "PUT", "/api/songs/$id/track?name=a.ogg", file = File(context.cacheDir, "a.part").apply { writeBytes("OggS".toByteArray() + ByteArray(8)) })
         val first = repo.song(id)!!.track
         call(api, "PUT", "/api/songs/$id/track?name=b.ogg", file = File(context.cacheDir, "b.part").apply { writeBytes("OggS".toByteArray() + ByteArray(8)) })
-        assertTrue(!tracks.file(first).exists())   // the first one went away
+        assertTrue("first=$first now=${repo.song(id)!!.track}", !tracks.file(first).exists())   // the first one went away
         assertTrue(tracks.file(repo.song(id)!!.track).exists())
         val file = File(context.cacheDir, "wait.part")
         file.outputStream().use { backup.write(it, setOf(Backup.Part.LIBRARY)) }
+        val before = context.cacheDir.listFiles()!!.filter { it.name.startsWith("backup-") }.toSet()   // other tests' leftovers
         call(api, "POST", "/api/backup/inspect", file = file)
-        val waiting = context.cacheDir.listFiles()!!.filter { it.name.startsWith("backup-") }
+        val waiting = context.cacheDir.listFiles()!!.filter { it.name.startsWith("backup-") } - before
         assertEquals(1, waiting.size)
         api.clear()
         assertTrue(waiting.none { it.exists() })
