@@ -132,7 +132,7 @@ class BandLink @Inject constructor(
     /** Sends to a device on the network (package encrypted with the pair key, or a CODE_ACK); true if it stored it. */
     suspend fun sendTo(peer: Peer, body: String, kind: String = BandProtocol.Kind.PACKAGE): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
         runCatching {
-            val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+            val s = dial(peer)
             BandSession(identity.hello()).send(s, peer.id, body, kind)
         }.getOrDefault(false)
     }
@@ -166,11 +166,9 @@ class BandLink @Inject constructor(
         val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
         onlineMembers.value.map { peer ->
             this@io.async {
-                val member = trust.member(peer.id) ?: return@async null
-                val theirs = BandCrypto.publicKey(member.key) ?: return@async null
-                val key = BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
+                val key = pairKeyWith(peer.id) ?: return@async null
                 val ok = runCatching {
-                    val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                    val s = dial(peer)
                     BandSession(identity.hello()).send(s, peer.id, ShareCode.encrypt(key, plain))
                 }.getOrDefault(false)
                 if (ok) peer.id else null
@@ -181,6 +179,9 @@ class BandLink @Inject constructor(
     /** A song asked of the band (title and artist, as in the QR). */
     @kotlinx.serialization.Serializable
     data class Wanted(val title: String, val artist: String = "")
+
+    // a connection to a device on the Wi-Fi, with the usual timeout (it was written out in five places)
+    private fun dial(peer: Peer): Socket = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
 
     // pair key with a member (null if they're no longer in the band or the saved key doesn't open)
     private fun pairKeyWith(id: String): ByteArray? {
@@ -200,7 +201,7 @@ class BandLink @Inject constructor(
             this@io.async {
                 val key = pairKeyWith(peer.id) ?: return@async emptyList()
                 runCatching {
-                    val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                    val s = dial(peer)
                     val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain)) ?: return@async emptyList()
                     val bytes = ShareCode.decrypt(key, body) ?: return@async emptyList()
                     json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), bytes.decodeToString())
@@ -228,7 +229,7 @@ class BandLink @Inject constructor(
                 this@io.async {
                     val key = pairKeyWith(peer.id) ?: return@async null
                     runCatching {
-                        val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                        val s = dial(peer)
                         val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain), BandProtocol.Kind.CONDUCT)
                             ?: return@async null
                         val bytes = ShareCode.decrypt(key, body) ?: return@async null
@@ -268,8 +269,7 @@ class BandLink @Inject constructor(
     // package from a band member: decrypt with the pair key and keep it in the inbox
     private fun receive(from: BandProtocol.Hello, body: String): Boolean {
         val member = trust.member(from.id) ?: return false
-        val theirs = BandCrypto.publicKey(member.key) ?: return false
-        val key = BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
+        val key = pairKeyWith(member.id) ?: return false
         val plain = ShareCode.decrypt(key, body) ?: return false
         val pkg = runCatching { json.decodeFromString(Package.serializer(), plain.decodeToString()) }.getOrNull() ?: return false
         val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return false
@@ -450,7 +450,7 @@ class BandLink @Inject constructor(
         _joins.update { it + (peer.id to Join.WAITING) }
         scope.launch {
             val r = runCatching {
-                val s = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+                val s = dial(peer)
                 BandSession(identity.hello()).join(s) { h -> trust.add(h.id, h.name, h.key) }
             }.getOrDefault(BandSession.JoinResult.FAILED)
             _joins.update { it + (peer.id to when (r) { BandSession.JoinResult.ACCEPTED -> Join.ACCEPTED; BandSession.JoinResult.DENIED -> Join.DENIED; BandSession.JoinResult.BUSY -> Join.BUSY; BandSession.JoinResult.VERSION -> Join.VERSION; else -> Join.FAILED }) }
