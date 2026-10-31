@@ -216,7 +216,8 @@ class SettingsViewModel @Inject constructor(
      */
     fun setEssential(on: Boolean) {
         repository.updateLook {
-            it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = if (on) false else it.playerMode)
+            // turning it off brings every part back, the player too (user, 31/10: it stayed off)
+            it.copy(bandOn = !on, internetOn = !on, extrasOn = !on, playerMode = !on)
                 .copy(essentialAlertOff = false, webEditorOn = if (on) false else it.webEditorOn)
         }
         if (on) br.app.stagebook.player.StagePlayer.turnOff()
