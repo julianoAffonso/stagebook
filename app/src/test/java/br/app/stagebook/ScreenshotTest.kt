@@ -324,6 +324,22 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_detalhes_7.png")
     }
 
+    // Settings → Advanced (31/10): Android settings, all on except debugging; tall so the three cards show whole
+    @Test @Config(qualifiers = TABLET_TALL)
+    fun settingsAdvancedTablet() = shoot("tablet_5_ajustes_avancado") {
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(settings, SettingsActions(advanced = br.app.stagebook.ui.settings.sampleAdvanced), it, section = SettingsSection.ADVANCED)
+        }
+    }
+
+    // without the permission: the card with the command to give it from the computer
+    @Test @Config(qualifiers = PHONE)
+    fun settingsAdvancedNoPermissionPhone() = shoot("celular_5_ajustes_avancado_permissao") {
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(settings, SettingsActions(advanced = br.app.stagebook.ui.settings.sampleAdvanced.copy(canWrite = false)), it, section = SettingsSection.ADVANCED)
+        }
+    }
+
     @Test fun settingsEssentialTablet() = shoot("tablet_5_ajustes_essencial") {
         val look = settings.look.copy(bandOn = false, internetOn = false, extrasOn = false, playerMode = false)
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }

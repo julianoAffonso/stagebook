@@ -827,4 +827,33 @@
         <item quantity="other">%1$d músicas ficaram de fora: não eram letra nem cifra.</item>
     </plurals>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
+    <!-- Settings → Advanced (31/10) -->
+    <string name="settings_advanced">Avançado</string>
+    <string name="settings_advanced_short">Ajustes do Android para tocar sem falhas</string>
+    <string name="advanced_play">Para tocar sem falhas</string>
+    <string name="advanced_play_help">Ajustes do Android que já derrubaram a interface de áudio ou pararam o app no palco. Vêm ligados; desligue um só se souber por quê. Alguns só existem em certos tablets e só aparecem neles.</string>
+    <string name="advanced_battery_free">O Stagebook está livre da economia de bateria.</string>
+    <string name="advanced_battery_restricted">A economia de bateria pode parar o Stagebook com a tela apagada.</string>
+    <string name="advanced_battery_allow">Liberar da economia de bateria</string>
+    <string name="advanced_battery">Bateria do aparelho</string>
+    <string name="advanced_computer">Computador</string>
+    <string name="advanced_permission">Permissão pelo computador</string>
+    <string name="advanced_permission_text">Para mudar esses ajustes do Android, o Stagebook precisa de uma permissão dada uma vez por um computador com o adb, com o aparelho conectado:</string>
+    <string name="advanced_permission_copy">Copiar o comando</string>
+    <string name="tweak_charge">Carga inteligente desligada</string>
+    <string name="tweak_charge_detail">Em alguns tablets (TCL), a proteção de carga derruba a interface de áudio USB por um instante. Custo: carrega até 100%.</string>
+    <string name="tweak_usb_routing">Som do Android fora da interface USB</string>
+    <string name="tweak_usb_routing_detail">Os sons do próprio Android não disputam a interface de áudio com o player.</string>
+    <string name="tweak_battery_manager">Gerenciador de bateria desligado</string>
+    <string name="tweak_battery_manager_detail">O Android para de sugerir restringir o Stagebook, que gasta bateria de propósito ao tocar.</string>
+    <string name="tweak_animations">Animações mais curtas</string>
+    <string name="tweak_animations_detail">As telas trocam mais rápido e gastam menos bateria.</string>
+    <string name="tweak_screen_timeout">Tela apaga depois de 10 minutos</string>
+    <string name="tweak_screen_timeout_detail">Fora do palco. No palco, o Stagebook mantém a tela ligada sozinho.</string>
+    <string name="tweak_scans">Sem buscas em segundo plano</string>
+    <string name="tweak_scans_detail">Wi-Fi e Bluetooth param de procurar localização quando estão desligados.</string>
+    <string name="tweak_mobile_data">Dados móveis só sem Wi-Fi</string>
+    <string name="tweak_mobile_data_detail">Os dados móveis não ficam ligados com o Wi-Fi conectado.</string>
+    <string name="tweak_debugging">Modo desenvolvedor e depuração por Wi-Fi</string>
+    <string name="tweak_debugging_detail">Para testar pelo computador com o adb, sem abrir os ajustes do Android. Vem desligado.</string>
 </resources>

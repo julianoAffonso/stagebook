@@ -829,4 +829,33 @@
         <item quantity="other">%1$d songs stayed out: they weren\'t lyrics or chords.</item>
     </plurals>
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
+    <!-- Settings → Advanced (31/10) -->
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_advanced_short">Android settings for playing without failures</string>
+    <string name="advanced_play">For playing without failures</string>
+    <string name="advanced_play_help">Android settings that made the audio interface drop or the app stop on stage. They start on; turn one off only if you know why. Some only exist on certain tablets and appear only on them.</string>
+    <string name="advanced_battery_free">Stagebook is free from battery saving.</string>
+    <string name="advanced_battery_restricted">Battery saving can stop Stagebook with the screen off.</string>
+    <string name="advanced_battery_allow">Free from battery saving</string>
+    <string name="advanced_battery">Device battery</string>
+    <string name="advanced_computer">Computer</string>
+    <string name="advanced_permission">Permission from the computer</string>
+    <string name="advanced_permission_text">To change these Android settings, Stagebook needs a permission given once from a computer with adb, with the device connected:</string>
+    <string name="advanced_permission_copy">Copy the command</string>
+    <string name="tweak_charge">Smart charging off</string>
+    <string name="tweak_charge_detail">On some tablets (TCL), charge protection drops the USB audio interface for a moment. Cost: it charges up to 100%.</string>
+    <string name="tweak_usb_routing">Android sound off the USB interface</string>
+    <string name="tweak_usb_routing_detail">Android\'s own sounds don\'t compete with the player for the audio interface.</string>
+    <string name="tweak_battery_manager">Battery manager off</string>
+    <string name="tweak_battery_manager_detail">Android stops suggesting to restrict Stagebook, which uses battery on purpose while playing.</string>
+    <string name="tweak_animations">Shorter animations</string>
+    <string name="tweak_animations_detail">Screens change faster and use less battery.</string>
+    <string name="tweak_screen_timeout">Screen off after 10 minutes</string>
+    <string name="tweak_screen_timeout_detail">Outside the stage. On stage, Stagebook keeps the screen on by itself.</string>
+    <string name="tweak_scans">No searches in the background</string>
+    <string name="tweak_scans_detail">Wi-Fi and Bluetooth stop searching for location when they are off.</string>
+    <string name="tweak_mobile_data">Mobile data only without Wi-Fi</string>
+    <string name="tweak_mobile_data_detail">Mobile data doesn\'t stay on while Wi-Fi is connected.</string>
+    <string name="tweak_debugging">Developer mode and Wi-Fi debugging</string>
+    <string name="tweak_debugging_detail">For testing from a computer with adb, without opening Android\'s settings. Starts off.</string>
 </resources>

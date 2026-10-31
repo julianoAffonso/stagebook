@@ -31,6 +31,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- pedido padrão do Android para sair da economia de bateria (tocar com a tela apagada), com aviso antes -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Settings → Advanced: Android settings written by the app; granted once from a computer (adb pm grant) -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
 
     <application
         android:name=".StagebookApp"
