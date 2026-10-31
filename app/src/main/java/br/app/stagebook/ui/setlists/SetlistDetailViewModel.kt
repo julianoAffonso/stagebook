@@ -71,75 +71,30 @@ class SetlistDetailViewModel @Inject constructor(
         conduct.start(setId, set.name, songs)
     }
 
-    val internetOn: StateFlow<Boolean> = repository.library.map { it.look.internetOn }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.internetOn)
-    private val internet = combine(connectivity.online, internetOn) { a, b -> a && b }   // modo essencial (T19)
-    private fun connectivityNow() = connectivity.isOnline()
+    // the Share sheet's internet code and band send, shared with the songs screen
+    private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
+    val internetOn: StateFlow<Boolean> = share.internetOn
     val setId = savedStateHandle.toRoute<SetlistDetail>().setId
 
     /** Internet now? "Code over the internet" only shows with it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    private val _cloud = MutableStateFlow<CloudUi?>(null)
-    val cloud: StateFlow<CloudUi?> = _cloud.asStateFlow()
+    val cloud: StateFlow<CloudUi?> = share.cloud
+    val bandOnline: StateFlow<Int> = share.bandOnline
+    /** How many band devices got the last send (0 = nobody got it). */
+    val bandResult = share.bandResult
 
     /** Sends the setlist over the internet (with the songs, if [withSongs]); the code shows in a dialog. */
-    fun sendInternet(withSongs: Boolean) {
-        if (_cloud.value == CloudUi.Sending) return
-        _cloud.value = CloudUi.Sending
-        viewModelScope.launch {
-            val name = repository.library.value.setlist(setId)?.name.orEmpty()
-            val sent = setlistCloud.send(setId, withSongs)
-            // the code's QR: whoever is next to you takes a photo or scans it with "Scan QR"
-            val qr = sent?.let { s ->
-                withContext(Dispatchers.Default) { runCatching { QrEncoder.encode(ShareCode.qrText(s.code).toByteArray(), 600).asImageBitmap() }.getOrNull() }
-            }
-            sent?.let { bandInternet.remember(it.code); watchJoins(it.code) }
-            _cloud.value = sent?.let { CloudUi.Sent(it.code, name, it.songs, it.skipped, qr) } ?: CloudUi.Failed
-        }
-    }
+    fun sendInternet(withSongs: Boolean) =
+        share.sendCode(repository.library.value.setlist(setId)?.name.orEmpty()) { setlistCloud.send(setId, withSongs) }
 
-    fun dismissCloud() { _cloud.value = null; joinsJob?.cancel() }
-
-    private var joinsJob: kotlinx.coroutines.Job? = null
-
-    // with the words dialog open, checks now and then who accepted (they join the band); once closed, it stops
-    private fun watchJoins(code: String) {
-        joinsJob?.cancel()
-        joinsJob = viewModelScope.launch {
-            repeat(JOIN_CHECKS) {
-                kotlinx.coroutines.delay(JOIN_EVERY_MS)
-                val names = bandInternet.checkAcks(code)
-                if (names.isNotEmpty()) _cloud.update { c -> (c as? CloudUi.Sent)?.let { it.copy(joined = it.joined + names) } ?: c }
-            }
-        }
-    }
-
-    /**
-     * How many band members we can send to right now ("Send to the band (N)"): all of them if someone is on Wi-Fi or
-     * there's internet; 0 = the option doesn't show.
-     */
-    val bandOnline: StateFlow<Int> = combine(bandTrust.members, bandLink.onlineMembers, internet) { members, lan, net ->
-        if (members.isNotEmpty() && (lan.isNotEmpty() || net)) members.size else 0
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    private val bandSent = Channel<Int>(Channel.BUFFERED)
-    /** How many band devices got the last send (0 = nobody got it). */
-    val bandResult = bandSent.receiveAsFlow()
+    fun dismissCloud() = share.dismissCloud()
 
     /** The Share sheet opened or closed: turns the band search on or off. */
-    fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
+    fun bandSearch(on: Boolean) = share.bandSearch(on)
 
     /** Sends the setlist (with the songs, if [withSongs]) to everyone in the band on the network now. */
-    fun sendBand(withSongs: Boolean) {
-        viewModelScope.launch {
-            val pkg = setlistCloud.setlistPackage(setId, withSongs) ?: return@launch
-            // nearby ones (Wi-Fi) right away; the others over the internet, in each pair's inbox
-            val lan = bandLink.send(pkg.first, pkg.second)
-            val net = if (connectivityNow()) bandInternet.sendToBand(pkg.first, pkg.second, lan) else 0
-            bandSent.send(lan.size + net)
-        }
-    }
+    fun sendBand(withSongs: Boolean) = share.sendBand { setlistCloud.setlistPackage(setId, withSongs) }
 
     val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
         val set = lib.setlist(setId)
@@ -200,9 +155,4 @@ class SetlistDetailViewModel @Inject constructor(
     private var qrJob: Job? = null
 
     fun hideQr() { _qr.value = null }
-
-    private companion object {
-        const val JOIN_EVERY_MS = 15_000L
-        const val JOIN_CHECKS = 40   // 10 min at most
-    }
 }
