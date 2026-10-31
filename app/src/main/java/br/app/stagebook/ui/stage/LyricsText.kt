@@ -85,7 +85,7 @@ private val sectionDirectives = mapOf(
     "start_of_verse" to Sections.Kind.VERSE, "sov" to Sections.Kind.VERSE,
     "start_of_bridge" to Sections.Kind.BRIDGE, "sob" to Sections.Kind.BRIDGE,
 )
-private val directiveName = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*}\s*$""")
+private val directiveName = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*\}\s*$""")
 
 fun stageLines(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,

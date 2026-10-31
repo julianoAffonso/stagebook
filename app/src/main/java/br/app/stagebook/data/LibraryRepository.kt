@@ -275,4 +275,4 @@ class LibraryRepository @Inject constructor(
 private const val TAG = "stagebook"
 
 /** ChordPro section (`{start_of_chorus}`, `{soc}`…): the song already has titles. */
-private val SECTION_DIRECTIVE = Regex("""^\s*\{\s*(start_of_\w+|so[cvb])\s*(:.*)?}\s*$""", RegexOption.IGNORE_CASE)
+private val SECTION_DIRECTIVE = Regex("""^\s*\{\s*(start_of_\w+|so[cvb])\s*(:.*)?\}\s*$""", RegexOption.IGNORE_CASE)

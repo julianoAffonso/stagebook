@@ -127,7 +127,7 @@ object Voicings {
     fun defineKeys(chord: String, keys: List<Int>): String =
         "{define-keyboard: $chord keys ${keys.joinToString(" ") { (it - keys.first()).toString() }}}"
 
-    private val defineLine = Regex("""^\s*\{\s*define-(\w+)\s*:\s*(\S+)\s+(.*)}\s*$""")
+    private val defineLine = Regex("""^\s*\{\s*define-(\w+)\s*:\s*(\S+)\s+(.*)\}\s*$""")
 
     /** The shape saved in the song for the chord, if any (strings); null if there isn't one. */
     fun savedShape(text: String, instrument: Instrument, chord: String): Shape? {

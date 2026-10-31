@@ -10,8 +10,8 @@ object Tablature {
     const val START = "{start_of_tab}"
     const val END = "{end_of_tab}"
 
-    private val startDirective = Regex("""^\s*\{\s*(start_of_tab|sot)\s*(:.*)?}\s*$""", RegexOption.IGNORE_CASE)
-    private val endDirective = Regex("""^\s*\{\s*(end_of_tab|eot)\s*}\s*$""", RegexOption.IGNORE_CASE)
+    private val startDirective = Regex("""^\s*\{\s*(start_of_tab|sot)\s*(:.*)?\}\s*$""", RegexOption.IGNORE_CASE)
+    private val endDirective = Regex("""^\s*\{\s*(end_of_tab|eot)\s*\}\s*$""", RegexOption.IGNORE_CASE)
     // string name (optional) + bar, then only dashes, digits and technique marks (h p b r / \ ~ x)
     private val tabLine = Regex("""^\s*([A-Ga-g][#b]?\s*)?[|:][-0-9|hpbrxHPBRX/\\~().*\s]+$""")
 
