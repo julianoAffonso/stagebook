@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -55,10 +54,6 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var conduct: br.app.stagebook.data.BandConduct   // created here so a follower answers right away
     private val pedal = PedalInput()
 
-    // Android 17+: the band only finds and is found on the local network with this permission; asked on open so nobody
-    // reaches the band screen without it (user, 31/10: the S26 stayed invisible to the TCL until it was given)
-    private val localNetwork = registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) band.update() }
-
     // language chosen in settings (changing it recreates the Activity)
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Languages.wrap(newBase))
 
@@ -83,7 +78,6 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) { midi.presses.collect { pedal.dispatch(it) } }
         }
-        if (repository.library.value.look.bandOn && needsLocalNetwork(this)) localNetwork.launch(LOCAL_NETWORK)
         setContent {
             StagebookTheme {
                 val offer by updateOffer.offer.collectAsStateWithLifecycle()
@@ -155,6 +149,7 @@ const val LOCAL_NETWORK = "android.permission.ACCESS_LOCAL_NETWORK"
 /**
  * The device has the local network permission and it isn't given yet. Checked on the permission itself, not on a version
  * number: where Android doesn't have it, the local network works without it and there is nothing to ask (user, 31/10).
+ * Asked where it's used (Settings → Band, where one joins the band), as Android recommends (user's decision, 31/10).
  */
 fun needsLocalNetwork(c: Context): Boolean =
     runCatching { c.packageManager.getPermissionInfo(LOCAL_NETWORK, 0) }.isSuccess &&
