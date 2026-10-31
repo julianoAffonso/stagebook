@@ -79,7 +79,11 @@ fun HomeScreen(
     inboxVm: InboxViewModel = hiltViewModel(),
     homeVm: HomeViewModel = hiltViewModel(),
 ) {
-    var tab by rememberSaveable { mutableStateOf(HomeTab.SONGS) }
+    // the tab picked on this visit; until one is picked, the start tab (Setlists, or Songs with no setlist yet)
+    val start by homeVm.startTab.collectAsStateWithLifecycle()
+    var picked by rememberSaveable { mutableStateOf<HomeTab?>(null) }
+    val home = start ?: HomeTab.SETLISTS
+    val tab = picked ?: home
     // what the band sent: notice at the top of the tabs (the newest not dismissed yet), number on the icon and the list
     val inbox by inboxVm.items.collectAsStateWithLifecycle()
     val hasBand by inboxVm.hasBand.collectAsStateWithLifecycle()
@@ -100,8 +104,8 @@ fun HomeScreen(
         HomeTab.SONGS to inbox.count { it.setName.isEmpty() },
         HomeTab.SETLISTS to inbox.count { it.setName.isNotEmpty() },
     )
-    // back on a tab that isn't the first goes to Songs (instead of closing the app)
-    BackHandler(enabled = tab != HomeTab.SONGS) { tab = HomeTab.SONGS }
+    // back on a tab that isn't the start one goes to it (instead of closing the app)
+    BackHandler(enabled = tab != home) { picked = home }
 
     // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
     // once on the Fire
@@ -115,7 +119,7 @@ fun HomeScreen(
             settingsVisit++
             settingsStart = null
         }
-        tab = t
+        picked = t
     }
     val openEssential = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.ESSENTIAL }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
