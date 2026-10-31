@@ -64,6 +64,8 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
          * Search results on the page (Google or a site's own search) that point to one of [hosts]: JSON
          * `[{"title":…,"url":…}]`, Google's /url redirects unwrapped, no repeats.
          */
+        // the hosts go in as a JS array (31/10: an escaped "$" left the Kotlin call as text, a syntax error in the page,
+        // so the computer's search never found anything)
         fun resultsScript(hosts: List<String>): String = """
 (function(hosts){
   var seen = {}, out = [];
@@ -79,7 +81,7 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
     } catch (e) {}
   });
   return JSON.stringify(out.slice(0, 15));
-})(${'$'}{hosts.joinToString(",", "[", "]") { "\"" + it.replace("\"", "") + "\"" }})
+})(${hosts.joinToString(",", "[", "]") { "\"" + it.replace("\"", "") + "\"" }})
 """.trimIndent()
 
         private const val TIMEOUT_MS = 25_000L

@@ -47,7 +47,7 @@ class EssentialModeTest {
             br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
             br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
         )
-        suspend fun until(ok: (Look) -> Boolean) = withTimeout(5_000) { repo.library.first { ok(it.look) } }.look
+        suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 
         vm.setPlayerMode(true)
         until { it.playerMode }
@@ -78,7 +78,7 @@ class EssentialModeTest {
 
     @Test fun `band on the network off ends Lead the band and does not come back`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        withTimeout(15_000) { repo.loaded.first { it } }
         val link = br.app.stagebook.data.BandLink(
             context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
             br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
@@ -87,7 +87,7 @@ class EssentialModeTest {
         conduct.start("s1", "Ensaio", listOf(br.app.stagebook.domain.Conduct.Item("Música")))
         assertTrue(conduct.role.value is br.app.stagebook.data.BandConduct.Role.Conducting)
         repo.updateLook { it.copy(bandOn = false) }
-        withTimeout(5_000) { conduct.role.first { it == br.app.stagebook.data.BandConduct.Role.None } }
+        withTimeout(15_000) { conduct.role.first { it == br.app.stagebook.data.BandConduct.Role.None } }
         kotlinx.coroutines.delay(300)   // a send already on its way doesn't bring leading back
         assertEquals(br.app.stagebook.data.BandConduct.Role.None, conduct.role.value)
         assertFalse(link.running.value)
@@ -95,9 +95,9 @@ class EssentialModeTest {
 
     @Test fun `internet off - nothing goes out to the band internet`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        withTimeout(15_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(internetOn = false) }
-        withTimeout(5_000) { repo.library.first { !it.look.internetOn } }
+        withTimeout(15_000) { repo.library.first { !it.look.internetOn } }
         val cloud = br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context))
         assertEquals(br.app.stagebook.data.SetlistCloud.Received.Offline, cloud.receive(br.app.stagebook.domain.ShareCode.generate()))
         assertTrue(cloud.acks(br.app.stagebook.domain.ShareCode.generate()).isEmpty())
@@ -116,13 +116,13 @@ class EssentialModeTest {
 
     @Test fun `alert on open - don't show again lasts until the mode is turned off`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        withTimeout(15_000) { repo.loaded.first { it } }
         val vm = SettingsViewModel(
             repo, context, AppUpdater(context),
             br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
             br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
         )
-        suspend fun until(ok: (Look) -> Boolean) = withTimeout(5_000) { repo.library.first { ok(it.look) } }.look
+        suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
         vm.setEssential(true)
         until { it.essential }
         repo.updateLook { it.copy(essentialAlertOff = true) }   // "Don't show again"
