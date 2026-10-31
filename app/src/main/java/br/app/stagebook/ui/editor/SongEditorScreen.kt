@@ -387,7 +387,7 @@ private fun SongDataFields(
             }
         },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth(),
     )
