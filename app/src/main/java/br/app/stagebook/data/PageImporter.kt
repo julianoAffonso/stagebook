@@ -47,7 +47,7 @@ class PageImporter @Inject constructor(
     suspend fun fromPage(parsed: PageData, withTab: Boolean? = null): PageImport {
         if (withTab == null && (Tablature.hasTab(parsed.chordText) || Tablature.hasTab(parsed.text))) return PageImport.AskTab
         val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
-        val page = parsed.copy(text = tab(parsed.text), chordText = tab(parsed.chordText))
+        val page = parsed.copy(text = tab(ChordImport.plainSpaces(parsed.text)), chordText = tab(ChordImport.plainSpaces(parsed.chordText)))
         // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics only
         val chordSource = page.chordText.ifBlank { page.text }
         var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
