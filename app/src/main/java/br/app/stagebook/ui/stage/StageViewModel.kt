@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
+import br.app.stagebook.domain.toSongMix
 import br.app.stagebook.data.StageGate
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.navigation.Stage
@@ -23,7 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @Immutable
-data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "")
+data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "", val mix: br.app.stagebook.domain.SongMix? = null)
 
 @Immutable
 data class StageUiState(
@@ -122,7 +123,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix)
             },
             look = lib.look,
         )
@@ -152,8 +153,16 @@ class StageViewModel @Inject constructor(
     }
 
     /** Capo changed on stage: saved in the song right away. */
-    /** The single mixer (the same as Settings → Player), changed over the stage while the song plays. */
-    fun setMixer(mixer: br.app.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
+    /**
+     * The mixer over the stage: what's changed stays with the song (user, 31/10), starting from the general one; the
+     * channel count stays general. Null = back to the general mixer.
+     */
+    fun setSongMix(songId: String, mixer: br.app.stagebook.domain.MixerConfig?) {
+        if (mixer != null && mixer.channels != repository.library.value.look.mixer.channels) {
+            repository.updateLook { it.copy(mixer = it.mixer.copy(channels = mixer.channels)) }
+        }
+        repository.updateSong(songId) { it.copy(mix = mixer?.toSongMix()) }
+    }
 
     fun setCapo(songId: String, capo: Int) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.withCapo(it.text, capo)) }

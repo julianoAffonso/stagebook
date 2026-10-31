@@ -863,4 +863,12 @@
     <string name="settings_track_stops_detail">Off, the button pauses and the song goes on from where it stopped.</string>
     <string name="eq_no_channel">On, it would change nothing. In the mixer, tap the channel to equalize and turn on \"Equalizer on\"; then turn the equalizer on here.</string>
     <string name="eq_no_channel_title">No channel goes through the equalizer</string>
+    <string name="stage_mix_hint">What you change here stays with this song only. The general mixer is in Settings → Player.</string>
+    <string name="stage_mix_own">This song has its own settings.</string>
+    <string name="stage_mix_general">Back to the general mixer</string>
+    <string name="stage_mix_general_confirm">This song goes back to the general mixer, and its own settings are deleted.</string>
+    <plurals name="mixer_own_songs">
+        <item quantity="one">%1$d song has its own mixer settings (changed on stage): what you change here doesn\'t apply to it.</item>
+        <item quantity="other">%1$d songs have their own mixer settings (changed on stage): what you change here doesn\'t apply to them.</item>
+    </plurals>
 </resources>

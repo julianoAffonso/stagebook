@@ -163,3 +163,16 @@ object Mixer {
         return MixPlan(gains, norms, eq, route)
     }
 }
+
+/**
+ * A song's own mix: what was changed in the mixer over the stage stays with the song (user, 31/10). It starts from the
+ * general mixer (Settings → Player) the first time it's touched; outputs, routing and the channel count stay general.
+ */
+@Serializable
+data class SongMix(val strips: List<MixChannel> = emptyList(), val eqOn: Boolean = false, val eqDb: List<Float> = emptyList())
+
+/** The mixer a song plays with: its own mix over the general one, or the general one. */
+fun MixerConfig.forSong(mix: SongMix?): MixerConfig =
+    if (mix == null) this else copy(strips = mix.strips.ifEmpty { strips }, eqOn = mix.eqOn, eqDb = mix.eqDb.ifEmpty { eqDb })
+
+fun MixerConfig.toSongMix() = SongMix(strips, eqOn, eqDb)

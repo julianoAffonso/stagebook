@@ -62,6 +62,7 @@ data class SettingsUiState(
     val update: UpdateState = UpdateState.Idle,
     val midi: MidiState = MidiState(),
     val language: AppLanguage = AppLanguage.SYSTEM,
+    val ownMix: Int = 0,   // songs with their own mix (changed over the stage): the general mixer doesn't reach them
 )
 
 /** Settings → Update the app. */
@@ -171,7 +172,7 @@ class SettingsViewModel @Inject constructor(
         combine(repository.loaded, repository.library, lastKey, devices, update) { loaded, lib, key, connected, up ->
             // the command comes from the current choice: changing the picker updates what the card shows right away
             val shown = key?.copy(action = PedalAction.of(key.keyCode, lib.look.pedalKeys))
-            SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, shown, version, lib.look.pedalName in connected, up)
+            SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, shown, version, lib.look.pedalName in connected, up, ownMix = lib.songs.count { it.mix != null })
         },
         midi.state,
         language,
