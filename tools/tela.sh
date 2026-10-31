@@ -17,7 +17,7 @@ dump() {
     "$ADB" -s "$S" exec-out cat /sdcard/ui.xml
 }
 
-# cada linha: x y | texto | descrição  (x y = centro do elemento)
+# cada linha: x y | texto | descrição | clicável (1/0)  (x y = centro do elemento)
 nodes() {
     dump | python3 -c '
 import re, sys, xml.etree.ElementTree as ET
@@ -25,15 +25,31 @@ for n in ET.fromstring(sys.stdin.read()).iter("node"):
     t, d = n.get("text", ""), n.get("content-desc", "")
     if not (t or d): continue
     x1, y1, x2, y2 = map(int, re.findall(r"\d+", n.get("bounds")))
-    print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d}")'
+    c = "1" if n.get("clickable") == "true" else "0"
+    print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d} | {c}")'
+}
+
+# toca no elemento cujo texto ou descrição é exatamente o pedido (de preferência clicável); se não houver, o que contém
+achar() {
+    nodes | python3 -c '
+import sys
+alvo = sys.argv[1].strip().lower()
+linhas = [l.rstrip("\n").split(" | ") for l in sys.stdin if l.strip()]
+def rotulos(p): return [p[1].strip().lower(), p[2].strip().lower()]
+def ok(p, exato): return (alvo in rotulos(p)) if exato else any(alvo in r for r in rotulos(p) if r)
+for exato in (True, False):
+    for clic in ("1", None):
+        for p in linhas:
+            if (clic is None or p[3].strip() == clic) and ok(p, exato):
+                print(f"{p[0].split()[0]} {p[0].split()[1]} | {p[1]} | {p[2]}"); sys.exit(0)
+sys.exit(1)' "$ARG"
 }
 
 case "$CMD" in
     textos) nodes ;;
     tem) nodes | grep -qiF -- "$ARG" ;;
     tocar)
-        linha=$(nodes | grep -iF -- "$ARG" | head -1)
-        [ -n "$linha" ] || { echo "\"$ARG\" não está na tela"; exit 1; }
+        linha=$(achar) || { echo "\"$ARG\" não está na tela"; exit 1; }
         set -- $linha
         "$ADB" -s "$S" shell input tap "$1" "$2"
         echo "toquei em $1,$2: $linha" ;;
