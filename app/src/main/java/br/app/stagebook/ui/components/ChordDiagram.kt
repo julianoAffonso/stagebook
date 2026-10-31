@@ -72,9 +72,34 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         val row = (bottom - top) / frets
         val base = shape.baseFret
         val thin = 1.5.dp.toPx()
-        // frets and strings; the nut is thick when it starts on the first fret
+        // the neck itself: a soft surface behind the grid, scaled to the diagram (the same tone in both themes)
+        drawRoundRect(
+            color.copy(alpha = 0.07f),
+            Offset(left - gap * 0.45f, top - row * 0.2f),
+            Size((right - left) + gap * 0.9f, (bottom - top) + row * 0.2f),
+            CornerRadius(gap * 0.4f),
+        )
+        // inlay marks on the frets the standard neck has (3, 5, 7, 9, 12 and their octaves): faint, in the middle of the fret
+        val inlay = minOf(gap, row) * 0.13f
+        for (r in 0 until frets) {
+            val fret = base + r
+            val y = top + (r + 0.5f) * row
+            when {
+                fret % 12 == 0 && fret > 0 -> {
+                    // the octave has two marks, a third of the way in from each side
+                    drawCircle(color.copy(alpha = 0.22f), inlay, Offset(left + (right - left) / 3f, y))
+                    drawCircle(color.copy(alpha = 0.22f), inlay, Offset(left + (right - left) * 2f / 3f, y))
+                }
+                fret % 12 in setOf(3, 5, 7, 9) -> drawCircle(color.copy(alpha = 0.22f), inlay, Offset((left + right) / 2f, y))
+            }
+        }
+        // frets: the nut is thick when it starts on the first fret
         for (i in 0..frets) drawLine(color, Offset(left, top + i * row), Offset(right, top + i * row), if (i == 0 && base == 1) 5.dp.toPx() else thin)
-        for (s in 0 until strings) drawLine(color, Offset(left + s * gap, top), Offset(left + s * gap, bottom), thin)
+        // strings get thicker towards the low ones (the first in the shape), as on a real neck
+        for (s in 0 until strings) {
+            val weight = thin * (1.7f - 1.2f * s / maxOf(1, strings - 1))
+            drawLine(color, Offset(left + s * gap, top), Offset(left + s * gap, bottom), weight)
+        }
         val dot = minOf(gap, row) * 0.28f
         // fret number right left of the grid, at the height of the diagram's first fret, clear of the barre's end dot
         if (base > 1) {
