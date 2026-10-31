@@ -18,6 +18,8 @@ data class Song(
     val zoom: Float = 1f,   // this song's stage zoom (pinch), over the default size from settings
     // backing track file copied into the app (name in filesDir/tracks); this device only: left out of export/QR
     val track: String = "",
+    // this song's own mix, changed in the mixer over the stage (null = the general one); this device only, like the track
+    val mix: br.app.stagebook.domain.SongMix? = null,
 )
 
 @Immutable

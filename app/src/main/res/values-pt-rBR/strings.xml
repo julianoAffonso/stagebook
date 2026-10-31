@@ -861,4 +861,12 @@
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
     <string name="eq_no_channel">Ligado, ele não mudaria nada. No mixer, toque no canal que quer equalizar e ligue \"Equalizador ligado\"; depois ligue o equalizador aqui.</string>
     <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
+    <string name="stage_mix_hint">O que você mudar aqui fica só nesta música. O mixer geral fica em Ajustes → Player.</string>
+    <string name="stage_mix_own">Esta música tem ajustes próprios.</string>
+    <string name="stage_mix_general">Voltar ao mixer geral</string>
+    <string name="stage_mix_general_confirm">Esta música volta a usar o mixer geral, e os ajustes próprios dela são apagados.</string>
+    <plurals name="mixer_own_songs">
+        <item quantity="one">%1$d música tem ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para ela.</item>
+        <item quantity="other">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
+    </plurals>
 </resources>

@@ -2,6 +2,7 @@ package br.app.stagebook.ui.stage
 
 import br.app.stagebook.ui.components.AppMenu
 import androidx.compose.foundation.clickable
+import br.app.stagebook.domain.forSong
 import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
@@ -240,7 +241,7 @@ fun StageRoute(
             onMetronomeSound = viewModel::metronomeSound,
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
-            onMixer = viewModel::setMixer,
+            onSongMix = viewModel::setSongMix,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -280,7 +281,7 @@ fun StageScreen(
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
-    onMixer: (br.app.stagebook.domain.MixerConfig) -> Unit = {},
+    onSongMix: (songId: String, mixer: br.app.stagebook.domain.MixerConfig?) -> Unit = { _, _ -> },
 ) {
     // the mixer over the stage, with the song playing (user, 31/10)
     var mixerOpen by remember { mutableStateOf(false) }
@@ -930,7 +931,14 @@ fun StageScreen(
                 // the mixer, left of play: adjusting while the song plays (Settings stopped the track, 31/10)
                 MixerButton(fg, { mixerOpen = true }, Modifier.align(Alignment.BottomEnd).padding(bottom = Spacing.s, end = Spacing.s + Sizes.touch + Spacing.m + Spacing.s))
             }
-            if (mixerOpen) StageMixerSheet(look.mixer, onMixer) { mixerOpen = false }
+            // the song's own mix over the general one; what's changed here stays with the song (user, 31/10)
+            if (mixerOpen) StageMixerSheet(
+                look.mixer.forSong(song.mix),
+                own = song.mix != null,
+                onMixer = { onSongMix(song.id, it) },
+                onGeneral = { onSongMix(song.id, null) },
+                onDismiss = { mixerOpen = false },
+            )
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },

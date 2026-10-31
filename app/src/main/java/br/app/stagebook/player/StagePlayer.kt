@@ -10,6 +10,7 @@ import br.app.stagebook.R
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.Measure
 import br.app.stagebook.domain.MixerConfig
+import br.app.stagebook.domain.forSong
 import br.app.stagebook.domain.Mixer
 import br.app.stagebook.domain.NormMode
 import br.app.stagebook.domain.OutputInfo
@@ -69,10 +70,11 @@ class StagePlayer @Inject constructor(
 
     init {
         instance = this
-        // the mixer changed in Settings: measure what's missing and apply right away (only with the player on)
+        // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
+        // missing and apply right away (only with the player on)
         scope.launch {
-            repository.library.map { it.look.mixer }.distinctUntilChanged().collect {
-                mixer = it
+            repository.library.map { lib -> lib.look.mixer to songMix(lib) }.distinctUntilChanged().collect { (general, _) ->
+                mixer = general
                 if (PlayerService.running) engine.withLock { measureAndApply() }
             }
         }
@@ -157,7 +159,7 @@ class StagePlayer @Inject constructor(
     private fun measureAndApply() {
         val f = loaded ?: return
         val lanes = Engine.lanes()
-        val cfg = mixer
+        val cfg = mixer.forSong(songMix(repository.library.value))   // the song's own mix, if it has one (31/10)
         for (g in cfg.groups(lanes)) {
             if (cfg.strip(g.first).norm == NormMode.NONE || g.first in measures) continue
             measure(f, Mixer.mask(g))?.let { measures[g.first] = it }
@@ -166,6 +168,10 @@ class StagePlayer @Inject constructor(
         Engine.setMix(p.gains, p.norms, p.eqMask, p.route)
         Engine.setEq(cfg.eqOn, cfg.eqDb.toFloatArray())
     }
+
+    // the loaded backing track's song: each track file belongs to one song
+    private fun songMix(lib: br.app.stagebook.data.model.Library): br.app.stagebook.domain.SongMix? =
+        loaded?.name?.let { name -> lib.songs.firstOrNull { it.track == name }?.mix }
 
     private fun measure(f: File, mask: Int): Measure? {
         val prefs = context.getSharedPreferences("norm", Context.MODE_PRIVATE)

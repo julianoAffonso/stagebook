@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.data.model.Look
+import br.app.stagebook.domain.toSongMix
 import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
@@ -46,6 +47,25 @@ class StageMixerTest {
         compose.onNodeWithContentDescription("Abrir o mixer").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Ver os níveis ao vivo").assertExists()
+    }
+
+    @Test fun `the sheet says changes stay with this song, and offers going back when the song has its own`() {
+        stage(track = "s1.ogg")
+        compose.onNodeWithContentDescription("Abrir o mixer").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("O que você mudar aqui fica só nesta música", substring = true).assertExists()
+        compose.onNodeWithText("Voltar ao mixer geral").assertDoesNotExist()
+    }
+
+    @Test fun `a song with its own mix shows it and the way back to the general mixer`() {
+        val song = StageSong("Música", "", "[G]linha", false, id = "s1", track = "s1.ogg", mix = br.app.stagebook.domain.MixerConfig().toSongMix())
+        compose.setContent {
+            StagebookTheme { StageScreen(StageUiState(false, listOf(song), look = Look(playerMode = true)), 0, 0, { _, _ -> }) }
+        }
+        compose.onNodeWithContentDescription("Abrir o mixer").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Esta música tem ajustes próprios.").assertExists()
+        compose.onNodeWithText("Voltar ao mixer geral").assertExists()
     }
 
     @Test fun `no mixer button on a song without a backing track`() {
