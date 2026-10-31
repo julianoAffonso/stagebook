@@ -40,7 +40,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -255,10 +254,12 @@ fun SongEditorScreen(
                             }
                         }
                     }
+                    // the lyrics take all the room left under the details (bug 31/10: they stopped short of the bottom);
+                    // only the preview scrolls, the text field is sized by the space instead
                     Column(
                         Modifier
                             .weight(1f)
-                            .verticalScroll(rememberScrollState())
+                            .then(if (previewing) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                             .padding(horizontal = Spacing.m, vertical = Spacing.m),
                         verticalArrangement = Arrangement.spacedBy(Spacing.m),
                     ) {
@@ -275,8 +276,7 @@ fun SongEditorScreen(
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             textStyle = MaterialTheme.typography.bodyLarge,
                             shape = MaterialTheme.shapes.small,
-                            minLines = 20,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 480.dp).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
+                            modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
                         )
                     }
                 }
