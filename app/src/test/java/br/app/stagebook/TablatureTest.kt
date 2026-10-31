@@ -54,4 +54,23 @@ class TablatureTest {
         val line = "e|12121212121212---3---|"
         assertEquals("e|12121212121212---5---|", br.app.stagebook.domain.Tablature.shiftLine(line, 2))
     }
+
+    // a Cifra Club style tab (only the tab lines, no lyrics): each string line counts, the chord row above doesn't
+    @org.junit.Test fun `a loose six-string tab without brackets is recognised line by line`() {
+        val tab = listOf(
+            "E|------------5----------9----------------7--------------5---------------| ",
+            "B|------7---------------------10---------------8--------------5----------| ",
+            "G|----7---7-------7----9---9-------9----7---7-----7----6---6----7-6-4----| ",
+            "D|--------------------------------------------------------------------7--| ",
+            "A|-----------------------------------------------------------------------| ",
+            "E|-----------------------------------------------------------------------| ",
+        )
+        val text = (listOf("       D                        A                  G               A", "[Tab - Intro]") + tab).joinToString("\n")
+        val flags = Tablature.tabLines(text)
+        assertEquals(listOf(false, false, true, true, true, true, true, true), flags)
+        // transposing up a half step moves every fret and keeps the columns
+        val up = Tablature.shift(text, 1)
+        assertEquals(text.lines().size, up.lines().size)
+        assertTrue(up.lines().drop(2).all { it.length == text.lines()[2].length })
+    }
 }
