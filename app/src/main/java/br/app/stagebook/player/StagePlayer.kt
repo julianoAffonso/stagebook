@@ -96,7 +96,14 @@ class StagePlayer @Inject constructor(
 
     private val prefs get() = context.getSharedPreferences("player", Context.MODE_PRIVATE)
 
-    fun toggle() = if (_ui.value.playing || _ui.value.waiting) pause() else play()
+    /** Play, or stop the song: back to the start ([stops], the default live) or just pause where it is. */
+    fun toggle(stops: Boolean = true) = if (_ui.value.playing || _ui.value.waiting) { if (stops) stop() else pause() } else play()
+
+    /** Stops and goes back to the start, with the same steps as the end of the song (live, a pause makes no sense). */
+    fun stop() {
+        pause()
+        if (PlayerService.running) scope.launch { engine.withLock { Engine.seek(0) } }
+    }
 
     fun play() {
         if (wanted == null) return

@@ -857,4 +857,8 @@
     <string name="tweak_debugging">Developer mode and Wi-Fi debugging</string>
     <string name="tweak_debugging_detail">For testing from a computer with adb, without opening Android\'s settings. Starts off.</string>
     <string name="stage_mixer_open">Open the mixer</string>
+    <string name="stage_stop">Stop the backing track and go back to the start</string>
+    <string name="settings_track_button">Track button on stage</string>
+    <string name="settings_track_stops">Stop goes back to the start</string>
+    <string name="settings_track_stops_detail">Off, the button pauses and the song goes on from where it stopped.</string>
 </resources>

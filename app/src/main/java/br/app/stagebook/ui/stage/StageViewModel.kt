@@ -75,7 +75,7 @@ class StageViewModel @Inject constructor(
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
 
-    fun togglePlay() = player.toggle()
+    fun togglePlay() = player.toggle(repository.library.value.look.trackStops)
     fun needsBatteryAsk() = player.needsBatteryAsk()
     fun batteryAsked() = player.batteryAsked()
 
