@@ -48,10 +48,22 @@ class MidiDecoderTest {
         assertEquals(3, MidiCode.number(p[0].code))
     }
 
-    @Test fun `pressing again without releasing is a repeat and releasing without pressing is ignored`() {
+    @Test fun `a CC moving to other values without releasing is a repeat and releasing without pressing is ignored`() {
         val d = MidiDecoder("")
         val p = d.feed(bytes(0xB0, 64, 0, 0xB0, 64, 127, 0xB0, 64, 120))
         assertEquals(listOf(0, 1), p.map { it.repeat })
+    }
+
+    // pedals that send only the press: every press counts (user, 31/10: the song moved once and then never again)
+    @Test fun `a pedal that sends only 127 presses every time`() {
+        val p = MidiDecoder("").feed(bytes(0xB0, 80, 127, 0xB0, 80, 127, 0xB0, 80, 127))
+        assertEquals(listOf(0, 0, 0), p.map { it.repeat })
+        assertTrue(p.all { it.down })
+    }
+
+    @Test fun `a pedal that sends only Note On presses every time`() {
+        val p = MidiDecoder("").feed(bytes(0x90, 60, 100, 0x90, 60, 100))
+        assertEquals(listOf(0, 0), p.map { it.repeat })
     }
 
     @Test fun `sysex does not become a button`() {

@@ -17,7 +17,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 
 /**
  * Stage text with chords: each chord (marked with [CHORD_TAG]) is drawn in the space above the marked letter, which
- * [joinLines] reserved. Used on stage and in the settings preview.
+ * [joinLines] reserved. Used on stage and in the settings preview. If a chord would still touch the one before it on
+ * the same line (font wider than [chordLine] guessed), it moves right just enough.
  */
 @Composable
 fun ChordText(
@@ -29,6 +30,7 @@ fun ChordText(
 ) {
     val measurer = rememberTextMeasurer()
     val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
+    val sizes = remember(text, chordStyle) { chordsAt.map { measurer.measure(it.item, chordStyle) } }
     var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text,
@@ -36,10 +38,17 @@ fun ChordText(
         modifier = modifier.drawWithContent {
             drawContent()
             val l = laid ?: return@drawWithContent
-            chordsAt.forEach { a ->
-                if (a.start >= l.layoutInput.text.length) return@forEach
+            var lastLine = -1
+            var lastEnd = 0f
+            val gap = if (chordStyle.fontSize.isSp) chordStyle.fontSize.toPx() * 0.3f else 0f
+            chordsAt.forEachIndexed { i, a ->
+                if (a.start >= l.layoutInput.text.length) return@forEachIndexed
                 val line = l.getLineForOffset(a.start)
-                drawText(measurer, a.item, Offset(l.getHorizontalPosition(a.start, true), l.getLineTop(line)), chordStyle)
+                var x = l.getHorizontalPosition(a.start, true)
+                if (line == lastLine) x = maxOf(x, lastEnd + gap)
+                drawText(sizes[i], topLeft = Offset(x, l.getLineTop(line)))
+                lastLine = line
+                lastEnd = x + sizes[i].size.width
             }
         },
         onTextLayout = { laid = it; onTextLayout(it) },
