@@ -854,4 +854,5 @@
     <string name="tweak_mobile_data_detail">Os dados móveis não ficam ligados com o Wi-Fi conectado.</string>
     <string name="tweak_debugging">Modo desenvolvedor e depuração por Wi-Fi</string>
     <string name="tweak_debugging_detail">Para testar pelo computador com o adb, sem abrir os ajustes do Android. Vem desligado.</string>
+    <string name="stage_mixer_open">Abrir o mixer</string>
 </resources>

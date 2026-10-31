@@ -240,6 +240,7 @@ fun StageRoute(
             onMetronomeSound = viewModel::metronomeSound,
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
+            onMixer = viewModel::setMixer,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -279,7 +280,10 @@ fun StageScreen(
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
+    onMixer: (br.app.stagebook.domain.MixerConfig) -> Unit = {},
 ) {
+    // the mixer over the stage, with the song playing (user, 31/10)
+    var mixerOpen by remember { mutableStateOf(false) }
     // × on a chord in the list: asks first (on stage an accidental tap is easy)
     var hidingChord by remember { mutableStateOf<String?>(null) }
     val look = uiState.look
@@ -922,7 +926,10 @@ fun StageScreen(
                     onRemove = { onRemoveTrack(song.id) },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
                 )
+                // the mixer, left of play: adjusting while the song plays (Settings stopped the track, 31/10)
+                MixerButton(fg, { mixerOpen = true }, Modifier.align(Alignment.BottomEnd).padding(bottom = Spacing.s, end = Spacing.s + Sizes.touch + Spacing.m + Spacing.s))
             }
+            if (mixerOpen) StageMixerSheet(look.mixer, onMixer) { mixerOpen = false }
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
@@ -1280,6 +1287,21 @@ private fun TrackButton(
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; onRemove() })
         }
+    }
+}
+
+/** Round, see-through button like play's: opens the mixer over the stage. */
+@Composable
+private fun MixerButton(fg: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .size(Sizes.touch + Spacing.m)
+            .clip(CircleShape)
+            .background(fg.copy(alpha = 0.12f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(AppIcons.Tune, stringResource(R.string.stage_mixer_open), tint = fg.copy(alpha = 0.85f))
     }
 }
 

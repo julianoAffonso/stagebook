@@ -856,4 +856,5 @@
     <string name="tweak_mobile_data_detail">Mobile data doesn\'t stay on while Wi-Fi is connected.</string>
     <string name="tweak_debugging">Developer mode and Wi-Fi debugging</string>
     <string name="tweak_debugging_detail">For testing from a computer with adb, without opening Android\'s settings. Starts off.</string>
+    <string name="stage_mixer_open">Open the mixer</string>
 </resources>
