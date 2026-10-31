@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.png" alt="Stagebook" width="64"></p>
+
 # Now Playing (OBS, Resolume…)
 
 **English** · [Português (Brasil)](now-playing.pt-BR.md)

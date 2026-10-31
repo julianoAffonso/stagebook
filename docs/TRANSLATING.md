@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.png" alt="Stagebook" width="64"></p>
+
 # Translating Stagebook
 
 **English** · [Português (Brasil)](TRANSLATING.pt-BR.md)

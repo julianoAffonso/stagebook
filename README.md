@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" alt="Stagebook" width="120"></p>
+
 # Stagebook
 
 **English** · [Português (Brasil)](README.pt-BR.md)
