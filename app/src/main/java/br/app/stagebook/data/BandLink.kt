@@ -227,22 +227,24 @@ class BandLink @Inject constructor(
             val plain = br.app.stagebook.domain.Conduct.encode(msg).toByteArray()
             onlineMembers.value.map { peer ->
                 this@io.async {
-                    val key = pairKeyWith(peer.id) ?: return@async null
+                    val key = pairKeyWith(peer.id) ?: return@async null.also { Log.w(TAG, "conduct: no pair key for ${peer.name}") }
+                    // a send that fails is logged (it used to vanish: the leader only saw "didn't answer", 31/10)
                     runCatching {
                         val s = dial(peer)
                         val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain), BandProtocol.Kind.CONDUCT)
-                            ?: return@async null
-                        val bytes = ShareCode.decrypt(key, body) ?: return@async null
+                            ?: return@async null.also { Log.w(TAG, "conduct: no answer from ${peer.name} (${peer.host}:${peer.port})") }
+                        val bytes = ShareCode.decrypt(key, body) ?: return@async null.also { Log.w(TAG, "conduct: answer from ${peer.name} not readable") }
                         peer.id to json.decodeFromString(br.app.stagebook.domain.Conduct.Lack.serializer(), bytes.decodeToString())
-                    }.getOrNull()
+                    }.onFailure { Log.w(TAG, "conduct to ${peer.name} (${peer.host}:${peer.port}) failed: $it") }.getOrNull()
                 }
             }.mapNotNull { it.await() }.toMap()
         }
 
     private fun onConduct(from: BandProtocol.Hello, body: String): String? {
-        val key = pairKeyWith(from.id) ?: return null
-        val msg = ShareCode.decrypt(key, body)?.let { br.app.stagebook.domain.Conduct.decode(it.decodeToString()) } ?: return null
-        val lack = conductHandler?.invoke(from, msg) ?: return null
+        val key = pairKeyWith(from.id) ?: return null.also { Log.w(TAG, "conduct from ${from.name}: not in the band here") }
+        val msg = ShareCode.decrypt(key, body)?.let { br.app.stagebook.domain.Conduct.decode(it.decodeToString()) }
+            ?: return null.also { Log.w(TAG, "conduct from ${from.name}: message not readable") }
+        val lack = conductHandler?.invoke(from, msg) ?: return null.also { Log.w(TAG, "conduct from ${from.name}: not handled") }
         return ShareCode.encrypt(key, json.encodeToString(br.app.stagebook.domain.Conduct.Lack.serializer(), lack).toByteArray())
     }
 
@@ -347,7 +349,7 @@ class BandLink @Inject constructor(
                             busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
                             onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false }, onConduct = ::onConduct,
                         )
-                    }
+                    }.onFailure { Log.w(TAG, "band session failed: $it") }
                 }
             }
         }
