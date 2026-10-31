@@ -73,8 +73,10 @@ class LibraryRepository @Inject constructor(
     init {
         scope.launch(Dispatchers.IO) {
             _library.value = load()
-            _loaded.value = true
+            // ready first: whoever reacts to "loaded" and changes something right away must see the change applied,
+            // not queued for later (a read right after a save could see the old library)
             ready.complete(Unit)
+            _loaded.value = true
         }
     }
 

@@ -281,6 +281,17 @@ class ScreenshotTest {
         }
     }
 
+    // F# with the barre on the 2nd fret (how the barre is drawn; user's request, 30/10)
+    @Test fun chordDiagramBarre() = shoot("acorde_fsustenido_pestana") {
+        androidx.compose.foundation.layout.Box(Modifier.padding(32.dp)) {
+            br.app.stagebook.ui.components.ChordDiagram(
+                "F#", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR,
+                br.app.stagebook.domain.Voicings.Shape(listOf(2, 4, 4, 3, 2, 2)), null, MaterialTheme.colorScheme.onSurface,
+                width = 240.dp,
+            )
+        }
+    }
+
     // keyboard with a capo chart: chords in the sounding key, the notice at the top and the first-time message
     @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.KEYBOARD)), 0, 0, { _, _ -> }, onBack = {})

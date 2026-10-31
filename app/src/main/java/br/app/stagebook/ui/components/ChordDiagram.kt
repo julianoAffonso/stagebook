@@ -49,15 +49,17 @@ fun ChordDiagram(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
     ) {
-        Text(chord, style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold), color = color, maxLines = 1)
-        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width)
+        val nameStyle = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold)
+        Text(chord, style = nameStyle, color = color, maxLines = 1)
+        // the fret number in the same size as the chord name (user's request, 30/10)
+        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width, nameStyle.fontSize)
     }
 }
 
 @Composable
-private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width: Dp) {
+private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width: Dp, labelSize: androidx.compose.ui.unit.TextUnit = 14.sp) {
     val measurer = rememberTextMeasurer()
-    val label = TextStyle(color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    val label = TextStyle(color = color, fontSize = labelSize, fontWeight = FontWeight.Bold)
     Canvas(Modifier.size(width, width * 1.15f)) {
         if (shape == null) return@Canvas
         val frets = 5
@@ -73,12 +75,12 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         // frets and strings; the nut is thick when it starts on the first fret
         for (i in 0..frets) drawLine(color, Offset(left, top + i * row), Offset(right, top + i * row), if (i == 0 && base == 1) 5.dp.toPx() else thin)
         for (s in 0 until strings) drawLine(color, Offset(left + s * gap, top), Offset(left + s * gap, bottom), thin)
-        // fret number right left of the grid, at the height of the diagram's first fret
+        val dot = minOf(gap, row) * 0.28f
+        // fret number right left of the grid, at the height of the diagram's first fret, clear of the barre's end dot
         if (base > 1) {
             val laid = measurer.measure("$base", label)
-            drawText(laid, topLeft = Offset(left - laid.size.width - 14.dp.toPx(), top + (row - laid.size.height) / 2))   // away from the barre dot
+            drawText(laid, topLeft = Offset(left - dot - laid.size.width - 6.dp.toPx(), top + (row - laid.size.height) / 2))
         }
-        val dot = minOf(gap, row) * 0.28f
         shape.frets.forEachIndexed { s, f ->
             val x = left + s * gap
             when {

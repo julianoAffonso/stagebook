@@ -28,7 +28,8 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
      */
     suspend fun copy(songId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
         if (extensionOf(uri) == null) return@withContext null
-        val tmp = File(dir, "${songId.take(36)}-${System.currentTimeMillis()}.part")
+        // the time plus a random bit: two tracks chosen in the same millisecond never get the same name
+        val tmp = File(dir, "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.part")
         try {
             val head = ByteArray(AudioFormat.HEADER)
             var size = 0L
