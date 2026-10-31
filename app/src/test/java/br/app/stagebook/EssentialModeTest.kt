@@ -40,7 +40,7 @@ class EssentialModeTest {
         assertFalse(Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = true).essential)
     }
 
-    @Test fun `turning on turns everything off - turning a part back on leaves the mode - turning off brings back band internet and extras`() = runBlocking {
+    @Test fun `turning on turns everything off - turning a part back on leaves the mode - turning off brings back band internet extras and the player`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         val vm = SettingsViewModel(
             repo, context, AppUpdater(context),
@@ -62,7 +62,7 @@ class EssentialModeTest {
         vm.setEssential(false)
         val back = until { it.bandOn }
         assertTrue(back.internetOn && back.extrasOn)
-        assertFalse(back.playerMode)   // the player stays as it was in the mode (off)
+        assertTrue(back.playerMode)   // the player comes back too (user, 31/10)
     }
 
     @Test fun `without extras the chord window keeps the diagram and shapes - no sound or Details`() {
