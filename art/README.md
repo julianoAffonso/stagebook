@@ -1,3 +1,5 @@
+<p align="center"><img src="../docs/logo.png" alt="Stagebook" width="64"></p>
+
 # Art
 
 `icon-source.png` is the app icon source (1264×1264, generated with Canva's AI and chosen on 30/10/2026). The launcher

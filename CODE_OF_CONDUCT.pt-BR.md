@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" alt="Stagebook" width="64"></p>
+
 # Código de Conduta de Colaboração
 
 [English](CODE_OF_CONDUCT.md) · **Português (Brasil)**

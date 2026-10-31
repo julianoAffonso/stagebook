@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" alt="Stagebook" width="64"></p>
+
 # Contributor Covenant Code of Conduct
 
 **English** · [Português (Brasil)](CODE_OF_CONDUCT.pt-BR.md)
