@@ -650,8 +650,8 @@
     <string name="scan_not_setlist">This QR isn\'t from Stagebook. Point at the setlist QR or the 3 words QR.</string>
     <string name="scan_name">Setlist name</string>
     <plurals name="scan_found">
-        <item quantity="one">%1$d of %2$d song is in your library</item>
-        <item quantity="other">%1$d of %2$d songs are in your library</item>
+        <item quantity="one">%1$d of %2$d song goes in the setlist</item>
+        <item quantity="other">%1$d of %2$d songs go in the setlist</item>
     </plurals>
     <string name="scan_missing_row">Not in your library, will be left out.</string>
     <string name="scan_which">Which one?</string>
@@ -665,7 +665,7 @@
     </plurals>
     <string name="scan_create_without">Create without them</string>
     <string name="scan_name_taken">There\'s already a setlist with this name</string>
-    <string name="scan_name_taken_text">Swap the songs in \"%1$s\" for the ones in the QR, or create another?</string>
+    <string name="scan_name_taken_text">Swap the songs in \"%1$s\" for the received ones, or create another?</string>
     <string name="scan_replace">Replace</string>
     <plurals name="scan_import_missing">
         <item quantity="one">Import the missing one (%1$d)</item>

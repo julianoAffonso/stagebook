@@ -18,6 +18,13 @@ import javax.inject.Inject
 /** What Home needs besides the band inbox: the essential mode alert (T19). */
 @HiltViewModel
 class HomeViewModel @Inject constructor(private val repository: LibraryRepository) : ViewModel() {
+    /**
+     * The tab the app opens on: Setlists, or Songs while there's no setlist yet (user, 31/10). Null until the library has
+     * loaded, so the screen doesn't show one tab and jump to the other.
+     */
+    val startTab: StateFlow<HomeTab?> = combine(repository.loaded, repository.library) { loaded, lib -> startOf(loaded, lib.sets.isEmpty()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, startOf(repository.loaded.value, repository.library.value.sets.isEmpty()))
+
     val essential: StateFlow<Boolean> = repository.library.map { it.look.essential }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.essential)
 
@@ -41,3 +48,5 @@ class HomeViewModel @Inject constructor(private val repository: LibraryRepositor
     val canSync: StateFlow<Boolean> = repository.library.map { it.look.bandOn || it.look.internetOn }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 }
+
+internal fun startOf(loaded: Boolean, noSetlists: Boolean): HomeTab? = if (!loaded) null else if (noSetlists) HomeTab.SONGS else HomeTab.SETLISTS
