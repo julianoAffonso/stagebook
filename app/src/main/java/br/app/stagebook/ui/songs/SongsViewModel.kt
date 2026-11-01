@@ -117,6 +117,9 @@ class SongsViewModel @Inject constructor(
 
     fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }
 
+    /** The tags of each chosen song (also the ones the search hides). */
+    fun tagsOf(ids: List<String>): List<List<String>> = ids.mapNotNull { repository.song(it)?.tags }
+
     /** Adds and takes off tags on the chosen songs. */
     fun setTags(ids: List<String>, add: List<String>, remove: List<String>) = repository.updateSongs(ids) { song ->
         var t = song.tags
