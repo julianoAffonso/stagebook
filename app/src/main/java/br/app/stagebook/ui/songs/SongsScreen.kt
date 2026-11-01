@@ -157,6 +157,10 @@ fun SongsScreen(
     var sharing by rememberSaveable { mutableStateOf(false) }
     val selecting = selection.active
     val toggle = selection::toggle
+    // selecting lets go of the search: otherwise, when a dialog of the selection closed (new setlist, tags), the focus
+    // went back to the search and the keyboard opened over the list (device test B-02)
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    androidx.compose.runtime.LaunchedEffect(selecting) { if (selecting) focus.clearFocus() }
     CenteredContent(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             // selecting, the top bar becomes the selection's, as in Google's apps (Gmail, Files, Photos): ✕, how many and
