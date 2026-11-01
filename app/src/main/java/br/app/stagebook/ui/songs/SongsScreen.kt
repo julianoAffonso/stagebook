@@ -146,7 +146,7 @@ fun SongsScreen(
     var naming by remember { mutableStateOf(false) }
     var limit by remember { mutableStateOf(false) }
     val message = br.app.stagebook.ui.components.LocalAppMessage.current
-    val res = androidx.compose.ui.platform.LocalContext.current.resources
+    val res = androidx.compose.ui.platform.LocalResources.current
     fun addedMessage(r: AddResult.Added) = res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
     val wide = wideLists()
     // tags of these songs (one from the ⋮, or the selection)

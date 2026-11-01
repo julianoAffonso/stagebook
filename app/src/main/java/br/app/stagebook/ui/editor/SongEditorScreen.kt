@@ -444,7 +444,7 @@ private fun SongDataFields(
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             // the song name takes what's left; artist, year and BPM have sizes you can predict (user, 01/11)
             TitleField(uiState, onTitle, onCollapse, Modifier.weight(1f))
-            AuthorYearTempo(uiState, onAuthor, onYear, onTempo, hint = true, artist = Modifier.width(Sizes.artistField))
+            AuthorYearTempo(uiState, onAuthor, onYear, onTempo, hint = true, artistWidth = Sizes.artistField)
         }
         return
     }
@@ -486,39 +486,40 @@ private fun TitleField(uiState: SongEditorUiState, onTitle: (String) -> Unit, on
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
     uiState: SongEditorUiState, onAuthor: (String) -> Unit, onYear: (String) -> Unit, onTempo: (String) -> Unit, hint: Boolean,
-    artist: Modifier = Modifier.weight(1f),
+    artistWidth: androidx.compose.ui.unit.Dp? = null,   // null: the artist takes what's left of the row
 ) {
-        OutlinedTextField(
-            value = uiState.author,
-            onValueChange = onAuthor,
-            label = { Text(stringResource(R.string.editor_author)) },
-            placeholder = if (hint) { { Text(stringResource(R.string.editor_auto_meta_short), maxLines = 1) } } else null,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            shape = MaterialTheme.shapes.small,
-            modifier = artist,
-        )
-        OutlinedTextField(
-            value = uiState.year,
-            onValueChange = onYear,
-            label = { Text(stringResource(R.string.editor_year)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.width(Sizes.yearField),   // 4 digits
-        )
-        // song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100)
-        val tempo = uiState.meta.tempoText
-        OutlinedTextField(
-            value = tempo,
-            onValueChange = onTempo,
-            label = { Text(stringResource(R.string.editor_tempo)) },
-            singleLine = true,
-            isError = tempo.isNotEmpty() && uiState.meta.tempo == 0,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits
-        )
+    val artist = if (artistWidth != null) Modifier.width(artistWidth) else Modifier.weight(1f)
+    OutlinedTextField(
+        value = uiState.author,
+        onValueChange = onAuthor,
+        label = { Text(stringResource(R.string.editor_author)) },
+        placeholder = if (hint) { { Text(stringResource(R.string.editor_auto_meta_short), maxLines = 1) } } else null,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+        shape = MaterialTheme.shapes.small,
+        modifier = artist,
+    )
+    OutlinedTextField(
+        value = uiState.year,
+        onValueChange = onYear,
+        label = { Text(stringResource(R.string.editor_year)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.width(Sizes.yearField),   // 4 digits
+    )
+    // song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100)
+    val tempo = uiState.meta.tempoText
+    OutlinedTextField(
+        value = tempo,
+        onValueChange = onTempo,
+        label = { Text(stringResource(R.string.editor_tempo)) },
+        singleLine = true,
+        isError = tempo.isNotEmpty() && uiState.meta.tempo == 0,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits
+    )
 }
 
 @Composable

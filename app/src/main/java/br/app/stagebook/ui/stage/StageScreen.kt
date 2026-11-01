@@ -1304,8 +1304,8 @@ private fun TrackButton(
     onClick: () -> Unit,
     onChange: () -> Unit,
     onRemove: () -> Unit,
-    onMixer: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onMixer: () -> Unit = {},
 ) {
     var menu by remember { mutableStateOf(false) }
     // removing asks first: a slip of the finger mid-show would take the track away (user, 01/11)

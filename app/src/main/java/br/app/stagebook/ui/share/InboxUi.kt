@@ -75,7 +75,7 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
                 br.app.stagebook.data.groupInbox(items).forEach { group ->
                     if (group.size > 1) {
                         Text(
-                            stringResource(R.string.inbox_versions, group.first().setName, group.size),
+                            androidx.compose.ui.res.pluralStringResource(R.plurals.inbox_versions, group.size, group.first().setName, group.size),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = Spacing.s),

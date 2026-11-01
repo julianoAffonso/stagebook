@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Stagebook</string>
 
     <!-- common actions -->
@@ -8,7 +8,6 @@
     <string name="action_clear">Clear</string>
     <string name="action_close">Close</string>
     <string name="action_delete">Delete</string>
-    <string name="action_edit">Edit</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Save</string>
     <string name="action_stage">Stage</string>
@@ -119,7 +118,6 @@
     <string name="stage_zoom">Zoom for this song: %1$d%%</string>
     <string name="stage_zoom_reset">Default</string>
     <string name="set_remove">Remove</string>
-    <string name="set_remove_confirm">Remove \"%1$s\" from this setlist? The song stays in the library.</string>
     <string name="set_tap_to_play">%1$s · tap one to open the stage</string>
     <string name="stage_empty_title">Nothing to play</string>
     <string name="stage_empty_message">This setlist was deleted or is empty. Go back and pick another.</string>
@@ -129,7 +127,6 @@
     <string name="settings_appearance">Stage look</string>
     <string name="settings_preview_text">[Chorus]\n[G]A sample [D]line\n[Em]To see how it [C]looks</string>
     <string name="settings_preview_size_text">[Chorus]\n[G]A sample [D]line</string>
-    <string name="settings_font_value">%1$d</string>
     <string name="settings_font_size">Lyrics size: %1$d</string>
     <string name="settings_text_color">Lyrics color</string>
     <string name="settings_background">Background color</string>
@@ -248,7 +245,6 @@
     <string name="chord_shape_keep">Use this one</string>
     <string name="editor_preview">See it on stage</string>
     <string name="editor_back_to_text">Back to the text</string>
-    <string name="editor_chords">Chords</string>
     <string name="editor_chord_new">Chord</string>
     <string name="editor_chord_hint">Like G, Am7, F#m/E, C7(9)</string>
     <string name="editor_chord_insert">Insert</string>
@@ -284,8 +280,6 @@
     <string name="backup_replace">Replace mine</string>
     <string name="backup_merge_help">Only the songs and setlists you don\'t have come in. Yours stay as they are.</string>
     <string name="backup_replace_help">Your songs and setlists are swapped for the file\'s.</string>
-    <string name="backup_restore">Restore backup</string>
-    <string name="backup_restore_ok">Restore</string>
     <string name="backup_restore_warning">The file\'s settings replace the ones here.</string>
     <string name="backup_part_library">Songs and setlists</string>
     <string name="backup_part_library_detail">With each song\'s zoom</string>
@@ -307,12 +301,18 @@
     <string name="editor_data_close">Hide song details</string>
     <string name="editor_capo_fret">fret %1$d</string>
     <string name="editor_capo_sounds">Shapes in %1$s. With the capo on fret %2$d, it sounds in %3$s.</string>
-    <string name="editor_capo_sounds_nokey">Shapes as written. With the capo on fret %1$d, everything sounds %1$d half steps higher.</string>
+    <plurals name="editor_capo_sounds_nokey">
+        <item quantity="one">Shapes as written. With the capo on fret %1$d, everything sounds %1$d half step higher.</item>
+        <item quantity="other">Shapes as written. With the capo on fret %1$d, everything sounds %1$d half steps higher.</item>
+    </plurals>
     <string name="stage_key_adjust">change key and capo</string>
     <string name="stage_key_capo_title">Key and capo</string>
     <string name="stage_key_capo_saved">Saved in the song.</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
-    <string name="inbox_versions">%1$s · %2$d versions</string>
+    <plurals name="inbox_versions">
+        <item quantity="one">%1$s · %2$d version</item>
+        <item quantity="other">%1$s · %2$d versions</item>
+    </plurals>
     <string name="inbox_latest">newest</string>
     <string name="inbox_updated_today">updated at %1$s</string>
     <string name="inbox_updated_day">updated %1$s, %2$s</string>
@@ -353,14 +353,10 @@
     <string name="metro_bpm">%1$d BPM</string>
     <string name="metro_slower">Slower</string>
     <string name="metro_faster">Faster</string>
-    <string name="metro_count">Count in 1-2-3-4</string>
+    <string name="metro_count">Count in 1–2–3–4</string>
     <string name="metro_glow_color">Glow color</string>
     <string name="metro_help">On stage, the icon next to the clock opens the metronome. It starts at the song\'s BPM, or 100 if it has none.</string>
     <string name="metro_in_settings">Count-in, sound and glow are in the %1$s.</string>
-    <string name="metro_short_count">count-in</string>
-    <string name="metro_short_sound">sound</string>
-    <string name="metro_short_silent">silent</string>
-    <string name="metro_short_glow">glow</string>
     <string name="metro_glow">Glow on the screen edge</string>
     <string name="metro_sound">Sound</string>
     <string name="stage_auto_title">Auto-scroll</string>
@@ -416,9 +412,7 @@
     <string name="settings_pedal_none_short">No pedal found yet</string>
     <string name="settings_pedal_connected_short">connected</string>
     <string name="settings_pedal_disconnected_short">disconnected</string>
-    <string name="settings_font_card">Lyrics size</string>
     <string name="settings_font_help">Applies to every song. On stage, pinching changes only the open song.</string>
-    <string name="settings_colors">Colors</string>
     <string name="settings_columns">Split into columns</string>
     <string name="settings_stage_mode">Moving on screen</string>
     <string name="settings_stage_mode_pages">Turn pages</string>
@@ -432,8 +426,6 @@
     <string name="settings_columns_help">Automatic decides for each song: it splits into 2 columns when the lyrics don\'t fit on one page and the lines are short enough. The pedal turns both columns together.</string>
     <string name="settings_bold_short">bold</string>
     <string name="settings_sections_look">Section titles</string>
-    <string name="settings_sections_shown">Titles shown</string>
-    <string name="settings_sections_hidden">Titles hidden</string>
     <string name="settings_normalize_card">Mark sections</string>
     <string name="settings_normalize_help">In lyrics with no section titles, finds the parts by what repeats. The verse that comes back is the chorus. Existing titles stay as they are.</string>
     <string name="settings_pedal_command">What this button does</string>
@@ -503,7 +495,7 @@
     <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here. Tap a channel name to pick its output, even out the volume, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
     <string name="mixer_channels">Channels in the backing tracks</string>
     <string name="mixer_channel">Channel %1$d</string>
-    <string name="mixer_pair">Channels %1$d and %2$d</string>
+    <string name="mixer_pair" tools:ignore="PluralsCandidate">Channels %1$d and %2$d</string>
     <string name="mixer_name">Name</string>
     <string name="mixer_mute">Mute the channel</string>
     <string name="mixer_unmute">Unmute the channel</string>
@@ -574,7 +566,7 @@
         <item quantity="one">Add %1$d song</item>
         <item quantity="other">Add %1$d songs</item>
     </plurals>
-    <string name="scan_songs_add_update">Add %1$d and update %2$d</string>
+    <string name="scan_songs_add_update" tools:ignore="PluralsCandidate">Add %1$d and update %2$d</string>
     <plurals name="scan_songs_update">
         <item quantity="one">Update %1$d song</item>
         <item quantity="other">Update %1$d songs</item>
@@ -689,10 +681,6 @@
     <string name="share_code_qr">QR of the words. Take a photo or scan it in Import → Scan QR.</string>
     <string name="share_message">Setlist \"%1$s\" on Stagebook. To get it, go to Import → Type the 3 words and type %2$s. Good for 12 hours.</string>
     <!-- selection in the Songs tab (share several) -->
-    <plurals name="songs_selected">
-        <item quantity="one">%1$d selected</item>
-        <item quantity="other">%1$d selected</item>
-    </plurals>
     <string name="songs_select_cancel">Exit selection</string>
     <!-- band on the local network (Settings → Band and broadcast and join requests) -->
     <string name="settings_band">Band and broadcast</string>
@@ -847,7 +835,7 @@
     <string name="tags_national">Local</string>
     <string name="tags_international">International</string>
     <string name="tags_auto">Split local and international</string>
-    <string name="tags_auto_confirm">By the lyrics language, %1$d songs get the Local tag (in English) and %2$d the International tag. Songs that already have one of these tags, or not enough lyrics, stay as they are. You can fix them later.</string>
+    <string name="tags_auto_confirm">By the lyrics language: Local tag (in English) on %1$d, International tag on %2$d. Songs that already have one of these tags, or not enough lyrics, stay as they are. You can fix them later.</string>
     <string name="tags_auto_ok">Split</string>
     <string name="tags_auto_none">No songs to split: they all have Local or International already, or have no lyrics.</string>
     <plurals name="tags_count">

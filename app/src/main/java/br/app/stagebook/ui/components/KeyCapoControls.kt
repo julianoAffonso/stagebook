@@ -88,7 +88,7 @@ fun KeyCapoControls(
             val validKey = key.isNotEmpty() && Chords.isChord(key)
             Text(
                 if (validKey) stringResource(R.string.editor_capo_sounds, key, capo, Chords.soundingKey(key, capo))
-                else stringResource(R.string.editor_capo_sounds_nokey, capo),
+                else androidx.compose.ui.res.pluralStringResource(R.plurals.editor_capo_sounds_nokey, capo, capo),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
