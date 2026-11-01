@@ -903,4 +903,7 @@
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
     <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional. Depois dá pra corrigir no editor de cada música ou selecionando várias na lista.</string>
+    <string name="editor_auto_meta_short">Em branco: o app completa</string>
+    <string name="editor_track_chip_set">Backing track</string>
+    <string name="editor_track_chip_none">Escolher backing track</string>
 </resources>

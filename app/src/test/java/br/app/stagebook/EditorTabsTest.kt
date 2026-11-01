@@ -83,10 +83,11 @@ class EditorTabsTest {
         compose.setContent {
             StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = track, onPickTrack = { picked++ }, onRemoveTrack = { removed++ }) }
         }
-        compose.onNodeWithText("Escolher").performClick()
+        // tablet: the backing track is a chip next to key, capo and tags
+        compose.onNodeWithText("Escolher backing track").performClick()
         assertEquals(1, picked)
         track = "song-1.ogg"
-        compose.onNodeWithText("Trocar").assertExists()
+        compose.onNodeWithText("Backing track").assertExists()
         compose.onNodeWithContentDescription("Remover o backing track").performClick()
         assertEquals(1, removed)
     }
