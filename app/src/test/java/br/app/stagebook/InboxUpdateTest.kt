@@ -30,4 +30,14 @@ class InboxUpdateTest {
         assertTrue(inbox.items.value.single().updated)
         assertTrue(inbox.items.value.single().text.endsWith("B\nA"))
     }
+
+    @Test fun `setlists arriving at the same time are all kept on disk`() {
+        val inbox = BandInbox(context)
+        val threads = (1..4).map { t ->
+            Thread { repeat(6) { i -> inbox.add("p$t", "Pessoa $t", "LETRAS3\n1\nShow $t-$i\nA", emptyList()) } }
+        }
+        threads.forEach(Thread::start); threads.forEach(Thread::join)
+        assertEquals(24, inbox.items.value.size)
+        assertEquals(inbox.items.value.map { it.id }.toSet(), BandInbox(context).items.value.map { it.id }.toSet())
+    }
 }

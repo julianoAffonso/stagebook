@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -65,12 +66,18 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
 
     fun get(id: String) = _items.value.firstOrNull { it.id == id }
 
-    fun markSeen(id: String) { _items.update { l -> l.map { if (it.id == id) it.copy(seen = true) else it } }; save() }
+    // from the screen: written off the main thread (the list carries every song's text)
+    fun markSeen(id: String) { _items.update { l -> l.map { if (it.id == id) it.copy(seen = true) else it } }; scope.launch { save() } }
 
-    fun remove(id: String) { _items.update { l -> l.filterNot { it.id == id } }; save() }
+    fun remove(id: String) { _items.update { l -> l.filterNot { it.id == id } }; scope.launch { save() } }
+
+    private val scope = backgroundScope(kotlinx.coroutines.Dispatchers.IO)
 
     private fun load(): List<Item> = runCatching { json.decodeFromString<List<Item>>(prefs.getString(KEY, null) ?: return emptyList()) }.getOrDefault(emptyList())
 
+    // one at a time, each with the list as it is now: two threads saving could write an older list last and lose an
+    // item that arrived (audit 01/11)
+    @Synchronized
     private fun save() = prefs.edit { putString(KEY, json.encodeToString(_items.value)) }
 
     private companion object {
