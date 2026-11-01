@@ -211,13 +211,16 @@ SECTIONS = [
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
             "Quando sai uma versão nova, o app avisa ao abrir (com o player desligado). A banda deve usar a mesma versão: um aparelho em outra versão aparece em Ajustes → Banda.",
+            "Em Ajustes → Sobre ficam o idioma, a versão e **Abrir a ajuda**, que abre esta página (precisa de internet).",
             "Tudo fica no aparelho: o que sai vai cifrado, sem conta, propaganda ou rastreio.",
         ],
         "text_en": [
             "When a new version is out, the app says so on opening (with the player off). The band should use the same version: a device on another one shows in Settings → Band.",
+            "Settings → About holds the language, the version and **Open the help**, which opens this page (it needs the internet).",
             "Everything stays on the device: what leaves it travels encrypted, with no account, ads or tracking.",
         ],
-        "figs": [Fig(("tablet_8_versao_nova", None, "Versão nova", "New version"))],
+        "figs": [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_lingua", "Ajustes → Sobre: ajuda, idioma e atualizar", "Settings → About: help, language and updating")),
+                 Fig(("tablet_8_versao_nova", None, "Versão nova", "New version"))],
     },
 ]
 
