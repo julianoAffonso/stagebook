@@ -102,6 +102,14 @@ class BandInternet @Inject constructor(
         }
     }
 
+    /**
+     * The codes worth asking the internet about: the send stays on the server 12 h (nobody accepts after that) and an
+     * "ok" another 12 h, so older codes only cost one request each, every sync, holding the lock (audit 01/11). The
+     * "ok" on the local network still counts for the whole 30 days.
+     */
+    internal fun recentCodes(codes: List<Pair<String, Long>>, now: Long): List<String> =
+        codes.filter { (_, until) -> now - (until - KEEP_MS) < ACK_WINDOW_MS }.map { it.first }
+
     /** The "ok"s for one of my sends: whoever accepted joins the band (and gets a welcome). Returns the new names. */
     suspend fun checkAcks(code: String): List<String> = cloud.acks(code).filterNot { trust.isMember(it.id) }.map { h ->
         trust.add(h.id, h.name, h.key)
@@ -132,7 +140,7 @@ class BandInternet @Inject constructor(
     }
 
     private suspend fun syncInternet() {
-        myCodes().forEach { runCatching { checkAcks(it.code) } }
+        recentCodes(myCodes().map { it.code to it.until }, now()).forEach { runCatching { checkAcks(it) } }
         accepted().forEach { runCatching { cloud.ack(it.code) } }   // repeats the "ok" until the welcome arrives
         val seen = prefs.getStringSet(KEY_SEEN, emptySet()).orEmpty().toMutableSet()
         var out = outbox()
@@ -225,6 +233,7 @@ class BandInternet @Inject constructor(
         const val KEY_SINCE = "since_"
         const val KEY_SEEN = "seen"
         const val KEEP_MS = 30L * 24 * 60 * 60 * 1000      // gives up after 30 days
+        const val ACK_WINDOW_MS = 26L * 60 * 60 * 1000      // 12 h of the send + 12 h of the "ok" + a margin
         const val RESEND_AFTER_MS = 12L * 60 * 60 * 1000   // the service keeps it 12 h: no resending before that
         const val MAX_TRIES = 5
         const val MAX_SEEN = 300
