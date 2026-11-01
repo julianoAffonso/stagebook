@@ -191,6 +191,8 @@ fun ImportScreen(
     }
     BackHandler(enabled = canGoBack) { webView?.goBack() }
 
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val notFound = stringResource(R.string.import_not_found)
     val unreadable = stringResource(R.string.import_unreadable)
     val notSong = stringResource(R.string.not_song)
@@ -238,7 +240,8 @@ fun ImportScreen(
                         placeholder = { Text(stringResource(R.string.import_address_hint)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                        keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(urlFor(address)) }),
+                        // the page shows up whole: the keyboard closes on Go (device test B-03)
+                        keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }),
                         shape = MaterialTheme.shapes.medium,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -248,7 +251,7 @@ fun ImportScreen(
                         ),
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { webView?.loadUrl(urlFor(address)) }) {
+                    IconButton(onClick = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }) {
                         Icon(AppIcons.Search, stringResource(R.string.import_go))
                     }
                 }
