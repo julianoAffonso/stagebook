@@ -73,4 +73,18 @@ class SectionsTest {
         // a lyrics line with a dash is not a part
         assertEquals(null, Sections.detect("Solo eu - e você"))
     }
+
+    @Test fun `any name in brackets on its own line is a part - chords are not`() {
+        val h = Sections.detect("[Solo Violino]")!!
+        assertEquals(Sections.Kind.OTHER, h.kind)
+        assertEquals("Solo Violino", Sections.label(h, SectionLang.PT))
+        assertEquals("Virada bateria", Sections.detect("  [Virada bateria] ")!!.original)
+        assertNull(Sections.detect("[Am]"))
+        assertNull(Sections.detect("[G  D  Em]"))
+        assertNull(Sections.detect("Solo Violino"))   // without brackets it's just a line
+        assertNull(Sections.detect("[Am]linha da letra"))
+        assertEquals("[Solo Violino]", Sections.normalize("[Solo Violino]", SectionLang.EN))
+        // a known name in brackets is still the known part
+        assertEquals(Sections.Kind.CHORUS, Sections.detect("[Refrão]")!!.kind)
+    }
 }

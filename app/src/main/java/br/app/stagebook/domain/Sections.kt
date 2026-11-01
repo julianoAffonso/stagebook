@@ -21,6 +21,8 @@ object Sections {
         PRELUDE("Prelúdio", "Prelude", listOf("prelude", "preludio")),
         PRE_VERSE("Pré-estrofe", "Pre-Verse", listOf("pre estrofe", "preestrofe", "pre verse", "preverse", "pre verso")),
         LINK("Link", "Link", listOf("link")),
+        // any other name written as a part ("[Solo Violino]", "[Virada bateria]"): shown as written (user, 01/11)
+        OTHER("", "", emptyList()),
     }
 
     /** [note]: what the chart wrote next to the part, kept as written ("(repeat)", "— Base 2x"). */
@@ -40,7 +42,16 @@ object Sections {
         val t = line.trim()
         if (t.isEmpty() || t.length > 40) return null
         val written = shape.matchEntire(t)?.groupValues?.get(1)?.trim() ?: return null
-        return plain(written) ?: withNote(written)
+        return plain(written) ?: withNote(written) ?: bracketed(t)
+    }
+
+    // the pattern for a part: a line that is only a text in brackets, and not chords ("[Am]", "[G D]" stay chords)
+    private val wholeBracket = Regex("""^\[([^\[\]]+)]$""")
+
+    private fun bracketed(line: String): Header? {
+        val name = wholeBracket.matchEntire(line)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (name.split(' ').filter { it.isNotEmpty() }.all(Chords::isChord)) return null
+        return Header(Kind.OTHER, "", "", name)
     }
 
     // "Verse 1 (repeat)", "Intro — Base 2x", "Fim - Repete 3x": the part, with the note kept (user, 01/11)
@@ -76,7 +87,7 @@ object Sections {
 
     /** Name shown in the chosen language ("as written" = without brackets and colons). */
     fun label(h: Header, lang: SectionLang): String {
-        if (lang == SectionLang.ORIGINAL) return h.original
+        if (lang == SectionLang.ORIGINAL || h.kind == Kind.OTHER) return h.original
         return buildString {
             append(if (lang == SectionLang.EN) h.kind.en else h.kind.pt)
             if (h.number.isNotEmpty()) append(' ').append(h.number)
@@ -86,7 +97,7 @@ object Sections {
     }
 
     /** [name] (the section name in the app's language) with the original title's number and repeat. */
-    fun label(h: Header, name: String): String = buildString {
+    fun label(h: Header, name: String): String = if (h.kind == Kind.OTHER) h.original else buildString {
         append(name)
         if (h.number.isNotEmpty()) append(' ').append(h.number)
         if (h.repeat.isNotEmpty()) append("  ").append(h.repeat)
