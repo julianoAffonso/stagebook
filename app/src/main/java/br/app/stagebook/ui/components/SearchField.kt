@@ -1,5 +1,7 @@
 package br.app.stagebook.ui.components
 
+import androidx.compose.ui.unit.sp
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
@@ -25,7 +27,8 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         // one line: beside the tag filter on phones it wrapped and the field grew taller
-        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+        // large system text: the hint gets smaller to fit instead of "Música, …" (B-20)
+        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
@@ -64,7 +67,8 @@ private fun LabeledSearchField(value: String, onValueChange: (String) -> Unit, p
         modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
         labelPosition = androidx.compose.material3.TextFieldLabelPosition.Attached(alwaysMinimize = true),
-        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+        // large system text: the hint gets smaller to fit instead of "Música, …" (B-20)
+        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
