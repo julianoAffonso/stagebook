@@ -16,7 +16,8 @@ enum class ImportProblem { NOT_FOUND, UNREADABLE, NOT_SONG }
 sealed interface PageImport {
     data object AskTab : PageImport
     data class Problem(val problem: ImportProblem) : PageImport
-    data class Song(val title: String, val artist: String, val year: String, val text: String) : PageImport
+    /** [offline]: no internet for the lookups (artist, year, BPM): the editor says so (device test B-27). */
+    data class Song(val title: String, val artist: String, val year: String, val text: String, val offline: Boolean = false) : PageImport
 }
 
 /**
@@ -29,6 +30,7 @@ class PageImporter @Inject constructor(
     private val repository: LibraryRepository,
     private val musicBrainz: MusicBrainz,
     private val deezer: DeezerBpm,
+    private val connectivity: Connectivity,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -75,7 +77,9 @@ class PageImporter @Inject constructor(
         var year = PageMeta.yearOf(page)
         // year of the first release on MusicBrainz (the site usually lacks it); on a poor connection it doesn't keep
         // the singer waiting for more than 8 s
-        val net = repository.library.value.look.internetOn   // essential mode (T19): no lookups
+        val internetOn = repository.library.value.look.internetOn   // essential mode (T19): no lookups
+        val online = internetOn && connectivity.isOnline()
+        val net = online
         if (net && meta.title.isNotEmpty()) musicBrainz.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { m ->
             if (artist.isBlank()) artist = m.artist
             if (m.year.isNotEmpty()) year = m.year
@@ -84,7 +88,8 @@ class PageImporter @Inject constructor(
         if (net && Chords.tempo(text) == 0 && meta.title.isNotEmpty()) deezer.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { b ->
             text = Chords.setDirective(text, "tempo", b.toString())
         }
-        return PageImport.Song(meta.title, artist, year, text)
+        // essential mode turns the lookups off on purpose: only a missing connection is worth a notice
+        return PageImport.Song(meta.title, artist, year, text, offline = internetOn && !online)
     }
 
     private companion object {

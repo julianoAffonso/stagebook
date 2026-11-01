@@ -54,10 +54,22 @@ class ImportChordsTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(chords = chords) }
         val draft = ImportDraft()
-        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm()), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
+        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(raw())
         withTimeout(5_000) { vm.openEditor.first() }
         draft.take()!!.text
+    }
+
+    @Test fun `without internet the import still opens and says artist, year and BPM were not filled in (device test B-27)`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        // the test device has no validated internet: the lookups can't run
+        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context)), ImportDraft(), SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
+        vm.onExtracted(raw())
+        withTimeout(5_000) { vm.offlineImport.first() }
+        withTimeout(5_000) { vm.openEditor.first() }
+        Unit
     }
 
     @Test fun `lyrics and chords come in as ChordPro with key and capo`() {
@@ -93,7 +105,7 @@ class ImportChordsTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         repo.updateLook { it.copy(chords = true) }
         val draft = ImportDraft()
-        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm()), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
+        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(rawWithTab())
         withTimeout(5_000) { vm.uiState.first { it.askTab } }
         vm.answerTab(include)
