@@ -732,7 +732,6 @@
     </plurals>
     <string name="inbox_newer">%1$s mandou algo de um Stagebook mais novo. Atualize o app para conferir.</string>
     <string name="inbox_open">Conferir</string>
-    <string name="inbox_later">Agora não</string>
     <string name="inbox_title">Recebidos da banda</string>
     <string name="inbox_discard">Descartar</string>
     <plurals name="import_received">
@@ -919,4 +918,9 @@
     <string name="stage_track_remove_confirm">Remover o backing track desta música? O arquivo de áudio sai do app.</string>
     <string name="stage_track_remove_ok">Remover</string>
     <string name="songs_set_gone">Esse setlist não existe mais.</string>
+    <plurals name="status_received">
+        <item quantity="one">%1$d recebido da banda</item>
+        <item quantity="other">%1$d recebidos da banda</item>
+    </plurals>
+    <string name="inbox_snack_open">Ver</string>
 </resources>

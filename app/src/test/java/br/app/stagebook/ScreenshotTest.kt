@@ -440,11 +440,9 @@ class ScreenshotTest {
     }
 
     @Test fun essentialBannerTablet() = shoot("tablet_1_musicas_essencial") {
-        HomeScaffold(HomeTab.SONGS, {}) { m ->
-            androidx.compose.foundation.layout.Column(m) {
-                br.app.stagebook.ui.home.EssentialBanner({}, androidx.compose.ui.Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
-                Songs(androidx.compose.ui.Modifier.weight(1f))
-            }
+        // the leaf next to the title instead of a strip (user, 01/11)
+        androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 0, {}, {})) {
+            HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
         }
     }
 
@@ -979,16 +977,14 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun inboxBannerPhone() = shoot("jornada_banda_4_aviso") {
-        HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
-            androidx.compose.foundation.layout.Column(it) {
-                br.app.stagebook.ui.share.InboxBanner(
-                    br.app.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "STAGEBOOK1\n12\nShow de sábado"), {}, {},
-                    androidx.compose.ui.Modifier.padding(horizontal = br.app.stagebook.ui.theme.Spacing.m).padding(top = br.app.stagebook.ui.theme.Spacing.s),
-                )
-                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, androidx.compose.ui.Modifier.weight(1f))
+        // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
+        androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {})) {
+            HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
             }
         }
     }
+
 
     @Test @Config(qualifiers = PHONE)
     fun scanAskBandPhone() = shoot("jornada_banda_5_pedir") {

@@ -142,7 +142,7 @@ fun SetlistsScreen(
                 title = stringResource(R.string.sets_title),
                 subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-            )
+            ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
             if (!selecting) Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
