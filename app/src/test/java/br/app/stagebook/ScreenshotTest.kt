@@ -448,8 +448,8 @@ class ScreenshotTest {
         }
     }
 
-    @Test fun settingsScreenTablet() = shoot("tablet_5_ajustes_tela") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SCREEN) }
+    @Test fun settingsScreenTablet() = shoot("tablet_5_ajustes_banda_transmissao") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.BAND) }
     }
 
     // T11: the same setlist sent by two members stays together in the inbox
@@ -582,14 +582,14 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneChords() = shoot("celular_5_ajustes_cifras") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.CHORDS) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LYRICS) }
     }
 
     // the whole Settings → Chords screen (tall, no scrolling): instrument, diagram on tap and chord list
     @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
     fun settingsPhoneChordsFull() = shoot("celular_5_ajustes_cifras_inteira") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
-            SettingsScreen(settings.copy(look = settings.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)), SettingsActions(), it, section = SettingsSection.CHORDS)
+            SettingsScreen(settings.copy(look = settings.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)), SettingsActions(), it, section = SettingsSection.LYRICS)
         }
     }
 
@@ -597,7 +597,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneChordsIllegible() = shoot("celular_5_ajustes_cifras_ilegivel") {
         val dark = settings.copy(look = settings.look.copy(chordColor = 0xFF000000.toInt()))
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(dark, SettingsActions(), it, section = SettingsSection.CHORDS) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(dark, SettingsActions(), it, section = SettingsSection.LYRICS) }
     }
 
     @Test @Config(qualifiers = PHONE)
