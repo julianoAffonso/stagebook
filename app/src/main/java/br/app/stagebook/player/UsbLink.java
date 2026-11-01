@@ -53,6 +53,8 @@ final class UsbLink {
         conn = um.openDevice(d);
         if (conn == null) return "couldn't open the USB interface";
         byte[] raw = conn.getRawDescriptors();
+        // some interfaces (or a cable dropping right then) give no descriptors: an error, not a crash (audio audit P1)
+        if (raw == null) return "the USB interface gave no descriptors";
 
         int curIf = -1, curAlt = -1, curSub = -1, outIf = -1, outAlt = -1;
         int candCh = 0, candSub = 0, candRes = 0;
