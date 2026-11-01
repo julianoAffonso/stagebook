@@ -188,42 +188,6 @@ object Chords {
     private fun name(i: Int, useFlats: Boolean) = (if (useFlats) flats else sharps)[((i % 12) + 12) % 12]
 
     /** The chord [semitones] half steps up (negative = down). [useFlats] null = the chord's own style. */
-    private val PARENS = Regex("""\([^)]*\)""")
-    private val SLASH_EXTENSION = Regex("""/(\d+M?)""")
-    private val SIGN_BEFORE = Regex("""([b#♭♯])(\d+)""")
-    private val SUS = Regex("""sus(2|4)?(?!\d)""")
-
-    /**
-     * A chord in the chart notation the app uses, the same as Cifra Club (user, 01/11): `7+` and `maj7` become `7M`,
-     * a slash before a number becomes parentheses (`C#7/9` → `C#7(9)`; a slash inside them stays, `D7(2/4)`), `sus4`
-     * and `sus` become `4` and `sus2` becomes `2`, and the sign goes after the number (`b13` → `13-`, `#9` → `9+`).
-     * Root and bass stay; what isn't a chord passes unchanged.
-     */
-    fun normalizeChord(c: String): String {
-        val name = ChordName.parse(c) ?: return c
-        var r = name.suffix.replace("maj7", "7M").replace("7+", "7M")
-        r = SUS.replace(r) { if (it.groupValues[1] == "2") "2" else "4" }
-        // signs: inside parentheses they just move after the number; outside, the alteration gets its own
-        val inside = StringBuilder()
-        var last = 0
-        PARENS.findAll(r).forEach { p ->
-            inside.append(outside(r.substring(last, p.range.first)))
-            inside.append(SIGN_BEFORE.replace(p.value) { s -> s.groupValues[2] + sign(s.groupValues[1]) })
-            last = p.range.last + 1
-        }
-        inside.append(outside(r.substring(last)))
-        return name.copy(suffix = inside.toString()).toString()
-    }
-
-    private fun sign(s: String) = if (s == "b" || s == "♭") "-" else "+"
-
-    private fun outside(part: String): String =
-        SIGN_BEFORE.replace(SLASH_EXTENSION.replace(part) { "(" + it.groupValues[1] + ")" }) { "(" + it.groupValues[2] + sign(it.groupValues[1]) + ")" }
-
-    /** Every chord in the ChordPro text in the app's notation ([normalizeChord]); the rest of the text stays. */
-    fun normalizeChords(text: String): String =
-        bracket.replace(text) { b -> if (isChord(b.groupValues[1])) "[" + normalizeChord(b.groupValues[1].trim()) + "]" else b.value }
-
     fun transposeChord(c: String, semitones: Int, useFlats: Boolean? = null): String {
         val chord = ChordName.parse(c) ?: return c
         val flat = useFlats ?: (chord.accidental == "b" || chord.accidental == "♭")
