@@ -121,6 +121,8 @@
     <string name="stage_end">End of setlist</string>
     <string name="stage_edit">Edit the lyrics on this page</string>
     <string name="stage_edit_line">Edit this line</string>
+    <string name="stage_highlight_line">Highlight this line</string>
+    <string name="stage_highlight_off">Remove the highlight</string>
     <string name="stage_zoom">Zoom for this song: %1$d%%</string>
     <string name="stage_zoom_reset">Default</string>
     <string name="set_remove">Remove</string>

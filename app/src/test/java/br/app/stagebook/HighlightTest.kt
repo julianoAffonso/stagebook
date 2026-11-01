@@ -8,6 +8,7 @@ import br.app.stagebook.ui.stage.ChordLook
 import br.app.stagebook.ui.stage.chordLine
 import br.app.stagebook.ui.stage.highlighted
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Highlighting a phrase in the lyrics (vocalist, 31/10): `==phrase==` in the text, a marker background on stage. */
@@ -61,5 +62,13 @@ class HighlightTest {
         val bg = out.spanStyles.single { it.item.background == marker }
         assertEquals(open + 2 until text.lastIndexOf("=="), bg.start until bg.end)
         assertEquals(2, out.spanStyles.count { it.item.color == faded })
+    }
+    @Test fun `stage - highlight this line wraps the whole line, again takes it off (B-28)`() {
+        val text = "{key: G}\n  [G]Saio cedo pela [D]rua  \noutra"
+        val on = br.app.stagebook.ui.editor.toggleLineHighlight(text, 1)
+        assertEquals("{key: G}\n  ==[G]Saio cedo pela [D]rua==  \noutra", on)
+        assertTrue(br.app.stagebook.ui.editor.lineHighlighted(on, 1))
+        assertEquals(text, br.app.stagebook.ui.editor.toggleLineHighlight(on, 1))
+        assertEquals(text, br.app.stagebook.ui.editor.toggleLineHighlight(text, 9))
     }
 }

@@ -171,6 +171,11 @@ class StageViewModel @Inject constructor(
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.withCapo(it.text, capo)) }
     }
 
+    /** "Highlight this line" on stage (B-28): saved in the song right away, like key and capo. */
+    fun toggleLineHighlight(songId: String, line: Int) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = br.app.stagebook.ui.editor.toggleLineHighlight(it.text, line)) }
+    }
+
     fun setZoom(songId: String, zoom: Float) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(zoom = zoom) }
     }
