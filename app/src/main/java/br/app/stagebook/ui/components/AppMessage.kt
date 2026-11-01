@@ -14,10 +14,11 @@ import kotlinx.coroutines.launch
  * app pattern. Every screen shows messages here (never Toast): `LocalAppMessage.current.show(...)`.
  */
 class AppMessage(val host: SnackbarHostState, private val scope: CoroutineScope) {
-    fun show(text: String, long: Boolean = false) {
+    fun show(text: String, long: Boolean = false, action: String? = null, onAction: () -> Unit = {}) {
         scope.launch {
             host.currentSnackbarData?.dismiss()
-            host.showSnackbar(text, duration = if (long) SnackbarDuration.Long else SnackbarDuration.Short)
+            val result = host.showSnackbar(text, actionLabel = action, duration = if (long) SnackbarDuration.Long else SnackbarDuration.Short)
+            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) onAction()
         }
     }
 }

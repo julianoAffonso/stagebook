@@ -178,7 +178,7 @@ fun SongsScreen(
                 title = stringResource(R.string.songs_title),
                 subtitle = pluralStringResource(R.plurals.song_count, uiState.total, uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-            )
+            ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             SearchWithTags(
                 query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
                 // selecting, the Import/New row goes away: the list keeps its distance from the search

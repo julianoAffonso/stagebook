@@ -55,28 +55,12 @@ class InboxViewModel @Inject constructor(
     fun discard(id: String) = inbox.remove(id)
 }
 
+/** "Ana sent the setlist Saturday show": what arrived, in one line (the list and the short message on the tabs). */
 @Composable
-private fun itemText(item: BandInbox.Item) =
+fun itemText(item: BandInbox.Item) =
     if (item.newer) stringResource(R.string.inbox_newer, item.fromName)
     else if (item.setName.isEmpty()) pluralStringResource(R.plurals.inbox_songs, item.songCount, item.fromName, item.songCount)
     else stringResource(R.string.inbox_setlist, item.fromName, item.setName)
-
-/** The news notice, like new email: "Ana sent the setlist Saturday show" → Check / Not now. */
-@Composable
-fun InboxBanner(item: BandInbox.Item, onOpen: () -> Unit, onLater: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.secondaryContainer) {
-        Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Icon(AppIcons.Group, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                Text(itemText(item), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.weight(1f))
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onLater) { Text(stringResource(R.string.inbox_later)) }
-                TextButton(onClick = onOpen) { Text(stringResource(R.string.inbox_open)) }
-            }
-        }
-    }
-}
 
 /** "Received from the band": everything not reviewed yet; tapping opens the review, the trash can discards. */
 @Composable
@@ -146,10 +130,4 @@ private fun updatedOf(at: Long): String {
 
 private val sample = BandInbox.Item("1", "a", "Celular da Ana", "STAGEBOOK1\n12\nShow de sábado")
 
-@LightPreview
-@Composable
-private fun InboxBannerLightPreview() = PreviewSurface(dark = false) { InboxBanner(sample, {}, {}) }
 
-@DarkPreview
-@Composable
-private fun InboxBannerDarkPreview() = PreviewSurface(dark = true) { InboxBanner(sample, {}, {}) }

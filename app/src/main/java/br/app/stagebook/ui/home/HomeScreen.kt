@@ -9,7 +9,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import br.app.stagebook.ui.share.InboxViewModel
 import br.app.stagebook.ui.share.InboxDialog
-import br.app.stagebook.ui.share.InboxBanner
+import br.app.stagebook.ui.components.HomeStatus
+import br.app.stagebook.ui.components.LocalHomeStatus
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
@@ -130,19 +131,19 @@ fun HomeScreen(
     }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
+        // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
+        // 01/11); something new from the band shows once as the short message at the bottom, with "View"
+        val status = HomeStatus(essential, inbox.size, openEssential) { listOpen = true }
+        val news = banner?.let { br.app.stagebook.ui.share.itemText(it) }
+        val viewLabel = stringResource(R.string.inbox_snack_open)
+        LaunchedEffect(banner?.id) {
+            val item = banner ?: return@LaunchedEffect
+            message.show(news.orEmpty(), long = true, action = viewLabel) { onOpenReceived(item.id) }
+            inboxVm.later(item.id)
+        }
         Column(m) {
-            // essential mode: a quiet reminder that something is off; tapping opens Settings (the section is the first
-            // one)
-            if (tab != HomeTab.SETTINGS && essential) {
-                EssentialBanner(openEssential, Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s))
-            }
-            if (tab != HomeTab.SETTINGS && banner != null) {
-                InboxBanner(
-                    banner, onOpen = { onOpenReceived(banner.id) }, onLater = { inboxVm.later(banner.id) },
-                    Modifier.padding(horizontal = Spacing.m).padding(top = Spacing.s),
-                )
-            }
             Box(Modifier.weight(1f)) {
+                androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status.takeIf { tab != HomeTab.SETTINGS }) {
                 tabs.SaveableStateProvider(if (tab == HomeTab.SETTINGS) "${HomeTab.SETTINGS}$settingsVisit" else tab.name) {
                     when (tab) {
                         HomeTab.SONGS -> SongsRoute(
@@ -152,6 +153,7 @@ fun HomeScreen(
                         HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
                         HomeTab.SETTINGS -> SettingsRoute(settingsStart)
                     }
+                }
                 }
             }
         }
@@ -242,19 +244,6 @@ private fun barColors() = ShortNavigationBarItemDefaults.colors(
     selectedIconColor = MaterialTheme.colorScheme.primary,
     selectedTextColor = MaterialTheme.colorScheme.primary,
 )
-
-/** "Essential mode on": a quiet line at the top of the tabs, no background. */
-@Composable
-fun EssentialBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier.clip(MaterialTheme.shapes.small).clickable(onClick = onClick).padding(horizontal = Spacing.s, vertical = Spacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-    ) {
-        Icon(AppIcons.Eco, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(stringResource(R.string.essential_banner), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
 
 /** Alert on open: what is off, as a list, and the link that goes straight to Settings → Essential mode. */
 @Composable
