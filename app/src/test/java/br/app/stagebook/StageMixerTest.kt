@@ -53,8 +53,8 @@ class StageMixerTest {
         stage(track = "s1.ogg")
         compose.onNodeWithContentDescription("Abrir o mixer").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("O que você mudar aqui fica só nesta música", substring = true).assertExists()
-        compose.onNodeWithText("Voltar ao mixer geral").assertDoesNotExist()
+        compose.onNodeWithText("cria um ajuste só desta música", substring = true).assertExists()
+        compose.onNodeWithText("Usar o mixer global").assertExists()   // on: no settings of its own
     }
 
     @Test fun `a song with its own mix shows it and the way back to the general mixer`() {
@@ -64,8 +64,8 @@ class StageMixerTest {
         }
         compose.onNodeWithContentDescription("Abrir o mixer").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Esta música tem ajustes próprios.").assertExists()
-        compose.onNodeWithText("Voltar ao mixer geral").assertExists()
+        compose.onNodeWithText("Esta música tem ajustes próprios", substring = true).assertExists()
+        compose.onNodeWithText("Usar o mixer global").assertExists()
     }
 
     @Test fun `no mixer button on a song without a backing track`() {
@@ -77,4 +77,21 @@ class StageMixerTest {
         stage(track = "s1.ogg", playerMode = false)
         compose.onNodeWithContentDescription("Abrir o mixer").assertDoesNotExist()
     }
+
+    // a link inside a text runs its action (the global mixer one opens Settings → Player, user 01/11)
+    @Test fun `a link in a text runs its action`() {
+        var opened = false
+        compose.setContent { StagebookTheme { br.app.stagebook.ui.components.LinkText("%1${'$'}s", "mixer global", { opened = true }) } }
+        compose.onNodeWithText("mixer global").performClick()
+        org.junit.Assert.assertTrue(opened)
+    }
+
+    // "Use the global mixer" on top of the song's mixer (user, 01/11)
+    @Test fun `use the global mixer - on without own settings, off with them`() {
+        stage(track = "s1.ogg")
+        compose.onNodeWithContentDescription("Abrir o mixer").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Usar o mixer global").assertExists()
+    }
+
 }

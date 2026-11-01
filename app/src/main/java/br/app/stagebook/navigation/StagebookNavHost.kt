@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -61,7 +62,14 @@ fun StagebookNavHost(
     // the "Lead the band" strip sits below any screen (the stage included) while the mode is on. Short messages
     // (snackbar) from any screen, at the bottom, above the "Lead the band" strip
     val message = rememberAppMessage()
-    CompositionLocalProvider(LocalAppMessage provides message) {
+    // a link to a Settings section from any screen: back to Home, which opens Settings on that section (user, 01/11)
+    val openSettings: (br.app.stagebook.ui.settings.SettingsSection) -> Unit = remember(nav) {
+        { section ->
+            br.app.stagebook.ui.settings.SettingsLinks.pending.value = section
+            nav.popBackStack<Home>(inclusive = false)
+        }
+    }
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings) {
     androidx.compose.foundation.layout.Column {
     Box(Modifier.weight(1f)) {
     NavHost(
