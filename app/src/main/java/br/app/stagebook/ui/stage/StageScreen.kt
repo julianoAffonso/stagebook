@@ -1118,7 +1118,7 @@ internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, s
         val end = starts[i] + maxOf(l.length, 1) - 1
         val first = r.getLineForOffset(starts[i])
         val last = r.getLineForOffset(end)
-        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty())
+        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length))
     }
 }
 
