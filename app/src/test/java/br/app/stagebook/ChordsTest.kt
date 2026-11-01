@@ -107,4 +107,17 @@ class ChordsTest {
         assertEquals("Refrão", Chords.directive("  { comment :  Refrão  }  ", "comment"))
         assertTrue(Chords.isDirective("{start_of_chorus}"))
     }
+
+    @Test fun `key capo and tempo read in one pass match the single readers`() {
+        val text = "[G]um\n{Tempo: 128 bpm}\n{key: Em}\n{capo: 3}\n{key: G}\n[C]dois"
+        val m = Chords.meta(text)
+        assertEquals(Chords.key(text), m.key)
+        assertEquals(Chords.capo(text), m.capo)
+        assertEquals(Chords.tempo(text), m.tempo)
+        assertEquals("128 bpm", m.tempoText)
+        assertEquals(br.app.stagebook.domain.SongMeta(), Chords.meta("só a letra"))
+        // the editor's state reads them from its text
+        assertEquals("Em", br.app.stagebook.ui.editor.SongEditorUiState(text = text).meta.key)
+        assertEquals(Chords.withMeta("nova", text), Chords.withMeta("nova", m))
+    }
 }

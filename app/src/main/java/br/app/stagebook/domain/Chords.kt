@@ -74,15 +74,41 @@ object Chords {
     fun hideMeta(text: String): String = text.split('\n').filterNot(::isMeta).joinToString("\n")
 
     /** The edited lyrics (without key and capo) with [from]'s key and capo back at the start. */
-    fun withMeta(edited: String, from: String): String {
+    fun withMeta(edited: String, from: String): String = withMeta(edited, meta(from))
+
+    /** The edited lyrics with the key, capo and BPM already read from the text before ([meta]). */
+    fun withMeta(edited: String, from: SongMeta): String {
         var t = hideMeta(edited)
-        tempo(from).takeIf { it > 0 }?.let { t = setDirective(t, "tempo", it.toString()) }
-        capo(from).takeIf { it > 0 }?.let { t = setDirective(t, "capo", it.toString()) }
-        key(from).takeIf { it.isNotEmpty() }?.let { t = setDirective(t, "key", it) }
+        from.tempo.takeIf { it > 0 }?.let { t = setDirective(t, "tempo", it.toString()) }
+        from.capo.takeIf { it > 0 }?.let { t = setDirective(t, "capo", it.toString()) }
+        from.key.takeIf { it.isNotEmpty() }?.let { t = setDirective(t, "key", it) }
         return t
     }
 
     fun key(text: String): String = directive(text, "key").orEmpty()
+
+    /** Key, capo and BPM read in one pass over the lines (the editor reads them on every keystroke; audit 01/11). */
+    fun meta(text: String): SongMeta {
+        var key: String? = null
+        var capo: String? = null
+        var tempo: String? = null
+        for (line in text.lineSequence()) {
+            val m = directiveIn(line) ?: continue
+            val value = m.groupValues[2].trim()
+            when (m.groupValues[1].lowercase()) {
+                "key" -> if (key == null) key = value
+                "capo" -> if (capo == null) capo = value
+                "tempo" -> if (tempo == null) tempo = value
+            }
+            if (key != null && capo != null && tempo != null) break
+        }
+        return SongMeta(
+            key.orEmpty(),
+            capo?.toIntOrNull()?.coerceIn(0, 12) ?: 0,
+            tempo.orEmpty(),
+            tempo?.filter(Char::isDigit)?.toIntOrNull()?.takeIf { it in MIN_TEMPO..MAX_TEMPO } ?: 0,
+        )
+    }
 
     // chords the user took off the stage chord list (ChordPro extension: x_ directives belong to apps)
     private const val HIDE = "x_hide_chords"
@@ -337,3 +363,6 @@ object Chords {
     /** Does the song have any chord? */
     fun hasChords(text: String): Boolean = bracket.findAll(text).any { isChord(it.groupValues[1]) }
 }
+
+/** A song's key, capo and BPM ([Chords.meta]); [tempoText] is the directive as written (the field shows it). */
+data class SongMeta(val key: String = "", val capo: Int = 0, val tempoText: String = "", val tempo: Int = 0)

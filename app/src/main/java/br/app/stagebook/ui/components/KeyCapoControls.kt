@@ -18,6 +18,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.R
 import br.app.stagebook.domain.Chords
+import br.app.stagebook.domain.SongMeta
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.delay
 import br.app.stagebook.ui.theme.Spacing
 
 /**
@@ -32,11 +36,17 @@ fun KeyCapoControls(
     onCapo: (Int) -> Unit,
     modifier: Modifier = Modifier,
     showCapo: Boolean = true,
+    meta: SongMeta = remember(text) { Chords.meta(text) },
 ) {
-    val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
-    val saved = remember(text) { Chords.key(text) }
-    val key = saved.ifEmpty { remember(text) { Chords.detectKey(text) } }
-    val capo = remember(text) { Chords.capo(text) }
+    // reading every chord of the song waits for a pause in typing (the saved key and capo come from [meta] right away;
+    // audit 01/11)
+    val hasChords by produceState(remember { hasChords(text) }, text) { delay(CHORDS_AFTER_TYPING_MS); value = hasChords(text) }
+    val detected by produceState(remember { if (meta.key.isEmpty()) Chords.detectKey(text) else "" }, text, meta.key) {
+        if (meta.key.isEmpty()) { delay(CHORDS_AFTER_TYPING_MS); value = Chords.detectKey(text) }
+    }
+    val saved = meta.key
+    val key = saved.ifEmpty { detected }
+    val capo = meta.capo
     val keyStepper = @Composable {
         Stepper(
             icon = AppIcons.MusicNote,
@@ -137,3 +147,7 @@ private fun KeyCapoLightPreview() = PreviewSurface(dark = false) { KeyCapoSample
 @DarkPreview
 @Composable
 private fun KeyCapoDarkPreview() = PreviewSurface(dark = true) { KeyCapoSamples() }
+
+private fun hasChords(text: String) = Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords)
+
+private const val CHORDS_AFTER_TYPING_MS = 300L

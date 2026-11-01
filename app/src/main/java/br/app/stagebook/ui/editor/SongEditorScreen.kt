@@ -195,7 +195,7 @@ fun SongEditorScreen(
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
             fun edit(v: TextFieldValue) {
                 lyrics = v
-                if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.text))
+                if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
             }
             var editingLyrics by remember { mutableStateOf(false) }
             // new chord: goes where the lyrics cursor was
@@ -257,7 +257,7 @@ fun SongEditorScreen(
                             if (track != null) TrackField(track.isNotEmpty(), trackName, onPickTrack, onRemoveTrack, Modifier.weight(1f))
                         }
                         // key and capo on their own line: next to the fields the capo got squeezed to "2"
-                        if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = showCapo)
+                        if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = showCapo, meta = uiState.meta)
                     }
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -400,14 +400,14 @@ internal fun lineEnd(text: String, at: Int): Int {
 /** Thin line with the song summary (title · artist · key · capo) and the arrow; when open, shows the fields below. */
 @Composable
 private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onToggle: () -> Unit, chords: Boolean, fields: @Composable () -> Unit) {
-    val key = remember(uiState.text) { Chords.key(uiState.text) }
-    val capo = remember(uiState.text) { Chords.capo(uiState.text) }
+    val key = uiState.meta.key
+    val capo = uiState.meta.capo
     val summary = listOfNotNull(
         uiState.title.ifBlank { null } ?: stringResource(R.string.editor_data_untitled),
         uiState.author.ifBlank { null },
         key.ifBlank { null }?.takeIf { chords },
         capo.takeIf { chords && it > 0 }?.let { stringResource(R.string.editor_data_capo, it) },
-        remember(uiState.text) { Chords.tempo(uiState.text) }.takeIf { it > 0 }?.let { stringResource(R.string.editor_data_tempo, it) },
+        uiState.meta.tempo.takeIf { it > 0 }?.let { stringResource(R.string.editor_data_tempo, it) },
     ).joinToString(" · ")
     Column(Modifier.padding(horizontal = Spacing.m)) {
         // like a choice field (user's request, 29/10): the outlined box and label, the summary inside and the ▼;
@@ -522,13 +522,13 @@ private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
             modifier = Modifier.width(Sizes.yearField),   // 4 digits
         )
         // song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100)
-        val tempo = remember(uiState.text) { Chords.directive(uiState.text, "tempo").orEmpty() }
+        val tempo = uiState.meta.tempoText
         OutlinedTextField(
             value = tempo,
             onValueChange = onTempo,
             label = { Text(stringResource(R.string.editor_tempo)) },
             singleLine = true,
-            isError = tempo.isNotEmpty() && Chords.tempo(uiState.text) == 0,
+            isError = tempo.isNotEmpty() && uiState.meta.tempo == 0,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits

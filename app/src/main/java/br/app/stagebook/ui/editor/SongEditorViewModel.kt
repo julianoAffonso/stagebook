@@ -44,6 +44,9 @@ data class SongEditorUiState(
     val tags: List<String> = emptyList(),   // saved with the song on Save, like the rest (user, 01/11: tags in the editor)
 ) {
     val canDelete get() = mode == EditorMode.EDIT || mode == EditorMode.IMPORTED_UPDATE
+
+    /** Key, capo and BPM, read once per state (the header, the fields and each keystroke use them; audit 01/11). */
+    val meta: br.app.stagebook.domain.SongMeta by lazy { Chords.meta(text) }
 }
 
 /** How the editor exits: close, or (when batch importing into a setlist) open the next song or the finished setlist. */
