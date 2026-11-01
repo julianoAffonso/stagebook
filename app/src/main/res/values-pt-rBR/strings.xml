@@ -374,7 +374,6 @@
     <string name="settings_auto_scroll_help">No modo rolar, o ▶ no palco faz a letra subir sozinha. Toque na tela ou no pedal para pausar.</string>
     <string name="stage_capo_desc">Capotraste na %1$dª casa</string>
     <string name="stage_capo_sounds_desc">Capotraste na %1$dª casa, soa em %2$s</string>
-    <string name="settings_font_family">Fonte</string>
     <string name="font_default">Padrão</string>
     <string name="font_condensed">Condensada</string>
     <string name="font_serif">Serifada</string>
@@ -795,7 +794,7 @@
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
     <!-- Settings → Advanced (31/10) -->
     <string name="settings_advanced">Avançado</string>
-    <string name="settings_advanced_short">Ajustes do Android para tocar sem falhas</string>
+    <string name="settings_advanced_short">Para tocar sem falhas</string>
     <string name="advanced_play">Para tocar sem falhas</string>
     <string name="advanced_play_help">Ajustes do Android que já derrubaram a interface de áudio ou pararam o app no palco. Vêm ligados; desligue um só se souber por quê. Alguns só existem em certos tablets e só aparecem neles.</string>
     <string name="advanced_battery_free">O Stagebook está livre da economia de bateria.</string>
@@ -908,4 +907,7 @@
     <string name="settings_page_card">Página</string>
     <string name="metro_summary_shown">No palco</string>
     <string name="metro_summary_hidden">Escondido do palco</string>
+    <string name="settings_font_lyrics">Fonte da letra</string>
+    <string name="settings_font_chords">Fonte dos acordes</string>
+    <string name="settings_font_sections">Fonte dos títulos</string>
 </resources>

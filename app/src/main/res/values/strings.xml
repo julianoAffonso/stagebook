@@ -374,7 +374,6 @@
     <string name="settings_auto_scroll_help">In scroll mode, ▶ on stage makes the lyrics move up by themselves. Tap the screen or the pedal to pause.</string>
     <string name="stage_capo_desc">Capo on fret %1$d</string>
     <string name="stage_capo_sounds_desc">Capo on fret %1$d, sounds in %2$s</string>
-    <string name="settings_font_family">Font</string>
     <string name="font_default">Default</string>
     <string name="font_condensed">Condensed</string>
     <string name="font_serif">Serif</string>
@@ -797,7 +796,7 @@
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
     <!-- Settings → Advanced (31/10) -->
     <string name="settings_advanced">Advanced</string>
-    <string name="settings_advanced_short">Android settings for playing without failures</string>
+    <string name="settings_advanced_short">For playing without failures</string>
     <string name="advanced_play">For playing without failures</string>
     <string name="advanced_play_help">Android settings that made the audio interface drop or the app stop on stage. They start on; turn one off only if you know why. Some only exist on certain tablets and appear only on them.</string>
     <string name="advanced_battery_free">Stagebook is free from battery saving.</string>
@@ -910,4 +909,7 @@
     <string name="settings_page_card">Page</string>
     <string name="metro_summary_shown">On stage</string>
     <string name="metro_summary_hidden">Hidden from the stage</string>
+    <string name="settings_font_lyrics">Lyrics font</string>
+    <string name="settings_font_chords">Chords font</string>
+    <string name="settings_font_sections">Titles font</string>
 </resources>
