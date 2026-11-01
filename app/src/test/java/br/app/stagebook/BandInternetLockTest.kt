@@ -47,4 +47,22 @@ class BandInternetLockTest {
         withTimeout(5_000) { while (codes().isEmpty()) kotlinx.coroutines.delay(20) }
         assertTrue(codes().single().contains("47-violao-lua"))
     }
+
+    @Test fun `only codes from the last day are asked over the internet`() {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val identity = br.app.stagebook.data.DeviceIdentity(context)
+        val link = br.app.stagebook.data.BandLink(
+            context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+        )
+        val band = BandInternet(
+            context, br.app.stagebook.data.SetlistCloud(repo, identity), br.app.stagebook.data.BandTrust(context), identity,
+            br.app.stagebook.data.BandInbox(context), br.app.stagebook.data.Connectivity(context), link,
+        )
+        val hour = 60L * 60 * 1000
+        val keep = 30 * 24 * hour
+        val now = 1_000 * keep
+        // until = created + 30 days
+        val codes = listOf("hoje" to now - 2 * hour + keep, "ontem" to now - 20 * hour + keep, "semana" to now - 7 * 24 * hour + keep)
+        assertEquals(listOf("hoje", "ontem"), band.recentCodes(codes, now))
+    }
 }
