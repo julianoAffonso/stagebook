@@ -12,7 +12,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
 
-/** Reading and writing letras.json and the library file ({"songs":[...]}) used for import/export. */
+/** Reading and writing stagebook.json and the library file ({"songs":[...]}) used for import/export. */
 object LibraryCodec {
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json {

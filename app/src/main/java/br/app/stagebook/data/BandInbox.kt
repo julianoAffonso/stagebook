@@ -2,7 +2,6 @@ package br.app.stagebook.data
 
 import android.content.Context
 import androidx.compose.runtime.Immutable
-import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,9 +41,8 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         val newer: Boolean get() = text == SetlistCloud.NEWER
     }
 
-    // the items carry every song's text: a file of their own, replaced whole (it used to be the "inbox" prefs, which
-    // keep everything in memory and rewrite the whole XML; audit 01/11)
-    private val prefs = context.getSharedPreferences("inbox", Context.MODE_PRIVATE)
+    // the items carry every song's text: a file of their own, replaced whole (prefs keep everything in memory and
+    // rewrite the whole XML; audit 01/11)
     private val file = File(context.filesDir, FILE)
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -77,17 +75,7 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
 
     private val scope = backgroundScope(kotlinx.coroutines.Dispatchers.IO)
 
-    private fun load(): List<Item> {
-        if (!file.exists()) migrate()
-        return runCatching { json.decodeFromString<List<Item>>(file.readText()) }.getOrDefault(emptyList())
-    }
-
-    // an inbox saved by an older version, in the prefs: moves to the file once
-    private fun migrate() {
-        val old = prefs.getString(KEY, null) ?: return
-        val moved = runCatching { file.replaceAtomically(old.toByteArray()) }.getOrDefault(false)
-        if (moved) prefs.edit { remove(KEY) }
-    }
+    private fun load(): List<Item> = runCatching { json.decodeFromString<List<Item>>(file.readText()) }.getOrDefault(emptyList())
 
     // one at a time, each with the list as it is now: two threads saving could write an older list last and lose an
     // item that arrived (audit 01/11). A full disk keeps the list in memory and logs (never a crash)
@@ -98,7 +86,6 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
     }
 
     private companion object {
-        const val KEY = "items"
         const val FILE = "inbox.json"
         const val MAX = 30   // the inbox doesn't grow without limit
     }

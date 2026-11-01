@@ -5,7 +5,7 @@ import br.app.stagebook.domain.PedalAction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// letras.json format (the same as the Java version: the old library opens without conversion).
+// The library saved in stagebook.json.
 
 @Immutable
 @Serializable

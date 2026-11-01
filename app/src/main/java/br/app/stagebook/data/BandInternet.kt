@@ -74,13 +74,8 @@ class BandInternet @Inject constructor(
     private fun <T> save(key: String, ser: kotlinx.serialization.KSerializer<T>, list: List<T>) =
         prefs.edit { putString(key, json.encodeToString(ListSerializer(ser), list)) }
 
-    private fun loadOut(): List<Out> {
-        // a queue saved by an older version, in the prefs: moves to the file once
-        if (!outFile.exists()) prefs.getString(KEY_OUT, null)?.let { old ->
-            if (runCatching { outFile.replaceAtomically(old.toByteArray()) }.getOrDefault(false)) prefs.edit { remove(KEY_OUT) }
-        }
-        return runCatching { json.decodeFromString(ListSerializer(Out.serializer()), outFile.readText()) }.getOrDefault(emptyList())
-    }
+    private fun loadOut(): List<Out> =
+        runCatching { json.decodeFromString(ListSerializer(Out.serializer()), outFile.readText()) }.getOrDefault(emptyList())
 
     private fun saveOut(list: List<Out>) {
         runCatching { outFile.replaceAtomically(json.encodeToString(ListSerializer(Out.serializer()), list).toByteArray()) }
@@ -250,7 +245,6 @@ class BandInternet @Inject constructor(
     }
 
     private companion object {
-        const val KEY_OUT = "outbox"   // older versions: the queue in the prefs (moved to [OUT_FILE])
         const val OUT_FILE = "band_outbox.json"
         const val KEY_CODES = "codes"
         const val KEY_ACCEPTED = "accepted"
