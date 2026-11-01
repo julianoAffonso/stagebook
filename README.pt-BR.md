@@ -11,6 +11,8 @@
 
 Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho ou com a banda.
 
+**Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
+
 ## O que ele faz
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. Cada botão do pedal pode fazer outra coisa.
