@@ -62,6 +62,7 @@
     <string name="editor_delete">Excluir música</string>
     <string name="editor_chord_label">Acorde:</string>
     <string name="editor_highlight">Destacar</string>
+    <string name="editor_highlight_hint">Selecione a frase e toque em Destacar</string>
     <string name="editor_sections">Seção:</string>
     <string name="editor_discard_confirm">Sair sem salvar? O que você digitou ou importou vai se perder.</string>
     <string name="editor_discard">Sair sem salvar</string>

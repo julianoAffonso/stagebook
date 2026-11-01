@@ -37,3 +37,30 @@ fun toggleHighlight(value: TextFieldValue): TextFieldValue {
     val out = text.substring(0, start) + HIGHLIGHT_MARK + text.substring(start, end) + HIGHLIGHT_MARK + text.substring(end)
     return TextFieldValue(out, TextRange(start + w, end + w))
 }
+
+/**
+ * Shows the highlights in the editor (user, 01/11, B-28): the phrase between `==` gets the stage's marker background
+ * and the marks themselves fade, so what is highlighted is visible without going to the stage. The text and the cursor
+ * positions don't change (only the look).
+ */
+class HighlightLook(private val marker: androidx.compose.ui.graphics.Color, private val marks: androidx.compose.ui.graphics.Color) :
+    androidx.compose.ui.text.input.VisualTransformation {
+    override fun filter(text: androidx.compose.ui.text.AnnotatedString): androidx.compose.ui.text.input.TransformedText {
+        if (!text.text.contains(HIGHLIGHT_MARK)) return androidx.compose.ui.text.input.TransformedText(text, androidx.compose.ui.text.input.OffsetMapping.Identity)
+        val out = androidx.compose.ui.text.AnnotatedString.Builder(text)
+        val w = HIGHLIGHT_MARK.length
+        var lineStart = 0
+        for (line in text.text.split('\n')) {
+            val at = highlightMarks(line)
+            for (k in at.indices step 2) {
+                val open = lineStart + at[k]
+                val close = lineStart + at[k + 1]
+                out.addStyle(androidx.compose.ui.text.SpanStyle(background = marker), open + w, close)
+                out.addStyle(androidx.compose.ui.text.SpanStyle(color = marks), open, open + w)
+                out.addStyle(androidx.compose.ui.text.SpanStyle(color = marks), close, close + w)
+            }
+            lineStart += line.length + 1
+        }
+        return androidx.compose.ui.text.input.TransformedText(out.toAnnotatedString(), androidx.compose.ui.text.input.OffsetMapping.Identity)
+    }
+}
