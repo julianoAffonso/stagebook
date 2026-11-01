@@ -104,6 +104,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -1186,8 +1187,9 @@ private fun PlayerDetail(look: Look, actions: SettingsActions, ownMix: Int = 0) 
             color = MaterialTheme.colorScheme.error,
         )
     }
-    MixerCard(look.mixer, actions.onMixer, actions.mixerLevels, actions.monitoring, actions.onMonitoring)
-    EqCard(look.mixer, actions.onMixer, actions.mixerLevels, actions.monitoring)
+    val (mixer, onMixer) = rememberMixerDraft(look.mixer, actions.onMixer)
+    MixerCard(mixer, onMixer, actions.mixerLevels, actions.monitoring, actions.onMonitoring)
+    EqCard(mixer, onMixer, actions.mixerLevels, actions.monitoring)
 }
 
 @Composable
@@ -1200,6 +1202,34 @@ private fun UsbRequirements() = HelpTip(
     stringResource(R.string.settings_player_requirements_text),
     label = stringResource(R.string.settings_player_requirements),
 )
+
+/**
+ * The mixer while a fader is dragged: shown at once, saved at most every [MIXER_SAVE_MS] with the latest value. Each
+ * drag event saved the whole library and recomposed every screen reading it (audit 01/11); the sound still follows
+ * the drag, a few times a second. A change from elsewhere (back to the global mixer) shows as soon as nothing waits.
+ */
+@Composable
+internal fun rememberMixerDraft(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit): Pair<MixerConfig, (MixerConfig) -> Unit> {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val save by androidx.compose.runtime.rememberUpdatedState(onMixer)
+    val draft = remember { mutableStateOf<MixerConfig?>(null) }
+    val saving = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    LaunchedEffect(mixer) { if (saving[0]?.isActive != true) draft.value = null }
+    val set: (MixerConfig) -> Unit = remember {
+        { m ->
+            draft.value = m
+            if (saving[0]?.isActive != true) {
+                saving[0] = scope.launch {
+                    kotlinx.coroutines.delay(MIXER_SAVE_MS)
+                    draft.value?.let(save)
+                }
+            }
+        }
+    }
+    return (draft.value ?: mixer) to set
+}
+
+internal const val MIXER_SAVE_MS = 150L
 
 @Composable
 internal fun MixerCard(

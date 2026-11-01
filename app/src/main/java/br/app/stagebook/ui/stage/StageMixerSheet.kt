@@ -73,8 +73,9 @@ internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerCo
                 // read-only on the global mixer: the controls dim, the meters keep their colour (user, 01/11)
                 androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalMixerLocked provides !own) {
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                        MixerCard(mixer, onMixer, { levels.value }, monitoring, { monitoring = it }, monitorSwitch = own)
-                        EqCard(mixer, onMixer, { levels.value }, monitoring)
+                        val (shown, onShown) = br.app.stagebook.ui.settings.rememberMixerDraft(mixer, onMixer)
+                        MixerCard(shown, onShown, { levels.value }, monitoring, { monitoring = it }, monitorSwitch = own)
+                        EqCard(shown, onShown, { levels.value }, monitoring)
                     }
                 }
                 // with the global mixer: nothing below takes a touch (it's read-only until the switch is off)
