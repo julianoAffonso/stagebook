@@ -874,6 +874,7 @@
     <string name="settings_pedal_done_none">None yet. Without setting anything, a regular pedal turns pages forward and back; a MIDI pedal needs to be set.</string>
     <string name="songs_add_to_set">Add to setlist</string>
     <string name="songs_add_to_set_title">Add to which setlist?</string>
+    <string name="songs_already_in_set">Nothing to add: everything is already in %1$s.</string>
     <plurals name="songs_added_to_set">
         <item quantity="one">%1$d song added to %2$s</item>
         <item quantity="other">%1$d songs added to %2$s</item>

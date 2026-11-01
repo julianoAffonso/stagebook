@@ -906,6 +906,7 @@
     <string name="settings_pedal_done_none">Nenhum ainda. Sem configurar, o pedal comum avança e volta a página; o pedal MIDI precisa ser configurado.</string>
     <string name="songs_add_to_set">Adicionar ao setlist</string>
     <string name="songs_add_to_set_title">Adicionar a qual setlist?</string>
+    <string name="songs_already_in_set">Nada a adicionar: já está tudo em %1$s.</string>
     <plurals name="songs_added_to_set">
         <item quantity="one">%1$d música adicionada em %2$s</item>
         <item quantity="many">%1$d músicas adicionadas em %2$s</item>
