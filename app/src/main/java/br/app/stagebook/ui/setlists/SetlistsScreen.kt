@@ -148,11 +148,16 @@ fun SetlistsScreen(
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
+            // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
+            // that was first, and the new one stayed hidden above it, device test B-09)
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val firstId = uiState.sets.firstOrNull()?.id
+            androidx.compose.runtime.LaunchedEffect(firstId) { if (listState.firstVisibleItemIndex <= 1) listState.scrollToItem(0) }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.sets.isEmpty() -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
-                    else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.l)) {
+                    else -> LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.l)) {
                         items(uiState.sets, key = { it.id }) { set ->
                             SongListItem(
                                 title = set.name,
