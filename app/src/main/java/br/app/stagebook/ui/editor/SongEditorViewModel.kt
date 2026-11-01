@@ -121,11 +121,15 @@ class SongEditorViewModel @Inject constructor(
         viewModelScope.launch {
             repository.loaded.first { it }
             val song = route.songId?.let(repository::song)
+            // the import draft lives in memory: if Android closes the app, the fields saved below bring it back, and
+            // this keeps it marked as an import not saved yet (audit 01/11)
+            if (draft != null) savedStateHandle[KEY_IMPORTED] = true
+            val imported = draft != null || savedStateHandle.get<Boolean>(KEY_IMPORTED) == true
             val loaded = SongEditorUiState(
                 loading = false,
                 mode = when {
-                    draft != null && song != null -> EditorMode.IMPORTED_UPDATE
-                    draft != null -> EditorMode.IMPORTED_NEW
+                    imported && song != null -> EditorMode.IMPORTED_UPDATE
+                    imported -> EditorMode.IMPORTED_NEW
                     song != null -> EditorMode.EDIT
                     else -> EditorMode.NEW
                 },
@@ -136,12 +140,13 @@ class SongEditorViewModel @Inject constructor(
                 // imported without a key: the app computes it from the chords (the Key field shows it, and the user can
                 // change it)
                 text = draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty(),
-                unsaved = draft != null,
+                unsaved = imported,
                 tags = song?.tags.orEmpty(),
             )
             original = loaded
             // Android closed the app with the edit open (low memory on the Fire): what was typed comes back
             val kept = savedStateHandle.get<Array<String>>(KEY_FIELDS)
+            if (kept == null && draft != null) savedStateHandle[KEY_FIELDS] = arrayOf(loaded.title, loaded.author, loaded.year, loaded.text)
             val keptTags = savedStateHandle.get<ArrayList<String>>(KEY_TAGS) ?: loaded.tags
             uiState = if (kept != null && kept.size == 4) loaded.edited(kept[0], kept[1], kept[2], kept[3], keptTags) else loaded.edited(loaded.title, loaded.author, loaded.year, loaded.text, keptTags)
         }
@@ -225,6 +230,7 @@ class SongEditorViewModel @Inject constructor(
     private companion object {
         const val KEY_FIELDS = "editor_fields"
         const val KEY_TAGS = "editor_tags"
+        const val KEY_IMPORTED = "editor_imported"
         const val KEY_NEW_ID = "editor_new_id"
         const val KEY_TRACK = "editor_track"
         const val KEY_TRACK_NAME = "editor_track_name"
