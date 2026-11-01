@@ -459,6 +459,19 @@ static void put_sample(uint8_t *p, float s) {
     else { int32_t v = (int32_t)(s * 8388607) << 8; memcpy(p, &v, 4); }
 }
 
+// URBs the kernel didn't hand back because the interface vanished (REAPURB keeps answering ENODEV after an unplug):
+// before, they were simply left behind, a leak on every drop. They're freed on the next start, after Java has closed
+// the old connection: from then on the kernel no longer touches them (audio audit P2).
+static struct usbdevfs_urb *g_parked[2 * NURBS];
+static int g_nparked = 0;
+
+static void park_urb(struct usbdevfs_urb *u) { if (g_nparked < 2 * NURBS) g_parked[g_nparked++] = u; }
+
+static void free_parked(void) {
+    for (int i = 0; i < g_nparked; i++) { free(g_parked[i]->buffer); free(g_parked[i]); }
+    g_nparked = 0;
+}
+
 // ---- thread USB ----
 static void *usb_main(void *arg) {
     int speed = ioctl(g_fd, USBDEVFS_GET_SPEED);
@@ -630,6 +643,9 @@ out:
     if (inflight == 0) {
         for (int u = 0; u < NURBS; u++) { free(urbs[u]->buffer); free(urbs[u]); }
         for (int u = 0; u < n_in; u++) { free(in_urbs[u]->buffer); free(in_urbs[u]); }
+    } else {
+        for (int u = 0; u < NURBS; u++) park_urb(urbs[u]);
+        for (int u = 0; u < n_in; u++) park_urb(in_urbs[u]);
     }
     pthread_mutex_lock(&g_stmx); LOGI("usb fim: %s", g_status); pthread_mutex_unlock(&g_stmx);
     g_usb_running = 0;
@@ -693,6 +709,7 @@ static void dev_close(void) {
 JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint maxpkt, jint ch, jint subslot,
                                      jint intf, jint alt, jint in_ep, jint in_maxpkt, jint in_fb) {
     if (g_usb_running) return JNI_TRUE;
+    free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
