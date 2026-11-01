@@ -40,4 +40,18 @@ class InboxUpdateTest {
         assertEquals(24, inbox.items.value.size)
         assertEquals(inbox.items.value.map { it.id }.toSet(), BandInbox(context).items.value.map { it.id }.toSet())
     }
+
+    @Test fun `an inbox saved in the prefs by an older version moves to its file`() {
+        val old = BandInbox(context).run {
+            add("ana", "Ana", "LETRAS3\n1\nShow\nA", emptyList())
+            kotlinx.serialization.json.Json.encodeToString(items.value)
+        }
+        java.io.File(context.filesDir, "inbox.json").delete()
+        val prefs = context.getSharedPreferences("inbox", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("items", old).commit()
+        assertEquals("Show", BandInbox(context).items.value.single().setName)
+        assertTrue(java.io.File(context.filesDir, "inbox.json").exists())
+        assertFalse(prefs.contains("items"))
+        assertEquals("Show", BandInbox(context).items.value.single().setName)
+    }
 }
