@@ -68,9 +68,11 @@ internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerCo
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // "See live levels" stays usable on the global mixer: the meters show what's playing (user, 01/11)
+            if (!own) br.app.stagebook.ui.components.SwitchRow(stringResource(R.string.mixer_monitor), monitoring, { monitoring = it })
             androidx.compose.foundation.layout.Box {
                 Column(Modifier.alpha(if (own) 1f else DISABLED_ALPHA), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    MixerCard(mixer, onMixer, { levels.value }, monitoring) { monitoring = it }
+                    MixerCard(mixer, onMixer, { levels.value }, monitoring, { monitoring = it }, monitorSwitch = own)
                     EqCard(mixer, onMixer, { levels.value }, monitoring)
                 }
                 // with the global mixer: nothing below takes a touch (it's read-only until the switch is off)
