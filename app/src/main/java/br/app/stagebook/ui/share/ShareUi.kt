@@ -187,18 +187,27 @@ fun ShareSheet(
     onBand: (Boolean) -> Unit = {},
     onSearch: (Boolean) -> Unit = {},
     internetOn: Boolean = true,
+    limits: ShareLimits? = null,   // null: one list with [songs] songs (a setlist when there's a QR, else loose songs)
 ) {
     DisposableEffect(Unit) {
         onSearch(true)
         onDispose { onSearch(false) }
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l), band, onBand, internetOn)
+        ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l), band, onBand, internetOn, limits ?: ShareLimits(lists = 1, songs = songs, setlists = onQr != null))
     }
 }
 
 /**
+ * What's being shared, for each way's limit ([br.app.stagebook.domain.BandContent]): [lists] setlists (loose songs are
+ * one list) and [songs] songs that can go along; [setlists] true offers sending only the titles.
+ */
+@Immutable
+data class ShareLimits(val lists: Int = 1, val songs: Int = 0, val setlists: Boolean = false)
+
+/**
  * The sheet's content (separate for the preview and screenshots). [band]: how many band members are on the network now.
+ * An option over its limit shows off, with the reason, and the others still work.
  */
 @Composable
 fun ShareOptions(
@@ -210,24 +219,36 @@ fun ShareOptions(
     band: Int = 0,
     onBand: (Boolean) -> Unit = {},
     internetOn: Boolean = true,   // essential mode (T19): no sending over the internet and no "no internet" notice
+    limits: ShareLimits = ShareLimits(lists = 1, songs = songs, setlists = onQr != null),
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
+    val bandOk = br.app.stagebook.domain.BandContent.bandFits(limits.lists)
+    val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, if (withSongs) limits.songs else 0)
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
         // band on the network: arrives by itself for band members on this Wi-Fi (no words, no QR)
         if (band > 0) {
-            ShareOption(AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band), stringResource(R.string.share_band_hint)) { onBand(withSongs) }
+            ShareOption(
+                AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band),
+                if (bandOk) stringResource(R.string.share_band_hint) else stringResource(R.string.share_band_limit, br.app.stagebook.domain.BandContent.MAX_BAND_SETS),
+                enabled = bandOk,
+            ) { onBand(withSongs) }
         }
         // QR on screen: only in a setlist (it carries only the titles; loose songs don't fit in a QR)
-        onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), it) }
+        onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), onClick = it) }
         if (!internetOn) Unit
         else if (online) {
-            ShareOption(AppIcons.Public, stringResource(R.string.share_internet), stringResource(R.string.share_internet_hint)) { onInternet(withSongs) }
+            ShareOption(
+                AppIcons.Public, stringResource(R.string.share_internet),
+                if (internetOk) stringResource(R.string.share_internet_hint)
+                else stringResource(if (limits.setlists && withSongs) R.string.share_internet_limit_titles else R.string.share_internet_limit, br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES - 1),
+                enabled = internetOk,
+            ) { onInternet(withSongs) }
         } else {
             Text(stringResource(if (onQr != null) R.string.share_offline else R.string.share_offline_songs), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         // in a setlist you can send only the titles (band and internet); loose songs always go whole
-        if (onQr != null && ((online && internetOn) || band > 0)) {
+        if (limits.setlists && ((online && internetOn) || band > 0)) {
             SwitchRow(
                 pluralStringResource(R.plurals.share_with_songs, songs, songs),
                 withSongs,
@@ -240,16 +261,17 @@ fun ShareOptions(
 }
 
 @Composable
-private fun ShareOption(icon: ImageVector, title: String, hint: String, onClick: () -> Unit) {
+private fun ShareOption(icon: ImageVector, title: String, hint: String, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = Spacing.s, horizontal = Spacing.xs),
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(enabled = enabled, onClick = onClick).padding(vertical = Spacing.s, horizontal = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Icon(icon, null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+            // off: the hint says why (over this way's limit)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
         }
     }
 }

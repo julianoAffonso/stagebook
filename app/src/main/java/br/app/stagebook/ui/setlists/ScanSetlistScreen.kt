@@ -85,6 +85,11 @@ fun ScanSetlistRoute(
         }
     }
     LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
+    // the other setlists of the same send went to Received
+    val parked by viewModel.parked.collectAsStateWithLifecycle()
+    LaunchedEffect(parked) {
+        if (parked > 0) { message.show(resources.getQuantityString(R.plurals.scan_parked, parked, parked), long = true); viewModel.parkedShown() }
+    }
     ScanSetlistScreen(
         ui = ui,
         cameraAllowed = camera,

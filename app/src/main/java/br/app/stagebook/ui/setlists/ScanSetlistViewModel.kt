@@ -229,7 +229,7 @@ class ScanSetlistViewModel @Inject constructor(
         _ui.value = ScanUi.Fetching()
         viewModelScope.launch {
             when (val r = cloud.receive(code)) {
-                is SetlistCloud.Received.Ok -> { sender = r.from; review(r.text, r.songs) }
+                is SetlistCloud.Received.Ok -> { sender = r.from; park(r.others, r.songs); review(r.text, r.songs) }
                 SetlistCloud.Received.NotFound -> _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND)
                 SetlistCloud.Received.Offline -> _ui.value = ScanUi.Fetching(CodeProblem.OFFLINE)
                 is SetlistCloud.Received.Newer -> _ui.value = ScanUi.Fetching(CodeProblem.NEWER)
@@ -255,6 +255,24 @@ class ScanSetlistViewModel @Inject constructor(
         }
         review(text, emptyList())
     }
+
+    private val _parked = MutableStateFlow(0)
+    /** How many more setlists came in the same send and wait in Received (the screen says so once). */
+    val parked: StateFlow<Int> = _parked
+
+    // several setlists in one code (user, 01/11): the first is reviewed here, the others go to Received with their
+    // own songs, each reviewed when the person wants
+    internal fun park(others: List<String>, songs: List<SetlistCloud.SharedSong>) {
+        if (others.isEmpty()) return
+        val from = sender
+        others.forEach { list ->
+            val titles = QrPayload.parse(list)?.songs?.map { TextKey.of(it.title) }?.toSet().orEmpty()
+            inbox.add(from?.id.orEmpty(), from?.name.orEmpty(), list, songs.filter { TextKey.of(it.title) in titles })
+        }
+        _parked.value = others.size
+    }
+
+    fun parkedShown() { _parked.value = 0 }
 
     internal fun review(text: String, songs: List<SetlistCloud.SharedSong>) {
         val parsed = QrPayload.parse(text) ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND); return }

@@ -12,6 +12,18 @@ object BandContent {
     const val MAX_TEXT = 60_000      // a long chord chart has about 10 thousand characters
     const val MAX_SONGS = 200
     const val MAX_LIST = 20_000      // the setlist text (name + titles)
+    // each way of sending has its own limit (user, 01/11: "fairer"). Internet: the free server (ntfy.sh) takes about 60
+    // requests in a row, and each song and each list is one (plus the sender's card). Band on the network: one package
+    // per setlist straight to the device, limited by its Received, which keeps 30. QR: one setlist (it isn't offered for
+    // several).
+    const val MAX_INTERNET_MESSAGES = 60
+    const val MAX_BAND_SETS = 30
+
+    /** Does a send by code fit? [lists]: setlists (loose songs are one list); [songs]: songs carried along. */
+    fun internetFits(lists: Int, songs: Int): Boolean = 1 + lists + songs <= MAX_INTERNET_MESSAGES && songs <= MAX_SONGS
+
+    /** Does a send to the band on the network fit? */
+    fun bandFits(sets: Int): Boolean = sets <= MAX_BAND_SETS
     private const val LONG_TOKEN = 200
     private const val ENCODED_SHARE = 0.9
 

@@ -81,7 +81,16 @@ fun SetlistsRoute(
         onReceived = onReceived,
         onSync = onSync,
         onDelete = viewModel::delete,
+        cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
+        onShareInternet = viewModel::shareInternet,
+        onDismissCloud = viewModel::dismissCloud,
+        codeActions = br.app.stagebook.ui.share.rememberCodeActions(),
+        band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
+        onSendBand = viewModel::sendBand,
+        onBandSearch = viewModel::bandSearch,
+        songsIn = viewModel::songsIn,
     )
+    br.app.stagebook.ui.share.BandResultMessage(viewModel.bandResult)
 }
 
 @Composable
@@ -92,6 +101,14 @@ fun SetlistsScreen(
     onPlay: (String) -> Unit,
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
+    cloud: br.app.stagebook.ui.share.CloudUi? = null,
+    onShareInternet: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
+    onDismissCloud: () -> Unit = {},
+    codeActions: br.app.stagebook.ui.share.CodeActions = br.app.stagebook.ui.share.CodeActions({}, { _, _ -> }),
+    band: Int = 0,
+    onSendBand: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
+    onBandSearch: (Boolean) -> Unit = {},
+    songsIn: (List<String>) -> Int = { 0 },
     onScan: () -> Unit = {},
     online: Boolean = false,
     internetOn: Boolean = true,
@@ -104,6 +121,7 @@ fun SetlistsScreen(
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
     var selected by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var deletingMany by rememberSaveable { mutableStateOf(false) }
+    var sharing by rememberSaveable { mutableStateOf(false) }
     val selecting = selected.isNotEmpty()
     fun toggle(id: String) { selected = if (id in selected) selected - id else selected + id }
     androidx.activity.compose.BackHandler(enabled = selecting) { selected = emptyList() }
@@ -113,7 +131,10 @@ fun SetlistsScreen(
                 br.app.stagebook.ui.components.SelectionTopBar(
                     count = selected.size,
                     onClose = { selected = emptyList() },
-                    actions = listOf(br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.action_delete), AppIcons.Delete) { deletingMany = true }),
+                    actions = listOf(
+                        br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.share_title), AppIcons.Share) { sharing = true },
+                        br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.action_delete), AppIcons.Delete) { deletingMany = true },
+                    ),
                     onSelectAll = { selected = uiState.sets.map { it.id } },
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                 )
@@ -168,6 +189,21 @@ fun SetlistsScreen(
             onDismiss = { creating = false },
         )
     }
+    if (sharing) {
+        br.app.stagebook.ui.share.ShareSheet(
+            songs = songsIn(selected),
+            online = online,
+            internetOn = internetOn,
+            onQr = null,   // a QR holds one setlist: several go by code or to the band
+            onInternet = { withSongs -> sharing = false; onShareInternet(selected, withSongs); selected = emptyList() },
+            onDismiss = { sharing = false },
+            band = band,
+            onBand = { withSongs -> sharing = false; onSendBand(selected, withSongs); selected = emptyList() },
+            onSearch = onBandSearch,
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true),
+        )
+    }
+    cloud?.let { br.app.stagebook.ui.share.CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
     if (deletingMany) {
         ConfirmDialog(
             message = pluralStringResource(R.plurals.sets_delete_many_confirm, selected.size, selected.size),
