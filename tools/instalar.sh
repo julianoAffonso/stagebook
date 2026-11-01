@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Instala a versão do último commit num aparelho de teste, com as travas do projeto.
-#   tools/instalar.sh <serial>          (os seriais saem de: source ~/.cache/stagebook-aparelhos.env → $TCL, $S26)
+#   tools/instalar.sh <serial> [--debug]  (os seriais saem de: source ~/.cache/stagebook-aparelhos.env → $TCL, $S26)
+# --debug: a versão de desenvolvimento, para um aparelho que já tem ela (a assinatura precisa ser a mesma)
 # Recusa, sem instalar, se: há mudança sem commit, a marca de auditoria existe, o aparelho não responde, ou o player
 # do Stagebook está ligado (instalar com o player ligado corta o som no meio). Usa a versão final assinada (release),
 # a mesma do GitHub: por cima de uma instalação com outra assinatura o Android recusa e NADA é apagado (nunca
 # desinstala). Imprime "instalado: <versão>" só depois de ler a versão no aparelho e conferir que é a do commit.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SERIAL="${1:?uso: tools/instalar.sh <serial>}"
+SERIAL="${1:?uso: tools/instalar.sh <serial> [--debug]}"
+VARIANT=release; [ "${2:-}" = "--debug" ] && VARIANT=debug
 ADB=(adb -s "$SERIAL")
 MARK="$HOME/Desktop/previous-app/.claude/auditoria-pendente"
 
@@ -20,8 +22,8 @@ if grep -q "br.app.stagebook/.player.PlayerService" <<<"$services"; then
 fi
 
 want="0.1.$(git rev-list --count HEAD) ($(git rev-parse --short HEAD))"
-./gradlew -q assembleRelease
-apk=app/build/outputs/apk/release/app-release.apk
+if [ "$VARIANT" = debug ]; then ./gradlew -q assembleDebug; else ./gradlew -q assembleRelease; fi
+apk=app/build/outputs/apk/$VARIANT/app-$VARIANT.apk
 out="$("${ADB[@]}" install -r "$apk" 2>&1)" || { echo "não instalou: $out"; exit 1; }
 got="$("${ADB[@]}" shell dumpsys package br.app.stagebook | sed -n 's/.*versionName=//p' | head -1 | tr -d '\r')"
 [ "$got" = "$want" ] || { echo "versão no aparelho ($got) não é a do commit ($want)"; exit 1; }
