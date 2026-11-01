@@ -269,7 +269,11 @@ fun SongEditorScreen(
                             // lyrics only profile: no chords in the editor (the saved lyrics don't change)
                             if (look.chords) {
                                 ChordBar(
-                                    chords = remember(uiState.text) { usedChords(uiState.text) },
+                                    // read a moment after typing stops, not on every keystroke (audit 01/11)
+                                    chords = androidx.compose.runtime.produceState(remember { usedChords(uiState.text) }, uiState.text) {
+                                        kotlinx.coroutines.delay(CHORDS_AFTER_TYPING_MS)
+                                        value = usedChords(uiState.text)
+                                    }.value,
                                     onPick = { chord -> edit(insertChord(shown, chord)) },
                                     onNew = { newChord = true },
                                 )
@@ -630,3 +634,5 @@ private fun SongEditorLightPreview() = StagebookTheme(darkTheme = false) { SongE
 @DarkPreview
 @Composable
 private fun SongEditorDarkPreview() = StagebookTheme(darkTheme = true) { SongEditorScreen(previewState, {}, {}, {}, {}, {}, {}, {}) }
+
+private const val CHORDS_AFTER_TYPING_MS = 300L
