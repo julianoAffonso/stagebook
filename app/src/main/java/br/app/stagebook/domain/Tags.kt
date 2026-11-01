@@ -14,6 +14,9 @@ object Tags {
     fun all(songs: List<Song>): List<String> =
         songs.flatMap { it.tags }.distinctBy { it.lowercase() }.sortedBy { TextKey.of(it) }
 
+    /** The chosen filter tags still in use ([all]): a tag no song has any more (taken off everywhere) leaves the filter. */
+    fun stillUsed(chosen: Set<String>, all: List<String>): Set<String> = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
+
     fun has(song: Song, tag: String): Boolean = song.tags.any { it.equals(tag, ignoreCase = true) }
 
     fun add(tags: List<String>, tag: String): List<String> = if (tags.any { it.equals(tag, true) }) tags else tags + tag

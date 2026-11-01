@@ -127,12 +127,7 @@ class SetlistDetailViewModel @Inject constructor(
     fun dismissLimit() { _limit.value = null }
 
     fun rename(name: String) {
-        if (name.isBlank()) return
-        val lib = repository.library.value
-        val set = lib.setlist(setId) ?: return
-        // the name also goes in the QR: a new name that would push the setlist over the limit isn't saved
-        if (QrPayload.fits(set, lib) && !QrPayload.fits(set, lib, name = name)) { _limit.value = LimitNotice.Name; return }
-        repository.renameSetlist(setId, name)
+        if (!repository.renameIfFits(setId, name)) _limit.value = LimitNotice.Name
     }
 
     fun delete() = repository.deleteSetlist(setId)

@@ -311,10 +311,8 @@ fun SongEditorScreen(
         }
     }
     if (tagging) {
-        val options = (br.app.stagebook.ui.components.suggestedTags() + allTags + uiState.tags).distinctBy { it.lowercase() }
-        val initial = options.associateWith { t ->
-            if (uiState.tags.any { it.equals(t, true) }) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off
-        }
+        val options = br.app.stagebook.ui.components.tagOptions(allTags + uiState.tags)
+        val initial = br.app.stagebook.ui.components.tagStates(options, listOf(uiState.tags))
         br.app.stagebook.ui.components.TagsDialog(options, initial, onTags) { tagging = false }
     }
     if (discarding) {
@@ -341,11 +339,7 @@ fun SongEditorScreen(
  */
 @Composable
 private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
-    val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val pick by rememberUpdatedState(onPick)
-    LaunchedEffect(taps) {
-        taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) pick() }
-    }
+    val taps = br.app.stagebook.ui.components.rememberTapSource(onPick)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     OutlinedTextField(
         value = if (has) name.ifEmpty { stringResource(R.string.editor_track_unnamed) } else stringResource(R.string.editor_track_empty),
@@ -367,11 +361,7 @@ private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove:
 /** The song's tags as a field like the others: "Tags" on top and the list, or "None" in grey; tapping opens the window. */
 @Composable
 private fun TagsField(tags: List<String>, modifier: Modifier = Modifier, onEdit: () -> Unit) {
-    val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val edit by rememberUpdatedState(onEdit)
-    LaunchedEffect(taps) {
-        taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) edit() }
-    }
+    val taps = br.app.stagebook.ui.components.rememberTapSource(onEdit)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     OutlinedTextField(
         value = if (tags.isEmpty()) stringResource(R.string.tags_empty) else tags.joinToString(", "),
@@ -412,11 +402,7 @@ private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onTogg
     Column(Modifier.padding(horizontal = Spacing.m)) {
         // like a choice field (user's request, 29/10): the outlined box and label, the summary inside and the ▼;
         // tapping opens the fields below. The field is read only: the tap arrives through the interactionSource
-        val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-        val toggle by rememberUpdatedState(onToggle)
-        LaunchedEffect(taps) {
-            taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) toggle() }
-        }
+        val taps = br.app.stagebook.ui.components.rememberTapSource(onToggle)
         // when open, the summary goes away (it would repeat the title right below) and the ▲ to collapse sits in the
         // Title field
         if (!expanded) OutlinedTextField(

@@ -145,7 +145,7 @@ class ScanSetlistViewModel @Inject constructor(
                 val came = carried.toMutableMap()
                 val rows = now.rows.mapIndexed { i, r ->
                     if (r.chosen != null || r.carried) return@mapIndexed r
-                    val s = got.firstOrNull { TextKey.of(it.title) == TextKey.of(r.title) && SongMatch.sameArtistKey(TextKey.of(it.author), TextKey.of(r.artist)) }
+                    val s = got.firstOrNull { it.isFor(r.title, r.artist) }
                     if (s == null) r else { came[i] = s; r.copy(carried = true, fromBand = true, lyricsOnly = noChords(s)) }
                 }
                 carried = came
@@ -280,9 +280,7 @@ class ScanSetlistViewModel @Inject constructor(
         val came = mutableMapOf<Int, SetlistCloud.SharedSong>()
         val other = mutableMapOf<Int, SetlistCloud.SharedSong>()
         val songsOnly = parsed.name.isEmpty()
-        fun came(e: QrPayload.Entry) = songs.firstOrNull { s ->
-            TextKey.of(s.title) == TextKey.of(e.title) && SongMatch.sameArtistKey(TextKey.of(s.author), TextKey.of(e.artist))
-        }
+        fun came(e: QrPayload.Entry) = songs.firstOrNull { it.isFor(e.title, e.artist) }
         val rows = parsed.songs.mapIndexed { i, e ->
             val m = SetlistMatcher.match(e, library)
             // loose songs: a similar one isn't the same, so the one that came goes in as new (in a setlist, the user
@@ -329,11 +327,19 @@ class ScanSetlistViewModel @Inject constructor(
     fun addSongs(): Int {
         if (finished) return 0
         finished = true
-        carried.values.forEach { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text))) }
+        carried.values.forEach { s -> save(s) }
         (_ui.value as? ScanUi.Review)?.let(::applyIncoming)
         done()
         return carried.size
     }
+
+    // a song that came goes into the library with its key computed (the editor shows it)
+    private fun save(s: SetlistCloud.SharedSong): String =
+        repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text)))
+
+    // a song that came answers a setlist line: same title, and the artist when both say one
+    private fun SetlistCloud.SharedSong.isFor(title: String, artist: String) =
+        TextKey.of(this.title) == TextKey.of(title) && SongMatch.sameArtistKey(TextKey.of(author), TextKey.of(artist))
 
     /** Is there already a setlist with this name (ignoring accents and case)? */
     fun existing(name: String): String? = repository.library.value.sets.firstOrNull { TextKey.of(it.name) == TextKey.of(name) }?.id
@@ -347,7 +353,7 @@ class ScanSetlistViewModel @Inject constructor(
         val ui = _ui.value as? ScanUi.Review ?: return null
         finished = true
         val slots = ui.rows.mapIndexed { i, r ->
-            r.chosen ?: carried[i]?.let { s -> repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text))) }
+            r.chosen ?: carried[i]?.let { s -> save(s) }
         }
         val id = replaceId ?: repository.createSetlist(uniqueName(ui.name.trim()))
         repository.setSetlistItems(id, slots.filterNotNull())

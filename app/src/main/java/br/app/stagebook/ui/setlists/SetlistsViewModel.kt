@@ -74,11 +74,19 @@ class SetlistsViewModel @Inject constructor(
     fun dismissNameLimit() { _nameLimit.value = false }
 
     fun rename(id: String, name: String) {
-        if (name.isBlank()) return
-        val lib = repository.library.value
-        val set = lib.setlist(id) ?: return
-        // the name also goes in the QR: a new name that would push the setlist over the limit isn't saved
-        if (QrPayload.fits(set, lib) && !QrPayload.fits(set, lib, name = name)) { _nameLimit.value = true; return }
-        repository.renameSetlist(id, name)
+        if (!repository.renameIfFits(id, name)) _nameLimit.value = true
     }
+}
+
+/**
+ * Renames a setlist unless the new name would push it over what the QR holds (the name goes in the QR too); false =
+ * not saved for that reason. A blank name or a setlist that's gone change nothing.
+ */
+internal fun br.app.stagebook.data.LibraryRepository.renameIfFits(id: String, name: String): Boolean {
+    if (name.isBlank()) return true
+    val lib = library.value
+    val set = lib.setlist(id) ?: return true
+    if (QrPayload.fits(set, lib) && !QrPayload.fits(set, lib, name = name)) return false
+    renameSetlist(id, name)
+    return true
 }

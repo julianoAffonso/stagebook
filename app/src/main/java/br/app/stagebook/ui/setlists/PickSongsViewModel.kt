@@ -51,7 +51,7 @@ class PickSongsViewModel @Inject constructor(
     private val filtered = combine(repository.library, search, query.debounce(::typingDelay), chosenTags) { lib, s, q, chosen ->
         val set = lib.setlist(setId)
         val all = br.app.stagebook.domain.Tags.all(lib.songs)
-        val kept = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
+        val kept = br.app.stagebook.domain.Tags.stillUsed(chosen, all)
         val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
             .map { PickRowUi(it.id, it.title, it.subtitle(), set?.items?.contains(it.id) == true, false) }
         PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, tags = all, chosenTags = kept)

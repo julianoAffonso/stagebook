@@ -119,12 +119,12 @@ fun SetlistsScreen(
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
-    var selected by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val selection = br.app.stagebook.ui.components.rememberSelection()
+    var selected by selection.state
     var deletingMany by rememberSaveable { mutableStateOf(false) }
     var sharing by rememberSaveable { mutableStateOf(false) }
-    val selecting = selected.isNotEmpty()
-    fun toggle(id: String) { selected = if (id in selected) selected - id else selected + id }
-    androidx.activity.compose.BackHandler(enabled = selecting) { selected = emptyList() }
+    val selecting = selection.active
+    val toggle = selection::toggle
     CenteredContent(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             if (selecting) {
