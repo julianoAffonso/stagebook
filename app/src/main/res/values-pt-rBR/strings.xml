@@ -631,6 +631,7 @@
     <string name="scan_title">Ler QR do setlist</string>
     <string name="scan_hint">Aponte a câmera para o QR que está na tela do outro aparelho.</string>
     <string name="scan_no_camera">Sem a câmera não dá para ler o QR.</string>
+    <string name="scan_no_camera_why">Para ler o QR, o Stagebook precisa da câmera.</string>
     <string name="scan_allow_camera">Permitir a câmera</string>
     <string name="scan_newer">Isto veio de um Stagebook mais novo. Atualize o app em Ajustes → Sobre para receber.</string>
     <string name="scan_incomplete">O QR veio incompleto. Aproxime e leia de novo.</string>

@@ -613,6 +613,7 @@
     <string name="scan_title">Scan setlist QR</string>
     <string name="scan_hint">Point the camera at the QR on the other device\'s screen.</string>
     <string name="scan_no_camera">Without the camera there\'s no way to scan the QR.</string>
+    <string name="scan_no_camera_why">To read the QR, Stagebook needs the camera.</string>
     <string name="scan_allow_camera">Allow camera</string>
     <string name="scan_newer">This came from a newer Stagebook. Update the app in Settings → About to receive it.</string>
     <string name="scan_incomplete">The QR came in incomplete. Move closer and scan again.</string>

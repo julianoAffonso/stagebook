@@ -72,6 +72,23 @@ fun ScanSetlistRoute(
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { camera = it }
+    // asked once and refused: Android no longer shows its question, so the button opens the app's settings; back from
+    // there, the permission is read again (device test B-21)
+    var asked by rememberSaveable { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        camera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        onPauseOrDispose { }
+    }
+    val askCamera = {
+        val activity = context as? android.app.Activity
+        val androidAsks = activity == null || androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+        if (asked && !androidAsks) {
+            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", context.packageName, null)))
+        } else {
+            asked = true
+            ask.launch(Manifest.permission.CAMERA)
+        }
+    }
     LaunchedEffect(viewModel) {
         viewModel.bandResult.collect { (got, asked) ->
             val msg = if (got > 0) resources.getQuantityString(R.plurals.scan_band_got, asked, got, asked) else resources.getString(R.string.scan_band_none)
@@ -93,7 +110,7 @@ fun ScanSetlistRoute(
     ScanSetlistScreen(
         ui = ui,
         cameraAllowed = camera,
-        onAskCamera = { ask.launch(Manifest.permission.CAMERA) },
+        onAskCamera = askCamera,
         onText = viewModel::onText,
         onName = viewModel::setName,
         onChoose = viewModel::choose,
@@ -205,13 +222,19 @@ private fun Scanning(
     onText: (String) -> Unit,
     camera: @Composable (onText: (String) -> Unit, modifier: Modifier) -> Unit,
 ) {
+    // without the camera: an empty state in the middle (camera icon, why, the button), not the "point the camera" hint;
+    // the hint had no color of its own and came out black on the dark background (device test B-21)
+    if (!cameraAllowed) {
+        br.app.stagebook.ui.components.EmptyState(
+            AppIcons.PhotoCamera,
+            stringResource(R.string.scan_no_camera),
+            stringResource(R.string.scan_no_camera_why),
+            action = { ActionButton(stringResource(R.string.scan_allow_camera), onAskCamera, icon = AppIcons.PhotoCamera) },
+        )
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        Text(stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodyLarge)
-        if (!cameraAllowed) {
-            Text(stringResource(R.string.scan_no_camera), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
-            ActionButton(stringResource(R.string.scan_allow_camera), onAskCamera, icon = AppIcons.QrCode)
-            return@Column
-        }
+        Text(stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
         Box(
             Modifier.fillMaxWidth().weight(1f, fill = false).clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
