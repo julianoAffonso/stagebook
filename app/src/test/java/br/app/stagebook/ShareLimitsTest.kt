@@ -29,6 +29,6 @@ class ShareLimitsTest {
         compose.setContent {
             StagebookTheme { ShareOptions(0, online = true, onQr = null, onInternet = {}, band = 2, limits = ShareLimits(lists = 31, songs = 0, setlists = true)) }
         }
-        compose.onNodeWithText("Passa do limite da banda", substring = true).assertExists()
+        compose.onNodeWithText("Muitos setlists de uma vez", substring = true).assertExists()
     }
 }

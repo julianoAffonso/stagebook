@@ -230,7 +230,7 @@ fun ShareOptions(
         if (band > 0) {
             ShareOption(
                 AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band),
-                if (bandOk) stringResource(R.string.share_band_hint) else stringResource(R.string.share_band_limit, br.app.stagebook.domain.BandContent.MAX_BAND_SETS),
+                if (bandOk) stringResource(R.string.share_band_hint) else stringResource(R.string.share_band_limit),
                 enabled = bandOk,
             ) { onBand(withSongs) }
         }
@@ -241,7 +241,7 @@ fun ShareOptions(
             ShareOption(
                 AppIcons.Public, stringResource(R.string.share_internet),
                 if (internetOk) stringResource(R.string.share_internet_hint)
-                else stringResource(if (limits.setlists && withSongs) R.string.share_internet_limit_titles else R.string.share_internet_limit, br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES - 1),
+                else stringResource(if (limits.setlists && withSongs) R.string.share_internet_limit_titles else R.string.share_internet_limit),
                 enabled = internetOk,
             ) { onInternet(withSongs) }
         } else {
