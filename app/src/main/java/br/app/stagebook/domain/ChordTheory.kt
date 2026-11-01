@@ -19,20 +19,12 @@ object ChordTheory {
      */
     data class Notes(val root: Int, val bass: Int, val tones: Set<Int>, val essential: Set<Int>, val intervals: Set<Int> = emptySet())
 
-    private val names = mapOf("C" to 0, "D" to 2, "E" to 4, "F" to 5, "G" to 7, "A" to 9, "B" to 11)
-    private val head = Regex("""^([A-G])([#b♯♭]?)(.*?)(?:/([A-G])([#b♯♭]?))?$""")
+    fun notes(chord: String): Notes? = ChordName.parse(chord)?.let(::notes)
 
-    private fun pc(letter: String, acc: String): Int {
-        val base = names.getValue(letter)
-        return (base + when (acc) { "#", "♯" -> 1; "b", "♭" -> -1; else -> 0 } + 12) % 12
-    }
-
-    fun notes(chord: String): Notes? {
-        if (!Chords.isChord(chord)) return null
-        val m = head.matchEntire(chord.trim()) ?: return null
-        val root = pc(m.groupValues[1], m.groupValues[2])
-        val bass = if (m.groupValues[4].isNotEmpty()) pc(m.groupValues[4], m.groupValues[5]) else root
-        var s = m.groupValues[3].replace("♯", "#").replace("♭", "b")
+    fun notes(chord: ChordName): Notes {
+        val root = chord.rootPc
+        val bass = chord.bassPc
+        var s = chord.suffix.replace("♯", "#").replace("♭", "b")
 
         // intervals from the root (semitones)
         var third: Int? = 4

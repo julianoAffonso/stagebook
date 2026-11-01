@@ -154,4 +154,13 @@ class ChordsTest {
         // Fullgás as in the library (chords only): the key is still B minor
         assertEquals("Bm", Chords.detectKey("[Bm]a [F#7(b13)]b [Bm7+]c [Em7M]d [G7+]e [A6]f [C#7/9]g [F#7]h [Bm]i"))
     }
+
+    @Test fun `one reading of the chord name for everything`() {
+        val n = br.app.stagebook.domain.ChordName.parse(" F5(7M/9)/C ")!!
+        assertEquals("F", n.root); assertEquals("5(7M/9)", n.suffix); assertEquals("C", n.bass)
+        assertEquals(5, n.rootPc); assertEquals(0, n.bassPc)
+        assertEquals("F5(7M/9)/C", n.toString())
+        assertEquals(11, br.app.stagebook.domain.ChordName.parse("Cb")!!.rootPc)
+        assertEquals(null, br.app.stagebook.domain.ChordName.parse("Refrão"))
+    }
 }
