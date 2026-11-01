@@ -101,8 +101,11 @@ private fun Stepper(
     upEnabled: Boolean,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
+        // phones: the icon alone (with "Capotraste" written out, "2ª casa" broke over three lines, 01/11); the name stays
+        // for accessibility
+        val wide = wideLists()
+        Icon(icon, if (wide) null else label, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (wide) Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = Spacing.xs))
         IconButton(onClick = onDown, enabled = downEnabled) { Icon(AppIcons.Remove, downLabel) }
         Text(
             value,
@@ -110,6 +113,8 @@ private fun Stepper(
             color = if (dimmed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.widthIn(min = 32.dp),
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
         )
         IconButton(onClick = onUp, enabled = upEnabled) { Icon(AppIcons.Add, upLabel) }
     }

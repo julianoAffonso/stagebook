@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -87,6 +88,8 @@ import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.ScreenInsets
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
+import br.app.stagebook.ui.theme.Sizes
+import br.app.stagebook.ui.components.wideLists
 
 @Composable
 fun SongEditorRoute(
@@ -241,11 +244,23 @@ fun SongEditorScreen(
                         onToggle = { dataOpen = !dataOpen },
                         chords = look.chords,
                     ) {
-                        SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
-                        // in the details, for new songs too (user, 30/10); only with the player on
-                        if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
-                        TagsRow(uiState.tags) { tagging = true }
-                        if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
+                        // tablet: two lines (user, 01/11: the details took half the screen); phone: one thing per line
+                        val wideData = wideLists()
+                        SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo, wide = wideData)
+                        val showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD
+                        if (wideData) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                                if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, Modifier.weight(1f), showCapo = showCapo)
+                                else Spacer(Modifier.weight(1f))
+                                TagsChip(uiState.tags) { tagging = true }
+                                if (track != null) TrackChip(track.isNotEmpty(), onPickTrack, onRemoveTrack)
+                            }
+                        } else {
+                            // in the details, for new songs too (user, 30/10); only with the player on
+                            if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
+                            TagsRow(uiState.tags) { tagging = true }
+                            if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = showCapo)
+                        }
                     }
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -318,6 +333,30 @@ fun SongEditorScreen(
             { deleting = false },
         )
     }
+}
+
+/** Tablet: the tags as one chip (tap opens the tags window). */
+@Composable
+private fun TagsChip(tags: List<String>, onEdit: () -> Unit) {
+    androidx.compose.material3.AssistChip(
+        onClick = onEdit,
+        label = { Text(if (tags.isEmpty()) stringResource(R.string.tags_action) else tags.joinToString(", "), maxLines = 1) },
+        leadingIcon = { Icon(AppIcons.Label, contentDescription = stringResource(R.string.tags_edit)) },
+    )
+}
+
+/** Tablet: the backing track as one chip (tap picks or swaps it; × removes it). */
+@Composable
+private fun TrackChip(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit) {
+    androidx.compose.material3.InputChip(
+        selected = has,
+        onClick = onPick,
+        label = { Text(stringResource(if (has) R.string.editor_track_chip_set else R.string.editor_track_chip_none), maxLines = 1) },
+        leadingIcon = { Icon(AppIcons.QueueMusic, contentDescription = null) },
+        trailingIcon = if (has) {
+            { IconButton(onClick = onRemove, modifier = Modifier.size(Sizes.touch)) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
+        } else null,
+    )
 }
 
 /** The song's tags in the details, and the button that opens the tags window. */
@@ -398,7 +437,24 @@ private fun SongDataFields(
     onYear: (String) -> Unit,
     onCollapse: () -> Unit,
     onTempo: (String) -> Unit = {},
+    wide: Boolean = false,
 ) {
+    // tablet: name, artist, year and BPM on one line, the "filled in by itself" note as the artist's hint
+    if (wide) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            // the song name takes what's left; artist, year and BPM have sizes you can predict (user, 01/11)
+            TitleField(uiState, onTitle, onCollapse, Modifier.weight(1f))
+            AuthorYearTempo(uiState, onAuthor, onYear, onTempo, hint = true, artist = Modifier.width(Sizes.artistField))
+        }
+        return
+    }
+    TitleField(uiState, onTitle, onCollapse, Modifier.fillMaxWidth())
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) { AuthorYearTempo(uiState, onAuthor, onYear, onTempo, hint = false) }
+    Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun TitleField(uiState: SongEditorUiState, onTitle: (String) -> Unit, onCollapse: () -> Unit, modifier: Modifier) {
     OutlinedTextField(
         value = uiState.title,
         onValueChange = onTitle,
@@ -422,17 +478,25 @@ private fun SongDataFields(
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         shape = MaterialTheme.shapes.small,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     )
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+}
+
+/** Artist, year and BPM, side by side (inside a Row). [hint]: the "blank is filled in" note as the artist's placeholder. */
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
+    uiState: SongEditorUiState, onAuthor: (String) -> Unit, onYear: (String) -> Unit, onTempo: (String) -> Unit, hint: Boolean,
+    artist: Modifier = Modifier.weight(1f),
+) {
         OutlinedTextField(
             value = uiState.author,
             onValueChange = onAuthor,
             label = { Text(stringResource(R.string.editor_author)) },
+            placeholder = if (hint) { { Text(stringResource(R.string.editor_auto_meta_short), maxLines = 1) } } else null,
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             shape = MaterialTheme.shapes.small,
-            modifier = Modifier.weight(3f),
+            modifier = artist,
         )
         OutlinedTextField(
             value = uiState.year,
@@ -441,7 +505,7 @@ private fun SongDataFields(
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             shape = MaterialTheme.shapes.small,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.width(Sizes.yearField),   // 4 digits
         )
         // song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100)
         val tempo = remember(uiState.text) { Chords.directive(uiState.text, "tempo").orEmpty() }
@@ -453,10 +517,8 @@ private fun SongDataFields(
             isError = tempo.isNotEmpty() && Chords.tempo(uiState.text) == 0,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             shape = MaterialTheme.shapes.small,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits
         )
-    }
-    Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /** Backing track of the song (T29, user's decision): picked here, so the stage shows the play button only on songs with one. */
