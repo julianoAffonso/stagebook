@@ -24,6 +24,13 @@ object AppIcons {
             .addPath(pathData = PathParser().parsePathString(paths.joinToString(" ")).toNodes(), fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd)
             .build()
 
+    val PhotoCamera by lazy {
+        icon(
+            "photo_camera",
+            "M12,12m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0",
+            "M9,2L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5 5,2.24 5,5 -2.24,5 -5,5z",
+        )
+    }
     val Edit by lazy {
         icon("edit", "M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z")
     }
