@@ -139,6 +139,50 @@ class ScreenshotTest {
         SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
     }
 
+    // setlist journey (user, 01/11): list, select, inside, select songs, add songs with the tag filter, add from Songs
+    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6), SetlistRowUi("3", "Casamento", 22)))
+
+    private fun journey(name: String, content: @Composable () -> Unit, then: () -> Unit = {}) {
+        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
+        then()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun setlistJourney1List() = journey("jornada_setlist_1_lista", { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } })
+
+    @Test fun setlistJourney2Select() = journey("jornada_setlist_2_selecionar", { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
+        compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
+        compose.onNodeWithText("Casamento").performClick()
+    }
+
+    @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
+
+    @Test fun setlistJourney4SelectSongs() = journey("jornada_setlist_4_selecionar_musicas", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }) {
+        compose.onNodeWithText("Wild Horses").performTouchInput { longClick() }
+    }
+
+    @Test fun setlistJourney5Add() = journey("jornada_setlist_5_adicionar", {
+        br.app.stagebook.ui.setlists.PickSongsScreen(
+            br.app.stagebook.ui.setlists.PickSongsUiState(
+                setName = "Show de sábado",
+                rows = songs.songs.filter { it.id != "1" && it.id != "4" }.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = false, selected = it.id == "2") },
+                selectedCount = 1,
+                tags = listOf("Internacional", "Nacional"),
+                chosenTags = setOf("Nacional"),
+            ),
+            "", {}, {}, {}, {},
+        )
+    })
+
+    @Test fun setlistJourney6FromSongs() = journey("jornada_setlist_6_das_musicas", {
+        HomeScaffold(HomeTab.SONGS, {}) {
+            SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", "Show de sábado"), br.app.stagebook.ui.songs.SetPick("3", "Casamento"))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
+        }
+    }) {
+        compose.onNodeWithContentDescription("Adicionar ao setlist").performClick()
+    }
+
     // importer: the web page stays blank in the test (WebView without network); checks the top bar and the button
     @Test fun importTablet() = shoot("tablet_10_importar") { ImportScreen(ImportUiState(), "Hazard", {}, {}, {}) }
 
