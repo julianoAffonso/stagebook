@@ -74,6 +74,9 @@ fun ChordText(
                 var x = l.getHorizontalPosition(a.start, true)
                 if (line == lastLine) x = maxOf(x, lastEnd + gap)
                 val chord = byName.getValue(a.item)
+                // a chord over the end of the line moves left to stay whole: "D7(9-)" over the last letters went past the
+                // right edge (device test B-14)
+                x = x.coerceAtMost((l.size.width - chord.size.width).toFloat()).coerceAtLeast(0f)
                 drawText(chord, topLeft = Offset(x, l.getLineTop(line)))
                 lastLine = line
                 lastEnd = x + chord.size.width
