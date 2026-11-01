@@ -122,13 +122,14 @@ fun StagebookNavHost(
                 onBack = dropUnlessResumed { nav.popBackStack() },
             )
         }
-        composable<Importer> {
+        composable<Importer> { entry ->
             ImportRoute(
                 onClose = dropUnlessResumed { nav.popBackStack() },
-                // the editor replaces the browser: save or cancel goes back to the list
-                onOpenEditor = { id -> nav.navigate(SongEditor(songId = id, fromImport = true)) { popUpTo<Importer> { inclusive = true } } },
-                onOpenEditorQueued = { id -> nav.navigate(SongEditor(songId = id, fromImport = true)) },
-                onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
+                // the editor replaces the browser: save or cancel goes back to the list. Only from the open browser: a
+                // late answer can't open a second editor (audit 01/11)
+                onOpenEditor = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true)) { popUpTo<Importer> { inclusive = true } } } },
+                onOpenEditorQueued = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true)) } },
+                onSetlistReady = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } } },
             )
         }
     }
