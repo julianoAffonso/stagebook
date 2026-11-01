@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.widthIn
 import br.app.stagebook.domain.HarmonicField
 import br.app.stagebook.ui.theme.Sizes
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import br.app.stagebook.domain.Chords
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -89,29 +89,22 @@ fun ChordShapePopup(
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                     return@Column
                 }
-                // play sits on top of the diagram, half transparent (user's request, 29/10): play the chord without
-                // hunting for a button
-                Box(contentAlignment = Alignment.Center) {
-                    ChordDiagram(
-                        chord,
-                        instrument,
-                        shapes.getOrNull(i),
-                        keySets.getOrNull(i),
-                        MaterialTheme.colorScheme.onSurface,
-                    )
-                    if (extras) Surface(
+                ChordDiagram(
+                    chord,
+                    instrument,
+                    shapes.getOrNull(i),
+                    keySets.getOrNull(i),
+                    MaterialTheme.colorScheme.onSurface,
+                )
+                // play on the variations line, left of the arrows (user, 01/11: on top of the diagram it covered the
+                // frets); still a big, full-colour button, close to the thumb
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    if (extras) FilledIconButton(
                         onClick = { onPlay(if (keyboard) keySets[i].map { it + capo } else Voicings.midi(shapes[i], instrument, capo)) },
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = PLAY_ALPHA),
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(Sizes.touch + Spacing.m),
+                        modifier = Modifier.size(Sizes.touch),
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(AppIcons.PlayRounded, stringResource(R.string.chord_play), Modifier.size(Sizes.touch * 0.7f))
-                        }
+                        Icon(AppIcons.PlayRounded, stringResource(R.string.chord_play))
                     }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { i = (i - 1 + count) % count }, enabled = count > 1) {
                         Icon(AppIcons.ChevronLeft, stringResource(R.string.chord_shape_previous))
                     }
@@ -152,7 +145,6 @@ fun ChordShapePopup(
     }
 }
 
-private const val PLAY_ALPHA = 0.35f   // the diagram still shows under the play button
 
 /**
  * Second screen of the chord window: the harmonic field of the song's key (with the chord's degree), the chord's own
