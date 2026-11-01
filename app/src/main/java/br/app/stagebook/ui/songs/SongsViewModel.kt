@@ -121,22 +121,6 @@ class SongsViewModel @Inject constructor(
         song.copy(tags = t)
     }
 
-    /**
-     * "Split Brazilian and international": the songs with neither tag yet, by the lyrics language (the ones it can't
-     * tell stay out). [preview] counts without saving, for the confirmation.
-     */
-    fun autoTags(national: String, international: String, preview: Boolean): Pair<Int, Int> {
-        val pending = repository.library.value.songs
-            .filter { !br.app.stagebook.domain.Tags.has(it, national) && !br.app.stagebook.domain.Tags.has(it, international) }
-            .mapNotNull { s -> br.app.stagebook.domain.LyricsLanguage.isPortuguese(s.text)?.let { s.id to it } }
-        val br = pending.filter { it.second }.map { it.first }
-        val other = pending.filterNot { it.second }.map { it.first }
-        if (!preview) {
-            setTags(br, listOf(national), emptyList())
-            setTags(other, listOf(international), emptyList())
-        }
-        return br.size to other.size
-    }
 
 
     fun deleteMany(ids: List<String>) = repository.deleteSongs(ids)

@@ -904,4 +904,5 @@
         <item quantity="one">Take %d song out of this setlist? It stays in the library.</item>
         <item quantity="other">Take %d songs out of this setlist? They stay in the library.</item>
     </plurals>
+    <string name="tags_auto_info">Tags, by the lyrics language, the songs that have neither Brazilian nor International yet. You can fix them later in each song\'s editor or by selecting several in the list.</string>
 </resources>

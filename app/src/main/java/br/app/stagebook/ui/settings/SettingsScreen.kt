@@ -321,6 +321,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onBandOn = viewModel::setBandOn,
                 onInternetOn = viewModel::setInternetOn,
                 onExtrasOn = viewModel::setExtrasOn,
+                onAutoTags = viewModel::autoTags,
                 onBackup = { parts ->
                     backupParts = parts
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${br.app.stagebook.data.Backup.EXTENSION}")
@@ -404,6 +405,7 @@ data class SettingsActions(
     val onInternetOn: (Boolean) -> Unit = {},
     val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
+    val onAutoTags: (national: String, international: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _ -> 0 to 0 },
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
@@ -1314,6 +1316,24 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 pluralStringResource(R.plurals.set_count, uiState.setCount, uiState.setCount),
             style = MaterialTheme.typography.bodyLarge,
         )
+    }
+    // song tags: splitting Brazilian and international songs, once (moved here from the song list's ⋮, user 01/11)
+    SettingsCard(stringResource(R.string.tags_title)) {
+        var ask by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+        val national = stringResource(R.string.tags_national)
+        val international = stringResource(R.string.tags_international)
+        InfoText(stringResource(R.string.tags_auto_info))
+        ActionButton(stringResource(R.string.tags_auto), { ask = actions.onAutoTags(national, international, true) }, Modifier.fillMaxWidth(), icon = AppIcons.Label, tone = ButtonTone.Tonal)
+        ask?.let { (br, other) ->
+            if (br + other == 0) InfoDialog(stringResource(R.string.tags_auto), stringResource(R.string.tags_auto_none), { ask = null })
+            else ConfirmDialog(
+                stringResource(R.string.tags_auto_confirm, br, other),
+                stringResource(R.string.tags_auto_ok),
+                { actions.onAutoTags(national, international, false) },
+                { ask = null },
+                destructive = false,
+            )
+        }
     }
     // one format only, .stagebook (user's request, 29/10), with the explanation visible (not hidden in "How it works")
     SettingsCard(stringResource(R.string.backup_save_card)) {

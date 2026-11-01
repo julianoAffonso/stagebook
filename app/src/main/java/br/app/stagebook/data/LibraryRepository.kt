@@ -148,6 +148,32 @@ class LibraryRepository @Inject constructor(
         mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id in set) change(it) else it }) }
     }
 
+    /**
+     * "Split Brazilian and international" (vocalist, 01/11): the songs with neither tag yet get one by the lyrics
+     * language (the ones it can't tell stay out). [preview] only counts, for the confirmation. Returns (Brazilian, other).
+     */
+    fun autoTags(national: String, international: String, preview: Boolean): Pair<Int, Int> {
+        val pending = _library.value.songs
+            .filter { !br.app.stagebook.domain.Tags.has(it, national) && !br.app.stagebook.domain.Tags.has(it, international) }
+            .mapNotNull { s -> br.app.stagebook.domain.LyricsLanguage.isPortuguese(s.text)?.let { s.id to it } }
+        val brazilian = pending.filter { it.second }.map { it.first }.toSet()
+        val other = pending.filterNot { it.second }.map { it.first }.toSet()
+        if (!preview && pending.isNotEmpty()) {
+            mutate { lib ->
+                lib.copy(
+                    songs = lib.songs.map { s ->
+                        when (s.id) {
+                            in brazilian -> s.copy(tags = br.app.stagebook.domain.Tags.add(s.tags, national))
+                            in other -> s.copy(tags = br.app.stagebook.domain.Tags.add(s.tags, international))
+                            else -> s
+                        }
+                    },
+                )
+            }
+        }
+        return brazilian.size to other.size
+    }
+
     /** Deletes several songs (a selection) in one save, and takes them out of the setlists. */
     fun deleteSongs(ids: Collection<String>) {
         val set = ids.toSet()
