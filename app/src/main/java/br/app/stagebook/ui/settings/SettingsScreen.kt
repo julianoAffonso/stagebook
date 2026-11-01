@@ -424,6 +424,7 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     PLAYER(R.string.settings_player, AppIcons.Play),
     SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
+    METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
     BAND(R.string.settings_band, AppIcons.Group),
     WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
     SCREEN(R.string.settings_screen, AppIcons.Brightness),
@@ -438,6 +439,7 @@ fun SettingsSection.shown(look: Look): Boolean = when (this) {
     SettingsSection.PLAYER -> look.playerMode
     SettingsSection.BAND -> look.bandOn || look.internetOn   // the band also works over the internet (same members)
     SettingsSection.WEB_EDITOR -> !look.essential   // essential mode turns the editor on the computer off (T37)
+    SettingsSection.METRONOME -> look.extrasOn
     else -> true
 }
 
@@ -535,6 +537,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
         } +
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
     SettingsSection.SECTIONS -> stringResource(if (ui.look.showSections) R.string.settings_sections_shown else R.string.settings_sections_hidden)
+    SettingsSection.METRONOME -> stringResource(if (ui.look.metroShown) R.string.metro_summary_shown else R.string.metro_summary_hidden)
     SettingsSection.CHORDS -> if (ui.look.chords) stringResource(R.string.settings_chords_on_short, (ui.look.chordScale * 100).roundToInt()) else stringResource(R.string.settings_chords_off_short)
     // the keyboard pedal, or else the saved MIDI pedal
     SettingsSection.PEDAL -> when {
@@ -564,6 +567,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
             SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
+            SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
             SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
@@ -580,17 +584,11 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
 private fun LyricsDetail(look: Look, actions: SettingsActions) {
     // the size changes live in the preview and only saves on release
     var font by remember(look.fontSp) { mutableFloatStateOf(look.fontSp) }
-    SettingsCard(stringResource(R.string.settings_font_card), help = stringResource(R.string.settings_font_help)) {
-        // control on top and a fixed-height preview below: changing the size doesn't move the screen
-        Text(stringResource(R.string.settings_font_value, font.roundToInt()), style = MaterialTheme.typography.headlineSmall)
-        Slider(
-            value = font,
-            onValueChange = { font = it },
-            onValueChangeFinished = { actions.onFont(font) },
-            valueRange = Look.MIN_FONT..Look.MAX_FONT,
-            steps = (Look.MAX_FONT - Look.MIN_FONT).toInt() - 1,
-        )
-        // on a wide screen the box is taller: the miniature (sized so 72 fits) stays close to the real size (30/10)
+    // everything about how the lyrics look in one card, the preview on top so each change shows there right away
+    // (user, 01/11: the size was far from the colors and the font)
+    SettingsCard(stringResource(R.string.settings_lyrics_card), help = stringResource(R.string.settings_font_help)) {
+        // fixed-height preview: changing the size doesn't move the screen; on a wide screen the box is taller, so the
+        // miniature (sized so 72 fits) stays close to the real size (30/10)
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             Surface(
                 color = Color(look.bg),
@@ -600,9 +598,29 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(font), R.string.settings_preview_size_text)
             }
         }
+        Text(stringResource(R.string.settings_font_size, font.roundToInt()), style = MaterialTheme.typography.bodyLarge)
+        Slider(
+            value = font,
+            onValueChange = { font = it },
+            onValueChangeFinished = { actions.onFont(font) },
+            valueRange = Look.MIN_FONT..Look.MAX_FONT,
+            steps = (Look.MAX_FONT - Look.MIN_FONT).toInt() - 1,
+        )
+        // the lyrics font (dropdown, written in the font itself) and bold
+        FontPicker(look.font, actions.onFontFamily)
+        SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
+        Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
+        ColorSwatchRow(StagePalette.text, look.fg, actions.onTextColor)
+        Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
+        ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
+        LegibilityWarnings(look)
     }
-    // turn pages (default) or scroll the lyrics; in both the pedal and a tap move one step
-    SettingsCard(stringResource(R.string.settings_stage_mode), help = stringResource(R.string.settings_stage_mode_help) + "\n\n" + stringResource(R.string.settings_auto_scroll_help)) {
+    // the page: turn pages (default) or scroll the lyrics, and the columns; in both modes the pedal and a tap move one step
+    SettingsCard(
+        stringResource(R.string.settings_page_card),
+        help = stringResource(R.string.settings_stage_mode_help) + "\n\n" + stringResource(R.string.settings_auto_scroll_help) + "\n\n" + stringResource(R.string.settings_columns_help),
+    ) {
+        Text(stringResource(R.string.settings_stage_mode), style = MaterialTheme.typography.bodyLarge)
         val modes = listOf(
             br.app.stagebook.data.model.StageMode.PAGES to R.string.settings_stage_mode_pages,
             br.app.stagebook.data.model.StageMode.SCROLL to R.string.settings_stage_mode_scroll,
@@ -627,9 +645,18 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 steps = Look.MAX_AUTO_SCROLL - 2,
             )
         }
+        if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) PageColumns(look, actions)
     }
-    if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) SettingsCard(stringResource(R.string.settings_columns), help = stringResource(R.string.settings_columns_help)) {
-        // "Split into columns: Automatic | Never | Always", each with a picture of the page (lines whole or in two blocks)
+    // the screen stays on with the app open (it was in its own Screen item)
+    SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
+        SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
+    }
+}
+
+/** "Split into columns: Automatic | Never | Always", each with a picture of the page (lines whole or in two blocks). */
+@Composable
+private fun PageColumns(look: Look, actions: SettingsActions) {
+        Text(stringResource(R.string.settings_columns), style = MaterialTheme.typography.bodyLarge)
         val options = listOf(
             Triple(StageColumns.AUTO, R.string.settings_columns_auto, AppIcons.AutoColumns),
             Triple(StageColumns.ONE, R.string.settings_columns_never, AppIcons.OneColumn),
@@ -646,19 +673,6 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
                 ) { Text(stringResource(label)) }
             }
         }
-    }
-    SettingsCard(stringResource(R.string.settings_colors)) {
-        Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
-        ColorSwatchRow(StagePalette.text, look.fg, actions.onTextColor)
-        Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
-        ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
-        SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
-        // the lyrics font on the same card (dropdown, written in the font itself)
-        FontPicker(look.font, actions.onFontFamily)
-        LegibilityWarnings(look)
-    }
-    // the stage metronome lives with the rest of the stage (user's decision of 30/10); off in essential mode
-    if (look.extrasOn) MetronomeDetail(look, actions)
 }
 
 /** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
@@ -732,6 +746,10 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_chords_card), help = stringResource(R.string.settings_chords_show_help)) {
         SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
         if (look.chords) {
+            // the same order as the lyrics card: the preview on top, then size, font and colour (user, 01/11)
+            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
+                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
+            }
             Text(stringResource(R.string.settings_chords_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
                 value = scale,
@@ -740,13 +758,9 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
                 valueRange = Look.MIN_CHORD_SCALE..Look.MAX_CHORD_SCALE,
                 steps = ((Look.MAX_CHORD_SCALE - Look.MIN_CHORD_SCALE) * 10).roundToInt() - 1,
             )
+            FontPicker(look.chordFont, actions.onChordFont)
             Text(stringResource(R.string.settings_chords_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
-            FontPicker(look.chordFont, actions.onChordFont)
-            // the preview right after what it shows (size, color, font)
-            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
-            }
             LegibilityWarnings(look)
         }
     }
@@ -840,12 +854,14 @@ private const val PREVIEW_FONT = 30f
 private fun SectionsDetail(look: Look, actions: SettingsActions) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     SettingsCard(stringResource(R.string.settings_sections_look), help = stringResource(R.string.settings_sections_help) + "\n\n" + stringResource(R.string.settings_translate_sections_help)) {
-        Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
-        ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
         if (look.showSections) {
-            // the size changes live in the preview and only saves on release (like the chords one)
+            // the same order as the lyrics card: the preview on top, then size and colour (user, 01/11); the size
+            // changes live in the preview and only saves on release
             var scale by remember(look.sectionScale) { mutableFloatStateOf(look.sectionScale) }
+            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
+                StagePreview(look.copy(sectionScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
+            }
             Text(stringResource(R.string.settings_sections_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
                 value = scale,
@@ -854,9 +870,8 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
                 valueRange = Look.MIN_SECTION_SCALE..Look.MAX_SECTION_SCALE,
                 steps = ((Look.MAX_SECTION_SCALE - Look.MIN_SECTION_SCALE) * 10).roundToInt() - 1,
             )
-            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(sectionScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
-            }
+            Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
+            ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         }
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
         LegibilityWarnings(look)
@@ -1299,9 +1314,7 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
 
 @Composable
 private fun ScreenDetail(look: Look, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
-        SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
-    }
+    // keeping the screen on moved to Stage look (user, 01/11)
     // Now Playing: the stage's "shout" to OBS and others (T23); a stage extra (T19)
     if (look.extrasOn) SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
         SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce)

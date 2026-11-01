@@ -913,4 +913,8 @@
     <string name="share_internet_limit">Too much to send over the internet at once. Send it in more than one go.</string>
     <string name="share_internet_limit_titles">Too much to send over the internet at once. Turn off “Bring the songs” or send fewer setlists.</string>
     <string name="share_band_limit">Too many setlists at once. Send them in more than one go.</string>
+    <string name="settings_lyrics_card">Lyrics</string>
+    <string name="settings_page_card">Page</string>
+    <string name="metro_summary_shown">On stage</string>
+    <string name="metro_summary_hidden">Hidden from the stage</string>
 </resources>

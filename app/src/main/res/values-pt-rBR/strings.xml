@@ -911,4 +911,8 @@
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
     <string name="share_band_limit">Muitos setlists de uma vez. Mande em mais de uma vez.</string>
+    <string name="settings_lyrics_card">Letra</string>
+    <string name="settings_page_card">Página</string>
+    <string name="metro_summary_shown">No palco</string>
+    <string name="metro_summary_hidden">Escondido do palco</string>
 </resources>
