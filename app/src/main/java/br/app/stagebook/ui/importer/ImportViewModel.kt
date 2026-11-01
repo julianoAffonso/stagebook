@@ -83,24 +83,33 @@ class ImportViewModel @Inject constructor(
 
     /** Answer to the tablature question: import with it (as a `{start_of_tab}` block) or without. */
     fun answerTab(include: Boolean) {
+        if (extracting) return
         val raw = pendingTab ?: return
         pendingTab = null
         _uiState.update { it.copy(askTab = false) }
-        viewModelScope.launch { extract(raw, include) }
+        extracting = true
+        viewModelScope.launch {
+            try { extract(raw, include) } finally { extracting = false }
+        }
     }
 
     private suspend fun extract(raw: String?, withTab: Boolean? = null) {
-        // one engine for the app and the editor on the computer (PageImporter)
-        when (val r = importer.fromScript(raw, withTab)) {
+        // one engine for the app and the editor on the computer (PageImporter); busy covers the slow part, off the main
+        // thread (audit 01/11)
+        _uiState.update { it.copy(busy = true) }
+        val r = try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { importer.fromScript(raw, withTab) }
+        } finally {
+            _uiState.update { it.copy(busy = false) }
+        }
+        when (r) {
             PageImport.AskTab -> {
                 pendingTab = raw   // the answer comes back through answerTab
                 _uiState.update { it.copy(askTab = true) }
             }
             is PageImport.Problem -> _uiState.update { it.copy(problem = r.problem) }
             is PageImport.Song -> {
-                _uiState.update { it.copy(busy = true) }
                 draft.put(ImportDraft.Draft(r.title, r.artist, r.year, r.text))
-                _uiState.update { it.copy(busy = false) }
                 opened.send(repository.findSong(r.title, r.artist)?.id)
             }
         }
