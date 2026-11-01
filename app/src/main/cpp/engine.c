@@ -665,7 +665,15 @@ static volatile int g_dev_running = 0;
 static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *data, int32_t nf) {
     float *o = (float *)data;
     int ch = AAudioStream_getChannelCount(st);
-    pthread_mutex_lock(&g_mx);
+    // AAudio's real-time callback never waits without a limit (audio audit P4): the lock is held only for short copies
+    // (microseconds), so it tries for up to 1 ms, the same as before in practice; if something held it longer, this
+    // block goes out silent instead of stalling Android's audio
+    int locked = 0;
+    for (double until = now_s() + 0.001; !(locked = pthread_mutex_trylock(&g_mx) == 0) && now_s() < until; ) {}
+    if (!locked) {
+        memset(o, 0, sizeof(float) * (size_t)nf * (size_t)ch);
+        return AAUDIO_CALLBACK_RESULT_CONTINUE;
+    }
     int mon = g_meter_on;
     for (int f = 0; f < nf; f++) {
         float lane[LANES_MAX] = {0};
