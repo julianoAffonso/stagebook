@@ -149,13 +149,15 @@ class LibraryRepository @Inject constructor(
     }
 
     /**
-     * "Split Brazilian and international" (vocalist, 01/11): the songs with neither tag yet get one by the lyrics
-     * language (the ones it can't tell stay out). [preview] only counts, for the confirmation. Returns (Brazilian, other).
+     * "Split national and international" (vocalist, 01/11): the songs with neither tag yet get one by the lyrics
+     * language: in the app's [language] is national, any other known language international (the ones it can't tell
+     * stay out). [preview] only counts, for the confirmation. Returns (national, international).
      */
-    fun autoTags(national: String, international: String, preview: Boolean): Pair<Int, Int> {
+    fun autoTags(national: String, international: String, language: String, preview: Boolean): Pair<Int, Int> {
+        if (language !in br.app.stagebook.domain.LyricsLanguage.known) return 0 to 0
         val pending = _library.value.songs
             .filter { !br.app.stagebook.domain.Tags.has(it, national) && !br.app.stagebook.domain.Tags.has(it, international) }
-            .mapNotNull { s -> br.app.stagebook.domain.LyricsLanguage.isPortuguese(s.text)?.let { s.id to it } }
+            .mapNotNull { s -> br.app.stagebook.domain.LyricsLanguage.detect(s.text)?.let { s.id to (it == language) } }
         val brazilian = pending.filter { it.second }.map { it.first }.toSet()
         val other = pending.filterNot { it.second }.map { it.first }.toSet()
         if (!preview && pending.isNotEmpty()) {

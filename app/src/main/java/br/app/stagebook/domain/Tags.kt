@@ -29,35 +29,41 @@ object Tags {
 }
 
 /**
- * Is the song in Portuguese? Counts common words of each language in the lyrics (chords and section titles out).
- * Null when there are too few words to tell (no lyrics yet). Good enough to start; the tags can be fixed by hand.
+ * The language of a song's lyrics, by the common words of each known language (chords and section titles out). Null
+ * when there are too few words to tell (no lyrics yet) or no known language wins. "National" is the app's language
+ * (user, 01/11: the app isn't only for Brazil): a new translation brings its own word list here.
  */
 object LyricsLanguage {
-    private val pt = setOf(
-        "que", "não", "nao", "você", "voce", "eu", "meu", "minha", "do", "da", "é", "os", "um", "uma", "pra", "para",
-        "com", "sem", "mais", "quando", "como", "tudo", "nada", "amor", "coração", "vida", "seu", "sua", "tão", "já",
-        "só", "vou", "quero", "nós", "agora", "sempre", "nunca", "dia", "noite", "também", "aqui", "assim", "ela", "ele",
-    )
-    private val en = setOf(
-        "the", "you", "and", "my", "love", "it", "is", "in", "of", "your", "that", "be", "we", "don't", "i'm", "baby",
-        "all", "for", "on", "with", "what", "can", "just", "know", "want", "never", "this", "are", "when", "now",
-        "got", "like", "there", "it's", "can't", "she", "he", "they", "night", "time", "way", "feel", "heart",
+    private val words = mapOf(
+        "pt" to setOf(
+            "que", "não", "nao", "você", "voce", "eu", "meu", "minha", "do", "da", "é", "os", "um", "uma", "pra", "para",
+            "com", "sem", "mais", "quando", "como", "tudo", "nada", "amor", "coração", "vida", "seu", "sua", "tão", "já",
+            "só", "vou", "quero", "nós", "agora", "sempre", "nunca", "dia", "noite", "também", "aqui", "assim", "ela", "ele",
+        ),
+        "en" to setOf(
+            "the", "you", "and", "my", "love", "it", "is", "in", "of", "your", "that", "be", "we", "don't", "i'm", "baby",
+            "all", "for", "on", "with", "what", "can", "just", "know", "want", "never", "this", "are", "when", "now",
+            "got", "like", "there", "it's", "can't", "she", "he", "they", "night", "time", "way", "feel", "heart", "i",
+        ),
     )
     private val word = Regex("""[\p{L}']+""")
 
-    fun isPortuguese(text: String): Boolean? {
+    /** Languages it can tell (ISO 639-1). */
+    val known: Set<String> get() = words.keys
+
+    fun detect(text: String): String? {
         val lyrics = Chords.stripChords(text).lines().filter { Sections.detect(it) == null && !it.trimStart().startsWith("{") }
-        var p = 0
-        var e = 0
+        val counts = words.keys.associateWith { 0 }.toMutableMap()
         lyrics.forEach { line ->
             word.findAll(line.lowercase()).forEach { m ->
                 val w = m.value.trim('\'')
-                if (w in pt) p++
-                if (w in en || w == "i") e++
+                words.forEach { (lang, set) -> if (w in set) counts[lang] = counts.getValue(lang) + 1 }
             }
         }
-        if (p + e < MIN_WORDS) return null
-        return p > e
+        if (counts.values.sum() < MIN_WORDS) return null
+        val best = counts.maxByOrNull { it.value } ?: return null
+        // a tie isn't an answer
+        return best.key.takeIf { counts.values.count { it == best.value } == 1 }
     }
 
     private const val MIN_WORDS = 5

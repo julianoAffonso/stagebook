@@ -235,7 +235,7 @@ class SettingsViewModel @Inject constructor(
     fun setMetronome(count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) =
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setMetronomeShown(on: Boolean) = repository.updateLook { it.copy(metroShown = on) }
-    fun autoTags(national: String, international: String, preview: Boolean) = repository.autoTags(national, international, preview)
+    fun autoTags(national: String, international: String, language: String, preview: Boolean) = repository.autoTags(national, international, language, preview)
     fun setAnnounce(on: Boolean) = repository.updateLook { it.copy(announce = on) }
     fun setChordPlay(m: br.app.stagebook.data.model.ChordPlayMode) = repository.updateLook { it.copy(chordPlay = m) }
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, Look.MAX_AUTO_SCROLL)) }

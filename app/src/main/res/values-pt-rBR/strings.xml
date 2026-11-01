@@ -854,7 +854,7 @@
     <string name="tags_national">Nacional</string>
     <string name="tags_international">Internacional</string>
     <string name="tags_auto">Separar nacionais e internacionais</string>
-    <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá para corrigir depois.</string>
+    <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional (em português) e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá para corrigir depois.</string>
     <string name="tags_auto_ok">Separar</string>
     <string name="tags_auto_none">Não há músicas para separar: todas já têm Nacional ou Internacional, ou estão sem letra.</string>
     <plurals name="tags_count">
@@ -898,7 +898,7 @@
         <item quantity="one">Tirar %d música deste setlist? Ela continua na biblioteca.</item>
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
-    <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional. Depois dá para corrigir no editor de cada música ou selecionando várias na lista.</string>
+    <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional: Nacional é o idioma do app. Depois dá para corrigir no editor de cada música ou selecionando várias na lista.</string>
     <string name="editor_auto_meta_short">Em branco: o app completa</string>
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>

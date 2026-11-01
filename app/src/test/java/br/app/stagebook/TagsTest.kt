@@ -36,14 +36,14 @@ class TagsTest {
     }
 
     @Test fun `Portuguese lyrics with chords and sections`() =
-        assertEquals(true, LyricsLanguage.isPortuguese("[Refrão]\n[G]Eu quero você [C]comigo\nQue a vida é tão bonita quando você está aqui"))
+        assertEquals("pt", LyricsLanguage.detect("[Refrão]\n[G]Eu quero você [C]comigo\nQue a vida é tão bonita quando você está aqui"))
 
     @Test fun `English lyrics`() =
-        assertEquals(false, LyricsLanguage.isPortuguese("{key: E}\n[E]You know I love you, baby\nAnd I can't let it go, it's all in my heart"))
+        assertEquals("en", LyricsLanguage.detect("{key: E}\n[E]You know I love you, baby\nAnd I can't let it go, it's all in my heart"))
 
     @Test fun `too little lyrics to tell`() {
-        assertNull(LyricsLanguage.isPortuguese("[G] [D] [Em] [C]"))
-        assertNull(LyricsLanguage.isPortuguese(""))
+        assertNull(LyricsLanguage.detect("[G] [D] [Em] [C]"))
+        assertNull(LyricsLanguage.detect(""))
     }
 
     @Test fun `tags survive saving the library`() {
@@ -53,4 +53,11 @@ class TagsTest {
         assertTrue(Tags.has(back.songs[0], "rock"))
         assertFalse(Tags.has(back.songs[1], "rock"))
     }
+
+    // "national" is the app's language (user, 01/11: not only for Brazil)
+    @Test fun `a tie or an unknown mix gives no language`() {
+        assertNull(LyricsLanguage.detect("eu you que the"))   // 2 x 2, too few words anyway
+        assertTrue("pt" in LyricsLanguage.known && "en" in LyricsLanguage.known)
+    }
+
 }
