@@ -133,7 +133,7 @@
     <!-- settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Stage look</string>
-    <string name="settings_preview_text">[Chorus]\n[G]A sample [D]line\n[Em]To see how it [C]looks</string>
+    <string name="settings_preview_text">[Chorus]\n[G]A sample [D]line\n[Em]To see how it [C]==looks==</string>
     <string name="settings_preview_size_text">[Chorus]\n[G]A sample [D]line</string>
     <string name="settings_font_size">Lyrics size: %1$d</string>
     <string name="settings_text_color">Lyrics color</string>
@@ -393,6 +393,8 @@
     <string name="settings_illegible_lyrics">The lyrics will be hard to read on this background</string>
     <string name="settings_illegible_sections">Section titles will be hard to read on this background</string>
     <string name="settings_illegible_chords">Chords will be hard to read on this background</string>
+    <string name="settings_illegible_highlight">The lyrics will be hard to read on this highlight</string>
+    <string name="settings_highlight_color">Highlight color</string>
     <string name="section_intro">Intro</string>
     <string name="section_verse">Verse</string>
     <string name="section_pre_chorus">Pre-chorus</string>

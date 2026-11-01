@@ -390,7 +390,7 @@ fun StageScreen(
     val chordLook = remember(look.chords, look.chordScale, look.chordColor) { ChordLook(look.chords, look.chordScale, Color(look.chordColor)) }
     // keyed on what it uses, not the whole look (auto-scroll speed or a hint flag would redo the lyrics)
     val sourced = remember(shownText, sectionNames, look.sectionColor, look.showSections, chordLook, look.sectionScale, look.sectionFont) {
-        stageLines(shownText, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, sectionFont = look.sectionFont.family)
+        stageLines(shownText, sectionNames, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, Color(look.highlightColor), look.sectionFont.family)
     }
     val lines = remember(sourced) { sourced.map { it.text } }
     // holding a line shows a button to edit it (it doesn't open right away: during a show a resting thumb on the screen

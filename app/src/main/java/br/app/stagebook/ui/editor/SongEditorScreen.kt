@@ -308,7 +308,7 @@ fun SongEditorScreen(
                             textStyle = MaterialTheme.typography.bodyLarge,
                             // the highlighted phrases show with the marker, as on stage (B-28)
                             visualTransformation = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f).let { faded ->
-                                remember(faded) { HighlightLook(androidx.compose.ui.graphics.Color(br.app.stagebook.ui.theme.StagePalette.HIGHLIGHT), faded) }
+                                remember(faded, look.highlightColor) { HighlightLook(androidx.compose.ui.graphics.Color(look.highlightColor), faded) }
                             },
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
@@ -580,7 +580,7 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
 private fun EditorPreview(text: String, look: Look) {
     val names = rememberSectionNames(look.translateSections)
     val chordLook = ChordLook(look.chords, look.chordScale, Color(look.chordColor))
-    val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, sectionFont = look.sectionFont.family).map { it.text } }
+    val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, Color(look.highlightColor), look.sectionFont.family).map { it.text } }
     val font = minOf(look.fontSp, 28f)
     val style = TextStyle(
         color = Color(look.fg),

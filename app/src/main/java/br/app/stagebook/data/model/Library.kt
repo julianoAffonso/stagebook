@@ -153,6 +153,8 @@ data class Look(
     val chords: Boolean = true,
     val chordScale: Float = 0.8f,
     val chordColor: Int = 0xFFFFC107.toInt(),
+    // highlighted phrases (==…==): a see-through marker, chosen in Stage look (user, 01/11)
+    val highlightColor: Int = 0x66FFEB3B,
     // recognized sections in the app's language (the saved lyrics don't change); false = as written
     val translateSections: Boolean = true,
     val font: StageFont = StageFont.DEFAULT,        // lyrics font

@@ -24,4 +24,11 @@ object Contrast {
     }
 
     fun legible(text: Int, background: Int) = ratio(text, background) >= LEGIBLE
+
+    /** A see-through color [top] laid over an opaque [bottom], as the screen shows it (the marker over the background). */
+    fun over(top: Int, bottom: Int): Int {
+        val a = ((top ushr 24) and 0xFF) / 255.0
+        fun mix(shift: Int) = (((top shr shift) and 0xFF) * a + ((bottom shr shift) and 0xFF) * (1 - a)).toInt()
+        return (0xFF shl 24) or (mix(16) shl 16) or (mix(8) shl 8) or mix(0)
+    }
 }

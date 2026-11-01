@@ -282,6 +282,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onChordScale = viewModel::setChordScale,
                 onSectionScale = viewModel::setSectionScale,
                 onChordColor = viewModel::setChordColor,
+                onHighlightColor = viewModel::setHighlightColor,
                 onFontFamily = viewModel::setFontFamily,
                 onChordFont = viewModel::setChordFont,
                 onSectionFont = viewModel::setSectionFont,
@@ -374,6 +375,7 @@ data class SettingsActions(
     val onChordScale: (Float) -> Unit = {},
     val onSectionScale: (Float) -> Unit = {},
     val onChordColor: (Int) -> Unit = {},
+    val onHighlightColor: (Int) -> Unit = {},
     val onFontFamily: (StageFont) -> Unit = {},
     val onChordFont: (StageFont) -> Unit = {},
     val onSectionFont: (StageFont) -> Unit = {},
@@ -654,6 +656,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
         Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.text, look.fg, actions.onTextColor)
+        // highlighted phrases (==…==): every option see-through, the lyrics show through (user, 01/11)
+        Text(stringResource(R.string.settings_highlight_color), style = MaterialTheme.typography.bodyLarge)
+        ColorSwatchRow(StagePalette.highlight, look.highlightColor, actions.onHighlightColor)
         Text(stringResource(R.string.settings_background), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
         LegibilityWarnings(look)
@@ -742,6 +747,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier,
             ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
             look.sectionScale,
             look.sectionFont.family,
+            Color(look.highlightColor),
         ),
         style = style,
         chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
@@ -777,6 +783,8 @@ private fun LegibilityWarnings(look: Look) {
         if (!Contrast.legible(look.fg, look.bg)) add(R.string.settings_illegible_lyrics)
         if (look.showSections && !Contrast.legible(look.sectionColor, look.bg)) add(R.string.settings_illegible_sections)
         if (look.chords && !Contrast.legible(look.chordColor, look.bg)) add(R.string.settings_illegible_chords)
+        // the lyrics over the marker, as the screen shows it on this background (user, 01/11)
+        if (!Contrast.legible(look.fg, Contrast.over(look.highlightColor, look.bg))) add(R.string.settings_illegible_highlight)
     }
     problems.forEach { msg ->
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
