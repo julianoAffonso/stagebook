@@ -78,6 +78,22 @@ class BackupTest {
         assertEquals("", repo.library.value.songs.single { it.title == "Com faixa" }.track)
     }
 
+    @Test fun `restoring the band - the band in memory follows the file`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val trust = br.app.stagebook.data.BandTrust(context)
+        val backup = Backup(context, repo, TrackStore(context), trust)
+        trust.add("ana", "Tablet da Ana", "k1")
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.SETTINGS))
+        trust.remove("ana")
+        trust.add("bia", "Celular da Bia", "k2")
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.SETTINGS)))
+        assertEquals(listOf("ana"), trust.members.value.map { it.id })
+        trust.add("caio", "Caio", "k3")   // the next change keeps the restored band
+        assertEquals(listOf("ana", "caio"), br.app.stagebook.data.BandTrust(context).members.value.map { it.id }.sorted())
+    }
+
     @Test fun `file that is not a backup is not read`() = runBlocking {
         val (_, _, backup) = setup()
         assertEquals(null, backup.inspect(ByteArrayInputStream("não é zip".toByteArray())))
