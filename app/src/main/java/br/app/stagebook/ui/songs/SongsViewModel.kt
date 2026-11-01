@@ -32,13 +32,15 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 
 @Immutable
-data class SongRowUi(val id: String, val title: String, val subtitle: String)
+data class SongRowUi(val id: String, val title: String, val subtitle: String, val tags: List<String> = emptyList())
 
 @Immutable
 data class SongsUiState(
     val loading: Boolean = true,
     val songs: List<SongRowUi> = emptyList(),
     val total: Int = 0,
+    val tags: List<String> = emptyList(),        // every tag in the library (the filter's options)
+    val chosenTags: Set<String> = emptySet(),
 )
 
 /** Waits for the person to stop typing before filtering; clearing the search is immediate. */
@@ -79,18 +81,51 @@ class SongsViewModel @Inject constructor(
 
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
+    private val chosenTags = MutableStateFlow(emptySet<String>())
 
     @OptIn(FlowPreview::class)
-    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search, query.debounce(::typingDelay)) { loaded, s, q ->
-        val songs = s.find(q)
+    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search, query.debounce(::typingDelay), chosenTags) { loaded, s, q, chosen ->
+        val all = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
+        // a tag that no song has any more (taken off everywhere) leaves the filter
+        val kept = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
+        val songs = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
         SongsUiState(
             loading = !loaded,
-            songs = songs.map { SongRowUi(it.id, it.title, it.subtitle()) },
+            songs = songs.map { SongRowUi(it.id, it.title, it.subtitle(), it.tags) },
             total = repository.library.value.songs.size,
+            tags = all,
+            chosenTags = kept,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 
     fun onQueryChange(q: String) { query.value = q }
+
+    fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }
+
+    /** Adds and takes off tags on the chosen songs. */
+    fun setTags(ids: List<String>, add: List<String>, remove: List<String>) = repository.updateSongs(ids) { song ->
+        var t = song.tags
+        remove.forEach { t = br.app.stagebook.domain.Tags.remove(t, it) }
+        add.forEach { t = br.app.stagebook.domain.Tags.add(t, br.app.stagebook.domain.Tags.clean(it)) }
+        song.copy(tags = t)
+    }
+
+    /**
+     * "Split Brazilian and international": the songs with neither tag yet, by the lyrics language (the ones it can't
+     * tell stay out). [preview] counts without saving, for the confirmation.
+     */
+    fun autoTags(national: String, international: String, preview: Boolean): Pair<Int, Int> {
+        val pending = repository.library.value.songs
+            .filter { !br.app.stagebook.domain.Tags.has(it, national) && !br.app.stagebook.domain.Tags.has(it, international) }
+            .mapNotNull { s -> br.app.stagebook.domain.LyricsLanguage.isPortuguese(s.text)?.let { s.id to it } }
+        val br = pending.filter { it.second }.map { it.first }
+        val other = pending.filterNot { it.second }.map { it.first }
+        if (!preview) {
+            setTags(br, listOf(national), emptyList())
+            setTags(other, listOf(international), emptyList())
+        }
+        return br.size to other.size
+    }
 
     fun delete(id: String) = repository.deleteSong(id)
 }

@@ -25,7 +25,13 @@ import br.app.stagebook.ui.songs.typingDelay
 data class PickRowUi(val id: String, val title: String, val subtitle: String, val inSet: Boolean, val selected: Boolean)
 
 @Immutable
-data class PickSongsUiState(val setName: String = "", val rows: List<PickRowUi> = emptyList(), val selectedCount: Int = 0)
+data class PickSongsUiState(
+    val setName: String = "",
+    val rows: List<PickRowUi> = emptyList(),
+    val selectedCount: Int = 0,
+    val tags: List<String> = emptyList(),
+    val chosenTags: Set<String> = emptySet(),
+)
 
 @HiltViewModel
 class PickSongsViewModel @Inject constructor(
@@ -37,19 +43,27 @@ class PickSongsViewModel @Inject constructor(
     private val search = repository.songSearch
     // order they were checked = order they go into the setlist
     private val selected = savedStateHandle.getStateFlow(KEY_SELECTED, ArrayList<String>())
+    // building the setlist by tag: "only Brazilian songs" (user, 01/11)
+    private val chosenTags = MutableStateFlow(emptySet<String>())
 
     @OptIn(FlowPreview::class)
-    val uiState: StateFlow<PickSongsUiState> = combine(repository.library, search, query.debounce(::typingDelay), selected) { lib, s, q, sel ->
+    val uiState: StateFlow<PickSongsUiState> = combine(repository.library, search, query.debounce(::typingDelay), selected, chosenTags) { lib, s, q, sel, chosen ->
         val set = lib.setlist(setId)
+        val all = br.app.stagebook.domain.Tags.all(lib.songs)
+        val kept = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
         PickSongsUiState(
             setName = set?.name.orEmpty(),
-            rows = s.find(q)
+            rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
                 .map { PickRowUi(it.id, it.title, it.subtitle(), set?.items?.contains(it.id) == true, it.id in sel) },
             selectedCount = sel.size,
+            tags = all,
+            chosenTags = kept,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PickSongsUiState())
 
     fun onQueryChange(q: String) { query.value = q }
+
+    fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }
 
     private val _limit = MutableStateFlow(false)
     /** The checked song would go over what the QR can hold: it didn't go in, and the notice asks for a new setlist. */

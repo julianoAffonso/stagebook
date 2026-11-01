@@ -872,4 +872,16 @@
         <item quantity="one">%1$d música tem ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para ela.</item>
         <item quantity="other">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
     </plurals>
+    <string name="tags_all">Todas</string>
+    <string name="tags_filter">Tags</string>
+    <string name="tags_title">Tags</string>
+    <string name="tags_new">Nova tag</string>
+    <string name="tags_add">Adicionar</string>
+    <string name="tags_action">Tags</string>
+    <string name="tags_national">Nacional</string>
+    <string name="tags_international">Internacional</string>
+    <string name="tags_auto">Separar nacionais e internacionais</string>
+    <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá pra corrigir depois.</string>
+    <string name="tags_auto_ok">Separar</string>
+    <string name="tags_auto_none">Não há músicas para separar: todas já têm Nacional ou Internacional, ou estão sem letra.</string>
 </resources>
