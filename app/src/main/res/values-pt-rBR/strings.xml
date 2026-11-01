@@ -24,6 +24,8 @@
         <item quantity="many">Voltar ao padrão (%1$d botões mudados)</item>
         <item quantity="other">Voltar ao padrão (%1$d botões mudados)</item>
     </plurals>
+    <string name="song_count_none">Nenhuma música</string>
+    <string name="set_count_none">Nenhum setlist</string>
     <plurals name="song_count">
         <item quantity="one">%d música</item>
         <item quantity="many">%d músicas</item>

@@ -192,7 +192,7 @@ fun SetlistDetailScreen(
                     )
                 } else ScreenHeader(
                     title = uiState.name,
-                    subtitle = pluralStringResource(R.plurals.song_count, items.size, items.size).let { count ->
+                    subtitle = br.app.stagebook.ui.components.songCountText(items.size).let { count ->
                         if (items.isNotEmpty()) stringResource(R.string.set_tap_to_play, count) else count
                     },
                     onBack = onBack,
