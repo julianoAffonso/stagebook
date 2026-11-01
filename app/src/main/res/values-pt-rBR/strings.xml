@@ -35,6 +35,8 @@
 
     <!-- músicas -->
     <string name="songs_title">Músicas</string>
+    <string name="search_label">Buscar</string>
+    <string name="search_hint">Música, artista</string>
     <string name="songs_search">Buscar música ou artista</string>
     <string name="songs_new">Nova música</string>
     <string name="songs_empty_title">Nenhuma música ainda</string>

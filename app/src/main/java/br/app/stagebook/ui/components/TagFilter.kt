@@ -100,9 +100,15 @@ fun SearchWithTags(
     modifier: Modifier = Modifier,
 ) {
     androidx.compose.foundation.layout.Row(modifier, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.s)) {
-        SearchField(query, onQueryChange, placeholder, Modifier.weight(1f))
+        val wide = wideLists()
+        // on phones, beside the filter, the long hint was cut: "Search" goes on top, like "Tags" (user, 01/11)
+        if (tags.isNotEmpty() && !wide) {
+            SearchField(query, onQueryChange, stringResource(R.string.search_hint), Modifier.weight(1f), label = stringResource(R.string.search_label))
+        } else {
+            SearchField(query, onQueryChange, placeholder, Modifier.weight(1f))
+        }
         if (tags.isNotEmpty()) {
-            val width = if (wideLists()) br.app.stagebook.ui.theme.Sizes.tagFilter else br.app.stagebook.ui.theme.Sizes.tagFilterNarrow
+            val width = if (wide) br.app.stagebook.ui.theme.Sizes.tagFilter else br.app.stagebook.ui.theme.Sizes.tagFilterNarrow
             TagFilter(tags, chosen, onTagsChange, Modifier.width(width))
         }
     }
