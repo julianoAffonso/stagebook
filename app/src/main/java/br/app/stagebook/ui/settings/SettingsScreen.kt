@@ -419,17 +419,20 @@ data class SettingsActions(
     val onInstallUpdate: () -> Unit = {},
 )
 
-/** Settings sections: list on the left on tablets, one screen per section on phones. */
+/**
+ * Settings sections: list on the left on tablets, one screen per section on phones. The user's order (01/11): what's
+ * set for the stage first, then songs and band, and what changes the whole app at the end.
+ */
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
-    ESSENTIAL(R.string.essential_title, AppIcons.Eco),   // first: changes the whole app
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
+    METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
     PLAYER(R.string.settings_player, AppIcons.Play),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
-    METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
-    BAND(R.string.settings_band, AppIcons.Group),
-    WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
     IMPORT(R.string.settings_chord_sites, AppIcons.Public),   // "Chord sites" / "Lyrics sites" by profile ([titleOf])
     LIBRARY(R.string.settings_library, AppIcons.Folder),
+    BAND(R.string.settings_band, AppIcons.Group),
+    WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
+    ESSENTIAL(R.string.essential_title, AppIcons.Eco),
     ADVANCED(R.string.settings_advanced, AppIcons.Tune),   // Android settings for playing without failures (31/10)
     ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
 }
