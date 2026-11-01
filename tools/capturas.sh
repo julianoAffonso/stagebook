@@ -14,5 +14,7 @@ for lang in pt-BR en; do
     || { echo "capturas ($lang) falharam: veja $WORK/$lang.log"; tail -20 "$WORK/$lang.log"; trap - EXIT; exit 1; }
 done
 
+# the editor on the computer: its real page with sample data, photographed by Chrome (same two languages)
+python3 -I tools/capturas_web.py "$WORK" > "$WORK/web.log" 2>&1 || { echo "capturas do editor web falharam: veja $WORK/web.log"; tail -20 "$WORK/web.log"; trap - EXIT; exit 1; }
 python3 -I tools/capturas_jornadas.py "$WORK" "$DEST"
 echo "capturas em: $DEST"

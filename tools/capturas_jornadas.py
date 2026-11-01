@@ -17,6 +17,7 @@ JOURNEYS = [
     ("09-banda", r"^jornada_banda_|^banda_"),
     ("10-ajustes", r"^(celular|tablet|tablet_em_pe)_5_|^ingles_2"),
     ("11-atualizacao", r"^(celular|tablet|tablet_em_pe)_8_"),
+    ("12-editor-web", r"^editor_web_"),
 ]
 
 
