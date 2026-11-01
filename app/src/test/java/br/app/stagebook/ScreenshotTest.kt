@@ -329,7 +329,7 @@ class ScreenshotTest {
     // the metronome is at the end of Stage look: a tall capture so it shows (it used to be its own section)
     @Test @Config(qualifiers = TABLET_TALL)
     fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 30f)), SettingsActions(), it, section = SettingsSection.LYRICS) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 30f)), SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
     // T20: with a capo, the window explains the shape and has Play
