@@ -46,19 +46,20 @@ class PickSongsViewModel @Inject constructor(
     // building the setlist by tag: "only Brazilian songs" (user, 01/11)
     private val chosenTags = MutableStateFlow(emptySet<String>())
 
+    // the search, tags and filter don't change when a song is checked: only the check marks are redone (audit 01/11)
     @OptIn(FlowPreview::class)
-    val uiState: StateFlow<PickSongsUiState> = combine(repository.library, search, query.debounce(::typingDelay), selected, chosenTags) { lib, s, q, sel, chosen ->
+    private val filtered = combine(repository.library, search, query.debounce(::typingDelay), chosenTags) { lib, s, q, chosen ->
         val set = lib.setlist(setId)
         val all = br.app.stagebook.domain.Tags.all(lib.songs)
         val kept = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
-        PickSongsUiState(
-            setName = set?.name.orEmpty(),
-            rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
-                .map { PickRowUi(it.id, it.title, it.subtitle(), set?.items?.contains(it.id) == true, it.id in sel) },
-            selectedCount = sel.size,
-            tags = all,
-            chosenTags = kept,
-        )
+        val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
+            .map { PickRowUi(it.id, it.title, it.subtitle(), set?.items?.contains(it.id) == true, false) }
+        PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, tags = all, chosenTags = kept)
+    }
+
+    val uiState: StateFlow<PickSongsUiState> = combine(filtered, selected) { f, sel ->
+        val chosen = sel.toHashSet()
+        f.copy(rows = f.rows.map { if (it.id in chosen) it.copy(selected = true) else it }, selectedCount = sel.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PickSongsUiState())
 
     fun onQueryChange(q: String) { query.value = q }
