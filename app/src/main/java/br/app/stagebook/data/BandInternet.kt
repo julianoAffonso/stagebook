@@ -52,6 +52,8 @@ class BandInternet @Inject constructor(
     private data class Accepted(val code: String, val from: String, val until: Long)
 
     private val prefs = context.getSharedPreferences("band_net", Context.MODE_PRIVATE)
+    // the queue carries every song sent, once per member: a file of its own instead of the prefs (audit 01/11)
+    private val outFile = java.io.File(context.filesDir, OUT_FILE)
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
     private val lock = Mutex()
@@ -72,8 +74,21 @@ class BandInternet @Inject constructor(
     private fun <T> save(key: String, ser: kotlinx.serialization.KSerializer<T>, list: List<T>) =
         prefs.edit { putString(key, json.encodeToString(ListSerializer(ser), list)) }
 
+    private fun loadOut(): List<Out> {
+        // a queue saved by an older version, in the prefs: moves to the file once
+        if (!outFile.exists()) prefs.getString(KEY_OUT, null)?.let { old ->
+            if (runCatching { outFile.replaceAtomically(old.toByteArray()) }.getOrDefault(false)) prefs.edit { remove(KEY_OUT) }
+        }
+        return runCatching { json.decodeFromString(ListSerializer(Out.serializer()), outFile.readText()) }.getOrDefault(emptyList())
+    }
+
+    private fun saveOut(list: List<Out>) {
+        runCatching { outFile.replaceAtomically(json.encodeToString(ListSerializer(Out.serializer()), list).toByteArray()) }
+            .onFailure { android.util.Log.w("BandInternet", "couldn't save the send queue", it) }
+    }
+
     private fun now() = System.currentTimeMillis()
-    private fun outbox() = load(KEY_OUT, Out.serializer()).filter { now() - it.at < KEEP_MS && it.tries <= MAX_TRIES }
+    private fun outbox() = loadOut().filter { now() - it.at < KEEP_MS && it.tries <= MAX_TRIES }
     private fun myCodes() = load(KEY_CODES, MyCode.serializer()).filter { it.until > now() }
     private fun accepted() = load(KEY_ACCEPTED, Accepted.serializer()).filter { it.until > now() }
 
@@ -145,35 +160,43 @@ class BandInternet @Inject constructor(
         val seen = prefs.getStringSet(KEY_SEEN, emptySet()).orEmpty().toMutableSet()
         var out = outbox()
         var acc = accepted()
-        trust.members.value.forEach { m ->
-            val key = pairKey(m) ?: return@forEach
-            val got = cloud.fetchPair(key, prefs.getString("$KEY_SINCE${m.id}", null)) ?: return@forEach
-            // they asked for songs missing from the setlist I sent (T12): answers with the ones I have, in a songs
-            // package
-            got.requests.forEach { wanted ->
-                val ids = link.songsFor(wanted)
-                if (ids.isNotEmpty()) cloud.songsPackage(ids)?.let { (list, songs) -> cloud.sendToPair(key, m.id, list, songs, java.util.UUID.randomUUID().toString()) }
+        val since = mutableMapOf<String, String>()   // each member's cursor, written once at the end (audit 01/11)
+        try {
+            trust.members.value.forEach { m ->
+                val key = pairKey(m) ?: return@forEach
+                val got = cloud.fetchPair(key, prefs.getString("$KEY_SINCE${m.id}", null)) ?: return@forEach
+                // they asked for songs missing from the setlist I sent (T12): answers with the ones I have, in a songs
+                // package
+                got.requests.forEach { wanted ->
+                    val ids = link.songsFor(wanted)
+                    if (ids.isNotEmpty()) cloud.songsPackage(ids)?.let { (list, songs) -> cloud.sendToPair(key, m.id, list, songs, java.util.UUID.randomUUID().toString()) }
+                }
+                got.packages.forEach { (pid, text, songs) ->
+                    // a repeat (a resend that arrived twice) doesn't come in again; the receipt goes anyway
+                    if (seen.add("${m.id}|$pid")) inbox.add(m.id, m.name, text, songs)
+                    cloud.receipt(key, m.id, pid)
+                }
+                out = out.filterNot { it.to == m.id && it.id in got.receipts }
+                if (got.welcome) acc = acc.filterNot { it.from == m.id }
+                got.last?.let { since[m.id] = it }
             }
-            got.packages.forEach { (pid, text, songs) ->
-                // a repeat (a resend that arrived twice) doesn't come in again; the receipt goes anyway
-                if (seen.add("${m.id}|$pid")) inbox.add(m.id, m.name, text, songs)
-                cloud.receipt(key, m.id, pid)
+            // no receipt and the service already deleted it (12 h): send again, with the same id
+            out = out.map { o ->
+                if (now() - o.sentAt < RESEND_AFTER_MS) return@map o
+                val m = trust.member(o.to) ?: return@map o
+                val key = pairKey(m) ?: return@map o
+                val ok = cloud.sendToPair(key, o.to, java.util.Base64.getDecoder().decode(o.list), o.songs, o.id)
+                if (ok) o.copy(sentAt = now(), tries = o.tries + 1) else o
             }
-            out = out.filterNot { it.to == m.id && it.id in got.receipts }
-            if (got.welcome) acc = acc.filterNot { it.from == m.id }
-            got.last?.let { prefs.edit { putString("$KEY_SINCE${m.id}", it) } }
+        } finally {
+            // also when a member's fetch fails halfway: what already arrived keeps its cursor and its "seen"
+            saveOut(out)
+            prefs.edit {
+                putString(KEY_ACCEPTED, json.encodeToString(ListSerializer(Accepted.serializer()), acc))
+                putStringSet(KEY_SEEN, seen.toList().takeLast(MAX_SEEN).toSet())
+                since.forEach { (id, last) -> putString("$KEY_SINCE$id", last) }
+            }
         }
-        // no receipt and the service already deleted it (12 h): send again, with the same id
-        out = out.map { o ->
-            if (now() - o.sentAt < RESEND_AFTER_MS) return@map o
-            val m = trust.member(o.to) ?: return@map o
-            val key = pairKey(m) ?: return@map o
-            val ok = cloud.sendToPair(key, o.to, java.util.Base64.getDecoder().decode(o.list), o.songs, o.id)
-            if (ok) o.copy(sentAt = now(), tries = o.tries + 1) else o
-        }
-        save(KEY_OUT, Out.serializer(), out)
-        save(KEY_ACCEPTED, Accepted.serializer(), acc)
-        prefs.edit { putStringSet(KEY_SEEN, seen.toList().takeLast(MAX_SEEN).toSet()) }
     }
 
     // on the same Wi-Fi: sends with no receipt go directly (and leave the queue); my pending "ok" too
@@ -190,7 +213,7 @@ class BandInternet @Inject constructor(
             val body = cloud.ackBody(a.code) ?: return@filterNot false
             link.sendTo(peer, body, BandProtocol.Kind.CODE_ACK)
         }
-        save(KEY_OUT, Out.serializer(), out)
+        saveOut(out)
         save(KEY_ACCEPTED, Accepted.serializer(), acc)
     }
 
@@ -209,7 +232,7 @@ class BandInternet @Inject constructor(
             // Wi-Fi
             Out(id, m.id, listB64, songs, now(), if (ok) now() else 0L) to ok
         }
-        save(KEY_OUT, Out.serializer(), outbox() + sent.map { it.first })
+        saveOut(outbox() + sent.map { it.first })
         sent.count { it.second }
     }
 
@@ -227,7 +250,8 @@ class BandInternet @Inject constructor(
     }
 
     private companion object {
-        const val KEY_OUT = "outbox"
+        const val KEY_OUT = "outbox"   // older versions: the queue in the prefs (moved to [OUT_FILE])
+        const val OUT_FILE = "band_outbox.json"
         const val KEY_CODES = "codes"
         const val KEY_ACCEPTED = "accepted"
         const val KEY_SINCE = "since_"

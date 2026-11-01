@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,7 +42,10 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         val newer: Boolean get() = text == SetlistCloud.NEWER
     }
 
+    // the items carry every song's text: a file of their own, replaced whole (it used to be the "inbox" prefs, which
+    // keep everything in memory and rewrite the whole XML; audit 01/11)
     private val prefs = context.getSharedPreferences("inbox", Context.MODE_PRIVATE)
+    private val file = File(context.filesDir, FILE)
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _items = MutableStateFlow(load())
@@ -73,15 +77,29 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
 
     private val scope = backgroundScope(kotlinx.coroutines.Dispatchers.IO)
 
-    private fun load(): List<Item> = runCatching { json.decodeFromString<List<Item>>(prefs.getString(KEY, null) ?: return emptyList()) }.getOrDefault(emptyList())
+    private fun load(): List<Item> {
+        if (!file.exists()) migrate()
+        return runCatching { json.decodeFromString<List<Item>>(file.readText()) }.getOrDefault(emptyList())
+    }
+
+    // an inbox saved by an older version, in the prefs: moves to the file once
+    private fun migrate() {
+        val old = prefs.getString(KEY, null) ?: return
+        val moved = runCatching { file.replaceAtomically(old.toByteArray()) }.getOrDefault(false)
+        if (moved) prefs.edit { remove(KEY) }
+    }
 
     // one at a time, each with the list as it is now: two threads saving could write an older list last and lose an
-    // item that arrived (audit 01/11)
+    // item that arrived (audit 01/11). A full disk keeps the list in memory and logs (never a crash)
     @Synchronized
-    private fun save() = prefs.edit { putString(KEY, json.encodeToString(_items.value)) }
+    private fun save() {
+        runCatching { file.replaceAtomically(json.encodeToString(_items.value).toByteArray()) }
+            .onFailure { android.util.Log.w("BandInbox", "couldn't save the inbox", it) }
+    }
 
     private companion object {
         const val KEY = "items"
+        const val FILE = "inbox.json"
         const val MAX = 30   // the inbox doesn't grow without limit
     }
 }
