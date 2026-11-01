@@ -516,6 +516,10 @@ private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
         label = { Text(stringResource(R.string.editor_tempo)) },
         singleLine = true,
         isError = tempo.isNotEmpty() && uiState.meta.tempo == 0,
+        // out of range, the field says which range: a red outline alone didn't say why the BPM was ignored (B-07)
+        supportingText = if (tempo.isNotEmpty() && uiState.meta.tempo == 0) {
+            { Text(stringResource(R.string.editor_tempo_range, br.app.stagebook.domain.Chords.MIN_TEMPO, br.app.stagebook.domain.Chords.MAX_TEMPO), maxLines = 1) }
+        } else null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = MaterialTheme.shapes.small,
         modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits
