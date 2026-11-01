@@ -17,7 +17,9 @@ object Chords {
     // note, accidental, the rest of the chord (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) and the bass
     private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,)*)(?:/([A-G])([#b♯♭]?))?""")
     private val bracket = Regex("""\[([^\[\]]*)]""")
-    private val directive = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.*?))?\s*\}\s*$""")
+    // the value can't hold "}": the lazy ".*?" between optional spaces backtracked for minutes on a long malformed line
+    // (audit 01/11); the value is trimmed where it's read
+    private val directive = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::([^}]*))?\}\s*$""")
     // marks that can be on a chord line without making it a lyrics line
     // built once: these ran per line (twice per line in the editor preview, on every keystroke; audit 30/10)
     private val SPACES = Regex("\\s+")

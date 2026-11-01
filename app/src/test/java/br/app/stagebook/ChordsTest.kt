@@ -98,4 +98,13 @@ class ChordsTest {
         assertTrue(Chords.hasChords(song))
         assertFalse(Chords.hasChords("[Refrão]\nsó letra"))
     }
+
+    @Test fun `a long malformed directive line is read fast - normal ones still read`() {
+        val started = System.nanoTime()
+        assertEquals(null, Chords.directive("{c:" + " ".repeat(5000) + "x", "c"))
+        assertTrue((System.nanoTime() - started) / 1_000_000 < 500)
+        assertEquals("G", Chords.directive("{key: G }", "key"))
+        assertEquals("Refrão", Chords.directive("  { comment :  Refrão  }  ", "comment"))
+        assertTrue(Chords.isDirective("{start_of_chorus}"))
+    }
 }
