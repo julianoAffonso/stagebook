@@ -15,7 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -71,9 +70,12 @@ internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerCo
             // "See live levels" stays usable on the global mixer: the meters show what's playing (user, 01/11)
             if (!own) br.app.stagebook.ui.components.SwitchRow(stringResource(R.string.mixer_monitor), monitoring, { monitoring = it })
             androidx.compose.foundation.layout.Box {
-                Column(Modifier.alpha(if (own) 1f else DISABLED_ALPHA), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    MixerCard(mixer, onMixer, { levels.value }, monitoring, { monitoring = it }, monitorSwitch = own)
-                    EqCard(mixer, onMixer, { levels.value }, monitoring)
+                // read-only on the global mixer: the controls dim, the meters keep their colour (user, 01/11)
+                androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalMixerLocked provides !own) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                        MixerCard(mixer, onMixer, { levels.value }, monitoring, { monitoring = it }, monitorSwitch = own)
+                        EqCard(mixer, onMixer, { levels.value }, monitoring)
+                    }
                 }
                 // with the global mixer: nothing below takes a touch (it's read-only until the switch is off)
                 if (!own) androidx.compose.foundation.layout.Box(
@@ -86,4 +88,3 @@ internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerCo
     }
 }
 
-private const val DISABLED_ALPHA = 0.38f   // Material's disabled look
