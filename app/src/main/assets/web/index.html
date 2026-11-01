@@ -111,7 +111,7 @@
             <button class="outline" id="track-pick"></button><button class="text" id="track-remove"></button>
             <input id="track-file" type="file" accept=".ogg,.mp3,.wav,audio/*" hidden>
           </div>
-          <div><label for="f-text" data-t="lyrics"></label><textarea id="f-text" spellcheck="false"></textarea></div>
+          <div><div class="row"><label for="f-text" data-t="lyrics" class="grow"></label><button class="outline" id="highlight" type="button"></button></div><textarea id="f-text" spellcheck="false"></textarea></div>
           <div class="actions">
             <button class="text" id="delete"></button>
             <span id="status" class="muted"></span>
@@ -287,6 +287,8 @@ async function connected(session) {
   $("track-remove").textContent = t.trackRemove;
   $("set-name").placeholder = t.setNameHint;
   $("words-go").textContent = t.go;
+  $("highlight").textContent = t.highlight;
+  $("highlight").title = t.highlightHint;
   $("fetch").textContent = t.fetch;
   $("convert").textContent = t.convert;
   $("files-pick").textContent = t.filesPick;
@@ -615,6 +617,35 @@ async function runImport(body) {
   say("status", t.imported);
 }
 
+// Highlight, as in the app's editor (user, 01/11, B-28): the selection (or the word at the cursor) between ==; with the
+// cursor inside a highlight, its marks come off. Only within one line, as the stage reads them.
+$("highlight").onclick = () => {
+  const f = $("f-text"), s = f.value, mark = "==";
+  let a = f.selectionStart, b = f.selectionEnd;
+  const lineStart = s.lastIndexOf("\n", a - 1) + 1;
+  const lineEnd = (s.indexOf("\n", a) + 1 || s.length + 1) - 1;
+  b = Math.min(b, lineEnd);
+  const line = s.slice(lineStart, lineEnd);
+  const marks = [];
+  for (let i = line.indexOf(mark); i >= 0; i = line.indexOf(mark, i + 2)) marks.push(lineStart + i);
+  for (let k = 0; k + 1 < marks.length; k += 2) {
+    if (a >= marks[k] && a <= marks[k + 1] + 2) {
+      f.value = s.slice(0, marks[k]) + s.slice(marks[k] + 2, marks[k + 1]) + s.slice(marks[k + 1] + 2);
+      f.setSelectionRange(marks[k], marks[k + 1] - 2);
+      dirty = true; f.focus(); return;
+    }
+  }
+  if (a === b) {
+    while (a > lineStart && !/\s/.test(s[a - 1])) a--;
+    while (b < lineEnd && !/\s/.test(s[b])) b++;
+  }
+  while (a < b && /\s/.test(s[a])) a++;
+  while (b > a && /\s/.test(s[b - 1])) b--;
+  if (a === b) { say("status", t.highlightHint); return; }
+  f.value = s.slice(0, a) + mark + s.slice(a, b) + mark + s.slice(b);
+  f.setSelectionRange(a + 2, b + 2);
+  dirty = true; f.focus();
+};
 $("convert").onclick = () => { if ($("paste").value.trim()) runImport({ text: $("paste").value }); };
 $("fetch").onclick = () => { if ($("url").value.trim()) { say("import-status", t.reading); runImport({ url: $("url").value }); } };
 
