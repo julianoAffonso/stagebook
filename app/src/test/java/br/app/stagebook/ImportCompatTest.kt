@@ -22,11 +22,7 @@ class ImportCompatTest {
                         "author": "Banda Fictícia",
                         "year": "1999",
                         "text": "[Refrão]\nlinha um\nlinha dois",
-                        "zoom": 1.2,
-                        "driveHash": "ab12",
-                        "declinedHash": "",
-                        "driveMeta": "",
-                        "declinedMeta": ""
+                        "zoom": 1.2
                     }
                 ]
             }
@@ -40,10 +36,10 @@ class ImportCompatTest {
     }
 
     @Test fun `setlist QR in the current format is read`() {
-        val text = "LETRAS3\n2\nShow de sábado\nCanção A\nCanção B\tArtista B"
-        // QR bytes: "L3" + deflate without a zlib header
+        val text = "STAGEBOOK1\n2\nShow de sábado\nCanção A\nCanção B\tArtista B"
+        // QR bytes: "Q1" + deflate without a zlib header
         val bytes = QrPayload.pack(text)
-        assertEquals("L3", String(bytes, 0, 2, Charsets.ISO_8859_1))
+        assertEquals("Q1", String(bytes, 0, 2, Charsets.ISO_8859_1))
         val inflater = java.util.zip.Inflater(true).apply { setInput(bytes, 2, bytes.size - 2) }
         val out = ByteArray(4096)
         val n = inflater.inflate(out)

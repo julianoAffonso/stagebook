@@ -144,7 +144,7 @@ private fun updatedOf(at: Long): String {
     else stringResource(R.string.inbox_updated_day, java.text.SimpleDateFormat("dd/MM", locale).format(java.util.Date(at)), time)
 }
 
-private val sample = BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado")
+private val sample = BandInbox.Item("1", "a", "Celular da Ana", "STAGEBOOK1\n12\nShow de sábado")
 
 @LightPreview
 @Composable

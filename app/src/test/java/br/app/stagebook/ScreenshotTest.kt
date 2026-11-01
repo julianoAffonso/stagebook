@@ -457,9 +457,9 @@ class ScreenshotTest {
     @Test fun inboxVersions() {
         val now = System.currentTimeMillis()
         val items = listOf(
-            br.app.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado", at = now - 600_000),
-            br.app.stagebook.data.BandInbox.Item("2", "b", "Tablet do Beto", "LETRAS3\n12\nShow de sábado", at = now - 60_000),
-            br.app.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "LETRAS3\n8\nEnsaio", at = now - 300_000, updated = true),
+            br.app.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "STAGEBOOK1\n12\nShow de sábado", at = now - 600_000),
+            br.app.stagebook.data.BandInbox.Item("2", "b", "Tablet do Beto", "STAGEBOOK1\n12\nShow de sábado", at = now - 60_000),
+            br.app.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "STAGEBOOK1\n8\nEnsaio", at = now - 300_000, updated = true),
         )
         compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_2_recebidos_versoes.png")
@@ -982,7 +982,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
             androidx.compose.foundation.layout.Column(it) {
                 br.app.stagebook.ui.share.InboxBanner(
-                    br.app.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "LETRAS3\n12\nShow de sábado"), {}, {},
+                    br.app.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "STAGEBOOK1\n12\nShow de sábado"), {}, {},
                     androidx.compose.ui.Modifier.padding(horizontal = br.app.stagebook.ui.theme.Spacing.m).padding(top = br.app.stagebook.ui.theme.Spacing.s),
                 )
                 SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, androidx.compose.ui.Modifier.weight(1f))

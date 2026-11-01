@@ -31,8 +31,8 @@ class BandContentTest {
     }
 
     @Test fun `setlist only passes in setlist format`() {
-        assertTrue(BandContent.listOk("LETRAS3\n2\nShow\nMúsica A\nMúsica B"))
+        assertTrue(BandContent.listOk("STAGEBOOK1\n2\nShow\nMúsica A\nMúsica B"))
         assertFalse(BandContent.listOk("qualquer coisa"))
-        assertFalse(BandContent.listOk("LETRAS3\n1\nShow\n" + java.util.Base64.getEncoder().encodeToString(ByteArray(600))))
+        assertFalse(BandContent.listOk("STAGEBOOK1\n1\nShow\n" + java.util.Base64.getEncoder().encodeToString(ByteArray(600))))
     }
 }
