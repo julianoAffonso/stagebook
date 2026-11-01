@@ -757,7 +757,7 @@
     <string name="web_deny">Deny</string>
     <string name="web_title">Stagebook editor</string>
     <string name="web_ask">Ask to come in</string>
-    <string name="web_asking_code">On the tablet, check code %1$s and allow.</string>
+    <string name="web_asking_code">On the device, check code %1$s and allow.</string>
     <string name="web_denied">Not allowed. Ask again if it was a mistake.</string>
     <string name="web_busy">Too many requests at once. Try again in a minute.</string>
     <string name="web_connected">Connected to %1$s</string>
@@ -768,15 +768,15 @@
     <string name="web_paste_hint">Copy the chords on the site and paste them here. Chords above the lyrics land in the right place.</string>
     <string name="web_convert">Convert</string>
     <string name="web_url_title">Page address</string>
-    <string name="web_url_hint">Paste the chords page address. The tablet opens the page and brings the song.</string>
+    <string name="web_url_hint">Paste the chords page address. The device opens the page and brings the song.</string>
     <string name="web_fetch">Bring the song</string>
-    <string name="web_reading">The tablet is opening the page…</string>
+    <string name="web_reading">The device is opening the page…</string>
     <string name="web_files_title">Files</string>
     <string name="web_files_hint">Drop .txt, .pro or .chordpro files here, several at once. Each one becomes a song.</string>
     <string name="web_files_pick">Choose files</string>
     <string name="web_files_done">Imported: %1$d. Already in the library: %2$d.</string>
     <string name="web_not_found">Didn\'t find lyrics there.</string>
-    <string name="web_no_internet">The tablet has no internet (or essential mode is on).</string>
+    <string name="web_no_internet">The device has no internet (or essential mode is on).</string>
     <string name="web_bad_address">Use an address that starts with http:// or https://.</string>
     <string name="web_band_none">Nothing from the band yet.</string>
     <string name="web_receive_title">Received from someone</string>
