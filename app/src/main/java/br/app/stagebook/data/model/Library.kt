@@ -31,7 +31,12 @@ data class Setlist(
     val id: String = "",
     val name: String = "",
     val items: List<String> = emptyList(),   // song ids, in order
-)
+) {
+    companion object {
+        /** A new setlist with no name given: the date and time ("01/11/2026 21:30"). */
+        fun defaultName(): String = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date())
+    }
+}
 
 @Serializable
 enum class SectionLang {

@@ -14,9 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.inject.Inject
 
 @Immutable
@@ -66,7 +63,7 @@ class SetlistsViewModel @Inject constructor(
 
     /** Empty name = current date and time. Returns the id to open the new setlist. */
     fun create(name: String): String =
-        repository.createSetlist(name.ifBlank { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ROOT).format(Date()) })
+        repository.createSetlist(name.ifBlank { br.app.stagebook.data.model.Setlist.defaultName() })
 
     fun delete(id: String) = repository.deleteSetlist(id)
 

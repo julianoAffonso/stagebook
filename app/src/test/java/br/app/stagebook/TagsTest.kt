@@ -60,4 +60,7 @@ class TagsTest {
         assertTrue("pt" in LyricsLanguage.known && "en" in LyricsLanguage.known)
     }
 
+
+    @Test fun `the typographic apostrophe counts like the plain one`() =
+        assertEquals("en", LyricsLanguage.detect("Don’t go\nDon’t stop\nDon’t wait\nDon’t cry\nDon’t run"))
 }

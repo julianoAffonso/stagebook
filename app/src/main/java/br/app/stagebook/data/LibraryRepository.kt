@@ -186,9 +186,7 @@ class LibraryRepository @Inject constructor(
     }
 
     /** Deletes the song and removes it from the setlists. */
-    fun deleteSong(id: String) = mutate { lib ->
-        lib.copy(songs = lib.songs.filterNot { it.id == id }, sets = lib.sets.map { s -> s.copy(items = s.items.filterNot { it == id }) })
-    }
+    fun deleteSong(id: String) = deleteSongs(listOf(id))
 
     // ---- setlists ----
     fun createSetlist(name: String): String {

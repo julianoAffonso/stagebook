@@ -174,9 +174,7 @@ class SongEditorViewModel @Inject constructor(
     fun allTags(): List<String> = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
 
     fun onTags(add: List<String>, remove: List<String>) {
-        var t = uiState.tags
-        remove.forEach { t = br.app.stagebook.domain.Tags.remove(t, it) }
-        add.forEach { t = br.app.stagebook.domain.Tags.add(t, br.app.stagebook.domain.Tags.clean(it)) }
+        val t = br.app.stagebook.domain.Tags.apply(uiState.tags, add, remove)
         uiState = uiState.edited(uiState.title, uiState.author, uiState.year, uiState.text, t)
         savedStateHandle[KEY_TAGS] = ArrayList(t)
     }
