@@ -83,7 +83,9 @@ public class PlayerService extends Service {
         }
         running = true;
         um = (UsbManager) getSystemService(USB_SERVICE);
-        ContextCompat.registerReceiver(this, usbReceiver, usbFilter(), ContextCompat.RECEIVER_EXPORTED);
+        // only the app's own permission answer (its PendingIntent) and Android's attach/detach notices, which reach a
+        // not-exported receiver too: another app can't fake a "permission denied" (audio audit P3)
+        ContextCompat.registerReceiver(this, usbReceiver, usbFilter(), ContextCompat.RECEIVER_NOT_EXPORTED);
         wake = ((PowerManager) getSystemService(POWER_SERVICE))
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "stagebook:play");
         connectUsb();
