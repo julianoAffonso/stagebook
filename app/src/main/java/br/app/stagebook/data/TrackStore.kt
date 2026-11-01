@@ -31,23 +31,9 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
         val tmp = File(dir, "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.part")
         try {
             if (extensionOf(uri) == null) return@withContext null
-            val head = ByteArray(AudioFormat.HEADER)
-            var size = 0L
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tmp.outputStream().use { out ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        if (size < head.size) System.arraycopy(buf, 0, head, size.toInt(), minOf(n.toLong(), head.size - size).toInt())
-                        size += n
-                        if (size > MAX_BYTES) throw IOException("too big")
-                        out.write(buf, 0, n)
-                    }
-                }
-            } ?: return@withContext null
+            val input = context.contentResolver.openInputStream(uri) ?: return@withContext null
             // the real format names the file (a .mp3 that is a WAV is kept as .wav)
-            val ext = AudioFormat.of(head) ?: throw IOException("not audio")
+            val ext = input.use { copyAudio(it, tmp) } ?: throw IOException("not audio or too big")
             val name = tmp.name.removeSuffix(".part") + ".$ext"
             if (!tmp.renameTo(File(dir, name))) throw IOException("rename failed")
             name
@@ -72,16 +58,15 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     /** The chosen file's name without the extension ("Under Pressure"), to show; empty when Android doesn't say. */
-    fun displayName(uri: Uri): String = runCatching {
+    fun displayName(uri: Uri): String = runCatching { queryName(uri) }.getOrNull().orEmpty().let(::shownName)
+
+    private fun queryName(uri: Uri): String? =
         context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
             if (c.moveToFirst()) c.getString(0) else null
         }
-    }.getOrNull().orEmpty().let(::shownName)
 
     private fun extensionOf(uri: Uri): String? {
-        val shown = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-            if (c.moveToFirst()) c.getString(0) else null
-        }.orEmpty()
+        val shown = queryName(uri).orEmpty()
         val byName = shown.ifEmpty { uri.lastPathSegment.orEmpty() }.substringAfterLast('.', "").lowercase()   // file:// has no display name
         if (byName in FORMATS) return byName
         return when (context.contentResolver.getType(uri)) {
@@ -93,6 +78,28 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     companion object {
+        /**
+         * Copies [input] into [to] in chunks (without closing [input]); returns the real format's extension from the
+         * first bytes, or null when it isn't audio or passes [MAX_BYTES] (the caller deletes [to]). A track picked by
+         * hand and one from a backup are checked the same way.
+         */
+        internal fun copyAudio(input: java.io.InputStream, to: File): String? {
+            val head = ByteArray(AudioFormat.HEADER)
+            var size = 0L
+            to.outputStream().use { out ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    if (size < head.size) System.arraycopy(buf, 0, head, size.toInt(), minOf(n.toLong(), head.size - size).toInt())
+                    size += n
+                    if (size > MAX_BYTES) return null
+                    out.write(buf, 0, n)
+                }
+            }
+            return AudioFormat.of(head)
+        }
+
         /** "Under Pressure.ogg" → "Under Pressure". */
         fun shownName(file: String): String = file.substringBeforeLast('.').trim()
 

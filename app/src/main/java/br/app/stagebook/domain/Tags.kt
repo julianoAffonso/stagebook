@@ -54,7 +54,6 @@ object LyricsLanguage {
             "got", "like", "there", "it's", "can't", "she", "he", "they", "night", "time", "way", "feel", "heart", "i",
         ),
     )
-    private val word = Regex("""[\p{L}']+""")
 
     /** Languages it can tell (ISO 639-1). */
     val known: Set<String> get() = words.keys
@@ -65,8 +64,7 @@ object LyricsLanguage {
         lyrics.forEach { line ->
             // the typographic apostrophe of most sites ("don’t", "I’m") counts as the plain one, as in LyricsCleaner
             // (audit 01/11)
-            word.findAll(line.lowercase().replace('’', '\'')).forEach { m ->
-                val w = m.value.trim('\'')
+            TextPatterns.words(line).forEach { w ->
                 words.forEach { (lang, set) -> if (w in set) counts[lang] = counts.getValue(lang) + 1 }
             }
         }

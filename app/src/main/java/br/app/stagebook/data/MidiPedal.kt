@@ -125,10 +125,15 @@ class MidiPedal @Inject constructor(
             @Suppress("DEPRECATION")
             m.devices.filter { it.type == MidiDeviceInfo.TYPE_USB }.forEach(::openDevice)
         } else {
-            synchronized(lock) { open.filterValues { it.info.type == MidiDeviceInfo.TYPE_USB }.keys.toList().map { open.remove(it) } }
-                .forEach { runCatching { it?.close() } }
-            publish()
+            closeAll(MidiDeviceInfo.TYPE_USB)
         }
+    }
+
+    /** Closes the open pedals of one [type] (USB or Bluetooth) and updates the list. */
+    private fun closeAll(type: Int) {
+        synchronized(lock) { open.filterValues { it.info.type == type }.keys.toList().map { open.remove(it) } }
+            .forEach { runCatching { it?.close() } }
+        publish()
     }
 
     private fun openDevice(info: MidiDeviceInfo) {
@@ -176,9 +181,7 @@ class MidiPedal @Inject constructor(
     private fun keepConnected(address: String) {
         reconnect?.cancel()
         if (address.isEmpty()) {
-            synchronized(lock) { open.filterValues { it.info.type == MidiDeviceInfo.TYPE_BLUETOOTH }.keys.toList().map { open.remove(it) } }
-                .forEach { runCatching { it?.close() } }
-            publish()
+            closeAll(MidiDeviceInfo.TYPE_BLUETOOTH)
             return
         }
         reconnect = scope.launch {

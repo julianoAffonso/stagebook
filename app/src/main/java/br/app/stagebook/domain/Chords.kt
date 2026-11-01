@@ -16,7 +16,7 @@ object Chords {
 
     // note, accidental, the rest of the chord (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) and the bass
     private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,)*)(?:/([A-G])([#b♯♭]?))?""")
-    private val bracket = Regex("""\[([^\[\]]*)]""")
+    internal val bracket = Regex("""\[([^\[\]]*)]""")   // LyricsView reads the same brackets
     // the value can't hold "}": the lazy ".*?" between optional spaces backtracked for minutes on a long malformed line
     // (audit 01/11); the value is trimmed where it's read
     private val directive = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::([^}]*))?\}\s*$""")

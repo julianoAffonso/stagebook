@@ -157,22 +157,7 @@ class Backup @Inject constructor(
      */
     private fun streamTrack(zip: ZipInputStream, name: String): java.io.File? {
         val part = java.io.File(tracks.file(name).parentFile, "$name.part")
-        val head = ByteArray(br.app.stagebook.domain.AudioFormat.HEADER)
-        var size = 0L
-        val good = runCatching {
-            part.outputStream().use { out ->
-                val buf = ByteArray(64 * 1024)
-                while (true) {
-                    val n = zip.read(buf)
-                    if (n < 0) break
-                    if (size < head.size) System.arraycopy(buf, 0, head, size.toInt(), minOf(n.toLong(), head.size - size).toInt())
-                    size += n
-                    if (size > TrackStore.MAX_BYTES) return@runCatching false
-                    out.write(buf, 0, n)
-                }
-            }
-            br.app.stagebook.domain.AudioFormat.of(head) != null
-        }.getOrDefault(false)
+        val good = runCatching { TrackStore.copyAudio(zip, part) != null }.getOrDefault(false)
         if (!good) part.delete()
         return part.takeIf { good }
     }

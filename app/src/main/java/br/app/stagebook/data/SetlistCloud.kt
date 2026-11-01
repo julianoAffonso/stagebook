@@ -139,17 +139,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val code = ShareCode.normalize(input) ?: return@withContext Received.NotFound
         val keys = ShareCode.keys(code)
         if (!internetOn) return@withContext Received.Offline
-        val lines = runCatching {
-            val c = URL("$SERVER/${keys.topic}/json?poll=1&since=all").openConnection() as HttpURLConnection
-            c.connectTimeout = TIMEOUT_MS
-            c.readTimeout = TIMEOUT_MS
-            c.setRequestProperty("User-Agent", USER_AGENT)
-            try {
-                if (c.responseCode != 200) null else c.inputStream.bufferedReader().readLines()
-            } finally {
-                c.disconnect()
-            }
-        }.getOrNull() ?: return@withContext Received.Offline
+        val lines = get("$SERVER/${keys.topic}/json?poll=1&since=all") ?: return@withContext Received.Offline
         // only what decrypts with this code (the channel is public: there may be junk from someone else); every setlist
         // in the order sent (several setlists can go in one send)
         val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
@@ -362,11 +352,6 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         const val MAX_PACKAGE = 16 * 1024 * 1024
 
         /** The messages (text) of an ntfy answer in JSON per line. */
-        fun messages(lines: List<String>): List<String> = lines.mapNotNull { l ->
-            runCatching {
-                val o = json.parseToJsonElement(l).jsonObject
-                if (o["event"]?.jsonPrimitive?.content == "message") o["message"]?.jsonPrimitive?.content else null
-            }.getOrNull()
-        }
+        fun messages(lines: List<String>): List<String> = messagesWithIds(lines).map { it.second }
     }
 }

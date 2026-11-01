@@ -55,4 +55,9 @@ class LyricsCleanerTest {
         val mixed = listOf(portuguese[0], english[0], "Oh, oh, oh", "Oh, oh, oh", portuguese[1], english[1], portuguese[2], english[2], portuguese[3], english[3])
         assertEquals((listOf(english[0], "Oh, oh, oh") + english.drop(1)).joinToString("\n"), LyricsCleaner.clean(mixed.joinToString("\n")))
     }
+
+    @Test
+    fun `removes chord lines the editor knows - also G7M and a labelled line`() {
+        assertEquals("Linha um\nLinha dois", LyricsCleaner.clean("G7M  E7(9)\nLinha um\nIntro: G D\nLinha dois"))
+    }
 }

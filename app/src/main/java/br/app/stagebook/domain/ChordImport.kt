@@ -6,8 +6,6 @@ package br.app.stagebook.domain
  */
 object ChordImport {
     private val tabLine = Regex("""^\s*[A-Ga-g][#b]?\s*\|[-0-9hpbr/\\|~x\s]*$""")
-    private val trailingSpace = Regex("\\s+$")
-    private val manyBlank = Regex("\n{3,}")
     // key and capo the way sites write them in 4 languages: "Tom: G", "Key: G", "Tono: G", "Tonalità: G"; "Capotraste
     // na 2ª casa", "Capo 2", "Capo: 2nd fret", "Cejilla en el 2º traste", "Capotasto al 2º tasto"
     private val capoText = Regex("""(?i)\b(?:capotraste\s+na|capotasto\s+(?:al|sul)|cejilla(?:\s+en(?:\s+el)?)?|capo(?:\s+on)?)\s*:?\s*(\d{1,2})""")
@@ -45,7 +43,7 @@ object ChordImport {
     fun toChordPro(text: String, key: String = "", capo: String = ""): String {
         // the "Tom: G" and "Capotraste na 2ª casa" lines become directives: removed before converting (otherwise the G
         // from the key line would land above the lyrics below)
-        val all = plainSpaces(text).replace("\r", "").split('\n').map { it.replace(trailingSpace, "") }
+        val all = plainSpaces(text).replace("\r", "").split('\n').map { it.replace(TextPatterns.TRAILING_SPACE, "") }
         // marked tablature blocks ({start_of_tab}…{end_of_tab}, T22) pass as they are; the rest is converted
         val inTab = Tablature.tabLines(all.joinToString("\n"))
         val parts = ArrayList<String>()
@@ -65,7 +63,7 @@ object ChordImport {
             }
         }
         flush()
-        var body = parts.joinToString("\n").replace(manyBlank, "\n\n").trim()
+        var body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
         val k = keyOf(key, text)
         val c = capoOf(capo, text)
         if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
