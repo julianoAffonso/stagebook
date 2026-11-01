@@ -266,7 +266,7 @@
     <string name="backup_open_info">Mostra o que o arquivo tem para você marcar.</string>
     <string name="backup_open_merge">Juntar traz só as músicas e setlists que você não tem. Os seus ficam como estão.</string>
     <string name="backup_open_replace">Substituir troca suas músicas e setlists pelos do arquivo. Use para voltar um backup ou trocar de aparelho.</string>
-    <string name="backup_open_other_device">Os ajustes do arquivo substituem os daqui. Em outro aparelho, autorize a banda de novo em Ajustes → Banda e transmissão.</string>
+    <string name="backup_open_other_device">Os ajustes do arquivo substituem os daqui. Em outro aparelho, autorize a banda de novo em %1$s.</string>
     <string name="backup_share_card">Outras formas de compartilhar</string>
     <string name="backup_share_info">Para mandar um setlist na hora, use Compartilhar dentro do setlist. Vai por QR, pela internet ou pela banda no Wi-Fi.</string>
     <string name="reset_title">Apagar tudo</string>
@@ -356,7 +356,7 @@
     <string name="metro_count">Contagem 1-2-3-4 antes</string>
     <string name="metro_glow_color">Cor do brilho</string>
     <string name="metro_help">No palco, o ícone ao lado do relógio abre o metrônomo. Ele começa no BPM da música, ou em 100 se ela não tiver.</string>
-    <string name="metro_in_settings">Contagem, som e brilho ficam em Ajustes → Visual do palco</string>
+    <string name="metro_in_settings">Contagem, som e brilho ficam nos %1$s.</string>
     <string name="metro_short_count">contagem</string>
     <string name="metro_short_sound">som</string>
     <string name="metro_short_silent">sem som</string>
@@ -444,7 +444,7 @@
     <string name="settings_pedal_cmd_play_pause">Play/pause do backing track</string>
     <string name="settings_pedal_cmd_none">Nada</string>
     <string name="settings_language">Idioma</string>
-    <string name="settings_language_help">Quer o Stagebook no seu idioma? Ajude a traduzir. O passo a passo está em Sobre → Ver o código.</string>
+    <string name="settings_language_help">Quer o Stagebook no seu idioma? Ajude a traduzir: o passo a passo está em %1$s.</string>
     <string name="language_system">Automático (o do aparelho)</string>
     <string name="pedal_key_code">Tecla %1$d</string>
     <string name="settings_pedal_key_reset">Voltar %1$s ao padrão</string>
@@ -638,7 +638,7 @@
     </plurals>
     <string name="queue_title">Para \"%1$s\": %2$d de %3$d · %4$s</string>
     <string name="queue_searching">Buscando em %1$s. Abra a página da música e toque em Importar.</string>
-    <string name="queue_none">Não achei em nenhum site da sua lista. Confira em Ajustes → Importação.</string>
+    <string name="queue_none">Não achei em nenhum dos %1$s.</string>
     <string name="queue_skip">Pular</string>
     <string name="queue_stop">Parar</string>
     <string name="scan_create_other">Criar outro</string>
@@ -828,10 +828,10 @@
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
     <string name="eq_no_channel">Ligado, ele não mudaria nada. No mixer, toque no canal que quer equalizar e ligue \"Equalizador ligado\"; depois ligue o equalizador aqui.</string>
     <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
-    <string name="stage_mix_hint">O que você mudar aqui fica só nesta música. O mixer geral fica em Ajustes → Player.</string>
-    <string name="stage_mix_own">Esta música tem ajustes próprios.</string>
-    <string name="stage_mix_general">Voltar ao mixer geral</string>
-    <string name="stage_mix_general_confirm">Esta música volta a usar o mixer geral, e os ajustes próprios dela são apagados.</string>
+    <string name="stage_mix_hint">Mexer em algo aqui cria um ajuste só desta música. Para mudar todas, use o %1$s.</string>
+    <string name="stage_mix_own">Esta música tem ajustes próprios. Para mudar as outras, use o %1$s.</string>
+    <string name="stage_mix_general">Usar o mixer global</string>
+    <string name="stage_mix_general_confirm">Esta música volta a usar o mixer global, e os ajustes próprios dela são apagados.</string>
     <plurals name="mixer_own_songs">
         <item quantity="one">%1$d música tem ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para ela.</item>
         <item quantity="other">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
@@ -910,4 +910,10 @@
     <string name="settings_font_lyrics">Fonte da letra</string>
     <string name="settings_font_chords">Fonte dos acordes</string>
     <string name="settings_font_sections">Fonte dos títulos</string>
+    <string name="stage_mix_global">mixer global</string>
+    <string name="metro_settings_link">ajustes do metrônomo</string>
+    <string name="queue_sites_link">sites da sua lista</string>
+    <string name="scan_newer_link">Isto veio de um Stagebook mais novo. %1$s para receber.</string>
+    <string name="scan_update_link">Atualize o app</string>
+    <string name="stage_mix_use_global">Usar o mixer global</string>
 </resources>

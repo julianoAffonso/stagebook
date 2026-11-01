@@ -38,6 +38,7 @@ import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -122,6 +123,11 @@ fun HomeScreen(
         picked = t
     }
     val openEssential = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.ESSENTIAL }
+    // a link from another screen (or another section): Settings opens right on it
+    val linked by br.app.stagebook.ui.settings.SettingsLinks.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(linked) {
+        linked?.let { onTab(HomeTab.SETTINGS); settingsStart = it; br.app.stagebook.ui.settings.SettingsLinks.pending.value = null }
+    }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
         Column(m) {

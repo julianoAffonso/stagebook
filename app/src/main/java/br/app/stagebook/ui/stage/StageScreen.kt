@@ -1349,7 +1349,10 @@ private fun MetronomeDialog(
                     Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
                     IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
                 }
-                Text(stringResource(R.string.metro_in_settings), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                br.app.stagebook.ui.components.SettingsLinkText(
+                    stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
+                    br.app.stagebook.ui.settings.SettingsSection.METRONOME, style = MaterialTheme.typography.bodySmall,
+                )
                 IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                     Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
                 }

@@ -266,7 +266,7 @@
     <string name="backup_open_info">Shows what the file has so you can choose.</string>
     <string name="backup_open_merge">Join brings in only the songs and setlists you don\'t have. Yours stay as they are.</string>
     <string name="backup_open_replace">Replace swaps your songs and setlists for the file\'s. Use it to restore a backup or move to a new device.</string>
-    <string name="backup_open_other_device">The file\'s settings replace the ones here. On another device, approve the band again in Settings → Band and broadcast.</string>
+    <string name="backup_open_other_device">The file\'s settings replace the ones here. On another device, approve the band again in %1$s.</string>
     <string name="backup_share_card">Other ways to share</string>
     <string name="backup_share_info">To send a setlist right now, use Share inside the setlist. It goes by QR, over the internet or to the band on Wi-Fi.</string>
     <string name="reset_title">Erase everything</string>
@@ -356,7 +356,7 @@
     <string name="metro_count">Count in 1-2-3-4</string>
     <string name="metro_glow_color">Glow color</string>
     <string name="metro_help">On stage, the icon next to the clock opens the metronome. It starts at the song\'s BPM, or 100 if it has none.</string>
-    <string name="metro_in_settings">Count-in, sound and glow are in Settings → Stage look</string>
+    <string name="metro_in_settings">Count-in, sound and glow are in the %1$s.</string>
     <string name="metro_short_count">count-in</string>
     <string name="metro_short_sound">sound</string>
     <string name="metro_short_silent">silent</string>
@@ -444,7 +444,7 @@
     <string name="settings_pedal_cmd_play_pause">Play/pause backing track</string>
     <string name="settings_pedal_cmd_none">Nothing</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_help">Want Stagebook in your language? Help translate it. The how-to is in About → See the code.</string>
+    <string name="settings_language_help">Want Stagebook in your language? Help translate it: the steps are in %1$s.</string>
     <string name="language_system">Automatic (the device\'s)</string>
     <string name="language_pt" translatable="false">Português (Brasil)</string>
     <string name="language_en" translatable="false">English</string>
@@ -640,7 +640,7 @@
     </plurals>
     <string name="queue_title">For \"%1$s\": %2$d of %3$d · %4$s</string>
     <string name="queue_searching">Searching %1$s. Open the song\'s page and tap Import.</string>
-    <string name="queue_none">Not found on any site in your list. Check Settings → Import.</string>
+    <string name="queue_none">Not found in any of the %1$s.</string>
     <string name="queue_skip">Skip</string>
     <string name="queue_stop">Stop</string>
     <string name="scan_create_other">Create another</string>
@@ -830,10 +830,10 @@
     <string name="settings_track_stops_detail">Off, the button pauses and the song goes on from where it stopped.</string>
     <string name="eq_no_channel">On, it would change nothing. In the mixer, tap the channel to equalize and turn on \"Equalizer on\"; then turn the equalizer on here.</string>
     <string name="eq_no_channel_title">No channel goes through the equalizer</string>
-    <string name="stage_mix_hint">What you change here stays with this song only. The general mixer is in Settings → Player.</string>
-    <string name="stage_mix_own">This song has its own settings.</string>
-    <string name="stage_mix_general">Back to the general mixer</string>
-    <string name="stage_mix_general_confirm">This song goes back to the general mixer, and its own settings are deleted.</string>
+    <string name="stage_mix_hint">Changing anything here makes settings for this song only. To change all of them, use the %1$s.</string>
+    <string name="stage_mix_own">This song has its own settings. To change the others, use the %1$s.</string>
+    <string name="stage_mix_general">Use the global mixer</string>
+    <string name="stage_mix_general_confirm">This song goes back to the global mixer, and its own settings are deleted.</string>
     <plurals name="mixer_own_songs">
         <item quantity="one">%1$d song has its own mixer settings (changed on stage): what you change here doesn\'t apply to it.</item>
         <item quantity="other">%1$d songs have their own mixer settings (changed on stage): what you change here doesn\'t apply to them.</item>
@@ -912,4 +912,10 @@
     <string name="settings_font_lyrics">Lyrics font</string>
     <string name="settings_font_chords">Chords font</string>
     <string name="settings_font_sections">Titles font</string>
+    <string name="stage_mix_global">global mixer</string>
+    <string name="metro_settings_link">metronome settings</string>
+    <string name="queue_sites_link">sites on your list</string>
+    <string name="scan_newer_link">This came from a newer Stagebook. %1$s to receive it.</string>
+    <string name="scan_update_link">Update the app</string>
+    <string name="stage_mix_use_global">Use the global mixer</string>
 </resources>

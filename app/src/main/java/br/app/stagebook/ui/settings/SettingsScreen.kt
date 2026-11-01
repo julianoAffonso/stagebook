@@ -437,6 +437,11 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
 }
 
+/** A Settings section asked for by a link somewhere in the app (the Home screen opens it). */
+object SettingsLinks {
+    val pending = kotlinx.coroutines.flow.MutableStateFlow<SettingsSection?>(null)
+}
+
 /** The section's name: the import sites say which kind, by the profile (user, 01/11: a friendlier name). */
 @StringRes
 fun SettingsSection.titleOf(look: Look): Int =
@@ -1317,7 +1322,8 @@ private fun languageLabel(l: AppLanguage): String = stringResource(
 
 @Composable
 private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_language), help = stringResource(R.string.settings_language_help)) {
+    SettingsCard(stringResource(R.string.settings_language)) {
+        br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.settings_language_help), stringResource(R.string.settings_about), SettingsSection.ABOUT)
         OptionDropdown(stringResource(R.string.settings_language), Languages.available, selected, actions.onLanguage, nameOf = { languageLabel(it) })
     }
 }
@@ -1394,7 +1400,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         InfoText(stringResource(R.string.backup_open_merge))
         InfoText(stringResource(R.string.backup_open_replace))
         ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.fillMaxWidth(), icon = AppIcons.Folder, tone = ButtonTone.Tonal)
-        InfoText(stringResource(R.string.backup_open_other_device))
+        br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.backup_open_other_device), stringResource(R.string.settings_band), SettingsSection.BAND, style = MaterialTheme.typography.bodyMedium)
     }
     // the other ways to send songs and setlists live on other screens: here only the map
     SettingsCard(stringResource(R.string.backup_share_card)) {

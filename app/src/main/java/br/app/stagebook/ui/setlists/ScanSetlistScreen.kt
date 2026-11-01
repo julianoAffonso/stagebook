@@ -217,7 +217,11 @@ private fun Scanning(
             camera(onText, Modifier.fillMaxSize())
         }
         ui.problem?.let { p ->
-            Text(
+            // newer app: "Update the app" is a link to About, where the update is (user, 01/11)
+            if (p == ScanProblem.NEWER) br.app.stagebook.ui.components.SettingsLinkText(
+                stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
+                br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
+            ) else Text(
                 stringResource(
                     when (p) {
                         ScanProblem.INCOMPLETE -> R.string.scan_incomplete
@@ -406,7 +410,10 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
                 Text(stringResource(R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
             }
             else -> {
-                Text(
+                if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.SettingsLinkText(
+                    stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
+                    br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
+                ) else Text(
                     stringResource(
                         when (ui.problem) {
                             CodeProblem.NOT_FOUND -> R.string.scan_code_not_found
