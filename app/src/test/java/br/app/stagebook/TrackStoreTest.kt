@@ -29,4 +29,20 @@ class TrackStoreTest {
         assertFalse(half.exists())
         assertTrue(fresh.exists())
     }
+
+    class Revoked : android.content.ContentProvider() {
+        override fun onCreate() = true
+        override fun query(uri: android.net.Uri, p: Array<out String>?, s: String?, a: Array<out String>?, o: String?): android.database.Cursor? =
+            throw SecurityException("permission revoked")
+        override fun getType(uri: android.net.Uri): String? = throw SecurityException("permission revoked")
+        override fun insert(uri: android.net.Uri, values: android.content.ContentValues?): android.net.Uri? = null
+        override fun delete(uri: android.net.Uri, s: String?, a: Array<out String>?) = 0
+        override fun update(uri: android.net.Uri, v: android.content.ContentValues?, s: String?, a: Array<out String>?) = 0
+    }
+
+    @Test fun `a picked file whose permission was revoked is just not used - no crash`() {
+        org.robolectric.Robolectric.setupContentProvider(Revoked::class.java, "revogado")
+        val name = kotlinx.coroutines.runBlocking { store.copy("s1", android.net.Uri.parse("content://revogado/faixa.ogg")) }
+        org.junit.Assert.assertNull(name)
+    }
 }

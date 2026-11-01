@@ -9,10 +9,8 @@ import br.app.stagebook.data.Languages
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.model.essential
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -47,7 +45,7 @@ class WebEditorServer @Inject constructor(
     backup: javax.inject.Provider<br.app.stagebook.data.Backup>,
     tracks: javax.inject.Provider<br.app.stagebook.data.TrackStore>,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = br.app.stagebook.data.backgroundScope(Dispatchers.IO)   // errors logged, never a crash (audit 01/11)
     private var server: ServerSocket? = null
     private var serverJob: Job? = null
     private var foreground = false
@@ -150,8 +148,8 @@ class WebEditorServer @Inject constructor(
 
     private fun serve(client: Socket) = client.use { s ->
         clients += s
-        s.soTimeout = TIMEOUT_MS
         val response = runCatching {
+            s.soTimeout = TIMEOUT_MS
             val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, { routes.gate(it, isBig(it.path)) }, ::maxBody)
             try {
                 if (server == null) HttpResponse.status(503) else routes.handle(req)   // turned off while it was arriving
