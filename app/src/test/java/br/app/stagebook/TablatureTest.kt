@@ -72,4 +72,20 @@ class TablatureTest {
         assertEquals(text.lines().size, up.lines().size)
         assertTrue(up.lines().drop(2).all { it.length == text.lines()[2].length })
     }
+    @Test fun `a half step down and back up gives the same tab, open strings included (device test B-15)`() {
+        val tab = listOf(
+            "E|-1---1---3-3----1---3-3-3----3-3------|",
+            "B|-1---1---3-3----1---3-3-3----3-3------|",
+            "G|-2---2---4-4----2---4-4-4----4-4------|",
+            "D|-0-------0--------0--------0----------|",
+        ).joinToString("\n")
+        val down = Tablature.shift(tab, -1)
+        // the open D can't go lower: the whole block goes up an octave and keeps its shape
+        assertTrue(down, down.lines()[3].startsWith("D|-11"))
+        assertTrue(down, down.lines()[0].startsWith("E|-12"))
+        // the notes come back exactly (the dashes between them may change by one where a fret had two digits)
+        val notes = { s: String -> s.lines().map { l -> Regex("""\d+""").findAll(l.substringAfter('|')).map { it.value }.toList() } }
+        assertEquals(notes(tab), notes(Tablature.shift(down, 1)))
+        assertEquals(tab, Tablature.shift(Tablature.shift(tab, 1), -1))
+    }
 }
