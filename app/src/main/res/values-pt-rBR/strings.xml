@@ -828,8 +828,8 @@
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
     <string name="eq_no_channel">Ligado, ele não mudaria nada. No mixer, toque no canal que quer equalizar e ligue \"Equalizador ligado\"; depois ligue o equalizador aqui.</string>
     <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
-    <string name="stage_mix_hint">Mexer em algo aqui cria um ajuste só desta música. Para mudar todas, use o %1$s.</string>
-    <string name="stage_mix_own">Esta música tem ajustes próprios. Para mudar as outras, use o %1$s.</string>
+    <string name="stage_mix_hint">Desligue para mexer só nesta música. O mixer global, que vale para todas, fica em Ajustes → Player.</string>
+    <string name="stage_mix_own">Esta música tem ajustes próprios. O mixer global, das outras músicas, fica em Ajustes → Player.</string>
     <string name="stage_mix_general">Usar o mixer global</string>
     <string name="stage_mix_general_confirm">Esta música volta a usar o mixer global, e os ajustes próprios dela são apagados.</string>
     <plurals name="mixer_own_songs">
@@ -910,7 +910,6 @@
     <string name="settings_font_lyrics">Fonte da letra</string>
     <string name="settings_font_chords">Fonte dos acordes</string>
     <string name="settings_font_sections">Fonte dos títulos</string>
-    <string name="stage_mix_global">mixer global</string>
     <string name="metro_settings_link">ajustes do metrônomo</string>
     <string name="queue_sites_link">sites da sua lista</string>
     <string name="scan_newer_link">Isto veio de um Stagebook mais novo. %1$s para receber.</string>
