@@ -571,7 +571,7 @@ private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -
 private fun EditorPreview(text: String, look: Look) {
     val names = rememberSectionNames(look.translateSections)
     val chordLook = ChordLook(look.chords, look.chordScale, Color(look.chordColor))
-    val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale).map { it.text } }
+    val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, sectionFont = look.sectionFont.family).map { it.text } }
     val font = minOf(look.fontSp, 28f)
     val style = TextStyle(
         color = Color(look.fg),

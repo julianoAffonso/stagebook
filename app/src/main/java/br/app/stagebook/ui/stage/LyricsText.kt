@@ -75,7 +75,8 @@ fun rememberSectionNames(translate: Boolean): SectionNames {
 fun lyricsLines(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
-): List<AnnotatedString> = stageLines(text, names, sectionColor, showSections, chords, sectionScale).map { it.text }
+    sectionFont: androidx.compose.ui.text.font.FontFamily? = null,
+): List<AnnotatedString> = stageLines(text, names, sectionColor, showSections, chords, sectionScale, sectionFont = sectionFont).map { it.text }
 
 /** A stage line and the lyrics line it came from (holding the line opens the editor on it). */
 class StageLine(val text: AnnotatedString, val source: Int)
@@ -92,6 +93,7 @@ fun stageLines(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
     highlight: Color = Color(br.app.stagebook.ui.theme.StagePalette.HIGHLIGHT),
+    sectionFont: androidx.compose.ui.text.font.FontFamily? = null,   // null: the lyrics font
 ): List<StageLine> {
     val out = ArrayList<StageLine>()
     fun blank(at: Int) { if (out.isNotEmpty() && out.last().text.isNotEmpty()) out += StageLine(AnnotatedString(""), at) }
@@ -102,7 +104,7 @@ fun stageLines(
                 // more emphasis (user's request, 29/10): adjustable size and a light background in the section color
                 withStyle(
                     SpanStyle(
-                        fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em,
+                        fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em, fontFamily = sectionFont,
                         background = sectionColor.copy(alpha = SECTION_BACKGROUND_ALPHA),
                     ),
                 ) {
@@ -274,7 +276,8 @@ fun lineStart(text: String, line: Int): Int {
 fun lyricsAnnotated(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
-): AnnotatedString = joinLines(lyricsLines(text, names, sectionColor, showSections, chords, sectionScale))
+    sectionFont: androidx.compose.ui.text.font.FontFamily? = null,
+): AnnotatedString = joinLines(lyricsLines(text, names, sectionColor, showSections, chords, sectionScale, sectionFont))
 
 private const val SECTION_BACKGROUND_ALPHA = 0.16f
 
