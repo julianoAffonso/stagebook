@@ -172,7 +172,8 @@ class StagePlayer @Inject constructor(
         }
         val p = Mixer.plan(cfg, lanes, measures)
         Engine.setMix(p.gains, p.norms, p.eqMask, p.route)
-        Engine.setEq(cfg.eqOn, cfg.eqDb.toFloatArray())
+        // always the engine's 5 bands: a shorter list (an old or hand-edited file) made the native call throw (audit 01/11)
+        Engine.setEq(cfg.eqOn, cfg.eqGains())
     }
 
     // the loaded backing track's song: each track file belongs to one song

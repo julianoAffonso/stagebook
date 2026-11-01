@@ -39,4 +39,10 @@ class SongMixTest {
         val generalLater = general.copy(channels = 4)
         assertEquals(4, generalLater.forSong(own).channels)
     }
+
+    @Test fun `the engine always gets 5 EQ bands - a short list is padded flat`() {
+        val short = br.app.stagebook.domain.MixerConfig(eqDb = listOf(3f, -2f, 1f))
+        assertEquals(listOf(3f, -2f, 1f, 0f, 0f), short.eqGains().toList())
+        assertEquals(5, br.app.stagebook.domain.MixerConfig(eqDb = List(7) { 1f }).eqGains().size)
+    }
 }
