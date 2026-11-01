@@ -307,9 +307,7 @@ fun SongEditorScreen(
         }
     }
     if (tagging) {
-        val national = stringResource(R.string.tags_national)
-        val international = stringResource(R.string.tags_international)
-        val options = (listOf(national, international) + allTags + uiState.tags).distinctBy { it.lowercase() }
+        val options = (br.app.stagebook.ui.components.suggestedTags() + allTags + uiState.tags).distinctBy { it.lowercase() }
         val initial = options.associateWith { t ->
             if (uiState.tags.any { it.equals(t, true) }) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off
         }

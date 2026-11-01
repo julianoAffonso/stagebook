@@ -1317,8 +1317,9 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             style = MaterialTheme.typography.bodyLarge,
         )
     }
-    // song tags: splitting Brazilian and international songs, once (moved here from the song list's ⋮, user 01/11)
-    SettingsCard(stringResource(R.string.tags_title)) {
+    // song tags: splitting national and international songs, once (moved here from the song list's ⋮, user 01/11);
+    // Portuguese only
+    if (br.app.stagebook.ui.components.nationalTagsShown()) SettingsCard(stringResource(R.string.tags_title)) {
         var ask by remember { mutableStateOf<Pair<Int, Int>?>(null) }
         val national = stringResource(R.string.tags_national)
         val international = stringResource(R.string.tags_international)

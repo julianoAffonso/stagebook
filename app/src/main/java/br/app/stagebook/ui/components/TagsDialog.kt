@@ -95,6 +95,18 @@ fun TagsDialog(
     )
 }
 
+/**
+ * National and International only exist in Portuguese (user, 01/11: in other languages it's unclear what people call
+ * them): the split in Settings and these two suggestions show only with the app in Portuguese.
+ */
+@Composable
+fun nationalTagsShown(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "pt"
+
+/** The tags offered even before anyone uses them: National and International, in Portuguese only. */
+@Composable
+fun suggestedTags(): List<String> =
+    if (nationalTagsShown()) listOf(stringResource(R.string.tags_national), stringResource(R.string.tags_international)) else emptyList()
+
 @LightPreview
 @Composable
 private fun TagsDialogLightPreview() = PreviewSurface(dark = false) {
