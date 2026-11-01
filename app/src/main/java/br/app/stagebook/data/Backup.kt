@@ -40,6 +40,9 @@ class Backup @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: LibraryRepository,
     private val tracks: TrackStore,
+    // the band in memory: restoring its prefs without telling it, the next change saved the old list over them (audit
+    // 01/11). Optional only for tests
+    private val trust: BandTrust? = null,
 ) {
     enum class Part { LIBRARY, TRACKS, SETTINGS }
 
@@ -140,6 +143,7 @@ class Backup @Inject constructor(
             if (Part.SETTINGS in parts) settings?.let { st ->
                 st["look"]?.let { repository.updateLook { _ -> json.decodeFromJsonElement(Look.serializer(), st["look"]!!) } }
                 st["prefs"]?.jsonObject?.forEach { (name, values) -> if (name in PREFS) jsonToPrefs(name, values.jsonObject) }
+                trust?.reload()
             }
             true
         }.getOrDefault(false)

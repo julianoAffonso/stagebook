@@ -48,6 +48,9 @@ class BandTrust @Inject constructor(@ApplicationContext context: Context) {
         save()
     }
 
+    /** Reads the band again from disk (a restored backup wrote it; the old list would be saved over it). */
+    fun reload() { _members.value = load() }
+
     private fun load(): List<Member> = runCatching { json.decodeFromString<List<Member>>(prefs.getString(KEY, null) ?: return emptyList()) }.getOrDefault(emptyList())
 
     private fun save() = prefs.edit { putString(KEY, json.encodeToString(_members.value)) }
