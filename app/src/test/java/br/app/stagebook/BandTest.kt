@@ -190,4 +190,14 @@ class BandTest {
         val input = (kotlinx.serialization.json.Json.encodeToString(BandProtocol.Hello.serializer(), fake) + "\n").reader().buffered()
         assertNull(BandProtocol.readHello(input))
     }
+
+    @Test fun `a line longer than the limit is refused - a normal one still reads`() {
+        val endless = "x".repeat(BandProtocol.MAX_HELLO + 1000).reader().buffered()
+        assertNull(BandProtocol.readHello(endless))
+        assertNull(BandProtocol.readLine("abcdef\n".reader().buffered(), 3))
+        val two = "um\r\ndois\n".reader().buffered()
+        assertEquals("um", BandProtocol.readLine(two, 10))
+        assertEquals("dois", BandProtocol.readLine(two, 10))
+        assertNull(BandProtocol.readLine(two, 10))
+    }
 }

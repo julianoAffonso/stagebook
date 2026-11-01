@@ -47,11 +47,28 @@ object BandProtocol {
 
     /** The [Hello] from the other side, checked: the id must match the key they sent. Null if it doesn't. */
     fun readHello(input: BufferedReader): Hello? = runCatching {
-        val h = json.decodeFromString<Hello>(input.readLine() ?: return null)
+        val h = json.decodeFromString<Hello>(readLine(input, MAX_HELLO) ?: return null)
         h.takeIf { BandCrypto.publicKey(it.key) != null && BandCrypto.idOf(it.key) == it.id && it.name.length <= MAX_NAME }
     }.getOrNull()
 
-    fun readMessage(input: BufferedReader): Message? = runCatching { json.decodeFromString<Message>(input.readLine() ?: return null) }.getOrNull()
+    fun readMessage(input: BufferedReader): Message? = runCatching { json.decodeFromString<Message>(readLine(input, MAX_MESSAGE) ?: return null) }.getOrNull()
+
+    /**
+     * One line, at most [max] characters: null at the end of the stream or past the limit (anyone on the Wi-Fi can open
+     * the port; an endless line without `\n` would fill the memory; audit 01/11).
+     */
+    fun readLine(input: BufferedReader, max: Int): String? {
+        val line = StringBuilder()
+        while (true) {
+            val c = input.read()
+            if (c == -1) return if (line.isEmpty()) null else line.toString()
+            if (c == '\n'.code) return line.toString().removeSuffix("\r")
+            if (line.length >= max) return null
+            line.append(c.toChar())
+        }
+    }
 
     const val MAX_NAME = 40
+    const val MAX_HELLO = 4 * 1024
+    const val MAX_MESSAGE = 20 * 1024 * 1024   // a setlist with every song, encrypted
 }
