@@ -553,7 +553,11 @@ fun StageScreen(
         // (sharing the line with the title, they got cut)
         val metaInline = wideLists()
         Row(Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
+        // artist keeps a little room so it doesn't vanish
+        BoxWithConstraints(Modifier.weight(1f)) {
+        val titleMax = if (metaInline && song.meta.isNotEmpty()) maxWidth * 0.8f else maxWidth
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
             if (onBack != null) {
@@ -575,7 +579,7 @@ fun StageScreen(
                 color = fg,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = Modifier.widthIn(max = titleMax),
             )
             if (metaInline && song.meta.isNotEmpty()) {
                 Text(
@@ -587,6 +591,7 @@ fun StageScreen(
                     modifier = Modifier.weight(1f, fill = false),
                 )
             }
+        }
         }
             // after the artist (user's request, 29/10): capo lit in the accent color, then the key; on phones they go
             // to the artist line, otherwise the title gets shorter. No backing track badge: the play only shows when

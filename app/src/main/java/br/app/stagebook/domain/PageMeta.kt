@@ -39,7 +39,15 @@ object PageMeta {
         val title = first(p.site, p.ldName, og.title, doc.title, p.title)
         var artist = first(p.site, p.ldArtist, og.artist, doc.artist, p.artist)
         if (TextKey.of(artist) == TextKey.of(title)) artist = ""
-        return TitleArtist(title, artist)
+        return TitleArtist(withoutArtist(title, artist), artist)
+    }
+
+    /** "Marina Lima - Fullgás" with the artist known → "Fullgás" (the page's data named it that way, 31/10). */
+    private fun withoutArtist(title: String, artist: String): String {
+        if (artist.isEmpty() || !separator.containsMatchIn(title)) return title
+        val parts = title.split(separator).map { it.trim() }
+        val rest = parts.filterNot { TextKey.of(it) == TextKey.of(artist) }
+        return if (rest.size in 1 until parts.size) rest.joinToString(" - ") else title
     }
 
     fun yearOf(p: PageData): String = p.ldDate.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) }.orEmpty()

@@ -182,8 +182,8 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     }
     segs.forEachIndexed { i, s ->
         val chord = s.chord ?: return@forEachIndexed
-        if (i == segs.lastIndex) return@forEachIndexed
-        val need = emWidth(chord) * look.scale * BOLD + CHORD_GAP
+        // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on)
+        val need = emWidth(chord) * look.scale * BOLD + if (i < segs.lastIndex) CHORD_GAP else 0f
         while (emWidth(s.text) < need) s.text += " "
     }
     // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
