@@ -212,8 +212,12 @@ class StagePlayer @Inject constructor(
                     while (isActive) {
                         delay(END_POLL_MS)
                         if (durationMs > 0 && Engine.position() >= durationMs - END_MARGIN_MS) {
-                            pause()
-                            engine.withLock { Engine.seek(0) }
+                            // pause() cancels this watch: without NonCancellable, a busy engine (a mixer change being
+                            // measured) skipped the seek and the next play stayed at the end (audit 01/11)
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                pause()
+                                engine.withLock { Engine.seek(0) }
+                            }
                         }
                     }
                 }
