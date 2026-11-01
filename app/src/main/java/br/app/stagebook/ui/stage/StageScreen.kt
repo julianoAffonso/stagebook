@@ -786,10 +786,11 @@ fun StageScreen(
                 style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
             )
             val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
-            SideEffect { hit.show(shown, columnWidth, gutter, chordPx) }
             // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
             // you continue lights up
             val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
+            // taps on the page find the line under the finger in the scrolled text, not the top of the song (audit 01/11)
+            SideEffect { hit.show(shown, columnWidth, gutter, chordPx, if (scrollMode) ({ scrollY.value }) else ({ 0f })) }
             val syncing = remember(index) { BooleanArray(1) }   // an auto-scroll pause sets the step without scrolling
             LaunchedEffect(index, stopAt, steps) {
                 if (syncing[0]) { syncing[0] = false; return@LaunchedEffect }
@@ -863,7 +864,7 @@ fun StageScreen(
                     content.columns.forEachIndexed { column, text ->
                         val strip = remember(text) { text.getStringAnnotations(CHORD_LIST_TAG, 0, text.length).firstOrNull() }
                         var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
-                        Box(Modifier.weight(1f).fillMaxHeight()) {
+                        Box(Modifier.weight(1f).fillMaxHeight().then(if (scrollMode) Modifier.clipToBounds() else Modifier)) {
                             ChordText(
                                 text,
                                 style = content.style,
@@ -883,7 +884,8 @@ fun StageScreen(
                                     shownText,
                                     look.instrument,
                                     Color(look.chordColor),
-                                    Modifier.offset { IntOffset(0, top) },
+                                    // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
+                                    Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },
                                     onHide = { hidingChord = it },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
                                 )
@@ -1204,12 +1206,15 @@ private class PageHit {
     private val layouts = arrayOfNulls<TextLayoutResult>(2)
 
     private var chordPx = 0f
+    private var scroll: () -> Float = { 0f }
 
-    fun show(c: PageContent, columnWidth: Int, gutter: Int, chordPx: Float) {
+    /** [scroll]: how far the text is moved up (scroll mode), so a point on screen maps to the text below it. */
+    fun show(c: PageContent, columnWidth: Int, gutter: Int, chordPx: Float, scroll: () -> Float = { 0f }) {
         if (c != content) { content = c; layouts.fill(null) }
         this.columnWidth = columnWidth
         this.gutter = gutter
         this.chordPx = chordPx
+        this.scroll = scroll
     }
 
     fun laidOut(c: PageContent, column: Int, r: TextLayoutResult) { if (c == content && column < layouts.size) layouts[column] = r }
@@ -1226,12 +1231,13 @@ private class PageHit {
         val column = if (c.columns.size > 1 && p.x >= columnWidth + gutter / 2f) 1 else 0
         val layout = layouts[column] ?: return null
         val x = p.x - if (column == 1) columnWidth + gutter else 0
-        if (p.y < 0 || p.y > layout.size.height) return null
-        val line = layout.getLineForVerticalPosition(p.y)
+        val y = p.y + scroll()
+        if (y < 0 || y > layout.size.height) return null
+        val line = layout.getLineForVerticalPosition(y)
         val text = layout.layoutInput.text
         val top = layout.getLineTop(line)
         val band = chordPx * 1.5f
-        if (p.y <= top + band) {
+        if (y <= top + band) {
             val tolerance = chordPx * 0.3f
             text.getStringAnnotations(CHORD_TAG, layout.getLineStart(line), layout.getLineEnd(line)).forEach { a ->
                 val x0 = layout.getHorizontalPosition(a.start, true)
@@ -1241,7 +1247,7 @@ private class PageHit {
         // chords-only line: the word under the finger
         val lineText = text.text.substring(layout.getLineStart(line), layout.getLineEnd(line))
         if (Chords.isChordLine(lineText)) {
-            val o = layout.getOffsetForPosition(Offset(x, p.y))
+            val o = layout.getOffsetForPosition(Offset(x, y))
             val s = text.text
             var a = o.coerceIn(0, s.length)
             var b = a
@@ -1258,9 +1264,10 @@ private class PageHit {
         val column = if (c.columns.size > 1 && p.x >= columnWidth + gutter / 2f) 1 else 0
         val layout = layouts[column] ?: return null
         val start = c.starts[column]
-        if (start < 0 || p.y > layout.size.height) return null
+        val y = p.y + scroll()
+        if (start < 0 || y < 0 || y > layout.size.height) return null
         // only the height matters: the whole line is the same at any point in it
-        val offset = layout.getLineStart(layout.getLineForVerticalPosition(p.y))
+        val offset = layout.getLineStart(layout.getLineForVerticalPosition(y))
         val text = layout.layoutInput.text
         val line = text.getStringAnnotations(LINE_TAG, offset, minOf(offset + 1, text.length)).firstOrNull()?.item?.toInt() ?: return null
         return start + line
