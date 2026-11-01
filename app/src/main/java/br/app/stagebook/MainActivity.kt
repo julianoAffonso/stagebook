@@ -115,6 +115,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // also here, not only on focus: a recreated screen (font size, language) already has focus and the status bar
+        // stayed over the app (device test B-19)
+        hideSystemBars()
         // new app version: checks in the background and asks off stage (not in essential mode without internet, T19)
         if (repository.library.value.look.internetOn) updateOffer.onEnter()
         band.setForeground(true)   // band on the network: only with the app in front
