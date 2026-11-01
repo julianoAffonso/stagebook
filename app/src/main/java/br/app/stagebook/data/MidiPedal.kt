@@ -187,19 +187,59 @@ class MidiPedal @Inject constructor(
                 val now = System.currentTimeMillis()
                 if (!btConnected() && canConnect() && now - lastTry > CONNECT_TIMEOUT_MS) {
                     lastTry = now
-                    connectBluetooth(address)
+                    findAndConnect(address)
                 }
                 delay(RETRY_MS)
             }
         }
     }
 
+    /**
+     * Looks for the saved pedal for a few seconds and connects as soon as it shows up. Connecting straight by address
+     * failed after the app reopened (31/10: it only came back after a search in Settings): Android connects to a BLE
+     * pedal it hasn't just seen as if it were classic Bluetooth. Without permission to search, it connects directly.
+     */
+    @SuppressLint("MissingPermission")   // hasPermissions() checks first
+    private fun findAndConnect(address: String) {
+        val scanner = bluetooth?.takeIf { it.isEnabled }?.bluetoothLeScanner
+        if (scanner == null || !hasPermissions()) { connectBluetooth(address); return }
+        val done = java.util.concurrent.atomic.AtomicBoolean(false)
+        val callback = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                if (done.getAndSet(true)) return
+                runCatching { scanner.stopScan(this) }
+                connectBluetooth(address, result.device)
+            }
+
+            override fun onScanFailed(errorCode: Int) {
+                if (!done.getAndSet(true)) connectBluetooth(address)
+            }
+        }
+        try {
+            scanner.startScan(
+                listOf(ScanFilter.Builder().setDeviceAddress(address).build()),
+                ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
+                callback,
+            )
+        } catch (e: SecurityException) {
+            Log.w("stagebook", "MIDI pedal: no permission to look for the pedal", e)
+            connectBluetooth(address)
+            return
+        }
+        // not seen (turned off, out of range): the scan stops, and the next try comes CONNECT_TIMEOUT_MS later (10 s
+        // of looking every 30 s, not nonstop)
+        scope.launch {
+            delay(FIND_MS)
+            if (!done.getAndSet(true)) runCatching { scanner.stopScan(callback) }
+        }
+    }
+
     @SuppressLint("MissingPermission")   // canConnect() checks first
-    private fun connectBluetooth(address: String) {
+    private fun connectBluetooth(address: String, seen: android.bluetooth.BluetoothDevice? = null) {
         val m = manager ?: return
         val adapter = bluetooth ?: return
         if (!adapter.isEnabled) return
-        val device = runCatching { adapter.getRemoteDevice(address) }.getOrNull() ?: return
+        val device = seen ?: runCatching { adapter.getRemoteDevice(address) }.getOrNull() ?: return
         try {
             m.openBluetoothDevice(device, { if (it == null) lastTry = 0 else attach(it) }, null)
         } catch (e: SecurityException) {
@@ -278,6 +318,7 @@ class MidiPedal @Inject constructor(
         val MIDI_SERVICE: java.util.UUID = java.util.UUID.fromString("03B80E5A-EDE8-4B33-A751-6CE34EC4C700")
         const val SCAN_MS = 15_000L
         const val RETRY_MS = 8_000L
+        const val FIND_MS = 10_000L
         const val CONNECT_TIMEOUT_MS = 30_000L
     }
 }
