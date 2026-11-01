@@ -53,6 +53,28 @@ object BandContent {
         return short >= lines.size * SHORT_SHARE
     }
 
+    /**
+     * What import takes as a song (ChordPro or lyrics, [text] with chords): short lines like verses, at least
+     * [MIN_VERSES] of them with [MIN_WORDS] words, and not mostly lines with numbers (a price list). A chart with
+     * [MIN_CHORDS] chords or more is a chart (also instrumental, or short verses): the verse rule is for plain text.
+     * The tablature doesn't count. The search
+     * page's footer ("Ajuda", "Feedback"…) and a shopping list came in as songs (device test B-05).
+     */
+    fun looksLikeSong(text: String): Boolean {
+        val noTab = Tablature.strip(text)
+        if (Chords.bracket.findAll(noTab).count { Chords.isChord(it.groupValues[1]) } >= MIN_CHORDS) return true
+        val plain = Chords.stripChords(noTab)
+        if (!looksLikeLyrics(plain)) return false
+        val lines = plain.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("{") && !it.startsWith("[") }
+        val verses = lines.count { l -> l.split(' ').count { w -> w.any(Char::isLetter) } >= MIN_WORDS }
+        val numbered = lines.count { l -> l.any(Char::isDigit) }
+        return verses >= MIN_VERSES && numbered * 2 < lines.size
+    }
+
+    private const val MIN_CHORDS = 2
+    private const val MIN_VERSES = 3
+    private const val MIN_WORDS = 3
+
     private const val SHORT_LINE = 90
     private const val SHORT_SHARE = 0.7
 
