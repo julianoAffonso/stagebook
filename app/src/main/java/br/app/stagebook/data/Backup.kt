@@ -134,6 +134,8 @@ class Backup @Inject constructor(
                 skipped = s.songs.size - allowed.size
                 val songs = allowed.map { if (keepTracks && it.track in partFiles) it else it.copy(track = "") }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
+                // the replaced library's tracks don't stay on the disk
+                tracks.sweep(repository.library.value.songs.mapTo(HashSet()) { it.track })
             }
             if (Part.SETTINGS in parts) settings?.let { st ->
                 st["look"]?.let { repository.updateLook { _ -> json.decodeFromJsonElement(Look.serializer(), st["look"]!!) } }

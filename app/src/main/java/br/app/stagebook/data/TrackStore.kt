@@ -59,6 +59,15 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
 
     fun remove(name: String) { if (name.isNotEmpty()) File(dir, name).delete() }
 
+    /**
+     * Deletes the files no song points to (deleted songs, a restored backup) and copies left half done (`.part`), once
+     * older than [SWEEP_AGE_MS]: a new song's track, not saved yet (even across Android closing the app), keeps its
+     * file meanwhile. They stayed on the disk for good (audit 01/11).
+     */
+    fun sweep(referenced: Set<String>, now: Long = System.currentTimeMillis()) {
+        dir.listFiles()?.forEach { f -> if (f.name !in referenced && now - f.lastModified() > SWEEP_AGE_MS) f.delete() }
+    }
+
     /** The chosen file's name without the extension ("Under Pressure"), to show; empty when Android doesn't say. */
     fun displayName(uri: Uri): String = runCatching {
         context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
@@ -86,6 +95,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
 
         val FORMATS = setOf("ogg", "mp3", "wav")
         const val MAX_BYTES = 200L * 1024 * 1024   // a long multitrack OGG is well under this
+        const val SWEEP_AGE_MS = 24L * 60 * 60 * 1000
         val MIME = arrayOf("audio/ogg", "application/ogg", "audio/mpeg", "audio/wav", "audio/x-wav", "audio/*")
     }
 }
