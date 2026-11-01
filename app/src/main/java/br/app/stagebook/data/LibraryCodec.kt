@@ -23,6 +23,14 @@ object LibraryCodec {
         prettyPrintIndent = " "
     }
 
+    // the app's own library file: nobody reads it by eye, and the indentation was a good part of a 2-3 MB write on
+    // every change (audit 01/11). The exported songs file stays indented
+    private val compact = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        encodeDefaults = true
+    }
+
     @Serializable
     private data class SongsFile(val version: Int = 1, val songs: List<Song> = emptyList())
 
@@ -35,11 +43,11 @@ object LibraryCodec {
         )
     }
 
-    fun encode(library: Library): String = json.encodeToString(Library.serializer(), library)
+    fun encode(library: Library): String = compact.encodeToString(Library.serializer(), library)
 
     /** Writes straight to the file, without building the ~1 MB text in memory (the Fire has 2 GB). */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
-    fun encodeTo(library: Library, out: OutputStream) = json.encodeToStream(Library.serializer(), library, out)
+    fun encodeTo(library: Library, out: OutputStream) = compact.encodeToStream(Library.serializer(), library, out)
 
     /** Reads straight from the file (opening the app without holding the whole text before decoding). */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)

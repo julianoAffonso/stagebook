@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import java.io.File
@@ -105,6 +106,8 @@ class LibraryRepository @Inject constructor(
     }
 
     private suspend fun persist() = withContext(Dispatchers.IO + NonCancellable) {
+        // a short wait gathers a burst of changes (typing, dragging) into one write
+        delay(SAVE_DELAY_MS)
         writeLock.withLock {
             writePending.set(false)
             // a full disk or a write failure can't crash the app on stage: the change stays in memory and the next
@@ -313,6 +316,7 @@ class LibraryRepository @Inject constructor(
 }
 
 private const val TAG = "stagebook"
+private const val SAVE_DELAY_MS = 300L
 
 /** ChordPro section (`{start_of_chorus}`, `{soc}`…): the song already has titles. */
 private val SECTION_DIRECTIVE = Regex("""^\s*\{\s*(start_of_\w+|so[cvb])\s*(:.*)?\}\s*$""", RegexOption.IGNORE_CASE)
