@@ -23,6 +23,13 @@ class ChordSpacingTest {
 
     @Test fun `bigger chords get more room`() = room("[Fsus4]il [C]ab[Csus4] cd [C]ef", 1.2f)
 
+    // a chord after the last word sits on spaces of its own, on the same line (it went down onto the next title)
+    @Test fun `a chord at the end of the line keeps a place on the line`() {
+        val line = chordLine("Até o sol voltar [G]", ChordLook(true, 0.8f, Color.Yellow))
+        val g = line.getStringAnnotations(CHORD_TAG, 0, line.length).single()
+        assertTrue(g.end > g.start && g.end <= line.length)
+    }
+
     @Test fun `lyrics already wide enough are not changed`() {
         val line = chordLine("[C]long enough words [G]here", ChordLook(true, 0.8f, Color.Yellow))
         assertTrue(line.text == "long enough words here")

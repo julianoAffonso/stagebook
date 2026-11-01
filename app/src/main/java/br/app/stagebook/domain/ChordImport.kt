@@ -29,9 +29,11 @@ object ChordImport {
     // sites pad the chord lines with non-breaking and thin spaces; Java's \s doesn't see them, so the line read as
     // lyrics and only the lyrics came in (user, 31/10)
     private val oddSpaces = Regex("[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]")
+    // and invisible marks at the start of every line (Cifra Club, Fullgás, 31/10): "\u200BBm" isn't a chord
+    private val invisible = Regex("[\u200B-\u200D\u2060\uFEFF]")
 
-    /** The text with every kind of space as a plain one (and tabs as 4 spaces, keeping the columns). */
-    fun plainSpaces(text: String): String = text.replace(oddSpaces, " ").replace("\t", "    ")
+    /** The text with every kind of space as a plain one, invisible marks gone (and tabs as 4 spaces, keeping the columns). */
+    fun plainSpaces(text: String): String = text.replace(invisible, "").replace(oddSpaces, " ").replace("\t", "    ")
 
     /** Does the page have chords? (two or more chords-only lines) */
     fun hasChords(text: String): Boolean = plainSpaces(text).lineSequence().count(Chords::isChordLine) >= 2
