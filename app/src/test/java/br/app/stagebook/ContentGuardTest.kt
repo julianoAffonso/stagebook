@@ -106,4 +106,11 @@ class ContentGuardTest {
         assertTrue(tracks.file("boa.ogg").exists())
         assertTrue(tracks.file("boa.ogg").parentFile!!.listFiles()!!.none { it.name.endsWith(".part") })
     }
+    @Test fun `import takes songs, not a search footer or a shopping list (device test B-05)`() {
+        assertFalse(BandContent.looksLikeSong("Tema escuro: ativado\nAjuda\nFeedback\nPrivacidade\nTermos"))
+        val shopping = (1..30).joinToString("\n") { listOf("Arroz 5 kg", "Feijão preto 1 kg", "Leite integral 12 caixas")[it % 3] + " - R$ $it,90" }
+        assertFalse(BandContent.looksLikeSong(shopping))
+        assertTrue(BandContent.looksLikeSong("{key: G}\n[G]Saio cedo pela [D]rua sem saber\nOnde a [Em]estrada vai dar\nLevo o [C]violão e um papel"))
+        assertTrue(BandContent.looksLikeSong("[Intro]\n[Dm7] [G/D] [Dm7] [G/D]\n[Dm7] [G/D] [Dm7]\n[Am7] [D7(9-)] [G7M] [Gm6]"))   // instrumental
+    }
 }

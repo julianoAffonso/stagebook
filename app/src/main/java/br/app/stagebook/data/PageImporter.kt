@@ -65,7 +65,7 @@ class PageImporter @Inject constructor(
         if (text.lines().size < 3) return PageImport.Problem(ImportProblem.NOT_FOUND)
         // only lyrics and chords come in (the same filter as the band, plus the look of verses)
         if (!br.app.stagebook.domain.BandContent.isPlainText(text) || text.length > br.app.stagebook.domain.BandContent.MAX_TEXT ||
-            !br.app.stagebook.domain.BandContent.looksLikeLyrics(Chords.stripChords(text))
+            !br.app.stagebook.domain.BandContent.looksLikeSong(text)
         ) return PageImport.Problem(ImportProblem.NOT_SONG)
         // BPM from the page (or written in the text): saved in the song, the metronome starts at it
         val bpm = ChordImport.bpmOf(page.bpm, page.chordText.ifBlank { page.text })
