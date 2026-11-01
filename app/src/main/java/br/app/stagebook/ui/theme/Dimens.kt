@@ -22,6 +22,7 @@ object Sizes {
     val swatch = 48.dp
     val tagFilter = 240.dp      // tag filter beside the search (tablet)
     val tagFilterNarrow = 144.dp   // and on phones
+    val tagMenu = 320.dp        // its open list, wider than the field on phones
     val fontPreview = 160.dp    // fixed box for the lyrics size preview (doesn't push the screen)
     val fontPreviewWide = 300.dp   // the same box on a wide screen (tablet): the sample stays near its real size
     val wideScreen = 600.dp
