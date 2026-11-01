@@ -60,8 +60,8 @@
     <string name="editor_sections">Section:</string>
     <string name="editor_discard_confirm">Leave without saving? What you typed or imported will be lost.</string>
     <string name="editor_discard">Leave without saving</string>
-    <string name="editor_error_title_empty">Enter the title.</string>
-    <string name="editor_error_title_taken">You already have a song with this title and artist.</string>
+    <string name="editor_error_title_empty">Enter the song name.</string>
+    <string name="editor_error_title_taken">You already have a song with this name and artist.</string>
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
@@ -75,9 +75,9 @@
     <string name="sets_rename">Rename</string>
     <string name="sets_delete">Delete setlist</string>
     <string name="sets_add_songs">Songs</string>
-    <string name="qr_limit_title">QR limit</string>
-    <string name="qr_limit_message">This setlist reached the number of songs a QR can carry. To go on, create a new setlist.</string>
-    <string name="qr_limit_name">With this name the setlist goes over what a QR can carry. Use a shorter name or create a new setlist.</string>
+    <string name="qr_limit_title">Setlist full</string>
+    <string name="qr_limit_message">This setlist is full. To go on, create another one.</string>
+    <string name="qr_limit_name">This name is too long for this setlist. Use a shorter one.</string>
     <string name="set_empty_title">Empty setlist</string>
     <string name="set_empty_message">Tap \"Songs\" to choose what goes into the show.</string>
     <string name="set_item_missing">(song removed)</string>
@@ -138,7 +138,7 @@
     <string name="settings_about">About</string>
     <string name="about_tagline">Lyrics, chords and backing tracks to play live, solo or with the band.</string>
     <string name="about_privacy">Privacy</string>
-    <string name="about_privacy_text">Your songs, setlists and settings stay on this device. What goes to the band or through the 3 words is encrypted, and nobody in between can read it. No account, no ads, no tracking.</string>
+    <string name="about_privacy_text">Your songs, setlists and settings stay on this device. What goes to the band or over the internet is protected, and nobody in between can read it. No account, no ads, no tracking.</string>
     <string name="about_open_source">Source available</string>
     <string name="about_open_source_text">Stagebook is free and anyone can see the code. Use it as you like, paid gigs included, and help make it better. Just don\'t copy it to make a competing app.</string>
     <string name="about_see_code">See the code</string>
@@ -198,7 +198,7 @@
     <string name="essential_band">Band on the network</string>
     <string name="essential_band_detail">Finding the band on Wi-Fi, sending to the band and Lead the band</string>
     <string name="essential_internet">Internet</string>
-    <string name="essential_internet_detail">3 words, received from the band, new app version, BPM and song details</string>
+    <string name="essential_internet_detail">Sending and receiving over the internet, new app version and filling in artist, year and BPM</string>
     <string name="essential_player">Track player</string>
     <string name="essential_player_detail">Backing tracks, USB audio interface and mixer</string>
     <string name="essential_extras">Metronome and chord extras</string>
@@ -266,12 +266,12 @@
     <string name="backup_save_info">Saves what\'s checked to a .stagebook file. Use it as a backup, to switch devices or to send to someone.</string>
     <string name="backup_save_where">Keep it on Drive, on a computer, or send it in a message. Sending just the lyrics? Uncheck the backing tracks, they make the file big.</string>
     <string name="backup_open_card">Open file</string>
-    <string name="backup_open_info">Shows what the file has so you can choose. Old .json files open too.</string>
+    <string name="backup_open_info">Shows what the file has so you can choose.</string>
     <string name="backup_open_merge">Join brings in only the songs and setlists you don\'t have. Yours stay as they are.</string>
     <string name="backup_open_replace">Replace swaps your songs and setlists for the file\'s. Use it to restore a backup or move to a new device.</string>
     <string name="backup_open_other_device">The file\'s settings replace the ones here. On another device, approve the band again in Settings → Band.</string>
     <string name="backup_share_card">Other ways to share</string>
-    <string name="backup_share_info">To send a setlist right now, use Share inside the setlist. It goes by QR, 3 words or the band on Wi-Fi.</string>
+    <string name="backup_share_info">To send a setlist right now, use Share inside the setlist. It goes by QR, over the internet or to the band on Wi-Fi.</string>
     <string name="reset_title">Erase everything</string>
     <string name="reset_info">Makes the app like new. Erases songs, setlists, backing tracks, settings and the band on this device.</string>
     <string name="reset_warning">You\'ll lose everything in the app on this device, and it can\'t be undone. Save a file first?</string>
@@ -321,7 +321,7 @@
     <string name="inbox_updated_day">updated %1$s, %2$s</string>
     <string name="inbox_versions_hint">More than one person sent this setlist. Open each version, see what changed and pick one.</string>
     <string name="scan_ask_internet">Ask %1$s for the missing ones online</string>
-    <string name="scan_internet_sent">Request sent to %1$s. The songs show up in Received from the band when their Stagebook syncs.</string>
+    <string name="scan_internet_sent">Request sent to %1$s. The songs show up in Received from the band when they open Stagebook.</string>
     <string name="scan_internet_failed">Couldn\'t send the request. Check your internet and try again.</string>
     <string name="import_tab_title">This chart has tablature</string>
     <string name="import_tab_message">Import the tab too? You can delete it later in the editor.</string>
@@ -346,7 +346,7 @@
     <string name="settings_chord_play_arpeggio">Picked</string>
     <string name="settings_chord_play_chord">Full chord</string>
     <string name="settings_chord_play_both">Both</string>
-    <string name="announce_title">Now Playing</string>
+    <string name="announce_title">Tell what\'s playing</string>
     <string name="announce_switch">Send the current song to OBS and others</string>
     <string name="announce_help">When the song changes, the stage tells apps like OBS and Resolume what\'s playing, with artist, key and BPM. The lyrics never go out.</string>
     <string name="metro_shown">Show on stage</string>
@@ -390,7 +390,7 @@
     <string name="settings_chords_size">Chord size: %1$d%% of the lyrics</string>
     <string name="settings_chords_color">Chord color</string>
     <string name="settings_translate_sections">Section names in the app\'s language</string>
-    <string name="settings_translate_sections_help">Refrão, Chorus and {start_of_chorus} all show as Chorus. The saved lyrics don\'t change. When off, they show as written.</string>
+    <string name="settings_translate_sections_help">Refrão, Chorus and other ways of writing it all show as Chorus. The saved lyrics don\'t change. When off, they show as written.</string>
     <string name="settings_illegible_lyrics">The lyrics will be hard to read on this background</string>
     <string name="settings_illegible_sections">Section titles will be hard to read on this background</string>
     <string name="settings_illegible_chords">Chords will be hard to read on this background</string>
@@ -408,8 +408,8 @@
     <string name="settings_normalize_ok">Mark</string>
     <string name="settings_normalize_confirm">Mark sections in songs that have no titles?\n\nThe app finds each part by what repeats. The verse that comes back is the chorus. Existing titles and the lyrics stay the same.</string>
     <plurals name="settings_unidentified">
-        <item quantity="one">%d with no repeats was left as it was.</item>
-        <item quantity="other">%d with no repeats were left as they were.</item>
+        <item quantity="one">%d song had no repeated parts and was left as it was.</item>
+        <item quantity="other">%d songs had no repeated parts and were left as they were.</item>
     </plurals>
     <plurals name="settings_normalized">
         <item quantity="one">%d song updated.</item>
@@ -577,7 +577,7 @@
     </plurals>
     <string name="scan_song_new">New, goes into your library</string>
     <string name="scan_song_have">You have it, yours stays</string>
-    <string name="scan_song_missing">Didn\'t come, too big</string>
+    <string name="scan_song_missing">Didn\'t come along. You can import it from the sites.</string>
     <plurals name="scan_songs_add">
         <item quantity="one">Add %1$d song</item>
         <item quantity="other">Add %1$d songs</item>
@@ -722,7 +722,7 @@
     <string name="band_other_version">Different app version (%1$s). Update both to the same version.</string>
     <string name="band_version_join">You\'re on different app versions. Update both and try again.</string>
     <string name="band_busy">They\'re on stage right now. Ask again after the show.</string>
-    <string name="band_failed">Couldn\'t reach them. Try again.</string>
+    <string name="band_failed">Couldn\'t connect. Check that both are on the same Wi-Fi and try again.</string>
     <string name="band_members">In the band</string>
     <string name="band_members_none">No one yet. Whoever you allow shows up here.</string>
     <string name="band_remove">Remove %1$s from the band</string>
@@ -778,7 +778,7 @@
     <string name="web_pick">Pick a song from the list or create a new one.</string>
     <string name="web_unsaved">There are unsaved changes. Leave anyway?</string>
     <string name="web_paste_title">Paste the chords</string>
-    <string name="web_paste_hint">Copy the chords on the site and paste them here. Chords above the lyrics become ChordPro.</string>
+    <string name="web_paste_hint">Copy the chords on the site and paste them here. Chords above the lyrics land in the right place.</string>
     <string name="web_convert">Convert</string>
     <string name="web_url_title">Page address</string>
     <string name="web_url_hint">Paste the chords page address. The tablet opens the page and brings the song.</string>
@@ -820,7 +820,7 @@
     <string name="tweak_usb_routing">Android sound off the USB interface</string>
     <string name="tweak_usb_routing_detail">Android\'s own sounds don\'t compete with the player for the audio interface.</string>
     <string name="tweak_battery_manager">Battery manager off</string>
-    <string name="tweak_battery_manager_detail">Android stops suggesting to restrict Stagebook, which uses battery on purpose while playing.</string>
+    <string name="tweak_battery_manager_detail">Android stops suggesting to restrict Stagebook, which needs to stay active to play.</string>
     <string name="tweak_animations">Shorter animations</string>
     <string name="tweak_animations_detail">Screens change faster and use less battery.</string>
     <string name="tweak_screen_timeout">Screen off after 10 minutes</string>
@@ -907,8 +907,8 @@
     <string name="tags_empty">None</string>
     <string name="editor_lyrics_chords">Lyrics and chords</string>
     <plurals name="scan_parked">
-        <item quantity="one">%d more setlist came along and is waiting in Received.</item>
-        <item quantity="other">%d more setlists came along and are waiting in Received.</item>
+        <item quantity="one">%d more setlist came along and is waiting in Received from the band.</item>
+        <item quantity="other">%d more setlists came along and are waiting in Received from the band.</item>
     </plurals>
     <string name="share_internet_limit">Too much to send over the internet at once. Send it in more than one go.</string>
     <string name="share_internet_limit_titles">Too much to send over the internet at once. Turn off “Bring the songs” or send fewer setlists.</string>

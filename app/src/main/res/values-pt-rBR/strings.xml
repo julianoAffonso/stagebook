@@ -60,8 +60,8 @@
     <string name="editor_sections">Seção:</string>
     <string name="editor_discard_confirm">Sair sem salvar? O que você digitou ou importou vai se perder.</string>
     <string name="editor_discard">Sair sem salvar</string>
-    <string name="editor_error_title_empty">Coloque o título.</string>
-    <string name="editor_error_title_taken">Você já tem uma música com esse título e artista.</string>
+    <string name="editor_error_title_empty">Coloque o nome da música.</string>
+    <string name="editor_error_title_taken">Você já tem uma música com esse nome e artista.</string>
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
@@ -75,9 +75,9 @@
     <string name="sets_rename">Renomear</string>
     <string name="sets_delete">Excluir setlist</string>
     <string name="sets_add_songs">Músicas</string>
-    <string name="qr_limit_title">Limite do QR</string>
-    <string name="qr_limit_message">O setlist chegou ao limite de músicas que podem ser transmitidas pelo QR. Para continuar, crie um novo setlist.</string>
-    <string name="qr_limit_name">Com esse nome o setlist passa do limite que pode ser transmitido pelo QR. Use um nome mais curto ou crie um novo setlist.</string>
+    <string name="qr_limit_title">Setlist cheio</string>
+    <string name="qr_limit_message">Este setlist já está cheio. Para continuar, crie outro.</string>
+    <string name="qr_limit_name">Esse nome é grande demais para este setlist. Use um mais curto.</string>
     <string name="set_empty_title">Setlist vazio</string>
     <string name="set_empty_message">Toque em \"Músicas\" para escolher o que entra no show.</string>
     <string name="set_item_missing">(música removida)</string>
@@ -138,7 +138,7 @@
     <string name="settings_about">Sobre</string>
     <string name="about_tagline">Letras, cifras e backing tracks para tocar ao vivo, sozinho ou com a banda.</string>
     <string name="about_privacy">Privacidade</string>
-    <string name="about_privacy_text">Suas músicas, setlists e ajustes ficam neste aparelho. O que vai para a banda ou pelas 3 palavras vai cifrado, e ninguém no caminho consegue ler. Sem conta, sem propaganda, sem rastreio.</string>
+    <string name="about_privacy_text">Suas músicas, setlists e ajustes ficam neste aparelho. O que vai para a banda ou pela internet vai protegido, e ninguém no caminho consegue ler. Sem conta, sem propaganda, sem rastreio.</string>
     <string name="about_open_source">Código disponível</string>
     <string name="about_open_source_text">O Stagebook é gratuito e qualquer um pode ver o código. Use à vontade, até em show pago, e ajude a melhorar. Só não vale copiar para fazer um app concorrente.</string>
     <string name="about_see_code">Ver o código</string>
@@ -196,9 +196,9 @@
     <string name="essential_keeps">Ficam letra, cifra, diagramas dos acordes e pedal</string>
     <string name="essential_parts">O que fica ligado</string>
     <string name="essential_band">Banda na rede</string>
-    <string name="essential_band_detail">Achar a banda no Wi-Fi, enviar pela banda e Quem conduz</string>
+    <string name="essential_band_detail">Achar a banda no Wi-Fi, enviar pela banda e Conduzir a banda</string>
     <string name="essential_internet">Internet</string>
-    <string name="essential_internet_detail">3 palavras, recebidos da banda, versão nova do app, BPM e dados da música</string>
+    <string name="essential_internet_detail">Enviar e receber pela internet, versão nova do app e completar artista, ano e BPM</string>
     <string name="essential_player">Player de faixas</string>
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
     <string name="essential_extras">Metrônomo e extras dos acordes</string>
@@ -266,12 +266,12 @@
     <string name="backup_save_info">Salva o que estiver marcado num arquivo .stagebook. Serve de backup, para trocar de aparelho ou para mandar a alguém.</string>
     <string name="backup_save_where">Guarde no Drive, no computador ou mande por mensagem. Vai mandar só as letras? Desmarque as backing tracks, que deixam o arquivo grande.</string>
     <string name="backup_open_card">Abrir arquivo</string>
-    <string name="backup_open_info">Mostra o que o arquivo tem para você marcar. Abre também os .json antigos.</string>
+    <string name="backup_open_info">Mostra o que o arquivo tem para você marcar.</string>
     <string name="backup_open_merge">Juntar traz só as músicas e setlists que você não tem. Os seus ficam como estão.</string>
     <string name="backup_open_replace">Substituir troca suas músicas e setlists pelos do arquivo. Use para voltar um backup ou trocar de aparelho.</string>
     <string name="backup_open_other_device">Os ajustes do arquivo substituem os daqui. Em outro aparelho, autorize a banda de novo em Ajustes → Banda.</string>
     <string name="backup_share_card">Outras formas de compartilhar</string>
-    <string name="backup_share_info">Para mandar um setlist na hora, use Compartilhar dentro do setlist. Vai por QR, 3 palavras ou pela banda no Wi-Fi.</string>
+    <string name="backup_share_info">Para mandar um setlist na hora, use Compartilhar dentro do setlist. Vai por QR, pela internet ou pela banda no Wi-Fi.</string>
     <string name="reset_title">Apagar tudo</string>
     <string name="reset_info">Deixa o app como novo. Apaga músicas, setlists, backing tracks, ajustes e a banda deste aparelho.</string>
     <string name="reset_warning">Você vai perder tudo o que está no app neste aparelho, e não dá para desfazer. Quer salvar um arquivo antes?</string>
@@ -321,7 +321,7 @@
     <string name="inbox_updated_day">atualizado em %1$s, %2$s</string>
     <string name="inbox_versions_hint">Mais de uma pessoa mandou esse setlist. Abra cada versão, veja o que muda e escolha uma.</string>
     <string name="scan_ask_internet">Pedir as que faltam a %1$s pela internet</string>
-    <string name="scan_internet_sent">Pedido enviado a %1$s. As músicas chegam em Recebidos da banda quando o Stagebook de lá sincronizar.</string>
+    <string name="scan_internet_sent">Pedido enviado a %1$s. As músicas chegam em Recebidos da banda quando a pessoa abrir o Stagebook.</string>
     <string name="scan_internet_failed">Não deu para enviar o pedido. Confira a internet e tente de novo.</string>
     <string name="import_tab_title">Esta cifra tem tablatura</string>
     <string name="import_tab_message">Quer importar a tablatura junto? Dá para apagar depois no editor.</string>
@@ -346,7 +346,7 @@
     <string name="settings_chord_play_arpeggio">Dedilhado</string>
     <string name="settings_chord_play_chord">Acorde cheio</string>
     <string name="settings_chord_play_both">Os dois</string>
-    <string name="announce_title">Now Playing</string>
+    <string name="announce_title">Avisar a música tocando</string>
     <string name="announce_switch">Enviar a música atual para OBS e outros</string>
     <string name="announce_help">Quando a música muda, o palco avisa programas como OBS e Resolume o que está tocando, com artista, tom e BPM. A letra nunca vai.</string>
     <string name="metro_shown">Mostrar no palco</string>
@@ -390,7 +390,7 @@
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
     <string name="settings_translate_sections">Nomes de seção no idioma do app</string>
-    <string name="settings_translate_sections_help">Refrão, Chorus e {start_of_chorus} aparecem todos como Refrão. A letra guardada não muda. Desligado, aparece como está escrito.</string>
+    <string name="settings_translate_sections_help">Refrão, Chorus e outras formas aparecem todas como Refrão. A letra guardada não muda. Desligado, aparece como está escrito.</string>
     <string name="settings_illegible_lyrics">A letra vai ficar ilegível neste fundo</string>
     <string name="settings_illegible_sections">Os títulos de seção vão ficar ilegíveis neste fundo</string>
     <string name="settings_illegible_chords">Os acordes vão ficar ilegíveis neste fundo</string>
@@ -408,8 +408,8 @@
     <string name="settings_normalize_ok">Marcar</string>
     <string name="settings_normalize_confirm">Marcar as seções nas músicas que não têm nenhum título?\n\nO app acha cada parte pelo que se repete. A estrofe que volta é o refrão. Os títulos que já existem e a letra não mudam.</string>
     <plurals name="settings_unidentified">
-        <item quantity="one">%d sem repetição ficou como estava.</item>
-        <item quantity="other">%d sem repetição ficaram como estavam.</item>
+        <item quantity="one">%d música não tinha partes repetidas e ficou como estava.</item>
+        <item quantity="other">%d músicas não tinham partes repetidas e ficaram como estavam.</item>
     </plurals>
     <plurals name="settings_normalized">
         <item quantity="one">%d música ajustada.</item>
@@ -575,7 +575,7 @@
     </plurals>
     <string name="scan_song_new">Nova, entra na sua biblioteca</string>
     <string name="scan_song_have">Você já tem, fica a sua</string>
-    <string name="scan_song_missing">Não veio, grande demais</string>
+    <string name="scan_song_missing">Não veio junto. Dá para importar dos sites.</string>
     <plurals name="scan_songs_add">
         <item quantity="one">Adicionar %1$d música</item>
         <item quantity="other">Adicionar %1$d músicas</item>
@@ -720,16 +720,16 @@
     <string name="band_other_version">Outra versão do app (%1$s). Atualizem os dois para a mesma versão.</string>
     <string name="band_version_join">Vocês estão em versões diferentes do app. Atualizem os dois e tentem de novo.</string>
     <string name="band_busy">Está no palco agora. Peça de novo depois do show.</string>
-    <string name="band_failed">Não deu para falar com ele. Tente de novo.</string>
+    <string name="band_failed">Não deu para conectar. Confira se os dois estão no mesmo Wi-Fi e tente de novo.</string>
     <string name="band_members">Da banda</string>
     <string name="band_members_none">Ninguém ainda. Quem for autorizado aparece aqui.</string>
     <string name="band_remove">Remover %1$s da banda</string>
     <string name="band_remove_short">Remover</string>
-    <string name="band_remove_confirm">Remover \"%1$s\" da banda? Para voltar, ele precisa pedir para entrar de novo.</string>
+    <string name="band_remove_confirm">Remover \"%1$s\" da banda? Para voltar, é preciso pedir para entrar de novo.</string>
     <string name="band_name_title">Como a banda vai ver este aparelho?</string>
-    <string name="band_name_hint">Como Meu tablet</string>
+    <string name="band_name_hint">Como Tablet do baixista</string>
     <string name="band_request_title">%1$s quer entrar na banda</string>
-    <string name="band_request_text">Autorizado, ele pode mandar setlists e músicas para você sem as 3 palavras, aqui na rede e pela internet. Dá para remover depois em Ajustes → Banda.</string>
+    <string name="band_request_text">Autorizado, esse aparelho pode mandar setlists e músicas para você sem as 3 palavras, aqui na rede e pela internet. Dá para remover depois em Ajustes → Banda.</string>
     <string name="band_allow">Autorizar</string>
     <string name="band_deny">Não autorizar</string>
     <!-- caixa de entrada: o que a banda mandou -->
@@ -776,7 +776,7 @@
     <string name="web_pick">Escolha uma música na lista ou crie uma nova.</string>
     <string name="web_unsaved">Tem mudanças sem salvar. Sair mesmo assim?</string>
     <string name="web_paste_title">Colar a cifra</string>
-    <string name="web_paste_hint">Copie a cifra no site e cole aqui. Os acordes em cima da letra viram ChordPro.</string>
+    <string name="web_paste_hint">Copie a cifra no site e cole aqui. Os acordes em cima da letra ficam no lugar certo.</string>
     <string name="web_convert">Converter</string>
     <string name="web_url_title">Endereço da página</string>
     <string name="web_url_hint">Cole o endereço da cifra. O tablet abre a página e traz a música.</string>
@@ -818,7 +818,7 @@
     <string name="tweak_usb_routing">Som do Android fora da interface USB</string>
     <string name="tweak_usb_routing_detail">Os sons do próprio Android não disputam a interface de áudio com o player.</string>
     <string name="tweak_battery_manager">Gerenciador de bateria desligado</string>
-    <string name="tweak_battery_manager_detail">O Android para de sugerir restringir o Stagebook, que gasta bateria de propósito ao tocar.</string>
+    <string name="tweak_battery_manager_detail">O Android para de sugerir restringir o Stagebook, que precisa ficar ativo para tocar.</string>
     <string name="tweak_animations">Animações mais curtas</string>
     <string name="tweak_animations_detail">As telas trocam mais rápido e gastam menos bateria.</string>
     <string name="tweak_screen_timeout">Tela apaga depois de 10 minutos</string>
@@ -854,7 +854,7 @@
     <string name="tags_national">Nacional</string>
     <string name="tags_international">Internacional</string>
     <string name="tags_auto">Separar nacionais e internacionais</string>
-    <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá pra corrigir depois.</string>
+    <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá para corrigir depois.</string>
     <string name="tags_auto_ok">Separar</string>
     <string name="tags_auto_none">Não há músicas para separar: todas já têm Nacional ou Internacional, ou estão sem letra.</string>
     <plurals name="tags_count">
@@ -898,15 +898,15 @@
         <item quantity="one">Tirar %d música deste setlist? Ela continua na biblioteca.</item>
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
-    <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional. Depois dá pra corrigir no editor de cada música ou selecionando várias na lista.</string>
+    <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional. Depois dá para corrigir no editor de cada música ou selecionando várias na lista.</string>
     <string name="editor_auto_meta_short">Em branco: o app completa</string>
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
     <string name="tags_empty">Nenhuma</string>
     <string name="editor_lyrics_chords">Letra e cifra</string>
     <plurals name="scan_parked">
-        <item quantity="one">Mais %d setlist veio junto e ficou em Recebidas.</item>
-        <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidas.</item>
+        <item quantity="one">Mais %d setlist veio junto e ficou em Recebidos da banda.</item>
+        <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
     </plurals>
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
