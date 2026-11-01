@@ -982,7 +982,7 @@ fun StageScreen(
             // scroll: auto-scroll ▶/⏸ and speed (−/+), on the clock line (outside the lyrics). A single icon (lit while
             // scrolling); the small window has play and speed (user's request, 29/10). Metronome: while playing, the
             // icon becomes stop and blinks on the beat (stronger on 1); when stopped, it opens the small window
-            if (look.extrasOn) {   // essential mode (T19): no metronome
+            if (look.extrasOn && look.metroShown) {   // essential mode (T19) or hidden in settings: no metronome
                 var metroDialog by remember { mutableStateOf(false) }
                 Box {
                     IconButton(onClick = { if (metroOn) metroOn = false else metroDialog = true }) {

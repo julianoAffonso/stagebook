@@ -347,6 +347,7 @@
     <string name="announce_title">Now Playing</string>
     <string name="announce_switch">Send the current song to OBS and others</string>
     <string name="announce_help">When the song changes, the stage tells apps like OBS and Resolume what\'s playing, with artist, key and BPM. The lyrics never go out.</string>
+    <string name="metro_shown">Show on stage</string>
     <string name="metro_title">Metronome</string>
     <string name="metro_stop">Stop the metronome</string>
     <string name="metro_play">Start the metronome</string>

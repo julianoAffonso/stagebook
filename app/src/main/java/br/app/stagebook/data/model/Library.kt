@@ -128,6 +128,7 @@ data class Look(
     val stageMode: StageMode = StageMode.PAGES,
     val autoScroll: Int = DEFAULT_AUTO_SCROLL,   // auto-scroll speed (1 to 10), in scroll mode
     // stage metronome: 1-2-3-4 count-in before starting and sound (off = blink only)
+    val metroShown: Boolean = true,   // metronome icon on the stage; off hides it (user, 31/10)
     val metroCount: Boolean = true,
     val metroSound: Boolean = true,
     val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // playing the chord on stage (T20)

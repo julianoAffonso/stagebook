@@ -347,6 +347,7 @@
     <string name="announce_title">Now Playing</string>
     <string name="announce_switch">Enviar a música atual para OBS e outros</string>
     <string name="announce_help">Quando a música muda, o palco avisa programas como OBS e Resolume o que está tocando, com artista, tom e BPM. A letra nunca vai.</string>
+    <string name="metro_shown">Mostrar no palco</string>
     <string name="metro_title">Metrônomo</string>
     <string name="metro_stop">Parar o metrônomo</string>
     <string name="metro_play">Começar o metrônomo</string>
