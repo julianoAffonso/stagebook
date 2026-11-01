@@ -257,7 +257,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             val ordered = parts.distinctBy { it.i }.sortedBy { it.i }
             if (ordered.size != n) return@mapNotNull null
             val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
-            val pkg = unpack(PAIR_MARK, bytes)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
+            // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
+            val pkg = unpack(PAIR_MARK, bytes, MAX_PACKAGE)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
             if (pkg.v > BandProtocol.VERSION) return@mapNotNull Triple(pid, NEWER, emptyList())   // the inbox says "update"
             val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
             Triple(pid, text, pkg.songs)
@@ -335,7 +336,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             }
         }
 
-        fun unpack(mark: ByteArray, bytes: ByteArray): String? {
+        /** The text packed with [mark], or null if it isn't one or it opens to more than [max] bytes. */
+        fun unpack(mark: ByteArray, bytes: ByteArray, max: Int = MAX_SONG_TEXT): String? {
             if (bytes.size <= mark.size || bytes[0] != mark[0] || bytes[1] != mark[1]) return null
             val i = Inflater(true)
             return try {
@@ -346,7 +348,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
                     val n = i.inflate(buf)
                     if (n == 0 && (i.needsInput() || i.needsDictionary())) return null
                     out.write(buf, 0, n)
-                    if (out.size() > MAX_SONG_TEXT) return null
+                    if (out.size() > max) return null
                 }
                 out.toString(Charsets.UTF_8.name())
             } catch (_: DataFormatException) {
@@ -357,6 +359,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }
 
         private const val MAX_SONG_TEXT = 256 * 1024
+        const val MAX_PACKAGE = 16 * 1024 * 1024
 
         /** The messages (text) of an ntfy answer in JSON per line. */
         fun messages(lines: List<String>): List<String> = lines.mapNotNull { l ->
