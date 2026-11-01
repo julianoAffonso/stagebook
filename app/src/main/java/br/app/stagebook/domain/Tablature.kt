@@ -118,7 +118,19 @@ object Tablature {
     /** Removes all tablature (import without the tab). */
     fun strip(text: String): String {
         val flags = tabLines(text)
-        return text.split('\n').filterIndexed { i, line -> !flags[i] && !isStart(line) && !isEnd(line) }.joinToString("\n")
-            .replace(BLANK_LINES, "\n\n")
+        val kept = text.split('\n').filterIndexed { i, line -> !flags[i] && !isStart(line) && !isEnd(line) }
+        // a part that is only tablature ("[Tab - Intro]", "[Tab - Solo]") goes whole: its title and what's left in it
+        // ("Parte 1 de 2", the chords over the tab) stayed as an empty part (device test B-04)
+        val out = ArrayList<String>(kept.size)
+        var inTab = false
+        for (line in kept) {
+            val title = PART_TITLE.matchEntire(line.trim())?.groupValues?.get(1)?.trim()
+            if (title != null && !Chords.isChord(title)) inTab = TAB_PART.containsMatchIn(title)
+            if (!inTab) out += line
+        }
+        return out.joinToString("\n").replace(BLANK_LINES, "\n\n")
     }
+
+    private val PART_TITLE = Regex("""\[([^\[\]]+)]""")
+    private val TAB_PART = Regex("""^(tab|tabs|tablatura|tablature)\b""", RegexOption.IGNORE_CASE)
 }

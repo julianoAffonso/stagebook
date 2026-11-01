@@ -88,4 +88,16 @@ class TablatureTest {
         assertEquals(notes(tab), notes(Tablature.shift(down, 1)))
         assertEquals(tab, Tablature.shift(Tablature.shift(tab, 1), -1))
     }
+    @Test fun `without the tablature, a tab-only part goes whole, title included (device test B-04)`() {
+        val page = listOf(
+            "[Intro]", "Dm7  G/D  Dm7  G/D", "",
+            "[Tab - Intro]", "", "Parte 1 de 2", "Dm7  G/D", "E|-1---1---3-3---|", "B|-1---1---3-3---|", "",
+            "[Primeira Parte]", "D7M(9)", "Vou cantar aqui", "",
+            "[Tab - Passagem]", "E|-5-3-1---|", "",
+            "[Segunda Parte]", "Gm7  C/Bb", "Outra linha",
+        ).joinToString("\n")
+        val out = Tablature.strip(page)
+        assertTrue(out, "Tab" !in out && "Parte 1 de 2" !in out && "E|" !in out)
+        assertTrue(out, "[Intro]" in out && "[Primeira Parte]" in out && "Vou cantar aqui" in out && "[Segunda Parte]" in out && "Outra linha" in out)
+    }
 }
