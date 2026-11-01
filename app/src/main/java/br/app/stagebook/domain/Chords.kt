@@ -229,7 +229,7 @@ object Chords {
         val flat = useFlats ?: (chord.accidental == "b" || chord.accidental == "♭")
         val out = StringBuilder(name(chord.rootPc + semitones, flat)).append(chord.suffix)
         if (chord.bass.isNotEmpty()) out.append('/').append(name(chord.bassPc + semitones, flat))
-        return out.toString()
+        return out.append(chord.mark).toString()
     }
 
     // the key names musicians use, half step by half step (user's request, 29/10): the editor's − and + move in this
