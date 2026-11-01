@@ -33,7 +33,7 @@ class SetlistReorderTest {
             items = listOf("a", "b", "c").map { SetItemUi(it, it, "Música $it", "", false) },
         )
         compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, {}, { _, _ -> }, {}) }
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
         }
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
@@ -52,7 +52,7 @@ class SetlistReorderTest {
             items = listOf("a", "b", "c", "d").map { SetItemUi(it, it, "Música $it", "", false) },
         )
         compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, {}, { _, _ -> }, {}) }
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
         }
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
@@ -73,7 +73,7 @@ class SetlistReorderTest {
             items = listOf("a", "b", "c").map { SetItemUi(it, it, "Música $it", "", false) },
         )
         compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, { opened = it }, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {}) }
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, { opened = it }, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }
         }
         compose.onNodeWithText("Música b").performClick()
         assertEquals(1, opened)

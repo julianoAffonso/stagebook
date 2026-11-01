@@ -96,7 +96,6 @@ fun StagebookNavHost(
                 onBack = dropUnlessResumed { nav.popBackStack() },
                 onPlay = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start)) } },
                 onAddSongs = { entry.ifResumed { nav.navigate(PickSongs(it)) } },
-                onEditSong = { entry.ifResumed { nav.navigate(SongEditor(songId = it)) } },
             )
         }
         composable<ScanSetlist> {

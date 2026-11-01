@@ -896,4 +896,12 @@
         <item quantity="other">Delete %d songs? They also leave the setlists.</item>
     </plurals>
     <string name="songs_select_all">Select all</string>
+    <plurals name="sets_delete_many_confirm">
+        <item quantity="one">Delete %d setlist? The songs stay in the library.</item>
+        <item quantity="other">Delete %d setlists? The songs stay in the library.</item>
+    </plurals>
+    <plurals name="set_remove_many_confirm">
+        <item quantity="one">Take %d song out of this setlist? It stays in the library.</item>
+        <item quantity="other">Take %d songs out of this setlist? They stay in the library.</item>
+    </plurals>
 </resources>

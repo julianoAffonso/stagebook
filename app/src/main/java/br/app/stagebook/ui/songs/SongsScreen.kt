@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -93,7 +92,6 @@ fun SongsRoute(
         onImport = { onImport(query) },
         // found what they were looking for: coming back from the stage the whole list shows
         onOpen = { query = ""; onOpenSong(it) },
-        onEdit = onEditSong,
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
         onShareSongs = viewModel::shareSongs,
         onDismissCloud = viewModel::dismissCloud,
@@ -122,7 +120,6 @@ fun SongsScreen(
     onNewSong: () -> Unit,
     onImport: () -> Unit,
     onOpen: (String) -> Unit,
-    onEdit: (String) -> Unit,
     modifier: Modifier = Modifier,
     online: Boolean = true,
     internetOn: Boolean = true,
@@ -169,13 +166,15 @@ fun SongsScreen(
             // selecting, the top bar becomes the selection's, as in Google's apps (Gmail, Files, Photos): ✕, how many and
             // the actions as icons (holding one shows its name), the rest in the ⋮ (user, 01/11)
             if (selecting) {
-                SelectionTopBar(
+                br.app.stagebook.ui.components.SelectionTopBar(
                     count = selected.size,
                     onClose = { selected = emptyList() },
-                    onTags = { tagging = selected },
-                    onSetlist = { addingToSet = true },
-                    onShare = { sharing = true },
-                    onDelete = { deletingMany = true },
+                    actions = listOf(
+                        br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.tags_action), AppIcons.Label) { tagging = selected },
+                        br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.songs_add_to_set), AppIcons.PlaylistAdd) { addingToSet = true },
+                        br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.share_title), AppIcons.Share) { sharing = true },
+                        br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.action_delete), AppIcons.Delete) { deletingMany = true },
+                    ),
                     onSelectAll = { selected = (selected + uiState.songs.map { it.id }).distinct() },
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                 )
@@ -225,13 +224,8 @@ fun SongsScreen(
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
-                                // tapping opens the stage and holding selects; editing has its own button, and tags and delete
-                                // live in the editor (user, 01/11)
-                                trailing = {
-                                    if (!selecting) IconButton(onClick = { onEdit(song.id) }) {
-                                        Icon(AppIcons.Edit, contentDescription = stringResource(R.string.action_edit), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                },
+                                // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete
+                                // in the editor (user, 01/11: the row's own pencil was one too many)
                             )
                         }
                     }
@@ -305,42 +299,6 @@ fun SongsScreen(
     }
 }
 
-/** The top bar while selecting songs, in the shape of Google's apps. */
-@Composable
-private fun SelectionTopBar(
-    count: Int,
-    onClose: () -> Unit,
-    onTags: () -> Unit,
-    onSetlist: () -> Unit,
-    onShare: () -> Unit,
-    onDelete: () -> Unit,
-    onSelectAll: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        IconButton(onClick = onClose) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
-        Text(count.toString(), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).padding(start = Spacing.s))
-        TipIcon(stringResource(R.string.tags_action), AppIcons.ListBulleted, onTags)
-        TipIcon(stringResource(R.string.songs_add_to_set), AppIcons.QueueMusic, onSetlist)
-        TipIcon(stringResource(R.string.share_title), AppIcons.Share, onShare)
-        TipIcon(stringResource(R.string.action_delete), AppIcons.Delete, onDelete)
-        OverflowMenu(listOf(MenuAction(stringResource(R.string.songs_select_all), AppIcons.Check, onSelectAll)))
-    }
-}
-
-/** An icon button whose name shows when held (Material tooltip), like the action icons in Google's apps. */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun TipIcon(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    androidx.compose.material3.TooltipBox(
-        positionProvider = androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider(androidx.compose.material3.TooltipAnchorPosition.Below),
-        tooltip = { PlainTooltip { Text(label) } },
-        state = androidx.compose.material3.rememberTooltipState(),
-    ) {
-        IconButton(onClick = onClick) { Icon(icon, contentDescription = label) }
-    }
-}
-
 /** Which setlist the selection goes into, or a new one. */
 @Composable
 private fun SetPickDialog(sets: List<SetPick>, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
@@ -371,11 +329,11 @@ private val previewState = SongsUiState(
 @LightPreview
 @Composable
 private fun SongsScreenLightPreview() = StagebookTheme(darkTheme = false) {
-    SongsScreen(previewState, "", {}, {}, {}, {}, {})
+    SongsScreen(previewState, "", {}, {}, {}, {})
 }
 
 @DarkPreview
 @Composable
 private fun SongsScreenDarkPreview() = StagebookTheme(darkTheme = true) {
-    SongsScreen(previewState, "", {}, {}, {}, {}, {})
+    SongsScreen(previewState, "", {}, {}, {}, {})
 }

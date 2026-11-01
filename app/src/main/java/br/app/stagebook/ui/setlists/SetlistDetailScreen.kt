@@ -82,7 +82,6 @@ fun SetlistDetailRoute(
     onBack: () -> Unit,
     onPlay: (setId: String, start: Int) -> Unit,
     onAddSongs: (String) -> Unit,
-    onEditSong: (String) -> Unit,
     viewModel: SetlistDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -124,7 +123,6 @@ fun SetlistDetailRoute(
         onShowQr = viewModel::showQr,
         onHideQr = viewModel::hideQr,
         onMove = viewModel::move,
-        onEditSong = onEditSong,
         onRemove = viewModel::remove,
         onDeleteSetlist = viewModel::delete,   // the setlist goes away and the LaunchedEffect above comes back
     )
@@ -141,7 +139,6 @@ fun SetlistDetailScreen(
     onShowQr: () -> Unit,
     onHideQr: () -> Unit,
     onMove: (Int, Int) -> Unit,
-    onEditSong: (String) -> Unit,
     onRemove: (Int, String) -> Unit,
     onDeleteSetlist: () -> Unit,
     modifier: Modifier = Modifier,
@@ -161,7 +158,12 @@ fun SetlistDetailScreen(
     var renaming by rememberSaveable { mutableStateOf(false) }
     var sharing by rememberSaveable { mutableStateOf(false) }   // the "Share" sheet open
     var deleting by rememberSaveable { mutableStateOf(false) }
-    var removing by rememberSaveable { mutableStateOf<Int?>(null) }   // position of the song to remove (confirms first)
+    // holding a song selects it (Google's pattern, as in the song list): the top bar removes them from the setlist
+    var selected by rememberSaveable { mutableStateOf(emptyList<String>()) }   // item keys
+    var removingMany by rememberSaveable { mutableStateOf(false) }
+    val selecting = selected.isNotEmpty()
+    fun toggle(key: String) { selected = if (key in selected) selected - key else selected + key }
+    androidx.activity.compose.BackHandler(enabled = selecting) { selected = emptyList() }
     // local copy: the list changes right away during the drag; the order is saved once, on release (saving at every
     // position rewrote the library several times per drag), and the saved order comes back through uiState
     var items by remember(uiState.items) { mutableStateOf(uiState.items) }
@@ -181,7 +183,15 @@ fun SetlistDetailScreen(
     Scaffold(contentWindowInsets = ScreenInsets, modifier = modifier, containerColor = MaterialTheme.colorScheme.background) { inner ->
         CenteredContent(Modifier.fillMaxSize().padding(inner)) {
             Column(Modifier.padding(horizontal = Spacing.m)) {
-                ScreenHeader(
+                if (selecting) {
+                    br.app.stagebook.ui.components.SelectionTopBar(
+                        count = selected.size,
+                        onClose = { selected = emptyList() },
+                        actions = listOf(br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.set_remove), AppIcons.Delete) { removingMany = true }),
+                        onSelectAll = { selected = items.map { it.key } },
+                        modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
+                    )
+                } else ScreenHeader(
                     title = uiState.name,
                     subtitle = pluralStringResource(R.plurals.song_count, items.size, items.size).let { count ->
                         if (items.isNotEmpty()) stringResource(R.string.set_tap_to_play, count) else count
@@ -206,7 +216,7 @@ fun SetlistDetailScreen(
                         ),
                     )
                 }
-                SetActions(items.isNotEmpty(), onAddSongs, { sharing = true }, Modifier.padding(bottom = Spacing.m))
+                if (!selecting) SetActions(items.isNotEmpty(), onAddSongs, { sharing = true }, Modifier.padding(bottom = Spacing.m))
                 Crossfade(targetState = uiState.loading, label = "set") { loading ->
                     when {
                         loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -222,7 +232,8 @@ fun SetlistDetailScreen(
                                     SongListItem(
                                         title = if (item.missing) stringResource(R.string.set_item_missing) else item.title,
                                         subtitle = item.subtitle,
-                                        onClick = { onPlay(index) },
+                                        onClick = { if (selecting) toggle(item.key) else onPlay(index) },
+                                        onLongClick = { toggle(item.key) },
                                         modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
                                         titleStyle = MaterialTheme.typography.titleLarge,
                                         inline = wide,
@@ -230,7 +241,8 @@ fun SetlistDetailScreen(
                                         // alone at the end
                                         leading = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                IconButton(
+                                                if (selecting) androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) })
+                                                else IconButton(
                                                     onClick = {},
                                                     modifier = Modifier.draggableHandle(
                                                         onDragStarted = { dragStart.key = item.key; dragStart.index = latestItems.indexOfFirst { it.key == item.key } },
@@ -242,15 +254,7 @@ fun SetlistDetailScreen(
                                                 NumberBadge(index + 1)
                                             }
                                         },
-                                        trailing = {
-                                            // edit the song and remove from the setlist in the ⋮ (Google's pattern)
-                                            OverflowMenu(
-                                                buildList {
-                                                    if (!item.missing) add(MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEditSong(item.songId) }))
-                                                    add(MenuAction(stringResource(R.string.set_remove), AppIcons.Delete, { removing = index }, danger = true))
-                                                },
-                                            )
-                                        },
+                                        // editing is on the stage's pencil; removing is done by selecting (user, 01/11)
                                     )
                                 }
                             }
@@ -267,12 +271,17 @@ fun SetlistDetailScreen(
     if (deleting) {
         ConfirmDialog(stringResource(R.string.sets_delete_confirm, uiState.name), stringResource(R.string.action_delete), onDeleteSetlist, { deleting = false })
     }
-    removing?.let { at ->
-        items.getOrNull(at)?.let { item ->
-            val title = if (item.missing) stringResource(R.string.set_item_missing) else item.title
-            // the repository only removes it if it's still the same song at that position
-            ConfirmDialog(stringResource(R.string.set_remove_confirm, title), stringResource(R.string.set_remove), { onRemove(at, item.songId) }, { removing = null })
-        } ?: run { removing = null }
+    if (removingMany) {
+        ConfirmDialog(
+            pluralStringResource(R.plurals.set_remove_many_confirm, selected.size, selected.size),
+            stringResource(R.string.set_remove),
+            {
+                // from the end, so the positions of the others don't move; the repository checks each is still there
+                items.withIndex().filter { it.value.key in selected }.sortedByDescending { it.index }.forEach { onRemove(it.index, it.value.songId) }
+                selected = emptyList()
+            },
+            { removingMany = false },
+        )
     }
     if (qr != null) QrDialog(qr, onHideQr)
     if (sharing) {
@@ -350,13 +359,13 @@ private val previewState = SetlistDetailUiState(
 @LightPreview
 @Composable
 private fun SetlistDetailLightPreview() = StagebookTheme(darkTheme = false) {
-    SetlistDetailScreen(previewState, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {})
+    SetlistDetailScreen(previewState, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
 }
 
 @DarkPreview
 @Composable
 private fun SetlistDetailDarkPreview() = StagebookTheme(darkTheme = true) {
-    SetlistDetailScreen(previewState, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {})
+    SetlistDetailScreen(previewState, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
 }
 
 /** Where the dragged song came from (saved once, on release). */

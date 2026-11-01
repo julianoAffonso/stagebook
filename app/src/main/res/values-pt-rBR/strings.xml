@@ -894,4 +894,12 @@
         <item quantity="other">Apagar %d músicas? Elas saem também dos setlists.</item>
     </plurals>
     <string name="songs_select_all">Selecionar todas</string>
+    <plurals name="sets_delete_many_confirm">
+        <item quantity="one">Apagar %d setlist? As músicas continuam na biblioteca.</item>
+        <item quantity="other">Apagar %d setlists? As músicas continuam na biblioteca.</item>
+    </plurals>
+    <plurals name="set_remove_many_confirm">
+        <item quantity="one">Tirar %d música deste setlist? Ela continua na biblioteca.</item>
+        <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
+    </plurals>
 </resources>
