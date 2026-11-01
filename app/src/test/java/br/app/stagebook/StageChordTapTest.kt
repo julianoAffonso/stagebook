@@ -79,6 +79,26 @@ class StageChordTapTest {
         assertTrue("virou a página: $position", position != -1 to -1)
     }
 
+    @Test fun `holding a line offers Highlight this line next to Edit, and it reports the song line (B-28)`() {
+        var highlighted = -1 to -1
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(
+                    StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f)),
+                    0, 0, { s, p -> position = s to p },
+                    onHighlightLine = { id, line -> highlighted = (if (id == "s1") 1 else 0) to line },
+                )
+            }
+        }
+        val lyric = compose.onNodeWithText("Segunda linha", substring = true).fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Editar esta linha").assertExists()
+        compose.onNodeWithText("Destacar esta linha").performClick()
+        compose.waitForIdle()
+        assertEquals(1 to 1, highlighted)
+    }
+
     @Test fun `with the diagram turned off in settings, tapping a chord opens nothing`() {
         show(Look(fontSp = 34f, chordTap = false))
         tapFirstChord()

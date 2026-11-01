@@ -228,6 +228,7 @@ fun StageRoute(
             onPosition = { i, p -> index = i; page = p },
             onZoom = viewModel::setZoom,
             onEdit = onEditSong,
+            onHighlightLine = viewModel::toggleLineHighlight,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
             playing = playerUi.playing || playerUi.waiting,
@@ -268,6 +269,7 @@ fun StageScreen(
     modifier: Modifier = Modifier,
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
+    onHighlightLine: (songId: String, line: Int) -> Unit = { _, _ -> },
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -406,6 +408,8 @@ fun StageScreen(
         // the chord list (source -1) isn't a lyrics line: opens at the start
         onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }?.let { lineStart(song.text, it) } ?: -1)
     }
+    // the song's line under the finger (null: the chord list or a line the stage made, nothing to highlight)
+    fun sourceLine(line: Int?): Int? = line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }
     fun styleFor(z: Float) = TextStyle(
         color = fg,
         fontSize = (look.fontSp * z).sp,
@@ -961,8 +965,12 @@ fun StageScreen(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             editOffer?.let { offer ->
-                EditLineButton(
-                    onClick = { editOffer = null; editAt(offer.line) },
+                // holding a line: edit it, and highlight it (or take the highlight off) right here (user, 01/11, B-28)
+                val source = sourceLine(offer.line)
+                EditLineButtons(
+                    onEdit = { editOffer = null; editAt(offer.line) },
+                    highlighted = source?.let { br.app.stagebook.ui.editor.lineHighlighted(song.text, it) },
+                    onHighlight = { editOffer = null; source?.let { onHighlightLine(song.id, it) } },
                     modifier = Modifier.layout { measurable, c ->
                         // above the finger (below if it doesn't fit), without leaving the screen
                         val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
@@ -1545,16 +1553,28 @@ private fun SongKeyBadges(
 }
 
 
+/** "Edit this line" and, for a line of the song, "Highlight this line" / "Remove the highlight" side by side. */
 @Composable
-private fun EditLineButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(onClick = onClick, modifier = modifier, shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, shadowElevation = 6.dp) {
+private fun EditLineButtons(onEdit: () -> Unit, highlighted: Boolean?, onHighlight: () -> Unit, modifier: Modifier = Modifier) {
+    // side by side; on a narrow phone the second goes under the first
+    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        EditOfferButton(AppIcons.Edit, stringResource(R.string.stage_edit_line), onEdit)
+        if (highlighted != null) {
+            EditOfferButton(AppIcons.Highlighter, stringResource(if (highlighted) R.string.stage_highlight_off else R.string.stage_highlight_line), onHighlight)
+        }
+    }
+}
+
+@Composable
+private fun EditOfferButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, shadowElevation = 6.dp) {
         Row(
             Modifier.heightIn(min = Sizes.touch).padding(horizontal = Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
-            Icon(AppIcons.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text(stringResource(R.string.stage_edit_line), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1)
         }
     }
 }
