@@ -931,10 +931,11 @@ fun StageScreen(
                     onClick = { if (song.track.isEmpty()) onPickTrack(song.id) else onTogglePlay() },
                     onChange = { onPickTrack(song.id) },
                     onRemove = { onRemoveTrack(song.id) },
+                    // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button
+                    // less over the lyrics)
+                    onMixer = { mixerOpen = true },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
                 )
-                // the mixer, left of play: adjusting while the song plays (Settings stopped the track, 31/10)
-                MixerButton(fg, { mixerOpen = true }, Modifier.align(Alignment.BottomEnd).padding(bottom = Spacing.s, end = Spacing.s + Sizes.touch + Spacing.m + Spacing.s))
             }
             // the song's own mix over the general one; what's changed here stays with the song (user, 31/10)
             if (mixerOpen) StageMixerSheet(
@@ -1268,7 +1269,7 @@ private class PageHit {
 
 /**
  * Track play/pause: a translucent circle, so it doesn't hide the lyrics. Without a track, the tap picks the file; with
- * a track, a long press offers to change or remove it.
+ * a track, a long press opens the song's mixer, or changes or removes the track.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1280,9 +1281,18 @@ private fun TrackButton(
     onClick: () -> Unit,
     onChange: () -> Unit,
     onRemove: () -> Unit,
+    onMixer: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var menu by remember { mutableStateOf(false) }
+    // removing asks first: a slip of the finger mid-show would take the track away (user, 01/11)
+    var removing by remember { mutableStateOf(false) }
+    if (removing) {
+        br.app.stagebook.ui.components.ConfirmDialog(
+            stringResource(R.string.stage_track_remove_confirm), stringResource(R.string.stage_track_remove_ok),
+            onRemove, { removing = false },
+        )
+    }
     Box(modifier) {
         Box(
             Modifier
@@ -1300,24 +1310,10 @@ private fun TrackButton(
             )
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.stage_mixer_open)) }, leadingIcon = { Icon(AppIcons.Tune, null) }, onClick = { menu = false; onMixer() })
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; onRemove() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; removing = true })
         }
-    }
-}
-
-/** Round, see-through button like play's: opens the mixer over the stage. */
-@Composable
-private fun MixerButton(fg: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .size(Sizes.touch + Spacing.m)
-            .clip(CircleShape)
-            .background(fg.copy(alpha = 0.12f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(AppIcons.Tune, stringResource(R.string.stage_mixer_open), tint = fg.copy(alpha = 0.85f))
     }
 }
 

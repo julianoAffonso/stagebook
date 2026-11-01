@@ -1075,7 +1075,9 @@ class ScreenshotTest {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = mixerLook), 0, 0, { _, _ -> }, onBack = {})
             }
         }
-        compose.onNodeWithContentDescription(str(R.string.stage_mixer_open)).performClick()
+        compose.onNodeWithContentDescription(str(R.string.stage_play)).performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithText(str(R.string.stage_mixer_open)).performClick()
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/jornada_eq_musica_1_aberto.png")
     }
