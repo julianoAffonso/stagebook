@@ -153,4 +153,24 @@ class WebEditorSongsTest {
         repo.updateLook { it.copy(internetOn = false) }
         assertEquals("""{"error":"offline"}""", import(importing("x"), """{"url":"https://example.com"}""").text())
     }
+
+    @Test fun `key and capo stay out of the lyrics on the page and come back on save - tags too`() {
+        val id = repo.saveSong(br.app.stagebook.data.model.Song(title = "Hazard", author = "Richard Marx", text = "{key: G}\n{capo: 2}\n[G]linha um", tags = listOf("Rock")))
+        val got = call("GET", "/api/songs/$id").text()
+        assertTrue(got, "\"text\":\"[G]linha um\"" in got)
+        assertTrue(got, "\"key\":\"G\"" in got && "\"capo\":2" in got && "\"tags\":[\"Rock\"]" in got)
+        assertEquals(200, call("PUT", "/api/songs/$id", """{"title":"Hazard","author":"Richard Marx","text":"[G]linha um\nlinha dois","key":"A","capo":3,"tags":["Rock","Nacional"," "]}""").status)
+        val song = repo.song(id)!!
+        assertEquals("A", br.app.stagebook.domain.Chords.key(song.text))
+        assertEquals(3, br.app.stagebook.domain.Chords.capo(song.text))
+        assertTrue(song.text.endsWith("[G]linha um\nlinha dois"))
+        assertEquals(listOf("Rock", "Nacional"), song.tags)
+        assertTrue(call("GET", "/api/songs").text().contains("\"tags\":[\"Rock\",\"Nacional\"]"))
+    }
+
+    @Test fun `transposing from the page moves the key it keeps apart and the chords`() {
+        val r = call("POST", "/api/transpose", """{"text":"[G]linha","semitones":2,"meta":{"key":"G","capo":1}}""").text()
+        assertTrue(r, "\"text\":\"[A]linha\"" in r)
+        assertTrue(r, "\"key\":\"A\"" in r && "\"capo\":1" in r)
+    }
 }

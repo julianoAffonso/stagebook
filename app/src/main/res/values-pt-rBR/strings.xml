@@ -958,4 +958,5 @@
     <string name="web_in_use">Editor web ligado</string>
     <string name="web_in_use_text">O editor web está aberto em %1$s. Quem estiver autorizado no computador pode mexer na biblioteca. Feche quando terminar.</string>
     <string name="web_close">Fechar o editor web</string>
+    <string name="web_tags_hint">Separe com vírgula: Nacional, Rock</string>
 </resources>

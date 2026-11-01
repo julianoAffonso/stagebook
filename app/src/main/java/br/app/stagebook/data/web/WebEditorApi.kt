@@ -28,7 +28,7 @@ class WebEditorApi(
     class Band(val items: () -> List<br.app.stagebook.data.BandInbox.Item>, val sync: () -> Unit)
 
     @Serializable
-    data class SongItem(val id: String, val title: String, val author: String, val year: String, val key: String)
+    data class SongItem(val id: String, val title: String, val author: String, val year: String, val key: String, val tags: List<String> = emptyList())
 
     @Serializable
     data class SongData(
@@ -39,10 +39,20 @@ class WebEditorApi(
         val tempo: String = "",
         val text: String = "",
         val track: String = "",   // the backing track file ("" = none); read only, changed by its own calls
+        val trackName: String = "",   // the track's own name, as the app shows it
+        // key and capo live in the song's details, not in the lyrics, as in the app (user, 01/11): the page shows and
+        // sends them apart, and the app puts them back in the text with its own rule
+        val key: String = "",
+        val capo: Int = 0,
+        val tags: List<String> = emptyList(),
     )
 
     @Serializable
-    data class TextChange(val text: String = "", val semitones: Int = 0, val capo: Int = 0)
+    data class TextChange(val text: String = "", val semitones: Int = 0, val capo: Int = 0, val key: String = "", val meta: Meta? = null)
+
+    /** The song's key and capo (the page keeps them apart from the lyrics). */
+    @Serializable
+    data class Meta(val key: String = "", val capo: Int = 0)
 
     @Serializable
     private data class Saved(val id: String)
@@ -93,7 +103,10 @@ class WebEditorApi(
 
     /** "song" (to review in the editor, not saved yet) or "askTab" (the tablature question first). */
     @Serializable
-    data class ImportResult(val status: String, val title: String = "", val author: String = "", val year: String = "", val tempo: String = "", val text: String = "")
+    data class ImportResult(
+        val status: String, val title: String = "", val author: String = "", val year: String = "", val tempo: String = "", val text: String = "",
+        val key: String = "", val capo: Int = 0,
+    )
 
     @Serializable
     private data class Problem(val error: String)
@@ -143,11 +156,18 @@ class WebEditorApi(
     private fun list(): String = json.encodeToString(
         repository.library.value.songs
             .sortedBy { it.title.lowercase() }
-            .map { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text)) },
+            .map { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text), it.tags) },
     )
 
     // the BPM has its own field: out of the text, so it isn't in two places
-    private fun data(s: Song) = SongData(s.id, s.title, s.author, s.year, Chords.directive(s.text, "tempo").orEmpty(), Chords.setDirective(s.text, "tempo", ""), s.track)
+    private fun data(s: Song): SongData {
+        val meta = Chords.meta(s.text)
+        return SongData(s.id, s.title, s.author, s.year, meta.tempoText, Chords.hideMeta(s.text), s.track, s.trackName, meta.key, meta.capo, s.tags)
+    }
+
+    // the page's lyrics with the key and capo it keeps apart, in the app's way (the BPM goes in on its own)
+    private fun withMeta(text: String, key: String, capo: Int) =
+        Chords.withMeta(text, br.app.stagebook.domain.SongMeta(key = key.trim(), capo = capo.coerceIn(0, 12)))
 
     private fun save(id: String?, req: HttpRequest): HttpResponse {
         val d = runCatching { json.decodeFromString<SongData>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
@@ -160,15 +180,20 @@ class WebEditorApi(
         // what the editor doesn't show stays (stage zoom, backing track)
         val base = id?.let(repository::song) ?: Song()
         // the key the chords imply is saved, as in the app's editor (31/10: one app, the same rules on the computer)
-        val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(d.text), "tempo", d.tempo.filter(Char::isDigit).take(3)))
-        val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text))
+        val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(d.text, d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3)))
+        val tags = br.app.stagebook.domain.Tags.apply(emptyList(), d.tags.filter { it.isNotBlank() }, emptyList())
+        val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text, tags = tags))
         afterSave(saved)
         return ok(json.encodeToString(Saved(saved)))
     }
 
+    // the change runs on the whole song (lyrics + key + capo) and comes back split again, as the page shows it
     private fun change(req: HttpRequest, how: (TextChange) -> String): HttpResponse {
         val c = runCatching { json.decodeFromString<TextChange>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
-        return ok(json.encodeToString(TextChange(how(c))))
+        val whole = c.meta?.let { c.copy(text = withMeta(c.text, it.key, it.capo)) } ?: c
+        val out = how(whole)
+        val meta = Chords.meta(out)
+        return ok(json.encodeToString(TextChange(if (c.meta != null) Chords.hideMeta(out) else out, meta = Meta(meta.key, meta.capo))))
     }
 
     // the app's import engine: the same page or text gives the same song as in the import browser
@@ -205,7 +230,8 @@ class WebEditorApi(
                         "song", found.title,
                         found.artist.ifBlank { Chords.directive(r.text, "artist") ?: Chords.directive(r.text, "subtitle").orEmpty() },
                         found.year, Chords.directive(found.text, "tempo").orEmpty(),
-                        Chords.setDirective(Chords.setDirective(Chords.setDirective(Chords.setDirective(found.text, "tempo", ""), "title", ""), "artist", ""), "subtitle", ""),
+                        Chords.hideMeta(Chords.setDirective(Chords.setDirective(Chords.setDirective(found.text, "title", ""), "artist", ""), "subtitle", "")),
+                        Chords.key(found.text), Chords.capo(found.text),
                     ),
                 ),
             )

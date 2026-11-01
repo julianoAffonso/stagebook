@@ -192,7 +192,9 @@ class WebEditorServer @Inject constructor(
     // the page's texts, in the app's language (Settings → Language): translating the app translates the editor
     private fun strings(): Map<String, String> {
         val localized = Languages.wrap(context)
-        return WEB_STRINGS.mapValues { localized.getString(it.value) }
+        // the lyrics field is named by the profile, as in the app's editor ("Lyrics and chords" with chords on)
+        val lyrics = if (repository.library.value.look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics
+        return WEB_STRINGS.mapValues { localized.getString(it.value) } + ("lyrics" to localized.getString(lyrics))
     }
 
     companion object {
@@ -235,6 +237,9 @@ class WebEditorServer @Inject constructor(
             "capoDown" to R.string.editor_capo_down,
             "capoUp" to R.string.editor_capo_up,
             "lyrics" to R.string.editor_lyrics,
+            "tags" to R.string.tags_title,
+            "tagsAll" to R.string.tags_all,
+            "tagsHint" to R.string.web_tags_hint,
             "save" to R.string.action_save,
             "delete" to R.string.action_delete,
             "deleteConfirm" to R.string.songs_delete_confirm,

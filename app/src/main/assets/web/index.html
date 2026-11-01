@@ -42,6 +42,8 @@
   ul.list li { padding: 10px 14px; border-radius: 16px; cursor: pointer; }
   ul.list li:hover { background: var(--raised); }
   ul.list li.on { background: var(--selected); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chips button { padding: 4px 12px; font-size: 13px; }
   .sub { font-size: 13px; color: var(--muted); }
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   .row > div { flex: 1; min-width: 120px; }
@@ -85,6 +87,7 @@
       <div class="card side">
         <button id="new" class="outline"></button>
         <input id="search" type="search">
+        <select id="tag-filter" aria-label="Tags" hidden></select>
         <ul class="list" id="songs"></ul>
         <p id="list-empty" class="muted" hidden></p>
       </div>
@@ -101,6 +104,8 @@
             <div class="stepper"><span data-t="key"></span><button class="icon" id="key-down">−</button><b id="key"></b><button class="icon" id="key-up">+</button></div>
             <div class="stepper"><span data-t="capo"></span><button class="icon" id="capo-down">−</button><b id="capo"></b><button class="icon" id="capo-up">+</button></div>
           </div>
+          <!-- tags, as in the app's editor: the ones the library already has come as suggestions -->
+          <div><label for="f-tags" data-t="tags"></label><input id="f-tags"><div class="chips" id="tag-suggest"></div></div>
           <!-- backing track: only for a saved song (the file is named after it) -->
           <div class="track" id="track-row" hidden>
             <span data-t="track"></span><span id="track-name" class="muted"></span>
@@ -278,6 +283,7 @@ async function connected(session) {
   $("new").textContent = "+ " + t.newSong;
   $("set-new").textContent = "+ " + t.newSet;
   $("search").placeholder = t.search;
+  $("f-tags").placeholder = t.tagsHint;
   $("pick").textContent = t.pick;
   $("set-pick").textContent = t.pick;
   ["save", "set-save"].forEach((id) => ($(id).textContent = t.save));
@@ -320,17 +326,34 @@ async function loadList() {
   songs = await r.json();
   // the search key once per load (not per song per keystroke: ~4000 normalizations on every letter with 2000 songs)
   songs.forEach((s) => (s.k = plain(s.title + " " + s.author)));
+  drawTagFilter();
   drawList();
   drawSetAdd();
 }
 
 const MAX_ROWS = 300;   // the list draws at most this many; the search narrows it
 
+// every tag in the library, each once (case doesn't matter), in alphabetical order
+function allTags() {
+  const seen = new Map();
+  songs.forEach((s) => (s.tags || []).forEach((tg) => { if (!seen.has(tg.toLowerCase())) seen.set(tg.toLowerCase(), tg); }));
+  return [...seen.values()].sort((a, b) => plain(a).localeCompare(plain(b)));
+}
+
+// the tag filter, like the app's song list: shows only with tags in the library
+function drawTagFilter() {
+  const f = $("tag-filter"), keep = f.value, tags = allTags();
+  f.replaceChildren(new Option(t.tags + ": " + t.tagsAll, ""), ...tags.map((tg) => new Option(tg, tg)));
+  f.value = tags.some((tg) => tg === keep) ? keep : "";
+  f.hidden = tags.length === 0;
+}
+
 function drawList() {
   const q = plain($("search").value.trim());
-  const shown = songs.filter((s) => !q || s.k.includes(q));
+  const tag = $("tag-filter").value.toLowerCase();
+  const shown = songs.filter((s) => (!q || s.k.includes(q)) && (!tag || (s.tags || []).some((tg) => tg.toLowerCase() === tag)));
   $("songs").replaceChildren(...shown.slice(0, MAX_ROWS).map((s) => {
-    const el = li(s.title, [s.author, s.year, s.key].filter(Boolean).join(" · "), () => open(s.id));
+    const el = li(s.title, [s.author, s.year, s.key, (s.tags || []).join(", ")].filter(Boolean).join(" · "), () => open(s.id));
     el.dataset.id = s.id;
     if (current && current.id === s.id) el.className = "on";
     return el;
@@ -355,6 +378,10 @@ function fillForm(song) {
   $("f-year").value = song.year;
   $("f-tempo").value = song.tempo;
   $("f-text").value = song.text;
+  $("f-tags").value = (song.tags || []).join(", ");
+  current.key = song.key || "";
+  current.capo = song.capo || 0;
+  drawTagSuggest();
   $("delete").hidden = !song.id;
   $("form").hidden = false;
   $("pick").hidden = true;
@@ -373,35 +400,36 @@ function markOpen() {
 function drawTrack() {
   const has = !!(current && current.track);
   $("track-row").hidden = !(current && current.id);
-  $("track-name").textContent = has ? current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓" : t.trackNone;
+  // the track's own name, as the app keeps it; an old track without one shows its file
+  $("track-name").textContent = has ? current.trackName || current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓" : t.trackNone;
   $("track-pick").textContent = has ? t.trackChange : t.trackPick;
   $("track-remove").hidden = !has;
 }
 
-// key and capo shown from the text's {key} and {capo}, like the app
-function directive(name) {
-  const m = $("f-text").value.match(new RegExp(`^\\s*\\{\\s*${name}\\s*:\\s*([^}]*)\\}`, "mi"));
-  return m ? m[1].trim() : "";
-}
-
+// key and capo live in the song's details, apart from the lyrics, as in the app (the tablet puts them back in the text)
 function drawKeyCapo() {
-  $("key").textContent = directive("key") || "–";
-  const capo = parseInt(directive("capo") || "0", 10) || 0;
+  $("key").textContent = (current && current.key) || "–";
+  const capo = (current && current.capo) || 0;
   $("capo").textContent = capo ? fill(t.capoFret, capo) : "0";
   $("capo-down").disabled = capo <= 0;
   $("capo-up").disabled = capo >= 12;
 }
 
 async function changeText(path, body) {
-  const r = await post(path, { text: $("f-text").value, ...body });
+  const r = await post(path, { text: $("f-text").value, meta: { key: current.key || "", capo: current.capo || 0 }, ...body });
   if (!r || r.status !== 200) return offline();
-  $("f-text").value = (await r.json()).text;
+  const out = await r.json();
+  $("f-text").value = out.text;
+  if (out.meta) { current.key = out.meta.key; current.capo = out.meta.capo; }
   dirty = true;
   drawKeyCapo();
 }
 
 async function save() {
-  const body = { title: $("f-title").value, author: $("f-author").value, year: $("f-year").value, tempo: $("f-tempo").value, text: $("f-text").value };
+  const body = {
+    title: $("f-title").value, author: $("f-author").value, year: $("f-year").value, tempo: $("f-tempo").value, text: $("f-text").value,
+    key: current.key || "", capo: current.capo || 0, tags: tagsTyped(),
+  };
   const id = current && current.id;
   const r = await api(id ? `/api/songs/${encodeURIComponent(id)}` : "/api/songs", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
   if (!r) return offline();
@@ -427,6 +455,19 @@ async function removeSong() {
   await Promise.all([loadList(), loadSets()]);
 }
 
+// the tags typed in the field (comma between them), and the library's other tags as suggestions to add with a click
+function tagsTyped() { return $("f-tags").value.split(",").map((x) => x.trim()).filter(Boolean); }
+
+function drawTagSuggest() {
+  const have = new Set(tagsTyped().map((x) => x.toLowerCase()));
+  $("tag-suggest").replaceChildren(...allTags().filter((tg) => !have.has(tg.toLowerCase())).map((tg) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "outline"; b.textContent = "+ " + tg;
+    b.onclick = () => { $("f-tags").value = [...tagsTyped(), tg].join(", "); dirty = true; drawTagSuggest(); };
+    return b;
+  }));
+}
+
 // backing track: the file goes to the tablet as is; it keeps the format check (OGG, MP3 or WAV)
 async function sendTrack(file) {
   if (!file || !current || !current.id) return;
@@ -442,13 +483,14 @@ async function sendTrack(file) {
 // the list redraws a moment after typing stops, not on every letter
 let searchTimer = 0;
 $("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(drawList, 150); };
-$("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "" }); };
+$("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "", key: "", capo: 0, tags: [] }); };
+$("tag-filter").onchange = drawList;
 $("save").onclick = save;
 $("delete").onclick = removeSong;
 $("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
 $("key-up").onclick = () => changeText("/api/transpose", { semitones: 1 });
-$("capo-down").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) - 1 });
-$("capo-up").onclick = () => changeText("/api/capo", { capo: (parseInt(directive("capo") || "0", 10) || 0) + 1 });
+$("capo-down").onclick = () => changeText("/api/capo", { capo: (current.capo || 0) - 1 });
+$("capo-up").onclick = () => changeText("/api/capo", { capo: (current.capo || 0) + 1 });
 $("track-pick").onclick = () => $("track-file").click();
 $("track-file").onchange = () => { sendTrack($("track-file").files[0]); $("track-file").value = ""; };
 $("track-remove").onclick = async () => {
@@ -456,7 +498,7 @@ $("track-remove").onclick = async () => {
   current.track = "";
   drawTrack();
 };
-["f-title", "f-author", "f-year", "f-tempo", "f-text"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-text") drawKeyCapo(); }));
+["f-title", "f-author", "f-year", "f-tempo", "f-text", "f-tags"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-tags") drawTagSuggest(); }));
 // Ctrl+S / Cmd+S saves what's open
 document.addEventListener("keydown", (e) => {
   if (!((e.ctrlKey || e.metaKey) && e.key === "s")) return;
@@ -573,7 +615,7 @@ async function runImport(body) {
   }
   say("import-status", "");
   tab("songs");
-  fillForm({ id: "", title: data.title, author: data.author, year: data.year, tempo: data.tempo, text: data.text, track: "" });
+  fillForm({ id: "", title: data.title, author: data.author, year: data.year, tempo: data.tempo, text: data.text, track: "", key: data.key || "", capo: data.capo || 0, tags: [] });
   dirty = true;
   say("status", t.imported);
 }
