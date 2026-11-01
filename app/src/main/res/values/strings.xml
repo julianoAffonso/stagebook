@@ -882,4 +882,18 @@
     <string name="settings_pedal_from_tablet">tablet keyboard</string>
     <string name="settings_pedal_done">Already set</string>
     <string name="settings_pedal_done_none">None yet. Without setting anything, a regular pedal turns pages forward and back; a MIDI pedal needs to be set.</string>
+    <string name="tags_none">No tags</string>
+    <string name="tags_list">Tags: %1$s</string>
+    <string name="tags_edit">Edit tags</string>
+    <string name="songs_add_to_set">Add to setlist</string>
+    <string name="songs_add_to_set_title">Add to which setlist?</string>
+    <plurals name="songs_added_to_set">
+        <item quantity="one">%1$d song added to %2$s</item>
+        <item quantity="other">%1$d songs added to %2$s</item>
+    </plurals>
+    <plurals name="songs_delete_many_confirm">
+        <item quantity="one">Delete %d song? It also leaves the setlists.</item>
+        <item quantity="other">Delete %d songs? They also leave the setlists.</item>
+    </plurals>
+    <string name="songs_select_all">Select all</string>
 </resources>

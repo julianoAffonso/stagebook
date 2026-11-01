@@ -880,4 +880,18 @@
     <string name="settings_pedal_from_tablet">teclado do tablet</string>
     <string name="settings_pedal_done">Já configurados</string>
     <string name="settings_pedal_done_none">Nenhum ainda. Sem configurar, o pedal comum avança e volta a página; o pedal MIDI precisa ser configurado.</string>
+    <string name="tags_none">Sem tags</string>
+    <string name="tags_list">Tags: %1$s</string>
+    <string name="tags_edit">Editar tags</string>
+    <string name="songs_add_to_set">Adicionar ao setlist</string>
+    <string name="songs_add_to_set_title">Adicionar a qual setlist?</string>
+    <plurals name="songs_added_to_set">
+        <item quantity="one">%1$d música adicionada em %2$s</item>
+        <item quantity="other">%1$d músicas adicionadas em %2$s</item>
+    </plurals>
+    <plurals name="songs_delete_many_confirm">
+        <item quantity="one">Apagar %d música? Ela sai também dos setlists.</item>
+        <item quantity="other">Apagar %d músicas? Elas saem também dos setlists.</item>
+    </plurals>
+    <string name="songs_select_all">Selecionar todas</string>
 </resources>
