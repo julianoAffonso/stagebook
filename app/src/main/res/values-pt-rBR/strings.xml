@@ -902,4 +902,5 @@
         <item quantity="one">Tirar %d música deste setlist? Ela continua na biblioteca.</item>
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
+    <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional. Depois dá pra corrigir no editor de cada música ou selecionando várias na lista.</string>
 </resources>

@@ -106,7 +106,6 @@ fun SongsRoute(
         onSync = onSync,
         onTagsChange = viewModel::onTagsChange,
         onSetTags = viewModel::setTags,
-        onAutoTags = viewModel::autoTags,
         onDeleteMany = viewModel::deleteMany,
         onAddToSetlist = viewModel::addToSetlist,
     )
@@ -138,7 +137,6 @@ fun SongsScreen(
     onSync: (() -> Unit)? = null,
     onTagsChange: (Set<String>) -> Unit = {},
     onSetTags: (ids: List<String>, add: List<String>, remove: List<String>) -> Unit = { _, _, _ -> },
-    onAutoTags: (national: String, international: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _ -> 0 to 0 },
     onDeleteMany: (List<String>) -> Unit = {},
     onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
 ) {
@@ -152,7 +150,6 @@ fun SongsScreen(
     val wide = wideLists()
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
-    var autoAsk by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val national = stringResource(R.string.tags_national)
     val international = stringResource(R.string.tags_international)
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
@@ -182,9 +179,7 @@ fun SongsScreen(
                 title = stringResource(R.string.songs_title),
                 subtitle = pluralStringResource(R.plurals.song_count, uiState.total, uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-            ) {
-                OverflowMenu(listOf(MenuAction(stringResource(R.string.tags_auto), AppIcons.ListBulleted, { autoAsk = onAutoTags(national, international, true) })))
-            }
+            )
             SearchWithTags(
                 query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
                 // selecting, the Import/New row goes away: the list keeps its distance from the search
@@ -287,16 +282,6 @@ fun SongsScreen(
         )
     }
     if (limit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_message), { limit = false })
-    autoAsk?.let { (br, other) ->
-        if (br + other == 0) InfoDialog(stringResource(R.string.tags_auto), stringResource(R.string.tags_auto_none), { autoAsk = null })
-        else ConfirmDialog(
-            stringResource(R.string.tags_auto_confirm, br, other),
-            stringResource(R.string.tags_auto_ok),
-            { onAutoTags(national, international, false) },
-            { autoAsk = null },
-            destructive = false,
-        )
-    }
 }
 
 /** Which setlist the selection goes into, or a new one. */

@@ -173,6 +173,28 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", chordSong), {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "")
     }
 
+    // the editor of a saved song: details open with the tags, and the ⋮ with Delete (user, 01/11)
+    private fun editorOpen(name: String, open: () -> Unit) {
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(
+                    SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "1999", chordSong, tags = listOf("Nacional", "Rock")),
+                    {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "faixa.ogg",
+                )
+            }
+        }
+        open()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun editorTagsTablet() = editorOpen("tablet_4_editor_tags") { compose.onNodeWithText("Canção de teste", substring = true).performClick() }
+
+    @Test fun editorMenuTablet() = editorOpen("tablet_4_editor_menu") { compose.onNodeWithContentDescription("Mais opções").performClick() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun editorTagsPhone() = editorOpen("celular_4_editor_tags") { compose.onNodeWithText("Canção de teste", substring = true).performClick() }
+
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
