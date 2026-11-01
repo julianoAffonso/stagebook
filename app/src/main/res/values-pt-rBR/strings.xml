@@ -918,4 +918,5 @@
     <string name="mixer_rename">Renomear o canal</string>
     <string name="stage_track_remove_confirm">Remover o backing track desta música? O arquivo de áudio sai do app.</string>
     <string name="stage_track_remove_ok">Remover</string>
+    <string name="songs_set_gone">Esse setlist não existe mais.</string>
 </resources>

@@ -262,6 +262,7 @@ fun SongsScreen(
             else when (val r = onAddToSetlist(selected, id, "")) {
                 is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
                 AddResult.Limit -> limit = true
+                AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
             }
         }, onDismiss = { addingToSet = false })
     }
@@ -274,6 +275,7 @@ fun SongsScreen(
                 when (val r = onAddToSetlist(selected, null, name)) {
                     is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
                     AddResult.Limit -> limit = true
+                    AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
                 }
             },
             onDismiss = { naming = false },
