@@ -183,8 +183,10 @@ fun ScanSetlistScreen(
                     if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords, onUseIncoming)
                     else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming, internetFrom, onAskInternet)
                     comparing?.let { i ->
+                        // the diff of two lyrics, once per song compared (not on every recomposition)
+                        val diff = androidx.compose.runtime.remember(i, ui.rows.getOrNull(i)) { changes(i) }
                         ChangesDialog(
-                            changes(i), useIncoming = ui.rows.getOrNull(i)?.useIncoming == true,
+                            diff, useIncoming = ui.rows.getOrNull(i)?.useIncoming == true,
                             onChoose = { use -> onUseIncoming(i, use); comparing = null },
                             onDismiss = { comparing = null },
                         )
