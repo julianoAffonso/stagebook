@@ -16,9 +16,15 @@ object Sections {
         SOLO("Solo", "Solo", listOf("solo", "guitar solo", "solo de guitarra")),
         INTERLUDE("Interlúdio", "Interlude", listOf("interlude", "interludio", "instrumental", "break", "passagem")),
         OUTRO("Fim", "Outro", listOf("outro", "final", "fim", "ending", "coda", "encerramento")),   // "Fim": the user's another app default
+        // the user's library also names these parts (01/11)
+        RIFF("Riff", "Riff", listOf("riff", "riff de abertura", "opening riff")),
+        PRELUDE("Prelúdio", "Prelude", listOf("prelude", "preludio")),
+        PRE_VERSE("Pré-estrofe", "Pre-Verse", listOf("pre estrofe", "preestrofe", "pre verse", "preverse", "pre verso")),
+        LINK("Link", "Link", listOf("link")),
     }
 
-    data class Header(val kind: Kind, val number: String, val repeat: String, val original: String)
+    /** [note]: what the chart wrote next to the part, kept as written ("(repeat)", "— Base 2x"). */
+    data class Header(val kind: Kind, val number: String, val repeat: String, val original: String, val note: String = "")
 
     /** A line of the text: either lyrics or a section title. */
     data class Line(val text: String, val header: Header?)
@@ -33,7 +39,26 @@ object Sections {
     fun detect(line: String): Header? {
         val t = line.trim()
         if (t.isEmpty() || t.length > 40) return null
-        val inner = shape.matchEntire(t)?.groupValues?.get(1)?.replace(brackets, " ")?.trim() ?: return null
+        val written = shape.matchEntire(t)?.groupValues?.get(1)?.trim() ?: return null
+        return plain(written) ?: withNote(written)
+    }
+
+    // "Verse 1 (repeat)", "Intro — Base 2x", "Fim - Repete 3x": the part, with the note kept (user, 01/11)
+    // the outer shape already took the closing ")" with the brackets around the title
+    private val noteInParens = Regex("""^(.+?)\s*\(([^()]+)\)?$""")
+    private val noteAfterDash = Regex("""^(.+?)\s+([—–-]\s+.+)$""")
+
+    private fun withNote(written: String): Header? {
+        noteInParens.matchEntire(written)?.let { m ->
+            val note = "(" + m.groupValues[2].trim() + ")"
+            return plain(m.groupValues[1].trim())?.copy(original = m.groupValues[1].trim() + " " + note, note = note)
+        }
+        val m = noteAfterDash.matchEntire(written) ?: return null
+        return plain(m.groupValues[1].trim())?.copy(original = written, note = m.groupValues[2].trim())
+    }
+
+    private fun plain(written: String): Header? {
+        val inner = written.replace(brackets, " ").trim()
         // "[Tab - Intro]" is the Intro of a tab (Cifra Club's title): the "tab" word goes, the section stays (31/10)
         val key = TextKey.of(inner).replace(tabPrefix, "")
         val m = tail.matchEntire(key) ?: return null
@@ -56,6 +81,7 @@ object Sections {
             append(if (lang == SectionLang.EN) h.kind.en else h.kind.pt)
             if (h.number.isNotEmpty()) append(' ').append(h.number)
             if (h.repeat.isNotEmpty()) append("  ").append(h.repeat)
+            if (h.note.isNotEmpty()) append(' ').append(h.note)
         }
     }
 
@@ -64,6 +90,7 @@ object Sections {
         append(name)
         if (h.number.isNotEmpty()) append(' ').append(h.number)
         if (h.repeat.isNotEmpty()) append("  ").append(h.repeat)
+        if (h.note.isNotEmpty()) append(' ').append(h.note)
     }
 
     fun parse(text: String): List<Line> = text.split('\n').map { Line(it, detect(it)) }
