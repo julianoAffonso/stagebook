@@ -921,4 +921,9 @@
     <string name="web_in_use_text">The web editor is open at %1$s. Anyone approved on a computer can change the library. Close it when you are done.</string>
     <string name="web_close">Close the web editor</string>
     <string name="web_tags_hint">Separate with commas: Rock, Ballad</string>
+    <string name="about_help">Help</string>
+    <string name="about_help_text">How to use each screen, with pictures. Opens in the browser.</string>
+    <string name="about_help_open">Open the help</string>
+    <string name="about_help_offline">No internet: the help opens once the tablet is online.</string>
+    <string name="help_url">https://julianoaffonso.github.io/stagebook/help/</string>
 </resources>
