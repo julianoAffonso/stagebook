@@ -83,6 +83,7 @@ class ScreenshotTest {
             SongRowUi("5", "Por Enquanto", "Legião Urbana · 1985"),
         ),
         total = 5,
+        tags = listOf("Internacional", "Nacional"),
     )
     private val set = SetlistDetailUiState(
         loading = false,
@@ -414,6 +415,8 @@ class ScreenshotTest {
                 setName = "Show de sábado",
                 rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
                 selectedCount = 2,
+                tags = listOf("Internacional", "Nacional"),
+                chosenTags = setOf("Nacional"),
             ),
             "", {}, {}, {}, {},
         )

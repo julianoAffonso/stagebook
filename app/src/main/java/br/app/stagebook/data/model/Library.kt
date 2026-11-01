@@ -20,6 +20,8 @@ data class Song(
     val track: String = "",
     // this song's own mix, changed in the mixer over the stage (null = the general one); this device only, like the track
     val mix: br.app.stagebook.domain.SongMix? = null,
+    // free tags (Nacional, Internacional, Rock…), to filter the lists and the setlist picker (vocalist, 01/11)
+    val tags: List<String> = emptyList(),
 )
 
 @Immutable

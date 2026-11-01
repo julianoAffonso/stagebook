@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
@@ -51,6 +52,7 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
         onToggle = { if (viewModel.toggle(it)) query = "" },
         onConfirm = { viewModel.confirm(); onDone() },
         onBack = onDone,
+        onTagsChange = viewModel::onTagsChange,
     )
 }
 
@@ -63,6 +65,7 @@ fun PickSongsScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onTagsChange: (Set<String>) -> Unit = {},
 ) {
     val wide = wideLists()
     Scaffold(
@@ -87,6 +90,9 @@ fun PickSongsScreen(
                     )
                 }
                 SearchField(query, onQueryChange, stringResource(R.string.songs_search), Modifier.padding(bottom = Spacing.m))
+                if (uiState.tags.isNotEmpty()) {
+                    br.app.stagebook.ui.components.TagFilter(uiState.tags, uiState.chosenTags, onTagsChange, Modifier.fillMaxWidth().padding(bottom = Spacing.m))
+                }
                 if (uiState.rows.isEmpty()) {
                     EmptyState(AppIcons.Search, stringResource(R.string.songs_not_found), "")
                 } else {

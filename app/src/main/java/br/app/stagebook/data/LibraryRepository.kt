@@ -58,7 +58,7 @@ class LibraryRepository @Inject constructor(
         // search and list rows only use title, artist and year (and the order): saving zoom or lyrics doesn't rebuild
         // the keys of 200 songs
         .distinctUntilChanged { a, b ->
-            a.size == b.size && a.indices.all { a[it].id == b[it].id && a[it].title == b[it].title && a[it].author == b[it].author && a[it].year == b[it].year }
+            a.size == b.size && a.indices.all { a[it].id == b[it].id && a[it].title == b[it].title && a[it].author == b[it].author && a[it].year == b[it].year && a[it].tags == b[it].tags }
         }
         .map(SongSearch::of)
         .flowOn(Dispatchers.Default)
@@ -141,6 +141,12 @@ class LibraryRepository @Inject constructor(
 
     fun updateSong(id: String, change: (Song) -> Song) =
         mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id == id) change(it) else it }) }
+
+    /** Changes several songs in one save (tags on a selection). */
+    fun updateSongs(ids: Collection<String>, change: (Song) -> Song) {
+        val set = ids.toSet()
+        mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id in set) change(it) else it }) }
+    }
 
     /** Deletes the song and removes it from the setlists. */
     fun deleteSong(id: String) = mutate { lib ->

@@ -53,6 +53,12 @@ import br.app.stagebook.ui.components.SongListItem
 import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.wideLists
+import br.app.stagebook.ui.components.InfoDialog
+import br.app.stagebook.ui.components.TagFilter
+import br.app.stagebook.ui.components.TagsDialog
+import androidx.compose.runtime.remember
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.foundation.layout.fillMaxWidth
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
 
@@ -98,6 +104,9 @@ fun SongsRoute(
         received = received,
         onReceived = onReceived,
         onSync = onSync,
+        onTagsChange = viewModel::onTagsChange,
+        onSetTags = viewModel::setTags,
+        onAutoTags = viewModel::autoTags,
     )
 }
 
@@ -127,8 +136,16 @@ fun SongsScreen(
     received: Int = 0,
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,
+    onTagsChange: (Set<String>) -> Unit = {},
+    onSetTags: (ids: List<String>, add: List<String>, remove: List<String>) -> Unit = { _, _, _ -> },
+    onAutoTags: (national: String, international: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _ -> 0 to 0 },
 ) {
     val wide = wideLists()
+    // tags of these songs (one from the ⋮, or the selection)
+    var tagging by remember { mutableStateOf<List<String>?>(null) }
+    var autoAsk by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val national = stringResource(R.string.tags_national)
+    val international = stringResource(R.string.tags_international)
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
     var selected by rememberSaveable { mutableStateOf(initialSelection) }
@@ -142,8 +159,11 @@ fun SongsScreen(
                 title = stringResource(R.string.songs_title),
                 subtitle = pluralStringResource(R.plurals.song_count, uiState.total, uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-            )
+            ) {
+                OverflowMenu(listOf(MenuAction(stringResource(R.string.tags_auto), AppIcons.ListBulleted, { autoAsk = onAutoTags(national, international, true) })))
+            }
             SearchField(query, onQueryChange, stringResource(R.string.songs_search))
+            if (uiState.tags.isNotEmpty()) TagFilter(uiState.tags, uiState.chosenTags, onTagsChange, Modifier.fillMaxWidth().padding(top = Spacing.s))
             if (selecting) {
                 // selection bar in place of New/Import: how many, Share and exit
                 Row(Modifier.padding(vertical = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -152,6 +172,7 @@ fun SongsScreen(
                         pluralStringResource(R.plurals.songs_selected, selected.size, selected.size),
                         style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
                     )
+                    ActionButton(stringResource(R.string.tags_action), { tagging = selected }, icon = AppIcons.ListBulleted, tone = ButtonTone.Tonal)
                     ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Share, tone = ButtonTone.Tonal)
                 }
             } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -195,6 +216,7 @@ fun SongsScreen(
                                             listOf(
                                                 MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEdit(song.id) }),
                                                 MenuAction(stringResource(R.string.share_title), AppIcons.Share, { selected = listOf(song.id); sharing = true }),
+                                                MenuAction(stringResource(R.string.tags_action), AppIcons.ListBulleted, { tagging = listOf(song.id) }),
                                                 MenuAction(stringResource(R.string.action_delete), AppIcons.Delete, { pendingDelete = song.id }, danger = true),
                                             ),
                                         )
@@ -218,6 +240,26 @@ fun SongsScreen(
         )
     }
     cloud?.let { CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
+    tagging?.let { ids ->
+        val rows = uiState.songs.filter { it.id in ids }
+        // the suggestions come first even before anyone uses them
+        val options = (listOf(national, international) + uiState.tags).distinctBy { it.lowercase() }
+        val initial = options.associateWith { t ->
+            val n = rows.count { r -> r.tags.any { it.equals(t, true) } }
+            when (n) { 0 -> ToggleableState.Off; rows.size -> ToggleableState.On; else -> ToggleableState.Indeterminate }
+        }
+        TagsDialog(options, initial, { add, remove -> onSetTags(ids, add, remove); selected = emptyList() }, { tagging = null })
+    }
+    autoAsk?.let { (br, other) ->
+        if (br + other == 0) InfoDialog(stringResource(R.string.tags_auto), stringResource(R.string.tags_auto_none), { autoAsk = null })
+        else ConfirmDialog(
+            stringResource(R.string.tags_auto_confirm, br, other),
+            stringResource(R.string.tags_auto_ok),
+            { onAutoTags(national, international, false) },
+            { autoAsk = null },
+            destructive = false,
+        )
+    }
     pendingDelete?.let { id ->
         val title = uiState.songs.firstOrNull { it.id == id }?.title.orEmpty()
         ConfirmDialog(

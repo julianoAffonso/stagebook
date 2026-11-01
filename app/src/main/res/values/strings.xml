@@ -874,4 +874,16 @@
         <item quantity="one">%1$d song has its own mixer settings (changed on stage): what you change here doesn\'t apply to it.</item>
         <item quantity="other">%1$d songs have their own mixer settings (changed on stage): what you change here doesn\'t apply to them.</item>
     </plurals>
+    <string name="tags_all">All</string>
+    <string name="tags_filter">Tags</string>
+    <string name="tags_title">Tags</string>
+    <string name="tags_new">New tag</string>
+    <string name="tags_add">Add</string>
+    <string name="tags_action">Tags</string>
+    <string name="tags_national">Brazilian</string>
+    <string name="tags_international">International</string>
+    <string name="tags_auto">Split Brazilian and international</string>
+    <string name="tags_auto_confirm">By the lyrics language, %1$d songs get the Brazilian tag and %2$d the International tag. Songs that already have one of these tags, or not enough lyrics, stay as they are. You can fix them later.</string>
+    <string name="tags_auto_ok">Split</string>
+    <string name="tags_auto_none">No songs to split: they all have Brazilian or International already, or have no lyrics.</string>
 </resources>
