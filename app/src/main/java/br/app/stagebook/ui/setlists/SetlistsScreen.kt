@@ -81,7 +81,6 @@ fun SetlistsRoute(
         onReceived = onReceived,
         onSync = onSync,
         onDelete = viewModel::delete,
-        onRename = viewModel::rename,
     )
 }
 
@@ -92,7 +91,6 @@ fun SetlistsScreen(
     onOpen: (String) -> Unit,
     onPlay: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onRename: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     onScan: () -> Unit = {},
     online: Boolean = false,
@@ -103,17 +101,29 @@ fun SetlistsScreen(
     onSync: (() -> Unit)? = null,
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
-    var renaming by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
+    var selected by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var deletingMany by rememberSaveable { mutableStateOf(false) }
+    val selecting = selected.isNotEmpty()
+    fun toggle(id: String) { selected = if (id in selected) selected - id else selected + id }
+    androidx.activity.compose.BackHandler(enabled = selecting) { selected = emptyList() }
     CenteredContent(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
-            ScreenHeader(
+            if (selecting) {
+                br.app.stagebook.ui.components.SelectionTopBar(
+                    count = selected.size,
+                    onClose = { selected = emptyList() },
+                    actions = listOf(br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.action_delete), AppIcons.Delete) { deletingMany = true }),
+                    onSelectAll = { selected = uiState.sets.map { it.id } },
+                    modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
+                )
+            } else ScreenHeader(
                 title = stringResource(R.string.sets_title),
                 subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             )
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
-            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            if (!selecting) Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
@@ -126,11 +136,13 @@ fun SetlistsScreen(
                             SongListItem(
                                 title = set.name,
                                 subtitle = pluralStringResource(R.plurals.song_count, set.count, set.count),
-                                onClick = { onOpen(set.id) },
+                                onClick = { if (selecting) toggle(set.id) else onOpen(set.id) },
+                                onLongClick = { toggle(set.id) },
+                                leading = if (selecting) { { androidx.compose.material3.Checkbox(set.id in selected, { toggle(set.id) }) } } else null,
                                 modifier = Modifier.animateItem(),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 trailing = {
-                                    Row {
+                                    if (!selecting) Row {
                                         IconButton(onClick = { onPlay(set.id) }, enabled = set.count > 0) {
                                             Icon(
                                                 AppIcons.Slideshow,
@@ -138,13 +150,6 @@ fun SetlistsScreen(
                                                 tint = if (set.count > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
-                                        // rename and delete in the ⋮ (Google's pattern), without opening the setlist
-                                        OverflowMenu(
-                                            listOf(
-                                                MenuAction(stringResource(R.string.sets_rename), AppIcons.Edit, { renaming = set.id }),
-                                                MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { pendingDelete = set.id }, danger = true),
-                                            ),
-                                        )
                                     }
                                 },
                             )
@@ -153,10 +158,6 @@ fun SetlistsScreen(
                 }
             }
         }
-    }
-    renaming?.let { id ->
-        val name = uiState.sets.firstOrNull { it.id == id }?.name.orEmpty()
-        TextInputDialog(stringResource(R.string.sets_rename), name, stringResource(R.string.sets_name), { onRename(id, it) }, { renaming = null })
     }
     if (creating) {
         TextInputDialog(
@@ -167,12 +168,12 @@ fun SetlistsScreen(
             onDismiss = { creating = false },
         )
     }
-    pendingDelete?.let { id ->
+    if (deletingMany) {
         ConfirmDialog(
-            message = stringResource(R.string.sets_delete_confirm, uiState.sets.firstOrNull { it.id == id }?.name.orEmpty()),
+            message = pluralStringResource(R.plurals.sets_delete_many_confirm, selected.size, selected.size),
             confirmLabel = stringResource(R.string.action_delete),
-            onConfirm = { onDelete(id) },
-            onDismiss = { pendingDelete = null },
+            onConfirm = { selected.forEach(onDelete); selected = emptyList() },
+            onDismiss = { deletingMany = false },
         )
     }
 }
@@ -184,8 +185,8 @@ private val previewState = SetlistsUiState(
 
 @LightPreview
 @Composable
-private fun SetlistsScreenLightPreview() = StagebookTheme(darkTheme = false) { SetlistsScreen(previewState, {}, {}, {}, {}, { _, _ -> }) }
+private fun SetlistsScreenLightPreview() = StagebookTheme(darkTheme = false) { SetlistsScreen(previewState, {}, {}, {}, {}) }
 
 @DarkPreview
 @Composable
-private fun SetlistsScreenDarkPreview() = StagebookTheme(darkTheme = true) { SetlistsScreen(previewState, {}, {}, {}, {}, { _, _ -> }) }
+private fun SetlistsScreenDarkPreview() = StagebookTheme(darkTheme = true) { SetlistsScreen(previewState, {}, {}, {}, {}) }

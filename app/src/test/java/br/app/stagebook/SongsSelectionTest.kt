@@ -18,8 +18,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * What's done to several songs lives in the selection (user, 01/11): tags, setlist, share and delete. The row only
- * has the pencil; tapping opens the stage.
+ * What's done to several songs lives in the selection (user, 01/11): tags, setlist, share and delete. The row has no
+ * buttons; tapping opens the stage (editing is on its pencil).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
@@ -35,7 +35,7 @@ class SongsSelectionTest {
 
     @Test fun `deleting the selection asks first, then deletes them all`() {
         var deleted = emptyList<String>()
-        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, {}, initialSelection = listOf("1", "2"), onDeleteMany = { deleted = it }) } }
+        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, initialSelection = listOf("1", "2"), onDeleteMany = { deleted = it }) } }
         compose.onNodeWithContentDescription("Apagar").performClick()
         compose.onNodeWithText("Apagar 2 músicas? Elas saem também dos setlists.").assertExists()
         compose.onNodeWithText("Apagar").performClick()   // the dialog's button
@@ -46,7 +46,7 @@ class SongsSelectionTest {
         var added: Pair<List<String>, String?>? = null
         compose.setContent {
             StagebookTheme {
-                SongsScreen(state, "", {}, {}, {}, {}, {}, initialSelection = listOf("2"), onAddToSetlist = { ids, set, _ -> added = ids to set; AddResult.Added(ids.size, "Sábado") })
+                SongsScreen(state, "", {}, {}, {}, {}, initialSelection = listOf("2"), onAddToSetlist = { ids, set, _ -> added = ids to set; AddResult.Added(ids.size, "Sábado") })
             }
         }
         compose.onNodeWithContentDescription("Adicionar ao setlist").performClick()
@@ -54,15 +54,9 @@ class SongsSelectionTest {
         assertEquals(listOf("2") to "s1", added)
     }
 
-    @Test fun `the row has the pencil to edit`() {
-        var edited = ""
-        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, { edited = it }) } }
-        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Editar"))[0].performClick()
-        assertEquals("1", edited)
-    }
 
     @Test fun `selecting, the top bar shows how many and select all takes every song`() {
-        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, {}, initialSelection = listOf("1")) } }
+        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, initialSelection = listOf("1")) } }
         compose.onNodeWithText("1").assertExists()
         compose.onNodeWithContentDescription("Mais opções").performClick()
         compose.onNodeWithText("Selecionar todas").performClick()
