@@ -91,6 +91,31 @@ class EditorFlowTest {
         }
     }
 
+    @Test
+    fun `Android closed the app right after an import - the imported song comes back unsaved`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+            val scope = CoroutineScope(Dispatchers.IO)
+            val repo = LibraryRepository(context, scope)
+            withTimeout(5_000) { repo.loaded.first { it } }
+            val meta = SongMetadata(repo, MusicBrainz(), scope)
+            val draft = ImportDraft().apply { put(ImportDraft.Draft("Importada", "Banda", "1999", "[G]letra importada")) }
+            val handle = SavedStateHandle(mapOf("fromImport" to true))
+            val vm = SongEditorViewModel(repo, meta, draft, handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+            withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
+            // nothing typed: process killed, the draft (in memory) is gone; only the SavedStateHandle survives
+            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+            withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
+            assertEquals("Importada", again.uiState.title)
+            assertTrue(again.uiState.text, again.uiState.text.contains("letra importada"))
+            assertTrue(again.uiState.unsaved)
+            assertEquals(br.app.stagebook.ui.editor.EditorMode.IMPORTED_NEW, again.uiState.mode)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithTextFirst(text: String) =
         onAllNodes(androidx.compose.ui.test.hasText(text)).onFirst().performScrollTo()
 
