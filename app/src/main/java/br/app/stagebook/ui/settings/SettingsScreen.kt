@@ -423,13 +423,11 @@ data class SettingsActions(
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     ESSENTIAL(R.string.essential_title, AppIcons.Eco),   // first: changes the whole app
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
-    CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     PLAYER(R.string.settings_player, AppIcons.Play),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
     METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
     BAND(R.string.settings_band, AppIcons.Group),
     WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
-    SCREEN(R.string.settings_screen, AppIcons.Brightness),
     IMPORT(R.string.settings_import_sites, AppIcons.Public),
     LIBRARY(R.string.settings_library, AppIcons.Folder),
     ADVANCED(R.string.settings_advanced, AppIcons.Tune),   // Android settings for playing without failures (31/10)
@@ -439,7 +437,8 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 /** Essential mode (T19): the section of what is turned off leaves the list. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
     SettingsSection.PLAYER -> look.playerMode
-    SettingsSection.BAND -> look.bandOn || look.internetOn   // the band also works over the internet (same members)
+    // the band also works over the internet (same members); telling OBS what's playing lives here too (user, 01/11)
+    SettingsSection.BAND -> look.bandOn || look.internetOn || look.extrasOn
     SettingsSection.WEB_EDITOR -> !look.essential   // essential mode turns the editor on the computer off (T37)
     SettingsSection.METRONOME -> look.extrasOn
     else -> true
@@ -460,7 +459,9 @@ fun SettingsScreen(
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // what the sliders show while being dragged (saved on release), read by the pinned preview and the sliders
-            val draft = remember(uiState.look.fontSp, uiState.look.sectionScale) { StageDraft(uiState.look.fontSp, uiState.look.sectionScale) }
+            val draft = remember(uiState.look.fontSp, uiState.look.sectionScale, uiState.look.chordScale) {
+                StageDraft(uiState.look.fontSp, uiState.look.sectionScale, uiState.look.chordScale)
+            }
             if (maxWidth >= Sizes.contentMax) {
                 // tablet in landscape: fixed list on the left, open section on the right
                 val open = section ?: SettingsSection.LYRICS
@@ -543,7 +544,6 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
         } +
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
     SettingsSection.METRONOME -> stringResource(if (ui.look.metroShown) R.string.metro_summary_shown else R.string.metro_summary_hidden)
-    SettingsSection.CHORDS -> if (ui.look.chords) stringResource(R.string.settings_chords_on_short, (ui.look.chordScale * 100).roundToInt()) else stringResource(R.string.settings_chords_off_short)
     // the keyboard pedal, or else the saved MIDI pedal
     SettingsSection.PEDAL -> when {
         ui.look.pedalName.isNotEmpty() ->
@@ -552,7 +552,6 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
             ui.look.midiBtName + " · " + stringResource(if (ui.midi.connected.any { it.bluetooth }) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
         else -> stringResource(R.string.settings_pedal_none_short)
     }
-    SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.WEB_EDITOR -> stringResource(if (ui.look.webEditorOn) R.string.settings_web_editor_on_short else R.string.settings_web_editor_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
@@ -569,12 +568,13 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
         when (section) {
             SettingsSection.ESSENTIAL -> EssentialDetail(uiState.look, actions)
             SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft)
-            SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
-            SettingsSection.BAND -> BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
+            SettingsSection.BAND -> {
+                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
+                AnnounceCard(uiState.look, actions)
+            }
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
-            SettingsSection.SCREEN -> ScreenDetail(uiState.look, actions)
             SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions, uiState.ownMix)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
@@ -586,9 +586,10 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
 
 /** What the stage look sliders show while dragged (they save on release): the pinned preview follows them live. */
 @Stable
-internal class StageDraft(fontSp: Float, sectionScale: Float) {
+internal class StageDraft(fontSp: Float, sectionScale: Float, chordScale: Float) {
     var font by mutableFloatStateOf(fontSp)
     var sectionScale by mutableFloatStateOf(sectionScale)
+    var chordScale by mutableFloatStateOf(chordScale)
 }
 
 /**
@@ -606,7 +607,7 @@ private fun SectionPinned(section: SettingsSection, look: Look, draft: StageDraf
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview),
         ) {
-            StagePreview(look.copy(sectionScale = draft.sectionScale), draft.font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(draft.font), R.string.settings_preview_size_text)
+            StagePreview(look.copy(sectionScale = draft.sectionScale, chordScale = draft.chordScale), draft.font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(draft.font), R.string.settings_preview_size_text)
         }
     }
 }
@@ -633,7 +634,8 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
         LegibilityWarnings(look)
     }
-    // section titles live with the rest of the stage look too (user, 01/11)
+    // chords and section titles live with the rest of the stage look too, under the same preview (user, 01/11)
+    ChordsLookCard(look, actions, draft)
     SectionsDetail(look, actions, draft)
     // the page: turn pages (default) or scroll the lyrics, and the columns; in both modes the pedal and a tap move one step
     SettingsCard(
@@ -667,6 +669,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         }
         if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) PageColumns(look, actions)
     }
+    ChordShapesCard(look, actions)
     // the screen stays on with the app open (it was in its own Screen item)
     SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
@@ -760,22 +763,17 @@ private fun LegibilityWarnings(look: Look) {
 }
 
 @Composable
-private fun ChordsDetail(look: Look, actions: SettingsActions) {
-    // the size changes live in the preview and only saves on release
-    var scale by remember(look.chordScale) { mutableFloatStateOf(look.chordScale) }
-    // the card doesn't repeat the screen title ("Chords")
+private fun ChordsLookCard(look: Look, actions: SettingsActions, draft: StageDraft) {
+    // the size changes live in the pinned preview and only saves on release
     SettingsCard(stringResource(R.string.settings_chords_card), help = stringResource(R.string.settings_chords_show_help)) {
         SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
         if (look.chords) {
-            // the same order as the lyrics card: the preview on top, then size, font and colour (user, 01/11)
-            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(chordScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
-            }
-            Text(stringResource(R.string.settings_chords_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            // the same order as the lyrics card: size, font and colour; the pinned preview above shows them (user, 01/11)
+            Text(stringResource(R.string.settings_chords_size, (draft.chordScale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
-                value = scale,
-                onValueChange = { scale = it },
-                onValueChangeFinished = { actions.onChordScale(scale) },
+                value = draft.chordScale,
+                onValueChange = { draft.chordScale = it },
+                onValueChangeFinished = { actions.onChordScale(draft.chordScale) },
                 valueRange = Look.MIN_CHORD_SCALE..Look.MAX_CHORD_SCALE,
                 steps = ((Look.MAX_CHORD_SCALE - Look.MIN_CHORD_SCALE) * 10).roundToInt() - 1,
             )
@@ -785,7 +783,11 @@ private fun ChordsDetail(look: Look, actions: SettingsActions) {
             LegibilityWarnings(look)
         }
     }
-    // chord diagrams on their own card (only in the lyrics and chords profile), with a sample for the instrument
+}
+
+/** Chord diagrams (only in the lyrics and chords profile), with a sample for the instrument. */
+@Composable
+private fun ChordShapesCard(look: Look, actions: SettingsActions) {
     if (look.chords) {
         SettingsCard(stringResource(R.string.settings_chord_shapes), help = stringResource(R.string.settings_instrument_help) + "\n\n" + stringResource(R.string.settings_chord_list_help)) {
             InstrumentPicker(look.instrument, actions.onInstrument)
@@ -869,7 +871,6 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
 }
 
 /** The chord preview doesn't go over this size (large lyrics wouldn't fit the box). */
-private const val PREVIEW_FONT = 30f
 
 @Composable
 private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
@@ -1330,10 +1331,9 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
     }
 }
 
+/** Telling OBS and others what's playing (T23), a stage extra (T19); it moved from the Screen item to the band's (01/11). */
 @Composable
-private fun ScreenDetail(look: Look, actions: SettingsActions) {
-    // keeping the screen on moved to Stage look (user, 01/11)
-    // Now Playing: the stage's "shout" to OBS and others (T23); a stage extra (T19)
+private fun AnnounceCard(look: Look, actions: SettingsActions) {
     if (look.extrasOn) SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
         SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce)
     }
