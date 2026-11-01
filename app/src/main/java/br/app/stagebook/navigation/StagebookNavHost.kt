@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -69,7 +70,8 @@ fun StagebookNavHost(
             nav.popBackStack<Home>(inclusive = false)
         }
     }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings) {
+    val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings) {
     androidx.compose.foundation.layout.Column {
     Box(Modifier.weight(1f)) {
     NavHost(
@@ -133,7 +135,7 @@ fun StagebookNavHost(
             )
         }
     }
-    SnackbarHost(message.host, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+    SnackbarHost(message.host, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = messageLift.bottom))
     }
     br.app.stagebook.ui.band.ConductRoute()
     }

@@ -51,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -228,7 +229,14 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                 contentWindowInsets = ScreenInsets,
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
-                    ShortNavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                    val lift = br.app.stagebook.ui.components.LocalMessageLift.current
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    androidx.compose.runtime.DisposableEffect(lift) { onDispose { lift.bottom = 0.dp } }
+                    ShortNavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        // the app's message shows above the tabs, not over them (B-29)
+                        modifier = Modifier.onSizeChanged { lift.bottom = with(density) { it.height.toDp() } },
+                    ) {
                         HomeTab.entries.forEach { t ->
                             ShortNavigationBarItem(
                                 selected = tab == t,
