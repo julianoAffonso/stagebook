@@ -167,6 +167,8 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val connectivity = remember(context) { br.app.stagebook.data.Connectivity(context.applicationContext) }
     // backup: pick the parts (all checked), then where to save the .stagebook file
     var backupParts by remember { mutableStateOf(br.app.stagebook.data.Backup.Part.entries.toSet()) }
     val backupSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(br.app.stagebook.data.Backup.MIME)) { uri ->
@@ -337,6 +339,11 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
+                // the help lives on the web, in the app's language (user, 01/11): with no internet, a notice instead
+                onOpenHelp = {
+                    if (connectivity.isOnline()) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, resources.getString(R.string.help_url).toUri())) }
+                    else scope.launch { snackbar.showSnackbar(resources.getString(R.string.about_help_offline)) }
+                },
                 onDownloadUpdate = viewModel::downloadUpdate,
                 onInstallUpdate = install,
             ),
@@ -418,6 +425,7 @@ data class SettingsActions(
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
+    val onOpenHelp: () -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
     val onInstallUpdate: () -> Unit = {},
 )
@@ -1505,6 +1513,11 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
 private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.app_name)) {
         Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge)
+    }
+    // the help is on the web (GitHub Pages), not inside the app
+    SettingsCard(stringResource(R.string.about_help)) {
+        Text(stringResource(R.string.about_help_text), style = MaterialTheme.typography.bodyMedium)
+        ActionButton(stringResource(R.string.about_help_open), actions.onOpenHelp, icon = AppIcons.Public, tone = ButtonTone.Tonal)
     }
     // the language lives here (user's decision of 30/10: a whole screen for one field was too much)
     LanguageDetail(uiState.language, actions)
