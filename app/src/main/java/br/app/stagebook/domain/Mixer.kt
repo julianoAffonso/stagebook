@@ -55,6 +55,12 @@ data class MixerConfig(
 ) {
     fun strip(i: Int): MixChannel = strips.getOrElse(i) { MixChannel() }
 
+    /**
+     * The EQ gains as the engine reads them: exactly [EQ_BANDS] values, missing ones flat (a shorter list, from an old
+     * or hand-edited file, made the native call throw; audit 01/11).
+     */
+    fun eqGains(): FloatArray = FloatArray(EQ_BANDS) { eqDb.getOrElse(it) { 0f } }
+
     /** First output (0 = output 1) of channel [i] on output [key]; with no choice, the one with the same number. */
     fun outputOf(i: Int, key: String = output.key): Int = routes[key]?.getOrNull(i)?.takeIf { it >= 0 } ?: i
 

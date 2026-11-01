@@ -1,12 +1,13 @@
 package br.app.stagebook.ui.components
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -26,29 +27,37 @@ fun SpectrumView(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    Canvas(modifier.clipToBounds()) {
-        if (!active()) return@Canvas
-        val levels = levelsDb()
-        if (levels.size != Spectrum.BINS) return@Canvas
-        val xs = FloatArray(Spectrum.BINS) { Spectrum.x(Spectrum.centers[it]) * size.width }
-        val ys = FloatArray(Spectrum.BINS) { size.height * (1f - Spectrum.fraction(levels[it])) }
-        // smooth curve: joins the midpoints between neighboring bands with quadratic curves
-        val line = Path().apply {
-            moveTo(xs[0], ys[0])
-            for (i in 1 until Spectrum.BINS) {
-                quadraticTo(xs[i - 1], ys[i - 1], (xs[i - 1] + xs[i]) / 2, (ys[i - 1] + ys[i]) / 2)
+    // the band positions, the paths and the stroke are made once per size; each frame (~15/s) only refills the paths
+    // (it allocated two arrays, two paths and a stroke on every frame; audit 01/11)
+    Spacer(
+        modifier.clipToBounds().drawWithCache {
+            val xs = FloatArray(Spectrum.BINS) { Spectrum.x(Spectrum.centers[it]) * size.width }
+            val ys = FloatArray(Spectrum.BINS)
+            val line = Path()
+            val fill = Path()
+            val stroke = Stroke(width = 2.dp.toPx())
+            onDrawBehind {
+                if (!active()) return@onDrawBehind
+                val levels = levelsDb()
+                if (levels.size != Spectrum.BINS) return@onDrawBehind
+                for (i in 0 until Spectrum.BINS) ys[i] = size.height * (1f - Spectrum.fraction(levels[i]))
+                // smooth curve: joins the midpoints between neighboring bands with quadratic curves
+                line.reset()
+                line.moveTo(xs[0], ys[0])
+                for (i in 1 until Spectrum.BINS) {
+                    line.quadraticTo(xs[i - 1], ys[i - 1], (xs[i - 1] + xs[i]) / 2, (ys[i - 1] + ys[i]) / 2)
+                }
+                line.lineTo(xs.last(), ys.last())
+                fill.reset()
+                fill.addPath(line)
+                fill.lineTo(xs.last(), size.height)
+                fill.lineTo(xs[0], size.height)
+                fill.close()
+                drawPath(fill, color.copy(alpha = FILL_ALPHA))
+                drawPath(line, color.copy(alpha = LINE_ALPHA), style = stroke)
             }
-            lineTo(xs.last(), ys.last())
-        }
-        val fill = Path().apply {
-            addPath(line)
-            lineTo(xs.last(), size.height)
-            lineTo(xs[0], size.height)
-            close()
-        }
-        drawPath(fill, color.copy(alpha = FILL_ALPHA))
-        drawPath(line, color.copy(alpha = LINE_ALPHA), style = Stroke(width = 2.dp.toPx()))
-    }
+        },
+    )
 }
 
 private const val FILL_ALPHA = 0.22f
