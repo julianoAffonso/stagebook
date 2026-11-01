@@ -46,4 +46,11 @@ class StageMetronomeTest {
         frames(3)
         compose.onNodeWithContentDescription("Metrônomo").assertExists()
     }
+
+    // the user can hide it in Settings → Stage (user, 31/10)
+    @Test fun `hidden in settings, no metronome on the stage`() {
+        val hidden = StageUiState(false, listOf(StageSong("Música", "", "linha", false)), look = Look(metroShown = false))
+        compose.setContent { StagebookTheme { StageScreen(hidden, 0, 0, { _, _ -> }) } }
+        compose.onNodeWithContentDescription("Metrônomo").assertDoesNotExist()
+    }
 }

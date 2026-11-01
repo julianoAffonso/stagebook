@@ -328,6 +328,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
+                onMetronomeShown = viewModel::setMetronomeShown,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 onDownloadUpdate = viewModel::downloadUpdate,
@@ -406,6 +407,7 @@ data class SettingsActions(
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
+    val onMetronomeShown: (Boolean) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
@@ -1286,6 +1288,8 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
     fun set(count: Boolean = look.metroCount, sound: Boolean = look.metroSound, glow: Boolean = look.metroGlow, color: Int = look.metroGlowColor) =
         actions.onMetronome(count, sound, glow, color)
     SettingsCard(stringResource(R.string.metro_title), help = stringResource(R.string.metro_help)) {
+        SwitchRow(stringResource(R.string.metro_shown), look.metroShown, actions.onMetronomeShown)
+        if (!look.metroShown) return@SettingsCard
         SwitchRow(stringResource(R.string.metro_count), look.metroCount, { set(count = it) })
         SwitchRow(stringResource(R.string.metro_sound), look.metroSound, { set(sound = it) })
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
