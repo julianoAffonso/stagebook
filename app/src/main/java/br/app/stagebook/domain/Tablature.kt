@@ -13,6 +13,7 @@ object Tablature {
     private val startDirective = Regex("""^\s*\{\s*(start_of_tab|sot)\s*(:.*)?\}\s*$""", RegexOption.IGNORE_CASE)
     private val endDirective = Regex("""^\s*\{\s*(end_of_tab|eot)\s*\}\s*$""", RegexOption.IGNORE_CASE)
     // string name (optional) + bar, then only dashes, digits and technique marks (h p b r / \ ~ x)
+    private val BLANK_LINES = Regex("\n{3,}")
     private val tabLine = Regex("""^\s*([A-Ga-g][#b]?\s*)?[|:][-0-9|hpbrxHPBRX/\\~().*\s]+$""")
 
     fun isStart(line: String) = startDirective.matches(line)
@@ -90,6 +91,6 @@ object Tablature {
     fun strip(text: String): String {
         val flags = tabLines(text)
         return text.split('\n').filterIndexed { i, line -> !flags[i] && !isStart(line) && !isEnd(line) }.joinToString("\n")
-            .replace(Regex("\n{3,}"), "\n\n")
+            .replace(BLANK_LINES, "\n\n")
     }
 }

@@ -3,6 +3,7 @@ package br.app.stagebook
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.Voicings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,5 +60,11 @@ class VoicingsTest {
         // changing the choice doesn't duplicate the line
         val again = Voicings.saveDefine(text, Instrument.ACOUSTIC_GUITAR, "C", Voicings.define(Instrument.ACOUSTIC_GUITAR, "C", Voicings.Shape(listOf(-1, 3, 2, 0, 1, 0))))
         assertEquals(1, again.lines().count { it.startsWith("{define-guitar: C ") })
+    }
+
+    @Test fun `shapes are remembered - the same chord again is not searched again, and max still cuts`() {
+        val first = Voicings.shapes("F#m7", Instrument.ACOUSTIC_GUITAR)
+        assertSame(first, Voicings.shapes("F#m7", Instrument.ACOUSTIC_GUITAR))
+        assertEquals(first.take(1), Voicings.shapes("F#m7", Instrument.ACOUSTIC_GUITAR, max = 1))
     }
 }
