@@ -4,6 +4,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.performTouchInput
 import br.app.stagebook.ui.songs.AddResult
 import br.app.stagebook.ui.songs.SetPick
 import br.app.stagebook.ui.songs.SongRowUi
@@ -54,6 +58,16 @@ class SongsSelectionTest {
         assertEquals(listOf("2") to "s1", added)
     }
 
+
+    @Test fun `starting a selection lets go of the search, so the keyboard does not come back after a dialog`() {
+        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}) } }
+        val search = compose.onNode(androidx.compose.ui.test.hasSetTextAction())
+        search.performClick()
+        search.assertIsFocused()
+        compose.onNodeWithText("Hazard").performTouchInput { longClick() }
+        compose.waitForIdle()
+        search.assertIsNotFocused()
+    }
 
     @Test fun `selecting, the top bar shows how many and select all takes every song`() {
         compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, initialSelection = listOf("1")) } }
