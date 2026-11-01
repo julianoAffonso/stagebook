@@ -55,4 +55,28 @@ class SongsSetPickTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test fun `the tags dialog sees every chosen song - also the ones the search hides`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+            withTimeout(5_000) { repo.loaded.first { it } }
+            val a = repo.saveSong(Song(title = "Primeira", author = "Banda", text = "letra", tags = listOf("Lenta")))
+            val b = repo.saveSong(Song(title = "Segunda", author = "Banda", text = "letra", tags = listOf("Rock")))
+            val identity = br.app.stagebook.data.DeviceIdentity(context)
+            val link = br.app.stagebook.data.BandLink(
+                context, identity, br.app.stagebook.data.BandTrust(context),
+                br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+            )
+            val cloud = br.app.stagebook.data.SetlistCloud(repo, identity)
+            val vm = SongsViewModel(
+                repo, br.app.stagebook.data.Connectivity(context), cloud, link, br.app.stagebook.data.BandTrust(context),
+                BandInternet(context, cloud, br.app.stagebook.data.BandTrust(context), identity, br.app.stagebook.data.BandInbox(context), br.app.stagebook.data.Connectivity(context), link),
+            )
+            vm.onQueryChange("Primeira")
+            assertEquals(listOf(listOf("Lenta"), listOf("Rock")), vm.tagsOf(listOf(a, b)))
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }

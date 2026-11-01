@@ -106,6 +106,7 @@ fun SongsRoute(
         onSync = onSync,
         onTagsChange = viewModel::onTagsChange,
         onSetTags = viewModel::setTags,
+        tagsOf = viewModel::tagsOf,
         onDeleteMany = viewModel::deleteMany,
         onAddToSetlist = viewModel::addToSetlist,
     )
@@ -137,6 +138,8 @@ fun SongsScreen(
     onSync: (() -> Unit)? = null,
     onTagsChange: (Set<String>) -> Unit = {},
     onSetTags: (ids: List<String>, add: List<String>, remove: List<String>) -> Unit = { _, _, _ -> },
+    // the tags of every chosen song, the ones the search hides included
+    tagsOf: (ids: List<String>) -> List<List<String>> = { ids -> uiState.songs.filter { it.id in ids }.map { it.tags } },
     onDeleteMany: (List<String>) -> Unit = {},
     onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
 ) {
@@ -238,11 +241,12 @@ fun SongsScreen(
     }
     cloud?.let { CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
     tagging?.let { ids ->
-        val rows = uiState.songs.filter { it.id in ids }
+        // all the chosen songs, not only the ones the search shows (audit 01/11)
+        val rows = remember(ids) { tagsOf(ids) }
         // the suggestions come first even before anyone uses them
         val options = (br.app.stagebook.ui.components.suggestedTags() + uiState.tags).distinctBy { it.lowercase() }
         val initial = options.associateWith { t ->
-            val n = rows.count { r -> r.tags.any { it.equals(t, true) } }
+            val n = rows.count { tags -> tags.any { it.equals(t, true) } }
             when (n) { 0 -> ToggleableState.Off; rows.size -> ToggleableState.On; else -> ToggleableState.Indeterminate }
         }
         TagsDialog(options, initial, { add, remove -> onSetTags(ids, add, remove); selected = emptyList() }, { tagging = null })
