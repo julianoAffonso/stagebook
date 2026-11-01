@@ -63,7 +63,6 @@
   ol.items li { display: flex; align-items: center; gap: 8px; background: var(--raised); border-radius: 14px; padding: 4px 4px 4px 14px; }
   ol.items li .n { color: var(--accent); width: 24px; font-variant-numeric: tabular-nums; }
   ol.items li .t { flex: 1; min-width: 0; }
-  .results li { cursor: pointer; }
   .review li { cursor: default !important; }
 </style>
 </head>
@@ -149,11 +148,6 @@
     <!-- import: the app's import, run by the tablet -->
     <div class="card" id="view-import" hidden>
       <div class="blocks">
-        <div>
-          <h3 data-t="fromInternet"></h3>
-          <div class="row"><div class="grow"><input id="web-search" type="search"></div><button class="outline" id="web-go"></button></div>
-          <ul class="list results" id="results"></ul>
-        </div>
         <div>
           <h3 data-t="urlTitle"></h3><p class="muted" data-t="urlHint"></p>
           <div class="row"><div class="grow"><input id="url" type="url" placeholder="https://"></div><button class="outline" id="fetch"></button></div>
@@ -292,8 +286,7 @@ async function connected(session) {
   $("capo-down").title = t.capoDown; $("capo-up").title = t.capoUp;
   $("track-remove").textContent = t.trackRemove;
   $("set-name").placeholder = t.setNameHint;
-  $("web-search").placeholder = t.search;
-  ["web-go", "words-go"].forEach((id) => ($(id).textContent = t.go));
+  $("words-go").textContent = t.go;
   $("fetch").textContent = t.fetch;
   $("convert").textContent = t.convert;
   $("files-pick").textContent = t.filesPick;
@@ -622,20 +615,6 @@ async function runImport(body) {
   say("status", t.imported);
 }
 
-$("web-go").onclick = async () => {
-  const q = $("web-search").value.trim();
-  if (!q) return;
-  say("import-status", t.reading);
-  const r = await post("/api/search", { q });
-  if (!r) return offline();
-  const data = await r.json().catch(() => []);
-  if (r.status === 409) return say("import-status", problems()[data.error] || t.unreadable, "error");
-  say("import-status", data.length ? "" : t.notFound);
-  $("results").replaceChildren(...data.map((x) => li(x.title, new URL(x.url).host.replace(/^www\./, ""), () => {
-    say("import-status", t.reading);
-    runImport({ url: x.url });
-  })));
-};
 $("convert").onclick = () => { if ($("paste").value.trim()) runImport({ text: $("paste").value }); };
 $("fetch").onclick = () => { if ($("url").value.trim()) { say("import-status", t.reading); runImport({ url: $("url").value }); } };
 

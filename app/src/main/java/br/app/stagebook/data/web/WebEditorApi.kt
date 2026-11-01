@@ -58,9 +58,6 @@ class WebEditorApi(
     private data class Saved(val id: String)
 
     @Serializable
-    data class SearchRequest(val q: String = "")
-
-    @Serializable
     data class ReceiveRequest(val code: String = "")
 
     @Serializable
@@ -95,9 +92,6 @@ class WebEditorApi(
     @Serializable
     data class Received(val id: String, val from: String, val name: String, val count: Int, val updated: Boolean)
 
-    @Serializable
-    data class SearchResult(val title: String, val url: String)
-
     /** Import from the computer: pasted text (with a title from the file name) or a page address. */
     @Serializable
     data class ImportRequest(val text: String = "", val title: String = "", val url: String = "", val withTab: Boolean? = null)
@@ -129,7 +123,6 @@ class WebEditorApi(
             parts == listOf("transpose") && req.method == "POST" -> change(req) { Chords.transposeSong(it.text, it.semitones) }
             parts == listOf("capo") && req.method == "POST" -> change(req) { Chords.withCapo(it.text, it.capo) }
             parts == listOf("import") && req.method == "POST" -> import(req)
-            parts == listOf("search") && req.method == "POST" -> search(req)
             parts == listOf("receive") && req.method == "POST" -> receive(req)
             parts == listOf("receive", "create") && req.method == "POST" -> receiveCreate(req)
             parts == listOf("band") && req.method == "GET" -> bandItems()
@@ -238,21 +231,6 @@ class WebEditorApi(
                 ),
             )
         }
-    }
-
-    // Import → From the internet, from the computer: the tablet searches (Google, as in the import browser) and keeps
-    // only the results from the sites in Settings → Import (chord sites in the chords profile, lyric sites otherwise)
-    private fun search(req: HttpRequest): HttpResponse {
-        val q = runCatching { json.decodeFromString<SearchRequest>(req.text()).q.trim() }.getOrNull().orEmpty()
-        if (q.isEmpty()) return HttpResponse.status(400)
-        val look = repository.library.value.look
-        if (!look.internetOn) return problem("offline")
-        val sites = if (look.chords) look.chordSites else look.lyricSites
-        val hosts = sites.mapNotNull { runCatching { java.net.URI(it.url).host?.removePrefix("www.") }.getOrNull() }
-        val url = "https://www.google.com/search?q=" + java.net.URLEncoder.encode((if (look.chords) "cifra " else "letra ") + q, "UTF-8")
-        val raw = kotlinx.coroutines.runBlocking { readPage(url, WebPageReader.resultsScript(hosts)) } ?: return problem("unreadable")
-        val found = runCatching { json.decodeFromString<List<SearchResult>>(json.decodeFromString<String>(raw)) }.getOrNull() ?: return problem("unreadable")
-        return ok(json.encodeToString(found))
     }
 
     // Import → Type the 3 words, from the computer: the review comes back here, creating is a second call

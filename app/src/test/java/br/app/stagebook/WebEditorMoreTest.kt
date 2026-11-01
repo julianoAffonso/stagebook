@@ -41,16 +41,8 @@ class WebEditorMoreTest {
     private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) =
         api.handle(HttpRequest(method, path.substringBefore('?'), path.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.associate { it.substringBefore('=') to it.substringAfter('=') }, body = body.toByteArray(), file = file), device)!!
 
-    @Test fun `search keeps only results from the configured sites`() {
-        var asked = ""
-        val page = kotlinx.serialization.json.JsonPrimitive("""[{"title":"Hazard - Cifra Club","url":"https://www.cifraclub.com.br/richard-marx/hazard/"}]""").toString()
-        val api = WebEditorApi(repo, readPage = { url, script -> asked = url; if (script != null) page else null })
-        val r = call(api, "POST", "/api/search", """{"q":"hazard"}""")
-        assertEquals(200, r.status)
-        assertTrue(r.text(), "cifraclub.com.br/richard-marx/hazard" in r.text())
-        assertTrue(asked, asked.startsWith("https://www.google.com/search?q=cifra+hazard"))
-        repo.updateLook { it.copy(internetOn = false) }
-        assertEquals("""{"error":"offline"}""", call(api, "POST", "/api/search", """{"q":"hazard"}""").text())
+    @Test fun `there is no automatic search from the computer - Google blocks it, user 01-11`() {
+        assertEquals(null, WebEditorApi(repo).handle(HttpRequest("POST", "/api/search", emptyMap(), body = """{"q":"hazard"}""".toByteArray()), device))
     }
 
     @Test fun `3 words - review then create, with mine, the ones that came and a choice`() {

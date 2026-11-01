@@ -260,7 +260,6 @@ class WebEditorServer @Inject constructor(
             "trackChange" to R.string.editor_track_change,
             "trackRemove" to R.string.stage_track_remove,
             "trackBad" to R.string.stage_track_bad,
-            "fromInternet" to R.string.import_from_sites,
             "go" to R.string.import_go,
             "typeWords" to R.string.sets_type_code,
             "codeNotFound" to R.string.scan_code_not_found,
