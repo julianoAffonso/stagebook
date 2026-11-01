@@ -905,4 +905,5 @@
     <string name="editor_track_empty">None</string>
     <string name="editor_track_unnamed">Audio attached</string>
     <string name="tags_empty">None</string>
+    <string name="editor_lyrics_chords">Lyrics and chords</string>
 </resources>

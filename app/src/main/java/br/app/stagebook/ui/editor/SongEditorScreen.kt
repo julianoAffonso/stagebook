@@ -294,7 +294,8 @@ fun SongEditorScreen(
                         OutlinedTextField(
                             value = shown,
                             onValueChange = ::edit,
-                            label = { Text(stringResource(R.string.editor_lyrics)) },
+                            // "Lyrics" in the lyrics only profile, "Lyrics and chords" with chords (user, 01/11)
+                            label = { Text(stringResource(if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)) },
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             textStyle = MaterialTheme.typography.bodyLarge,
                             shape = MaterialTheme.shapes.small,

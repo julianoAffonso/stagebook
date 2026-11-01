@@ -903,4 +903,5 @@
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
     <string name="tags_empty">Nenhuma</string>
+    <string name="editor_lyrics_chords">Letra e cifra</string>
 </resources>

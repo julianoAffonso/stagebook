@@ -123,4 +123,13 @@ class EditorTabsTest {
         assertEquals("Under Pressure", br.app.stagebook.data.TrackStore.shownName("Under Pressure.ogg"))
         assertEquals("", br.app.stagebook.data.TrackStore.shownName(""))
     }
+
+    @Test fun `the lyrics field says what it holds, by profile`() {
+        val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha")
+        var chords by androidx.compose.runtime.mutableStateOf(true)
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, look = br.app.stagebook.data.model.Look(chords = chords)) } }
+        compose.onNodeWithText("Letra e cifra").assertExists()
+        chords = false
+        compose.onNodeWithText("Letra").assertExists()
+    }
 }
