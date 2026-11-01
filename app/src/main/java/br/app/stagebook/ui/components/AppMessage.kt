@@ -8,6 +8,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 
 /**
  * The app's short message: a single snackbar at the bottom of the screen (above the "Lead the band" strip), in Google's
@@ -33,3 +36,13 @@ fun rememberAppMessage(): AppMessage {
 val LocalAppMessage = staticCompositionLocalOf<AppMessage> {
     AppMessage(SnackbarHostState(), CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined))
 }
+
+/**
+ * How far the message sits above the bottom of the screen: the phone's tab bar sets its height here, so the message
+ * shows above the tabs instead of covering them (device test B-29). Zero on screens without a bottom bar.
+ */
+class MessageLift {
+    var bottom by androidx.compose.runtime.mutableStateOf(0.dp)
+}
+
+val LocalMessageLift = staticCompositionLocalOf { MessageLift() }
