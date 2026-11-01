@@ -150,7 +150,10 @@ fun SongsScreen(
     var limit by remember { mutableStateOf(false) }
     val message = br.app.stagebook.ui.components.LocalAppMessage.current
     val res = androidx.compose.ui.platform.LocalResources.current
-    fun addedMessage(r: AddResult.Added) = res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
+    // none added: they were already there ("0 música adicionada" said nothing useful, device test B-29)
+    fun addedMessage(r: AddResult.Added) =
+        if (r.count == 0) res.getString(R.string.songs_already_in_set, r.set)
+        else res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
     val wide = wideLists()
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
