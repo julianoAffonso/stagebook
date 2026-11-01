@@ -916,4 +916,6 @@
     <string name="scan_update_link">Atualize o app</string>
     <string name="stage_mix_use_global">Usar o mixer global</string>
     <string name="mixer_rename">Renomear o canal</string>
+    <string name="stage_track_remove_confirm">Remover o backing track desta música? O arquivo de áudio sai do app.</string>
+    <string name="stage_track_remove_ok">Remover</string>
 </resources>

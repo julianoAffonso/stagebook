@@ -88,16 +88,19 @@ class StageViewModel @Inject constructor(
      * work.
      */
     suspend fun attachTrack(songId: String, uri: android.net.Uri): Boolean {
+        // cancelling the picker never gets here, and a file that isn't audio returns before anything changes: the
+        // current track stays (user's question, 01/11)
         val name = tracks.copy(songId, uri) ?: return false
+        val shown = tracks.displayName(uri)
         val old = repository.song(songId)?.track.orEmpty()
-        repository.updateSong(songId) { it.copy(track = name) }
+        repository.updateSong(songId) { it.copy(track = name, trackName = shown) }
         if (old != name) tracks.remove(old)
         return true
     }
 
     fun removeTrack(songId: String) {
         val old = repository.song(songId)?.track.orEmpty()
-        repository.updateSong(songId) { it.copy(track = "") }
+        repository.updateSong(songId) { it.copy(track = "", trackName = "") }
         player.open(null)
         tracks.remove(old)
     }
