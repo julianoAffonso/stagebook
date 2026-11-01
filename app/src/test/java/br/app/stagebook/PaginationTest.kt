@@ -40,4 +40,13 @@ class PaginationTest {
         assertEquals(listOf(listOf(0..8, 10..18), listOf(20..23)), sheets)
         assertEquals(3, Pagination.sheets(lines(4, 4, 4, 4, 4), 90, 1).size)
     }
+    @Test fun `a section title followed by a blank line goes to the next page with its verse (device test B-13)`() {
+        val L = { h: Int -> Pagination.Line(h, false) }
+        val blank = Pagination.Line(10, true)
+        val title = Pagination.Line(20, false, title = true)
+        // page of 100: verse (60) + blank + title (20) would fit, but the title's verse (50) goes to the next page
+        val lines = listOf(L(30), L(30), blank, title, blank, L(25), L(25))
+        val pages = Pagination.paginate(lines, 100)
+        assertEquals(listOf(0..1, 3..6), pages)
+    }
 }

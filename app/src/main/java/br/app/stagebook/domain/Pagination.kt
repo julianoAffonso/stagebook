@@ -6,7 +6,7 @@ package br.app.stagebook.domain
  */
 object Pagination {
     /** A lyrics line already measured at the screen width (the height counts automatic wrapping). */
-    data class Line(val height: Int, val blank: Boolean)
+    data class Line(val height: Int, val blank: Boolean, val title: Boolean = false)
 
     /** Line ranges for each page (no blank lines at the edges). */
     fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> {
@@ -70,6 +70,15 @@ object Pagination {
             while (i < lines.size && !lines[i].blank) i++
             out += s until i
         }
-        return out
+        // a section title alone (a blank line after it) goes with the next verse: it was left at the bottom of a page,
+        // with its verse on the next one (device test B-13)
+        val merged = ArrayList<IntRange>(out.size)
+        var k = 0
+        while (k < out.size) {
+            val b = out[k]
+            if (b.first == b.last && lines[b.first].title && k + 1 < out.size) { merged += b.first..out[k + 1].last; k += 2 }
+            else { merged += b; k++ }
+        }
+        return merged
     }
 }
