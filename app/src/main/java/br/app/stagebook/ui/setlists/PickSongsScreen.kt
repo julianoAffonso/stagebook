@@ -89,10 +89,10 @@ fun PickSongsScreen(
                         enabled = uiState.selectedCount > 0,
                     )
                 }
-                SearchField(query, onQueryChange, stringResource(R.string.songs_search), Modifier.padding(bottom = Spacing.m))
-                if (uiState.tags.isNotEmpty()) {
-                    br.app.stagebook.ui.components.TagFilter(uiState.tags, uiState.chosenTags, onTagsChange, Modifier.fillMaxWidth().padding(bottom = Spacing.m))
-                }
+                br.app.stagebook.ui.components.SearchWithTags(
+                    query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
+                    Modifier.padding(bottom = Spacing.m),
+                )
                 if (uiState.rows.isEmpty()) {
                     EmptyState(AppIcons.Search, stringResource(R.string.songs_not_found), "")
                 } else {

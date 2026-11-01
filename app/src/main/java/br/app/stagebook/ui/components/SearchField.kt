@@ -22,7 +22,8 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder) },
+        // one line: beside the tag filter on phones it wrapped and the field grew taller
+        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {

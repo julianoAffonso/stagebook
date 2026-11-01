@@ -20,6 +20,8 @@ object Sizes {
     val row = 72.dp             // song row
     val swipeTrigger = 56.dp    // row opened by dragging: only the icon button (24) + margin (16) on each side
     val swatch = 48.dp
+    val tagFilter = 240.dp      // tag filter beside the search (tablet)
+    val tagFilterNarrow = 144.dp   // and on phones
     val fontPreview = 160.dp    // fixed box for the lyrics size preview (doesn't push the screen)
     val fontPreviewWide = 300.dp   // the same box on a wide screen (tablet): the sample stays near its real size
     val wideScreen = 600.dp

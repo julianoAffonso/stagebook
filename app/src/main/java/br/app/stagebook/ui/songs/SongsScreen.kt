@@ -54,7 +54,7 @@ import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.wideLists
 import br.app.stagebook.ui.components.InfoDialog
-import br.app.stagebook.ui.components.TagFilter
+import br.app.stagebook.ui.components.SearchWithTags
 import br.app.stagebook.ui.components.TagsDialog
 import androidx.compose.runtime.remember
 import androidx.compose.ui.state.ToggleableState
@@ -162,8 +162,7 @@ fun SongsScreen(
             ) {
                 OverflowMenu(listOf(MenuAction(stringResource(R.string.tags_auto), AppIcons.ListBulleted, { autoAsk = onAutoTags(national, international, true) })))
             }
-            SearchField(query, onQueryChange, stringResource(R.string.songs_search))
-            if (uiState.tags.isNotEmpty()) TagFilter(uiState.tags, uiState.chosenTags, onTagsChange, Modifier.fillMaxWidth().padding(top = Spacing.s))
+            SearchWithTags(query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange)
             if (selecting) {
                 // selection bar in place of New/Import: how many, Share and exit
                 Row(Modifier.padding(vertical = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
