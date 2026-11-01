@@ -58,8 +58,7 @@ import br.app.stagebook.ui.share.rememberCodeActions
 import br.app.stagebook.ui.components.InfoDialog
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
-import br.app.stagebook.ui.components.MenuAction
-import br.app.stagebook.ui.components.OverflowMenu
+import br.app.stagebook.ui.components.TipIcon
 import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.CenteredContent
 import br.app.stagebook.ui.components.ConfirmDialog
@@ -203,18 +202,13 @@ fun SetlistDetailScreen(
                     IconButton(onClick = { onPlay(0) }, enabled = items.isNotEmpty()) {
                         Icon(AppIcons.Slideshow, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
                     }
-                    // rename and delete in the ⋮ (Google's pattern): the setlist name doesn't get cut on phones
-                    OverflowMenu(
-                        listOf(
-                            // only with a band member: sends the setlist and opens the stage; the band follows the song
-                            // changes
-                            *listOfNotNull(
-                                MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { band > 0 && items.isNotEmpty() },
-                            ).toTypedArray(),
-                            MenuAction(stringResource(R.string.sets_rename), AppIcons.Edit, { renaming = true }),
-                            MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
-                        ),
-                    )
+                    // everything in view, no ⋮ (user, 01/11, as in the song editor); holding an icon shows its name.
+                    // Conducting the band only with a band member and songs
+                    if (band > 0 && items.isNotEmpty()) TipIcon(stringResource(R.string.conduct_start), AppIcons.Group, onConduct)
+                    TipIcon(stringResource(R.string.sets_rename), AppIcons.Edit) { renaming = true }
+                    IconButton(onClick = { deleting = true }) {
+                        Icon(AppIcons.Delete, stringResource(R.string.sets_delete), tint = MaterialTheme.colorScheme.error)
+                    }
                 }
                 if (!selecting) SetActions(items.isNotEmpty(), onAddSongs, { sharing = true }, Modifier.padding(bottom = Spacing.m))
                 Crossfade(targetState = uiState.loading, label = "set") { loading ->
