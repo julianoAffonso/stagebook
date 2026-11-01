@@ -90,6 +90,13 @@ class WebEditorSongsTest {
         assertEquals("wild.ogg", song.track)
     }
 
+    @Test fun `the list ignores accents like the app - À Francesa with the A's, Há Tempos before Hunting`() {
+        listOf("Zebra", "À Francesa", "Hunting High and Low", "Há Tempos", "Fullgás", "Fátima").forEach { repo.saveSong(Song(title = it)) }
+        val list = call("GET", "/api/songs").text()
+        val order = Regex("\"title\":\"([^\"]+)\"").findAll(list).map { it.groupValues[1] }.toList()
+        assertEquals(listOf("À Francesa", "Fátima", "Fullgás", "Há Tempos", "Hunting High and Low", "Zebra"), order)
+    }
+
     @Test fun `deletes, and an unknown song is not found`() {
         val id = repo.saveSong(Song(title = "Sai"))
         assertEquals(204, call("DELETE", "/api/songs/$id").status)

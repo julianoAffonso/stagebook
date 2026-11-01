@@ -156,7 +156,8 @@ class WebEditorApi(
 
     private fun list(): String = json.encodeToString(
         repository.library.value.songs
-            .sortedBy { it.title.lowercase() }
+            // the app's order (accents and case ignored): "À Francesa" with the A's, not after Z (device test B-22)
+            .sortedBy { br.app.stagebook.domain.TextKey.of(it.title) }
             .map { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text), it.tags) },
     )
 
