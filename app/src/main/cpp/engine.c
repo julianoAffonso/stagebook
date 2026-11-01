@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -285,6 +286,14 @@ static int submit(struct usbdevfs_urb *u) {
     return ioctl(g_fd, USBDEVFS_SUBMITURB, u);
 }
 static char g_status[256] = "parado";
+// the status is written by the USB thread and AAudio's error callback and read from Java: its own small lock, never
+// the audio's (audio audit A4: a status read while USB dropped could come out mixed)
+static pthread_mutex_t g_stmx = PTHREAD_MUTEX_INITIALIZER;
+static void set_status(const char *fmt, ...) {
+    char b[sizeof g_status];
+    va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
+    pthread_mutex_lock(&g_stmx); memcpy(g_status, b, sizeof b); pthread_mutex_unlock(&g_stmx);
+}
 
 static double now_s(void) {
     struct timespec ts;
@@ -535,19 +544,19 @@ static void *usb_main(void *arg) {
     for (int u = 0; u < NURBS; u++) {
         FILL(urbs[u]);
         if (submit(urbs[u]) < 0) {
-            snprintf(g_status, sizeof g_status, "erro USB ao iniciar: %s", strerror(errno));
+            set_status("erro USB ao iniciar: %s", strerror(errno));
             goto out;
         }
         inflight++;
     }
-    snprintf(g_status, sizeof g_status, "USB ativo");
+    set_status("USB ativo");
 
     while (tail_urbs < TAIL_URBS + NURBS - 1) {
         if (!tail && g_usb_stop) tail = 1;
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
             if (errno == EINTR) continue;
-            snprintf(g_status, sizeof g_status, "USB caiu: %s", strerror(errno));
+            set_status("USB caiu: %s", strerror(errno));
             goto out;
         }
         inflight--;
@@ -601,12 +610,12 @@ static void *usb_main(void *arg) {
         if (tail_urbs >= TAIL_URBS) continue;   // drains what is still in the queue
         FILL(done);
         if (submit(done) < 0) {
-            snprintf(g_status, sizeof g_status, "USB caiu: %s", strerror(errno));
+            set_status("USB caiu: %s", strerror(errno));
             goto out;
         }
         inflight++;
     }
-    snprintf(g_status, sizeof g_status, "parado (urbs=%ld erros=%d)", reaped, errors);
+    set_status("parado (urbs=%ld erros=%d)", reaped, errors);
 
 out:
     for (int u = 0; u < NURBS; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, urbs[u]);
@@ -622,7 +631,7 @@ out:
         for (int u = 0; u < NURBS; u++) { free(urbs[u]->buffer); free(urbs[u]); }
         for (int u = 0; u < n_in; u++) { free(in_urbs[u]->buffer); free(in_urbs[u]); }
     }
-    LOGI("usb fim: %s", g_status);
+    pthread_mutex_lock(&g_stmx); LOGI("usb fim: %s", g_status); pthread_mutex_unlock(&g_stmx);
     g_usb_running = 0;
     return NULL;
 }
@@ -664,7 +673,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
 // headphones unplugged, Bluetooth dropped...: the stream dies; the app's watchdog sees isRunning() false and opens
 // again
 static void dev_error(AAudioStream *st, void *ud, aaudio_result_t err) {
-    snprintf(g_status, sizeof g_status, "saída do aparelho caiu: %s", AAudio_convertResultToText(err));
+    set_status("saída do aparelho caiu: %s", AAudio_convertResultToText(err));
     g_dev_running = 0;
 }
 
@@ -723,7 +732,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
     aaudio_result_t r = AAudioStreamBuilder_openStream(b, &g_dev);
     AAudioStreamBuilder_delete(b);
     if (r != AAUDIO_OK || AAudioStream_getSampleRate(g_dev) != OUT_RATE) {
-        snprintf(g_status, sizeof g_status, "saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
+        set_status("saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
         if (g_dev) { AAudioStream_close(g_dev); g_dev = NULL; }
         return JNI_FALSE;
     }
@@ -731,7 +740,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
     pthread_create(&g_dec_thr, NULL, dec_main, NULL);
     if (AAudioStream_requestStart(g_dev) != AAUDIO_OK) { dev_close(); return JNI_FALSE; }
     g_dev_running = 1;
-    snprintf(g_status, sizeof g_status, "saída do aparelho ativa");
+    set_status("saída do aparelho ativa");
     return JNI_TRUE;
 #else
     return JNI_FALSE;
@@ -834,7 +843,11 @@ JNIEXPORT jboolean JNICALL FN(isRunning)(JNIEnv *e, jclass c) {
     return g_usb_running ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT jstring JNICALL FN(status)(JNIEnv *e, jclass c) { return (*e)->NewStringUTF(e, g_status); }
+JNIEXPORT jstring JNICALL FN(status)(JNIEnv *e, jclass c) {
+    char b[sizeof g_status];
+    pthread_mutex_lock(&g_stmx); memcpy(b, g_status, sizeof b); pthread_mutex_unlock(&g_stmx);
+    return (*e)->NewStringUTF(e, b);
+}
 
 // live meters: turns measuring on/off (off, the engine does the same as before)
 JNIEXPORT void JNICALL FN(setMeter)(JNIEnv *e, jclass c, jboolean on) {
