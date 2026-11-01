@@ -29,6 +29,7 @@ import br.app.stagebook.ui.components.MixerChannelEditor
 import br.app.stagebook.ui.components.label
 import br.app.stagebook.domain.MixerConfig
 import br.app.stagebook.ui.components.OptionDropdown
+import br.app.stagebook.ui.components.lockedDim
 import br.app.stagebook.domain.Voicings
 import br.app.stagebook.ui.components.ChordDiagram
 import androidx.compose.ui.text.input.KeyboardType
@@ -1214,13 +1215,14 @@ internal fun MixerCard(
     SettingsCard(stringResource(R.string.mixer_title), help = stringResource(R.string.mixer_help) + "\n\n" + stringResource(R.string.mixer_routes_help)) {
         OptionDropdown(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
-            { onMixer(mixer.copy(channels = it)) }, { it.toString() },
+            { onMixer(mixer.copy(channels = it)) }, { it.toString() }, Modifier.lockedDim(),
         )
         if (monitorSwitch) SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
         // which output the shown routing belongs to (the one in use or the last used)
         Text(
             pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
             style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.lockedDim(),
         )
         val groups = mixer.groups()
         // phone: one channel per row, horizontal fader; tablet: narrow strips side by side, vertical fader (like a
@@ -1275,7 +1277,7 @@ internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: 
         var noChannel by remember { mutableStateOf(false) }
         SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { on ->
             if (on && mixer.strips.take(mixer.channels).none { it.eq }) noChannel = true else onMixer(mixer.copy(eqOn = on))
-        })
+        }, Modifier.lockedDim())
         if (noChannel) InfoDialog(stringResource(R.string.eq_no_channel_title), stringResource(R.string.eq_no_channel), { noChannel = false })
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
@@ -1295,8 +1297,9 @@ internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: 
             Row(Modifier.fillMaxWidth()) {
                 MixerConfig.EQ_FREQ.forEachIndexed { i, hz ->
                     val db = mixer.eqDb.getOrElse(i) { 0f }
+                    // read-only: the faders dim, the live spectrum behind keeps its colour
                     Column(
-                        Modifier.weight(1f),
+                        Modifier.weight(1f).lockedDim(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
@@ -1308,7 +1311,7 @@ internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: 
             }
         }
         ActionButton(stringResource(R.string.eq_reset), onClick = { onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { 0f })) },
-            icon = AppIcons.Undo, tone = ButtonTone.Tonal, enabled = mixer.eqOn)
+            icon = AppIcons.Undo, tone = ButtonTone.Tonal, enabled = mixer.eqOn, modifier = Modifier.lockedDim())
     }
 }
 

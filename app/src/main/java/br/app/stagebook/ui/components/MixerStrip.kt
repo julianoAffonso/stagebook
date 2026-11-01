@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.R
@@ -40,6 +41,18 @@ import kotlin.math.roundToInt
  * name (or the settings icon) opens editing ([MixerChannelEditor]). [first] is the file's channel (0 = channel 1).
  * [upright]: narrow strip with a vertical fader (tablet); otherwise a row with a horizontal fader (phone).
  */
+/**
+ * The mixer shown read-only (a song on the global mixer, user 01/11): the controls look disabled, but the live meters
+ * keep their normal colour so they stay readable on stage.
+ */
+val LocalMixerLocked = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** Dims a control while the mixer is read-only ([LocalMixerLocked]); the meters don't use it. */
+@Composable
+fun Modifier.lockedDim(): Modifier = if (LocalMixerLocked.current) this.alpha(LOCKED_ALPHA) else this
+
+private const val LOCKED_ALPHA = 0.38f   // Material's disabled look
+
 @Composable
 fun MixerStrip(
     first: Int,
@@ -63,21 +76,23 @@ fun MixerStrip(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Header(first, strip, pair, output, outputs, onEdit, Modifier.fillMaxWidth(), centered = true)
-                MuteButton(strip, onChange)
+                Header(first, strip, pair, output, outputs, onEdit, Modifier.fillMaxWidth().lockedDim(), centered = true)
+                androidx.compose.foundation.layout.Box(Modifier.lockedDim()) { MuteButton(strip, onChange) }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                    VerticalFader(strip.gainDb, setGain, valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, origin = MixerConfig.MIN_DB)
+                    androidx.compose.foundation.layout.Box(Modifier.lockedDim()) {
+                        VerticalFader(strip.gainDb, setGain, valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, origin = MixerConfig.MIN_DB)
+                    }
                     if (showMeters) lanes.forEach { l -> PeakMeter({ meters().levelDb[l] }, { meters().holdDb[l] }) }
                 }
-                GainText(strip)
+                GainText(strip, Modifier.lockedDim())
             }
         } else {
             Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.m, vertical = Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.lockedDim(), verticalAlignment = Alignment.CenterVertically) {
                     Header(first, strip, pair, output, outputs, onEdit, Modifier.weight(1f), centered = false)
                     MuteButton(strip, onChange)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Row(Modifier.lockedDim(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Slider(
                         value = strip.gainDb, onValueChange = setGain,
                         valueRange = MixerConfig.MIN_DB..MixerConfig.MAX_DB, enabled = strip.on, modifier = Modifier.weight(1f),
