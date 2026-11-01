@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -45,6 +46,8 @@ fun ScreenHeader(
     modifier: Modifier = Modifier,
     subtitle: String = "",
     onBack: (() -> Unit)? = null,
+    onTitleClick: (() -> Unit)? = null,   // tapping the title (e.g. rename a setlist, user 01/11); its label for accessibility
+    titleClickLabel: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val wide = wideLists()
@@ -60,17 +63,18 @@ fun ScreenHeader(
             Column(Modifier.weight(1f)) {
                 Text(
                     title,
-                    // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones has
-                    // the top bar's smaller title, so it doesn't take two lines; on tablets always big (it fits)
+                    // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones a
+                    // smaller one that can wrap to two lines, centred on the icons (user, 01/11: "Show de sába…" was
+                    // cut next to the setlist's icons); on tablets always big (it fits)
                     style = when {
                         wide -> MaterialTheme.typography.headlineLarge
-                        onBack != null -> MaterialTheme.typography.titleLarge
+                        onBack != null -> MaterialTheme.typography.titleMedium
                         else -> MaterialTheme.typography.headlineMedium
                     },
                     color = MaterialTheme.colorScheme.onBackground,
-                    // inner screen top bar on phones: a single line, with "…" (like Google does)
-                    maxLines = if (!wide && onBack != null) 1 else 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier,
                 )
                 if (wide && subtitle.isNotEmpty()) Subtitle(subtitle)
             }

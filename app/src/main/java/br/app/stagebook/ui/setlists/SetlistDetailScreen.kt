@@ -196,16 +196,19 @@ fun SetlistDetailScreen(
                         if (items.isNotEmpty()) stringResource(R.string.set_tap_to_play, count) else count
                     },
                     onBack = onBack,
+                    // tapping the name renames it, like a song's name in its editor (user, 01/11)
+                    onTitleClick = { renaming = true },
+                    titleClickLabel = stringResource(R.string.sets_rename),
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                 ) {
                     // small play: the stage from the start (tapping a song opens on it)
                     IconButton(onClick = { onPlay(0) }, enabled = items.isNotEmpty()) {
                         Icon(AppIcons.Slideshow, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
                     }
-                    // everything in view, no ⋮ (user, 01/11, as in the song editor); holding an icon shows its name.
+                    // everything in view, no ⋮ (user, 01/11, as in the song editor); holding an icon shows its name;
+                    // rename is a tap on the name.
                     // Conducting the band only with a band member and songs
                     if (band > 0 && items.isNotEmpty()) TipIcon(stringResource(R.string.conduct_start), AppIcons.Group, onConduct)
-                    TipIcon(stringResource(R.string.sets_rename), AppIcons.Edit) { renaming = true }
                     IconButton(onClick = { deleting = true }) {
                         Icon(AppIcons.Delete, stringResource(R.string.sets_delete), tint = MaterialTheme.colorScheme.error)
                     }
