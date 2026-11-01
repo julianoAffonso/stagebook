@@ -15,6 +15,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -53,20 +55,33 @@ internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerCo
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Spacing.m).padding(bottom = Spacing.l),
             verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
-            // "Use the global mixer" on top (user, 01/11): on, the song plays with the global mixer and the first change
-            // here makes its own copy (the switch turns off by itself); off, it has its own settings, and turning it on
-            // asks first and drops them
+            // "Use the global mixer" on top (user, 01/11): on (a song never changed), the song plays with the global
+            // mixer and the controls below only show it, disabled; turning it off makes the song's own copy and enables
+            // them; turning it on again asks first and drops the song's settings
             br.app.stagebook.ui.components.SwitchRow(
                 stringResource(R.string.stage_mix_use_global), !own,
                 { on -> if (on) backToGeneral = true else onMixer(mixer) },
             )
-            // to change every song: the global mixer is a link (user, 01/11)
-            br.app.stagebook.ui.components.SettingsLinkText(
-                stringResource(if (own) R.string.stage_mix_own else R.string.stage_mix_hint), stringResource(R.string.stage_mix_global),
-                br.app.stagebook.ui.settings.SettingsSection.PLAYER,
+            // where the global mixer is, as text: a link would leave the stage in the middle of a song (user, 01/11)
+            androidx.compose.material3.Text(
+                stringResource(if (own) R.string.stage_mix_own else R.string.stage_mix_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            MixerCard(mixer, onMixer, { levels.value }, monitoring) { monitoring = it }
-            EqCard(mixer, onMixer, { levels.value }, monitoring)
+            androidx.compose.foundation.layout.Box {
+                Column(Modifier.alpha(if (own) 1f else DISABLED_ALPHA), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    MixerCard(mixer, onMixer, { levels.value }, monitoring) { monitoring = it }
+                    EqCard(mixer, onMixer, { levels.value }, monitoring)
+                }
+                // with the global mixer: nothing below takes a touch (it's read-only until the switch is off)
+                if (!own) androidx.compose.foundation.layout.Box(
+                    Modifier.matchParentSize().pointerInput(Unit) {
+                        awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
+                    },
+                )
+            }
         }
     }
 }
+
+private const val DISABLED_ALPHA = 0.38f   // Material's disabled look

@@ -53,7 +53,7 @@ class StageMixerTest {
         stage(track = "s1.ogg")
         compose.onNodeWithContentDescription("Abrir o mixer").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("cria um ajuste só desta música", substring = true).assertExists()
+        compose.onNodeWithText("Desligue para mexer só nesta música", substring = true).assertExists()
         compose.onNodeWithText("Usar o mixer global").assertExists()   // on: no settings of its own
     }
 
