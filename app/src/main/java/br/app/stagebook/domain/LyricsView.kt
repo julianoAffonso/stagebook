@@ -10,7 +10,7 @@ package br.app.stagebook.domain
  * keeps the chords whose stretch before (or after) them didn't change; a new line gets no chord.
  */
 object LyricsView {
-    private val bracket = Regex("""\[([^\[\]]*)]""")
+    private val bracket = Chords.bracket
 
     /** The line without chords (the rest, spaces included, stays the same: positions match [chordsAt]). */
     private fun plain(line: String) = bracket.replace(line) { if (Chords.isChord(it.groupValues[1])) "" else it.value }

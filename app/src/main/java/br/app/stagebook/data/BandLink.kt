@@ -141,9 +141,11 @@ class BandLink @Inject constructor(
     /** The package (list + songs) encrypted for a member, ready for [sendTo]. */
     fun packageFor(memberId: String, list: ByteArray, songs: List<SetlistCloud.SharedSong>): String? {
         val key = pairKeyWith(memberId) ?: return null
-        val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
-        return ShareCode.encrypt(key, plain)
+        return ShareCode.encrypt(key, packageBytes(list, songs))
     }
+
+    private fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray =
+        json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
 
     /**
      * Searches for the band briefly (on app open with something pending: sends with no receipt, an unconfirmed "ok"),
@@ -164,7 +166,7 @@ class BandLink @Inject constructor(
 
     /** Sends a setlist or songs to everyone in the band on the network now; returns the ids of who got it. */
     suspend fun send(list: ByteArray, songs: List<SetlistCloud.SharedSong>): Set<String> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
-        val plain = json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
+        val plain = packageBytes(list, songs)
         onlineMembers.value.map { peer ->
             this@io.async {
                 val key = pairKeyWith(peer.id) ?: return@async null
@@ -250,11 +252,13 @@ class BandLink @Inject constructor(
     }
 
     /** The songs here that answer a request (same rule as the QR: title, with the artist as tiebreaker). */
-    fun songsFor(wanted: List<Wanted>): List<String> {
+    fun songsFor(wanted: List<Wanted>): List<String> = found(wanted).map { it.id }.distinct()
+
+    private fun found(wanted: List<Wanted>): List<br.app.stagebook.data.model.Song> {
         val library = repository.library.value.songs
         return wanted.take(MAX_ASK).mapNotNull { w ->
-            (br.app.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? br.app.stagebook.domain.QrMatch.Found)?.song?.id
-        }.distinct()
+            (br.app.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? br.app.stagebook.domain.QrMatch.Found)?.song
+        }
     }
 
     // a band member asked: answer with the ones here (same rule as the QR: title, with the artist as tiebreaker)
@@ -262,10 +266,7 @@ class BandLink @Inject constructor(
         val key = pairKeyWith(from.id) ?: return null
         val plain = ShareCode.decrypt(key, body) ?: return null
         val wanted = runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), plain.decodeToString()) }.getOrNull() ?: return null
-        val library = repository.library.value.songs
-        val found = wanted.take(MAX_ASK).mapNotNull { w ->
-            (br.app.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? br.app.stagebook.domain.QrMatch.Found)?.song
-        }.map { SetlistCloud.SharedSong(it.title, it.author, it.year, it.text) }
+        val found = found(wanted).map { SetlistCloud.SharedSong(it.title, it.author, it.year, it.text) }
         return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
     }
 

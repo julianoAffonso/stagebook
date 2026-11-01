@@ -1,21 +1,15 @@
 package br.app.stagebook.domain
 
-import java.util.Locale
-
 /**
  * Cleaning lyrics imported from a site: removes loose chords and the translation (only the original language stays).
  */
 object LyricsCleaner {
-    private const val CHORD = "[A-G][#b]?(m|maj|min|dim|aug|sus|add|M|º|°|\\+)?[0-9]*(\\([^)]*\\))?(/[A-G][#b]?)?"
-    private val chordLine = Regex("($CHORD\\s*)+")
-    private val trailingSpace = Regex("\\s+$")
-    private val manyBlank = Regex("\n{3,}")
-
     fun clean(raw: String): String {
         val kept = raw.replace("\r", "").split('\n')
-            .map { it.replace(trailingSpace, "") }
-            .filterNot { it.isNotBlank() && chordLine.matches(it.trim()) }
-        return keepOriginalLanguage(kept.joinToString("\n")).replace(manyBlank, "\n\n").trim()
+            .map { it.replace(TextPatterns.TRAILING_SPACE, "") }
+            // the same chord line the editor knows (its own pattern missed "G7M" and labelled lines like "Intro: G D"; audit 01/11)
+            .filterNot { it.isNotBlank() && Chords.isChordLine(it) }
+        return keepOriginalLanguage(kept.joinToString("\n")).replace(TextPatterns.MANY_BLANK, "\n\n").trim()
     }
 
     enum class Lang { EN, PT }
@@ -42,14 +36,10 @@ object LyricsCleaner {
         "pode", "posso", "há", "num", "numa", "pelo", "pela", "sobre", "depois", "antes", "ao", "aos", "à",
         "em", "na", "se", "eram", "era", "minha", "estava", "fosse", "seus", "suas", "deixa", "deixe",
     )
-    private val wordSplit = Regex("[^\\p{L}']+")
-
     fun langOf(line: String): Lang? {
         var en = 0
         var pt = 0
-        for (w in line.lowercase(Locale.ROOT).replace('’', '\'').split(wordSplit)) {
-            val word = w.trim('\'')
-            if (word.isEmpty()) continue
+        for (word in TextPatterns.words(line)) {
             if (word in english) en++
             if (word in portuguese) pt++
         }
