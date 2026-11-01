@@ -23,6 +23,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
@@ -69,6 +71,15 @@ fun MixerStrip(
 ) {
     val lanes = if (pair) listOf(first, first + 1) else listOf(first)   // paired: double meter (left and right)
     val setGain = { db: Float -> onChange(strip.copy(gainDb = (db * 2).roundToInt() / 2f)) }
+    // tapping the channel's name renames it, like a setlist's (user, 01/11); the settings icon opens the rest
+    var renaming by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    if (renaming) {
+        TextInputDialog(
+            stringResource(R.string.mixer_name), strip.name, channelTitle(first, pair),
+            { onChange(strip.copy(name = it.trim())) }, { renaming = false },
+        )
+    }
+    val rename = { renaming = true }
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         if (upright) {
             Column(
@@ -76,7 +87,7 @@ fun MixerStrip(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Header(first, strip, pair, output, outputs, onEdit, Modifier.fillMaxWidth().lockedDim(), centered = true)
+                Header(first, strip, pair, output, outputs, onEdit, rename, Modifier.fillMaxWidth().lockedDim(), centered = true)
                 androidx.compose.foundation.layout.Box(Modifier.lockedDim()) { MuteButton(strip, onChange) }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.foundation.layout.Box(Modifier.lockedDim()) {
@@ -89,7 +100,7 @@ fun MixerStrip(
         } else {
             Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.m, vertical = Spacing.s)) {
                 Row(Modifier.lockedDim(), verticalAlignment = Alignment.CenterVertically) {
-                    Header(first, strip, pair, output, outputs, onEdit, Modifier.weight(1f), centered = false)
+                    Header(first, strip, pair, output, outputs, onEdit, rename, Modifier.weight(1f), centered = false)
                     MuteButton(strip, onChange)
                 }
                 Row(Modifier.lockedDim(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -110,10 +121,12 @@ fun MixerStrip(
     }
 }
 
-// channel name and the summary (normalize, output, EQ, center); a tap opens editing
+// channel name (a tap renames it) and the summary (normalize, output, EQ, center) with the settings icon (a tap opens
+// editing)
 @Composable
 private fun Header(
-    first: Int, strip: MixChannel, pair: Boolean, output: Int, outputs: OutputInfo, onEdit: () -> Unit, modifier: Modifier, centered: Boolean,
+    first: Int, strip: MixChannel, pair: Boolean, output: Int, outputs: OutputInfo, onEdit: () -> Unit, onRename: () -> Unit,
+    modifier: Modifier, centered: Boolean,
 ) {
     val title = channelTitle(first, pair)
     val summary = listOfNotNull(
@@ -133,7 +146,10 @@ private fun Header(
             Modifier.weight(1f, fill = !centered).then(if (centered) Modifier.height(80.dp) else Modifier),
             horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
         ) {
-            Text(strip.name.ifEmpty { title }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                strip.name.ifEmpty { title }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clip(MaterialTheme.shapes.small).clickable(onClickLabel = stringResource(R.string.mixer_rename), onClick = onRename),
+            )
             if (strip.name.isNotEmpty()) {
                 Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }

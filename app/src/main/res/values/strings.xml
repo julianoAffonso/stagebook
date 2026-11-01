@@ -917,4 +917,5 @@
     <string name="scan_newer_link">This came from a newer Stagebook. %1$s to receive it.</string>
     <string name="scan_update_link">Update the app</string>
     <string name="stage_mix_use_global">Use the global mixer</string>
+    <string name="mixer_rename">Rename the channel</string>
 </resources>
