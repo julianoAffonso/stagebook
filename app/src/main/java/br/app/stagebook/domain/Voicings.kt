@@ -31,8 +31,23 @@ object Voicings {
         return shape.frets.mapIndexedNotNull { i, f -> if (f < 0 || i >= tuning.size) null else tuning[i] + f + capo }
     }
 
-    /** The chord's shapes on a string instrument, from easiest to hardest (empty on keyboard). */
-    fun shapes(chord: String, instrument: Instrument, max: Int = 12): List<Shape> {
+    /**
+     * The chord's shapes on a string instrument, from easiest to hardest (empty on keyboard). Remembered: the stage's
+     * chord list searched every chord again on each song, on the main thread (audit 01/11).
+     */
+    fun shapes(chord: String, instrument: Instrument, max: Int = MAX_SHAPES): List<Shape> {
+        if (max > MAX_SHAPES) return search(chord, instrument, max)
+        val key = "$chord|$instrument"
+        val all = synchronized(cache) { cache[key] } ?: search(chord, instrument, MAX_SHAPES).also { synchronized(cache) { cache[key] = it } }
+        return if (max >= all.size) all else all.take(max)
+    }
+
+    private const val MAX_SHAPES = 12
+    private val cache = object : LinkedHashMap<String, List<Shape>>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Shape>>) = size > 128
+    }
+
+    private fun search(chord: String, instrument: Instrument, max: Int): List<Shape> {
         val tuning = tunings[instrument] ?: return emptyList()
         val notes = ChordTheory.notes(chord) ?: return emptyList()
         val six = tuning.size == 6
@@ -127,13 +142,14 @@ object Voicings {
     fun defineKeys(chord: String, keys: List<Int>): String =
         "{define-keyboard: $chord keys ${keys.joinToString(" ") { (it - keys.first()).toString() }}}"
 
+    private val SPACES = Regex("\\s+")
     private val defineLine = Regex("""^\s*\{\s*define-(\w+)\s*:\s*(\S+)\s+(.*)\}\s*$""")
 
     /** The shape saved in the song for the chord, if any (strings); null if there isn't one. */
     fun savedShape(text: String, instrument: Instrument, chord: String): Shape? {
         val m = text.lineSequence().mapNotNull { defineLine.matchEntire(it) }
             .firstOrNull { it.groupValues[1] == instrument.chordPro && it.groupValues[2] == chord } ?: return null
-        val parts = m.groupValues[3].split(Regex("\\s+"))
+        val parts = m.groupValues[3].split(SPACES)
         val base = parts.getOrNull(parts.indexOf("base-fret") + 1)?.toIntOrNull() ?: 1
         val i = parts.indexOf("frets")
         if (i < 0) return null
@@ -145,7 +161,7 @@ object Voicings {
     fun savedKeys(text: String, chord: String): List<Int>? {
         val m = text.lineSequence().mapNotNull { defineLine.matchEntire(it) }
             .firstOrNull { it.groupValues[1] == "keyboard" && it.groupValues[2] == chord } ?: return null
-        val parts = m.groupValues[3].split(Regex("\\s+"))
+        val parts = m.groupValues[3].split(SPACES)
         val i = parts.indexOf("keys")
         if (i < 0) return null
         val rel = parts.drop(i + 1).mapNotNull { it.toIntOrNull() }
