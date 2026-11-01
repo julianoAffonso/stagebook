@@ -475,7 +475,9 @@ async function sendTrack(file) {
     { method: "PUT", body: file, headers: { "X-Stagebook": "1", "Content-Type": "application/octet-stream" }, credentials: "same-origin" }).catch(() => null);
   if (!r) return offline();
   if (r.status !== 200) return say("status", r.status === 413 ? t.trackBad : (problems()[(await r.json().catch(() => ({}))).error] || t.trackBad), "error");
-  current.track = (await r.json()).track;
+  const sent = await r.json();
+  current.track = sent.track;
+  current.trackName = sent.trackName || "";   // the new track's name, not the old one's (device test B-23)
   drawTrack();
   say("status", t.saved);
 }
