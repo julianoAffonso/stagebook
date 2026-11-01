@@ -107,7 +107,7 @@ fun ScanSetlistRoute(
             onBack()
         },
         onBack = onBack,
-        camera = { onText, modifier -> QrScanner(onText, modifier) },
+        camera = { onText, modifier -> QrScanner(onText, modifier, onNoCamera = { message.show(resources.getString(R.string.scan_no_camera), long = true) }) },
         byCode = viewModel.code.isNotEmpty(),
         fromName = viewModel.fromName,
         band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
