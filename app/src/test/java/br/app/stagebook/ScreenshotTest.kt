@@ -91,7 +91,7 @@ class ScreenshotTest {
         name = "Show de sábado",
         items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false) },
     )
-    private val lyrics = "[Verse 1]\nPrimeira linha da letra de exemplo\nSegunda linha um pouco mais comprida que a outra\nTerceira linha\n\n" +
+    private val lyrics = "[Verse 1]\nPrimeira linha da letra de exemplo\nSegunda linha ==um pouco mais comprida== que a outra\nTerceira linha\n\n" +
         "[Chorus]\nO refrão aparece aqui\nE repete mais uma vez\n\n[Verse 2]\nMais uma estrofe\nCom outra linha\nE a última"
 
     private fun shoot(name: String, content: @Composable () -> Unit) {
