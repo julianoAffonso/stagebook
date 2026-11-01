@@ -133,7 +133,15 @@ fun HomeScreen(
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
-        val status = HomeStatus(essential, inbox.size, openEssential) { listOpen = true }
+        val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
+        var webOpen by rememberSaveable { mutableStateOf(false) }
+        if (webOpen && webAddress.isNotEmpty()) {
+            br.app.stagebook.ui.components.ConfirmDialog(
+                stringResource(R.string.web_in_use_text, webAddress), stringResource(R.string.web_close),
+                { webOpen = false; homeVm.closeWebEditor() }, { webOpen = false }, destructive = false,
+            )
+        }
+        val status = HomeStatus(essential, inbox.size, openEssential, { listOpen = true }, webAddress) { webOpen = true }
         val news = banner?.let { br.app.stagebook.ui.share.itemText(it) }
         val viewLabel = stringResource(R.string.inbox_snack_open)
         LaunchedEffect(banner?.id) {
