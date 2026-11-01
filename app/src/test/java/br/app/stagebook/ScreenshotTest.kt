@@ -179,7 +179,7 @@ class ScreenshotTest {
             StagebookTheme {
                 SongEditorScreen(
                     SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "1999", chordSong, tags = listOf("Nacional", "Rock")),
-                    {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "faixa.ogg",
+                    {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "faixa.ogg", trackName = "Canção de teste (playback)",
                 )
             }
         }

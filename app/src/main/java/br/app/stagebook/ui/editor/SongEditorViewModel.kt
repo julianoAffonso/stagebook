@@ -79,26 +79,33 @@ class SongEditorViewModel @Inject constructor(
     var track by mutableStateOf(savedStateHandle.get<String>(KEY_TRACK) ?: route.songId?.let(repository::song)?.track.orEmpty())
         private set
 
+    /** The track's own name, to show ("" = unknown: attached before names were kept). */
+    var trackName by mutableStateOf(savedStateHandle.get<String>(KEY_TRACK_NAME) ?: route.songId?.let(repository::song)?.trackName.orEmpty())
+        private set
+
     /** Links the chosen file right away (copied into the app); saving reads the song again, so it's kept. */
     suspend fun attachTrack(uri: android.net.Uri): Boolean {
         val name = tracks.copy(songId, uri) ?: return false
+        val shown = tracks.displayName(uri)
         val old = track
         // a saved song keeps it right away; a new one takes it when saved
-        if (route.songId != null) repository.updateSong(songId) { it.copy(track = name) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(track = name, trackName = shown) }
         if (old != name) tracks.remove(old)
-        keepTrack(name)
+        keepTrack(name, shown)
         return true
     }
 
     fun removeTrack() {
-        if (route.songId != null) repository.updateSong(songId) { it.copy(track = "") }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(track = "", trackName = "") }
         tracks.remove(track)
-        keepTrack("")
+        keepTrack("", "")
     }
 
-    private fun keepTrack(name: String) {
+    private fun keepTrack(name: String, shown: String) {
         track = name
+        trackName = shown
         savedStateHandle[KEY_TRACK] = name
+        savedStateHandle[KEY_TRACK_NAME] = shown
     }
 
     // a new song left without saving: the backing track copied for it goes away
@@ -195,7 +202,7 @@ class SongEditorViewModel @Inject constructor(
         if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = songId, track = track, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(s.text))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
+        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(s.text))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         finished = true
         // batch importing into a setlist: the song takes its place and the queue moves on
@@ -220,5 +227,6 @@ class SongEditorViewModel @Inject constructor(
         const val KEY_TAGS = "editor_tags"
         const val KEY_NEW_ID = "editor_new_id"
         const val KEY_TRACK = "editor_track"
+        const val KEY_TRACK_NAME = "editor_track_name"
     }
 }

@@ -185,7 +185,6 @@
     <string name="stage_track_change">Trocar o backing track</string>
     <string name="stage_track_remove">Remover o backing track</string>
     <string name="editor_track_none">Nenhum nesta música</string>
-    <string name="editor_track_set">Escolhido. No palco, aparece o play.</string>
     <string name="editor_track_pick">Escolher</string>
     <string name="editor_track_change">Trocar</string>
     <string name="stage_track_bad">Esse arquivo não serve. Use OGG, MP3 ou WAV.</string>
@@ -880,9 +879,6 @@
     <string name="settings_pedal_from_tablet">teclado do tablet</string>
     <string name="settings_pedal_done">Já configurados</string>
     <string name="settings_pedal_done_none">Nenhum ainda. Sem configurar, o pedal comum avança e volta a página; o pedal MIDI precisa ser configurado.</string>
-    <string name="tags_none">Sem tags</string>
-    <string name="tags_list">Tags: %1$s</string>
-    <string name="tags_edit">Editar tags</string>
     <string name="songs_add_to_set">Adicionar ao setlist</string>
     <string name="songs_add_to_set_title">Adicionar a qual setlist?</string>
     <plurals name="songs_added_to_set">
@@ -904,6 +900,7 @@
     </plurals>
     <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional. Depois dá pra corrigir no editor de cada música ou selecionando várias na lista.</string>
     <string name="editor_auto_meta_short">Em branco: o app completa</string>
-    <string name="editor_track_chip_set">Backing track</string>
-    <string name="editor_track_chip_none">Escolher backing track</string>
+    <string name="editor_track_empty">Nenhum</string>
+    <string name="editor_track_unnamed">Áudio anexado</string>
+    <string name="tags_empty">Nenhuma</string>
 </resources>

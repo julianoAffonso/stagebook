@@ -59,6 +59,13 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
 
     fun remove(name: String) { if (name.isNotEmpty()) File(dir, name).delete() }
 
+    /** The chosen file's name without the extension ("Under Pressure"), to show; empty when Android doesn't say. */
+    fun displayName(uri: Uri): String = runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+    }.getOrNull().orEmpty().let(::shownName)
+
     private fun extensionOf(uri: Uri): String? {
         val shown = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
             if (c.moveToFirst()) c.getString(0) else null
@@ -74,6 +81,9 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     companion object {
+        /** "Under Pressure.ogg" → "Under Pressure". */
+        fun shownName(file: String): String = file.substringBeforeLast('.').trim()
+
         val FORMATS = setOf("ogg", "mp3", "wav")
         const val MAX_BYTES = 200L * 1024 * 1024   // a long multitrack OGG is well under this
         val MIME = arrayOf("audio/ogg", "application/ogg", "audio/mpeg", "audio/wav", "audio/x-wav", "audio/*")
