@@ -834,8 +834,8 @@
     <string name="stage_mix_general">Use the global mixer</string>
     <string name="stage_mix_general_confirm">This song goes back to the global mixer, and its own settings are deleted.</string>
     <plurals name="mixer_own_songs">
-        <item quantity="one">%1$d song has its own mixer settings (changed on stage): what you change here doesn\'t apply to it.</item>
-        <item quantity="other">%1$d songs have their own mixer settings (changed on stage): what you change here doesn\'t apply to them.</item>
+        <item quantity="one">%1$d song has its own mixer settings, changed on stage. What you change here doesn\'t apply to it.</item>
+        <item quantity="other">%1$d songs have their own mixer settings, changed on stage. What you change here doesn\'t apply to them.</item>
     </plurals>
     <string name="tags_more">%1$s +%2$d</string>
     <string name="tags_all">All</string>

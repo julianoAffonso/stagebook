@@ -864,9 +864,9 @@
     <string name="stage_mix_general">Usar o mixer global</string>
     <string name="stage_mix_general_confirm">Esta música volta a usar o mixer global, e os ajustes próprios dela são apagados.</string>
     <plurals name="mixer_own_songs">
-        <item quantity="one">%1$d música tem ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para ela.</item>
-        <item quantity="many">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
-        <item quantity="other">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
+        <item quantity="one">%1$d música tem ajustes próprios de mixer, mudados no palco. O que você mudar aqui não vale para ela.</item>
+        <item quantity="many">%1$d músicas têm ajustes próprios de mixer, mudados no palco. O que você mudar aqui não vale para elas.</item>
+        <item quantity="other">%1$d músicas têm ajustes próprios de mixer, mudados no palco. O que você mudar aqui não vale para elas.</item>
     </plurals>
     <string name="tags_more">%1$s +%2$d</string>
     <string name="tags_all">Todas</string>
