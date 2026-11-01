@@ -280,7 +280,8 @@ fun SongsScreen(
             onDismiss = { naming = false },
         )
     }
-    if (limit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_message), { limit = false })
+    // several songs at once: the setlist may still have room, only not for all of them (device test B-11)
+    if (limit) InfoDialog(stringResource(R.string.qr_limit_batch_title), stringResource(R.string.qr_limit_batch), { limit = false })
 }
 
 /** Which setlist the selection goes into, or a new one. */

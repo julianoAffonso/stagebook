@@ -81,6 +81,8 @@
     <string name="sets_add_songs">Músicas</string>
     <string name="qr_limit_title">Setlist cheio</string>
     <string name="qr_limit_message">Este setlist já está cheio. Para continuar, crie outro.</string>
+    <string name="qr_limit_batch_title">Não cabem todas</string>
+    <string name="qr_limit_batch">Essas músicas não cabem juntas neste setlist (o QR tem limite). Escolha menos músicas ou crie outro setlist.</string>
     <string name="qr_limit_name">Esse nome é grande demais para este setlist. Use um mais curto.</string>
     <string name="set_empty_title">Setlist vazio</string>
     <string name="set_empty_message">Toque em \"Músicas\" para escolher o que entra no show.</string>
