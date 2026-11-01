@@ -86,7 +86,8 @@ class WebEditorApi(
     data class BackupRestore(val token: String = "", val parts: List<String> = emptyList(), val replace: Boolean = false)
 
     @Serializable
-    private data class TrackSet(val track: String)
+    // the stored file and the name the page shows right away (without it the page showed a piece of the file name)
+    private data class TrackSet(val track: String, val trackName: String = "")
 
     @Serializable
     private data class RestoreDone(val skipped: Int)
@@ -346,7 +347,7 @@ class WebEditorApi(
             val shown = br.app.stagebook.data.TrackStore.shownName(req.query["name"].orEmpty())
             repository.updateSong(id) { it.copy(track = name, trackName = shown) }
             if (song.track != name) store.remove(song.track)
-            return ok(json.encodeToString(TrackSet(name)))
+            return ok(json.encodeToString(TrackSet(name, shown)))
         } finally {
             named.delete()
         }

@@ -112,6 +112,8 @@ class WebEditorMoreTest {
         val upload = File(context.cacheDir, "upload.part").apply { writeBytes("OggS".toByteArray() + ByteArray(28)) }
         val r = call(api, "PUT", "/api/songs/$id/track?name=minha.ogg", file = upload)
         assertEquals(200, r.status)
+        // the page shows the new name right away (device test B-23)
+        assertTrue(r.text(), "\"trackName\":\"minha\"" in r.text())
         val name = repo.song(id)!!.track
         assertTrue(tracks.file(name).exists())
         assertEquals(409, call(api, "PUT", "/api/songs/$id/track?name=foto.jpg", file = File(context.cacheDir, "x.part").apply { writeBytes(ByteArray(4)) }).status)
