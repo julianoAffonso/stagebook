@@ -41,7 +41,17 @@ data class SongsUiState(
     val total: Int = 0,
     val tags: List<String> = emptyList(),        // every tag in the library (the filter's options)
     val chosenTags: Set<String> = emptySet(),
+    val sets: List<SetPick> = emptyList(),        // setlists to add a selection to
 )
+
+@Immutable
+data class SetPick(val id: String, val name: String)
+
+/** Adding a selection to a setlist: added (how many, where) or over what the setlist's QR holds. */
+sealed interface AddResult {
+    data class Added(val count: Int, val set: String) : AddResult
+    data object Limit : AddResult
+}
 
 /** Waits for the person to stop typing before filtering; clearing the search is immediate. */
 fun typingDelay(q: String): Long = if (q.isEmpty()) 0L else 150L
@@ -95,6 +105,7 @@ class SongsViewModel @Inject constructor(
             total = repository.library.value.songs.size,
             tags = all,
             chosenTags = kept,
+            sets = repository.library.value.sets.map { SetPick(it.id, it.name) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 
@@ -127,5 +138,21 @@ class SongsViewModel @Inject constructor(
         return br.size to other.size
     }
 
-    fun delete(id: String) = repository.deleteSong(id)
+
+    fun deleteMany(ids: List<String>) = repository.deleteSongs(ids)
+
+    /**
+     * Adds the selection to a setlist ([setId]), or to a new one named [newName] (empty = date and time, as on the
+     * Setlists tab). The ones already there stay where they are; it stops before going over what the QR can hold.
+     */
+    fun addToSetlist(ids: List<String>, setId: String?, newName: String): AddResult {
+        val lib = repository.library.value
+        val name = newName.ifBlank { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
+        val set = setId?.let(lib::setlist) ?: br.app.stagebook.data.model.Setlist(name = name)
+        val extra = ids.filterNot { it in set.items }
+        if (!br.app.stagebook.domain.QrPayload.fits(set, lib, extraIds = extra)) return AddResult.Limit
+        val id = setId ?: repository.createSetlist(name)
+        repository.addToSetlist(id, extra)
+        return AddResult.Added(extra.size, set.name)
+    }
 }

@@ -129,6 +129,8 @@ fun SongEditorRoute(
         track = viewModel.track.takeIf { look.playerMode },
         onPickTrack = { picker.launch(TrackStore.MIME) },
         onRemoveTrack = viewModel::removeTrack,
+        allTags = remember { viewModel.allTags() },
+        onTags = viewModel::onTags,
     )
 }
 
@@ -151,8 +153,11 @@ fun SongEditorScreen(
     track: String? = null,   // the song's backing track file ("" = none); null = can't pick here (new song or player off)
     onPickTrack: () -> Unit = {},
     onRemoveTrack: () -> Unit = {},
+    allTags: List<String> = emptyList(),
+    onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
 ) {
     var deleting by rememberSaveable { mutableStateOf(false) }
+    var tagging by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
     var newChord by rememberSaveable { mutableStateOf(false) }
     // the song details (title, artist, year, key, capo) stay collapsed on one line; a new song starts with them open
@@ -236,6 +241,7 @@ fun SongEditorScreen(
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo)
                         // in the details, for new songs too (user, 30/10); only with the player on
                         if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
+                        TagsRow(uiState.tags) { tagging = true }
                         if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD)
                     }
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
@@ -284,6 +290,15 @@ fun SongEditorScreen(
             }
         }
     }
+    if (tagging) {
+        val national = stringResource(R.string.tags_national)
+        val international = stringResource(R.string.tags_international)
+        val options = (listOf(national, international) + allTags + uiState.tags).distinctBy { it.lowercase() }
+        val initial = options.associateWith { t ->
+            if (uiState.tags.any { it.equals(t, true) }) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off
+        }
+        br.app.stagebook.ui.components.TagsDialog(options, initial, onTags) { tagging = false }
+    }
     if (discarding) {
         ConfirmDialog(
             stringResource(R.string.editor_discard_confirm),
@@ -299,6 +314,20 @@ fun SongEditorScreen(
             onDelete,
             { deleting = false },
         )
+    }
+}
+
+/** The song's tags in the details, and the button that opens the tags window. */
+@Composable
+private fun TagsRow(tags: List<String>, onEdit: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Text(
+            if (tags.isEmpty()) stringResource(R.string.tags_none) else stringResource(R.string.tags_list, tags.joinToString(", ")),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (tags.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        androidx.compose.material3.TextButton(onClick = onEdit) { Text(stringResource(R.string.tags_edit)) }
     }
 }
 

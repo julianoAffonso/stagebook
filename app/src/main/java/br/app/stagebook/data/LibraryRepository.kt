@@ -148,6 +148,12 @@ class LibraryRepository @Inject constructor(
         mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id in set) change(it) else it }) }
     }
 
+    /** Deletes several songs (a selection) in one save, and takes them out of the setlists. */
+    fun deleteSongs(ids: Collection<String>) {
+        val set = ids.toSet()
+        mutate { lib -> lib.copy(songs = lib.songs.filterNot { it.id in set }, sets = lib.sets.map { s -> s.copy(items = s.items.filterNot { it in set }) }) }
+    }
+
     /** Deletes the song and removes it from the setlists. */
     fun deleteSong(id: String) = mutate { lib ->
         lib.copy(songs = lib.songs.filterNot { it.id == id }, sets = lib.sets.map { s -> s.copy(items = s.items.filterNot { it == id }) })

@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -91,7 +94,6 @@ fun SongsRoute(
         // found what they were looking for: coming back from the stage the whole list shows
         onOpen = { query = ""; onOpenSong(it) },
         onEdit = onEditSong,
-        onDelete = viewModel::delete,
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
         onShareSongs = viewModel::shareSongs,
         onDismissCloud = viewModel::dismissCloud,
@@ -107,6 +109,8 @@ fun SongsRoute(
         onTagsChange = viewModel::onTagsChange,
         onSetTags = viewModel::setTags,
         onAutoTags = viewModel::autoTags,
+        onDeleteMany = viewModel::deleteMany,
+        onAddToSetlist = viewModel::addToSetlist,
     )
 }
 
@@ -119,7 +123,6 @@ fun SongsScreen(
     onImport: () -> Unit,
     onOpen: (String) -> Unit,
     onEdit: (String) -> Unit,
-    onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     online: Boolean = true,
     internetOn: Boolean = true,
@@ -139,14 +142,22 @@ fun SongsScreen(
     onTagsChange: (Set<String>) -> Unit = {},
     onSetTags: (ids: List<String>, add: List<String>, remove: List<String>) -> Unit = { _, _, _ -> },
     onAutoTags: (national: String, international: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _ -> 0 to 0 },
+    onDeleteMany: (List<String>) -> Unit = {},
+    onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
 ) {
+    var deletingMany by remember { mutableStateOf(false) }
+    var addingToSet by remember { mutableStateOf(false) }
+    var naming by remember { mutableStateOf(false) }
+    var limit by remember { mutableStateOf(false) }
+    val message = br.app.stagebook.ui.components.LocalAppMessage.current
+    val res = androidx.compose.ui.platform.LocalContext.current.resources
+    fun addedMessage(r: AddResult.Added) = res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
     val wide = wideLists()
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
     var autoAsk by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val national = stringResource(R.string.tags_national)
     val international = stringResource(R.string.tags_international)
-    var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
     var selected by rememberSaveable { mutableStateOf(initialSelection) }
     var sharing by rememberSaveable { mutableStateOf(false) }
@@ -155,26 +166,33 @@ fun SongsScreen(
     BackHandler(enabled = selecting) { selected = emptyList() }
     CenteredContent(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
-            ScreenHeader(
+            // selecting, the top bar becomes the selection's, as in Google's apps (Gmail, Files, Photos): ✕, how many and
+            // the actions as icons (holding one shows its name), the rest in the ⋮ (user, 01/11)
+            if (selecting) {
+                SelectionTopBar(
+                    count = selected.size,
+                    onClose = { selected = emptyList() },
+                    onTags = { tagging = selected },
+                    onSetlist = { addingToSet = true },
+                    onShare = { sharing = true },
+                    onDelete = { deletingMany = true },
+                    onSelectAll = { selected = (selected + uiState.songs.map { it.id }).distinct() },
+                    modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
+                )
+            } else ScreenHeader(
                 title = stringResource(R.string.songs_title),
                 subtitle = pluralStringResource(R.plurals.song_count, uiState.total, uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) {
                 OverflowMenu(listOf(MenuAction(stringResource(R.string.tags_auto), AppIcons.ListBulleted, { autoAsk = onAutoTags(national, international, true) })))
             }
-            SearchWithTags(query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange)
-            if (selecting) {
-                // selection bar in place of New/Import: how many, Share and exit
-                Row(Modifier.padding(vertical = Spacing.m), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    IconButton(onClick = { selected = emptyList() }) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
-                    Text(
-                        pluralStringResource(R.plurals.songs_selected, selected.size, selected.size),
-                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
-                    )
-                    ActionButton(stringResource(R.string.tags_action), { tagging = selected }, icon = AppIcons.ListBulleted, tone = ButtonTone.Tonal)
-                    ActionButton(stringResource(R.string.share_title), { sharing = true }, icon = AppIcons.Share, tone = ButtonTone.Tonal)
-                }
-            } else Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            SearchWithTags(
+                query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
+                // selecting, the Import/New row goes away: the list keeps its distance from the search
+                Modifier.padding(bottom = if (selecting) Spacing.m else 0.dp),
+            )
+            // while selecting, the actions are in the top bar
+            if (!selecting) Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 // secondary at the start, the main action at the end (like Google's apps). Import from sites (with
                 // internet), scan the QR or type the code: one button, one menu.
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
@@ -207,18 +225,11 @@ fun SongsScreen(
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
+                                // tapping opens the stage and holding selects; editing has its own button, and tags and delete
+                                // live in the editor (user, 01/11)
                                 trailing = {
-                                    // tapping the row opens the stage: no stage icon of its own (user, 01/11)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        // edit and delete in the ⋮ (Google's pattern), visible on the row
-                                        OverflowMenu(
-                                            listOf(
-                                                MenuAction(stringResource(R.string.action_edit), AppIcons.Edit, { onEdit(song.id) }),
-                                                MenuAction(stringResource(R.string.share_title), AppIcons.Share, { selected = listOf(song.id); sharing = true }),
-                                                MenuAction(stringResource(R.string.tags_action), AppIcons.ListBulleted, { tagging = listOf(song.id) }),
-                                                MenuAction(stringResource(R.string.action_delete), AppIcons.Delete, { pendingDelete = song.id }, danger = true),
-                                            ),
-                                        )
+                                    if (!selecting) IconButton(onClick = { onEdit(song.id) }) {
+                                        Icon(AppIcons.Edit, contentDescription = stringResource(R.string.action_edit), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 },
                             )
@@ -249,6 +260,39 @@ fun SongsScreen(
         }
         TagsDialog(options, initial, { add, remove -> onSetTags(ids, add, remove); selected = emptyList() }, { tagging = null })
     }
+    if (deletingMany) {
+        ConfirmDialog(
+            pluralStringResource(R.plurals.songs_delete_many_confirm, selected.size, selected.size),
+            stringResource(R.string.action_delete),
+            { onDeleteMany(selected); selected = emptyList() },
+            { deletingMany = false },
+        )
+    }
+    if (addingToSet) {
+        SetPickDialog(uiState.sets, onPick = { id ->
+            addingToSet = false
+            if (id == null) naming = true
+            else when (val r = onAddToSetlist(selected, id, "")) {
+                is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
+                AddResult.Limit -> limit = true
+            }
+        }, onDismiss = { addingToSet = false })
+    }
+    if (naming) {
+        br.app.stagebook.ui.components.TextInputDialog(
+            title = stringResource(R.string.sets_new),
+            initial = "",
+            placeholder = stringResource(R.string.sets_name_hint),
+            onConfirm = { name ->
+                when (val r = onAddToSetlist(selected, null, name)) {
+                    is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
+                    AddResult.Limit -> limit = true
+                }
+            },
+            onDismiss = { naming = false },
+        )
+    }
+    if (limit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_message), { limit = false })
     autoAsk?.let { (br, other) ->
         if (br + other == 0) InfoDialog(stringResource(R.string.tags_auto), stringResource(R.string.tags_auto_none), { autoAsk = null })
         else ConfirmDialog(
@@ -259,15 +303,59 @@ fun SongsScreen(
             destructive = false,
         )
     }
-    pendingDelete?.let { id ->
-        val title = uiState.songs.firstOrNull { it.id == id }?.title.orEmpty()
-        ConfirmDialog(
-            message = stringResource(R.string.songs_delete_confirm, title),
-            confirmLabel = stringResource(R.string.action_delete),
-            onConfirm = { onDelete(id) },
-            onDismiss = { pendingDelete = null },
-        )
+}
+
+/** The top bar while selecting songs, in the shape of Google's apps. */
+@Composable
+private fun SelectionTopBar(
+    count: Int,
+    onClose: () -> Unit,
+    onTags: () -> Unit,
+    onSetlist: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit,
+    onSelectAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        IconButton(onClick = onClose) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
+        Text(count.toString(), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).padding(start = Spacing.s))
+        TipIcon(stringResource(R.string.tags_action), AppIcons.ListBulleted, onTags)
+        TipIcon(stringResource(R.string.songs_add_to_set), AppIcons.QueueMusic, onSetlist)
+        TipIcon(stringResource(R.string.share_title), AppIcons.Share, onShare)
+        TipIcon(stringResource(R.string.action_delete), AppIcons.Delete, onDelete)
+        OverflowMenu(listOf(MenuAction(stringResource(R.string.songs_select_all), AppIcons.Check, onSelectAll)))
     }
+}
+
+/** An icon button whose name shows when held (Material tooltip), like the action icons in Google's apps. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun TipIcon(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    androidx.compose.material3.TooltipBox(
+        positionProvider = androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider(androidx.compose.material3.TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = androidx.compose.material3.rememberTooltipState(),
+    ) {
+        IconButton(onClick = onClick) { Icon(icon, contentDescription = label) }
+    }
+}
+
+/** Which setlist the selection goes into, or a new one. */
+@Composable
+private fun SetPickDialog(sets: List<SetPick>, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.songs_add_to_set_title)) },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                SongListItem(title = stringResource(R.string.sets_new), subtitle = "", onClick = { onPick(null) }, leading = { Icon(AppIcons.Add, null, tint = MaterialTheme.colorScheme.primary) })
+                sets.forEach { s -> SongListItem(title = s.name, subtitle = "", onClick = { onPick(s.id) }) }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 private val previewState = SongsUiState(
@@ -283,11 +371,11 @@ private val previewState = SongsUiState(
 @LightPreview
 @Composable
 private fun SongsScreenLightPreview() = StagebookTheme(darkTheme = false) {
-    SongsScreen(previewState, "", {}, {}, {}, {}, {}, {})
+    SongsScreen(previewState, "", {}, {}, {}, {}, {})
 }
 
 @DarkPreview
 @Composable
 private fun SongsScreenDarkPreview() = StagebookTheme(darkTheme = true) {
-    SongsScreen(previewState, "", {}, {}, {}, {}, {}, {})
+    SongsScreen(previewState, "", {}, {}, {}, {}, {})
 }

@@ -41,6 +41,7 @@ data class SongEditorUiState(
     val text: String = "",
     val error: EditorError? = null,
     val unsaved: Boolean = false,   // something typed or imported not saved yet
+    val tags: List<String> = emptyList(),   // saved with the song on Save, like the rest (user, 01/11: tags in the editor)
 ) {
     val canDelete get() = mode == EditorMode.EDIT || mode == EditorMode.IMPORTED_UPDATE
 }
@@ -129,19 +130,21 @@ class SongEditorViewModel @Inject constructor(
                 // change it)
                 text = draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty(),
                 unsaved = draft != null,
+                tags = song?.tags.orEmpty(),
             )
             original = loaded
             // Android closed the app with the edit open (low memory on the Fire): what was typed comes back
             val kept = savedStateHandle.get<Array<String>>(KEY_FIELDS)
-            uiState = if (kept != null && kept.size == 4) loaded.edited(kept[0], kept[1], kept[2], kept[3]) else loaded
+            val keptTags = savedStateHandle.get<ArrayList<String>>(KEY_TAGS) ?: loaded.tags
+            uiState = if (kept != null && kept.size == 4) loaded.edited(kept[0], kept[1], kept[2], kept[3], keptTags) else loaded.edited(loaded.title, loaded.author, loaded.year, loaded.text, keptTags)
         }
     }
 
     private var original = SongEditorUiState()
 
-    private fun SongEditorUiState.edited(title: String, author: String, year: String, text: String): SongEditorUiState {
-        val next = copy(title = title, author = author, year = year, text = text)
-        val changed = title != original.title || author != original.author || year != original.year || text != original.text
+    private fun SongEditorUiState.edited(title: String, author: String, year: String, text: String, tags: List<String> = this.tags): SongEditorUiState {
+        val next = copy(title = title, author = author, year = year, text = text, tags = tags)
+        val changed = title != original.title || author != original.author || year != original.year || text != original.text || tags != original.tags
         return next.copy(unsaved = changed || original.unsaved)
     }
 
@@ -154,6 +157,17 @@ class SongEditorViewModel @Inject constructor(
     fun onAuthor(v: String) = update(author = v)
     fun onYear(v: String) = update(year = v.filter(Char::isDigit).take(4))
     fun onText(v: String) = update(text = v)
+
+    /** Every tag in the library (the choices in the tags window). */
+    fun allTags(): List<String> = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
+
+    fun onTags(add: List<String>, remove: List<String>) {
+        var t = uiState.tags
+        remove.forEach { t = br.app.stagebook.domain.Tags.remove(t, it) }
+        add.forEach { t = br.app.stagebook.domain.Tags.add(t, br.app.stagebook.domain.Tags.clean(it)) }
+        uiState = uiState.edited(uiState.title, uiState.author, uiState.year, uiState.text, t)
+        savedStateHandle[KEY_TAGS] = ArrayList(t)
+    }
 
     /** Stage look (editor preview). */
     val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
@@ -181,7 +195,7 @@ class SongEditorViewModel @Inject constructor(
         if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = songId, track = track, title = title, author = s.author.trim(), year = s.year.trim(), text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(s.text))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
+        val id = repository.saveSong(base.copy(id = songId, track = track, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(s.text))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         finished = true
         // batch importing into a setlist: the song takes its place and the queue moves on
@@ -203,6 +217,7 @@ class SongEditorViewModel @Inject constructor(
 
     private companion object {
         const val KEY_FIELDS = "editor_fields"
+        const val KEY_TAGS = "editor_tags"
         const val KEY_NEW_ID = "editor_new_id"
         const val KEY_TRACK = "editor_track"
     }

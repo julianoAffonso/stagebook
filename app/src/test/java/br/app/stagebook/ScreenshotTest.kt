@@ -99,14 +99,14 @@ class ScreenshotTest {
     }
 
     @Composable
-    private fun Songs(modifier: Modifier = Modifier) = SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, modifier)
+    private fun Songs(modifier: Modifier = Modifier) = SongsScreen(songs, "", {}, {}, {}, {}, {}, modifier)
 
     @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
     // no internet: Import unavailable, with the crossed cloud and the notice
     @Test @Config(qualifiers = PHONE)
     fun homeSongsOfflinePhone() = shoot("celular_1_musicas_sem_internet") {
-        HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, online = false) }
+        HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(songs, "", {}, {}, {}, {}, {}, it, online = false) }
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -827,7 +827,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun songsSelectPhone() = shoot("jornada_musicas_1_selecao") {
         HomeScaffold(HomeTab.SONGS, {}) {
-            br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
+            br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
         }
     }
 
@@ -837,7 +837,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScaffold(HomeTab.SONGS, {}) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, {}, it, received = 2, onSync = {}) }
+                    HomeScaffold(HomeTab.SONGS, {}) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, {}, it, received = 2, onSync = {}) }
                 }
             }
         }
@@ -1028,7 +1028,7 @@ class ScreenshotTest {
         compose.setContent {
             val d = androidx.compose.ui.platform.LocalDensity.current
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, fontScale)) {
-                StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SongsScreen(tagged, "", {}, {}, {}, {}, {}, {}) } }
+                StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SongsScreen(tagged, "", {}, {}, {}, {}, {}) } }
             }
         }
         compose.onNodeWithText(if (fontScale > 0f && compose.onAllNodesWithText("2 tags").fetchSemanticsNodes().isNotEmpty()) "2 tags" else "Nacional +1").performClick()
