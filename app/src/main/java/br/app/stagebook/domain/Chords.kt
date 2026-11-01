@@ -14,10 +14,6 @@ object Chords {
     // keys written with flats (major and minor); the others with sharps
     private val flatKeys = setOf("F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb", "Dm", "Gm", "Cm", "Fm", "Bbm", "Ebm", "Abm")
 
-    // note, accidental, the rest of the chord (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) and the bass
-    // a slash before a number is an extension, as the chord charts write it (A7/4, C#7/9, G6/9, D7(2/4)); before a
-    // note it's the bass (D/F#)
-    private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,|/(?=\d))*)(?:/([A-G])([#b♯♭]?))?""")
     internal val bracket = Regex("""\[([^\[\]]*)]""")   // LyricsView reads the same brackets
     // the value can't hold "}": the lazy ".*?" between optional spaces backtracked for minutes on a long malformed line
     // (audit 01/11); the value is trimmed where it's read
@@ -30,7 +26,7 @@ object Chords {
     private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?""", RegexOption.IGNORE_CASE)
 
     /** Is the whole text a chord? (`G`, `F#m7/E`, `Cm7(b5)`, `G7M`, `Bb`) */
-    fun isChord(s: String): Boolean = chord.matchEntire(s.trim()) != null
+    fun isChord(s: String): Boolean = ChordName.parse(s) != null
 
     // ---- diretivas ----
 
@@ -189,19 +185,6 @@ object Chords {
 
     // ---- transpor ----
 
-    private fun index(note: String): Int {
-        val n = note.replace('♯', '#').replace('♭', 'b')
-        val i = sharps.indexOf(n).takeIf { it >= 0 } ?: flats.indexOf(n)
-        return when {
-            i >= 0 -> i
-            n == "Cb" -> 11
-            n == "Fb" -> 4
-            n == "E#" -> 5
-            n == "B#" -> 0
-            else -> -1
-        }
-    }
-
     private fun name(i: Int, useFlats: Boolean) = (if (useFlats) flats else sharps)[((i % 12) + 12) % 12]
 
     /** The chord [semitones] half steps up (negative = down). [useFlats] null = the chord's own style. */
@@ -217,9 +200,8 @@ object Chords {
      * Root and bass stay; what isn't a chord passes unchanged.
      */
     fun normalizeChord(c: String): String {
-        val m = chord.matchEntire(c.trim()) ?: return c
-        val (root, acc, rest, bass, bassAcc) = m.destructured
-        var r = rest.replace("maj7", "7M").replace("7+", "7M")
+        val name = ChordName.parse(c) ?: return c
+        var r = name.suffix.replace("maj7", "7M").replace("7+", "7M")
         r = SUS.replace(r) { if (it.groupValues[1] == "2") "2" else "4" }
         // signs: inside parentheses they just move after the number; outside, the alteration gets its own
         val inside = StringBuilder()
@@ -230,7 +212,7 @@ object Chords {
             last = p.range.last + 1
         }
         inside.append(outside(r.substring(last)))
-        return root + acc + inside + if (bass.isNotEmpty()) "/$bass$bassAcc" else ""
+        return name.copy(suffix = inside.toString()).toString()
     }
 
     private fun sign(s: String) = if (s == "b" || s == "♭") "-" else "+"
@@ -243,15 +225,10 @@ object Chords {
         bracket.replace(text) { b -> if (isChord(b.groupValues[1])) "[" + normalizeChord(b.groupValues[1].trim()) + "]" else b.value }
 
     fun transposeChord(c: String, semitones: Int, useFlats: Boolean? = null): String {
-        val m = chord.matchEntire(c.trim()) ?: return c
-        val (root, acc, rest, bass, bassAcc) = m.destructured
-        val flat = useFlats ?: (acc == "b" || acc == "♭")
-        val r = index(root + acc).takeIf { it >= 0 } ?: return c
-        val out = StringBuilder(name(r + semitones, flat)).append(rest)
-        if (bass.isNotEmpty()) {
-            val b = index(bass + bassAcc)
-            out.append('/').append(if (b >= 0) name(b + semitones, flat) else bass + bassAcc)
-        }
+        val chord = ChordName.parse(c) ?: return c
+        val flat = useFlats ?: (chord.accidental == "b" || chord.accidental == "♭")
+        val out = StringBuilder(name(chord.rootPc + semitones, flat)).append(chord.suffix)
+        if (chord.bass.isNotEmpty()) out.append('/').append(name(chord.bassPc + semitones, flat))
         return out.toString()
     }
 
@@ -271,9 +248,8 @@ object Chords {
     data class Triad(val root: Int, val minor: Boolean, val dim: Boolean, val seventh: Seventh = Seventh.NONE)
 
     fun triad(c: String): Triad? {
-        val m = chord.matchEntire(c.trim()) ?: return null
-        val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return null
-        val n = ChordTheory.notes(c) ?: return null
+        val n = ChordName.parse(c)?.notes ?: return null
+        val root = n.root
         val q = quality(n)
         val seventh = when {
             11 in n.intervals -> Seventh.MAJOR
@@ -292,10 +268,9 @@ object Chords {
 
     /** The key [semitones] half steps up, with the usual name (D + 1 = Eb, F + 1 = F#, Am + 1 = Bbm). */
     fun transposeKey(key: String, semitones: Int): String {
-        val m = chord.matchEntire(key.trim()) ?: return key
-        val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return key
-        val minor = quality(key.trim()) == Quality.MINOR
-        val i = ((root + semitones) % 12 + 12) % 12
+        val n = ChordName.parse(key)?.notes ?: return key
+        val minor = quality(n) == Quality.MINOR
+        val i = ((n.root + semitones) % 12 + 12) % 12
         return (if (minor) minorKeys else majorKeys)[i]
     }
 
@@ -342,8 +317,6 @@ object Chords {
 
     // read from the chord's notes, the same reading as the diagram and the harmonic field (m7(5-) is diminished, sus
     // has no third and counts as major; user, 01/11: every chord feature follows one rule)
-    private fun quality(chord: String): Quality = ChordTheory.notes(chord)?.let(::quality) ?: Quality.MAJOR
-
     private fun quality(n: ChordTheory.Notes): Quality = with(n.intervals) {
         when {
             3 in this && 6 in this && 7 !in this -> Quality.DIM
@@ -363,8 +336,8 @@ object Chords {
      * major.
      */
     fun detectKey(text: String): String {
-        val chords = bracket.findAll(fromChordsOverLyrics(text)).mapNotNull { chord.matchEntire(it.groupValues[1].trim()) }
-            .mapNotNull { m -> index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 }?.let { it to quality(m.value) } }
+        val chords = bracket.findAll(fromChordsOverLyrics(text)).mapNotNull { ChordName.parse(it.groupValues[1])?.notes }
+            .map { n -> n.root to quality(n) }
             .toList()
         if (chords.isEmpty()) return ""
         var best = "" ; var bestScore = -1.0
