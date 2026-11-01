@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -17,7 +18,8 @@ import br.app.stagebook.R
 
 /** Rounded search field, no underline, with a magnifier and a clear button. */
 @Composable
-fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, label: String? = null) {
+    if (label != null) return LabeledSearchField(value, onValueChange, placeholder, label, modifier)
     TextField(
         value = value,
         onValueChange = onValueChange,
@@ -33,6 +35,45 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
             }
         },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        shape = MaterialTheme.shapes.medium,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+        ),
+    )
+}
+
+/**
+ * The search with its label always small on top (phones, beside the tag filter, which shows "Tags" the same way). Only
+ * the state-based field can keep the label up while empty; the text still comes from and goes to [value].
+ */
+@Composable
+private fun LabeledSearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, label: String, modifier: Modifier) {
+    val state = androidx.compose.foundation.text.input.rememberTextFieldState(value)
+    val current by androidx.compose.runtime.rememberUpdatedState(value)
+    val change by androidx.compose.runtime.rememberUpdatedState(onValueChange)
+    androidx.compose.runtime.LaunchedEffect(value) { if (state.text.toString() != value) state.edit { replace(0, length, value) } }
+    androidx.compose.runtime.LaunchedEffect(state) {
+        androidx.compose.runtime.snapshotFlow { state.text.toString() }.collect { if (it != current) change(it) }
+    }
+    TextField(
+        state = state,
+        modifier = modifier.fillMaxWidth(),
+        label = { Text(label) },
+        labelPosition = androidx.compose.material3.TextFieldLabelPosition.Attached(alwaysMinimize = true),
+        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+        leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(AppIcons.Close, contentDescription = stringResource(R.string.action_clear))
+                }
+            }
+        },
+        lineLimits = androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         shape = MaterialTheme.shapes.medium,
         colors = TextFieldDefaults.colors(
