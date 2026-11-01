@@ -634,7 +634,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
             steps = (Look.MAX_FONT - Look.MIN_FONT).toInt() - 1,
         )
         // the lyrics font (dropdown, written in the font itself) and bold
-        FontPicker(look.font, actions.onFontFamily)
+        FontPicker(look.font, actions.onFontFamily, R.string.settings_font_lyrics)
         SwitchRow(stringResource(R.string.settings_bold), look.bold, actions.onBold)
         Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyLarge)
         ColorSwatchRow(StagePalette.text, look.fg, actions.onTextColor)
@@ -785,7 +785,7 @@ private fun ChordsLookCard(look: Look, actions: SettingsActions, draft: StageDra
                 valueRange = Look.MIN_CHORD_SCALE..Look.MAX_CHORD_SCALE,
                 steps = ((Look.MAX_CHORD_SCALE - Look.MIN_CHORD_SCALE) * 10).roundToInt() - 1,
             )
-            FontPicker(look.chordFont, actions.onChordFont)
+            FontPicker(look.chordFont, actions.onChordFont, R.string.settings_font_chords)
             Text(stringResource(R.string.settings_chords_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.chord, look.chordColor, actions.onChordColor)
             LegibilityWarnings(look)
@@ -861,7 +861,8 @@ private fun InstrumentPicker(selected: Instrument, onSelect: (Instrument) -> Uni
 
 /** The stage font in a dropdown: the field and each option written in the font itself. */
 @Composable
-private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
+// each picker says whose font it is: Stage look has three (lyrics, chords, section titles), user 01/11
+private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit, @StringRes label: Int) {
     val names = mapOf(
         StageFont.DEFAULT to R.string.font_default,
         StageFont.CONDENSED to R.string.font_condensed,
@@ -869,7 +870,7 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
         StageFont.MONO to R.string.font_mono,
     )
     OptionDropdown(
-        stringResource(R.string.settings_font_family),
+        stringResource(label),
         StageFont.entries,
         selected,
         onSelect,
@@ -896,7 +897,7 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
                 steps = ((Look.MAX_SECTION_SCALE - Look.MIN_SECTION_SCALE) * 10).roundToInt() - 1,
             )
             // their own font, like the lyrics and the chords (user, 01/11)
-            FontPicker(look.sectionFont, actions.onSectionFont)
+            FontPicker(look.sectionFont, actions.onSectionFont, R.string.settings_font_sections)
             Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         }
