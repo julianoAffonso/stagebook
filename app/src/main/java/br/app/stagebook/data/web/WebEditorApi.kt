@@ -270,18 +270,19 @@ class WebEditorApi(
     }
 
     // Import → Open a .stagebook file, from the computer: the file waits on the tablet while the page picks the parts
-    private var waitingBackup: Pair<String, java.io.File>? = null
+    // atomic, not under the lock: clear() runs on the main thread when the app leaves, and must not wait behind a
+    // restore or a track upload holding the lock (that was an ANR; audit 01/11)
+    private val waitingBackup = java.util.concurrent.atomic.AtomicReference<Pair<String, java.io.File>?>(null)
 
     @Synchronized
     private fun backupInspect(req: HttpRequest): HttpResponse {
         val b = backup() ?: return HttpResponse.status(404)
         val upload = req.file ?: return HttpResponse.status(400)
         val contents = kotlinx.coroutines.runBlocking { upload.inputStream().use { b.inspect(it) } } ?: return problem("unreadable")
-        waitingBackup?.second?.delete()
         val token = java.util.UUID.randomUUID().toString()
         val kept = java.io.File(workDir(), "backup-$token.stagebook")
         if (!upload.renameTo(kept)) return problem("unreadable")
-        waitingBackup = token to kept
+        waitingBackup.getAndSet(token to kept)?.second?.delete()
         return ok(json.encodeToString(BackupInfo(token, contents.parts.map { it.name.lowercase() }, contents.songs, contents.newer)))
     }
 
@@ -289,20 +290,19 @@ class WebEditorApi(
     private fun backupRestore(req: HttpRequest): HttpResponse {
         val b = backup() ?: return HttpResponse.status(404)
         val r = runCatching { json.decodeFromString<BackupRestore>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
-        val (token, file) = waitingBackup ?: return problem("expired")
+        val waiting = waitingBackup.get() ?: return problem("expired")
+        val (token, file) = waiting
         if (token != r.token) return problem("expired")
         val parts = r.parts.mapNotNull { p -> br.app.stagebook.data.Backup.Part.entries.firstOrNull { it.name.equals(p, ignoreCase = true) } }.toSet()
         val done = kotlinx.coroutines.runBlocking { file.inputStream().use { b.restore(it, parts, r.replace) } }
         file.delete()
-        waitingBackup = null
+        waitingBackup.compareAndSet(waiting, null)
         return if (done) ok(json.encodeToString(RestoreDone(b.skipped))) else problem("unreadable")
     }
 
     /** The editor turned off: a backup waiting for its parts goes away (it could be 1 GB). */
-    @Synchronized
     fun clear() {
-        waitingBackup?.second?.delete()
-        waitingBackup = null
+        waitingBackup.getAndSet(null)?.second?.delete()
     }
 
     // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=.
