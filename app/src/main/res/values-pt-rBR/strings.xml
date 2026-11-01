@@ -872,6 +872,7 @@
         <item quantity="one">%1$d música tem ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para ela.</item>
         <item quantity="other">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
     </plurals>
+    <string name="tags_more">%1$s +%2$d</string>
     <string name="tags_all">Todas</string>
     <string name="tags_filter">Tags</string>
     <string name="tags_title">Tags</string>
@@ -884,4 +885,8 @@
     <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá pra corrigir depois.</string>
     <string name="tags_auto_ok">Separar</string>
     <string name="tags_auto_none">Não há músicas para separar: todas já têm Nacional ou Internacional, ou estão sem letra.</string>
+    <plurals name="tags_count">
+        <item quantity="one">%d tag</item>
+        <item quantity="other">%d tags</item>
+    </plurals>
 </resources>

@@ -2,6 +2,8 @@ package br.app.stagebook.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import br.app.stagebook.R
 
 /**
@@ -32,7 +35,15 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
     val all = stringResource(R.string.tags_all)
     ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
         TextField(
-            value = if (chosen.isEmpty()) all else tags.filter { it in chosen }.joinToString(", "),
+            // one tag by name; more than one, the first and how many more, or on phones (narrow field) only how many
+            value = tags.filter { it in chosen }.let { c ->
+                when {
+                    c.isEmpty() -> all
+                    c.size == 1 -> c[0]
+                    wideLists() -> stringResource(R.string.tags_more, c[0], c.size - 1)
+                    else -> pluralStringResource(R.plurals.tags_count, c.size, c.size)
+                }
+            },
             onValueChange = {},
             readOnly = true,
             singleLine = true,
@@ -49,9 +60,14 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
             ),
             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
-        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
+        // the menu can be wider than the field (on phones with large text the names broke in the middle of words)
+        ExposedDropdownMenu(
+            expanded = open, onDismissRequest = { open = false }, matchAnchorWidth = false,
+            modifier = Modifier.widthIn(min = br.app.stagebook.ui.theme.Sizes.tagFilterNarrow, max = br.app.stagebook.ui.theme.Sizes.tagMenu),
+            containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border,
+        ) {
             DropdownMenuItem(
-                text = { Text(all, style = MaterialTheme.typography.bodyLarge) },
+                text = { Text(all, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 onClick = { onChange(emptySet()); open = false },
                 leadingIcon = { Checkbox(chosen.isEmpty(), onCheckedChange = null) },
                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
@@ -59,7 +75,7 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
             HorizontalDivider()
             tags.forEach { t ->
                 DropdownMenuItem(
-                    text = { Text(t, style = MaterialTheme.typography.bodyLarge) },
+                    text = { Text(t, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     onClick = { onChange(if (t in chosen) chosen - t else chosen + t) },
                     leadingIcon = { Checkbox(t in chosen, onCheckedChange = null) },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,

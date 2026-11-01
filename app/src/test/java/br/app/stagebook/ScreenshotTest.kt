@@ -1020,6 +1020,29 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun stagePhone() = shoot("celular_7_palco") { StageScreen(stage, 0, 1, { _, _ -> }, onBack = {}) }
+
+    // the tag filter open: several ticked at once, and with large system text (user, 01/11)
+    private val tagged = songs.copy(tags = listOf("Abertura de show", "Internacional", "Lenta", "Nacional", "Rock anos 80"), chosenTags = setOf("Nacional", "Rock anos 80"))
+
+    private fun tagFilterOpen(name: String, fontScale: Float) {
+        compose.setContent {
+            val d = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, fontScale)) {
+                StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SongsScreen(tagged, "", {}, {}, {}, {}, {}, {}) } }
+            }
+        }
+        compose.onNodeWithText(if (fontScale > 0f && compose.onAllNodesWithText("2 tags").fetchSemanticsNodes().isNotEmpty()) "2 tags" else "Nacional +1").performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun tagFilterOpenTablet() = tagFilterOpen("tablet_1_musicas_tags_abertas", 1f)
+
+    @Test fun tagFilterOpenTabletBigText() = tagFilterOpen("tablet_1_musicas_tags_abertas_texto_grande", 1.6f)
+
+    @Test @Config(qualifiers = PHONE)
+    fun tagFilterOpenPhoneBigText() = tagFilterOpen("celular_1_musicas_tags_abertas_texto_grande", 1.6f)
+
 }
 
 // Fire HD 10 (2019, 9th gen): 1920x1200 at 1.5x (hdpi) = 1280x800 dp; the app hides the bars
