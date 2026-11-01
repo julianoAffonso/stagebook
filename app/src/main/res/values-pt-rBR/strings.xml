@@ -138,7 +138,7 @@
     <!-- ajustes -->
     <string name="settings_title">Ajustes</string>
     <string name="settings_appearance">Visual do palco</string>
-    <string name="settings_preview_text">[Refrão]\n[G]Uma linha de e[D]xemplo\n[Em]Pra ver como [C]fica</string>
+    <string name="settings_preview_text">[Refrão]\n[G]Uma linha de e[D]xemplo\n[Em]Pra ver como [C]==fica==</string>
     <string name="settings_preview_size_text">[Refrão]\n[G]Uma linha de e[D]xemplo</string>
     <string name="settings_font_size">Tamanho da letra: %1$d</string>
     <string name="settings_text_color">Cor da letra</string>
@@ -402,6 +402,8 @@
     <string name="settings_illegible_lyrics">A letra vai ficar ilegível neste fundo</string>
     <string name="settings_illegible_sections">Os títulos de seção vão ficar ilegíveis neste fundo</string>
     <string name="settings_illegible_chords">Os acordes vão ficar ilegíveis neste fundo</string>
+    <string name="settings_illegible_highlight">A letra vai ficar ilegível neste destaque</string>
+    <string name="settings_highlight_color">Cor do destaque</string>
     <string name="section_intro">Intro</string>
     <string name="section_verse">Verso</string>
     <string name="section_pre_chorus">Pré-refrão</string>

@@ -232,6 +232,7 @@ class SettingsViewModel @Inject constructor(
     fun setSectionScale(s: Float) = repository.updateLook { it.copy(sectionScale = s.coerceIn(Look.MIN_SECTION_SCALE, Look.MAX_SECTION_SCALE)) }
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
+    fun setHighlightColor(argb: Int) = repository.updateLook { it.copy(highlightColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }
     fun setMetronome(count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) =
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }

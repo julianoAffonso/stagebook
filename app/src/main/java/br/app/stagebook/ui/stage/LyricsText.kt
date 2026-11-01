@@ -83,7 +83,8 @@ fun lyricsLines(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
     sectionFont: androidx.compose.ui.text.font.FontFamily? = null,
-): List<AnnotatedString> = stageLines(text, names, sectionColor, showSections, chords, sectionScale, sectionFont = sectionFont).map { it.text }
+    highlight: Color = Color(br.app.stagebook.ui.theme.StagePalette.HIGHLIGHT),
+): List<AnnotatedString> = stageLines(text, names, sectionColor, showSections, chords, sectionScale, highlight, sectionFont).map { it.text }
 
 /** A stage line and the lyrics line it came from (holding the line opens the editor on it). */
 class StageLine(val text: AnnotatedString, val source: Int)
@@ -286,7 +287,8 @@ fun lyricsAnnotated(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
     sectionFont: androidx.compose.ui.text.font.FontFamily? = null,
-): AnnotatedString = joinLines(lyricsLines(text, names, sectionColor, showSections, chords, sectionScale, sectionFont))
+    highlight: Color = Color(br.app.stagebook.ui.theme.StagePalette.HIGHLIGHT),
+): AnnotatedString = joinLines(lyricsLines(text, names, sectionColor, showSections, chords, sectionScale, sectionFont, highlight))
 
 private const val SECTION_BACKGROUND_ALPHA = 0.16f
 

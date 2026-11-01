@@ -23,4 +23,13 @@ class ContrastTest {
         assertTrue(Contrast.legible(0xFF4AF6CD.toInt(), black))           // green section on black (default)
         assertTrue(Contrast.legible(black, 0xFFFFF8E1.toInt()))           // black lyrics on cream
     }
+    @Test fun `the marker is judged over the background, as the screen shows it (user, 01-11)`() {
+        // 40% yellow over black = dark yellow; over white = light yellow
+        assertEquals(0xFF665E17.toInt(), br.app.stagebook.domain.Contrast.over(0x66FFEB3B, 0xFF000000.toInt()))
+        assertEquals(0xFFFFF7B0.toInt(), br.app.stagebook.domain.Contrast.over(0x66FFEB3B, 0xFFFFFFFF.toInt()))
+        // every marker option keeps white lyrics readable on black (the default look)
+        br.app.stagebook.ui.theme.StagePalette.highlight.forEach { m ->
+            assertTrue(Integer.toHexString(m), br.app.stagebook.domain.Contrast.legible(0xFFFFFFFF.toInt(), br.app.stagebook.domain.Contrast.over(m, 0xFF000000.toInt())))
+        }
+    }
 }

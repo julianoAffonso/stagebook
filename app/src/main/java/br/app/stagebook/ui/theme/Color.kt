@@ -83,5 +83,7 @@ object StagePalette {
     val glow = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFEF5350, 0xFFAB47BC, 0xFFFFFFFF).map { it.toInt() }
     // highlighted phrase on stage: a see-through marker, readable on dark and light backgrounds (vocalist, 31/10)
     const val HIGHLIGHT = 0x66FFEB3B
+    // the marker colors to choose from: all see-through, so the lyrics show through on any background (user, 01/11)
+    val highlight = listOf(0x66FFEB3B, 0x6600E676, 0x6600E5FF, 0x66FF4081, 0x66FF9100, 0x66B388FF)
     val chord = listOf(0xFFFFC107, 0xFFFFFFFF, 0xFF80DEEA, 0xFFA5D6A7, 0xFFFF8A65, 0xFF000000).map { it.toInt() }
 }
