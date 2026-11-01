@@ -150,8 +150,6 @@ fun SongsScreen(
     val wide = wideLists()
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
-    val national = stringResource(R.string.tags_national)
-    val international = stringResource(R.string.tags_international)
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
     var selected by rememberSaveable { mutableStateOf(initialSelection) }
     var sharing by rememberSaveable { mutableStateOf(false) }
@@ -242,7 +240,7 @@ fun SongsScreen(
     tagging?.let { ids ->
         val rows = uiState.songs.filter { it.id in ids }
         // the suggestions come first even before anyone uses them
-        val options = (listOf(national, international) + uiState.tags).distinctBy { it.lowercase() }
+        val options = (br.app.stagebook.ui.components.suggestedTags() + uiState.tags).distinctBy { it.lowercase() }
         val initial = options.associateWith { t ->
             val n = rows.count { r -> r.tags.any { it.equals(t, true) } }
             when (n) { 0 -> ToggleableState.Off; rows.size -> ToggleableState.On; else -> ToggleableState.Indeterminate }
