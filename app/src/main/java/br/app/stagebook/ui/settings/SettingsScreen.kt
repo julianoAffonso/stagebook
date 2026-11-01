@@ -534,8 +534,14 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
     SettingsSection.SECTIONS -> stringResource(if (ui.look.showSections) R.string.settings_sections_shown else R.string.settings_sections_hidden)
     SettingsSection.CHORDS -> if (ui.look.chords) stringResource(R.string.settings_chords_on_short, (ui.look.chordScale * 100).roundToInt()) else stringResource(R.string.settings_chords_off_short)
-    SettingsSection.PEDAL -> if (ui.look.pedalName.isEmpty()) stringResource(R.string.settings_pedal_none_short)
-    else ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
+    // the keyboard pedal, or else the saved MIDI pedal
+    SettingsSection.PEDAL -> when {
+        ui.look.pedalName.isNotEmpty() ->
+            ui.look.pedalName + " · " + stringResource(if (ui.pedalConnected) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
+        ui.look.midiBtAddress.isNotEmpty() ->
+            ui.look.midiBtName + " · " + stringResource(if (ui.midi.connected.any { it.bluetooth }) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
+        else -> stringResource(R.string.settings_pedal_none_short)
+    }
     SettingsSection.SCREEN -> stringResource(if (ui.look.keepScreenOn) R.string.settings_screen_on_short else R.string.settings_screen_off_short)
     SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.WEB_EDITOR -> stringResource(if (ui.look.webEditorOn) R.string.settings_web_editor_on_short else R.string.settings_web_editor_off_short)
@@ -867,61 +873,114 @@ private fun SectionsDetail(look: Look, actions: SettingsActions) {
     }
 }
 
+/**
+ * Pedal (user, 01/11: "the logic of adding the pedal is a bit odd", "hard to find where", "confusing texts"): two
+ * cards in the order things are done. Connect: every pedal in one place, with its state, and how to add each kind.
+ * Buttons: press one, see which it is and choose what it does; right below, the ones already set.
+ */
 @Composable
 private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
-    val name = uiState.look.pedalName
-    SettingsCard(stringResource(R.string.settings_pedal_yours)) {
-        if (name.isEmpty()) {
-            Text(stringResource(R.string.settings_pedal_none), style = MaterialTheme.typography.bodyLarge)
+    PedalConnectCard(uiState, actions)
+    PedalButtonsCard(uiState, actions)
+}
+
+@Composable
+private fun PedalConnectCard(uiState: SettingsUiState, actions: SettingsActions) {
+    val look = uiState.look
+    val midi = uiState.midi
+    SettingsCard(stringResource(R.string.settings_pedal_connect)) {
+        val btMidiOn = midi.connected.any { it.bluetooth }
+        val usb = midi.connected.filter { !it.bluetooth }
+        val any = look.pedalName.isNotEmpty() || look.midiBtAddress.isNotEmpty() || usb.isNotEmpty()
+        if (!any) Text(stringResource(R.string.settings_pedal_nothing), style = MaterialTheme.typography.bodyLarge)
+        if (look.pedalName.isNotEmpty()) {
+            PedalStatusRow(look.pedalName, stringResource(R.string.settings_pedal_kind_bt), uiState.pedalConnected)
+        }
+        if (look.midiBtAddress.isNotEmpty()) {
+            PedalStatusRow(look.midiBtName, stringResource(R.string.settings_pedal_kind_midi_bt), btMidiOn, onForget = actions.onMidiForget)
+        }
+        usb.forEach { d -> PedalStatusRow(d.name, stringResource(R.string.settings_pedal_kind_midi_usb), true) }
+        ActionButton(stringResource(R.string.settings_pedal_add_common), actions.onPairPedal, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal)
+        if (midi.supported) {
+            ActionButton(
+                stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_pedal_add_midi),
+                actions.onMidiScan,
+                Modifier.fillMaxWidth(),
+                icon = AppIcons.Pedal,
+                tone = ButtonTone.Tonal,
+                enabled = !midi.scanning,
+            )
+            if (midi.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
+            midi.found.forEach { f ->
+                SongListItem(title = f.name, subtitle = stringResource(R.string.settings_midi_choose), onClick = { actions.onMidiChoose(f) })
+            }
+            when {
+                midi.bluetoothOff -> Text(stringResource(R.string.settings_midi_bt_off), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                midi.searched && !midi.scanning && midi.found.isEmpty() ->
+                    Text(stringResource(R.string.settings_midi_found_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        HelpTip(stringResource(R.string.settings_pedal_kinds_help), label = stringResource(R.string.settings_pedal_kinds_label))
+        if (midi.supported) {
+            SwitchRow(stringResource(R.string.settings_midi_usb_switch), look.midiUsb, actions.onMidiUsb)
+            HelpTip(stringResource(R.string.settings_midi_usb_help), label = stringResource(R.string.settings_midi_usb_about))
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                Text(stringResource(R.string.settings_midi_location), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         } else {
-            Text(name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(stringResource(R.string.settings_midi_unsupported), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** A pedal and its state: name and kind, connected (accent) or not (with what happens next), and Forget when it applies. */
+@Composable
+private fun PedalStatusRow(name: String, kind: String, on: Boolean, onForget: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Column(Modifier.weight(1f)) {
+            Text(if (name.isBlank()) kind else "$name · $kind", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             Text(
-                stringResource(if (uiState.pedalConnected) R.string.settings_pedal_connected else R.string.settings_pedal_disconnected),
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (uiState.pedalConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                stringResource(if (on) R.string.settings_pedal_state_on else R.string.settings_pedal_state_off),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        ActionButton(stringResource(R.string.settings_pair_pedal), actions.onPairPedal, icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal)
+        if (onForget != null) TextButton(onClick = onForget) { Text(stringResource(R.string.settings_pedal_forget)) }
     }
-    SettingsCard(stringResource(R.string.settings_pedal_test_card)) {
+}
+
+@Composable
+private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions) {
+    val keys = uiState.look.pedalKeys
+    SettingsCard(stringResource(R.string.settings_pedal_buttons)) {
         val key = uiState.lastKey
         // first the button you pressed, then what it does: before pressing, the choice had no button to belong to
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                Text(
-                    if (key == null) stringResource(R.string.settings_pedal_test)
-                    else stringResource(
-                        R.string.settings_pedal_last,
-                        stringResource(
-                            when (key.action) {
-                                PedalAction.NEXT -> R.string.settings_pedal_next
-                                PedalAction.PREVIOUS -> R.string.settings_pedal_previous
-                                PedalAction.NEXT_SONG -> R.string.settings_pedal_next_song
-                                PedalAction.PREVIOUS_SONG -> R.string.settings_pedal_previous_song
-                                PedalAction.PLAY_PAUSE -> R.string.settings_pedal_play_pause
-                                PedalAction.NONE -> R.string.settings_pedal_unused
-                            },
-                        ),
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (key == null || key.action == PedalAction.NONE) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
-                )
-                // the button (key or MIDI) and where it came from, in the subtitle style: the command is the line above
-                if (key != null) {
+            Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                if (key == null) {
+                    Text(stringResource(R.string.settings_pedal_press), style = MaterialTheme.typography.bodyLarge)
+                } else {
+                    val from = key.device.ifEmpty { stringResource(R.string.settings_pedal_from_tablet) }
                     Text(
-                        pedalKeyName(key) + " · " +
-                            if (key.device.isEmpty()) stringResource(R.string.settings_pedal_from_device_builtin) else stringResource(R.string.settings_pedal_from_device, key.device),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        stringResource(R.string.settings_pedal_pressed, pedalKeyName(key)) + " · " + from,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
                     )
+                    // like another app: the button pressed can be set to another stage command
+                    PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
                 }
             }
         }
-        // like another app: the last button pressed can be set to another stage command
-        if (key != null) PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
+        Text(stringResource(R.string.settings_pedal_done), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (keys.isEmpty()) {
+            Text(stringResource(R.string.settings_pedal_done_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            keys.forEach { (code, action) ->
+                PedalKeyRow(pedalKeyName(code), action, { actions.onPedalAction(code, it) }, { actions.onPedalAction(code, PedalAction.default(code)) })
+            }
+            ActionButton(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size), actions.onResetPedalKeys, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
+        }
     }
-    PedalKeysCard(uiState.look.pedalKeys, actions)
-    MidiCard(uiState.midi, uiState.look, actions)
 }
 
 @Composable
@@ -958,55 +1017,6 @@ private fun pedalKeyName(code: Int): String {
 }
 
 @Composable
-private fun MidiCard(midi: MidiState, look: Look, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_midi)) {
-        if (!midi.supported) {
-            Text(stringResource(R.string.settings_midi_unsupported), style = MaterialTheme.typography.bodyLarge)
-            return@SettingsCard
-        }
-        SwitchRow(stringResource(R.string.settings_midi_usb_switch), look.midiUsb, actions.onMidiUsb)
-        HelpTip(stringResource(R.string.settings_midi_usb_help), label = stringResource(R.string.settings_midi_usb_about))
-        if (midi.connected.isEmpty()) {
-            Text(stringResource(R.string.settings_midi_none), style = MaterialTheme.typography.bodyLarge)
-        } else {
-            midi.connected.forEach { d ->
-                Text(
-                    stringResource(R.string.settings_midi_connected, d.name, stringResource(if (d.bluetooth) R.string.settings_midi_bt else R.string.settings_midi_usb)),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        if (look.midiBtAddress.isNotEmpty()) {
-            val on = midi.connected.any { it.bluetooth }
-            Text(stringResource(R.string.settings_midi_saved, look.midiBtName), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            if (!on) Text(stringResource(R.string.settings_midi_waiting), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = actions.onMidiForget) { Text(stringResource(R.string.settings_midi_forget)) }
-        }
-        ActionButton(
-            stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_midi_scan),
-            actions.onMidiScan,
-            icon = AppIcons.Bluetooth,
-            tone = ButtonTone.Tonal,
-            enabled = !midi.scanning,
-        )
-        if (midi.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
-        midi.found.forEach { f ->
-            SongListItem(title = f.name, subtitle = stringResource(R.string.settings_midi_choose), onClick = { actions.onMidiChoose(f) })
-        }
-        when {
-            midi.bluetoothOff -> Text(stringResource(R.string.settings_midi_bt_off), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            midi.searched && !midi.scanning && midi.found.isEmpty() ->
-                Text(stringResource(R.string.settings_midi_found_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-        }
-        HelpTip(stringResource(R.string.settings_midi_help), label = stringResource(R.string.settings_midi_after))
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            Text(stringResource(R.string.settings_midi_location), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
 private fun pedalActionLabel(a: PedalAction): String = stringResource(
     when (a) {
         PedalAction.NEXT -> R.string.settings_pedal_cmd_next
@@ -1017,21 +1027,6 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
         PedalAction.NONE -> R.string.settings_pedal_cmd_none
     },
 )
-
-/** Buttons set to another command, always visible: tapping changes the command, ✕ resets that button to default. */
-@Composable
-private fun PedalKeysCard(keys: Map<Int, PedalAction>, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.settings_pedal_keys)) {
-        if (keys.isEmpty()) {
-            Text(stringResource(R.string.settings_pedal_keys_none), style = MaterialTheme.typography.bodyLarge)
-            return@SettingsCard
-        }
-        keys.forEach { (code, action) ->
-            PedalKeyRow(pedalKeyName(code), action, { actions.onPedalAction(code, it) }, { actions.onPedalAction(code, PedalAction.default(code)) })
-        }
-        ActionButton(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size), actions.onResetPedalKeys, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
-    }
-}
 
 @Composable
 private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, onRemove: () -> Unit) {
