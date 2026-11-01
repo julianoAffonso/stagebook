@@ -42,6 +42,17 @@ class WebEditorSongsTest {
 
     private fun idOf(json: String) = Regex("\"id\":\"([^\"]+)\"").find(json)!!.groupValues[1]
 
+    @Test fun `leaving the app does not wait behind a restore or upload holding the editor's lock`() {
+        val holding = java.util.concurrent.CountDownLatch(1)
+        val busy = Thread { synchronized(api) { holding.countDown(); Thread.sleep(3_000) } }.apply { start() }
+        holding.await()
+        val started = System.nanoTime()
+        api.clear()
+        val ms = (System.nanoTime() - started) / 1_000_000
+        busy.join()
+        assertTrue("clear() waited $ms ms", ms < 1_000)
+    }
+
     @Test fun `creates a song - chords above the lyrics become ChordPro and the BPM goes to tempo`() {
         val r = call("POST", "/api/songs", """{"title":" Nova ","author":"Banda","tempo":"92","text":"G       D\nlinha de exemplo"}""")
         assertEquals(200, r.status)
