@@ -453,12 +453,14 @@ fun StageScreen(
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
         val start = androidx.compose.runtime.withFrameNanos { it }
-        var beat = 0
+        var now = start
         while (true) {
+            // the beat from the clock, not counted: back from the screen off, it jumps to the current beat instead of
+            // blinking every missed one in a row (audit 01/11)
+            val beat = metroBeatAt(now - start, periodNanos)
             metroBeat = beat
-            beat++
-            val now = androidx.compose.runtime.withFrameNanos { it }
-            delay(((start + beat * periodNanos - now) / 1_000_000).coerceAtLeast(0))
+            delay(((start + (beat + 1) * periodNanos - now) / 1_000_000).coerceAtLeast(0))
+            now = androidx.compose.runtime.withFrameNanos { it }
         }
     }
     DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
@@ -819,7 +821,8 @@ fun StageScreen(
                 var last = androidx.compose.runtime.withFrameNanos { it }
                 while (true) {
                     val now = androidx.compose.runtime.withFrameNanos { it }
-                    val v = (scrollY.value + autoPx * (now - last) / 1_000_000_000f).coerceAtMost(maxScroll.toFloat())
+                    // a long gap between frames (screen off, a stall) doesn't jump the text ahead (audit 01/11)
+                    val v = (scrollY.value + autoPx * autoScrollNanos(now - last) / 1_000_000_000f).coerceAtMost(maxScroll.toFloat())
                     last = now
                     scrollY.snapTo(v)
                     if (v >= maxScroll) { autoOn = false; break }
@@ -1194,6 +1197,15 @@ private data class PageContent(
     val sheetColumns: Int,
     val chordStyle: TextStyle,
 )
+
+/** The metronome beat (0 = first) [sinceStart] nanoseconds after it started; a frame up to 20 ms early counts. */
+internal fun metroBeatAt(sinceStart: Long, periodNanos: Long): Int = ((sinceStart + METRO_EARLY_NANOS) / periodNanos).toInt()
+
+/** The time auto-scroll moves the text for, between two frames: at most [MAX_SCROLL_FRAME_NANOS]. */
+internal fun autoScrollNanos(sinceLast: Long): Long = sinceLast.coerceIn(0, MAX_SCROLL_FRAME_NANOS)
+
+private const val METRO_EARLY_NANOS = 20_000_000L
+private const val MAX_SCROLL_FRAME_NANOS = 100_000_000L
 
 /** "Edit this line" button offered where the finger held; `line` is the index in `lines`. */
 private class EditOffer(val at: Offset, val line: Int)
