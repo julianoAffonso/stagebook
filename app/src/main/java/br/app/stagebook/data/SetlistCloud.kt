@@ -20,7 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Setlist (and songs) over the internet, with no server of ours: the QR package (`L3` + deflate) and each song (`S1` +
+ * Setlist (and songs) over the internet, with no server of ours: the QR package (`Q1` + deflate) and each song (`S1` +
  * deflate), encrypted with the code's key, go to an ntfy.sh channel (free public service; rules checked on 24/10:
  * messages up to 4 KB, kept 12 h, "best effort"). The receiver types the code; the app fetches the channel, decrypts
  * and opens the same review as the QR.

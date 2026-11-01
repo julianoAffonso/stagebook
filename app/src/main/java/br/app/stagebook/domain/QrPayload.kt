@@ -8,7 +8,7 @@ import java.util.zip.Deflater
 import java.util.zip.Inflater
 
 /**
- * Setlist QR content: the bytes `L3` + deflate (no zlib header) of the UTF-8 text:
+ * Setlist QR content: the bytes `Q1` + deflate (no zlib header) of the UTF-8 text:
  * ```
  * <format header>
  * <number of songs>
@@ -23,8 +23,11 @@ import java.util.zip.Inflater
  * every title it didn't find.
  */
 object QrPayload {
-    const val HEADER = "LETRAS3"   // format header: fixed (QRs already made with it keep working)
-    private val PACKED_MARK = byteArrayOf('L'.code.toByte(), '3'.code.toByte())
+    private const val NAME = "STAGEBOOK"
+    private const val VERSION = 1
+    const val HEADER = "$NAME$VERSION"   // format header; a higher number = a newer app (it asks to update)
+    // "Q" + the version: a newer QR still unpacks here, so the reader can say "update the app" instead of "not a setlist"
+    private val PACKED_MARK = byteArrayOf('Q'.code.toByte(), ('0'.code + VERSION).toByte())
 
     /**
      * QR ceiling, in bytes (already compressed). The QR holds up to 2,331 bytes at this correction level (M), but that
@@ -53,7 +56,7 @@ object QrPayload {
         return (listOf(HEADER, songs.size.toString(), clean(name)) + lines).joinToString("\n")
     }
 
-    /** The bytes that go in the QR: `L3` + deflate of the text. */
+    /** The bytes that go in the QR: `Q1` + deflate of the text. */
     fun pack(text: String): ByteArray {
         val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
         return try {
@@ -77,9 +80,9 @@ object QrPayload {
 
     private const val MAX_TEXT = 64 * 1024   // a setlist never gets close; guards against odd data
 
-    /** Compressed QR text (`L3` + deflate), or null if the bytes aren't in that format. */
+    /** Compressed QR text (`Q1` + deflate), or null if the bytes aren't in that format. */
     fun unpack(bytes: ByteArray?): String? {
-        if (bytes == null || bytes.size <= PACKED_MARK.size || bytes[0] != PACKED_MARK[0] || bytes[1] != PACKED_MARK[1]) return null
+        if (bytes == null || bytes.size <= PACKED_MARK.size || bytes[0] != PACKED_MARK[0] || bytes[1] !in '1'.code.toByte()..'9'.code.toByte()) return null
         val inflater = Inflater(true)
         return try {
             inflater.setInput(bytes, PACKED_MARK.size, bytes.size - PACKED_MARK.size)
@@ -101,7 +104,7 @@ object QrPayload {
 
     /** Setlist QR in a format newer than this app (a higher header number): asks to update. */
     fun isNewer(text: String): Boolean =
-        Regex("^LETRAS(\\d+)\n").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { it > HEADER.removePrefix("LETRAS").toInt() } == true
+        Regex("^$NAME(\\d+)\n").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { it > VERSION } == true
 
     /**
      * Reading the already decompressed text (reference for the reader): null if it isn't a setlist QR or a title is

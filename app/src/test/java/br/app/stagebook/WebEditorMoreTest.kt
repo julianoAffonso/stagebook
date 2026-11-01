@@ -57,7 +57,7 @@ class WebEditorMoreTest {
         val mine = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "[G]minha"))
         val similarA = repo.saveSong(Song(title = "Tempo Perdido", author = "Legião Urbana"))
         repo.saveSong(Song(title = "Tempo Perdido", author = "Outra"))
-        val payload = "LETRAS3\n4\nShow de sábado\nHazard\tRichard Marx\nNoite clara\tOutra Banda\nTempo Perdido\nSem música"
+        val payload = "STAGEBOOK1\n4\nShow de sábado\nHazard\tRichard Marx\nNoite clara\tOutra Banda\nTempo Perdido\nSem música"
         val came = SetlistCloud.SharedSong("Noite clara", "Outra Banda", "", "[Am]uma\n[C]duas\n[G]três")
         var joined = ""
         val receiver = WebReceive(repo, { SetlistCloud.Received.Ok(payload, listOf(came)) }, { code, _ -> joined = code })
@@ -79,7 +79,7 @@ class WebEditorMoreTest {
     @Test fun `band - lists what arrived, syncs, and opening reviews it`() {
         var synced = 0
         var done = ""
-        val item = br.app.stagebook.data.BandInbox.Item("i1", "f", "Celular da Ana", "LETRAS3\n1\nEnsaio\nHazard", emptyList())
+        val item = br.app.stagebook.data.BandInbox.Item("i1", "f", "Celular da Ana", "STAGEBOOK1\n1\nEnsaio\nHazard", emptyList())
         val receiver = WebReceive(repo, { SetlistCloud.Received.NotFound }, inboxDone = { done = it })
         val api = WebEditorApi(repo, receiver = { receiver }, band = { WebEditorApi.Band({ listOf(item) }, { synced++ }) })
         assertTrue(call(api, "GET", "/api/band").text().contains("\"from\":\"Celular da Ana\""))

@@ -80,7 +80,7 @@ class LibraryTest {
     }
 
     private fun unpack(bytes: ByteArray): String {
-        assertEquals('L'.code.toByte(), bytes[0]); assertEquals('3'.code.toByte(), bytes[1])
+        assertEquals('Q'.code.toByte(), bytes[0]); assertEquals('1'.code.toByte(), bytes[1])
         val inf = java.util.zip.Inflater(true)
         inf.setInput(bytes, 2, bytes.size - 2)
         val out = ByteArray(65536); val n = inf.inflate(out); inf.end()
@@ -95,15 +95,15 @@ class LibraryTest {
         ))
         val set = Setlist("s", "Show de sábado", listOf("a", "removida", "b", "c"))
         val text = unpack(QrPayload.build(set, lib))
-        assertEquals("LETRAS3\n3\nShow de sábado\nHazard\nMalandragem\nIt's My Life\tBon Jovi", text)
+        assertEquals("STAGEBOOK1\n3\nShow de sábado\nHazard\nMalandragem\nIt's My Life\tBon Jovi", text)
         assertEquals(
             QrPayload.Parsed("Show de sábado", listOf(QrPayload.Entry("Hazard", ""), QrPayload.Entry("Malandragem", ""), QrPayload.Entry("It's My Life", "Bon Jovi"))),
             QrPayload.parse(text),
         )
         // a title is missing: the reader refuses instead of creating an incomplete setlist
-        assertNull(QrPayload.parse("LETRAS3\n3\nShow\nHazard\nMalandragem"))
+        assertNull(QrPayload.parse("STAGEBOOK1\n3\nShow\nHazard\nMalandragem"))
         // the old format no longer works
-        assertNull(QrPayload.parse("LETRAS2\n1\nShow\nHazard"))
+        assertNull(QrPayload.parse("LETRAS3\n1\nShow\nHazard"))   // no compatibility with the previous app app
     }
 
     @Test
