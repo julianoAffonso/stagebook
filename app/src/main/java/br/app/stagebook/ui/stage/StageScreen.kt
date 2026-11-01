@@ -443,7 +443,8 @@ fun StageScreen(
     var autoAvailable by remember { mutableStateOf(false) }   // scroll mode and the song doesn't fit on one screen
     // metronome (T33c): starts at the song's BPM (no BPM, 100); stops when changing songs. The sound came in T33d
     var metroOn by remember(index) { mutableStateOf(false) }
-    val songTempo = remember(index, uiState.songs) { uiState.songs.getOrNull(index)?.text?.let(Chords::tempo) ?: 0 }
+    val songText = uiState.songs.getOrNull(index)?.text
+    val songTempo = remember(songText) { songText?.let(Chords::tempo) ?: 0 }
     var metroBpm by remember(index, songTempo) { mutableIntStateOf(songTempo.takeIf { it > 0 } ?: Chords.DEFAULT_TEMPO) }
     var metroBeat by remember(index) { mutableIntStateOf(-1) }   // current beat since play (0 = first)
     // the sound (T33d) and the blink start together; the blink aims at the moment of each beat since the start (it
@@ -776,7 +777,9 @@ fun StageScreen(
             val shownAt = if (scrollMode) 0 else stopAt
             // each animation page carries its own text: the one leaving can't be built with the new song's lines (that
             // was the crash when changing songs)
-            val shown = PageContent(
+            // remembered: built on every recomposition, it joined the whole song again (scroll mode) and, being a new
+            // object, reset the hit layouts and the text's own remember (audit 01/11)
+            val shown = remember(index, shownAt, sheets, shownLines, style, columns, chordLook, look.chordFont, scrollMode) { PageContent(
                 index,
                 shownAt,
                 if (scrollMode) listOf(joinLines(shownLines))
@@ -786,7 +789,7 @@ fun StageScreen(
                 columns,
                 // chord: bold, in its color and size, following the lyrics zoom
                 style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
-            )
+            ) }
             val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
             // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
             // you continue lights up
