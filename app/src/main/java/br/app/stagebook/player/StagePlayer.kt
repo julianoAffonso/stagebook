@@ -62,8 +62,11 @@ class StagePlayer @Inject constructor(
 
     @Volatile private var wanted: File? = null    // backing track of the open song
     @Volatile private var loaded: File? = null    // what's in the engine
+    // what's in the engine with its mix and normalization applied: only this one plays (the output could connect while
+    // load() was still measuring, and the song started with the old gains; audit 01/11)
+    @Volatile private var ready: File? = null
     private var durationMs = -1L
-    private var endWatch: Job? = null
+    @Volatile private var endWatch: Job? = null   // swapped only under [engine]
 
     @Volatile private var mixer = MixerConfig()
     private val measures = mutableMapOf<Int, Measure>()   // of the loaded backing track, per mixer channel
@@ -135,6 +138,7 @@ class StagePlayer @Inject constructor(
     fun shutdown() {
         pause()
         loaded = null
+        ready = null
         if (PlayerService.running) {
             context.startService(Intent(context, PlayerService::class.java).setAction(PlayerService.ACTION_STOP))
         }
@@ -143,6 +147,7 @@ class StagePlayer @Inject constructor(
     private suspend fun load(): Boolean = engine.withLock {
         val f = wanted ?: return@withLock false
         if (f == loaded) return@withLock durationMs >= 0
+        ready = null
         durationMs = Engine.load(f.absolutePath)
         loaded = f
         measures.clear()
@@ -151,6 +156,7 @@ class StagePlayer @Inject constructor(
         val lanes = Engine.lanes()
         if (lanes > mixer.channels) repository.updateLook { it.copy(mixer = it.mixer.copy(channels = lanes)) }
         measureAndApply()
+        ready = f
         true
     }
 
@@ -190,19 +196,25 @@ class StagePlayer @Inject constructor(
 
     // Only plays with the output ready (USB or device); without it, play waits (the service notifies when it connects).
     // Also resumes after a reconnection: stopping the engine resets its play, but not the position.
+    // Called from the main thread (service) and from play(): checked and started under [engine], after load() finished,
+    // so only one end watch ever runs.
     private fun startIfConnected() {
-        val ui = _ui.value
-        if (!(ui.waiting || ui.playing) || !PlayerService.connected || loaded == null || loaded != wanted) return
-        Engine.play()
-        PlayerService.playing(true)
-        _ui.update { it.copy(playing = true, waiting = false) }
-        endWatch?.cancel()
-        endWatch = scope.launch {
-            while (isActive) {
-                delay(END_POLL_MS)
-                if (durationMs > 0 && Engine.position() >= durationMs - END_MARGIN_MS) {
-                    pause()
-                    engine.withLock { Engine.seek(0) }
+        scope.launch {
+            engine.withLock {
+                val ui = _ui.value
+                if (!(ui.waiting || ui.playing) || !PlayerService.connected || ready == null || ready != wanted) return@withLock
+                Engine.play()
+                PlayerService.playing(true)
+                _ui.update { it.copy(playing = true, waiting = false) }
+                endWatch?.cancel()
+                endWatch = scope.launch {
+                    while (isActive) {
+                        delay(END_POLL_MS)
+                        if (durationMs > 0 && Engine.position() >= durationMs - END_MARGIN_MS) {
+                            pause()
+                            engine.withLock { Engine.seek(0) }
+                        }
+                    }
                 }
             }
         }
