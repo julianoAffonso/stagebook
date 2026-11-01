@@ -100,8 +100,7 @@ class SongsViewModel @Inject constructor(
     @OptIn(FlowPreview::class)
     val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search, query.debounce(::typingDelay), chosenTags, setPicks) { loaded, s, q, chosen, sets ->
         val all = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
-        // a tag that no song has any more (taken off everywhere) leaves the filter
-        val kept = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
+        val kept = br.app.stagebook.domain.Tags.stillUsed(chosen, all)
         val songs = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
         SongsUiState(
             loading = !loaded,

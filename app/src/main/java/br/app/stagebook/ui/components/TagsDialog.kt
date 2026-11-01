@@ -102,6 +102,19 @@ fun TagsDialog(
 @Composable
 fun nationalTagsShown(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "pt"
 
+/** The window's choices: the suggestions first, then [more] (each tag once, ignoring case). */
+@Composable
+fun tagOptions(more: List<String>): List<String> = (suggestedTags() + more).distinctBy { it.lowercase() }
+
+/** Each choice's box for the chosen songs' tags ([rows]): on in all, off in none, mixed otherwise. */
+fun tagStates(options: List<String>, rows: List<List<String>>): Map<String, ToggleableState> = options.associateWith { t ->
+    when (rows.count { tags -> tags.any { it.equals(t, true) } }) {
+        0 -> ToggleableState.Off
+        rows.size -> ToggleableState.On
+        else -> ToggleableState.Indeterminate
+    }
+}
+
 /** The tags offered even before anyone uses them: National and International, in Portuguese only. */
 @Composable
 fun suggestedTags(): List<String> =

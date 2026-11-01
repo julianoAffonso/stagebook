@@ -158,11 +158,11 @@ fun SetlistDetailScreen(
     var sharing by rememberSaveable { mutableStateOf(false) }   // the "Share" sheet open
     var deleting by rememberSaveable { mutableStateOf(false) }
     // holding a song selects it (Google's pattern, as in the song list): the top bar removes them from the setlist
-    var selected by rememberSaveable { mutableStateOf(emptyList<String>()) }   // item keys
+    val selection = br.app.stagebook.ui.components.rememberSelection()   // item keys
+    var selected by selection.state
     var removingMany by rememberSaveable { mutableStateOf(false) }
-    val selecting = selected.isNotEmpty()
-    fun toggle(key: String) { selected = if (key in selected) selected - key else selected + key }
-    androidx.activity.compose.BackHandler(enabled = selecting) { selected = emptyList() }
+    val selecting = selection.active
+    val toggle = selection::toggle
     // local copy: the list changes right away during the drag; the order is saved once, on release (saving at every
     // position rewrote the library several times per drag), and the saved order comes back through uiState
     var items by remember(uiState.items) { mutableStateOf(uiState.items) }

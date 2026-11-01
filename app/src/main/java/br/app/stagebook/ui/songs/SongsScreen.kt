@@ -9,7 +9,6 @@ import br.app.stagebook.ui.share.CloudDialog
 import br.app.stagebook.ui.share.CloudUi
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Checkbox
-import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Text
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -59,7 +58,6 @@ import br.app.stagebook.ui.components.InfoDialog
 import br.app.stagebook.ui.components.SearchWithTags
 import br.app.stagebook.ui.components.TagsDialog
 import androidx.compose.runtime.remember
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.foundation.layout.fillMaxWidth
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
@@ -154,11 +152,11 @@ fun SongsScreen(
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
-    var selected by rememberSaveable { mutableStateOf(initialSelection) }
+    val selection = br.app.stagebook.ui.components.rememberSelection(initialSelection)
+    var selected by selection.state
     var sharing by rememberSaveable { mutableStateOf(false) }
-    val selecting = selected.isNotEmpty()
-    fun toggle(id: String) { selected = if (id in selected) selected - id else selected + id }
-    BackHandler(enabled = selecting) { selected = emptyList() }
+    val selecting = selection.active
+    val toggle = selection::toggle
     CenteredContent(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             // selecting, the top bar becomes the selection's, as in Google's apps (Gmail, Files, Photos): ✕, how many and
@@ -244,11 +242,8 @@ fun SongsScreen(
         // all the chosen songs, not only the ones the search shows (audit 01/11)
         val rows = remember(ids) { tagsOf(ids) }
         // the suggestions come first even before anyone uses them
-        val options = (br.app.stagebook.ui.components.suggestedTags() + uiState.tags).distinctBy { it.lowercase() }
-        val initial = options.associateWith { t ->
-            val n = rows.count { tags -> tags.any { it.equals(t, true) } }
-            when (n) { 0 -> ToggleableState.Off; rows.size -> ToggleableState.On; else -> ToggleableState.Indeterminate }
-        }
+        val options = br.app.stagebook.ui.components.tagOptions(uiState.tags)
+        val initial = br.app.stagebook.ui.components.tagStates(options, rows)
         TagsDialog(options, initial, { add, remove -> onSetTags(ids, add, remove); selected = emptyList() }, { tagging = null })
     }
     if (deletingMany) {
