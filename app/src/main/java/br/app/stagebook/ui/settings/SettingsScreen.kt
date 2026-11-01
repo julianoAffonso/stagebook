@@ -405,7 +405,7 @@ data class SettingsActions(
     val onInternetOn: (Boolean) -> Unit = {},
     val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
-    val onAutoTags: (national: String, international: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _ -> 0 to 0 },
+    val onAutoTags: (national: String, international: String, language: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _, _ -> 0 to 0 },
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
@@ -1322,14 +1322,16 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         var ask by remember { mutableStateOf<Pair<Int, Int>?>(null) }
         val national = stringResource(R.string.tags_national)
         val international = stringResource(R.string.tags_international)
+        // national = the language the app is showing (the tag names come in it too)
+        val language = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language
         InfoText(stringResource(R.string.tags_auto_info))
-        ActionButton(stringResource(R.string.tags_auto), { ask = actions.onAutoTags(national, international, true) }, Modifier.fillMaxWidth(), icon = AppIcons.Label, tone = ButtonTone.Tonal)
+        ActionButton(stringResource(R.string.tags_auto), { ask = actions.onAutoTags(national, international, language, true) }, Modifier.fillMaxWidth(), icon = AppIcons.Label, tone = ButtonTone.Tonal)
         ask?.let { (br, other) ->
             if (br + other == 0) InfoDialog(stringResource(R.string.tags_auto), stringResource(R.string.tags_auto_none), { ask = null })
             else ConfirmDialog(
                 stringResource(R.string.tags_auto_confirm, br, other),
                 stringResource(R.string.tags_auto_ok),
-                { actions.onAutoTags(national, international, false) },
+                { actions.onAutoTags(national, international, language, false) },
                 { ask = null },
                 destructive = false,
             )

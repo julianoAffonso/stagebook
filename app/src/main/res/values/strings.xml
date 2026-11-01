@@ -853,12 +853,12 @@
     <string name="tags_new">New tag</string>
     <string name="tags_add">Add</string>
     <string name="tags_action">Tags</string>
-    <string name="tags_national">Brazilian</string>
+    <string name="tags_national">Local</string>
     <string name="tags_international">International</string>
-    <string name="tags_auto">Split Brazilian and international</string>
-    <string name="tags_auto_confirm">By the lyrics language, %1$d songs get the Brazilian tag and %2$d the International tag. Songs that already have one of these tags, or not enough lyrics, stay as they are. You can fix them later.</string>
+    <string name="tags_auto">Split local and international</string>
+    <string name="tags_auto_confirm">By the lyrics language, %1$d songs get the Local tag (in English) and %2$d the International tag. Songs that already have one of these tags, or not enough lyrics, stay as they are. You can fix them later.</string>
     <string name="tags_auto_ok">Split</string>
-    <string name="tags_auto_none">No songs to split: they all have Brazilian or International already, or have no lyrics.</string>
+    <string name="tags_auto_none">No songs to split: they all have Local or International already, or have no lyrics.</string>
     <plurals name="tags_count">
         <item quantity="one">%d tag</item>
         <item quantity="other">%d tags</item>
@@ -900,7 +900,7 @@
         <item quantity="one">Take %d song out of this setlist? It stays in the library.</item>
         <item quantity="other">Take %d songs out of this setlist? They stay in the library.</item>
     </plurals>
-    <string name="tags_auto_info">Tags, by the lyrics language, the songs that have neither Brazilian nor International yet. You can fix them later in each song\'s editor or by selecting several in the list.</string>
+    <string name="tags_auto_info">Tags, by the lyrics language, the songs that have neither Local nor International yet: Local is the app\'s language. You can fix them later in each song\'s editor or by selecting several in the list.</string>
     <string name="editor_auto_meta_short">Blank: the app fills it in</string>
     <string name="editor_track_empty">None</string>
     <string name="editor_track_unnamed">Audio attached</string>
