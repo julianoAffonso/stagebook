@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,8 +39,14 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
             label = { Text(stringResource(R.string.tags_filter)) },
             textStyle = MaterialTheme.typography.bodyLarge,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
-            shape = MaterialTheme.shapes.small,
-            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            // the same look as the search field it sits next to
+            shape = MaterialTheme.shapes.medium,
+            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+            ),
             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
         ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
@@ -62,6 +69,29 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
     }
 }
 
+/**
+ * Search with the tag filter beside it (user, 01/11: the filter alone on its line was too big). Without tags, only the
+ * search.
+ */
+@Composable
+fun SearchWithTags(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String,
+    tags: List<String>,
+    chosen: Set<String>,
+    onTagsChange: (Set<String>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.foundation.layout.Row(modifier, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.s)) {
+        SearchField(query, onQueryChange, placeholder, Modifier.weight(1f))
+        if (tags.isNotEmpty()) {
+            val width = if (wideLists()) br.app.stagebook.ui.theme.Sizes.tagFilter else br.app.stagebook.ui.theme.Sizes.tagFilterNarrow
+            TagFilter(tags, chosen, onTagsChange, Modifier.width(width))
+        }
+    }
+}
+
 @LightPreview
 @Composable
 private fun TagFilterLightPreview() = PreviewSurface(dark = false) {
@@ -71,5 +101,5 @@ private fun TagFilterLightPreview() = PreviewSurface(dark = false) {
 @DarkPreview
 @Composable
 private fun TagFilterDarkPreview() = PreviewSurface(dark = true) {
-    TagFilter(listOf("Internacional", "Nacional", "Rock"), setOf("Nacional", "Rock"), {})
+    SearchWithTags("", {}, "Buscar música ou artista", listOf("Internacional", "Nacional", "Rock"), setOf("Nacional", "Rock"), {})
 }
