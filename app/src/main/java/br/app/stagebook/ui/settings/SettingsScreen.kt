@@ -1207,6 +1207,7 @@ internal fun MixerCard(
     levels: () -> MixerLevels,   // read only when drawing the meters
     monitoring: Boolean,
     onMonitoring: (Boolean) -> Unit,
+    monitorSwitch: Boolean = true,   // false: the caller shows "See live levels" itself (song mixer on the global one)
 ) {
     // also opened over the stage, with the song playing (user, 31/10: from Settings the track stopped)
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // channel being edited (the first of the pair); -1 = none
@@ -1215,7 +1216,7 @@ internal fun MixerCard(
             stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
             { onMixer(mixer.copy(channels = it)) }, { it.toString() },
         )
-        SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
+        if (monitorSwitch) SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
         // which output the shown routing belongs to (the one in use or the last used)
         Text(
             pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),

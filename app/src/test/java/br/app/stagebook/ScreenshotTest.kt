@@ -1087,7 +1087,7 @@ class ScreenshotTest {
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
         ) {
             androidx.compose.material3.Text(str(R.string.stage_mix_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true) {}
+            br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true, {})
             br.app.stagebook.ui.settings.EqCard(mixerLook.mixer, {}, { mixerLevels }, true)
         }
     }
