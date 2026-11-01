@@ -3,8 +3,10 @@ package br.app.stagebook
 import br.app.stagebook.domain.MidiCode
 import br.app.stagebook.domain.MidiDecoder
 import br.app.stagebook.domain.PedalAction
+import br.app.stagebook.domain.PedalLearn
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -48,10 +50,47 @@ class MidiDecoderTest {
         assertEquals(3, MidiCode.number(p[0].code))
     }
 
-    @Test fun `a CC moving to other values without releasing is a repeat and releasing without pressing is ignored`() {
+    @Test fun `a CC moving to other values without releasing is a repeat`() {
         val d = MidiDecoder("")
-        val p = d.feed(bytes(0xB0, 64, 0, 0xB0, 64, 127, 0xB0, 64, 120))
+        val p = d.feed(bytes(0xB0, 64, 127, 0xB0, 64, 120))
         assertEquals(listOf(0, 1), p.map { it.repeat })
+    }
+
+    // Hotone: two buttons on CC 27, one sends 127 and the other 0 (user, 31/10)
+    @Test fun `every CC comes with its value, a 0 without a press too`() {
+        val p = MidiDecoder("").feed(bytes(0xB0, 27, 0, 0xB0, 27, 127, 0xB0, 27, 0))
+        assertEquals(listOf(0, 127, 0), p.map { it.value })
+        assertEquals(listOf(false, true, false), p.map { it.down })
+    }
+
+    @Test fun `two buttons on the same CC told apart by the value each run their command`() {
+        val cc = MidiCode.of(0xB0, 27)
+        val keys = mapOf(MidiCode.withValue(cc, 127) to PedalAction.NEXT, MidiCode.withValue(cc, 0) to PedalAction.PREVIOUS)
+        val p = MidiDecoder("").feed(bytes(0xB0, 27, 0, 0xB0, 27, 0, 0xB0, 27, 127, 0xB0, 27, 127, 0xB0, 27, 0))
+        val run = p.map { PedalAction.hit(it, keys) }.filter { it.runs }.map { it.action }
+        assertEquals(listOf(PedalAction.PREVIOUS, PedalAction.PREVIOUS, PedalAction.NEXT, PedalAction.NEXT, PedalAction.PREVIOUS), run)
+    }
+
+    @Test fun `a button set by the CC alone still works as before`() {
+        val cc = MidiCode.of(0xB0, 27)
+        val keys = mapOf(cc to PedalAction.NEXT)
+        val p = MidiDecoder("").feed(bytes(0xB0, 27, 127, 0xB0, 27, 0, 0xB0, 27, 127))
+        assertEquals(2, p.map { PedalAction.hit(it, keys) }.count { it.runs })
+    }
+
+    @Test fun `set up a button records the CC with its value and skips the release right after a press`() {
+        val learn = PedalLearn()
+        val cc = MidiCode.of(0xB0, 27)
+        val d = MidiDecoder("")
+        val (down, up) = d.feed(bytes(0xB0, 27, 127, 0xB0, 27, 0))
+        assertEquals(MidiCode.withValue(cc, 127), learn.code(down, 1_000))
+        assertNull(learn.code(up, 1_200))                                // regular pedal: foot coming off
+        assertEquals(MidiCode.withValue(cc, 0), learn.code(up, 5_000))   // Hotone: the 0 button on its own
+        assertEquals(0, MidiCode.value(MidiCode.withValue(cc, 0)))
+        assertEquals(127, MidiCode.value(MidiCode.withValue(cc, 127)))
+        assertNull(MidiCode.value(cc))
+        assertEquals(27, MidiCode.number(MidiCode.withValue(cc, 127)))
+        assertEquals(MidiCode.Kind.CC, MidiCode.kind(MidiCode.withValue(cc, 0)))
     }
 
     // pedals that send only the press: every press counts (user, 31/10: the song moved once and then never again)

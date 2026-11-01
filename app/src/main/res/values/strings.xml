@@ -474,6 +474,7 @@
     <string name="settings_pedal_keys_none">No buttons changed. They do the default, next and previous page. To change one, press it and pick what it does in Set up a button.</string>
     <string name="settings_pedal_key_reset">Reset %1$s to default</string>
     <string name="midi_cc">MIDI CC %1$d (channel %2$d)</string>
+    <string name="midi_cc_value">MIDI CC %1$d = %2$d (channel %3$d)</string>
     <string name="midi_note">MIDI note %1$d (channel %2$d)</string>
     <string name="midi_program">MIDI program %1$d (channel %2$d)</string>
     <string name="settings_midi">MIDI pedal</string>

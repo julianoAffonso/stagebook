@@ -10,6 +10,7 @@ data class PedalPress(
     val repeat: Int = 0,
     val device: String = "",   // name of the external device that sent it; empty = the tablet itself
     val name: String = "",     // key name (keyboard only; the MIDI one comes from MidiCode on screen)
+    val value: Int = -1,       // CC value (0 to 127); -1 for keys, notes and program changes
 )
 
 /** MIDI button codes, above any Android keyCode: type + channel + number (CC, note or program). */
@@ -32,6 +33,34 @@ object MidiCode {
     fun channel(code: Int): Int = ((code shr 8) and 0x0F) + 1
 
     fun number(code: Int): Int = code and 0x7F
+
+    // a CC button told apart by its value: pedals like the Hotone send the same CC on two buttons, one with 127 and
+    // the other with 0 (user, 31/10)
+    private const val VALUED = 0x100000
+
+    fun withValue(code: Int, value: Int): Int = code or VALUED or ((value and 0x7F) shl 25)
+
+    /** The CC value this button was set by, or null for a button that's only the CC (or not a CC). */
+    fun value(code: Int): Int? = if (isMidi(code) && code and VALUED != 0) (code ushr 25) and 0x7F else null
+}
+
+/**
+ * Which code "Set up a button" records. A CC is recorded with its value, so two buttons on the same CC (127 and 0)
+ * become two buttons; the 0 a regular pedal sends when the foot comes off right after its 127 isn't a button.
+ */
+class PedalLearn {
+    private val pressedAt = HashMap<Int, Long>()   // CC → when it last came with a value ≥ 64
+
+    fun code(p: PedalPress, now: Long): Int? {
+        if (p.value < 0) return p.code
+        if (p.value >= 64) pressedAt[p.code] = now
+        else if (pressedAt[p.code]?.let { now - it < RELEASE_MS } == true) return null
+        return MidiCode.withValue(p.code, p.value)
+    }
+
+    private companion object {
+        const val RELEASE_MS = 1_500L
+    }
 }
 
 /**
@@ -43,6 +72,8 @@ object MidiCode {
  * Many pedals send only the press (CC 127 or Note On every time, never the release): the same message again while
  * "held" is a new press (user, 31/10: the pedal moved the song once and then never again). A CC going up through
  * other values without a release (expression pedal, knob) comes as a repeat, so it doesn't fire on every step.
+ * Every CC comes out with its value, a low one without a press before it too: it can be a button of its own
+ * ([PedalAction.hit]).
  */
 class MidiDecoder(private val device: String) {
     private var status = 0
@@ -93,7 +124,11 @@ class MidiDecoder(private val device: String) {
             val before = held.put(code, value)
             if (before == null || before == value || type == 0x90) 0 else 1
         } else 0
-        if (!down && held.remove(code) == null) return null   // releasing without having pressed (CC going from 0 to 63): nothing
+        if (type == 0xB0) {
+            if (!down) held.remove(code)
+            return PedalPress(code, down, repeat, device, value = value)
+        }
+        if (!down && held.remove(code) == null) return null   // releasing a note that wasn't pressed: nothing
         return PedalPress(code, down, repeat, device)
     }
 }
