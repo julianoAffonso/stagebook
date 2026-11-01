@@ -42,6 +42,14 @@ class ShareCodeTest {
         assertNull(ShareCode.decrypt(k, "lixo de outra pessoa"))
     }
 
+    @Test fun `a band package bigger than one song opens with the package cap - not with the song cap`() {
+        val mark = byteArrayOf('P'.code.toByte(), '1'.code.toByte())
+        val big = (1..40_000).joinToString("\n") { "Linha $it ${it * 7919 % 10007}" }   // ~600 KB, as 30+ songs
+        val packed = SetlistCloud.pack(mark, big)
+        assertNull(SetlistCloud.unpack(mark, packed))
+        assertEquals(big, SetlistCloud.unpack(mark, packed, SetlistCloud.MAX_PACKAGE))
+    }
+
     @Test fun `song goes and comes back compressed and the ntfy answer is read line by line`() {
         val mark = byteArrayOf('S'.code.toByte(), '1'.code.toByte())
         val text = """{"title":"Canção","text":"[G]linha"}"""
