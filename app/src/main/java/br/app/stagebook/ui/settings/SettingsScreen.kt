@@ -103,6 +103,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -279,6 +280,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onChordColor = viewModel::setChordColor,
                 onFontFamily = viewModel::setFontFamily,
                 onChordFont = viewModel::setChordFont,
+                onSectionFont = viewModel::setSectionFont,
                 onInstrument = viewModel::setInstrument,
                 onChordList = viewModel::setChordList,
                 onChordTap = viewModel::setChordTap,
@@ -364,6 +366,7 @@ data class SettingsActions(
     val onChordColor: (Int) -> Unit = {},
     val onFontFamily: (StageFont) -> Unit = {},
     val onChordFont: (StageFont) -> Unit = {},
+    val onSectionFont: (StageFont) -> Unit = {},
     val onInstrument: (Instrument) -> Unit = {},
     val onChordList: (ChordListPlace) -> Unit = {},
     val onChordTap: (Boolean) -> Unit = {},
@@ -422,7 +425,6 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
     CHORDS(R.string.settings_chords, AppIcons.MusicNote),
     PLAYER(R.string.settings_player, AppIcons.Play),
-    SECTIONS(R.string.settings_sections, AppIcons.ListBulleted),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
     METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
     BAND(R.string.settings_band, AppIcons.Group),
@@ -457,6 +459,8 @@ fun SettingsScreen(
             return@Crossfade
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            // what the sliders show while being dragged (saved on release), read by the pinned preview and the sliders
+            val draft = remember(uiState.look.fontSp, uiState.look.sectionScale) { StageDraft(uiState.look.fontSp, uiState.look.sectionScale) }
             if (maxWidth >= Sizes.contentMax) {
                 // tablet in landscape: fixed list on the left, open section on the right
                 val open = section ?: SettingsSection.LYRICS
@@ -470,8 +474,9 @@ fun SettingsScreen(
                     ) {
                         // fixed header; only the content scrolls
                         ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
+                        SectionPinned(open, uiState.look, draft)
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                            SectionDetail(open, uiState, actions)
+                            SectionDetail(open, uiState, actions, draft)
                             Spacer(Modifier.height(Spacing.l))
                         }
                     }
@@ -485,8 +490,9 @@ fun SettingsScreen(
                         CenteredContent(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
                                 ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = { onSection(null) })
+                                SectionPinned(open, uiState.look, draft)
                                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                                    SectionDetail(open, uiState, actions)
+                                    SectionDetail(open, uiState, actions, draft)
                                     Spacer(Modifier.height(Spacing.l))
                                 }
                             }
@@ -536,7 +542,6 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
             StageColumns.TWO -> " · " + stringResource(R.string.settings_columns_two_short)
         } +
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
-    SettingsSection.SECTIONS -> stringResource(if (ui.look.showSections) R.string.settings_sections_shown else R.string.settings_sections_hidden)
     SettingsSection.METRONOME -> stringResource(if (ui.look.metroShown) R.string.metro_summary_shown else R.string.metro_summary_hidden)
     SettingsSection.CHORDS -> if (ui.look.chords) stringResource(R.string.settings_chords_on_short, (ui.look.chordScale * 100).roundToInt()) else stringResource(R.string.settings_chords_off_short)
     // the keyboard pedal, or else the saved MIDI pedal
@@ -559,12 +564,11 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
 }
 
 @Composable
-private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions) {
+private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         when (section) {
             SettingsSection.ESSENTIAL -> EssentialDetail(uiState.look, actions)
-            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions)
-            SettingsSection.SECTIONS -> SectionsDetail(uiState.look, actions)
+            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft)
             SettingsSection.CHORDS -> ChordsDetail(uiState.look, actions)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
             SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
@@ -580,29 +584,43 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
     }
 }
 
+/** What the stage look sliders show while dragged (they save on release): the pinned preview follows them live. */
+@Stable
+internal class StageDraft(fontSp: Float, sectionScale: Float) {
+    var font by mutableFloatStateOf(fontSp)
+    var sectionScale by mutableFloatStateOf(sectionScale)
+}
+
+/**
+ * Pinned above the scrolling content: on Stage look, the stage preview, so every change (lyrics, section titles,
+ * chords) shows right away while scrolling through the options (user, 01/11).
+ */
 @Composable
-private fun LyricsDetail(look: Look, actions: SettingsActions) {
-    // the size changes live in the preview and only saves on release
-    var font by remember(look.fontSp) { mutableFloatStateOf(look.fontSp) }
-    // everything about how the lyrics look in one card, the preview on top so each change shows there right away
-    // (user, 01/11: the size was far from the colors and the font)
-    SettingsCard(stringResource(R.string.settings_lyrics_card), help = stringResource(R.string.settings_font_help)) {
-        // fixed-height preview: changing the size doesn't move the screen; on a wide screen the box is taller, so the
-        // miniature (sized so 72 fits) stays close to the real size (30/10)
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            Surface(
-                color = Color(look.bg),
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview),
-            ) {
-                StagePreview(look, font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(font), R.string.settings_preview_size_text)
-            }
+private fun SectionPinned(section: SettingsSection, look: Look, draft: StageDraft) {
+    if (section != SettingsSection.LYRICS) return
+    // fixed height: changing the size doesn't move the screen; on a wide screen the box is taller, so the miniature
+    // (sized so 72 fits) stays close to the real size (30/10)
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(bottom = Spacing.m)) {
+        Surface(
+            color = Color(look.bg),
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview),
+        ) {
+            StagePreview(look.copy(sectionScale = draft.sectionScale), draft.font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(draft.font), R.string.settings_preview_size_text)
         }
-        Text(stringResource(R.string.settings_font_size, font.roundToInt()), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
+    // everything about how the lyrics look in one card (user, 01/11: the size was far from the colors and the font);
+    // the preview is pinned above
+    SettingsCard(stringResource(R.string.settings_lyrics_card), help = stringResource(R.string.settings_font_help)) {
+        Text(stringResource(R.string.settings_font_size, draft.font.roundToInt()), style = MaterialTheme.typography.bodyLarge)
         Slider(
-            value = font,
-            onValueChange = { font = it },
-            onValueChangeFinished = { actions.onFont(font) },
+            value = draft.font,
+            onValueChange = { draft.font = it },
+            onValueChangeFinished = { actions.onFont(draft.font) },
             valueRange = Look.MIN_FONT..Look.MAX_FONT,
             steps = (Look.MAX_FONT - Look.MIN_FONT).toInt() - 1,
         )
@@ -615,6 +633,8 @@ private fun LyricsDetail(look: Look, actions: SettingsActions) {
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground)
         LegibilityWarnings(look)
     }
+    // section titles live with the rest of the stage look too (user, 01/11)
+    SectionsDetail(look, actions, draft)
     // the page: turn pages (default) or scroll the lyrics, and the columns; in both modes the pedal and a tap move one step
     SettingsCard(
         stringResource(R.string.settings_page_card),
@@ -694,6 +714,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier,
             look.showSections,
             ChordLook(look.chords, look.chordScale, Color(look.chordColor)),
             look.sectionScale,
+            look.sectionFont.family,
         ),
         style = style,
         chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
@@ -851,25 +872,22 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit) {
 private const val PREVIEW_FONT = 30f
 
 @Composable
-private fun SectionsDetail(look: Look, actions: SettingsActions) {
+private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     SettingsCard(stringResource(R.string.settings_sections_look), help = stringResource(R.string.settings_sections_help) + "\n\n" + stringResource(R.string.settings_translate_sections_help)) {
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
         if (look.showSections) {
-            // the same order as the lyrics card: the preview on top, then size and colour (user, 01/11); the size
-            // changes live in the preview and only saves on release
-            var scale by remember(look.sectionScale) { mutableFloatStateOf(look.sectionScale) }
-            Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().height(Sizes.fontPreview)) {
-                StagePreview(look.copy(sectionScale = scale), minOf(look.fontSp, PREVIEW_FONT), Modifier.padding(Spacing.m).clipToBounds(), R.string.settings_preview_size_text)
-            }
-            Text(stringResource(R.string.settings_sections_size, (scale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            // the same order as the lyrics card: size, font and colour; the pinned preview above shows them (user, 01/11)
+            Text(stringResource(R.string.settings_sections_size, (draft.sectionScale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
             Slider(
-                value = scale,
-                onValueChange = { scale = it },
-                onValueChangeFinished = { actions.onSectionScale(scale) },
+                value = draft.sectionScale,
+                onValueChange = { draft.sectionScale = it },
+                onValueChangeFinished = { actions.onSectionScale(draft.sectionScale) },
                 valueRange = Look.MIN_SECTION_SCALE..Look.MAX_SECTION_SCALE,
                 steps = ((Look.MAX_SECTION_SCALE - Look.MIN_SECTION_SCALE) * 10).roundToInt() - 1,
             )
+            // their own font, like the lyrics and the chords (user, 01/11)
+            FontPicker(look.sectionFont, actions.onSectionFont)
             Text(stringResource(R.string.settings_section_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(StagePalette.section, look.sectionColor, actions.onSectionColor)
         }

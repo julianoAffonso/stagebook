@@ -198,6 +198,7 @@ class SettingsViewModel @Inject constructor(
     fun setTranslateSections(on: Boolean) = repository.updateLook { it.copy(translateSections = on) }
     fun setFontFamily(f: StageFont) = repository.updateLook { it.copy(font = f) }
     fun setChordFont(f: StageFont) = repository.updateLook { it.copy(chordFont = f) }
+    fun setSectionFont(f: StageFont) = repository.updateLook { it.copy(sectionFont = f) }
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
     fun setSites(chords: Boolean, sites: List<ImportSite>) =
         repository.updateLook { if (chords) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }

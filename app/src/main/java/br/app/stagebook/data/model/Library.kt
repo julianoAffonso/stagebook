@@ -152,6 +152,7 @@ data class Look(
     val translateSections: Boolean = true,
     val font: StageFont = StageFont.DEFAULT,        // lyrics font
     val chordFont: StageFont = StageFont.DEFAULT,   // chord font
+    val sectionFont: StageFont = StageFont.DEFAULT, // section titles font (user, 01/11)
     val instrument: Instrument = Instrument.ACOUSTIC_GUITAR,   // chord diagrams (popup and list)
     val chordList: ChordListPlace = ChordListPlace.NONE,
     val chordTap: Boolean = true,   // tapping a chord on stage shows the diagram (off: the tap turns the page)

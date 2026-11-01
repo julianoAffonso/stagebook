@@ -39,7 +39,7 @@ class NormalizeFlowTest {
     fun `button and confirmation call mark sections`() {
         var calls = 0
         compose.setContent {
-            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.SECTIONS) }
+            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.LYRICS) }
         }
         compose.onNodeWithText("Marcar seções nas letras sem títulos").performScrollTo().performClick()
         compose.onNodeWithText("Marcar").performClick()

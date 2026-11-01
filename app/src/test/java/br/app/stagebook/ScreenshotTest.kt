@@ -46,6 +46,7 @@ import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
 import br.app.stagebook.ui.theme.StagebookTheme
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -518,7 +519,7 @@ class ScreenshotTest {
     // the strip in context: below a follower's stage, with the current song missing for the bass player. T28: bigger
     // section titles, with a light background, and the size adjustable in Settings → Lyrics sections
     @Test fun settingsSectionsTablet() = shoot("tablet_5_ajustes_secoes") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.SECTIONS) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LYRICS) }
     }
 
     @Test fun conductOnStage() = shoot("tablet_6_palco_acompanhando") {
@@ -623,6 +624,21 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneLyrics() = shoot("celular_5_ajustes_letra") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 72f)), SettingsActions(), it, section = SettingsSection.LYRICS) }
+    }
+
+    // the stage preview stays pinned while scrolling to the section titles (user, 01/11)
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneLyricsScrolled() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 40f)), SettingsActions(), it, section = SettingsSection.LYRICS) }
+                }
+            }
+        }
+        compose.onNodeWithText(str(R.string.settings_sections_look)).performScrollTo()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_5_ajustes_letra_secoes.png")
     }
 
     private val stage = StageUiState(
