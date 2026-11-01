@@ -30,6 +30,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Immutable
 data class SongRowUi(val id: String, val title: String, val subtitle: String, val tags: List<String> = emptyList())
@@ -51,6 +52,7 @@ data class SetPick(val id: String, val name: String)
 sealed interface AddResult {
     data class Added(val count: Int, val set: String) : AddResult
     data object Limit : AddResult
+    data object Gone : AddResult   // the setlist was deleted meanwhile (on another screen, or by the band)
 }
 
 /** Waits for the person to stop typing before filtering; clearing the search is immediate. */
@@ -92,9 +94,11 @@ class SongsViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
     private val chosenTags = MutableStateFlow(emptySet<String>())
+    // the setlists for "Add to which setlist?": they change without the songs changing (audit 01/11)
+    private val setPicks = repository.library.map { l -> l.sets.map { SetPick(it.id, it.name) } }.distinctUntilChanged()
 
     @OptIn(FlowPreview::class)
-    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search, query.debounce(::typingDelay), chosenTags) { loaded, s, q, chosen ->
+    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search, query.debounce(::typingDelay), chosenTags, setPicks) { loaded, s, q, chosen, sets ->
         val all = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
         // a tag that no song has any more (taken off everywhere) leaves the filter
         val kept = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()
@@ -105,7 +109,7 @@ class SongsViewModel @Inject constructor(
             total = repository.library.value.songs.size,
             tags = all,
             chosenTags = kept,
-            sets = repository.library.value.sets.map { SetPick(it.id, it.name) },
+            sets = sets,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 
@@ -132,7 +136,7 @@ class SongsViewModel @Inject constructor(
     fun addToSetlist(ids: List<String>, setId: String?, newName: String): AddResult {
         val lib = repository.library.value
         val name = newName.ifBlank { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
-        val set = setId?.let(lib::setlist) ?: br.app.stagebook.data.model.Setlist(name = name)
+        val set = (if (setId != null) lib.setlist(setId) ?: return AddResult.Gone else null) ?: br.app.stagebook.data.model.Setlist(name = name)
         val extra = ids.filterNot { it in set.items }
         if (!br.app.stagebook.domain.QrPayload.fits(set, lib, extraIds = extra)) return AddResult.Limit
         val id = setId ?: repository.createSetlist(name)
