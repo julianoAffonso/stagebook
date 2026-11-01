@@ -66,6 +66,9 @@ class ImportViewModel @Inject constructor(
     /** Song ready to review: the id of the existing one with the same title, or null if it's new. */
     private val opened = Channel<String?>(Channel.BUFFERED)
     val openEditor = opened.receiveAsFlow()
+    // imported without internet: the editor opens with a notice that artist, year and BPM weren't filled in (B-27)
+    private val offline = Channel<Unit>(Channel.BUFFERED)
+    val offlineImport = offline.receiveAsFlow()
 
     /** `raw` is what evaluateJavascript returns: the script's JSON string, in quotes. */
     fun onExtracted(raw: String?) {
@@ -110,6 +113,7 @@ class ImportViewModel @Inject constructor(
             is PageImport.Problem -> _uiState.update { it.copy(problem = r.problem) }
             is PageImport.Song -> {
                 draft.put(ImportDraft.Draft(r.title, r.artist, r.year, r.text))
+                if (r.offline) offline.send(Unit)
                 opened.send(repository.findSong(r.title, r.artist)?.id)
             }
         }

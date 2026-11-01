@@ -77,6 +77,9 @@ fun ImportRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val queue by viewModel.queueState.collectAsStateWithLifecycle()
     // in the queue, the importer sits below the editor (cancel goes back to the same song)
+    val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
+    val offlineNote = stringResource(R.string.import_offline_note)
+    LaunchedEffect(viewModel) { viewModel.offlineImport.collect { appMessage.show(offlineNote, long = true) } }
     LaunchedEffect(viewModel) { viewModel.openEditor.collect { if (viewModel.queueState.value != null) onOpenEditorQueued(it) else onOpenEditor(it) } }
     // the page has tablature: import it too? (asks every time)
     if (uiState.askTab) {
