@@ -592,7 +592,7 @@ class ScreenshotTest {
         [Em]Pra cantar o que [C]sobrar
 
         {start_of_chorus}
-        [C]Oh, [G]oh, [D]canta comigo
+        [C]Oh, [G]oh, ==[D]canta comigo==
         [C]Até o [D]sol voltar[G]
         {end_of_chorus}
         {c: Solo de sax}

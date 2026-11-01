@@ -81,5 +81,7 @@ object StagePalette {
     val section = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFFFEB3B, 0xFFEF5350, 0xFFBDBDBD).map { it.toInt() }
     // metronome glow on the stage edge
     val glow = listOf(0xFF4AF6CD, 0xFF42A5F5, 0xFFFFA726, 0xFFEF5350, 0xFFAB47BC, 0xFFFFFFFF).map { it.toInt() }
+    // highlighted phrase on stage: a see-through marker, readable on dark and light backgrounds (vocalist, 31/10)
+    const val HIGHLIGHT = 0x66FFEB3B
     val chord = listOf(0xFFFFC107, 0xFFFFFFFF, 0xFF80DEEA, 0xFFA5D6A7, 0xFFFF8A65, 0xFF000000).map { it.toInt() }
 }
