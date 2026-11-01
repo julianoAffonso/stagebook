@@ -51,4 +51,15 @@ class HighlightTest {
     @Test fun `editor - the selection stops at the end of the line`() {
         assertEquals("==um==\ndois", toggleHighlight(TextFieldValue("um\ndois", TextRange(0, 6))).text)
     }
+    @Test fun `editor - the highlighted phrase shows with the marker and the marks fade, text unchanged (B-28)`() {
+        val marker = androidx.compose.ui.graphics.Color.Yellow
+        val faded = androidx.compose.ui.graphics.Color.Gray
+        val text = "primeira\numa ==frase destacada== aqui"
+        val out = br.app.stagebook.ui.editor.HighlightLook(marker, faded).filter(androidx.compose.ui.text.AnnotatedString(text)).text
+        assertEquals(text, out.text)
+        val open = text.indexOf("==")
+        val bg = out.spanStyles.single { it.item.background == marker }
+        assertEquals(open + 2 until text.lastIndexOf("=="), bg.start until bg.end)
+        assertEquals(2, out.spanStyles.count { it.item.color == faded })
+    }
 }

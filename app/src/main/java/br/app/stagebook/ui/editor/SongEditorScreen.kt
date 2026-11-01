@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -193,6 +194,8 @@ fun SongEditorScreen(
             var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
             // the text always comes from the state; the selection and cursor live here
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
+            val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
+            val highlightHint = stringResource(R.string.editor_highlight_hint)
             fun edit(v: TextFieldValue) {
                 lyrics = v
                 if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
@@ -264,7 +267,8 @@ fun SongEditorScreen(
                         Column(Modifier.padding(bottom = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             SectionBar(
                                 onPick = { kind -> edit(insertSection(shown, kind)) },
-                                onHighlight = { edit(toggleHighlight(shown)) },
+                                // nothing to highlight under the cursor (no selection, empty line): says how (B-28)
+                                onHighlight = { toggleHighlight(shown).let { if (it == shown) appMessage.show(highlightHint) else edit(it) } },
                             )
                             // lyrics only profile: no chords in the editor (the saved lyrics don't change)
                             if (look.chords) {
@@ -302,6 +306,10 @@ fun SongEditorScreen(
                             label = { Text(stringResource(if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)) },
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             textStyle = MaterialTheme.typography.bodyLarge,
+                            // the highlighted phrases show with the marker, as on stage (B-28)
+                            visualTransformation = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f).let { faded ->
+                                remember(faded) { HighlightLook(androidx.compose.ui.graphics.Color(br.app.stagebook.ui.theme.StagePalette.HIGHLIGHT), faded) }
+                            },
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
                         )
@@ -536,8 +544,14 @@ private fun SectionBar(onPick: (Sections.Kind) -> Unit, onHighlight: () -> Unit,
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off
-        SuggestionChip(onClick = onHighlight, label = { Text(stringResource(R.string.editor_highlight), style = MaterialTheme.typography.titleSmall) })
+        // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off. Its own
+        // button with the marker icon, apart from the section shortcuts (the user couldn't find it among them, B-28)
+        androidx.compose.material3.AssistChip(
+            onClick = onHighlight,
+            label = { Text(stringResource(R.string.editor_highlight), style = MaterialTheme.typography.titleSmall) },
+            leadingIcon = { androidx.compose.material3.Icon(AppIcons.Highlighter, null, Modifier.size(18.dp)) },
+        )
+        androidx.compose.material3.VerticalDivider(Modifier.height(24.dp).padding(horizontal = Spacing.xs))
         // a short label says what the row is (an icon alone said nothing, user 30/10)
         Text(stringResource(R.string.editor_sections), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val names = rememberSectionNames(true)
