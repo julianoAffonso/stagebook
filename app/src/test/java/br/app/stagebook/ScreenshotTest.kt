@@ -252,11 +252,11 @@ class ScreenshotTest {
 
     /** Diagram of the chord tapped on stage (another window), on each instrument. */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    private fun chordPopup(name: String, chord: String, instrument: br.app.stagebook.data.model.Instrument) {
+    private fun chordPopup(name: String, chord: String, instrument: br.app.stagebook.data.model.Instrument, extras: Boolean = true) {
         compose.setContent {
             StagebookTheme {
                 StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
-                br.app.stagebook.ui.stage.ChordShapePopup(chord, instrument, chordSong, {}, {})
+                br.app.stagebook.ui.stage.ChordShapePopup(chord, instrument, chordSong, {}, {}, extras = extras)
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
@@ -465,6 +465,8 @@ class ScreenshotTest {
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR)
+    // essential mode: no sound and no Details, the diagram and its shapes stay (user, 01/11)
+    @Test fun chordPopupEssential() = chordPopup("tablet_6_acorde_essencial", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, extras = false)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", br.app.stagebook.data.model.Instrument.UKULELE)
     @Test fun chordPopupKeyboard() = chordPopup("tablet_6_acorde_teclado", "Am7", br.app.stagebook.data.model.Instrument.KEYBOARD)
     @Test fun chordPopupCavaquinho() = chordPopup("tablet_6_acorde_cavaquinho", "D", br.app.stagebook.data.model.Instrument.CAVAQUINHO)
