@@ -54,6 +54,7 @@ class SetlistsViewModel @Inject constructor(
 
     /** "Type code" only with internet (only watched while the tab is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val localNet: StateFlow<Boolean> = connectivity.localNet.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     val internetOn: StateFlow<Boolean> = repository.library.map { it.look.internetOn }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.internetOn)
 

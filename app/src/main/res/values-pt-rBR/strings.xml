@@ -558,6 +558,7 @@
     <string name="sets_scan">Ler QR</string>
     <string name="import_menu">Importar</string>
     <string name="import_sync_band">Sincronizar com a banda</string>
+    <string name="import_sync_band_offline">Sincronizar com a banda (sem Wi-Fi)</string>
     <string name="import_syncing">Procurando novidades da banda…</string>
     <string name="import_from_sites">Da internet</string>
     <string name="import_from_sites_offline">Da internet (sem internet)</string>

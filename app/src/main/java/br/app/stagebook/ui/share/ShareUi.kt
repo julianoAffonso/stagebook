@@ -73,6 +73,7 @@ fun ImportButton(
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,    // "Sync with the band" (only with a band member)
     internetOn: Boolean = true,      // essential mode (T19): no "Type the 3 words"
+    localNet: Boolean = true,        // no Wi-Fi: the band can't be reached, "Sync with the band" says so (B-26)
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
@@ -81,9 +82,10 @@ fun ImportButton(
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             onSync?.let { sync ->
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.import_sync_band)) },
+                    text = { Text(stringResource(if (localNet) R.string.import_sync_band else R.string.import_sync_band_offline)) },
                     onClick = { open = false; sync() },
-                    leadingIcon = { Icon(AppIcons.Sync, null) },
+                    leadingIcon = { Icon(if (localNet) AppIcons.Sync else AppIcons.CloudOff, null) },
+                    enabled = localNet,
                 )
             }
             if (received > 0) {

@@ -90,6 +90,7 @@ class SongsViewModel @Inject constructor(
 
     /** Import needs internet: the button is disabled without it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    val localNet: StateFlow<Boolean> = connectivity.localNet.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     private val query = MutableStateFlow("")
     private val search = repository.songSearch

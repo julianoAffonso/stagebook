@@ -26,12 +26,19 @@ class Connectivity @Inject constructor(@ApplicationContext private val context: 
         } == true
     }
 
-    val online: Flow<Boolean> = callbackFlow {
+    val online: Flow<Boolean> = watch { caps ->
+        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    /** On a local network (Wi-Fi or cable), internet or not: what the band uses (device test B-26). */
+    val localNet: Flow<Boolean> = watch { caps ->
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private fun watch(read: (NetworkCapabilities) -> Boolean): Flow<Boolean> = callbackFlow {
         val cm = context.getSystemService(ConnectivityManager::class.java)
         if (cm == null) { trySend(true); awaitClose { }; return@callbackFlow }
-        fun now() = cm.getNetworkCapabilities(cm.activeNetwork)?.let {
-            it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && it.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        } == true
+        fun now() = cm.getNetworkCapabilities(cm.activeNetwork)?.let(read) == true
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) { trySend(now()) }
             override fun onLost(network: Network) { trySend(now()) }

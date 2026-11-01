@@ -547,6 +547,7 @@
     <string name="sets_scan">Scan QR</string>
     <string name="import_menu">Import</string>
     <string name="import_sync_band">Sync with the band</string>
+    <string name="import_sync_band_offline">Sync with the band (no Wi-Fi)</string>
     <string name="import_syncing">Checking for news from the band…</string>
     <string name="import_from_sites">From the web</string>
     <string name="import_from_sites_offline">From the web (no internet)</string>

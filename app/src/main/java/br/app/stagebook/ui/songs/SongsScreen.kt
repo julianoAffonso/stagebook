@@ -76,6 +76,7 @@ fun SongsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val online by viewModel.online.collectAsStateWithLifecycle()
+    val localNet by viewModel.localNet.collectAsStateWithLifecycle()
     val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
     BandResultMessage(viewModel.bandResult)
     var query by rememberSaveable { mutableStateOf("") }
@@ -84,6 +85,7 @@ fun SongsRoute(
         uiState = uiState,
         online = online,
         internetOn = internetOn,
+        localNet = localNet,
         query = query,
         onQueryChange = { query = it },
         onNewSong = { onEditSong(null) },
@@ -121,6 +123,7 @@ fun SongsScreen(
     modifier: Modifier = Modifier,
     online: Boolean = true,
     internetOn: Boolean = true,
+    localNet: Boolean = true,   // on Wi-Fi: "Sync with the band" needs it (B-26)
     cloud: CloudUi? = null,
     onShareSongs: (List<String>) -> Unit = {},
     onDismissCloud: () -> Unit = {},
@@ -192,7 +195,7 @@ fun SongsScreen(
             if (!selecting) Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 // secondary at the start, the main action at the end (like Google's apps). Import from sites (with
                 // internet), scan the QR or type the code: one button, one menu.
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
             }
             AnimatedVisibility(!online) {
