@@ -66,32 +66,6 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
     }
 
     companion object {
-        /**
-         * Search results on the page (Google or a site's own search) that point to one of [hosts]: JSON
-         * `[{"title":…,"url":…}]`, Google's /url redirects unwrapped, no repeats.
-         */
-        // the hosts go in as a JS array (31/10: an escaped "$" left the Kotlin call as text, a syntax error in the page,
-        // so the computer's search never found anything)
-        fun resultsScript(hosts: List<String>): String = """
-(function(hosts){
-  var seen = {}, out = [];
-  Array.prototype.forEach.call(document.querySelectorAll('a[href]'), function(a){
-    try {
-      var u = new URL(a.href);
-      if (u.host.indexOf('google') >= 0 && u.pathname === '/url') u = new URL(u.searchParams.get('q') || u.searchParams.get('url'));
-      var ok = hosts.some(function(h){ return u.host === h || u.host.endsWith('.' + h); });
-      // the hidden page isn't on screen: innerText can come back empty there, so the result's h3 or its plain text (B-25)
-      var h3 = a.querySelector('h3');
-      var title = ((h3 && h3.textContent) || a.innerText || a.textContent || '').trim().split('\n')[0];
-      if (!ok || !title || seen[u.href]) return;
-      seen[u.href] = true;
-      out.push({ title: title.slice(0, 120), url: u.href });
-    } catch (e) {}
-  });
-  return JSON.stringify(out.slice(0, 15));
-})(${hosts.joinToString(",", "[", "]") { "\"" + it.replace("\"", "") + "\"" }})
-""".trimIndent()
-
         private const val TIMEOUT_MS = 25_000L
         private const val HIDDEN_WIDTH = 1080
         private const val HIDDEN_HEIGHT = 2000
