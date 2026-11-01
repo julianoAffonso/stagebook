@@ -129,16 +129,6 @@ class ChordsTest {
         assertEquals("C#", br.app.stagebook.domain.ChordTheory.notes("A/C#")!!.bass.let { listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")[it] })
     }
 
-    @Test fun `chords move to the Cifra Club notation`() {
-        mapOf(
-            "Bm7+" to "Bm7M", "G7+" to "G7M", "Fmaj7" to "F7M", "Am(maj7)" to "Am(7M)", "C#7/9" to "C#7(9)", "A7/4" to "A7(4)",
-            "A4/7" to "A4(7)", "B7/13" to "B7(13)", "Csus4" to "C4", "Gsus" to "G4", "Dsus2" to "D2", "Bsus/F#" to "B4/F#",
-            "F#7(b13)" to "F#7(13-)", "D7(b9)" to "D7(9-)", "F#m7(b5)" to "F#m7(5-)", "E7(#9)" to "E7(9+)", "C7b9" to "C7(9-)",
-            "D7(2/4)" to "D7(2/4)", "F5(7M/9)/C" to "F5(7M/9)/C", "G/B" to "G/B", "E7M" to "E7M", "Refrão" to "Refrão",
-        ).forEach { (from, to) -> assertEquals(from, to, Chords.normalizeChord(from)) }
-        assertEquals("[C#7(9)]um [Bm7M]dois [Refrão]", Chords.normalizeChords("[C#7/9]um [Bm7+]dois [Refrão]"))
-    }
-
     @Test fun `every chord feature reads the notations the same way`() {
         val t = br.app.stagebook.domain.ChordTheory
         assertEquals(t.notes("E7(9)"), t.notes("E7/9"))
@@ -167,8 +157,12 @@ class ChordsTest {
     @Test fun `a marked chord keeps its mark and plays as the chord`() {
         assertTrue(Chords.isChordLine("D  D  E*  F*"))
         assertEquals("F#*", Chords.transposeChord("E*", 2))
-        assertEquals("E7M*", Chords.normalizeChord("Emaj7*"))
         assertEquals(br.app.stagebook.domain.ChordTheory.notes("E"), br.app.stagebook.domain.ChordTheory.notes("E*"))
         assertTrue(br.app.stagebook.domain.Voicings.shapes("E*", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR).isNotEmpty())
+    }
+
+    @Test fun `an imported chart keeps the site's chord notation`() {
+        val body = br.app.stagebook.domain.ChordImport.toChordPro("A7/4   Bm7+\nlinha um aqui\nE*  C#7/9\nlinha dois aqui")
+        listOf("[A7/4]", "[Bm7+]", "[E*]", "[C#7/9]").forEach { assertTrue(it, it in body) }
     }
 }

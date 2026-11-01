@@ -63,9 +63,8 @@ object ChordImport {
             }
         }
         flush()
-        // the site's chords in the app's notation (A7/4 → A7(4), Bm7+ → Bm7M…), so the diagram finds them
-        var body = Chords.normalizeChords(parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim())
-        val k = keyOf(key, text).let(Chords::normalizeChord)
+        var body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
+        val k = keyOf(key, text)
         val c = capoOf(capo, text)
         if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
         if (Chords.isChord(k)) body = Chords.setDirective(body, "key", k)
