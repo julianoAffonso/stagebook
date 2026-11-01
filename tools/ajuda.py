@@ -23,14 +23,14 @@ SECTIONS = [
     {
         "id": "musicas", "pt": "Músicas", "en": "Songs",
         "text_pt": [
-            "A aba **Músicas** é a sua biblioteca. Busque pelo nome ou pelo artista e filtre por **tags** (Nacional, Rock, Casamento…).",
-            "Toque numa música para abrir o palco; segure para **selecionar várias** e pôr num setlist, mudar as tags, compartilhar ou apagar.",
-            "No topo, ao lado do título, aparecem só quando importa: a folha do **modo essencial**, o grupo com o número do que a **banda** mandou e o computador do **editor web** ligado. Um toque em cada um leva ao que interessa.",
+            "A aba Músicas é a sua biblioteca. Dá para buscar pelo nome ou pelo artista e filtrar pelas tags que você criou.",
+            "Tocando numa música, ela abre no palco. Segurando, você seleciona várias de uma vez para pôr num setlist, mudar as tags, compartilhar ou apagar.",
+            "Ao lado do título podem aparecer alguns ícones: a folha quando o modo essencial está ligado, o grupo com um número quando a banda mandou algo, e o computador quando o editor web está ligado. Tocando no ícone você vai direto para o assunto.",
         ],
         "text_en": [
-            "The **Songs** tab is your library. Search by title or artist and filter by **tags** (Local, Rock, Wedding…).",
-            "Tap a song to open the stage; hold it to **select several** and add them to a setlist, change their tags, share or delete them.",
-            "At the top, next to the title, they only show when they matter: the **essential mode** leaf, the group with the number of things the **band** sent and the computer of the **web editor** turned on. Tapping each takes you where it matters.",
+            "The Songs tab is your library. You can search by title or artist and filter by the tags you created.",
+            "Tap a song and it opens on stage. Hold it to select several at once and add them to a setlist, change their tags, share or delete them.",
+            "A few icons may show next to the title: the leaf when essential mode is on, the group with a number when the band sent something, and the computer when the web editor is on. Tapping an icon takes you straight to it.",
         ],
         "figs": [Fig(("tablet_1_musicas", "celular_1_musicas", "A lista de músicas", "The song list")),
                  Fig(("tablet_1_musicas_tags_abertas", None, "Filtro por tags", "Filter by tags")),
@@ -39,14 +39,14 @@ SECTIONS = [
     {
         "id": "importar", "pt": "Importar", "en": "Importing",
         "text_pt": [
-            "**Importar** traz músicas dos sites de letra e cifra que estão na sua lista (Ajustes → Sites de cifra ou de letra). Você confere a página e toca Importar: o app não baixa nada sozinho.",
-            "O mesmo botão lê o **QR** de um setlist e recebe um envio pelas **3 palavras** (ex.: 47-violao-lua).",
-            "Só letra e cifra entram: arquivos ou textos que não parecem música são recusados.",
+            "Em Importar você busca a música nos sites da sua lista (Ajustes → Sites de cifra ou Sites de letra), abre a página e toca em Importar. O app só baixa o que você mandar.",
+            "O mesmo botão lê o QR de um setlist e recebe o que alguém mandou pelas 3 palavras.",
+            "Se o texto não parecer letra ou cifra, o app não aceita.",
         ],
         "text_en": [
-            "**Import** brings songs from the lyrics and chords sites on your list (Settings → Chord sites or Lyrics sites). You check the page and tap Import: the app never downloads anything by itself.",
-            "The same button reads a setlist's **QR** and receives something sent with **3 words** (e.g. 47-violao-lua).",
-            "Only lyrics and chords come in: files or texts that don't look like a song are refused.",
+            "In Import you look the song up on the sites on your list (Settings → Chord sites or Lyrics sites), open the page and tap Import. The app only downloads what you ask for.",
+            "The same button reads a setlist's QR and receives what someone sent with the 3 words.",
+            "If the text doesn't look like lyrics or chords, the app won't take it.",
         ],
         "figs": [Fig(("tablet_10_importar", "celular_10_importar", "Importando de um site", "Importing from a site")),
                  Fig(("jornada_importar_menu", None, "O menu de importar", "The import menu"))],
@@ -54,18 +54,18 @@ SECTIONS = [
     {
         "id": "editor", "pt": "Editor da música", "en": "Song editor",
         "text_pt": [
-            "A letra e a cifra ocupam a tela. Os **dados da música** (nome, artista, ano, BPM, tom, capotraste, tags e backing track) ficam recolhidos no topo: um toque abre.",
-            "Os acordes vão entre colchetes, no formato ChordPro (`[G]Hoje eu [D]vou`); cifra com os acordes na linha de cima, colada, vira esse formato sozinha.",
-            "**Tom** − e + transpõe a cifra meio tom. **Capotraste** − e + não muda os diagramas, só o som (\"Com capo na 2ª casa, soa em A\"). O tom e o capo ficam nos dados da música, não na letra.",
-            "**Partes**: qualquer linha só com um nome entre colchetes vira parte da música (`[Refrão]`, `[Solo de violino]`); os atalhos no topo inserem as mais comuns.",
-            "O app entende a escrita da cifra como ela veio (`A7+`, `E7/9`, `E*`) e mostra o diagrama certo.",
+            "No editor a letra fica com a tela toda. Nome, artista, ano, BPM, tom, capotraste, tags e backing track ficam em Dados da música, no topo; toque para abrir.",
+            "Os acordes vão entre colchetes, no meio da letra: [G]Hoje eu [D]vou. Se você colar uma cifra com os acordes na linha de cima, o app converte sozinho.",
+            "O − e + do tom transpõem a cifra meio tom de cada vez. O do capotraste não mexe nos diagramas, só avisa em que tom vai soar.",
+            "Uma linha só com um nome entre colchetes vira o título de uma parte: [Refrão], [Solo de violino]. Os atalhos no topo põem as partes mais usadas.",
+            "Os acordes ficam escritos como vieram do site (A7+, E7/9, E*), e o app mostra o diagrama certo para cada um.",
         ],
         "text_en": [
-            "Lyrics and chords fill the screen. The **song details** (name, artist, year, BPM, key, capo, tags and backing track) stay folded at the top: one tap opens them.",
-            "Chords go in brackets, ChordPro style (`[G]Here I [D]go`); a chart pasted with the chords on the line above turns into it by itself.",
-            "**Key** − and + transposes the chords a half step. **Capo** − and + doesn't change the diagrams, only the sound (\"With the capo on fret 2, it sounds in A\"). Key and capo live in the song details, not in the lyrics.",
-            "**Parts**: any line with just a name in brackets is a part of the song (`[Chorus]`, `[Violin solo]`); the shortcuts at the top insert the usual ones.",
-            "The app reads chords as the chart writes them (`A7+`, `E7/9`, `E*`) and shows the right diagram.",
+            "In the editor the lyrics get the whole screen. Name, artist, year, BPM, key, capo, tags and backing track are under Song details at the top; tap to open them.",
+            "Chords go in brackets, inside the lyrics: [G]Here I [D]go. If you paste a chart with the chords on the line above, the app converts it for you.",
+            "The key's − and + transpose the chords a half step at a time. The capo's don't change the diagrams; they only tell you what key it will sound in.",
+            "A line with just a name in brackets becomes a part title: [Chorus], [Violin solo]. The shortcuts at the top add the usual parts.",
+            "Chords stay written the way the site wrote them (A7+, E7/9, E*), and the app shows the right diagram for each.",
         ],
         "figs": [Fig(("tablet_4_editor_dados", "celular_4_editor", "Dados da música abertos", "Song details open")),
                  Fig(("tablet_4_editor_tags", "celular_4_editor_tags", "Tags da música", "The song's tags")),
@@ -75,14 +75,14 @@ SECTIONS = [
     {
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
-            "Crie um setlist (sem nome, ele leva a data e a hora), toque no nome para renomear e ponha as músicas em ordem arrastando.",
-            "**Escolher músicas** mostra a biblioteca com busca e tags: marque na ordem em que vão tocar.",
-            "Ao receber um setlist, a conferência mostra o que você tem, o que tem dúvida e o que falta. Nada some em silêncio: antes de criar, o app diz o que vai ficar de fora e oferece importar as que faltam.",
+            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas.",
+            "Em Escolher músicas, marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar.",
+            "Quando chega um setlist de alguém, o app mostra quais músicas você já tem e quais faltam. Antes de criar, ele avisa o que vai ficar de fora e oferece importar as que faltam.",
         ],
         "text_en": [
-            "Create a setlist (with no name it takes the date and time), tap its name to rename it and drag the songs into order.",
-            "**Pick songs** shows the library with search and tags: check them in the order they'll be played.",
-            "When a setlist arrives, the check shows what you have, what's in doubt and what's missing. Nothing disappears quietly: before creating it, the app says what will be left out and offers to import the missing ones.",
+            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order.",
+            "In Pick songs, check the songs in the order they'll be played. Search and tags help you find them.",
+            "When a setlist comes from someone, the app shows which songs you already have and which are missing. Before creating it, it tells you what will be left out and offers to import the missing ones.",
         ],
         "figs": [Fig(("tablet_2_setlists", "celular_2_setlists", "Os setlists", "The setlists")),
                  Fig(("tablet_3_setlist", "celular_3_setlist", "Dentro de um setlist", "Inside a setlist")),
@@ -92,12 +92,12 @@ SECTIONS = [
     {
         "id": "compartilhar", "pt": "Compartilhar e QR", "en": "Sharing and QR",
         "text_pt": [
-            "Num setlist, **Compartilhar**: um **QR** que funciona sem internet (o outro tablet lê com a câmera) ou **3 palavras** para enviar pela internet, ditas ou digitadas. Valem 12 horas e vão cifradas.",
-            "\"Levar as músicas\" manda também as letras: quem recebe só usa as que não tem; as dele nunca mudam.",
+            "Num setlist, Compartilhar mostra um QR, que o outro tablet lê com a câmera, mesmo sem internet. Ou gera 3 palavras para mandar pela internet; dá para ditar. Elas valem por 12 horas.",
+            "Com Levar as músicas ligado, as letras vão junto. Quem recebe só fica com as que não tinha; as dele não mudam.",
         ],
         "text_en": [
-            "In a setlist, **Share**: a **QR** that works offline (the other tablet reads it with the camera) or **3 words** to send over the internet, said out loud or typed. They last 12 hours and travel encrypted.",
-            "\"Bring the songs\" sends the lyrics too: whoever receives only uses the ones they don't have; theirs never change.",
+            "In a setlist, Share shows a QR that the other tablet reads with its camera, even offline. Or it makes 3 words to send over the internet; you can just say them. They last 12 hours.",
+            "With Bring the songs on, the lyrics go too. The other person only keeps the ones they didn't have; theirs don't change.",
         ],
         "figs": [Fig(("jornada_compartilhar_1_folha", None, "Compartilhar", "Share")),
                  Fig(("jornada_compartilhar_2_codigo", None, "As 3 palavras", "The 3 words")),
@@ -106,16 +106,16 @@ SECTIONS = [
     {
         "id": "palco", "pt": "Palco", "en": "Stage",
         "text_pt": [
-            "O palco mostra a letra grande, com a cifra e as partes destacadas. Toque ou use o pedal para **virar a página** (ou **rolar**, em Ajustes → Visual do palco); a linha onde você continua acende por um instante.",
-            "No topo ficam o **tom** e o **capo**: um toque abre − e + ali mesmo. Com o palco aberto nada aparece por cima: o que a banda mandar espera você sair.",
-            "Toque num acorde para ver o **diagrama** (violão, guitarra, ukulele, cavaquinho ou teclado), as variações, o som e os **detalhes** (o grau no campo harmônico do tom).",
-            "O **metrônomo** começa no BPM da música; a **rolagem automática** faz a letra subir sozinha no modo Rolar.",
+            "No palco a letra aparece grande, com a cifra e as partes. Toque nas laterais ou use o pedal para virar a página. Se preferir rolar, troque em Ajustes → Visual do palco.",
+            "O tom e o capo ficam no topo; tocando neles você muda ali mesmo. Enquanto o palco está aberto, nada aparece por cima: o que a banda mandar fica esperando.",
+            "Tocando num acorde você vê o diagrama, para violão, guitarra, ukulele, cavaquinho ou teclado, com as variações e o som. Em Detalhes aparece o grau do acorde no tom da música.",
+            "O metrônomo começa no BPM da música. No modo Rolar, a rolagem automática sobe a letra sozinha.",
         ],
         "text_en": [
-            "The stage shows the lyrics large, with chords and parts highlighted. Tap or use the pedal to **turn the page** (or **scroll**, in Settings → Stage look); the line where you continue lights up for a moment.",
-            "At the top are the **key** and the **capo**: one tap opens − and + right there. While the stage is open nothing shows over it: whatever the band sends waits until you leave.",
-            "Tap a chord to see its **diagram** (acoustic or electric guitar, ukulele, cavaquinho or keyboard), the variations, its sound and the **details** (its degree in the song's key).",
-            "The **metronome** starts at the song's BPM; **auto-scroll** moves the lyrics up by itself in Scroll mode.",
+            "On stage the lyrics show large, with the chords and parts. Tap the sides or use the pedal to turn the page. If you'd rather scroll, change it in Settings → Stage look.",
+            "Key and capo are at the top; tap them to change them right there. While the stage is open nothing pops up over it: whatever the band sends waits.",
+            "Tap a chord to see its diagram for guitar, electric guitar, ukulele, cavaquinho or keyboard, with variations and sound. Details shows the chord's degree in the song's key.",
+            "The metronome starts at the song's BPM. In Scroll mode, auto-scroll moves the lyrics up on its own.",
         ],
         "figs": [Fig(("tablet_6_palco", "celular_7_palco", "O palco", "The stage")),
                  Fig(("tablet_6_palco_cifra", "celular_7_palco_cifra", "Com a cifra", "With chords")),
@@ -127,14 +127,14 @@ SECTIONS = [
     {
         "id": "backing", "pt": "Backing track", "en": "Backing track",
         "text_pt": [
-            "Cada música pode ter um **backing track** (OGG multicanal, MP3 ou WAV), escolhido nos dados da música. No palco, o play só aparece nas músicas que têm faixa.",
-            "Toca por uma **interface de áudio USB** (USB Audio 2.0, 48 kHz) ou pela saída do aparelho. Se a interface cair no meio do show, o app **não** passa para o alto-falante: espera ela voltar.",
-            "No fim da música ele para e volta ao começo, esperando o próximo play. Segurar o play troca ou tira a faixa e abre o mixer da música.",
+            "Cada música pode ter um backing track (OGG com vários canais, MP3 ou WAV). Escolha nos Dados da música. No palco, o play só aparece nas músicas que têm um.",
+            "O som sai por uma interface de áudio USB (USB Audio 2.0, 48 kHz) ou pela saída do aparelho. Se a interface desconectar no meio do show, o app espera ela voltar em vez de jogar o som no alto-falante.",
+            "Quando a música acaba, ele para e volta ao começo. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
         ],
         "text_en": [
-            "Each song can have a **backing track** (multichannel OGG, MP3 or WAV), picked in the song details. On stage, play only shows on songs that have one.",
-            "It plays through a **USB audio interface** (USB Audio 2.0, 48 kHz) or the device's own output. If the interface drops mid-show the app does **not** switch to the speaker: it waits for it to come back.",
-            "At the end of the song it stops and goes back to the start, waiting for the next play. Holding play changes or removes the track and opens the song's mixer.",
+            "Each song can have a backing track (multichannel OGG, MP3 or WAV). Pick it in Song details. On stage, play only shows on songs that have one.",
+            "Sound goes out through a USB audio interface (USB Audio 2.0, 48 kHz) or the device's own output. If the interface disconnects mid-show, the app waits for it to come back instead of sending the sound to the speaker.",
+            "When the song ends it stops and goes back to the start. Hold play to change or remove the track and to open the song's mixer.",
         ],
         "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
                  Fig(("jornada_faixa_4_menu", None, "Trocar ou tirar a faixa", "Change or remove the track"))],
@@ -142,14 +142,14 @@ SECTIONS = [
     {
         "id": "mixer", "pt": "Mixer", "en": "Mixer",
         "text_pt": [
-            "Um canal para cada canal do arquivo, com volume, saída da interface, **igualar o volume** (média ou pico) e um **equalizador** de 5 bandas com limitador.",
-            "Toque no nome do canal para renomear; no ícone ao lado, para os ajustes dele (unir em estéreo, tocar no meio…).",
-            "No palco, o mixer abre por cima com a música tocando, e o que você muda ali fica **só nesta música**; \"Usar o mixer global\" volta ao geral.",
+            "O mixer tem um canal para cada canal do arquivo: volume, saída na interface, igualar o volume pela média ou pelo pico e um equalizador de 5 bandas.",
+            "Tocando no nome do canal você renomeia; o ícone ao lado abre os outros ajustes, como juntar dois canais em estéreo.",
+            "No palco, o mixer abre por cima com a música tocando. O que você muda ali vale só para aquela música. Para voltar ao mixer geral, ligue Usar o mixer global.",
         ],
         "text_en": [
-            "One channel per file channel, with volume, the interface output, **level matching** (average or peak) and a 5-band **equalizer** with a limiter.",
-            "Tap a channel's name to rename it; the icon next to it opens its settings (join as stereo, play in the middle…).",
-            "On stage the mixer opens over the song while it plays, and what you change there stays **with that song only**; \"Use the global mixer\" goes back to the general one.",
+            "The mixer has one channel per file channel: volume, interface output, level matching by average or peak, and a 5-band equalizer.",
+            "Tap a channel's name to rename it; the icon next to it opens the other settings, like joining two channels as stereo.",
+            "On stage the mixer opens over the song while it plays. What you change there only applies to that song. To go back to the general mixer, turn on Use the global mixer.",
         ],
         "figs": [Fig(("jornada_mixer_2_tablet", "jornada_mixer_1_celular", "O mixer", "The mixer")),
                  Fig(("jornada_mixer_3_editar_canal", None, "Ajustes do canal", "Channel settings")),
@@ -158,14 +158,14 @@ SECTIONS = [
     {
         "id": "banda", "pt": "Banda", "en": "Band",
         "text_pt": [
-            "No mesmo Wi-Fi (do lugar ou o ponto de acesso de um celular), um aparelho toca **Pedir para entrar** e o outro **Autorizar**, como no Bluetooth. Fica guardado até alguém remover.",
-            "Depois disso, mandar um setlist para a banda é um toque: quem está no Wi-Fi recebe na hora; os outros, pela internet, quando abrirem o app.",
-            "O que chega aparece uma vez embaixo (\"Ana enviou o setlist…\" · Ver) e fica no ícone da banda no topo até você conferir. **Conduzir a banda** sincroniza a música da vez em todos.",
+            "Com os aparelhos no mesmo Wi-Fi (pode ser o ponto de acesso de um celular), um toca em Pedir para entrar e o outro em Autorizar. Depois disso eles se reconhecem até alguém remover.",
+            "Mandar um setlist para a banda é um toque. Quem está no mesmo Wi-Fi recebe na hora; quem não está, recebe pela internet quando abrir o app.",
+            "Quando chega algo, aparece um aviso rápido embaixo e um número no ícone da banda, no topo, até você conferir. Em Conduzir a banda, todos acompanham a música que você está tocando.",
         ],
         "text_en": [
-            "On the same Wi-Fi (the venue's or a phone's hotspot), one device taps **Ask to join** and the other **Approve**, like Bluetooth. It's kept until someone removes it.",
-            "After that, sending a setlist to the band is one tap: whoever is on the Wi-Fi gets it right away; the others, over the internet, when they open the app.",
-            "What arrives shows once at the bottom (\"Ana sent the setlist…\" · View) and stays on the band icon at the top until you check it. **Lead the band** keeps everyone on the same song.",
+            "With the devices on the same Wi-Fi (a phone's hotspot works too), one taps Ask to join and the other taps Approve. After that they know each other until someone removes it.",
+            "Sending a setlist to the band takes one tap. Whoever is on the same Wi-Fi gets it right away; the others get it over the internet when they open the app.",
+            "When something arrives you get a short notice at the bottom and a number on the band icon at the top until you check it. With Lead the band, everyone follows the song you're playing.",
         ],
         "figs": [Fig(("jornada_banda_1_ajustes", None, "Ajustes → Banda", "Settings → Band")),
                  Fig(("jornada_banda_3_compartilhar", None, "Mandar para a banda", "Send to the band")),
@@ -175,14 +175,14 @@ SECTIONS = [
     {
         "id": "ajustes", "pt": "Ajustes", "en": "Settings",
         "text_pt": [
-            "**Modo essencial** (o primeiro da lista): para quem toca sozinho ou com a bateria no fim. Desliga tudo o que não é letra, cifra, diagramas e pedal; ou só uma parte.",
-            "**Visual do palco**: fontes, cores, tamanho das partes, virar página ou rolar, metrônomo. **Pedal**: Bluetooth ou MIDI, e o que cada botão faz.",
-            "**Biblioteca e backup**: um arquivo `.stagebook` com o que você marcar (músicas, setlists, backing tracks, ajustes). Serve de backup e para passar músicas para alguém.",
+            "O Modo essencial é o primeiro da lista. Serve para quem toca sozinho ou está com pouca bateria: deixa só letra, cifra, diagramas e pedal. Dá para desligar só uma parte.",
+            "Em Visual do palco ficam as fontes, as cores, o tamanho dos títulos das partes, virar página ou rolar, e o metrônomo. Em Pedal você liga um pedal Bluetooth ou MIDI e escolhe o que cada botão faz.",
+            "Em Biblioteca e backup você salva um arquivo .stagebook com o que escolher: músicas, setlists, backing tracks e ajustes. Serve de backup e para passar músicas para outra pessoa.",
         ],
         "text_en": [
-            "**Essential mode** (first on the list): for playing alone or on low battery. It turns off everything that isn't lyrics, chords, diagrams and the pedal; or just part of it.",
-            "**Stage look**: fonts, colours, part title size, turning pages or scrolling, metronome. **Pedal**: Bluetooth or MIDI, and what each button does.",
-            "**Library and backup**: a `.stagebook` file with what you check (songs, setlists, backing tracks, settings). It's a backup and a way to pass songs to someone.",
+            "Essential mode is first on the list. It's for playing alone or on low battery: it leaves only lyrics, chords, diagrams and the pedal. You can turn off just part of it.",
+            "Stage look has the fonts, colours, part title size, turning pages or scrolling, and the metronome. In Pedal you connect a Bluetooth or MIDI pedal and choose what each button does.",
+            "In Library and backup you save a .stagebook file with what you choose: songs, setlists, backing tracks and settings. It works as a backup and to pass songs to someone else.",
         ],
         "figs": [Fig(("tablet_5_ajustes", "celular_5_ajustes", "Os ajustes", "Settings")),
                  Fig(("tablet_5_ajustes_essencial", None, "Modo essencial", "Essential mode")),
@@ -192,14 +192,14 @@ SECTIONS = [
     {
         "id": "editor-web", "pt": "Editor no computador", "en": "Editor on the computer",
         "text_pt": [
-            "Em Ajustes → Editar no computador, **Ligar o editor** mostra um endereço (`http://…:8090`). No navegador do computador, no mesmo Wi-Fi, toque **Pedir para entrar**; o tablet mostra um código de 4 números, igual ao da página: autorize só se forem iguais.",
-            "No computador você edita as músicas com teclado de verdade (tags, tom e capo nos campos, a letra em ChordPro; Ctrl+S salva), monta setlists e importa: colar a cifra, o endereço da página, soltar arquivos, as 3 palavras, o que a banda mandou ou um arquivo `.stagebook`.",
-            "Enquanto ele está ligado, o ícone do computador aparece no topo das abas; um toque mostra o endereço e **Fechar o editor web**. Ele também desliga sozinho depois de 5 minutos sem uso e ao fechar o app.",
+            "Em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090. Abra no navegador do computador, no mesmo Wi-Fi, e toque em Pedir para entrar. O tablet mostra um código de 4 números; autorize só se for o mesmo da página.",
+            "No computador dá para editar as músicas com teclado (Ctrl+S salva), mudar tom, capo e tags, montar setlists e importar colando a cifra, colando o endereço da página ou soltando arquivos.",
+            "Enquanto o editor está ligado, o ícone do computador aparece no topo das abas. Tocando nele você vê o endereço e pode fechar o editor. Ele também desliga sozinho depois de 5 minutos sem uso ou quando você fecha o app.",
         ],
         "text_en": [
-            "In Settings → Edit on the computer, **Turn on the editor** shows an address (`http://…:8090`). In the computer's browser, on the same Wi-Fi, tap **Ask to come in**; the tablet shows a 4-digit code, the same as the page's: approve only if they match.",
-            "On the computer you edit songs with a real keyboard (tags, key and capo in their fields, the lyrics in ChordPro; Ctrl+S saves), build setlists and import: paste chords, a page address, drop files, the 3 words, what the band sent or a `.stagebook` file.",
-            "While it's on, the computer icon shows at the top of the tabs; one tap shows the address and **Close the web editor**. It also turns off by itself after 5 minutes unused and when the app closes.",
+            "In Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090. Open it in the computer's browser, on the same Wi-Fi, and tap Ask to come in. The tablet shows a 4-digit code; approve only if it matches the page.",
+            "On the computer you can edit songs with a keyboard (Ctrl+S saves), change key, capo and tags, build setlists and import by pasting chords, pasting a page address or dropping files.",
+            "While the editor is on, the computer icon shows at the top of the tabs. Tap it to see the address and close the editor. It also turns off by itself after 5 minutes unused or when you close the app.",
         ],
         "figs": [Fig((None, "celular_5_ajustes_editor_web", "Ligando o editor no tablet", "Turning on the editor on the tablet")),
                  Fig(("editor_web_1_pedido", None, "Pedindo para entrar", "Asking to come in")),
@@ -210,14 +210,14 @@ SECTIONS = [
     {
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
-            "Quando sai uma versão nova, o app avisa ao abrir (com o player desligado). A banda deve usar a mesma versão: um aparelho em outra versão aparece em Ajustes → Banda.",
-            "Em Ajustes → Sobre ficam o idioma, a versão e **Abrir a ajuda**, que abre esta página (precisa de internet).",
-            "Tudo fica no aparelho: o que sai vai cifrado, sem conta, propaganda ou rastreio.",
+            "Quando sai uma versão nova, o app avisa ao abrir. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda.",
+            "Em Ajustes → Sobre ficam o idioma, a versão e o botão Abrir a ajuda, que traz para esta página (precisa de internet).",
+            "Suas músicas e ajustes ficam no aparelho. O que vai para a banda ou pela internet vai cifrado. Não tem conta, propaganda nem rastreio.",
         ],
         "text_en": [
-            "When a new version is out, the app says so on opening (with the player off). The band should use the same version: a device on another one shows in Settings → Band.",
-            "Settings → About holds the language, the version and **Open the help**, which opens this page (it needs the internet).",
-            "Everything stays on the device: what leaves it travels encrypted, with no account, ads or tracking.",
+            "When a new version is out, the app tells you when it opens. It's best if the whole band uses the same version; a device on another one shows up marked in Settings → Band.",
+            "Settings → About has the language, the version and the Open the help button, which brings you to this page (it needs the internet).",
+            "Your songs and settings stay on the device. What goes to the band or over the internet is encrypted. There's no account, no ads and no tracking.",
         ],
         "figs": [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_lingua", "Ajustes → Sobre: ajuda, idioma e atualizar", "Settings → About: help, language and updating")),
                  Fig(("tablet_8_versao_nova", None, "Versão nova", "New version"))],
@@ -225,9 +225,9 @@ SECTIONS = [
 ]
 
 UI = {
-    "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Letra, cifra e backing track no palco, com a banda junto.", "contents": "Nesta página",
+    "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",
               "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR"},
-    "en": {"title": "Stagebook help", "lead": "Lyrics, chords and backing tracks on stage, with the band in sync.", "contents": "On this page",
+    "en": {"title": "Stagebook help", "lead": "How to use each part of the app.", "contents": "On this page",
            "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "../ajuda/", "lang": "en"},
 }
 
