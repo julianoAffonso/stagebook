@@ -1366,7 +1366,13 @@ private fun languageLabel(l: AppLanguage): String = stringResource(
 @Composable
 private fun LanguageDetail(selected: AppLanguage, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.settings_language)) {
-        br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.settings_language_help), stringResource(R.string.settings_about), SettingsSection.ABOUT)
+        // the steps are in the translation guide on the web (it pointed to About, the screen it was already on)
+        val uri = androidx.compose.ui.platform.LocalUriHandler.current
+        val guide = stringResource(R.string.translate_url)
+        br.app.stagebook.ui.components.LinkText(
+            stringResource(R.string.settings_language_help), stringResource(R.string.settings_translate_guide),
+            { runCatching { uri.openUri(guide) } },
+        )
         OptionDropdown(stringResource(R.string.settings_language), Languages.available, selected, actions.onLanguage, nameOf = { languageLabel(it) })
     }
 }

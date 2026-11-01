@@ -440,7 +440,7 @@
     <string name="settings_pedal_cmd_play_pause">Play/pause backing track</string>
     <string name="settings_pedal_cmd_none">Nothing</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_help">Want Stagebook in your language? Help translate it: the steps are in %1$s.</string>
+    <string name="settings_language_help">Want Stagebook in your language? Help translate it: the steps are in the %1$s.</string>
     <string name="language_system">Automatic (the device\'s)</string>
     <string name="language_pt" translatable="false">Português (Brasil)</string>
     <string name="language_en" translatable="false">English</string>
@@ -926,4 +926,6 @@
     <string name="about_help_open">Open the help</string>
     <string name="about_help_offline">No internet: the help opens once the tablet is online.</string>
     <string name="help_url">https://julianoaffonso.github.io/stagebook/help/</string>
+    <string name="settings_translate_guide">translation guide</string>
+    <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md</string>
 </resources>
