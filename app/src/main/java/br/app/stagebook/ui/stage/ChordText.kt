@@ -31,10 +31,12 @@ fun ChordText(
     modifier: Modifier = Modifier,
     onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
-    val measurer = rememberTextMeasurer()
+    // no cache of its own: each distinct chord is measured once below and kept (a song repeats a few chords many times;
+    // the default cache kept whole layouts; audit 01/11)
+    val measurer = rememberTextMeasurer(cacheSize = 0)
     val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
     val marked = remember(text) { text.getStringAnnotations(HIGHLIGHT_TAG, 0, text.length) }
-    val sizes = remember(text, chordStyle) { chordsAt.map { measurer.measure(it.item, chordStyle) } }
+    val byName = remember(text, chordStyle) { chordsAt.map { it.item }.distinct().associateWith { measurer.measure(it, chordStyle) } }
     var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text,
@@ -66,14 +68,15 @@ fun ChordText(
             var lastLine = -1
             var lastEnd = 0f
             val gap = if (chordStyle.fontSize.isSp) chordStyle.fontSize.toPx() * 0.3f else 0f
-            chordsAt.forEachIndexed { i, a ->
-                if (a.start >= l.layoutInput.text.length) return@forEachIndexed
+            chordsAt.forEach { a ->
+                if (a.start >= l.layoutInput.text.length) return@forEach
                 val line = l.getLineForOffset(a.start)
                 var x = l.getHorizontalPosition(a.start, true)
                 if (line == lastLine) x = maxOf(x, lastEnd + gap)
-                drawText(sizes[i], topLeft = Offset(x, l.getLineTop(line)))
+                val chord = byName.getValue(a.item)
+                drawText(chord, topLeft = Offset(x, l.getLineTop(line)))
                 lastLine = line
-                lastEnd = x + sizes[i].size.width
+                lastEnd = x + chord.size.width
             }
         },
         onTextLayout = { laid = it; onTextLayout(it) },

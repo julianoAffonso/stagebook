@@ -417,7 +417,8 @@ fun StageScreen(
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
         hyphens = Hyphens.None,
     )
-    val measurer = rememberTextMeasurer()
+    // no cache: what it measures is kept in the stage's own remember (the default kept 8 whole-song layouts; audit 01/11)
+    val measurer = rememberTextMeasurer(cacheSize = 0)
     var pageCount by remember { mutableIntStateOf(1) }
     var pageCountFor by remember { mutableIntStateOf(-1) }   // which song the pageCount belongs to (measured on screen)
     val current = if (page == LAST_PAGE) pageCount - 1 else page.coerceIn(0, pageCount - 1)
@@ -705,7 +706,7 @@ fun StageScreen(
             val height = constraints.maxHeight
             val gutter = with(LocalDensity.current) { Spacing.xxl.roundToPx() }
             // never break a word in the middle: the lyrics don't go over the size at which the longest word fits
-            val widest = remember(lines, look.fontSp, look.bold) {
+            val widest = remember(lines, look.fontSp, look.bold, look.font) {
                 val words = lines.asSequence()
                     .flatMap { it.text.split(SPACES).asSequence() }
                     .filter { it.isNotEmpty() }
