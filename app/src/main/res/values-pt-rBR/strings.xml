@@ -308,6 +308,7 @@
     <string name="editor_data_capo">capo %1$d</string>
     <string name="editor_data_tempo">%1$d BPM</string>
     <string name="editor_tempo">BPM</string>
+    <string name="editor_tempo_range">%1$d–%2$d</string>
     <string name="editor_data_open">Mostrar os dados da música</string>
     <string name="editor_data_close">Recolher os dados da música</string>
     <string name="editor_capo_fret">%1$dª casa</string>
