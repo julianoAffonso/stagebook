@@ -489,8 +489,9 @@ static void *usb_main(void *arg) {
                 else if (g_fb_mode == 1 && d > -FB_LO) g_fb_mode = 0; \
                 if (g_fb_mode) { nf += g_fb_mode; st_fb_adj++; } \
             } \
-            g_tot_out += nf; st_out_frames += nf; \
+            /* the packet's ceiling first: a frame cut here isn't counted as sent (audio audit A2) */ \
             if (nf * frame_bytes > g_maxpkt) nf = g_maxpkt / frame_bytes; \
+            g_tot_out += nf; st_out_frames += nf; \
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail; \
