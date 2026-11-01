@@ -55,6 +55,12 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
                 }
             }
         }
+        // a screen's size for the hidden page: without a layout some pages don't build their results (B-25)
+        web.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(HIDDEN_WIDTH, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(HIDDEN_HEIGHT, android.view.View.MeasureSpec.EXACTLY),
+        )
+        web.layout(0, 0, HIDDEN_WIDTH, HIDDEN_HEIGHT)
         created(web)
         web.loadUrl(url)
     }
@@ -74,7 +80,9 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
       var u = new URL(a.href);
       if (u.host.indexOf('google') >= 0 && u.pathname === '/url') u = new URL(u.searchParams.get('q') || u.searchParams.get('url'));
       var ok = hosts.some(function(h){ return u.host === h || u.host.endsWith('.' + h); });
-      var title = (a.innerText || '').trim().split('\n')[0];
+      // the hidden page isn't on screen: innerText can come back empty there, so the result's h3 or its plain text (B-25)
+      var h3 = a.querySelector('h3');
+      var title = ((h3 && h3.textContent) || a.innerText || a.textContent || '').trim().split('\n')[0];
       if (!ok || !title || seen[u.href]) return;
       seen[u.href] = true;
       out.push({ title: title.slice(0, 120), url: u.href });
@@ -85,6 +93,8 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
 """.trimIndent()
 
         private const val TIMEOUT_MS = 25_000L
+        private const val HIDDEN_WIDTH = 1080
+        private const val HIDDEN_HEIGHT = 2000
         const val SETTLE_MS = 1_500L
     }
 }
