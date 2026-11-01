@@ -62,6 +62,7 @@ fun SetlistsRoute(
     onSync: (() -> Unit)? = null,
 ) {
     val online by viewModel.online.collectAsStateWithLifecycle()
+    val localNet by viewModel.localNet.collectAsStateWithLifecycle()
     val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val nameLimit by viewModel.nameLimit.collectAsStateWithLifecycle()
@@ -76,6 +77,7 @@ fun SetlistsRoute(
         onScan = onScan,
         online = online,
         internetOn = internetOn,
+        localNet = localNet,
         onReceiveCode = onReceiveCode,
         received = received,
         onReceived = onReceived,
@@ -112,6 +114,7 @@ fun SetlistsScreen(
     onScan: () -> Unit = {},
     online: Boolean = false,
     internetOn: Boolean = true,
+    localNet: Boolean = true,   // on Wi-Fi: "Sync with the band" needs it (B-26)
     onReceiveCode: (String) -> Unit = {},
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -145,7 +148,7 @@ fun SetlistsScreen(
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
             if (!selecting) Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn)
+                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
