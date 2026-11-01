@@ -17,7 +17,16 @@ import javax.inject.Inject
 
 /** What Home needs besides the band inbox: the essential mode alert (T19). */
 @HiltViewModel
-class HomeViewModel @Inject constructor(private val repository: LibraryRepository) : ViewModel() {
+class HomeViewModel @Inject constructor(
+    private val repository: LibraryRepository,
+    private val webEditor: br.app.stagebook.data.web.WebEditorServer,
+) : ViewModel() {
+    /** The web editor's address while it's on ("" = off): the tabs show it's in use, with a way to close it. */
+    val webAddress: StateFlow<String> = webEditor.address
+
+    /** Closes the web editor (the same as its switch in Settings). */
+    fun closeWebEditor() = repository.updateLook { it.copy(webEditorOn = false) }
+
     /**
      * The tab the app opens on: Setlists, or Songs while there's no setlist yet (user, 31/10). Null until the library has
      * loaded, so the screen doesn't show one tab and jump to the other.

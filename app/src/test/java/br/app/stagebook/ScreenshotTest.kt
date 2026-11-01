@@ -978,7 +978,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun inboxBannerPhone() = shoot("jornada_banda_4_aviso") {
         // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
-        androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {})) {
+        androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
                 SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
             }

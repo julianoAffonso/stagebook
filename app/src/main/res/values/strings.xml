@@ -917,4 +917,7 @@
         <item quantity="other">%1$d from the band</item>
     </plurals>
     <string name="inbox_snack_open">View</string>
+    <string name="web_in_use">Web editor on</string>
+    <string name="web_in_use_text">The web editor is open at %1$s. Anyone approved on a computer can change the library. Close it when you are done.</string>
+    <string name="web_close">Close the web editor</string>
 </resources>

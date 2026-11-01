@@ -17,7 +17,10 @@ import br.app.stagebook.R
  * What the main tabs say about the app without taking a strip of the screen (user, 01/11: the essential mode and band
  * strips were too much): essential mode on and how many things from the band are waiting.
  */
-data class HomeStatus(val essential: Boolean, val received: Int, val onEssential: () -> Unit, val onReceived: () -> Unit)
+data class HomeStatus(
+    val essential: Boolean, val received: Int, val onEssential: () -> Unit, val onReceived: () -> Unit,
+    val webAddress: String = "", val onWebEditor: () -> Unit = {},   // the web editor while it's on (user, 01/11)
+)
 
 /** Given by the Home screen to the tabs' headers; none elsewhere. */
 val LocalHomeStatus = staticCompositionLocalOf<HomeStatus?> { null }
@@ -26,6 +29,11 @@ val LocalHomeStatus = staticCompositionLocalOf<HomeStatus?> { null }
 @Composable
 fun HomeStatusIcons() {
     val status = LocalHomeStatus.current ?: return
+    if (status.webAddress.isNotEmpty()) {
+        IconButton(onClick = status.onWebEditor) {
+            Icon(AppIcons.Computer, stringResource(R.string.web_in_use), tint = MaterialTheme.colorScheme.primary)
+        }
+    }
     if (status.essential) {
         IconButton(onClick = status.onEssential) {
             Icon(AppIcons.Eco, stringResource(R.string.essential_banner), tint = MaterialTheme.colorScheme.primary)
@@ -43,7 +51,7 @@ fun HomeStatusIcons() {
 @LightPreview
 @Composable
 private fun HomeStatusIconsLightPreview() = PreviewSurface(dark = false) {
-    CompositionLocalProvider(LocalHomeStatus provides HomeStatus(true, 2, {}, {})) { ScreenHeader("Músicas", subtitle = "42 músicas") { HomeStatusIcons() } }
+    CompositionLocalProvider(LocalHomeStatus provides HomeStatus(true, 2, {}, {}, "http://192.168.0.10:8090")) { ScreenHeader("Músicas", subtitle = "42 músicas") { HomeStatusIcons() } }
 }
 
 @DarkPreview
