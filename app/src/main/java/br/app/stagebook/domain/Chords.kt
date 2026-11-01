@@ -30,18 +30,22 @@ object Chords {
 
     // ---- diretivas ----
 
-    fun isDirective(line: String): Boolean = directive.matchEntire(line) != null
+    fun isDirective(line: String): Boolean = directiveIn(line) != null
+
+    // a directive needs a "{": the other lines skip the regex (the editor reads the key, capo and tempo on every
+    // keystroke, over every line; audit 01/11)
+    private fun directiveIn(line: String): MatchResult? = if (line.indexOf('{') < 0) null else directive.matchEntire(line)
 
     /** A directive's value (`key`, `capo`…), or null. */
     fun directive(text: String, name: String): String? = text.lineSequence()
-        .mapNotNull { directive.matchEntire(it) }
+        .mapNotNull { directiveIn(it) }
         .firstOrNull { it.groupValues[1].equals(name, ignoreCase = true) }
         ?.groupValues?.get(2)?.trim()
 
     /** Saves (or removes, with an empty value) a directive; a new one goes at the start of the text. */
     fun setDirective(text: String, name: String, value: String): String {
         val lines = text.split('\n').toMutableList()
-        val i = lines.indexOfFirst { directive.matchEntire(it)?.groupValues?.get(1).equals(name, ignoreCase = true) }
+        val i = lines.indexOfFirst { directiveIn(it)?.groupValues?.get(1).equals(name, ignoreCase = true) }
         val line = "{$name: $value}"
         when {
             i >= 0 && value.isEmpty() -> lines.removeAt(i)
@@ -60,7 +64,7 @@ object Chords {
     const val MAX_TEMPO = 300
     const val DEFAULT_TEMPO = 100   // metronome when the song has no BPM
 
-    private fun isMeta(line: String) = directive.matchEntire(line)?.groupValues?.get(1)?.lowercase() in meta
+    private fun isMeta(line: String) = directiveIn(line)?.groupValues?.get(1)?.lowercase() in meta
 
     /**
      * The lyrics without the key and capo lines (in the editor they live in the song details, not the lyrics field).
