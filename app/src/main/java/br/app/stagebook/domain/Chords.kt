@@ -15,7 +15,9 @@ object Chords {
     private val flatKeys = setOf("F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb", "Dm", "Gm", "Cm", "Fm", "Bbm", "Ebm", "Abm")
 
     // note, accidental, the rest of the chord (m, 7, maj7, sus4, add9, dim, aug, °, +, 7M, (9), (b5)…) and the bass
-    private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,)*)(?:/([A-G])([#b♯♭]?))?""")
+    // a slash before a number is an extension, as the chord charts write it (A7/4, C#7/9, G6/9, D7(2/4)); before a
+    // note it's the bass (D/F#)
+    private val chord = Regex("""([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,|/(?=\d))*)(?:/([A-G])([#b♯♭]?))?""")
     internal val bracket = Regex("""\[([^\[\]]*)]""")   // LyricsView reads the same brackets
     // the value can't hold "}": the lazy ".*?" between optional spaces backtracked for minutes on a long malformed line
     // (audit 01/11); the value is trimmed where it's read
@@ -203,6 +205,43 @@ object Chords {
     private fun name(i: Int, useFlats: Boolean) = (if (useFlats) flats else sharps)[((i % 12) + 12) % 12]
 
     /** The chord [semitones] half steps up (negative = down). [useFlats] null = the chord's own style. */
+    private val PARENS = Regex("""\([^)]*\)""")
+    private val SLASH_EXTENSION = Regex("""/(\d+M?)""")
+    private val SIGN_BEFORE = Regex("""([b#♭♯])(\d+)""")
+    private val SUS = Regex("""sus(2|4)?(?!\d)""")
+
+    /**
+     * A chord in the chart notation the app uses, the same as Cifra Club (user, 01/11): `7+` and `maj7` become `7M`,
+     * a slash before a number becomes parentheses (`C#7/9` → `C#7(9)`; a slash inside them stays, `D7(2/4)`), `sus4`
+     * and `sus` become `4` and `sus2` becomes `2`, and the sign goes after the number (`b13` → `13-`, `#9` → `9+`).
+     * Root and bass stay; what isn't a chord passes unchanged.
+     */
+    fun normalizeChord(c: String): String {
+        val m = chord.matchEntire(c.trim()) ?: return c
+        val (root, acc, rest, bass, bassAcc) = m.destructured
+        var r = rest.replace("maj7", "7M").replace("7+", "7M")
+        r = SUS.replace(r) { if (it.groupValues[1] == "2") "2" else "4" }
+        // signs: inside parentheses they just move after the number; outside, the alteration gets its own
+        val inside = StringBuilder()
+        var last = 0
+        PARENS.findAll(r).forEach { p ->
+            inside.append(outside(r.substring(last, p.range.first)))
+            inside.append(SIGN_BEFORE.replace(p.value) { s -> s.groupValues[2] + sign(s.groupValues[1]) })
+            last = p.range.last + 1
+        }
+        inside.append(outside(r.substring(last)))
+        return root + acc + inside + if (bass.isNotEmpty()) "/$bass$bassAcc" else ""
+    }
+
+    private fun sign(s: String) = if (s == "b" || s == "♭") "-" else "+"
+
+    private fun outside(part: String): String =
+        SIGN_BEFORE.replace(SLASH_EXTENSION.replace(part) { "(" + it.groupValues[1] + ")" }) { "(" + it.groupValues[2] + sign(it.groupValues[1]) + ")" }
+
+    /** Every chord in the ChordPro text in the app's notation ([normalizeChord]); the rest of the text stays. */
+    fun normalizeChords(text: String): String =
+        bracket.replace(text) { b -> if (isChord(b.groupValues[1])) "[" + normalizeChord(b.groupValues[1].trim()) + "]" else b.value }
+
     fun transposeChord(c: String, semitones: Int, useFlats: Boolean? = null): String {
         val m = chord.matchEntire(c.trim()) ?: return c
         val (root, acc, rest, bass, bassAcc) = m.destructured
@@ -234,21 +273,15 @@ object Chords {
     fun triad(c: String): Triad? {
         val m = chord.matchEntire(c.trim()) ?: return null
         val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return null
-        val rest = m.groupValues[3]
-        val halfDim = rest.contains("m7b5") || rest.contains("m7(b5)") || rest.contains("ø")
-        val q = if (halfDim) Quality.DIM else quality(rest)
-        return Triad(root, q == Quality.MINOR, q == Quality.DIM, seventhOf(rest, halfDim))
-    }
-
-    // 7M/maj7/M7/Δ = major seventh; °7/dim7 = diminished; 7, m7, m7(b5) and the 9/11/13 extensions (without "add") =
-    // minor
-    private fun seventhOf(rest: String, halfDim: Boolean): Seventh = when {
-        halfDim -> Seventh.MINOR
-        rest.contains("7M") || rest.contains("maj7") || rest.contains("M7") || rest.contains("Δ") || rest.contains("maj9") -> Seventh.MAJOR
-        rest.contains("°7") || rest.contains("º7") || rest.contains("dim7") -> Seventh.DIMINISHED
-        rest.contains("7") -> Seventh.MINOR
-        !rest.contains("add") && (rest.contains("9") || rest.contains("11") || rest.contains("13")) -> Seventh.MINOR
-        else -> Seventh.NONE
+        val n = ChordTheory.notes(c) ?: return null
+        val q = quality(n)
+        val seventh = when {
+            11 in n.intervals -> Seventh.MAJOR
+            10 in n.intervals -> Seventh.MINOR
+            q == Quality.DIM && 9 in n.intervals -> Seventh.DIMINISHED   // in a diminished chord the 6th is the °7
+            else -> Seventh.NONE
+        }
+        return Triad(root, q == Quality.MINOR, q == Quality.DIM, seventh)
     }
 
     /** Usual name of the key with root [root] (C, Db… / Cm, C#m…). */
@@ -261,7 +294,7 @@ object Chords {
     fun transposeKey(key: String, semitones: Int): String {
         val m = chord.matchEntire(key.trim()) ?: return key
         val root = index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 } ?: return key
-        val minor = quality(m.groupValues[3]) == Quality.MINOR
+        val minor = quality(key.trim()) == Quality.MINOR
         val i = ((root + semitones) % 12 + 12) % 12
         return (if (minor) minorKeys else majorKeys)[i]
     }
@@ -307,10 +340,16 @@ object Chords {
 
     private enum class Quality { MAJOR, MINOR, DIM }
 
-    private fun quality(rest: String) = when {
-        rest.startsWith("dim") || rest.startsWith("°") || rest.startsWith("º") || rest.startsWith("m7b5") -> Quality.DIM
-        rest.startsWith("m") && !rest.startsWith("maj") -> Quality.MINOR
-        else -> Quality.MAJOR
+    // read from the chord's notes, the same reading as the diagram and the harmonic field (m7(5-) is diminished, sus
+    // has no third and counts as major; user, 01/11: every chord feature follows one rule)
+    private fun quality(chord: String): Quality = ChordTheory.notes(chord)?.let(::quality) ?: Quality.MAJOR
+
+    private fun quality(n: ChordTheory.Notes): Quality = with(n.intervals) {
+        when {
+            3 in this && 6 in this && 7 !in this -> Quality.DIM
+            3 in this && 4 !in this -> Quality.MINOR
+            else -> Quality.MAJOR
+        }
     }
 
     // harmonic field degrees: major I ii iii IV V vi vii°; minor (natural, with the harmonic's major V) i ii° III iv v
@@ -325,7 +364,7 @@ object Chords {
      */
     fun detectKey(text: String): String {
         val chords = bracket.findAll(fromChordsOverLyrics(text)).mapNotNull { chord.matchEntire(it.groupValues[1].trim()) }
-            .mapNotNull { m -> index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 }?.let { it to quality(m.groupValues[3]) } }
+            .mapNotNull { m -> index(m.groupValues[1] + m.groupValues[2]).takeIf { it >= 0 }?.let { it to quality(m.value) } }
             .toList()
         if (chords.isEmpty()) return ""
         var best = "" ; var bestScore = -1.0

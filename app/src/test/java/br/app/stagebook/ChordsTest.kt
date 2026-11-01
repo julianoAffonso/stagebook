@@ -120,4 +120,38 @@ class ChordsTest {
         assertEquals("Em", br.app.stagebook.ui.editor.SongEditorUiState(text = text).meta.key)
         assertEquals(Chords.withMeta("nova", text), Chords.withMeta("nova", m))
     }
+
+    @Test fun `chart notations from the library and Cifra Club are chords - a slash before a note is still the bass`() {
+        listOf("E7/9", "A7/4", "A4/7", "C#7/9", "B7/13", "G6/9", "D7(2/4)", "F5(7M/9)/C", "A7(4/6)", "E7(9+)", "F#7(13-)", "Bm7+", "A5-", "C4+(9)")
+            .forEach { assertTrue(it, Chords.isChord(it)) }
+        assertEquals("D7/9", Chords.transposeChord("C#7/9", 1))
+        assertEquals("A/C#", Chords.transposeChord("G/B", 2))
+        assertEquals("C#", br.app.stagebook.domain.ChordTheory.notes("A/C#")!!.bass.let { listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")[it] })
+    }
+
+    @Test fun `chords move to the Cifra Club notation`() {
+        mapOf(
+            "Bm7+" to "Bm7M", "G7+" to "G7M", "Fmaj7" to "F7M", "Am(maj7)" to "Am(7M)", "C#7/9" to "C#7(9)", "A7/4" to "A7(4)",
+            "A4/7" to "A4(7)", "B7/13" to "B7(13)", "Csus4" to "C4", "Gsus" to "G4", "Dsus2" to "D2", "Bsus/F#" to "B4/F#",
+            "F#7(b13)" to "F#7(13-)", "D7(b9)" to "D7(9-)", "F#m7(b5)" to "F#m7(5-)", "E7(#9)" to "E7(9+)", "C7b9" to "C7(9-)",
+            "D7(2/4)" to "D7(2/4)", "F5(7M/9)/C" to "F5(7M/9)/C", "G/B" to "G/B", "E7M" to "E7M", "Refrão" to "Refrão",
+        ).forEach { (from, to) -> assertEquals(from, to, Chords.normalizeChord(from)) }
+        assertEquals("[C#7(9)]um [Bm7M]dois [Refrão]", Chords.normalizeChords("[C#7/9]um [Bm7+]dois [Refrão]"))
+    }
+
+    @Test fun `every chord feature reads the notations the same way`() {
+        val t = br.app.stagebook.domain.ChordTheory
+        assertEquals(t.notes("E7(9)"), t.notes("E7/9"))
+        assertEquals(t.notes("F7M"), t.notes("F7+"))
+        assertEquals(t.notes("E7(#9)"), t.notes("E7(9+)"))
+        assertEquals(t.notes("F#7(b13)"), t.notes("F#7(13-)"))
+        assertEquals(t.notes("A7(4)"), t.notes("A7/4"))
+        listOf("E7/9", "A7/4", "D7(2/4)", "F5(7M/9)/C", "Bm7+", "F#7(13-)").forEach {
+            assertTrue(it, br.app.stagebook.domain.Voicings.shapes(it, br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR).isNotEmpty())
+        }
+        // the key: m7(5-) is the half-diminished ii of a minor key, not a minor chord
+        assertEquals(Chords.detectKey("[Am]a [Bm7(b5)]b [E7]c [Am]d"), Chords.detectKey("[Am]a [Bm7(5-)]b [E7/9]c [Am]d"))
+        // Fullgás as in the library (chords only): the key is still B minor
+        assertEquals("Bm", Chords.detectKey("[Bm]a [F#7(b13)]b [Bm7+]c [Em7M]d [G7+]e [A6]f [C#7/9]g [F#7]h [Bm]i"))
+    }
 }
