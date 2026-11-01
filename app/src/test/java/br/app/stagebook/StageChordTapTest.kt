@@ -62,6 +62,23 @@ class StageChordTapTest {
         assertEquals("não virou a página", -1 to -1, position)
     }
 
+    @Test fun `a tap on the side of a chords-only line turns the page, it does not open the last chord`() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(
+                    StageUiState(loading = false, songs = listOf(StageSong("Teste", "", "[G]  [D]\nPrimeira linha de letra comprida\nSegunda", false, id = "s1"), songs[1]), look = Look(fontSp = 34f)),
+                    0, 0, { s, p -> position = s to p },
+                )
+            }
+        }
+        val block = compose.onNodeWithText("Primeira linha", substring = true).fetchSemanticsNode().boundsInRoot
+        val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.width
+        compose.onRoot().performTouchInput { click(Offset(width * 0.9f, block.top + 6f)) }
+        compose.waitForIdle()
+        assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
+        assertTrue("virou a página: $position", position != -1 to -1)
+    }
+
     @Test fun `with the diagram turned off in settings, tapping a chord opens nothing`() {
         show(Look(fontSp = 34f, chordTap = false))
         tapFirstChord()

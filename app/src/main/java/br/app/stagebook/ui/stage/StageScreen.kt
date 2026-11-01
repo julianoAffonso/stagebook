@@ -1269,7 +1269,12 @@ private class PageHit {
             var b = a
             while (a > 0 && !s[a - 1].isWhitespace()) a--
             while (b < s.length && !s[b].isWhitespace()) b++
-            s.substring(a, b).takeIf(Chords::isChord)?.let { return it }
+            // only when the finger is over the word: past the end of the line the offset is the line's end, which
+            // picked the last chord and a tap on the side opened it instead of turning the page (device test B-12)
+            val tolerance = chordPx * 0.3f
+            val over = a < b && x >= layout.getHorizontalPosition(a, true) - tolerance &&
+                x <= layout.getHorizontalPosition(b, true) + tolerance
+            if (over) s.substring(a, b).takeIf(Chords::isChord)?.let { return it }
         }
         return null
     }
