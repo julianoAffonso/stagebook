@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Stagebook</string>
 
     <!-- ações comuns -->
@@ -8,7 +8,6 @@
     <string name="action_clear">Limpar</string>
     <string name="action_close">Fechar</string>
     <string name="action_delete">Apagar</string>
-    <string name="action_edit">Editar</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Salvar</string>
     <string name="action_stage">Palco</string>
@@ -22,14 +21,17 @@
 
     <plurals name="settings_pedal_reset">
         <item quantity="one">Voltar ao padrão (%1$d botão mudado)</item>
+        <item quantity="many">Voltar ao padrão (%1$d botões mudados)</item>
         <item quantity="other">Voltar ao padrão (%1$d botões mudados)</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%d música</item>
+        <item quantity="many">%d músicas</item>
         <item quantity="other">%d músicas</item>
     </plurals>
     <plurals name="set_count">
         <item quantity="one">%d setlist</item>
+        <item quantity="many">%d setlists</item>
         <item quantity="other">%d setlists</item>
     </plurals>
 
@@ -93,10 +95,12 @@
     <string name="qr_hint">Quem recebe toca em Importar → Ler QR. O app avisa se faltar alguma música.</string>
     <plurals name="qr_count">
         <item quantity="one">%d música no QR</item>
+        <item quantity="many">%d músicas no QR</item>
         <item quantity="other">%d músicas no QR</item>
     </plurals>
     <plurals name="qr_missing">
         <item quantity="one">%d música removida da biblioteca não vai no QR.</item>
+        <item quantity="many">%d músicas removidas da biblioteca não vão no QR.</item>
         <item quantity="other">%d músicas removidas da biblioteca não vão no QR.</item>
     </plurals>
 
@@ -119,7 +123,6 @@
     <string name="stage_zoom">Zoom desta música: %1$d%%</string>
     <string name="stage_zoom_reset">Padrão</string>
     <string name="set_remove">Tirar</string>
-    <string name="set_remove_confirm">Tirar \"%1$s\" deste setlist? A música continua na biblioteca.</string>
     <string name="set_tap_to_play">%1$s · toque numa para abrir o palco</string>
     <string name="stage_empty_title">Nada para tocar</string>
     <string name="stage_empty_message">Este setlist foi apagado ou está vazio. Volte e escolha outro.</string>
@@ -129,7 +132,6 @@
     <string name="settings_appearance">Visual do palco</string>
     <string name="settings_preview_text">[Refrão]\n[G]Uma linha de e[D]xemplo\n[Em]Pra ver como [C]fica</string>
     <string name="settings_preview_size_text">[Refrão]\n[G]Uma linha de e[D]xemplo</string>
-    <string name="settings_font_value">%1$d</string>
     <string name="settings_font_size">Tamanho da letra: %1$d</string>
     <string name="settings_text_color">Cor da letra</string>
     <string name="settings_background">Cor do fundo</string>
@@ -150,6 +152,7 @@
     <string name="conduct_missing_now">Sem esta música: %1$s</string>
     <plurals name="conduct_no_answer">
         <item quantity="one">%1$d da banda não respondeu</item>
+        <item quantity="many">%1$d da banda não responderam</item>
         <item quantity="other">%1$d da banda não responderam</item>
     </plurals>
     <string name="conduct_see_lacks">Ver o que falta</string>
@@ -239,6 +242,7 @@
     <string name="stage_chord_hide_ok">Esconder</string>
     <plurals name="stage_chords_restore">
         <item quantity="one">Mostrar de novo %1$d acorde escondido</item>
+        <item quantity="many">Mostrar de novo os %1$d acordes escondidos</item>
         <item quantity="other">Mostrar de novo os %1$d acordes escondidos</item>
     </plurals>
     <string name="settings_chord_list_help">Mostra cada acorde da música uma vez, na ordem em que aparecem. No palco, o × tira um acorde da lista e o ↺ devolve.</string>
@@ -248,7 +252,6 @@
     <string name="chord_shape_keep">Usar esta</string>
     <string name="editor_preview">Ver como fica no palco</string>
     <string name="editor_back_to_text">Voltar ao texto</string>
-    <string name="editor_chords">Acordes</string>
     <string name="editor_chord_new">Acorde</string>
     <string name="editor_chord_hint">Ex.: G, Am7, F#m/E, C7(9)</string>
     <string name="editor_chord_insert">Inserir</string>
@@ -284,8 +287,6 @@
     <string name="backup_replace">Substituir as minhas</string>
     <string name="backup_merge_help">Entram só as músicas e os setlists que você não tem; os seus ficam como estão.</string>
     <string name="backup_replace_help">Suas músicas e setlists são trocados pelos do arquivo.</string>
-    <string name="backup_restore">Restaurar backup</string>
-    <string name="backup_restore_ok">Restaurar</string>
     <string name="backup_restore_warning">Os ajustes do arquivo substituem os daqui.</string>
     <string name="backup_part_library">Músicas e setlists</string>
     <string name="backup_part_library_detail">Com o zoom de cada música</string>
@@ -307,12 +308,20 @@
     <string name="editor_data_close">Recolher os dados da música</string>
     <string name="editor_capo_fret">%1$dª casa</string>
     <string name="editor_capo_sounds">Diagramas de %1$s. Com capo na %2$dª casa, soa em %3$s.</string>
-    <string name="editor_capo_sounds_nokey">Diagramas como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</string>
+    <plurals name="editor_capo_sounds_nokey">
+        <item quantity="one">Diagramas como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meio-tom acima.</item>
+        <item quantity="many">Diagramas como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</item>
+        <item quantity="other">Diagramas como estão na cifra. Com capo na %1$dª casa, tudo soa %1$d meios-tons acima.</item>
+    </plurals>
     <string name="stage_key_adjust">mudar tom e capo</string>
     <string name="stage_key_capo_title">Tom e capo</string>
     <string name="stage_key_capo_saved">Fica salvo na música.</string>
     <string name="stage_capo_sounds_short">(%1$s)</string>
-    <string name="inbox_versions">%1$s · %2$d versões</string>
+    <plurals name="inbox_versions">
+        <item quantity="one">%1$s · %2$d versão</item>
+        <item quantity="many">%1$s · %2$d versões</item>
+        <item quantity="other">%1$s · %2$d versões</item>
+    </plurals>
     <string name="inbox_latest">mais nova</string>
     <string name="inbox_updated_today">atualizado às %1$s</string>
     <string name="inbox_updated_day">atualizado em %1$s, %2$s</string>
@@ -353,14 +362,10 @@
     <string name="metro_bpm">%1$d BPM</string>
     <string name="metro_slower">Mais devagar</string>
     <string name="metro_faster">Mais rápido</string>
-    <string name="metro_count">Contagem 1-2-3-4 antes</string>
+    <string name="metro_count">Contagem 1–2–3–4 antes</string>
     <string name="metro_glow_color">Cor do brilho</string>
     <string name="metro_help">No palco, o ícone ao lado do relógio abre o metrônomo. Ele começa no BPM da música, ou em 100 se ela não tiver.</string>
     <string name="metro_in_settings">Contagem, som e brilho ficam nos %1$s.</string>
-    <string name="metro_short_count">contagem</string>
-    <string name="metro_short_sound">som</string>
-    <string name="metro_short_silent">sem som</string>
-    <string name="metro_short_glow">brilho</string>
     <string name="metro_glow">Brilho na borda da tela</string>
     <string name="metro_sound">Som</string>
     <string name="stage_auto_title">Rolagem automática</string>
@@ -403,10 +408,12 @@
     <string name="settings_normalize_confirm">Marcar as seções nas músicas que não têm nenhum título?\n\nO app acha cada parte pelo que se repete. A estrofe que volta é o refrão. Os títulos que já existem e a letra não mudam.</string>
     <plurals name="settings_unidentified">
         <item quantity="one">%d música não tinha partes repetidas e ficou como estava.</item>
+        <item quantity="many">%d músicas não tinham partes repetidas e ficaram como estavam.</item>
         <item quantity="other">%d músicas não tinham partes repetidas e ficaram como estavam.</item>
     </plurals>
     <plurals name="settings_normalized">
         <item quantity="one">%d música ajustada.</item>
+        <item quantity="many">%d músicas ajustadas.</item>
         <item quantity="other">%d músicas ajustadas.</item>
     </plurals>
     <string name="settings_screen">Tela</string>
@@ -416,9 +423,7 @@
     <string name="settings_pedal_none_short">Nenhum pedal reconhecido ainda</string>
     <string name="settings_pedal_connected_short">conectado</string>
     <string name="settings_pedal_disconnected_short">desconectado</string>
-    <string name="settings_font_card">Tamanho da letra</string>
     <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
-    <string name="settings_colors">Cores</string>
     <string name="settings_columns">Dividir em colunas</string>
     <string name="settings_stage_mode">Como avançar na tela</string>
     <string name="settings_stage_mode_pages">Virar página</string>
@@ -432,8 +437,6 @@
     <string name="settings_columns_help">Automático decide para cada música: divide em 2 colunas quando a letra não cabe numa página e as frases são curtas. O pedal vira as duas colunas juntas.</string>
     <string name="settings_bold_short">negrito</string>
     <string name="settings_sections_look">Títulos de seção</string>
-    <string name="settings_sections_shown">Títulos visíveis</string>
-    <string name="settings_sections_hidden">Títulos escondidos</string>
     <string name="settings_normalize_card">Marcar seções</string>
     <string name="settings_normalize_help">Nas letras sem nenhum título de seção, acha as partes pelo que se repete. A estrofe que volta é o refrão. Os títulos que já existem ficam como estão.</string>
     <string name="settings_pedal_command">O que este botão faz</string>
@@ -466,6 +469,7 @@
     <string name="settings_imported">Importado. Novas: %1$d · atualizadas: %2$d</string>
     <plurals name="settings_import_confirm">
         <item quantity="one">%1$d música que já está aqui vai ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>
+        <item quantity="many">%1$d músicas que já estão aqui vão ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>
         <item quantity="other">%1$d músicas que já estão aqui vão ter a letra trocada pela do arquivo (e %2$d novas entram). Importar mesmo assim?</item>
     </plurals>
     <string name="settings_import_failed">Esse arquivo não é uma biblioteca do Stagebook.</string>
@@ -501,7 +505,7 @@
     <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui. Toque no nome do canal para escolher a saída, igualar o volume, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
     <string name="mixer_channels">Canais nos backing tracks</string>
     <string name="mixer_channel">Canal %1$d</string>
-    <string name="mixer_pair">Canais %1$d e %2$d</string>
+    <string name="mixer_pair" tools:ignore="PluralsCandidate">Canais %1$d e %2$d</string>
     <string name="mixer_name">Nome</string>
     <string name="mixer_mute">Desligar o canal</string>
     <string name="mixer_unmute">Ligar o canal</string>
@@ -518,6 +522,7 @@
     <string name="mixer_out_left_right">Esquerda e direita</string>
     <plurals name="mixer_now_output">
         <item quantity="one">Tocando em: %1$s (%2$d saída)</item>
+        <item quantity="many">Tocando em: %1$s (%2$d saídas)</item>
         <item quantity="other">Tocando em: %1$s (%2$d saídas)</item>
     </plurals>
     <string name="mixer_routes_help">A saída de cada canal fica guardada para cada interface. Ao ligar outra, ou tocar na saída do aparelho, o app usa o que ficou guardado para ela. Se não tiver nada, cada canal sai na saída de mesmo número.</string>
@@ -559,10 +564,12 @@
     <string name="scan_songs_title">Músicas recebidas</string>
     <plurals name="scan_songs_received">
         <item quantity="one">%1$d música recebida</item>
+        <item quantity="many">%1$d músicas recebidas</item>
         <item quantity="other">%1$d músicas recebidas</item>
     </plurals>
     <plurals name="scan_songs_new">
         <item quantity="one">%1$d nova</item>
+        <item quantity="many">%1$d novas</item>
         <item quantity="other">%1$d novas</item>
     </plurals>
     <string name="scan_song_new">Nova, entra na sua biblioteca</string>
@@ -570,25 +577,30 @@
     <string name="scan_song_missing">Não veio junto. Dá para importar dos sites.</string>
     <plurals name="scan_songs_add">
         <item quantity="one">Adicionar %1$d música</item>
+        <item quantity="many">Adicionar %1$d músicas</item>
         <item quantity="other">Adicionar %1$d músicas</item>
     </plurals>
-    <string name="scan_songs_add_update">Adicionar %1$d e atualizar %2$d</string>
+    <string name="scan_songs_add_update" tools:ignore="PluralsCandidate">Adicionar %1$d e atualizar %2$d</string>
     <plurals name="scan_songs_update">
         <item quantity="one">Atualizar %1$d música</item>
+        <item quantity="many">Atualizar %1$d músicas</item>
         <item quantity="other">Atualizar %1$d músicas</item>
     </plurals>
     <plurals name="songs_added">
         <item quantity="one">%1$d música adicionada</item>
+        <item quantity="many">%1$d músicas adicionadas</item>
         <item quantity="other">%1$d músicas adicionadas</item>
     </plurals>
     <plurals name="scan_ask_band">
         <item quantity="one">Pedir à banda (%1$d aparelho na rede)</item>
+        <item quantity="many">Pedir à banda (%1$d aparelhos na rede)</item>
         <item quantity="other">Pedir à banda (%1$d aparelhos na rede)</item>
     </plurals>
     <string name="scan_asking_band">Perguntando à banda…</string>
     <string name="scan_band_row">Veio da banda e entra na sua biblioteca.</string>
     <plurals name="scan_band_got">
         <item quantity="one">A banda tinha %1$d de %2$d música que faltava</item>
+        <item quantity="many">A banda tinha %1$d de %2$d músicas que faltavam</item>
         <item quantity="other">A banda tinha %1$d de %2$d músicas que faltavam</item>
     </plurals>
     <string name="scan_band_none">Ninguém da banda tinha as que faltam. Dá para importar dos sites.</string>
@@ -616,6 +628,7 @@
     <string name="scan_name">Nome do setlist</string>
     <plurals name="scan_found">
         <item quantity="one">%1$d de %2$d música entra no setlist</item>
+        <item quantity="many">%1$d de %2$d músicas entram no setlist</item>
         <item quantity="other">%1$d de %2$d músicas entram no setlist</item>
     </plurals>
     <string name="scan_missing_row">Não está na sua biblioteca e vai ficar de fora.</string>
@@ -626,6 +639,7 @@
     <string name="scan_create">Criar setlist</string>
     <plurals name="scan_missing_title">
         <item quantity="one">%1$d música vai ficar de fora</item>
+        <item quantity="many">%1$d músicas vão ficar de fora</item>
         <item quantity="other">%1$d músicas vão ficar de fora</item>
     </plurals>
     <string name="scan_create_without">Criar sem elas</string>
@@ -634,6 +648,7 @@
     <string name="scan_replace">Substituir</string>
     <plurals name="scan_import_missing">
         <item quantity="one">Importar a que falta (%1$d)</item>
+        <item quantity="many">Importar as que faltam (%1$d)</item>
         <item quantity="other">Importar as que faltam (%1$d)</item>
     </plurals>
     <string name="queue_title">Para \"%1$s\": %2$d de %3$d · %4$s</string>
@@ -646,11 +661,13 @@
     <string name="share_title">Compartilhar</string>
     <plurals name="share_band">
         <item quantity="one">Mandar para a banda (%1$d aparelho)</item>
+        <item quantity="many">Mandar para a banda (%1$d aparelhos)</item>
         <item quantity="other">Mandar para a banda (%1$d aparelhos)</item>
     </plurals>
     <string name="share_band_hint">Quem está neste Wi-Fi recebe na hora. Os outros recebem pela internet quando abrirem o app, em até 12 horas. Cada um confere antes de entrar.</string>
     <plurals name="share_band_sent">
         <item quantity="one">Enviado para %1$d aparelho da banda</item>
+        <item quantity="many">Enviado para %1$d aparelhos da banda</item>
         <item quantity="other">Enviado para %1$d aparelhos da banda</item>
     </plurals>
     <string name="share_band_failed">Não deu para mandar para a banda. Confira o Wi-Fi ou a internet e tente de novo.</string>
@@ -660,6 +677,7 @@
     <string name="share_internet_hint">Aparecem 3 palavras e um QR para quem vai receber. Valem por 12 horas.</string>
     <plurals name="share_with_songs">
         <item quantity="one">Levar a música (%1$d)</item>
+        <item quantity="many">Levar as músicas (%1$d)</item>
         <item quantity="other">Levar as músicas (%1$d)</item>
     </plurals>
     <string name="share_with_songs_hint">Quem recebe ganha só as músicas que ainda não tem. As que já tem continuam do jeito que estão.</string>
@@ -671,10 +689,12 @@
     <string name="share_failed_text">O serviço não respondeu. Confira a internet e tente de novo, ou use o QR.</string>
     <plurals name="share_sent_songs">
         <item quantity="one">Enviando %1$d música.</item>
+        <item quantity="many">Enviando %1$d músicas.</item>
         <item quantity="other">Enviando %1$d músicas.</item>
     </plurals>
     <plurals name="share_skipped">
         <item quantity="one">%1$d música grande demais não foi.</item>
+        <item quantity="many">%1$d músicas grandes demais não foram.</item>
         <item quantity="other">%1$d músicas grandes demais não foram.</item>
     </plurals>
     <string name="share_sent_hint">No outro aparelho, vá em Importar → Digitar as 3 palavras. Valem por 12 horas.</string>
@@ -687,15 +707,12 @@
     <string name="share_code_qr">QR das palavras. Tire uma foto ou leia em Importar → Ler QR.</string>
     <string name="share_message">Setlist \"%1$s\" no Stagebook. Para receber, vá em Importar → Digitar as 3 palavras e digite %2$s. Vale por 12 horas.</string>
     <!-- seleção na aba Músicas (compartilhar várias) -->
-    <plurals name="songs_selected">
-        <item quantity="one">%1$d selecionada</item>
-        <item quantity="other">%1$d selecionadas</item>
-    </plurals>
     <string name="songs_select_cancel">Sair da seleção</string>
     <!-- banda na rede local (Ajustes → Banda e transmissão e o pedido de entrada) -->
     <string name="settings_band">Banda e transmissão</string>
     <plurals name="settings_band_short">
         <item quantity="one">%1$d aparelho na banda</item>
+        <item quantity="many">%1$d aparelhos na banda</item>
         <item quantity="other">%1$d aparelhos na banda</item>
     </plurals>
     <string name="settings_band_none">Ninguém da banda ainda</string>
@@ -728,6 +745,7 @@
     <string name="inbox_setlist">%1$s enviou o setlist \"%2$s\"</string>
     <plurals name="inbox_songs">
         <item quantity="one">%1$s enviou %2$d música</item>
+        <item quantity="many">%1$s enviou %2$d músicas</item>
         <item quantity="other">%1$s enviou %2$d músicas</item>
     </plurals>
     <string name="inbox_newer">%1$s mandou algo de um Stagebook mais novo. Atualize o app para conferir.</string>
@@ -736,6 +754,7 @@
     <string name="inbox_discard">Descartar</string>
     <plurals name="import_received">
         <item quantity="one">Recebido da banda (%1$d)</item>
+        <item quantity="many">Recebidos da banda (%1$d)</item>
         <item quantity="other">Recebidos da banda (%1$d)</item>
     </plurals>
     <string name="scan_from">Enviado por %1$s</string>
@@ -788,6 +807,7 @@
     <string name="not_song">Isso não parece letra nem cifra. O Stagebook guarda só letras e cifras, em texto.</string>
     <plurals name="backup_skipped">
         <item quantity="one">%1$d música ficou de fora: não era letra nem cifra.</item>
+        <item quantity="many">%1$d músicas ficaram de fora: não eram letra nem cifra.</item>
         <item quantity="other">%1$d músicas ficaram de fora: não eram letra nem cifra.</item>
     </plurals>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
@@ -833,6 +853,7 @@
     <string name="stage_mix_general_confirm">Esta música volta a usar o mixer global, e os ajustes próprios dela são apagados.</string>
     <plurals name="mixer_own_songs">
         <item quantity="one">%1$d música tem ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para ela.</item>
+        <item quantity="many">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
         <item quantity="other">%1$d músicas têm ajustes próprios de mixer (mudados no palco): o que você mudar aqui não vale para elas.</item>
     </plurals>
     <string name="tags_more">%1$s +%2$d</string>
@@ -845,11 +866,12 @@
     <string name="tags_national">Nacional</string>
     <string name="tags_international">Internacional</string>
     <string name="tags_auto">Separar nacionais e internacionais</string>
-    <string name="tags_auto_confirm">Pelo idioma da letra, %1$d músicas vão ganhar a tag Nacional (em português) e %2$d a tag Internacional. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá para corrigir depois.</string>
+    <string name="tags_auto_confirm">Pelo idioma da letra: tag Nacional (em português) em %1$d, tag Internacional em %2$d. Músicas que já têm uma dessas tags, ou sem letra suficiente, ficam como estão. Dá para corrigir depois.</string>
     <string name="tags_auto_ok">Separar</string>
     <string name="tags_auto_none">Não há músicas para separar: todas já têm Nacional ou Internacional, ou estão sem letra.</string>
     <plurals name="tags_count">
         <item quantity="one">%d tag</item>
+        <item quantity="many">%d tags</item>
         <item quantity="other">%d tags</item>
     </plurals>
     <string name="settings_pedal_connect">Conectar o pedal</string>
@@ -874,19 +896,23 @@
     <string name="songs_add_to_set_title">Adicionar a qual setlist?</string>
     <plurals name="songs_added_to_set">
         <item quantity="one">%1$d música adicionada em %2$s</item>
+        <item quantity="many">%1$d músicas adicionadas em %2$s</item>
         <item quantity="other">%1$d músicas adicionadas em %2$s</item>
     </plurals>
     <plurals name="songs_delete_many_confirm">
         <item quantity="one">Apagar %d música? Ela sai também dos setlists.</item>
+        <item quantity="many">Apagar %d músicas? Elas saem também dos setlists.</item>
         <item quantity="other">Apagar %d músicas? Elas saem também dos setlists.</item>
     </plurals>
     <string name="songs_select_all">Selecionar todas</string>
     <plurals name="sets_delete_many_confirm">
         <item quantity="one">Apagar %d setlist? As músicas continuam na biblioteca.</item>
+        <item quantity="many">Apagar %d setlists? As músicas continuam na biblioteca.</item>
         <item quantity="other">Apagar %d setlists? As músicas continuam na biblioteca.</item>
     </plurals>
     <plurals name="set_remove_many_confirm">
         <item quantity="one">Tirar %d música deste setlist? Ela continua na biblioteca.</item>
+        <item quantity="many">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
     <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional: Nacional é o idioma do app. Depois dá para corrigir no editor de cada música ou selecionando várias na lista.</string>
@@ -897,6 +923,7 @@
     <string name="editor_lyrics_chords">Letra e cifra</string>
     <plurals name="scan_parked">
         <item quantity="one">Mais %d setlist veio junto e ficou em Recebidos da banda.</item>
+        <item quantity="many">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
         <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
     </plurals>
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
@@ -920,6 +947,7 @@
     <string name="songs_set_gone">Esse setlist não existe mais.</string>
     <plurals name="status_received">
         <item quantity="one">%1$d recebido da banda</item>
+        <item quantity="many">%1$d recebidos da banda</item>
         <item quantity="other">%1$d recebidos da banda</item>
     </plurals>
     <string name="inbox_snack_open">Ver</string>
