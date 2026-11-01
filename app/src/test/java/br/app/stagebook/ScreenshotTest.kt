@@ -163,7 +163,7 @@ class ScreenshotTest {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
         compose.onNodeWithText("Casamento").performClick()
         compose.onNodeWithText("Show de sábado").performClick()
-        compose.onNodeWithContentDescription("Compartilhar").performClick()
+        compose.onNodeWithContentDescription(str(R.string.share_title)).performClick()
     }
 
     @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
@@ -190,7 +190,7 @@ class ScreenshotTest {
             SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", "Show de sábado"), br.app.stagebook.ui.songs.SetPick("3", "Casamento"))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
         }
     }) {
-        compose.onNodeWithContentDescription("Adicionar ao setlist").performClick()
+        compose.onNodeWithContentDescription(str(R.string.songs_add_to_set)).performClick()
     }
 
     // importer: the web page stays blank in the test (WebView without network); checks the top bar and the button
