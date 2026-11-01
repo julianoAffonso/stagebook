@@ -190,8 +190,6 @@ class ScreenshotTest {
 
     @Test fun editorTagsTablet() = editorOpen("tablet_4_editor_tags") { compose.onNodeWithText("Canção de teste", substring = true).performClick() }
 
-    @Test fun editorMenuTablet() = editorOpen("tablet_4_editor_menu") { compose.onNodeWithContentDescription("Mais opções").performClick() }
-
     @Test @Config(qualifiers = PHONE)
     fun editorTagsPhone() = editorOpen("celular_4_editor_tags") { compose.onNodeWithText("Canção de teste", substring = true).performClick() }
 

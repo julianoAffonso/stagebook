@@ -49,7 +49,7 @@
     <string name="editor_edit">Edit song</string>
     <string name="editor_imported_new">Song imported. Check it and save.</string>
     <string name="editor_imported_update">New lyrics imported. Check them and save.</string>
-    <string name="editor_title">Title</string>
+    <string name="editor_title">Song name</string>
     <string name="editor_author">Artist</string>
     <string name="editor_year">Year</string>
     <string name="editor_lyrics">Lyrics</string>
