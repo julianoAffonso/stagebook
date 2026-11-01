@@ -34,8 +34,19 @@ enum class PedalAction {
             else -> NONE
         }
 
+        /**
+         * The command for a press and whether it runs now. A CC button set by its value runs on every message with that
+         * value (the Hotone's 0 button never "presses"); any other button runs on its press, not on held repeats.
+         */
+        fun hit(p: PedalPress, custom: Map<Int, PedalAction>): PedalHit {
+            if (p.value >= 0) custom[MidiCode.withValue(p.code, p.value)]?.let { return PedalHit(it, true) }
+            return PedalHit(of(p.code, custom), p.down && p.repeat == 0)
+        }
+
         /** Saves a button's choice; resetting to default removes the key from the list. */
         fun assign(custom: Map<Int, PedalAction>, keyCode: Int, action: PedalAction): Map<Int, PedalAction> =
             if (action == default(keyCode)) custom - keyCode else custom + (keyCode to action)
     }
 }
+
+data class PedalHit(val action: PedalAction, val runs: Boolean)

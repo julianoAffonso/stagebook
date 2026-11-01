@@ -472,6 +472,7 @@
     <string name="settings_pedal_keys_none">Nenhum botão mudado. Eles fazem o padrão, avançar e voltar a página. Para mudar um, aperte o botão e escolha o que ele faz em Configurar um botão.</string>
     <string name="settings_pedal_key_reset">Voltar %1$s ao padrão</string>
     <string name="midi_cc">MIDI CC %1$d (canal %2$d)</string>
+    <string name="midi_cc_value">MIDI CC %1$d = %2$d (canal %3$d)</string>
     <string name="midi_note">MIDI nota %1$d (canal %2$d)</string>
     <string name="midi_program">MIDI programa %1$d (canal %2$d)</string>
     <string name="settings_midi">Pedal MIDI</string>

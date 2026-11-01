@@ -526,10 +526,10 @@ fun StageScreen(
     )
 
     PedalHandler { p ->
-        val action = PedalAction.of(p.code, look.pedalKeys)
+        val (action, runs) = PedalAction.hit(p, look.pedalKeys)
         if (action == PedalAction.NONE) return@PedalHandler false
         // a foot resting on the pedal repeats the key: only the first one turns the page
-        if (p.down && p.repeat == 0) {
+        if (runs) {
             when (action) {
                 PedalAction.NEXT -> next()
                 PedalAction.PREVIOUS -> previous()

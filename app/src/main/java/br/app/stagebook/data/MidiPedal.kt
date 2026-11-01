@@ -142,7 +142,7 @@ class MidiPedal @Inject constructor(
         val info = device.info
         // the switch was turned off while USB was opening
         if (info.type == MidiDeviceInfo.TYPE_USB && !usbOn) { runCatching { device.close() }; return }
-        val name = info.properties.getString(MidiDeviceInfo.PROPERTY_NAME).orEmpty()
+        val name = nameOf(info)
         // the device's OUTPUT port = what it sends to the tablet
         info.ports.filter { it.type == android.media.midi.MidiDeviceInfo.PortInfo.TYPE_OUTPUT }.forEach { port ->
             val decoder = MidiDecoder(name)
@@ -158,9 +158,14 @@ class MidiPedal @Inject constructor(
         publish()
     }
 
+    // Android gives Bluetooth pedals no name (it showed "Connected:  (Bluetooth)", 31/10): the one saved on search
+    private fun nameOf(info: MidiDeviceInfo): String =
+        info.properties.getString(MidiDeviceInfo.PROPERTY_NAME)?.takeIf { it.isNotBlank() }
+            ?: if (info.type == MidiDeviceInfo.TYPE_BLUETOOTH) repository.library.value.look.midiBtName else ""
+
     private fun publish() {
         val list = synchronized(lock) { open.values.toList() }.map {
-            MidiDeviceUi(it.info.properties.getString(MidiDeviceInfo.PROPERTY_NAME).orEmpty(), it.info.type == MidiDeviceInfo.TYPE_BLUETOOTH)
+            MidiDeviceUi(nameOf(it.info), it.info.type == MidiDeviceInfo.TYPE_BLUETOOTH)
         }
         _state.value = _state.value.copy(connected = list)
     }

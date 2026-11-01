@@ -26,6 +26,7 @@ import br.app.stagebook.data.MidiFound
 import br.app.stagebook.data.MidiPedal
 import br.app.stagebook.data.MidiState
 import br.app.stagebook.domain.MidiCode
+import br.app.stagebook.domain.PedalLearn
 import br.app.stagebook.domain.PedalAction
 import br.app.stagebook.domain.PedalPress
 import br.app.stagebook.ui.isExternal
@@ -134,6 +135,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private val lastKey = MutableStateFlow<PedalKeyUi?>(null)
+    private val learn = PedalLearn()
     // the language shown in the picker: kept here, not read once, because changing the language recreates the
     // Activity and this ViewModel survives it (a value read at creation stayed stale: bug found on the TCL, 31/10)
     private val language = MutableStateFlow(Languages.get(context))
@@ -283,7 +285,8 @@ class SettingsViewModel @Inject constructor(
      * Pedal test: shows the button received, what it does on stage and which device it came from (and saves the name).
      */
     fun onKey(p: PedalPress) {
-        lastKey.value = PedalKeyUi(p.name, PedalAction.NONE, p.device, p.code)
+        val code = learn.code(p, System.currentTimeMillis()) ?: return
+        lastKey.value = PedalKeyUi(p.name, PedalAction.NONE, p.device, code)
         // the saved name is the keyboard pedal's ("connected" comes from the keyboard list); MIDI has its own card
         if (!MidiCode.isMidi(p.code) && p.device.isNotEmpty() && p.device != repository.library.value.look.pedalName) {
             repository.updateLook { it.copy(pedalName = p.device) }

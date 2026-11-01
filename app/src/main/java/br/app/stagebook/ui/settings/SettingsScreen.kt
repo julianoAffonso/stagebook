@@ -949,7 +949,7 @@ private fun pedalKeyName(code: Int): String {
     val n = MidiCode.number(code)
     val ch = MidiCode.channel(code)
     return when (MidiCode.kind(code)) {
-        MidiCode.Kind.CC -> stringResource(R.string.midi_cc, n, ch)
+        MidiCode.Kind.CC -> MidiCode.value(code)?.let { stringResource(R.string.midi_cc_value, n, it, ch) } ?: stringResource(R.string.midi_cc, n, ch)
         MidiCode.Kind.NOTE -> stringResource(R.string.midi_note, n, ch)
         MidiCode.Kind.PROGRAM -> stringResource(R.string.midi_program, n, ch)
     }
