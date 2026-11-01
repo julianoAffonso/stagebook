@@ -428,11 +428,16 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
     BAND(R.string.settings_band, AppIcons.Group),
     WEB_EDITOR(R.string.settings_web_editor, AppIcons.Computer),
-    IMPORT(R.string.settings_import_sites, AppIcons.Public),
+    IMPORT(R.string.settings_chord_sites, AppIcons.Public),   // "Chord sites" / "Lyrics sites" by profile ([titleOf])
     LIBRARY(R.string.settings_library, AppIcons.Folder),
     ADVANCED(R.string.settings_advanced, AppIcons.Tune),   // Android settings for playing without failures (31/10)
     ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
 }
+
+/** The section's name: the import sites say which kind, by the profile (user, 01/11: a friendlier name). */
+@StringRes
+fun SettingsSection.titleOf(look: Look): Int =
+    if (this == SettingsSection.IMPORT && !look.chords) R.string.settings_lyric_sites else title
 
 /** Essential mode (T19): the section of what is turned off leaves the list. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
@@ -474,7 +479,7 @@ fun SettingsScreen(
                             .padding(horizontal = Spacing.m),
                     ) {
                         // fixed header; only the content scrolls
-                        ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
+                        ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
                         SectionPinned(open, uiState.look, draft)
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                             SectionDetail(open, uiState, actions, draft)
@@ -490,7 +495,7 @@ fun SettingsScreen(
                     } else {
                         CenteredContent(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
-                                ScreenHeader(stringResource(open.title), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = { onSection(null) })
+                                ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = { onSection(null) })
                                 SectionPinned(open, uiState.look, draft)
                                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                                     SectionDetail(open, uiState, actions, draft)
@@ -513,7 +518,7 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 SettingsSection.entries.filter { it.shown(uiState.look) }.forEach { s ->
                     SongListItem(
-                        title = stringResource(s.title),
+                        title = stringResource(s.titleOf(uiState.look)),
                         subtitle = summary(s, uiState, band),
                         onClick = { onSection(s) },
                         containerColor = if (s == selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,

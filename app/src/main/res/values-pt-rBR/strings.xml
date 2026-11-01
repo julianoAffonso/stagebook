@@ -213,7 +213,6 @@
     <string name="action_never_again">Não mostrar de novo</string>
     <string name="settings_player_off_short">Desligado</string>
     <string name="settings_player_mode_help">Toca o backing track de cada música numa interface de áudio USB ou na saída do aparelho. Aceita OGG, MP3 e WAV, com quantos canais tiver.</string>
-    <string name="settings_import_sites">Importação</string>
     <string name="settings_lyric_sites">Sites de letra</string>
     <string name="settings_chord_sites">Sites de cifra</string>
     <string name="settings_sites_help">O marcado é onde o importador abre. Uma busca digitada no importador procura no Google.</string>

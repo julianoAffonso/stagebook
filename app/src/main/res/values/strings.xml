@@ -213,7 +213,6 @@
     <string name="action_never_again">Don\'t show again</string>
     <string name="settings_player_off_short">Off</string>
     <string name="settings_player_mode_help">Plays each song\'s backing track on a USB audio interface or the device\'s own output. Works with OGG, MP3 and WAV, with any number of channels.</string>
-    <string name="settings_import_sites">Import</string>
     <string name="settings_lyric_sites">Lyrics sites</string>
     <string name="settings_chord_sites">Chord sites</string>
     <string name="settings_sites_help">The importer opens the checked one. Anything you type in the importer is searched on Google.</string>
