@@ -1050,6 +1050,30 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
     }
 
+    // the song's mixer and equalizer, opened over the stage (user, 01/11): the sheet as it opens, and its whole content
+    @Test fun songMixerSheetTablet() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = mixerLook), 0, 0, { _, _ -> }, onBack = {})
+            }
+        }
+        compose.onNodeWithContentDescription(str(R.string.stage_mixer_open)).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/jornada_eq_musica_1_aberto.png")
+    }
+
+    @Test @Config(qualifiers = TABLET_TALL)
+    fun songMixerContentTablet() = shoot("jornada_eq_musica_2_inteiro") {
+        androidx.compose.foundation.layout.Column(
+            androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.m),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
+        ) {
+            androidx.compose.material3.Text(str(R.string.stage_mix_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true) {}
+            br.app.stagebook.ui.settings.EqCard(mixerLook.mixer, {}, { mixerLevels }, true)
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack2NoTrack() = shoot("jornada_faixa_2_palco_sem_faixa") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
