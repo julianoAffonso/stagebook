@@ -80,4 +80,13 @@ class SetlistReorderTest {
         compose.onNodeWithContentDescription("Palco").performClick()   // top play: from the start
         assertEquals(0, opened)
     }
+
+    // tapping the setlist's name renames it, like a song's name (user, 01/11)
+    @Test fun `tapping the name opens rename`() {
+        val state = SetlistDetailUiState(loading = false, name = "Show", items = listOf(SetItemUi("a", "a", "Música a", "", false)))
+        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
+        compose.onNodeWithText(state.name).performClick()
+        compose.onNodeWithText("Renomear").assertExists()   // the dialog title
+    }
+
 }

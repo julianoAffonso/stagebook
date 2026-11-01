@@ -58,8 +58,7 @@ class SongsSelectionTest {
     @Test fun `selecting, the top bar shows how many and select all takes every song`() {
         compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}, initialSelection = listOf("1")) } }
         compose.onNodeWithText("1").assertExists()
-        compose.onNodeWithContentDescription("Mais opções").performClick()
-        compose.onNodeWithText("Selecionar todas").performClick()
+        compose.onNodeWithContentDescription("Selecionar todas").performClick()
         compose.onNodeWithText("2").assertExists()
     }
 }

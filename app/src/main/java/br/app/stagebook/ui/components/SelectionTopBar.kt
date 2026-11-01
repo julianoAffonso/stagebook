@@ -26,8 +26,8 @@ import br.app.stagebook.ui.theme.Spacing
 class SelectionAction(val label: String, val icon: ImageVector, val onClick: () -> Unit)
 
 /**
- * The top bar while selecting, in the shape of Google's apps (Gmail, Files, Photos): ✕, how many, the actions as
- * icons (holding one shows its name) and "Select all" in the ⋮. The same on every list (user, 01/11).
+ * The top bar while selecting, in the shape of Google's apps (Gmail, Files, Photos): ✕, how many, "Select all" and
+ * the actions as icons (holding one shows its name). The same on every list (user, 01/11).
  */
 @Composable
 fun SelectionTopBar(
@@ -40,8 +40,9 @@ fun SelectionTopBar(
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         IconButton(onClick = onClose) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
         Text(count.toString(), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).padding(start = Spacing.s))
+        // select all as an icon too: a ⋮ with a single option was one tap too many (user, 01/11)
+        TipIcon(stringResource(R.string.songs_select_all), AppIcons.SelectAll, onSelectAll)
         actions.forEach { TipIcon(it.label, it.icon, it.onClick) }
-        OverflowMenu(listOf(MenuAction(stringResource(R.string.songs_select_all), AppIcons.Check, onSelectAll)))
     }
 }
 
