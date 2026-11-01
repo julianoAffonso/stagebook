@@ -20,7 +20,7 @@ object Sizes {
     val row = 72.dp             // song row
     val swipeTrigger = 56.dp    // row opened by dragging: only the icon button (24) + margin (16) on each side
     val swatch = 48.dp
-    val artistField = 280.dp    // artist or band (tablet): names are short
+    val artistField = 200.dp    // artist or band (tablet): names are short; longer ones scroll inside the field
     val yearField = 96.dp       // song year: always 4 digits
     val tempoField = 88.dp      // BPM: up to 3 digits
     val tagFilter = 240.dp      // tag filter beside the search (tablet)
