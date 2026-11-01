@@ -27,10 +27,10 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
      * bytes, not only the name), is bigger than [MAX_BYTES] or couldn't be read.
      */
     suspend fun copy(songId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
-        if (extensionOf(uri) == null) return@withContext null
         // the time plus a random bit: two tracks chosen in the same millisecond never get the same name
         val tmp = File(dir, "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.part")
         try {
+            if (extensionOf(uri) == null) return@withContext null
             val head = ByteArray(AudioFormat.HEADER)
             var size = 0L
             context.contentResolver.openInputStream(uri)?.use { input ->
@@ -51,7 +51,10 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
             val name = tmp.name.removeSuffix(".part") + ".$ext"
             if (!tmp.renameTo(File(dir, name))) throw IOException("rename failed")
             name
-        } catch (e: IOException) {
+        } catch (e: Exception) {
+            // any failure reading the picked file (a revoked permission, a provider that throws) is "this file won't
+            // do", never a crash: the callers run in the screen's scope (audit 01/11)
+            if (e is kotlinx.coroutines.CancellationException) throw e
             tmp.delete()
             null
         }
