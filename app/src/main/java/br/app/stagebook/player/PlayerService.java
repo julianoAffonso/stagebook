@@ -195,16 +195,24 @@ public class PlayerService extends Service {
         setStatus(getString(R.string.player_usb_connecting));
         usbOps.execute(() -> {
             UsbLink l = new UsbLink();
-            String err = l.open(um, d);
+            String err;
+            try {
+                err = l.open(um, d);
+            } catch (RuntimeException e) {
+                // the interface unplugged mid-conversation, a descriptor Android refused…: a failed connection, and
+                // "connecting" doesn't stay on forever (the watchdog tries again) (audio audit P1)
+                err = "USB open failed: " + e;
+            }
             if (err != null) {
-                l.close();
+                try { l.close(); } catch (RuntimeException ignored) {}
             } else {
                 Engine.start(l.conn.getFileDescriptor(), l.ep, l.maxPacket, l.channels, l.subslot,
                         l.outIfNum, l.outAltNum, l.inEp, l.inMaxPacket, l.inChannels * l.inSubslot);
                 usbOpen = l;
             }
+            String result = err;
             // turned off or dropped midway: releaseUsb (queued after this one) already closes this connection
-            main.post(() -> { if (gen == usbGen) usbReady(l, err); });
+            main.post(() -> { if (gen == usbGen) usbReady(l, result); });
         });
     }
 
