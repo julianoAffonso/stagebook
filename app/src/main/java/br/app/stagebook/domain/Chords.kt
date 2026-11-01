@@ -187,13 +187,40 @@ object Chords {
 
     private fun name(i: Int, useFlats: Boolean) = (if (useFlats) flats else sharps)[((i % 12) + 12) % 12]
 
-    /** The chord [semitones] half steps up (negative = down). [useFlats] null = the chord's own style. */
-    fun transposeChord(c: String, semitones: Int, useFlats: Boolean? = null): String {
+    /**
+     * The chord [semitones] half steps up (negative = down). [useFlats] null = the chord's own style. With the new
+     * [key], each note is spelled by its degree in that key (see [spell]).
+     */
+    fun transposeChord(c: String, semitones: Int, useFlats: Boolean? = null, key: String = ""): String {
         val chord = ChordName.parse(c) ?: return c
         val flat = useFlats ?: (chord.accidental == "b" || chord.accidental == "♭")
-        val out = StringBuilder(name(chord.rootPc + semitones, flat)).append(chord.suffix)
-        if (chord.bass.isNotEmpty()) out.append('/').append(name(chord.bassPc + semitones, flat))
+        val note = { pc: Int -> if (key.isNotEmpty()) spell(pc, key) ?: name(pc, flat) else name(pc, flat) }
+        val out = StringBuilder(note(chord.rootPc + semitones)).append(chord.suffix)
+        if (chord.bass.isNotEmpty()) out.append('/').append(note(chord.bassPc + semitones))
         return out.append(chord.mark).toString()
+    }
+
+    private val letters = "CDEFGAB"
+    private val letterPc = intArrayOf(0, 2, 4, 5, 7, 9, 11)
+    // the degree (letter steps from the tonic) of each half step above it: ♭2, 2, ♭3, 3, 4, ♯4, 5, ♭6, 6, ♭7, 7
+    private val degreeOf = intArrayOf(0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6)
+
+    /**
+     * Note [pc] spelled by its degree in [key]: in Dm the major third is F# (not Gb), in C the ♭7 is Bb. The spelling
+     * depends only on the note's place in the key, so a half step up and back down gives the chart back as it was
+     * (F#7(13) in Dm came back as Gb7(13), device test B-06). Null when it would need E#, B#, Cb, Fb or a double
+     * accidental: the caller falls back to the key's flats or sharps.
+     */
+    internal fun spell(pc: Int, key: String): String? {
+        val tonic = ChordName.parse(key) ?: return null
+        val letter = letters.indexOf(tonic.root.first().uppercaseChar()).takeIf { it >= 0 } ?: return null
+        val interval = ((pc - tonic.rootPc) % 12 + 12) % 12
+        // the half step between the 4th and the 5th: ♭5 in flat keys (Ab in Dm), ♯4 in the others (F# in C)
+        val degree = if (interval == 6 && key in flatKeys) 4 else degreeOf[interval]
+        val target = (letter + degree) % 7
+        val diff = ((pc - letterPc[target]) % 12 + 12 + 6) % 12 - 6
+        val out = letters[target] + when (diff) { 0 -> ""; 1 -> "#"; -1 -> "b"; else -> return null }
+        return out.takeUnless { it in setOf("E#", "B#", "Cb", "Fb") }
     }
 
     // the key names musicians use, half step by half step (user's request, 29/10): the editor's − and + move in this
@@ -247,7 +274,7 @@ object Chords {
         val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys else null   // the key name is already the usual one
         val body = text.split('\n').joinToString("\n") { line ->
             if (isDirective(line)) line
-            else bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats) + "]" else b.value }
+            else bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats, newKey) + "]" else b.value }
         }
         // the tablature moves too (T22)
         val tabbed = Tablature.shift(body, semitones)
