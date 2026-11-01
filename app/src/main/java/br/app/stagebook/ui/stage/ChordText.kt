@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -18,7 +20,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 /**
  * Stage text with chords: each chord (marked with [CHORD_TAG]) is drawn in the space above the marked letter, which
  * [joinLines] reserved. Used on stage and in the settings preview. If a chord would still touch the one before it on
- * the same line (font wider than [chordLine] guessed), it moves right just enough.
+ * the same line (font wider than [chordLine] guessed), it moves right just enough. A highlighted phrase
+ * ([HIGHLIGHT_TAG]) gets a marker behind the lyrics letters only, not the chord space above them.
  */
 @Composable
 fun ChordText(
@@ -30,12 +33,34 @@ fun ChordText(
 ) {
     val measurer = rememberTextMeasurer()
     val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
+    val marked = remember(text) { text.getStringAnnotations(HIGHLIGHT_TAG, 0, text.length) }
     val sizes = remember(text, chordStyle) { chordsAt.map { measurer.measure(it.item, chordStyle) } }
     var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text,
         style = style,
         modifier = modifier.drawWithContent {
+            laid?.let { l ->
+                val size = if (style.fontSize.isSp) style.fontSize.toPx() else 0f
+                marked.forEach { a ->
+                    val color = Color(a.item.toInt())
+                    val end = a.end.coerceAtMost(l.layoutInput.text.length)
+                    if (a.start >= end) return@forEach
+                    for (line in l.getLineForOffset(a.start)..l.getLineForOffset(end - 1)) {
+                        val from = maxOf(a.start, l.getLineStart(line))
+                        val to = minOf(end, l.getLineEnd(line, visibleEnd = true))
+                        if (from >= to) continue
+                        // by the letters' boxes: the position just past the last letter of a paragraph comes back as 0
+                        val x0 = l.getBoundingBox(from).left
+                        val x1 = l.getBoundingBox(to - 1).right
+                        val base = l.getLineBaseline(line)
+                        // the letters' height, from the baseline; without a font size, the whole line
+                        val top = if (size > 0f) base - size * 0.95f else l.getLineTop(line)
+                        val bottom = if (size > 0f) base + size * 0.3f else l.getLineBottom(line)
+                        drawRect(color, Offset(minOf(x0, x1), top), Size(kotlin.math.abs(x1 - x0), bottom - top))
+                    }
+                }
+            }
             drawContent()
             val l = laid ?: return@drawWithContent
             var lastLine = -1

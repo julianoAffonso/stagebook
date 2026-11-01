@@ -3,6 +3,7 @@ package br.app.stagebook.ui.stage
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
@@ -90,6 +91,7 @@ private val directiveName = Regex("""^\s*\{\s*([A-Za-z_][A-Za-z_-]*)\s*(?::\s*(.
 fun stageLines(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,
     sectionScale: Float = Look.DEFAULT_SECTION_SCALE,
+    highlight: Color = Color(br.app.stagebook.ui.theme.StagePalette.HIGHLIGHT),
 ): List<StageLine> {
     val out = ArrayList<StageLine>()
     fun blank(at: Int) { if (out.isNotEmpty() && out.last().text.isNotEmpty()) out += StageLine(AnnotatedString(""), at) }
@@ -132,9 +134,9 @@ fun stageLines(
         when {
             h != null -> header(names.label(h), i)
             raw.isBlank() -> blank(i)
-            !Chords.hasChords(raw) -> out += StageLine(AnnotatedString(raw.trimEnd()), i)
-            !chords.show -> Chords.stripChords(raw).takeIf { it.isNotBlank() }?.let { out += StageLine(AnnotatedString(it), i) }
-            else -> out += StageLine(chordLine(raw, chords), i)
+            !Chords.hasChords(raw) -> out += StageLine(highlighted(AnnotatedString(raw.trimEnd()), highlight), i)
+            !chords.show -> Chords.stripChords(raw).takeIf { it.isNotBlank() }?.let { out += StageLine(highlighted(AnnotatedString(it), highlight), i) }
+            else -> out += StageLine(highlighted(chordLine(raw, chords), highlight), i)
         }
     }
     while (out.isNotEmpty() && out.last().text.isEmpty()) out.removeAt(out.lastIndex)
@@ -203,12 +205,56 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     }
 }
 
+/**
+ * Highlighted stretch of a stage line (item = ARGB color). [ChordText] paints it behind the lyrics only: a background
+ * style would also cover the chord space above a line with chords.
+ */
+const val HIGHLIGHT_TAG = "highlight"
+
+/** Marks a highlighted phrase in the lyrics: `==phrase==` (vocalist, 31/10). It never crosses a line. */
+const val HIGHLIGHT_MARK = "=="
+
+/** Where each highlight mark starts on a line, in pairs (open, close); an unpaired last mark stays as text. */
+internal fun highlightMarks(line: String): List<Int> {
+    val marks = ArrayList<Int>()
+    var i = line.indexOf(HIGHLIGHT_MARK)
+    while (i >= 0) { marks += i; i = line.indexOf(HIGHLIGHT_MARK, i + HIGHLIGHT_MARK.length) }
+    return marks.take(marks.size / 2 * 2)
+}
+
+/**
+ * Takes the `==` marks out of a stage line and marks what was between them with [HIGHLIGHT_TAG] (a marker background). The line's
+ * styles and marks move with the text; a chord that sat on a mark moves to the letter after it.
+ */
+internal fun highlighted(line: AnnotatedString, color: Color): AnnotatedString {
+    val text = line.text
+    val marks = highlightMarks(text)
+    if (marks.isEmpty()) return line
+    val w = HIGHLIGHT_MARK.length
+    fun at(x: Int): Int = x - marks.sumOf { m -> (x - m).coerceIn(0, w) }
+    val b = AnnotatedString.Builder()
+    var from = 0
+    marks.forEach { m -> b.append(text.substring(from, m)); from = m + w }
+    b.append(text.substring(from))
+    val length = b.length
+    line.spanStyles.forEach { b.addStyle(it.item, at(it.start), at(it.end)) }
+    line.paragraphStyles.forEach { b.addStyle(it.item, at(it.start), at(it.end)) }
+    line.getStringAnnotations(0, text.length).forEach { a ->
+        val start = at(a.start)
+        val end = at(a.end).let { if (it <= start) start + 1 else it }
+        if (start < length) b.addStringAnnotation(a.tag, a.item, start, end.coerceAtMost(length))
+    }
+    for (k in marks.indices step 2) b.addStringAnnotation(HIGHLIGHT_TAG, color.toArgb().toString(), at(marks[k]), at(marks[k + 1]))
+    return b.toAnnotatedString()
+}
+
 // rough width of text in em, by kind of letter (proportional font): enough to keep one chord off the next
 private const val BOLD = 1.1f
 private const val CHORD_GAP = 0.5f
 
 internal fun emWidth(text: String): Float = text.sumOf { c ->
     when {
+        c == '=' -> 0.0   // highlight marks: they leave the line ([highlighted])
         c == ' ' || c in "iljI.,;:'!|()" -> 0.28
         c in "mwMW" -> 0.85
         c.isUpperCase() || c == '#' -> 0.68

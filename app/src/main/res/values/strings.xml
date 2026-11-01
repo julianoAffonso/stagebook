@@ -54,6 +54,7 @@
     <string name="editor_auto_meta">Left artist or year blank? When you save, the app fills them in from the web.</string>
     <string name="editor_delete">Delete song</string>
     <string name="editor_chord_label">Chord:</string>
+    <string name="editor_highlight">Highlight</string>
     <string name="editor_sections">Section:</string>
     <string name="editor_discard_confirm">Leave without saving? What you typed or imported will be lost.</string>
     <string name="editor_discard">Leave without saving</string>

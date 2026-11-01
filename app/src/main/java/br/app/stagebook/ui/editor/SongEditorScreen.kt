@@ -241,9 +241,10 @@ fun SongEditorScreen(
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
                     AnimatedVisibility(editingLyrics && !previewing) {
                         Column(Modifier.padding(bottom = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            SectionBar(onPick = { kind ->
-                                edit(insertSection(shown, kind))
-                            })
+                            SectionBar(
+                                onPick = { kind -> edit(insertSection(shown, kind)) },
+                                onHighlight = { edit(toggleHighlight(shown)) },
+                            )
                             // lyrics only profile: no chords in the editor (the saved lyrics don't change)
                             if (look.chords) {
                                 ChordBar(
@@ -444,7 +445,7 @@ private fun TrackRow(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit, mod
 }
 
 @Composable
-private fun SectionBar(onPick: (Sections.Kind) -> Unit, modifier: Modifier = Modifier) {
+private fun SectionBar(onPick: (Sections.Kind) -> Unit, onHighlight: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
@@ -453,6 +454,8 @@ private fun SectionBar(onPick: (Sections.Kind) -> Unit, modifier: Modifier = Mod
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off
+        SuggestionChip(onClick = onHighlight, label = { Text(stringResource(R.string.editor_highlight), style = MaterialTheme.typography.titleSmall) })
         // a short label says what the row is (an icon alone said nothing, user 30/10)
         Text(stringResource(R.string.editor_sections), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val names = rememberSectionNames(true)
