@@ -165,4 +165,14 @@ class ChordsTest {
         val body = br.app.stagebook.domain.ChordImport.toChordPro("A7/4   Bm7+\nlinha um aqui\nE*  C#7/9\nlinha dois aqui")
         listOf("[A7/4]", "[Bm7+]", "[E*]", "[C#7/9]").forEach { assertTrue(it, it in body) }
     }
+    @Test fun `a half step up and back down gives the same spelling (device test B-06)`() {
+        val wave = "{key: Dm}\n[Dm7] [G/D] [D7M(9)] [Bbº] [F#7(13)] [F#7(13-)] [B7(9-)] [Bb7(13)] [A7(13-)] [C/Bb] [Ab/Bb]"
+        assertEquals(wave, Chords.transpose(Chords.transpose(wave, 1), -1))
+        assertEquals(wave, Chords.transpose(Chords.transpose(wave, -1), 1))
+        // each note by its degree in the new key: in Ebm the F#7 (major third of Dm) is G7, in C#m it is E#… → F7
+        assertTrue(Chords.transpose(wave, 1), "[G7(13)]" in Chords.transpose(wave, 1))
+        assertEquals("Bb", Chords.spell(10, "C"))
+        assertEquals("F#", Chords.spell(6, "Dm"))
+        assertEquals(null, Chords.spell(5, "C#m"))   // E# → the caller uses the key's sharps (F)
+    }
 }
