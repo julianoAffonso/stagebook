@@ -49,7 +49,7 @@
     <string name="editor_edit">Editar música</string>
     <string name="editor_imported_new">Música importada. Confira e salve.</string>
     <string name="editor_imported_update">Letra nova importada. Confira e salve.</string>
-    <string name="editor_title">Título</string>
+    <string name="editor_title">Nome da música</string>
     <string name="editor_author">Artista</string>
     <string name="editor_year">Ano</string>
     <string name="editor_lyrics">Letra</string>

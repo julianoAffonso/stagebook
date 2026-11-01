@@ -223,12 +223,15 @@ fun SongEditorScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        // save in view; delete (existing song) in the ⋮, away from save (Google's pattern)
+                        // save and delete in view (delete only for a saved song)
                         IconButton(onClick = onSave) {
                             Icon(AppIcons.Save, stringResource(R.string.action_save), tint = MaterialTheme.colorScheme.primary)
                         }
+                        // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option)
                         if (uiState.canDelete) {
-                            OverflowMenu(listOf(MenuAction(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, danger = true)))
+                            IconButton(onClick = { deleting = true }) {
+                                Icon(AppIcons.Delete, stringResource(R.string.editor_delete), tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                     // song details collapsed on one line (user's request, 29/10): tapping opens the fields right there

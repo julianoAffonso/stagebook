@@ -29,23 +29,23 @@ class EditorTabsTest {
     @Test fun `new song opens with the details shown - tapping the summary collapses`() {
         val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
-        compose.onNodeWithText("Título").assertExists()
+        compose.onNodeWithText("Nome da música").assertExists()
         // when open, the summary doesn't show (it would repeat the title): the ▲ in the Title field collapses
         compose.onNodeWithText("Música sem título").assertDoesNotExist()
         compose.onNodeWithContentDescription("Recolher os dados da música").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Música sem título").assertExists()
-        compose.onNodeWithText("Título").assertDoesNotExist()
+        compose.onNodeWithText("Nome da música").assertDoesNotExist()
     }
 
     @Test fun `existing song opens collapsed with the summary - tapping opens the fields`() {
         compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
-        compose.onNodeWithText("Título").assertDoesNotExist()
+        compose.onNodeWithText("Nome da música").assertDoesNotExist()
         // the lyrics field doesn't show {key}/{capo}: they're in the summary
         compose.onNodeWithText("{key: G}", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Título").assertExists()
+        compose.onNodeWithText("Nome da música").assertExists()
     }
 
     @Test fun `saving without a title opens the details with the error`() {
@@ -53,13 +53,13 @@ class EditorTabsTest {
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
         state = state.copy(title = "", error = EditorError.TITLE_EMPTY)
         compose.waitForIdle()
-        compose.onNodeWithText("Título").assertExists()
+        compose.onNodeWithText("Nome da música").assertExists()
     }
 
     @Test fun `open - you can type the song name in the Title field`() {
         var typed = ""
         compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), { typed = it }, {}, {}, {}, {}, {}, {}) } }
-        compose.onNodeWithText("Título").performTextInput("Hazard")
+        compose.onNodeWithText("Nome da música").performTextInput("Hazard")
         org.junit.Assert.assertEquals("Hazard", typed)
     }
 
@@ -95,5 +95,19 @@ class EditorTabsTest {
         val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = null) } }
         compose.onNodeWithText("Escolher").assertDoesNotExist()
+    }
+
+    // delete is an icon in the bar (user, 01/11), only for a saved song: a new one has nothing to delete
+    @Test fun `delete shows only for a saved song`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithContentDescription("Excluir música").assertDoesNotExist()
+    }
+
+    @Test fun `deleting a saved song asks first`() {
+        var deleted = false
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha"), {}, {}, {}, {}, {}, {}, { deleted = true }) } }
+        compose.onNodeWithContentDescription("Excluir música").performClick()
+        org.junit.Assert.assertFalse(deleted)
+        compose.onNodeWithText("Apagar \"Hazard\"? Ela também sai dos setlists.").assertExists()   // the confirmation
     }
 }
