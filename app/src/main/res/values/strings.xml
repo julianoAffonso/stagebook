@@ -672,7 +672,7 @@
         <item quantity="one">Bring the song (%1$d)</item>
         <item quantity="other">Bring the songs (%1$d)</item>
     </plurals>
-    <string name="share_with_songs_hint">They only take the ones they don\'t have. Theirs don\'t change.</string>
+    <string name="share_with_songs_hint">Whoever receives gets only the songs they don\'t have yet. The ones they already have stay as they are.</string>
     <string name="share_offline_songs">No internet right now. Sending online shows up when it\'s back.</string>
     <string name="share_offline">No internet right now, just the QR. Sending online shows up when it\'s back.</string>
     <string name="share_sending">Sending…</string>
