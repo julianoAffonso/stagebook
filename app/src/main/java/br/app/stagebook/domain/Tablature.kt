@@ -39,8 +39,35 @@ object Tablature {
     /** Moves up ([semitones] > 0) or down the frets of every tablature in the text, without moving the columns. */
     fun shift(text: String, semitones: Int): String {
         if (semitones == 0) return text
+        val lines = text.split('\n')
         val flags = tabLines(text)
-        return text.split('\n').mapIndexed { i, line -> if (flags[i]) shiftLine(line, semitones) else line }.joinToString("\n")
+        val out = lines.toMutableList()
+        // each block of tab lines moves together, an octave up or down when it would leave the neck: a fret under 0 sent
+        // only that note up 12 and −1 then +1 turned the open strings into 12 (device test B-15). Now the whole block
+        // goes up when any fret would be under 0, and down when all would be at 12 or more, so the shape stays and a
+        // step down and back up gives the same tab
+        var i = 0
+        while (i < lines.size) {
+            if (!flags[i]) { i++; continue }
+            var end = i
+            while (end < lines.size && flags[end]) end++
+            val lowest = (i until end).flatMap { frets(lines[it]) }.minOrNull()
+            val octave = when {
+                lowest == null -> 0
+                lowest + semitones < 0 -> 12
+                lowest + semitones >= 12 -> -12
+                else -> 0
+            }
+            for (k in i until end) out[k] = shiftLine(lines[k], semitones + octave)
+            i = end
+        }
+        return out.joinToString("\n")
+    }
+
+    /** The frets in a tab line (1 or 2 digits after the string name), as [shiftLine] reads them. */
+    private fun frets(line: String): List<Int> {
+        val bar = line.indexOfFirst { it == '|' || it == ':' }.coerceAtLeast(0)
+        return Regex("""\d+""").findAll(line.substring(bar)).map { it.value }.filter { it.length <= MAX_FRET_DIGITS }.map { it.toInt() }.toList()
     }
 
     private const val MAX_FRET_DIGITS = 2
@@ -65,7 +92,8 @@ object Tablature {
             var width = j - i
             out.append(now)
             // a fret with more digits eats the dashes after it; with fewer, gives dashes back (the columns don't move)
-            while (now.length > width && j < line.length && line[j] == '-') { j++; width++ }
+            // never the dash that separates it from the next fret: "3-3" two up an octave became "1414" (B-15)
+            while (now.length > width && j < line.length && line[j] == '-' && !(j + 1 < line.length && line[j + 1].isDigit())) { j++; width++ }
             repeat(width - now.length) { out.append('-') }
             i = j
         }
