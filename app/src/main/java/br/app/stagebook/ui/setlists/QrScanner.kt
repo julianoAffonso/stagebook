@@ -30,10 +30,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Camera reading QR (decoded on the device with ZXing; no Google service). */
 @Composable
-fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
+fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier, onNoCamera: () -> Unit = {}) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val latest by rememberUpdatedState(onText)
+    val noCamera by rememberUpdatedState(onNoCamera)
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
     // the camera can be ready after the screen leaves (Cancel right after granting permission): then it can't be turned
@@ -43,7 +44,9 @@ fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
     AndroidView(
         factory = { ctx ->
             PreviewView(ctx).also { view ->
-                providerFuture.addListener({
+                // a camera that fails to open (in use, no camera at all, a broken service) says so instead of closing
+                // the app (audit 01/11)
+                providerFuture.addListener({ runCatching {
                     if (disposed.get()) return@addListener
                     val provider = providerFuture.get()
                     val preview = Preview.Builder().build().also { it.surfaceProvider = view.surfaceProvider }
@@ -58,7 +61,7 @@ fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
                     }
                     provider.unbindAll()
                     provider.bindToLifecycle(lifecycleOwner, camera, preview, analysis)
-                }, ContextCompat.getMainExecutor(ctx))
+                }.onFailure { if (!disposed.get()) noCamera() } }, ContextCompat.getMainExecutor(ctx))
             }
         },
         modifier = modifier,
@@ -66,7 +69,7 @@ fun QrScanner(onText: (String) -> Unit, modifier: Modifier = Modifier) {
     DisposableEffect(Unit) {
         onDispose {
             disposed.set(true)
-            providerFuture.addListener({ providerFuture.get().unbindAll() }, ContextCompat.getMainExecutor(context))
+            providerFuture.addListener({ runCatching { providerFuture.get().unbindAll() } }, ContextCompat.getMainExecutor(context))
             analysisExecutor.shutdown()
         }
     }

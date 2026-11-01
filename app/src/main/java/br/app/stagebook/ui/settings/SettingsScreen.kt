@@ -287,7 +287,8 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onChordList = viewModel::setChordList,
                 onChordTap = viewModel::setChordTap,
                 onNormalize = viewModel::normalizeSections,
-                onPairPedal = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
+                // some Android builds have no Bluetooth screen to open: nothing happens instead of a crash (audit 01/11)
+                onPairPedal = { runCatching { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) } },
                 onPedalAction = viewModel::setPedalAction,
                 onResetPedalKeys = viewModel::resetPedalKeys,
                 onMidiScan = { if (viewModel.hasMidiPermissions()) viewModel.scanMidi() else midiPermissions.launch(viewModel.midiPermissions()) },
