@@ -45,6 +45,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -183,6 +186,10 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
         if (n > 0) BadgedBox(badge = { Badge { Text(n.toString()) } }) { Icon(t.icon, contentDescription = null) }
         else Icon(t.icon, contentDescription = null)
     }
+    // one content for both layouts: a phone turned sideways moves from the bottom bar to the rail, and the tab's state
+    // (selection, search, scroll) goes along instead of starting over (device test B-01)
+    val currentContent by rememberUpdatedState(content)
+    val shared = remember { movableContentOf<Modifier> { m -> currentContent(m) } }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= Sizes.railBreakpoint) {
             val rail = rememberWideNavigationRailState()
@@ -213,7 +220,7 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                             )
                         }
                     }
-                    content(Modifier.weight(1f))
+                    shared(Modifier.weight(1f))
                 }
             }
         } else {
@@ -233,7 +240,7 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                         }
                     }
                 },
-            ) { inner -> Box(Modifier.padding(inner)) { content(Modifier.fillMaxSize()) } }
+            ) { inner -> Box(Modifier.padding(inner)) { shared(Modifier.fillMaxSize()) } }
         }
     }
 }
