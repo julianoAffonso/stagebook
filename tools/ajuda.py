@@ -59,6 +59,7 @@ SECTIONS = [
             "O − e + do tom transpõem a cifra meio tom de cada vez. O do capotraste não mexe nos diagramas, só avisa em que tom vai soar.",
             "Uma linha só com um nome entre colchetes vira o título de uma parte: [Refrão], [Solo de violino]. Os atalhos no topo põem as partes mais usadas.",
             "Os acordes ficam escritos como vieram do site (A7+, E7/9, E*), e o app mostra o diagrama certo para cada um.",
+            "Para destacar uma frase, selecione-a na letra e toque em Destacar (o botão com o marca-texto). Ela fica pintada no editor e no palco. No palco também dá: segure a linha e toque em Destacar esta linha. A cor do destaque fica em Ajustes → Visual do palco.",
         ],
         "text_en": [
             "In the editor the lyrics get the whole screen. Name, artist, year, BPM, key, capo, tags and backing track are under Song details at the top; tap to open them.",
@@ -66,6 +67,7 @@ SECTIONS = [
             "The key's − and + transpose the chords a half step at a time. The capo's don't change the diagrams; they only tell you what key it will sound in.",
             "A line with just a name in brackets becomes a part title: [Chorus], [Violin solo]. The shortcuts at the top add the usual parts.",
             "Chords stay written the way the site wrote them (A7+, E7/9, E*), and the app shows the right diagram for each.",
+            "To highlight a phrase, select it in the lyrics and tap Highlight (the marker button). It shows painted in the editor and on stage. On stage too: hold the line and tap Highlight this line. The highlight color is in Settings → Stage look.",
         ],
         "figs": [Fig(("tablet_4_editor_dados", "celular_4_editor", "Dados da música abertos", "Song details open")),
                  Fig(("tablet_4_editor_tags", "celular_4_editor_tags", "Tags da música", "The song's tags")),
@@ -192,13 +194,13 @@ SECTIONS = [
     {
         "id": "editor-web", "pt": "Editor no computador", "en": "Editor on the computer",
         "text_pt": [
-            "Em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090. Abra no navegador do computador, no mesmo Wi-Fi, e toque em Pedir para entrar. O tablet mostra um código de 4 números; autorize só se for o mesmo da página.",
-            "No computador dá para editar as músicas com teclado (Ctrl+S salva), mudar tom, capo e tags, montar setlists e importar colando a cifra, colando o endereço da página ou soltando arquivos.",
+            "Em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090. Abra no navegador do computador, no mesmo Wi-Fi, e toque em Pedir para entrar. O aparelho mostra um código de 4 números; autorize só se for o mesmo da página.",
+            "No computador dá para editar as músicas com teclado (Ctrl+S salva), mudar tom, capo e tags, destacar frases (botão Destacar), montar setlists e importar colando a cifra, colando o endereço da página ou soltando arquivos.",
             "Enquanto o editor está ligado, o ícone do computador aparece no topo das abas. Tocando nele você vê o endereço e pode fechar o editor. Ele também desliga sozinho depois de 5 minutos sem uso ou quando você fecha o app.",
         ],
         "text_en": [
-            "In Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090. Open it in the computer's browser, on the same Wi-Fi, and tap Ask to come in. The tablet shows a 4-digit code; approve only if it matches the page.",
-            "On the computer you can edit songs with a keyboard (Ctrl+S saves), change key, capo and tags, build setlists and import by pasting chords, pasting a page address or dropping files.",
+            "In Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090. Open it in the computer's browser, on the same Wi-Fi, and tap Ask to come in. The device shows a 4-digit code; approve only if it matches the page.",
+            "On the computer you can edit songs with a keyboard (Ctrl+S saves), change key, capo and tags, highlight phrases (Highlight button), build setlists and import by pasting chords, pasting a page address or dropping files.",
             "While the editor is on, the computer icon shows at the top of the tabs. Tap it to see the address and close the editor. It also turns off by itself after 5 minutes unused or when you close the app.",
         ],
         "figs": [Fig((None, "celular_5_ajustes_editor_web", "Ligando o editor no tablet", "Turning on the editor on the tablet")),
