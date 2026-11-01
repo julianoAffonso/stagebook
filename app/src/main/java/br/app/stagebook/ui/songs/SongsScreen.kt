@@ -176,7 +176,7 @@ fun SongsScreen(
                 )
             } else ScreenHeader(
                 title = stringResource(R.string.songs_title),
-                subtitle = pluralStringResource(R.plurals.song_count, uiState.total, uiState.total),
+                subtitle = br.app.stagebook.ui.components.songCountText(uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             SearchWithTags(

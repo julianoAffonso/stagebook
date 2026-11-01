@@ -140,7 +140,7 @@ fun SetlistsScreen(
                 )
             } else ScreenHeader(
                 title = stringResource(R.string.sets_title),
-                subtitle = pluralStringResource(R.plurals.set_count, uiState.sets.size, uiState.sets.size),
+                subtitle = br.app.stagebook.ui.components.setCountText(uiState.sets.size),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
@@ -156,7 +156,7 @@ fun SetlistsScreen(
                         items(uiState.sets, key = { it.id }) { set ->
                             SongListItem(
                                 title = set.name,
-                                subtitle = pluralStringResource(R.plurals.song_count, set.count, set.count),
+                                subtitle = br.app.stagebook.ui.components.songCountText(set.count),
                                 onClick = { if (selecting) toggle(set.id) else onOpen(set.id) },
                                 onLongClick = { toggle(set.id) },
                                 leading = if (selecting) { { androidx.compose.material3.Checkbox(set.id in selected, { toggle(set.id) }) } } else null,

@@ -23,6 +23,8 @@
         <item quantity="one">Reset to default (%1$d button changed)</item>
         <item quantity="other">Reset to default (%1$d buttons changed)</item>
     </plurals>
+    <string name="song_count_none">No songs</string>
+    <string name="set_count_none">No setlists</string>
     <plurals name="song_count">
         <item quantity="one">%d song</item>
         <item quantity="other">%d songs</item>

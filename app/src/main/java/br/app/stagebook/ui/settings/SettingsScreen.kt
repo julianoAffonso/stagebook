@@ -582,8 +582,8 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.ABOUT -> stringResource(R.string.settings_update_installed, ui.version) +
         if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
     SettingsSection.ADVANCED -> stringResource(R.string.settings_advanced_short)
-    SettingsSection.LIBRARY -> pluralStringResource(R.plurals.song_count, ui.songCount, ui.songCount) + " · " +
-        pluralStringResource(R.plurals.set_count, ui.setCount, ui.setCount)
+    SettingsSection.LIBRARY -> br.app.stagebook.ui.components.songCountText(ui.songCount) + " · " +
+        br.app.stagebook.ui.components.setCountText(ui.setCount)
 }
 
 @Composable
@@ -1407,8 +1407,8 @@ private fun AnnounceCard(look: Look, actions: SettingsActions) {
 private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.library_card)) {
         Text(
-            pluralStringResource(R.plurals.song_count, uiState.songCount, uiState.songCount) + " · " +
-                pluralStringResource(R.plurals.set_count, uiState.setCount, uiState.setCount),
+            br.app.stagebook.ui.components.songCountText(uiState.songCount) + " · " +
+                br.app.stagebook.ui.components.setCountText(uiState.setCount),
             style = MaterialTheme.typography.bodyLarge,
         )
     }
