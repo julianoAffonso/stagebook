@@ -317,7 +317,8 @@ class WebEditorApi(
         if (!upload.renameTo(named)) return problem("unreadable")
         try {
             val name = kotlinx.coroutines.runBlocking { store.copy(id, android.net.Uri.fromFile(named)) } ?: return problem("format")
-            repository.updateSong(id) { it.copy(track = name) }
+            val shown = br.app.stagebook.data.TrackStore.shownName(req.query["name"].orEmpty())
+            repository.updateSong(id) { it.copy(track = name, trackName = shown) }
             if (song.track != name) store.remove(song.track)
             return ok(json.encodeToString(TrackSet(name)))
         } finally {
@@ -328,7 +329,7 @@ class WebEditorApi(
     private fun trackDelete(id: String): HttpResponse {
         val store = tracks() ?: return HttpResponse.status(404)
         val song = repository.song(id) ?: return HttpResponse.status(404)
-        repository.updateSong(id) { it.copy(track = "") }
+        repository.updateSong(id) { it.copy(track = "", trackName = "") }
         store.remove(song.track)
         return HttpResponse.status(204)
     }

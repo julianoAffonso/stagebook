@@ -130,6 +130,7 @@ fun SongEditorRoute(
         onTempo = viewModel::setTempo,
         look = look,
         track = viewModel.track.takeIf { look.playerMode },
+        trackName = viewModel.trackName,
         onPickTrack = { picker.launch(TrackStore.MIME) },
         onRemoveTrack = viewModel::removeTrack,
         allTags = remember { viewModel.allTags() },
@@ -156,6 +157,7 @@ fun SongEditorScreen(
     track: String? = null,   // the song's backing track file ("" = none); null = can't pick here (new song or player off)
     onPickTrack: () -> Unit = {},
     onRemoveTrack: () -> Unit = {},
+    trackName: String = "",   // the track's own name ("" = unknown)
     allTags: List<String> = emptyList(),
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
 ) {
@@ -248,19 +250,14 @@ fun SongEditorScreen(
                         val wideData = wideLists()
                         SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo, wide = wideData)
                         val showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD
-                        if (wideData) {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                                if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, Modifier.weight(1f), showCapo = showCapo)
-                                else Spacer(Modifier.weight(1f))
-                                TagsChip(uiState.tags) { tagging = true }
-                                if (track != null) TrackChip(track.isNotEmpty(), onPickTrack, onRemoveTrack)
-                            }
-                        } else {
-                            // in the details, for new songs too (user, 30/10); only with the player on
-                            if (track != null) TrackRow(track.isNotEmpty(), onPickTrack, onRemoveTrack)
-                            TagsRow(uiState.tags) { tagging = true }
-                            if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = showCapo)
+                        // tags and backing track side by side, as fields like the others (user, 01/11: on the phone too);
+                        // the track only with the player on, for new songs too (user, 30/10)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                            TagsField(uiState.tags, Modifier.weight(1f)) { tagging = true }
+                            if (track != null) TrackField(track.isNotEmpty(), trackName, onPickTrack, onRemoveTrack, Modifier.weight(1f))
                         }
+                        // key and capo on their own line: next to the fields the capo got squeezed to "2"
+                        if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = showCapo)
                     }
                     // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
                     AnimatedVisibility(editingLyrics && !previewing) {
@@ -335,42 +332,56 @@ fun SongEditorScreen(
     }
 }
 
-/** Tablet: the tags as one chip (tap opens the tags window). */
+/**
+ * The backing track as a field like the others (user, 01/11): "Backing track" on top and the track's name, or
+ * "None" in grey; tapping picks or swaps it, × takes it off.
+ */
 @Composable
-private fun TagsChip(tags: List<String>, onEdit: () -> Unit) {
-    androidx.compose.material3.AssistChip(
-        onClick = onEdit,
-        label = { Text(if (tags.isEmpty()) stringResource(R.string.tags_action) else tags.joinToString(", "), maxLines = 1) },
-        leadingIcon = { Icon(AppIcons.Label, contentDescription = stringResource(R.string.tags_edit)) },
-    )
-}
-
-/** Tablet: the backing track as one chip (tap picks or swaps it; × removes it). */
-@Composable
-private fun TrackChip(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit) {
-    androidx.compose.material3.InputChip(
-        selected = has,
-        onClick = onPick,
-        label = { Text(stringResource(if (has) R.string.editor_track_chip_set else R.string.editor_track_chip_none), maxLines = 1) },
-        leadingIcon = { Icon(AppIcons.QueueMusic, contentDescription = null) },
-        trailingIcon = if (has) {
-            { IconButton(onClick = onRemove, modifier = Modifier.size(Sizes.touch)) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
-        } else null,
-    )
-}
-
-/** The song's tags in the details, and the button that opens the tags window. */
-@Composable
-private fun TagsRow(tags: List<String>, onEdit: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        Text(
-            if (tags.isEmpty()) stringResource(R.string.tags_none) else stringResource(R.string.tags_list, tags.joinToString(", ")),
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (tags.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
-        androidx.compose.material3.TextButton(onClick = onEdit) { Text(stringResource(R.string.tags_edit)) }
+private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pick by rememberUpdatedState(onPick)
+    LaunchedEffect(taps) {
+        taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) pick() }
     }
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    OutlinedTextField(
+        value = if (has) name.ifEmpty { stringResource(R.string.editor_track_unnamed) } else stringResource(R.string.editor_track_empty),
+        onValueChange = {},
+        readOnly = true,
+        singleLine = true,
+        label = { Text(stringResource(R.string.stage_backing_track)) },
+        leadingIcon = { Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else muted) },
+        trailingIcon = if (has) {
+            { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
+        } else null,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (has) MaterialTheme.colorScheme.onSurface else muted),
+        interactionSource = taps,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier,
+    )
+}
+
+/** The song's tags as a field like the others: "Tags" on top and the list, or "None" in grey; tapping opens the window. */
+@Composable
+private fun TagsField(tags: List<String>, modifier: Modifier = Modifier, onEdit: () -> Unit) {
+    val taps = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val edit by rememberUpdatedState(onEdit)
+    LaunchedEffect(taps) {
+        taps.interactions.collect { if (it is androidx.compose.foundation.interaction.PressInteraction.Release) edit() }
+    }
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    OutlinedTextField(
+        value = if (tags.isEmpty()) stringResource(R.string.tags_empty) else tags.joinToString(", "),
+        onValueChange = {},
+        readOnly = true,
+        singleLine = true,
+        label = { Text(stringResource(R.string.tags_title)) },
+        leadingIcon = { Icon(AppIcons.Label, null, tint = if (tags.isEmpty()) muted else MaterialTheme.colorScheme.primary) },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (tags.isEmpty()) muted else MaterialTheme.colorScheme.onSurface),
+        interactionSource = taps,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier,
+    )
 }
 
 /** End of the line at position `at` (outside the text = start). */
@@ -519,23 +530,6 @@ private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits
         )
-}
-
-/** Backing track of the song (T29, user's decision): picked here, so the stage shows the play button only on songs with one. */
-@Composable
-private fun TrackRow(has: Boolean, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.stage_backing_track), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(if (has) R.string.editor_track_set else R.string.editor_track_none),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (has) IconButton(onClick = onRemove) { Icon(AppIcons.Delete, stringResource(R.string.stage_track_remove)) }
-        ActionButton(stringResource(if (has) R.string.editor_track_change else R.string.editor_track_pick), onPick, tone = ButtonTone.Tonal)
-    }
 }
 
 @Composable

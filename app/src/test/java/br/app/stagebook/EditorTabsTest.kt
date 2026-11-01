@@ -83,11 +83,11 @@ class EditorTabsTest {
         compose.setContent {
             StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = track, onPickTrack = { picked++ }, onRemoveTrack = { removed++ }) }
         }
-        // tablet: the backing track is a chip next to key, capo and tags
-        compose.onNodeWithText("Escolher backing track").performClick()
+        // tablet: a field next to key, capo and tags; "Nenhum" in grey without a track (user, 01/11)
+        compose.onNodeWithText("Nenhum").performClick()
         assertEquals(1, picked)
         track = "song-1.ogg"
-        compose.onNodeWithText("Backing track").assertExists()
+        compose.onNodeWithText("Áudio anexado").assertExists()   // attached before names were kept
         compose.onNodeWithContentDescription("Remover o backing track").performClick()
         assertEquals(1, removed)
     }
@@ -110,5 +110,17 @@ class EditorTabsTest {
         compose.onNodeWithContentDescription("Excluir música").performClick()
         org.junit.Assert.assertFalse(deleted)
         compose.onNodeWithText("Apagar \"Hazard\"? Ela também sai dos setlists.").assertExists()   // the confirmation
+    }
+
+    @Test fun `the attached track shows its own name`() {
+        val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "")
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = "s1-123.ogg", trackName = "Hazard (backing)") } }
+        compose.onNodeWithText("Hazard", substring = true).performClick()   // opens the details
+        compose.onNodeWithText("Hazard (backing)").assertExists()
+    }
+
+    @Test fun `the shown name drops the extension`() {
+        assertEquals("Under Pressure", br.app.stagebook.data.TrackStore.shownName("Under Pressure.ogg"))
+        assertEquals("", br.app.stagebook.data.TrackStore.shownName(""))
     }
 }

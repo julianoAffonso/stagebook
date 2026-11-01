@@ -185,7 +185,6 @@
     <string name="stage_track_change">Change the backing track</string>
     <string name="stage_track_remove">Remove the backing track</string>
     <string name="editor_track_none">None for this song</string>
-    <string name="editor_track_set">Chosen. On stage, play shows up.</string>
     <string name="editor_track_pick">Choose</string>
     <string name="editor_track_change">Change</string>
     <string name="stage_track_bad">This file won\'t work. Use OGG, MP3 or WAV.</string>
@@ -882,9 +881,6 @@
     <string name="settings_pedal_from_tablet">tablet keyboard</string>
     <string name="settings_pedal_done">Already set</string>
     <string name="settings_pedal_done_none">None yet. Without setting anything, a regular pedal turns pages forward and back; a MIDI pedal needs to be set.</string>
-    <string name="tags_none">No tags</string>
-    <string name="tags_list">Tags: %1$s</string>
-    <string name="tags_edit">Edit tags</string>
     <string name="songs_add_to_set">Add to setlist</string>
     <string name="songs_add_to_set_title">Add to which setlist?</string>
     <plurals name="songs_added_to_set">
@@ -906,6 +902,7 @@
     </plurals>
     <string name="tags_auto_info">Tags, by the lyrics language, the songs that have neither Brazilian nor International yet. You can fix them later in each song\'s editor or by selecting several in the list.</string>
     <string name="editor_auto_meta_short">Blank: the app fills it in</string>
-    <string name="editor_track_chip_set">Backing track</string>
-    <string name="editor_track_chip_none">Pick a backing track</string>
+    <string name="editor_track_empty">None</string>
+    <string name="editor_track_unnamed">Audio attached</string>
+    <string name="tags_empty">None</string>
 </resources>
