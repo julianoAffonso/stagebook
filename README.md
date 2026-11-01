@@ -11,6 +11,8 @@
 
 Lyrics, chords and backing tracks in one app, to play live on Android. Solo or with the band.
 
+**Help, with a picture of every screen:** [docs/help](docs/help/index.html)
+
 ## What it does
 - **Stage:** full screen, always lit, in pages or scrolling. Turn with a Bluetooth or MIDI pedal (USB and Bluetooth),
   a tap or auto-scroll. Each pedal button can do something else.
