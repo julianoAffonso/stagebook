@@ -930,6 +930,29 @@ static void kweight_init(biquad *shelf, biquad *hp, double fs) {
     *hp = (biquad){1.0, -2.0, 1.0, 2.0 * (K * K - 1.0) / a0, (1.0 - K / Q + K * K) / a0, 0, 0};
 }
 
+// Integrated loudness from the 100 ms segments' mean squares: 400 ms blocks (4 segments, 75% overlap), the absolute
+// gate at -70 LUFS and the relative one 10 LU below (ITU-R BS.1770). Shared by analyze and analyzeMask (audio audit A3).
+static float gated_lufs(const double *segs, size_t nseg) {
+    double sumAbs = 0; long nAbs = 0;
+    for (size_t i = 0; i + 3 < nseg; i++) {
+        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
+        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
+    }
+    float lufs = -70.0f;
+    if (nAbs > 0) {
+        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
+        long n = 0;
+        for (size_t i = 0; i + 3 < nseg; i++) {
+            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
+            if (z <= 0) continue;
+            double l = -0.691 + 10 * log10(z);
+            if (l > -70.0 && l > rel) { sum += z; n++; }
+        }
+        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
+    }
+    return lufs;
+}
+
 // Loudness of a set of channels (bits in mask): {lufs, peak}. The same measurement as the backing above (K-weighting,
 // 400 ms blocks, -70 and -10 gates), but on the chosen channels: each mixer channel or pair.
 JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath, jint mask) {
@@ -966,23 +989,7 @@ JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath
         }
     }
     src_close(&v);
-    double sumAbs = 0; long nAbs = 0;
-    for (size_t i = 0; i + 3 < nseg; i++) {
-        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
-    }
-    float lufs = -70.0f;
-    if (nAbs > 0) {
-        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
-        long n = 0;
-        for (size_t i = 0; i + 3 < nseg; i++) {
-            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-            if (z <= 0) continue;
-            double l = -0.691 + 10 * log10(z);
-            if (l > -70.0 && l > rel) { sum += z; n++; }
-        }
-        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
-    }
+    float lufs = gated_lufs(segs, nseg);
     free(segs);
     float out[2] = {lufs, (float)peak};
     jfloatArray arr = (*e)->NewFloatArray(e, 2);
@@ -1027,24 +1034,7 @@ JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
     }
     src_close(&v);
 
-    // 400 ms blocks (4 segments) with 75% overlap
-    double sumAbs = 0; long nAbs = 0;
-    for (size_t i = 0; i + 3 < nseg; i++) {
-        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
-    }
-    float lufs = -70.0f;
-    if (nAbs > 0) {
-        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
-        long n = 0;
-        for (size_t i = 0; i + 3 < nseg; i++) {
-            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-            if (z <= 0) continue;
-            double l = -0.691 + 10 * log10(z);
-            if (l > -70.0 && l > rel) { sum += z; n++; }
-        }
-        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
-    }
+    float lufs = gated_lufs(segs, nseg);
     free(segs);
     float out[3] = {lufs, (float)peakB, (float)peakC};
     jfloatArray arr = (*e)->NewFloatArray(e, 3);
