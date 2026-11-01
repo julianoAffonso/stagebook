@@ -121,12 +121,8 @@ class SongsViewModel @Inject constructor(
     fun tagsOf(ids: List<String>): List<List<String>> = ids.mapNotNull { repository.song(it)?.tags }
 
     /** Adds and takes off tags on the chosen songs. */
-    fun setTags(ids: List<String>, add: List<String>, remove: List<String>) = repository.updateSongs(ids) { song ->
-        var t = song.tags
-        remove.forEach { t = br.app.stagebook.domain.Tags.remove(t, it) }
-        add.forEach { t = br.app.stagebook.domain.Tags.add(t, br.app.stagebook.domain.Tags.clean(it)) }
-        song.copy(tags = t)
-    }
+    fun setTags(ids: List<String>, add: List<String>, remove: List<String>) =
+        repository.updateSongs(ids) { song -> song.copy(tags = br.app.stagebook.domain.Tags.apply(song.tags, add, remove)) }
 
 
 
@@ -138,7 +134,7 @@ class SongsViewModel @Inject constructor(
      */
     fun addToSetlist(ids: List<String>, setId: String?, newName: String): AddResult {
         val lib = repository.library.value
-        val name = newName.ifBlank { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
+        val name = newName.ifBlank { br.app.stagebook.data.model.Setlist.defaultName() }
         val set = (if (setId != null) lib.setlist(setId) ?: return AddResult.Gone else null) ?: br.app.stagebook.data.model.Setlist(name = name)
         val extra = ids.filterNot { it in set.items }
         if (!br.app.stagebook.domain.QrPayload.fits(set, lib, extraIds = extra)) return AddResult.Limit

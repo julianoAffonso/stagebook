@@ -20,6 +20,14 @@ object Tags {
 
     fun remove(tags: List<String>, tag: String): List<String> = tags.filterNot { it.equals(tag, true) }
 
+    /** The tags window's answer applied to one song's tags: [remove] taken off, then [add] (cleaned) put on. */
+    fun apply(tags: List<String>, add: List<String>, remove: List<String>): List<String> {
+        var t = tags
+        remove.forEach { t = remove(t, it) }
+        add.forEach { t = add(t, clean(it)) }
+        return t
+    }
+
     /** Songs with every chosen tag; none chosen = all. */
     fun <T> filter(items: List<T>, chosen: Set<String>, tagsOf: (T) -> List<String>): List<T> {
         if (chosen.isEmpty()) return items
@@ -55,7 +63,9 @@ object LyricsLanguage {
         val lyrics = Chords.stripChords(text).lines().filter { Sections.detect(it) == null && !it.trimStart().startsWith("{") }
         val counts = words.keys.associateWith { 0 }.toMutableMap()
         lyrics.forEach { line ->
-            word.findAll(line.lowercase()).forEach { m ->
+            // the typographic apostrophe of most sites ("don’t", "I’m") counts as the plain one, as in LyricsCleaner
+            // (audit 01/11)
+            word.findAll(line.lowercase().replace('’', '\'')).forEach { m ->
                 val w = m.value.trim('\'')
                 words.forEach { (lang, set) -> if (w in set) counts[lang] = counts.getValue(lang) + 1 }
             }
