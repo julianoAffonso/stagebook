@@ -904,4 +904,11 @@
     <string name="editor_track_unnamed">Áudio anexado</string>
     <string name="tags_empty">Nenhuma</string>
     <string name="editor_lyrics_chords">Letra e cifra</string>
+    <plurals name="scan_parked">
+        <item quantity="one">Mais %d setlist veio junto e ficou em Recebidas.</item>
+        <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidas.</item>
+    </plurals>
+    <string name="share_internet_limit">Passa do limite do código: até %1$d itens por envio (cada música e cada setlist conta um).</string>
+    <string name="share_internet_limit_titles">Com as músicas passa do limite do código (até %1$d itens). Desligue “Levar as músicas” para mandar só os títulos.</string>
+    <string name="share_band_limit">Passa do limite da banda: até %1$d setlists por envio.</string>
 </resources>

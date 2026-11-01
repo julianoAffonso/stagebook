@@ -156,6 +156,15 @@ class ScreenshotTest {
         compose.onNodeWithText("Casamento").performClick()
     }
 
+    @Test fun setlistJourney2bShare() = journey("jornada_setlist_2b_compartilhar_varios", {
+        HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it, online = true, band = 2, songsIn = { ids -> ids.size * 20 }) }
+    }) {
+        compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
+        compose.onNodeWithText("Casamento").performClick()
+        compose.onNodeWithText("Show de sábado").performClick()
+        compose.onNodeWithContentDescription("Compartilhar").performClick()
+    }
+
     @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
 
     @Test fun setlistJourney4SelectSongs() = journey("jornada_setlist_4_selecionar_musicas", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }) {

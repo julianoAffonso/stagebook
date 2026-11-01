@@ -42,7 +42,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     sealed interface Received {
         /** [from]: the sender (their device), to join "the band" on accepting. */
-        data class Ok(val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null) : Received
+        // [others]: more setlists in the same send (several setlists shared at once, user 01/11)
+        data class Ok(val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null, val others: List<String> = emptyList()) : Received
         data object NotFound : Received   // wrong code or past the 12 h
         data object Offline : Received
         /** Came from a newer Stagebook (a format this app doesn't know yet): update to receive. */
@@ -83,8 +84,18 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     suspend fun sendSongs(songIds: List<String>): Sent? = songsPackage(songIds)?.let { (p, s) -> sendPackage(p, s) }
 
-    // each song in its own message and the list last: the receiver never sees the list without the songs
-    private suspend fun sendPackage(packed: ByteArray, songs: List<SharedSong>): Sent? = withContext(Dispatchers.IO) {
+    /** Several setlists in one send (one code): each list, and each song only once even if in more than one. */
+    suspend fun sendMany(setIds: List<String>, withSongs: Boolean): Sent? {
+        val packages = setIds.mapNotNull { setlistPackage(it, withSongs) }
+        if (packages.isEmpty()) return null
+        val songs = packages.flatMap { it.second }.distinctBy { br.app.stagebook.domain.TextKey.of(it.title) + "\t" + br.app.stagebook.domain.TextKey.of(it.author) }
+        return sendPackages(packages.map { it.first }, songs)
+    }
+
+    private suspend fun sendPackage(packed: ByteArray, songs: List<SharedSong>): Sent? = sendPackages(listOf(packed), songs)
+
+    // each song in its own message and the lists last: the receiver never sees a list without the songs
+    private suspend fun sendPackages(lists: List<ByteArray>, songs: List<SharedSong>): Sent? = withContext(Dispatchers.IO) {
         val code = ShareCode.generate()
         val keys = ShareCode.keys(code)
         var sent = 0
@@ -99,8 +110,10 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
                 else -> return@withContext null
             }
         }
-        val body = ShareCode.encrypt(keys.key, packed)
-        if (body.length > MAX_MESSAGE || !post(keys.topic, body)) return@withContext null
+        for (packed in lists) {
+            val body = ShareCode.encrypt(keys.key, packed)
+            if (body.length > MAX_MESSAGE || !post(keys.topic, body)) return@withContext null
+        }
         Sent(code, sent, skipped)
     }
 
@@ -137,18 +150,19 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
                 c.disconnect()
             }
         }.getOrNull() ?: return@withContext Received.Offline
-        // only what decrypts with this code (the channel is public: there may be junk from someone else); the newest
-        // setlist
+        // only what decrypts with this code (the channel is public: there may be junk from someone else); every setlist
+        // in the order sent (several setlists can go in one send)
         val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
         // only setlists and songs in plain text (BandContent): the rest is discarded
-        val text = plain.asReversed().firstNotNullOfOrNull { QrPayload.unpack(it) }?.takeIf(br.app.stagebook.domain.BandContent::listOk)
+        val lists = plain.mapNotNull { QrPayload.unpack(it) }.filter(br.app.stagebook.domain.BandContent::listOk).distinct()
+        val text = lists.firstOrNull()
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
             .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
         val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
         when {
             from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)
             text == null -> Received.NotFound
-            else -> Received.Ok(text, songs, from)
+            else -> Received.Ok(text, songs, from, lists.drop(1))
         }
     }
 

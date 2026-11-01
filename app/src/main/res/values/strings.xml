@@ -906,4 +906,11 @@
     <string name="editor_track_unnamed">Audio attached</string>
     <string name="tags_empty">None</string>
     <string name="editor_lyrics_chords">Lyrics and chords</string>
+    <plurals name="scan_parked">
+        <item quantity="one">%d more setlist came along and is waiting in Received.</item>
+        <item quantity="other">%d more setlists came along and are waiting in Received.</item>
+    </plurals>
+    <string name="share_internet_limit">Over the code\'s limit: up to %1$d items per send (each song and each setlist counts one).</string>
+    <string name="share_internet_limit_titles">With the songs it\'s over the code\'s limit (up to %1$d items). Turn off “Bring the songs” to send the titles only.</string>
+    <string name="share_band_limit">Over the band\'s limit: up to %1$d setlists per send.</string>
 </resources>

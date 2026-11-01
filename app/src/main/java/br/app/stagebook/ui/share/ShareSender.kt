@@ -101,6 +101,19 @@ class ShareSender(
         }
     }
 
+    /** Several setlists to the band in one tap: one package each; the result is how many got them. */
+    fun sendBandMany(packages: () -> List<Pair<ByteArray, List<SetlistCloud.SharedSong>>>) {
+        scope.launch {
+            var reached = 0
+            for ((list, songs) in packages()) {
+                val lan = bandLink.send(list, songs)
+                val net = if (connectivity.isOnline()) bandInternet.sendToBand(list, songs, lan) else 0
+                reached = maxOf(reached, lan.size + net)
+            }
+            bandSent.send(reached)
+        }
+    }
+
     companion object {
         const val JOIN_EVERY_MS = 15_000L
         const val JOIN_CHECKS = 40   // 10 min at most

@@ -222,4 +222,29 @@ class ScanSetlistTest {
         val found = link.songsFor(listOf(br.app.stagebook.data.BandLink.Wanted(repo.song(ids[0])!!.title), br.app.stagebook.data.BandLink.Wanted("Não existe")))
         assertEquals(listOf(ids[0]), found)
     }
+
+    // several setlists in one code (user, 01/11): the others wait in Received, each with its own songs
+    @Test fun `the other setlists of a send go to Received with their songs`() {
+        val (_, vm, _) = setup()
+        val songs = listOf(
+            br.app.stagebook.data.SetlistCloud.SharedSong("Lua Nova", "Banda", "", "linha"),
+            br.app.stagebook.data.SetlistCloud.SharedSong("Rio Azul", "Banda", "", "linha"),
+        )
+        vm.park(listOf(qr("Sábado", "Lua Nova"), qr("Domingo", "Rio Azul")), songs)
+        assertEquals(2, vm.parked.value)
+        val inbox = br.app.stagebook.data.BandInbox(context).items.value
+        val sabado = inbox.first { it.setName == "Sábado" }
+        assertEquals(listOf("Lua Nova"), sabado.songs.map { it.title })
+        assertTrue(inbox.any { it.setName == "Domingo" })
+    }
+
+    // each way of sending has its own limit (user, 01/11)
+    @Test fun `internet takes about 60 messages, the band 30 setlists`() {
+        assertTrue(br.app.stagebook.domain.BandContent.internetFits(lists = 3, songs = 56))   // 1 + 3 + 56 = 60
+        org.junit.Assert.assertFalse(br.app.stagebook.domain.BandContent.internetFits(lists = 3, songs = 57))
+        assertTrue(br.app.stagebook.domain.BandContent.internetFits(lists = 20, songs = 0))   // titles only
+        assertTrue(br.app.stagebook.domain.BandContent.bandFits(30))
+        org.junit.Assert.assertFalse(br.app.stagebook.domain.BandContent.bandFits(31))
+    }
+
 }
