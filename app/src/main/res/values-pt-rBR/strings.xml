@@ -401,6 +401,10 @@
     <string name="section_solo">Solo</string>
     <string name="section_interlude">Interlúdio</string>
     <string name="section_outro">Fim</string>
+    <string name="section_riff">Riff</string>
+    <string name="section_prelude">Prelúdio</string>
+    <string name="section_pre_verse">Pré-estrofe</string>
+    <string name="section_link">Link</string>
     <string name="settings_show_sections">Mostrar os títulos das seções</string>
     <string name="settings_sections_size">Tamanho dos títulos: %1$d%% da letra</string>
     <string name="settings_normalize">Marcar seções nas letras sem títulos</string>

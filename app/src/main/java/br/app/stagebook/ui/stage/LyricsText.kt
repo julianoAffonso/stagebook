@@ -64,6 +64,10 @@ fun rememberSectionNames(translate: Boolean): SectionNames {
         Sections.Kind.SOLO to stringResource(R.string.section_solo),
         Sections.Kind.INTERLUDE to stringResource(R.string.section_interlude),
         Sections.Kind.OUTRO to stringResource(R.string.section_outro),
+        Sections.Kind.RIFF to stringResource(R.string.section_riff),
+        Sections.Kind.PRELUDE to stringResource(R.string.section_prelude),
+        Sections.Kind.PRE_VERSE to stringResource(R.string.section_pre_verse),
+        Sections.Kind.LINK to stringResource(R.string.section_link),
     )
     return SectionNames(names)
 }
