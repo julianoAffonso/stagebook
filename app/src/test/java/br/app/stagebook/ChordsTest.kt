@@ -163,4 +163,12 @@ class ChordsTest {
         assertEquals(11, br.app.stagebook.domain.ChordName.parse("Cb")!!.rootPc)
         assertEquals(null, br.app.stagebook.domain.ChordName.parse("Refrão"))
     }
+
+    @Test fun `a marked chord keeps its mark and plays as the chord`() {
+        assertTrue(Chords.isChordLine("D  D  E*  F*"))
+        assertEquals("F#*", Chords.transposeChord("E*", 2))
+        assertEquals("E7M*", Chords.normalizeChord("Emaj7*"))
+        assertEquals(br.app.stagebook.domain.ChordTheory.notes("E"), br.app.stagebook.domain.ChordTheory.notes("E*"))
+        assertTrue(br.app.stagebook.domain.Voicings.shapes("E*", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR).isNotEmpty())
+    }
 }
