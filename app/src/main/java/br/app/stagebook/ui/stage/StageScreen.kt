@@ -1567,9 +1567,12 @@ private fun EditLineButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier = Modifier) {
     if (count <= 1) return
-    Box(modifier, contentAlignment = Alignment.CenterEnd) {
+    // as many dots as the width takes (at most PAGE_SLOTS): on a phone the row went past the edge and the last number was
+    // cut (device test B-18)
+    BoxWithConstraints(modifier, contentAlignment = Alignment.CenterEnd) {
+        val fits = ((maxWidth + Spacing.xs) / (Sizes.pageDot + Spacing.xs)).toInt().coerceIn(1, PAGE_SLOTS)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-            PageSlots.of(current, count, PAGE_SLOTS).forEach { i ->
+            PageSlots.of(current, count, fits).forEach { i ->
                 val on = i == current
                 Box(
                     Modifier
@@ -1581,6 +1584,8 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
                         if (i == null) "…" else "${i + 1}",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = if (on) MaterialTheme.colorScheme.background else color.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        softWrap = false,   // "12" in the small dot broke into "1" over "2"
                     )
                 }
             }
