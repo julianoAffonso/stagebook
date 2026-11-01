@@ -208,8 +208,8 @@ fun SongsScreen(
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
                                 trailing = {
+                                    // tapping the row opens the stage: no stage icon of its own (user, 01/11)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(AppIcons.Slideshow, contentDescription = stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
                                         // edit and delete in the ⋮ (Google's pattern), visible on the row
                                         OverflowMenu(
                                             listOf(
