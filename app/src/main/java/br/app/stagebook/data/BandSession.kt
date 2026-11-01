@@ -29,7 +29,9 @@ class BandSession(private val me: Hello) {
         onConduct: (Hello, String) -> String? = { _, _ -> null },
     ) {
         socket.use { s ->
-            s.soTimeout = ANSWER_TIMEOUT_MS
+            // whoever connects says who they are quickly: a silent connection doesn't hold a thread for 90 s (this side
+            // only reads the hello and one message; waiting for Allow is a write)
+            s.soTimeout = HELLO_TIMEOUT_MS
             val input = s.getInputStream().bufferedReader()
             val out = s.getOutputStream().bufferedWriter()
             val them = BandProtocol.readHello(input) ?: return
@@ -124,6 +126,7 @@ class BandSession(private val me: Hello) {
 
     companion object {
         const val SEND_TIMEOUT_MS = 15_000
+        const val HELLO_TIMEOUT_MS = 10_000
         const val ANSWER_TIMEOUT_MS = 90_000   // the other one has a minute and a half to tap Allow
     }
 }

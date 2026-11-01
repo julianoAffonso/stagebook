@@ -68,6 +68,7 @@ class BandLink @Inject constructor(
     enum class Join { WAITING, ACCEPTED, DENIED, BUSY, VERSION, FAILED }
 
     private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
+    private val sessions = kotlinx.coroutines.sync.Semaphore(SESSIONS)   // connections served at once
 
     private val _peers = MutableStateFlow<List<Peer>>(emptyList())
     val peers: StateFlow<List<Peer>> = _peers
@@ -342,14 +343,21 @@ class BandLink @Inject constructor(
             val session = BandSession(identity.hello())
             while (isActive) {
                 val client = runCatching { socket.accept() }.getOrNull() ?: break
+                // at most SESSIONS at once: a flood of connections from the Wi-Fi doesn't take every IO thread
+                if (!sessions.tryAcquire()) { runCatching { client.close() }; continue }
                 launch {
-                    runCatching {
+                    try {
                         session.serve(
                             client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
                             busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
                             onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false }, onConduct = ::onConduct,
                         )
-                    }.onFailure { Log.w(TAG, "band session failed: $it") }
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        Log.w(TAG, "band session failed: $e")
+                    } finally {
+                        sessions.release()
+                    }
                 }
             }
         }
@@ -474,6 +482,7 @@ class BandLink @Inject constructor(
         const val CONNECT_TIMEOUT_MS = 5_000
         const val BURST_MS = 30_000L
         const val MAX_ASK = 200   // a setlist never goes over this; guards against an odd request
+        const val SESSIONS = 8
         val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // hotspot interface names on Android devices
     }
 
