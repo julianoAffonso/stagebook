@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class ImportProblem { NOT_FOUND, UNREADABLE, NOT_SONG }
+enum class ImportProblem { NOT_FOUND, UNREADABLE, NOT_SONG, SEARCH_PAGE }
 
 /** What came out of a page (or pasted text): the song ready to review, a problem, or the tablature question first. */
 sealed interface PageImport {
@@ -47,6 +47,9 @@ class PageImporter @Inject constructor(
 
     /** [withTab] null = asks first when the page has tablature (answer with true or false). */
     suspend fun fromPage(parsed: PageData, withTab: Boolean? = null): PageImport {
+        // the search results aren't a song: Google's summary has bits of lyrics and came in as "cifra wave tom jobim"
+        // with a made-up key (device test B-05): open the chords page first
+        if (SEARCH_HOST.containsMatchIn(parsed.site)) return PageImport.Problem(ImportProblem.SEARCH_PAGE)
         if (withTab == null && (Tablature.hasTab(parsed.chordText) || Tablature.hasTab(parsed.text))) return PageImport.AskTab
         val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
         val page = parsed.copy(text = tab(ChordImport.plainSpaces(parsed.text)), chordText = tab(ChordImport.plainSpaces(parsed.chordText)))
@@ -94,5 +97,6 @@ class PageImporter @Inject constructor(
 
     private companion object {
         const val LOOKUP_TIMEOUT_MS = 8_000L
+        val SEARCH_HOST = Regex("""(^|\.)(google|bing|duckduckgo)\.""")
     }
 }

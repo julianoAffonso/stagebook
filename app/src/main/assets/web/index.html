@@ -218,7 +218,7 @@ const li = (title, sub, onclick) => {
   if (onclick) el.onclick = onclick;
   return el;
 };
-const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad, not_song: t.notSong });
+const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad, not_song: t.notSong, search_page: t.searchPage });
 
 let songs = [], sets = [];
 let current = null;   // the song open in the form ({id:""} = new)

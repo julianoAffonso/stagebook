@@ -217,6 +217,7 @@ class WebEditorApi(
                     br.app.stagebook.data.ImportProblem.NOT_FOUND -> "not_found"
                     br.app.stagebook.data.ImportProblem.NOT_SONG -> "not_song"
                     br.app.stagebook.data.ImportProblem.UNREADABLE -> "unreadable"
+                    br.app.stagebook.data.ImportProblem.SEARCH_PAGE -> "search_page"
                 },
             )
             is br.app.stagebook.data.PageImport.Song -> ok(

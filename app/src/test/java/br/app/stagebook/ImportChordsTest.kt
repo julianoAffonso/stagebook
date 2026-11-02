@@ -72,6 +72,16 @@ class ImportChordsTest {
         Unit
     }
 
+    @Test fun `a search results page is refused - open the chords page first (B-05)`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val importer = br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context))
+        val page = br.app.stagebook.domain.PageData(title = "cifra wave tom jobim", text = "Uma linha inventada para o teste aqui\nOutra linha de exemplo bem comum\nMais uma frase qualquer sem sentido\nE a última linha do exemplo", site = "www.google.com")
+        assertEquals(br.app.stagebook.data.PageImport.Problem(br.app.stagebook.data.ImportProblem.SEARCH_PAGE), importer.fromPage(page, false))
+        assertTrue(importer.fromPage(page.copy(site = "www.cifraclub.com.br"), false) is br.app.stagebook.data.PageImport.Song)
+    }
+
     @Test fun `lyrics and chords come in as ChordPro with key and capo`() {
         val text = import(chords = true)
         assertEquals("G", Chords.key(text))
