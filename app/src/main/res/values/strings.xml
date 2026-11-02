@@ -181,7 +181,6 @@
     <string name="settings_update_help">Android always asks you to confirm. The first time, it asks you to allow \"install apps from this source\". Allow it and come back. Your songs, setlists and settings stay.</string>
     <string name="settings_sections_help">Lines like [Chorus], Verse 2:, Bridge, Intro, Solo, Outro… become highlighted titles on stage.</string>
     <string name="settings_section_color">Section title color</string>
-    <string name="settings_player">Player</string>
     <string name="stage_play">Play the backing track</string>
     <string name="stage_pause">Pause the backing track</string>
     <string name="stage_track_pick">Choose this song\'s backing track</string>
@@ -192,7 +191,7 @@
     <string name="editor_track_change">Change</string>
     <string name="stage_track_bad">This file won\'t work. Use OGG, MP3 or WAV.</string>
     <string name="stage_backing_track">Backing track</string>
-    <string name="settings_player_on_short">On</string>
+    <string name="settings_player_on_short">Player on</string>
     <string name="essential_title">Essential mode</string>
     <string name="essential_help">For playing solo or with the battery running low. Turns off what runs in the background and removes from the screen what isn\'t used. You can turn off just one part.</string>
     <string name="essential_switch">Turn on essential mode</string>
@@ -216,7 +215,6 @@
     <string name="essential_alert_relink">To turn them back on, go to</string>
     <string name="essential_alert_route">Settings → Essential mode</string>
     <string name="action_never_again">Don\'t show again</string>
-    <string name="settings_player_off_short">Off</string>
     <string name="settings_player_mode_help">Plays each song\'s backing track on a USB audio interface or the device\'s own output. Works with OGG, MP3 and WAV, with any number of channels.</string>
     <string name="settings_lyric_sites">Lyrics sites</string>
     <string name="settings_chord_sites">Chord sites</string>
@@ -836,6 +834,8 @@
     <string name="eq_no_channel_title">No channel goes through the equalizer</string>
     <string name="usb_record_why">So Android remembers the USB interface and doesn\'t ask for permission every time the cable comes back, allow audio access. Stagebook records nothing: the interface\'s input only keeps the clock.</string>
     <string name="usb_record_allow">Allow</string>
+    <string name="player_title">Player</string>
+    <string name="metro_player_title">Metronome and player</string>
     <string name="mixer_listen_on_stage">The mixer and equalizer are on the stage, to adjust while listening: play a song, hold play and open the mixer.</string>
     <string name="stage_mix_hint">Changes here go to the global mixer, for every song. Turn it off to change this song only.</string>
     <string name="stage_mix_own">This song has its own settings: what you change here applies only to it.</string>

@@ -180,13 +180,13 @@ SECTIONS = [
         "id": "ajustes", "pt": "Ajustes", "en": "Settings",
         "text_pt": [
             "O Modo essencial é o primeiro da lista. Serve para quem toca sozinho ou está com pouca bateria: deixa só letra, cifra, diagramas e pedal. Dá para desligar só uma parte.",
-            "Em Visual do palco ficam as fontes, as cores, o tamanho dos títulos das partes, virar página ou rolar, e o metrônomo. Em Pedal você liga um pedal Bluetooth ou MIDI e escolhe o que cada botão faz. Com mais de um pedal, os botões ficam separados por pedal, com o conectado em cima.",
+            "Em Visual do palco ficam as fontes, as cores, o tamanho dos títulos das partes e virar página ou rolar. Em Metrônomo e player ficam o metrônomo, a saída USB e o botão da faixa no palco. Com o modo essencial desligando um dos dois, o item leva só o nome do que ficou ligado. Em Pedal você liga um pedal Bluetooth ou MIDI e escolhe o que cada botão faz. Com mais de um pedal, os botões ficam separados por pedal, com o conectado em cima.",
             "Com um pedal Bluetooth ligado, o teclado da tela pode sumir: o celular acha que o pedal é um teclado de verdade. Isso é do Android, não do app. No Gboard, ligue Configurações → Teclado físico → Mostrar teclado na tela. Em outros teclados, toque no ícone de teclado na barra de baixo e ligue Teclado na tela.",
             "Em Biblioteca e backup você salva um arquivo .stagebook com o que escolher: músicas, setlists, backing tracks e ajustes. Serve de backup e para passar músicas para outra pessoa.",
         ],
         "text_en": [
             "Essential mode is first on the list. It's for playing alone or on low battery: it leaves only lyrics, chords, diagrams and the pedal. You can turn off just part of it.",
-            "Stage look has the fonts, colours, part title size, turning pages or scrolling, and the metronome. In Pedal you connect a Bluetooth or MIDI pedal and choose what each button does. With more than one pedal, the buttons are grouped by pedal, the connected one on top.",
+            "Stage look has the fonts, colours, part title size and turning pages or scrolling. Metronome and player has the metronome, the USB output and the stage's track button. When essential mode turns one of them off, the item is named after the one left on. In Pedal you connect a Bluetooth or MIDI pedal and choose what each button does. With more than one pedal, the buttons are grouped by pedal, the connected one on top.",
             "With a Bluetooth pedal connected, the on-screen keyboard may disappear: the phone takes the pedal for a real keyboard. That comes from Android, not the app. In Gboard, turn on Settings → Physical keyboard → Show on-screen keyboard. In other keyboards, tap the keyboard icon on the bottom bar and turn on the on-screen keyboard.",
             "In Library and backup you save a .stagebook file with what you choose: songs, setlists, backing tracks and settings. It works as a backup and to pass songs to someone else.",
         ],
