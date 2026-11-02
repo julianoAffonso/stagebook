@@ -38,8 +38,13 @@ fun FactoryResetDialog(onBackupFirst: () -> Unit, onReset: () -> Unit, onDismiss
         title = { Text(stringResource(R.string.reset_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                br.app.stagebook.ui.components.StatusNote(stringResource(R.string.reset_warning), br.app.stagebook.ui.components.StatusTone.PROBLEM)
-                TextButton(onClick = onBackupFirst) { Text(stringResource(R.string.reset_backup_first)) }
+                // the way out sits inside the warning: a backup with everything (songs, tracks and settings) first
+                br.app.stagebook.ui.components.StatusNote(stringResource(R.string.reset_warning), br.app.stagebook.ui.components.StatusTone.PROBLEM) {
+                    br.app.stagebook.ui.components.ActionButton(
+                        stringResource(R.string.reset_backup_first), onClick = onBackupFirst,
+                        icon = br.app.stagebook.ui.components.AppIcons.Download, tone = br.app.stagebook.ui.components.ButtonTone.Tonal,
+                    )
+                }
                 Text(stringResource(R.string.reset_type_code), style = MaterialTheme.typography.bodyMedium)
                 Text(code, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.error)
                 OutlinedTextField(
