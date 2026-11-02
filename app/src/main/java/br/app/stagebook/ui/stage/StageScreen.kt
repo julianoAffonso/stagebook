@@ -798,8 +798,8 @@ fun StageScreen(
             // all hidden: the list stays as the ↶ that brings them back
             val stripHidden = remember(shownText) { Chords.hiddenChords(shownText).size }
             val stripPlace = if (look.chords && (stripChordCount > 0 || stripHidden > 0)) look.chordList else ChordListPlace.NONE
-            // the diagrams fill the width: as many rows as needed, the chords spread evenly over them and grown to the
-            // row's width, up to STRIP_MAX_SCALE (a few chords don't become huge)
+            // the diagrams fill the width: as many rows as needed, the chords spread evenly over them, each cell widened to
+            // the row's width (up to STRIP_MAX_SCALE: a few chords don't end up far apart)
             // the corner × keeps its own room, so it never sits on a chord
             val stripRoom = with(density) { columnWidth - STRIP_CLOSE_WIDTH.toPx() }
             val stripScale = with(density) {
@@ -813,7 +813,7 @@ fun StageScreen(
             val stripEm = with(density) {
                 val perRow = maxOf(1, (stripRoom / (STRIP_ITEM_WIDTH.toPx() * stripScale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
-                val tall = if (stripChordCount == 0) STRIP_RESTORE_HEIGHT.toPx() else rows * STRIP_ITEM_HEIGHT.toPx() * stripScale
+                val tall = if (stripChordCount == 0) STRIP_RESTORE_HEIGHT.toPx() else rows * STRIP_ITEM_HEIGHT.toPx()
                 (tall + Spacing.m.toPx()) / style.fontSize.toPx()
             }
             val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
@@ -1260,7 +1260,7 @@ private class GestureTargets(
 // song's
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
-private const val STRIP_MAX_SCALE = 1.8f
+private const val STRIP_MAX_SCALE = 2.5f
 private val STRIP_RESTORE_HEIGHT = 40.dp   // the chord list with every chord hidden: just the ↶
 
 /** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */
