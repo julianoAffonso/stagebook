@@ -386,7 +386,7 @@
     <string name="settings_chords_card">Chords in the lyrics</string>
     <string name="settings_chords_show">On stage</string>
     <string name="settings_lyrics_only">Lyrics only</string>
-    <string name="settings_chords_show_help">When off, the stage shows only the lyrics, even for songs with chords.</string>
+    <string name="settings_chords_show_help">Lyrics and chords: the chords show above the lyrics. Lyrics only: the stage shows just the lyrics, even in songs with chords.</string>
     <string name="settings_chords_size">Chord size: %1$d%% of the lyrics</string>
     <string name="settings_chords_color">Chord color</string>
     <string name="settings_translate_sections">Section names in the app\'s language</string>
