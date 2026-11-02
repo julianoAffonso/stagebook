@@ -517,8 +517,7 @@
     <!-- mixer do player (Ajustes → Player) -->
     <string name="mixer_title">Mixer</string>
     <string name="mixer_monitor">Ver os níveis ao vivo</string>
-    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui. Toque no nome do canal para escolher a saída, igualar o volume, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
-    <string name="mixer_channels">Canais nos backing tracks</string>
+    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui, até o número da faixa com mais canais já tocada. Toque no nome do canal para escolher a saída, igualar o volume, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
     <string name="mixer_channel">Canal %1$d</string>
     <string name="mixer_pair" tools:ignore="PluralsCandidate">Canais %1$d e %2$d</string>
     <string name="mixer_name">Nome</string>
