@@ -243,9 +243,16 @@ public class PlayerService extends Service {
     void useAndroidUsb(UsbDevice d) {
         if (androidUsb != null || connecting) return;
         if (deviceOut) releaseUsb();   // was on the device's own output: the interface arrived
+        // the output of this interface (same product name): with a USB headset on a hub too, the first USB output could
+        // be the headset (audit 02/11 #6); the first one only if no name matches
         AudioDeviceInfo out = null;
+        String wanted = d.getProductName() != null ? d.getProductName().trim() : "";
         for (AudioDeviceInfo a : getSystemService(AudioManager.class).getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
-            if (a.getType() == AudioDeviceInfo.TYPE_USB_DEVICE) { out = a; break; }
+            if (a.getType() != AudioDeviceInfo.TYPE_USB_DEVICE) continue;
+            if (out == null) out = a;
+            CharSequence name = a.getProductName();
+            // Android names it "USB-Audio - USB interface" (seen on the S26): the interface's name inside it
+            if (!wanted.isEmpty() && name != null && name.toString().toLowerCase(java.util.Locale.ROOT).contains(wanted.toLowerCase(java.util.Locale.ROOT))) { out = a; break; }
         }
         // Android hasn't listed it yet (just plugged in): the watchdog tries again
         if (out == null) { setStatus(getString(R.string.player_usb_connecting)); return; }
