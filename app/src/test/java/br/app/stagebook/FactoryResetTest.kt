@@ -43,7 +43,7 @@ class FactoryResetTest {
         compose.onNodeWithText("Código").performTextInput("4821")
         eraseButton.assertIsNotEnabled()
         compose.onNodeWithText("4821").performTextInput("")
-        compose.onNodeWithText("Salvar arquivo antes (com tudo)").performClick()
+        compose.onNodeWithText("Fazer um backup antes").performClick()
         assertEquals(1, backup)
         assertEquals(0, reset)
     }

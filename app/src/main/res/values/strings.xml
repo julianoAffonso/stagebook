@@ -273,8 +273,8 @@
     <string name="backup_share_info">To send a setlist right now, use Share inside the setlist. It goes by QR, over the internet or to the band on Wi-Fi.</string>
     <string name="reset_title">Erase everything</string>
     <string name="reset_info">Makes the app like new. Erases songs, setlists, backing tracks, settings and the band on this device.</string>
-    <string name="reset_warning">You\'ll lose everything in the app on this device, and it can\'t be undone. Save a file first?</string>
-    <string name="reset_backup_first">Save a file first (with everything)</string>
+    <string name="reset_warning">Erases every song, setlist, backing track and setting on this device. It can\'t be undone.</string>
+    <string name="reset_backup_first">Back up first</string>
     <string name="reset_type_code">To confirm, type the code:</string>
     <string name="reset_code_label">Code</string>
     <string name="reset_confirm">Erase everything</string>

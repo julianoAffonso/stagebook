@@ -280,8 +280,8 @@
     <string name="backup_share_info">Para mandar um setlist na hora, use Compartilhar dentro do setlist. Vai por QR, pela internet ou pela banda no Wi-Fi.</string>
     <string name="reset_title">Apagar tudo</string>
     <string name="reset_info">Deixa o app como novo. Apaga músicas, setlists, backing tracks, ajustes e a banda deste aparelho.</string>
-    <string name="reset_warning">Você vai perder tudo o que está no app neste aparelho, e não dá para desfazer. Quer salvar um arquivo antes?</string>
-    <string name="reset_backup_first">Salvar arquivo antes (com tudo)</string>
+    <string name="reset_warning">Apaga deste aparelho todas as músicas, setlists, backing tracks e ajustes. Não dá para desfazer.</string>
+    <string name="reset_backup_first">Fazer um backup antes</string>
     <string name="reset_type_code">Para confirmar, digite o código:</string>
     <string name="reset_code_label">Código</string>
     <string name="reset_confirm">Apagar tudo</string>
