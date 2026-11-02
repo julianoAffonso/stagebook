@@ -1010,6 +1010,7 @@ fun StageScreen(
         // setlist) in their place. The dots came from the header and replace "Continues →", which repeated what they
         // already show (user's request, 23/10)
         val nextTitle = uiState.songs.getOrNull(index + 1)?.let { if (it.missing) stringResource(R.string.set_item_missing) else it.title }
+            ?: uiState.followNext
         Row(
             Modifier.fillMaxWidth().padding(top = Spacing.s, bottom = Spacing.m),
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
@@ -1058,7 +1059,7 @@ fun StageScreen(
                 Text(
                     when {
                         nextTitle != null -> stringResource(R.string.stage_next, nextTitle)
-                        uiState.songs.size > 1 -> stringResource(R.string.stage_end)
+                        uiState.songs.size > 1 || uiState.followEnd -> stringResource(R.string.stage_end)
                         else -> ""
                     },
                     style = MaterialTheme.typography.titleMedium,
