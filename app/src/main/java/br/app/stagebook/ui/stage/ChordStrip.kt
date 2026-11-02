@@ -14,8 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -59,7 +57,7 @@ fun ChordStrip(
     instrument: Instrument,
     color: Color,
     modifier: Modifier = Modifier,
-    scale: Float = 1f,   // the stage grows the diagrams to fill the width (user, 02/11: they took ~3/4 of the TCL)
+    scale: Float = 1f,   // the stage widens each cell so the list fills the width (user, 02/11: it took ~3/4 of the TCL)
     onHide: (String) -> Unit = {},
     onHideAll: () -> Unit = {},
     onRestore: () -> Unit = {},
@@ -80,14 +78,13 @@ fun ChordStrip(
             // holding a chord takes it off this song's list (the stage asks to confirm); one × for the whole list below,
             // instead of one on every chord (user, 02/11)
             Box(
-                Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT * scale)
+                // the cell widens to fill the row; the drawing stays at its own size (scaled up, it looked blown up on
+                // the TCL; user, 02/11)
+                Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT)
                     .combinedClickable(onClickLabel = null, onLongClickLabel = stringResource(R.string.stage_chord_hide, c), onLongClick = { onHide(c) }, onClick = {}),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                ChordDiagram(
-                    c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true,
-                    modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale; transformOrigin = TransformOrigin(0.5f, 0f) },
-                )
+                ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true)
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
