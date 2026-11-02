@@ -47,7 +47,7 @@ Measured on real devices for one minute per screen (CPU as a share of **one** co
 | Stage, idle | 1.4% · 219 MB | 0.3% · 167 MB | 0.4% · 121 MB |
 | Stage, turning a page every 3 s | 12.7% · 198 MB | 3.8% · 146 MB | 2.9% · 120 MB |
 | Stage, following the band | — | 0.2% · 253 MB | 8.8% · 114 MB |
-| Leading the band for 5 minutes (9 songs, a page every 2 s) | 5.0% · 194 MB | — | 2.4% · 124 MB (following) |
+| Leading the band for 5 minutes (9 songs, a page every 2 s) | 5.0% · 194 MB | 0.8% · 186 MB (following) | 2.4% · 124 MB (following) |
 | Sending a setlist to the band | 2.6% · 198 MB | 0.0% · 160 MB (receiving) | — |
 | Backing track playing on a USB interface | 15% · 202 MB | — | — |
 | Band settings, idle | 3.1% · 205 MB | 7.2% · 186 MB | 0.6% · 123 MB |
