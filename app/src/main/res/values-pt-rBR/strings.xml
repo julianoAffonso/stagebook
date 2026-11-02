@@ -865,6 +865,8 @@
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
     <string name="eq_no_channel">Ligado, ele não mudaria nada. No mixer, toque no canal que quer equalizar e ligue \"Equalizador ligado\"; depois ligue o equalizador aqui.</string>
     <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
+    <string name="usb_record_why">Para o Android lembrar da interface USB e não pedir permissão toda vez que o cabo voltar, permita o acesso ao áudio. O Stagebook não grava nada: a entrada da interface só acerta o relógio.</string>
+    <string name="usb_record_allow">Permitir</string>
     <string name="mixer_listen_on_stage">Para ajustar ouvindo, toque uma música no palco, segure o play e abra o mixer.</string>
     <string name="stage_mix_hint">Os ajustes aqui mudam o mixer global, que vale para todas as músicas. Desligue para mexer só nesta música.</string>
     <string name="stage_mix_own">Esta música tem ajustes próprios: o que você muda aqui vale só para ela.</string>
