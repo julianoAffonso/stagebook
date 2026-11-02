@@ -479,21 +479,18 @@ fun StageScreen(
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
         // the time of the next frame, but never waiting for it longer than a beat: once on the TCL the beats stopped
-        // (icon dim, no glow) while the metronome stayed on, as if no frame came; without a frame the count goes on
-        // from the time waited, so the beats keep coming (device test, 02/11)
-        suspend fun frameOrNull() = kotlinx.coroutines.withTimeoutOrNull(periodNanos / 1_000_000) { androidx.compose.runtime.withFrameNanos { it } }
-        val firstFrame = frameOrNull()
-        val start = firstFrame ?: 0L
+        // (icon dim, no glow) while the metronome stayed on, as if no frame came; without a frame the time comes from
+        // System.nanoTime, the clock frame times use too, so the count doesn't drift (audit 02/11)
+        suspend fun now() = kotlinx.coroutines.withTimeoutOrNull(periodNanos / 1_000_000) { androidx.compose.runtime.withFrameNanos { it } } ?: System.nanoTime()
+        val start = now()
         var now = start
         while (true) {
             // the beat from the clock, not counted: back from the screen off, it jumps to the current beat instead of
             // blinking every missed one in a row (audit 01/11)
             val beat = metroBeatAt(now - start, periodNanos)
             metroBeat = beat
-            val wait = ((start + (beat + 1) * periodNanos - now) / 1_000_000).coerceAtLeast(0)
-            delay(wait)
-            // a frame's time only when the count started on one (both on the same clock)
-            now = (if (firstFrame != null) frameOrNull() else null) ?: (now + wait * 1_000_000)
+            delay(((start + (beat + 1) * periodNanos - now) / 1_000_000).coerceAtLeast(0))
+            now = now()
         }
     }
     DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
