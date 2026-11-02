@@ -64,8 +64,19 @@ class StageViewModel @Inject constructor(
     /** Plays the stage chord the way chosen in Settings (picked, strummed or both). */
     fun playChord(notes: List<Int>, keyboard: Boolean) = chordPlayer.play(notes, repository.library.value.look.chordPlay, keyboard)
 
-    /** Metronome click on the regular output (null = stopped or visual only). */
-    fun metronomeSound(bpm: Int?) { if (bpm != null) metronome.start(bpm) else metronome.stop() }
+    /**
+     * Metronome click (null = stopped or visual only): on the USB output chosen in Settings when the player is there
+     * (user, 02/11), otherwise on the device's regular output.
+     */
+    fun metronomeSound(bpm: Int?) {
+        val look = repository.library.value.look
+        val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
+        when {
+            bpm == null -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
+            look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb) -> metronome.stop()
+            else -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm) }
+        }
+    }
 
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {

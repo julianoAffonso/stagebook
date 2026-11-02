@@ -327,6 +327,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
                 onMetronomeShown = viewModel::setMetronomeShown,
+                onMetronomeOut = viewModel::setMetronomeOut,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 // the help lives on the web, in the app's language (user, 01/11): with no internet, a notice instead
@@ -410,6 +411,7 @@ data class SettingsActions(
     val onFactoryReset: () -> Unit = {},
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
     val onMetronomeShown: (Boolean) -> Unit = {},
+    val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
     val onOpenHelp: () -> Unit = {},
@@ -1433,6 +1435,17 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
         if (!look.metroShown) return@SettingsCard
         SwitchRow(stringResource(R.string.metro_count), look.metroCount, { set(count = it) })
         SwitchRow(stringResource(R.string.metro_sound), look.metroSound, { set(sound = it) })
+        // the drummer hears it through the desk: a USB output (user, 02/11); only with the player on
+        if (look.metroSound && look.playerMode) {
+            val outputs = look.mixer.output
+            val options = br.app.stagebook.domain.MetronomeOut.options(outputs)
+            val chosen = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair).takeIf { it in options } ?: br.app.stagebook.domain.MetronomeOut.DEVICE
+            OptionDropdown(
+                stringResource(R.string.metro_out), options, chosen, { actions.onMetronomeOut(it) },
+                { o -> if (o.device) stringResource(R.string.metro_out_device) else outputs.label() + " · " + br.app.stagebook.ui.components.outputName(o.out, o.pair, outputs) },
+            )
+            if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
         if (look.metroGlow) {
             Text(stringResource(R.string.metro_glow_color), style = MaterialTheme.typography.bodyLarge)

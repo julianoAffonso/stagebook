@@ -144,6 +144,10 @@ data class Look(
     val announce: Boolean = true,   // Now Playing: announce the current song on the local network (OBS, Resolume)
     val metroGlow: Boolean = true,   // glow on the stage edge on the beat
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // glow color
+    // where the metronome sounds (user, 02/11): -1 = the device (headphones, speaker); otherwise the USB interface's
+    // output (the first one, and the next too when [metroUsbPair]), so the drummer hears it through the desk
+    val metroUsbOut: Int = -1,
+    val metroUsbPair: Boolean = true,
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // buttons set to another command in settings (key → command)
     val pedalSeen: List<Int> = emptyList(),   // the pedal's buttons pressed in settings: listed with what each does (user, 01/11)
     val midiBtAddress: String = "",   // Bluetooth MIDI pedal chosen in Settings (the app reconnects by itself)

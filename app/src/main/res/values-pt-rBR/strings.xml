@@ -866,6 +866,9 @@
     <string name="usb_record_allow">Permitir</string>
     <string name="player_title">Player</string>
     <string name="player_on_alone">Ligado</string>
+    <string name="metro_out">Saída do som</string>
+    <string name="metro_out_device">Aparelho (fone ou alto-falante)</string>
+    <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
     <string name="metro_player_title">Metrônomo e player</string>
     <string name="mixer_listen_on_stage">O mixer e o equalizador ficam no palco, para ajustar ouvindo: toque uma música, segure o play e abra o mixer.</string>
     <string name="stage_mix_hint">Os ajustes aqui mudam o mixer global, que vale para todas as músicas. Desligue para mexer só nesta música.</string>
