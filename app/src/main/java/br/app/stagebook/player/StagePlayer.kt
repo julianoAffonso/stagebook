@@ -64,7 +64,9 @@ class StagePlayer @Inject constructor(
     private val _usbReady = MutableStateFlow(false)
     val usbReady: StateFlow<Boolean> = _usbReady
 
-    @Volatile private var wanted: File? = null    // backing track of the open song
+    // backing track the player holds: live, the one playing goes on when the song on screen changes (TrackQueue)
+    private val queue = br.app.stagebook.domain.TrackQueue<File>()
+    private val wanted: File? get() = queue.wanted
     @Volatile private var loaded: File? = null    // what's in the engine
     // what's in the engine with its mix and normalization applied: only this one plays (the output could connect while
     // load() was still measuring, and the song started with the old gains; audit 01/11)
@@ -95,12 +97,9 @@ class StagePlayer @Inject constructor(
         }
     }
 
-    /** Song open on stage (null = no backing track): stops whatever is playing and notes the new one. */
+    /** Song open on stage (null = no backing track): loads its track, or, with a track playing, after it stops. */
     fun open(track: File?) {
-        if (track == wanted) return
-        wanted = track
-        if (_ui.value.playing || _ui.value.waiting) pause()
-        if (PlayerService.running) scope.launch { load() }
+        if (queue.open(track, playing = _ui.value.playing || _ui.value.waiting) && PlayerService.running) scope.launch { load() }
     }
 
     /** Ask to skip battery saving (play with the screen off)? Only once, and only if it hasn't yet. */
@@ -144,6 +143,8 @@ class StagePlayer @Inject constructor(
             Engine.pause()
             PlayerService.playing(false)
         }
+        // the song on screen changed while this track played: its track comes in now
+        if (queue.stopped() && PlayerService.running) scope.launch { load() }
     }
 
     /**

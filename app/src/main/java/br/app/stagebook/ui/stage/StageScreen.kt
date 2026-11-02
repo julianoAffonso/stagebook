@@ -962,14 +962,15 @@ fun StageScreen(
             }
             SideEffect { autoAvailable = scrollMode && !song.missing && maxScroll > 0 }
             // player (player mode only): transparent play/pause in the bottom right corner, over the lyrics
-            // only songs with a backing track show the button (T29, user's decision); the track is picked in the editor
-            if (look.playerMode && !song.missing && song.track.isNotEmpty()) {
+            // only songs with a backing track show the button (T29, user's decision); the track is picked in the editor.
+            // A track playing goes on when the song changes, so the button stays (to stop it) on any song meanwhile
+            if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
                 TrackButton(
-                    hasTrack = song.track.isNotEmpty(),
+                    hasTrack = song.track.isNotEmpty() || playing,
                     playing = playing,
                     stops = look.trackStops,
                     fg = fg,
-                    onClick = { if (song.track.isEmpty()) onPickTrack(song.id) else onTogglePlay() },
+                    onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
                     onChange = { onPickTrack(song.id) },
                     onRemove = { onRemoveTrack(song.id) },
                     // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button

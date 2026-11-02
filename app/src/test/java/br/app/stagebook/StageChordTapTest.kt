@@ -137,4 +137,12 @@ class StageChordTapTest {
         compose.onNodeWithText("Trocar o backing track").assertExists()
         assertEquals(0, compose.onAllNodesWithText("Editar esta linha").fetchSemanticsNodes().size)
     }
+
+    // live, the track playing goes on when the song changes: on a song without a track the button stays, to stop it
+    @Test fun `with a track playing, a song without a track still shows the stop button`() {
+        compose.setContent {
+            StagebookTheme { StageScreen(StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f, playerMode = true)), 0, 0, { _, _ -> }, playing = true) }
+        }
+        compose.onNodeWithContentDescription("Parar o backing track e voltar ao início").assertExists()
+    }
 }
