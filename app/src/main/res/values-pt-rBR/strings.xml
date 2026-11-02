@@ -910,6 +910,8 @@
     <string name="settings_pedal_from_tablet">teclado do tablet</string>
     <string name="settings_pedal_done">Botões do pedal</string>
     <string name="settings_pedal_default">padrão</string>
+    <string name="settings_pedal_group_on">%1$s · conectado</string>
+    <string name="settings_pedal_group_off">%1$s · desligado</string>
     <string name="settings_pedal_done_none">Nenhum ainda. Aperte cada botão do pedal: ele aparece aqui com o que faz.</string>
     <string name="songs_add_to_set">Adicionar ao setlist</string>
     <string name="songs_add_to_set_title">Adicionar a qual setlist?</string>
