@@ -44,11 +44,13 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 | Tela | TCL NXTPAPER 11 Plus | Galaxy S26 Ultra | Chuwi Hi10 XPro |
 |---|---|---|---|
 | Lista de músicas, parada | 1,4% · 194 MB | 0,1% · 136 MB | 1,5% · 117 MB |
-| Palco, parado | 1,4% · 219 MB | 0,3% · 167 MB | — |
-| Palco, virando página a cada 3 s | 12,7% · 198 MB | 3,8% · 146 MB | — |
+| Palco, parado | 1,4% · 219 MB | 0,3% · 167 MB | 0,4% · 121 MB |
+| Palco, virando página a cada 3 s | 12,7% · 198 MB | 3,8% · 146 MB | 2,9% · 120 MB |
 | Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB |
+| Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | — | 2,4% · 124 MB (acompanhando) |
+| Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — |
 | Backing track tocando numa interface USB | 15% · 202 MB | — | — |
-| Ajustes da banda, parado | 3,1% · 205 MB | 7,2% · 186 MB | — |
+| Ajustes da banda, parado | 3,1% · 205 MB | 7,2% · 186 MB | 0,6% · 123 MB |
 
 Mesmo tocando uma faixa, o Stagebook usa menos de 2% do processador inteiro. O modo essencial quase não muda esses
 números: o ganho dele é a tela mais simples.
