@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- USB audio interfaces the player speaks to (class 1, subclass 2, protocol 0x20 = USB Audio 2.0, like the USB interface):
+<!-- USB audio interfaces the player speaks to (class 1, subclass 2, protocol 0x20 = USB Audio 2.0):
      plugging one in, Android offers to open Stagebook and grants the USB permission (UsbLink.isAudioOut) -->
 <resources>
     <usb-device class="1" subclass="2" protocol="32" />

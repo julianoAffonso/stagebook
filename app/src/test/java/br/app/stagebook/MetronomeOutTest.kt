@@ -12,7 +12,7 @@ class MetronomeOutTest {
     }
 
     @Test fun `a 4 output interface offers its pairs then each output`() {
-        val o = MetronomeOut.options(OutputInfo("usb:1397:050d", "USB interface", 4))
+        val o = MetronomeOut.options(OutputInfo("usb:1397:050d", "USB Mixer", 4))
         assertEquals(
             listOf(MetronomeOut.DEVICE, MetronomeOut(0, true), MetronomeOut(2, true), MetronomeOut(0, false), MetronomeOut(1, false), MetronomeOut(2, false), MetronomeOut(3, false)),
             o,

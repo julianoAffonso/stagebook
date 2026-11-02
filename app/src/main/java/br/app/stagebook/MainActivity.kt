@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
     private val localNetwork = registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) band.update() }
 
     // recording permission, asked with a word first when a USB audio interface is plugged in: without it Android greys
-    // out "Always" for an interface that also records (the USB interface), so every time the cable came back it asked for the
+    // out "Always" for an interface that also records (a mixer), so every time the cable came back it asked for the
     // USB permission again and opened another app on top, mid-song (device test, 02/11)
     private val recordAudio = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
     private val askRecord = androidx.compose.runtime.mutableStateOf(false)
