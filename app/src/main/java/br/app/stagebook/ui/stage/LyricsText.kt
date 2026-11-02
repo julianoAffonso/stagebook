@@ -1,5 +1,8 @@
 package br.app.stagebook.ui.stage
 
+import br.app.stagebook.domain.HIGHLIGHT_MARK
+import br.app.stagebook.domain.highlightMarks
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -223,16 +226,6 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
  */
 const val HIGHLIGHT_TAG = "highlight"
 
-/** Marks a highlighted phrase in the lyrics: `==phrase==` (vocalist, 31/10). It never crosses a line. */
-const val HIGHLIGHT_MARK = "=="
-
-/** Where each highlight mark starts on a line, in pairs (open, close); an unpaired last mark stays as text. */
-internal fun highlightMarks(line: String): List<Int> {
-    val marks = ArrayList<Int>()
-    var i = line.indexOf(HIGHLIGHT_MARK)
-    while (i >= 0) { marks += i; i = line.indexOf(HIGHLIGHT_MARK, i + HIGHLIGHT_MARK.length) }
-    return marks.take(marks.size / 2 * 2)
-}
 
 /**
  * Takes the `==` marks out of a stage line and marks what was between them with [HIGHLIGHT_TAG] (a marker background). The line's

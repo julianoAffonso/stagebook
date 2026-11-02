@@ -2,8 +2,8 @@ package br.app.stagebook.ui.editor
 
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import br.app.stagebook.ui.stage.HIGHLIGHT_MARK
-import br.app.stagebook.ui.stage.highlightMarks
+import br.app.stagebook.domain.HIGHLIGHT_MARK
+import br.app.stagebook.domain.highlightMarks
 
 /**
  * "Highlight" in the editor (vocalist, 31/10): wraps the selection in `==` so the stage paints it with a marker. No

@@ -103,7 +103,7 @@ class StageChordTapTest {
                 StageScreen(
                     StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f)),
                     0, 0, { s, p -> position = s to p },
-                    onHighlightWords = { id, line, shown, from, to -> marked = listOf(id, line, shown, from, to); marks++ },
+                    onHighlightWords = { id, line, shown, from, to, _ -> marked = listOf(id, line, shown, from, to); marks++ },
                 )
             }
         }
