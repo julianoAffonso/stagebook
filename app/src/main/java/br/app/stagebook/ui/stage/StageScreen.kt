@@ -469,7 +469,10 @@ fun StageScreen(
     var metroBeat by remember(index) { mutableIntStateOf(-1) }   // current beat since play (0 = first)
     // the sound (T33d) and the blink start together; the blink aims at the moment of each beat since the start (it
     // doesn't drift)
-    LaunchedEffect(metroOn, metroBpm, look.metroSound, metroUsbReady) {
+    // the USB interface becoming ready restarts it only when the metronome sounds there: with the device output, play on
+    // the track (the player reaching the interface) restarted the click from beat 1 mid-song (audit 02/11)
+    val usbRestart = metroUsbReady && look.playerMode && look.metroUsbOut >= 0
+    LaunchedEffect(metroOn, metroBpm, look.metroSound, usbRestart) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
