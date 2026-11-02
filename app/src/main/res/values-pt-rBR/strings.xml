@@ -246,6 +246,7 @@
     <string name="settings_chord_list_bottom">Fim</string>
     <string name="stage_chord_hide">Esconder %1$s da lista</string>
     <string name="stage_chord_hide_confirm">Esconder %1$s da lista de acordes desta música?</string>
+    <string name="stage_chords_hide_all">Esconder os acordes desta música</string>
     <string name="stage_chord_hide_ok">Esconder</string>
     <plurals name="stage_chords_restore">
         <item quantity="one">Mostrar de novo %1$d acorde escondido</item>

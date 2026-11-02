@@ -553,6 +553,8 @@ fun StageScreen(
                 // a long press on the track button belongs to it (change/remove), not "edit this line"
                 if (trackButton?.contains(p) == true) return@GestureTargets
                 val line = hit.lineAt(p)
+                // the chord list has its own long press (take a chord off the list)
+                if (line != null && pageLines.getOrNull(line)?.source == -1) return@GestureTargets
                 if (!song.missing && line != null) {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     editOffer = EditOffer(p, line)
@@ -793,11 +795,26 @@ fun StageScreen(
             // of diagrams at this width, so the pagination counts it.
             val density = LocalDensity.current
             val stripChordCount = remember(shownText) { stripChords(shownText).size }
-            val stripPlace = if (look.chords && stripChordCount > 0) look.chordList else ChordListPlace.NONE
+            // all hidden: the list stays as the ↶ that brings them back
+            val stripHidden = remember(shownText) { Chords.hiddenChords(shownText).size }
+            val stripPlace = if (look.chords && (stripChordCount > 0 || stripHidden > 0)) look.chordList else ChordListPlace.NONE
+            // the diagrams fill the width: as many rows as needed, the chords spread evenly over them and grown to the
+            // row's width, up to STRIP_MAX_SCALE (a few chords don't become huge)
+            // the corner × keeps its own room, so it never sits on a chord
+            val stripRoom = with(density) { columnWidth - STRIP_CLOSE_WIDTH.toPx() }
+            val stripScale = with(density) {
+                val item = STRIP_ITEM_WIDTH.toPx()
+                val perRowMax = maxOf(1, (stripRoom / item).toInt())
+                val rows = maxOf(1, (stripChordCount + perRowMax - 1) / perRowMax)
+                val perRow = maxOf(1, (stripChordCount + rows - 1) / rows)
+                // a whole pixel less per chord: rounding up put the last chord of a full row on a row of its own
+                (((stripRoom / perRow).toInt() - 1) / item).coerceIn(1f, STRIP_MAX_SCALE)
+            }
             val stripEm = with(density) {
-                val perRow = maxOf(1, columnWidth / STRIP_ITEM_WIDTH.roundToPx())
+                val perRow = maxOf(1, (stripRoom / (STRIP_ITEM_WIDTH.toPx() * stripScale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
-                (rows * STRIP_ITEM_HEIGHT.toPx() + Spacing.m.toPx()) / style.fontSize.toPx()
+                val tall = if (stripChordCount == 0) STRIP_RESTORE_HEIGHT.toPx() else rows * STRIP_ITEM_HEIGHT.toPx() * stripScale
+                (tall + Spacing.m.toPx()) / style.fontSize.toPx()
             }
             val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
                 val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth)
@@ -939,7 +956,9 @@ fun StageScreen(
                                     Color(look.chordColor),
                                     // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
                                     Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },
+                                    scale = stripScale,
                                     onHide = { hidingChord = it },
+                                    onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
                                 )
                             }
@@ -1241,6 +1260,8 @@ private class GestureTargets(
 // song's
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
+private const val STRIP_MAX_SCALE = 1.8f
+private val STRIP_RESTORE_HEIGHT = 40.dp   // the chord list with every chord hidden: just the ↶
 
 /** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */
 private object FullSpeedMotion : androidx.compose.ui.MotionDurationScale { override val scaleFactor = 1f }
