@@ -413,8 +413,11 @@ class BandLink @Inject constructor(
         }
     }
 
-    // the broadcast address of every local IPv4 network this device is on (Wi-Fi, hotspot, cable)
-    private fun broadcastTargets(): List<InetAddress> = runCatching {
+    /**
+     * The broadcast address of every local IPv4 network this device is on (Wi-Fi, hotspot, cable): the band beacon and
+     * Now Playing go to each, since 255.255.255.255 leaves only by the main network (4G on a phone sharing its hotspot).
+     */
+    fun broadcastTargets(): List<InetAddress> = runCatching {
         NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
             .filter { it.isUp && !it.isLoopback }
             .flatMap { it.interfaceAddresses }

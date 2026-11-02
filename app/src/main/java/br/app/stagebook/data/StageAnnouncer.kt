@@ -30,7 +30,10 @@ class StageAnnouncer @Inject constructor(private val link: BandLink) {
                 if (link.onWifi()) runCatching {
                     DatagramSocket().use { s ->
                         s.broadcast = true
-                        s.send(DatagramPacket(bytes, bytes.size, InetAddress.getByName("255.255.255.255"), StageAnnouncement.PORT))
+                        // each local network's broadcast, like the band beacon: 255.255.255.255 left only by the main
+                        // network, so OBS on a phone's hotspot got nothing while the phone also had 4G (user, 02/11)
+                        val targets = link.broadcastTargets().ifEmpty { listOf(InetAddress.getByName("255.255.255.255")) }
+                        for (t in targets) s.send(DatagramPacket(bytes, bytes.size, t, StageAnnouncement.PORT))
                     }
                 }
                 delay(StageAnnouncement.REPEAT_MS)
