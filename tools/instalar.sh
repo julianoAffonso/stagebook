@@ -18,7 +18,7 @@ MARK="$HOME/Desktop/previous-app/.claude/auditoria-pendente"
 "${ADB[@]}" get-state >/dev/null 2>&1 || { echo "recusado: aparelho $SERIAL não responde no adb"; exit 1; }
 services="$("${ADB[@]}" shell dumpsys activity services br.app.stagebook 2>/dev/null)" || { echo "recusado: não deu para ler o estado do player"; exit 1; }
 if grep -q "br.app.stagebook/.player.PlayerService" <<<"$services"; then
-    echo "recusado: o player do Stagebook está ligado no aparelho (desligue em Ajustes → Player ou no aviso)"; exit 1
+    echo "recusado: o player do Stagebook está ligado no aparelho (toque em Desligar no aviso do Stagebook, nas notificações)"; exit 1
 fi
 
 want="0.1.$(git rev-list --count HEAD) ($(git rev-parse --short HEAD))"
