@@ -58,10 +58,47 @@ object Tablature {
                 lowest + semitones >= 12 -> -12
                 else -> 0
             }
-            for (k in i until end) out[k] = shiftLine(lines[k], semitones + octave)
+            val shifted = shiftBlock(lines.subList(i, end), semitones + octave)
+            for (k in i until end) out[k] = shifted[k - i]
             i = end
         }
         return out.joinToString("\n")
+    }
+
+    /**
+     * The strings of one tab block moved together, column by column: where a fret grows (9 → 10) every string gets the
+     * column, where it shrinks every string loses it, so the strings stay aligned and a step down and back up gives
+     * the same text. Moving each string on its own ate or gave back dashes and the strings drifted apart (B-15).
+     */
+    private fun shiftBlock(block: List<String>, semitones: Int): List<String> {
+        val outs = block.map { StringBuilder() }
+        val starts = block.map { l -> l.indexOfFirst { it == '|' || it == ':' }.coerceAtLeast(0) }
+        val from = starts.maxOrNull() ?: 0
+        block.forEachIndexed { k, l -> outs[k].append(l.substring(0, minOf(from, l.length))) }
+        val width = block.maxOf { it.length }
+        fun fretAt(l: String, c: Int): Int =   // length of the fret starting at c (1 or 2 digits), 0 if none
+            if (c < l.length && l[c].isDigit() && (c == 0 || !l[c - 1].isDigit())) {
+                var e = c; while (e < l.length && l[e].isDigit()) e++
+                (e - c).takeIf { it <= MAX_FRET_DIGITS } ?: 0
+            } else 0
+        var c = from
+        while (c < width) {
+            val spans = block.map { fretAt(it, c) }
+            val span = spans.maxOrNull() ?: 0
+            if (span == 0) { block.forEachIndexed { k, l -> if (c < l.length) outs[k].append(l[c]) }; c++; continue }
+            val news = block.mapIndexed { k, l -> if (spans[k] > 0) (l.substring(c, c + spans[k]).toInt() + semitones).coerceAtLeast(0).toString() else null }
+            val need = news.maxOf { it?.length ?: 0 }
+            // what the other strings have in these columns may only be dropped if it is dashes
+            val canShrink = block.indices.all { k -> spans[k] > 0 || block[k].substring(minOf(c, block[k].length), minOf(c + span, block[k].length)).all { it == '-' } }
+            val outWidth = if (need < span && !canShrink) span else need
+            block.forEachIndexed { k, l ->
+                val piece = news[k] ?: l.substring(minOf(c, l.length), minOf(c + span, l.length))
+                val cell = if (piece.length > outWidth) piece.take(outWidth) else piece + "-".repeat(outWidth - piece.length)
+                if (c < l.length) outs[k].append(cell)
+            }
+            c += span
+        }
+        return outs.map { it.toString() }
     }
 
     /** The frets in a tab line (1 or 2 digits after the string name), as [shiftLine] reads them. */
