@@ -134,7 +134,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Stage look</string>
     <string name="settings_preview_text">[Chorus]\n[G]A sample ==[D]line==\n[Em]To see how it [C]looks</string>
-    <string name="settings_preview_size_text">[Chorus]\n[G]A sample [D]line</string>
+    <string name="settings_preview_size_text">[Chorus]\n[G]A sample ==[D]line==</string>
     <string name="settings_font_size">Lyrics size: %1$d</string>
     <string name="settings_text_color">Lyrics color</string>
     <string name="settings_background">Background color</string>
