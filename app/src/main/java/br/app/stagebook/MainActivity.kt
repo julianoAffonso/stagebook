@@ -116,14 +116,19 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         // also here, not only on focus: a recreated screen (font size, language) already has focus and the status bar
-        // stayed over the app (device test B-19)
-        hideSystemBars()
+        // stayed over the app (device test B-19). After the window is attached: called right away it did nothing
+        window.decorView.post { hideSystemBars() }
         // new app version: checks in the background and asks off stage (not in essential mode without internet, T19)
         if (repository.library.value.look.internetOn) updateOffer.onEnter()
         band.setForeground(true)   // band on the network: only with the app in front
         webEditor.setForeground(true)   // editor on the computer: only with the app open (T37)
         midi.setForeground(true)   // the saved Bluetooth pedal is looked for only with the app in front
         bandInternet.onAppOpen()   // band over the internet: checks the inbox once, on open
+    }
+
+    override fun onResume() {
+        super.onResume()
+        window.decorView.post { hideSystemBars() }
     }
 
     override fun onStop() {
