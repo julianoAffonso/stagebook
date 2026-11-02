@@ -31,6 +31,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- the USB interface also records (the USB interface): without this, Android greys out "Always" in its USB chooser and asks
+         again every time the cable comes back (device test, 02/11). Nothing is recorded: the input only sets the clock -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- pedido padrão do Android para sair da economia de bateria (tocar com a tela apagada), com aviso antes -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Settings → Advanced: Android settings written by the app; granted once from a computer (adb pm grant) -->

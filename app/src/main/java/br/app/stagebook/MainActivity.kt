@@ -61,6 +61,18 @@ class MainActivity : ComponentActivity() {
     // (otherwise Android shows its device chooser instead); without a band it's asked in Settings → Band (user, 31/10)
     private val localNetwork = registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) band.update() }
 
+    // recording permission, asked with a word first when a USB audio interface is plugged in: without it Android greys
+    // out "Always" for an interface that also records (the USB interface), so every time the cable came back it asked for the
+    // USB permission again and opened another app on top, mid-song (device test, 02/11)
+    private val recordAudio = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private val askRecord = androidx.compose.runtime.mutableStateOf(false)
+
+    private fun checkUsbRecord() {
+        if (recordAsked || checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        val usb = getSystemService(android.hardware.usb.UsbManager::class.java) ?: return
+        if (usb.deviceList.values.any(::isUsbAudio)) askRecord.value = true
+    }
+
     // language chosen in settings (changing it recreates the Activity)
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Languages.wrap(newBase))
 
@@ -108,6 +120,15 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong) }
+                if (askRecord.value) {
+                    br.app.stagebook.ui.components.ConfirmDialog(
+                        androidx.compose.ui.res.stringResource(R.string.usb_record_why),
+                        androidx.compose.ui.res.stringResource(R.string.usb_record_allow),
+                        { recordAudio.launch(android.Manifest.permission.RECORD_AUDIO) },
+                        { askRecord.value = false; recordAsked = true },
+                        destructive = false,
+                    )
+                }
                 // "So-and-so wants to join the band" on any screen, one at a time. On stage nothing shows on top: the
                 // show is never interrupted.
                 val requests by band.requests.collectAsStateWithLifecycle()
@@ -137,6 +158,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        checkUsbRecord()   // also when the app was opened by plugging in the interface
         window.decorView.post { hideSystemBars() }
     }
 
@@ -168,6 +190,13 @@ class MainActivity : ComponentActivity() {
 }
 
 private const val BARS_RESET_MS = 250L
+
+// asked once per app run: "Not now" isn't asked again until the app opens again
+private var recordAsked = false
+
+/** A USB Audio 2.0 interface (like the USB interface): the same kind the player speaks to. */
+internal fun isUsbAudio(d: android.hardware.usb.UsbDevice): Boolean =
+    (0 until d.interfaceCount).any { d.getInterface(it).let { x -> x.interfaceClass == 1 && x.interfaceSubclass == 2 && x.interfaceProtocol == 0x20 } }
 
 // the local network permission (a string: the constant isn't in older SDK stubs)
 const val LOCAL_NETWORK = "android.permission.ACCESS_LOCAL_NETWORK"
