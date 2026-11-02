@@ -1,9 +1,13 @@
 package br.app.stagebook.data
 
+import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import br.app.stagebook.domain.MetronomeClick
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,7 +16,7 @@ import javax.inject.Singleton
  * engine). A thread writes audio nonstop (silence + clicks on the right sample), so the timing doesn't drift.
  */
 @Singleton
-class MetronomeSound @Inject constructor() {
+class MetronomeSound @Inject constructor(@ApplicationContext private val context: Context) {
     @Volatile private var worker: Thread? = null
 
     fun start(bpm: Int) {
@@ -30,6 +34,9 @@ class MetronomeSound @Inject constructor() {
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
             }.getOrNull() ?: return@Thread
+            // the device's own output, never the USB interface: with the interface playing through Android (the
+            // "through Android" option), the default output is the interface and the click went there too
+            deviceOutput()?.let { track.setPreferredDevice(it) }
             val buf = ShortArray(CHUNK)
             var pos = 0L
             try {
@@ -51,5 +58,17 @@ class MetronomeSound @Inject constructor() {
         worker = null
     }
 
-    private companion object { const val CHUNK = 960 }   // 20 ms per write
+    /** Headphones (wired or Bluetooth) when connected, otherwise the speaker. */
+    private fun deviceOutput(): AudioDeviceInfo? {
+        val outs = context.getSystemService(AudioManager::class.java)?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) ?: return null
+        return DEVICE_PREFERENCE.firstNotNullOfOrNull { type -> outs.firstOrNull { it.type == type } }
+    }
+
+    private companion object {
+        const val CHUNK = 960   // 20 ms per write
+        val DEVICE_PREFERENCE = listOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
+        )
+    }
 }
