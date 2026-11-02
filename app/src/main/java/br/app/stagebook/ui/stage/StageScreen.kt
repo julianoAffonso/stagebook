@@ -1277,6 +1277,9 @@ private class PageHit {
         val y = p.y + scroll()
         if (y < 0 || y > layout.size.height) return null
         val line = layout.getLineForVerticalPosition(y)
+        // below the song's last line the layout still answers with that line: a tap there (to go back a page) opened
+        // the last chords-only line's chord (device test on the TCL, end of a song, 02/11)
+        if (y > layout.getLineBottom(line)) return null
         val text = layout.layoutInput.text
         val top = layout.getLineTop(line)
         val band = chordPx * 1.5f
