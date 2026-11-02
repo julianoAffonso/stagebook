@@ -170,7 +170,6 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val connectivity = remember(context) { br.app.stagebook.data.Connectivity(context.applicationContext) }
     // backup: pick the parts (all checked), then where to save the .stagebook file
     var backupParts by remember { mutableStateOf(br.app.stagebook.data.Backup.Part.entries.toSet()) }
     val backupSaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(br.app.stagebook.data.Backup.MIME)) { uri ->
@@ -333,7 +332,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 // the help lives on the web, in the app's language (user, 01/11): with no internet, a notice instead
                 onOpenHelp = {
-                    if (connectivity.isOnline()) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, resources.getString(R.string.help_url).toUri())) }
+                    if (br.app.stagebook.data.Connectivity.isOnline(context)) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, resources.getString(R.string.help_url).toUri())) }
                     else scope.launch { snackbar.showSnackbar(resources.getString(R.string.about_help_offline)) }
                 },
                 onDownloadUpdate = viewModel::downloadUpdate,
