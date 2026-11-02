@@ -43,6 +43,9 @@ private inline fun NavBackStackEntry.ifResumed(go: () -> Unit) {
     if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) go()
 }
 
+// screens the leader's song can take the follower away from: nothing is being typed or chosen there
+private fun androidx.navigation.NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>() || hasRoute<SetlistDetail>()
+
 /** [updateOffer]: new app version; shows on top of any screen, never on stage. */
 @Composable
 fun StagebookNavHost(
@@ -53,14 +56,15 @@ fun StagebookNavHost(
 ) {
     val nav = rememberNavController()
     // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
-    // editing or importing, it doesn't pull the person off the screen: the "Following" strip shows the current song
-    // A song asked for while on one of those screens waits and opens on coming back to Home, if it's still the leader's
-    // current song: before, coming back showed nothing until the next song (device test over a hotspot, 02/11)
+    // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip
+    // shows the current song. Just looking at a setlist does pull (the S26 sat on the setlist while the band played, 02/11)
+    // A song asked for while on one of those screens waits and opens on coming back to a screen that pulls, if it's
+    // still the leader's current song: before, coming back showed nothing until the next song (hotspot test, 02/11)
     var pendingFollow by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             val here = nav.currentBackStackEntry?.destination ?: return@collect
-            if (here.hasRoute<Home>() || here.hasRoute<Stage>()) {
+            if (here.pullsToStage()) {
                 pendingFollow = null
                 nav.navigate(Stage(songId = id)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
             } else {
@@ -71,7 +75,7 @@ fun StagebookNavHost(
     LaunchedEffect(nav) {
         nav.currentBackStackEntryFlow.collect { entry ->
             val id = pendingFollow ?: return@collect
-            if (entry.destination.hasRoute<Home>()) {
+            if (entry.destination.pullsToStage()) {
                 pendingFollow = null
                 if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
             }
