@@ -243,10 +243,12 @@ private fun Scanning(
         }
         ui.problem?.let { p ->
             // newer app: "Update the app" is a link to About, where the update is (user, 01/11)
-            if (p == ScanProblem.NEWER) br.app.stagebook.ui.components.SettingsLinkText(
-                stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
-                br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
-            ) else Text(
+            if (p == ScanProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
+                br.app.stagebook.ui.components.SettingsLinkText(
+                    stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
+                    br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = androidx.compose.material3.LocalContentColor.current,
+                )
+            } else br.app.stagebook.ui.components.StatusNote(
                 stringResource(
                     when (p) {
                         ScanProblem.INCOMPLETE -> R.string.scan_incomplete
@@ -254,7 +256,7 @@ private fun Scanning(
                         ScanProblem.NOT_SETLIST -> R.string.scan_not_setlist
                     },
                 ),
-                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
+                br.app.stagebook.ui.components.StatusTone.PROBLEM,
             )
         }
     }
@@ -435,10 +437,12 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
                 Text(stringResource(R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
             }
             else -> {
-                if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.SettingsLinkText(
-                    stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
-                    br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
-                ) else Text(
+                if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
+                    br.app.stagebook.ui.components.SettingsLinkText(
+                        stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
+                        br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = androidx.compose.material3.LocalContentColor.current,
+                    )
+                } else br.app.stagebook.ui.components.StatusNote(
                     stringResource(
                         when (ui.problem) {
                             CodeProblem.NOT_FOUND -> R.string.scan_code_not_found
@@ -446,7 +450,7 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
                             CodeProblem.OFFLINE -> R.string.scan_code_offline
                         },
                     ),
-                    style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error,
+                    br.app.stagebook.ui.components.StatusTone.PROBLEM,
                 )
                 ActionButton(stringResource(R.string.scan_code_retry), onRetry, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
             }

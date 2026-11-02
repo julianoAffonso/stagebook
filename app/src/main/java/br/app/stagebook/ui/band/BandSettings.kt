@@ -56,7 +56,7 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
         val online = band.nearby.filter { it.member }.associateBy { it.id }
         if (lan) SettingsCard(stringResource(R.string.band_nearby)) {
             when {
-                !band.wifi -> Text(stringResource(R.string.band_no_wifi), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                !band.wifi -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_no_wifi), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                 newcomers.isEmpty() -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     // a still icon, not a spinner: this screen can stay open for minutes and the animation cost ~60% of a core on the TCL
                     if (band.searching) Icon(AppIcons.Search, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)

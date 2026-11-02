@@ -58,7 +58,7 @@ fun WebEditorDetail(on: Boolean, ui: WebEditorUi, onSwitch: (Boolean) -> Unit, o
             SwitchRow(stringResource(R.string.settings_web_editor_switch), on, onSwitch, detail = stringResource(R.string.settings_web_editor_switch_detail))
             if (on) {
                 if (ui.address.isEmpty()) {
-                    Text(stringResource(R.string.settings_web_editor_no_wifi), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    br.app.stagebook.ui.components.StatusNote(stringResource(R.string.settings_web_editor_no_wifi), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                 } else {
                     Text(stringResource(R.string.settings_web_editor_open), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     // big, to read from the computer's chair
