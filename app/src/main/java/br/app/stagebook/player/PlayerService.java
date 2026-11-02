@@ -252,6 +252,7 @@ public class PlayerService extends Service {
         int ch = 2;
         for (int n : out.getChannelCounts()) ch = Math.max(ch, n);
         final int id = out.getId(), count = Math.min(ch, 8);
+        bitPerfect(out, count);
         connecting = true;
         int gen = usbGen;
         setStatus(getString(R.string.player_usb_connecting));
@@ -260,6 +261,30 @@ public class PlayerService extends Service {
             if (!ok) Log.w(TAG, Engine.status());
             main.post(() -> { if (gen == usbGen) androidUsbReady(ok, d, count); });
         });
+    }
+
+    // Android 14+: asks Android to open the interface bit-perfect (no mixing, no conversion), with all its channels.
+    // On the S26 its normal path only delivered outputs 1-2 to the USB interface even with a 4-channel stream (02/11).
+    void bitPerfect(AudioDeviceInfo out, int count) {
+        if (Build.VERSION.SDK_INT < 34) return;
+        try {
+            AudioManager am = getSystemService(AudioManager.class);
+            android.media.AudioMixerAttributes chosen = null;
+            for (android.media.AudioMixerAttributes m : am.getSupportedMixerAttributes(out)) {
+                Log.i(TAG, "mixer offered: " + m);
+                android.media.AudioFormat f = m.getFormat();
+                if (m.getMixerBehavior() == android.media.AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT
+                        && f.getChannelCount() == count && f.getSampleRate() == 48000
+                        && (chosen == null || f.getEncoding() == android.media.AudioFormat.ENCODING_PCM_32BIT)) chosen = m;
+            }
+            if (chosen == null) { Log.i(TAG, "no bit-perfect mixer with " + count + " channels at 48 kHz"); return; }
+            android.media.AudioAttributes media = new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA).build();
+            boolean ok = am.setPreferredMixerAttributes(media, out, chosen);
+            Log.i(TAG, "bit-perfect " + (ok ? "set: " : "refused: ") + chosen);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "bit-perfect failed: " + e);
+        }
     }
 
     void androidUsbReady(boolean ok, UsbDevice d, int count) {
