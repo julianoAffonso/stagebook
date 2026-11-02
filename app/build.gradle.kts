@@ -9,25 +9,25 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
-// Versão automática pelo git: <base>.<nº de commits> (commit); "+" = build com mudanças não commitadas.
-// O nº de commits só cresce, então cada APK novo instala por cima do anterior.
+// Automatic version from git: <base>.<commit count> (commit); "+" = build with uncommitted changes. The commit count
+// only grows, so each new APK installs over the previous one.
 fun git(vararg args: String) = providers.exec { commandLine("git", *args) }.standardOutput.asText.get().trim()
 val commits = git("rev-list", "--count", "HEAD").toInt()
 val commit = git("rev-parse", "--short", "HEAD") + if (git("status", "--porcelain").isNotEmpty()) "+" else ""
 
-// Chave de assinatura das versões publicadas: fica FORA do repositório (o código é público). Sem ela, o
-// release não assina e não pode ser publicado. Perder a chave = os aparelhos não aceitam mais atualizações.
+// Signing key for published versions: it stays OUTSIDE the repository (the code is public). Without it, the release
+// isn't signed and can't be published. Losing the key = devices no longer accept updates.
 val releaseKey = Properties()
 val releaseKeyFile = file(System.getProperty("user.home") + "/.android/stagebook-release.properties")
 if (releaseKeyFile.exists()) releaseKeyFile.inputStream().use { releaseKey.load(it) }
 
 android {
-    namespace = "com.juliano.stagebook"
+    namespace = "br.app.stagebook"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.juliano.stagebook"
-        minSdk = 28          // Android 9: Fire HD 10 (2019) e tablets mais simples
+        applicationId = "br.app.stagebook"
+        minSdk = 28          // Android 9: Fire HD 10 (2019) and simpler tablets
         targetSdk = 37
         versionCode = commits
         versionName = "0.1.$commits ($commit)"
@@ -58,16 +58,23 @@ android {
 
     buildFeatures { compose = true }
 
-    // capturas de tela das telas (Robolectric + Roborazzi): ./gradlew recordRoborazziDebug
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    // screenshots of the screens (Robolectric + Roborazzi): ./gradlew recordRoborazziDebug
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // captures folder (T39): -PshotsLang=en and -PshotsDir=<folder> reach the screenshot tests
+        unitTests.all { test ->
+            test.systemProperty("shots.lang", project.findProperty("shotsLang")?.toString().orEmpty())
+            test.systemProperty("shots.dir", project.findProperty("shotsDir")?.toString().orEmpty())
+        }
+    }
 
-    // motor de áudio (player): vem pronto do build_native.sh, o mesmo comando do motor validado
+    // audio engine (player): comes ready from build_native.sh, the same command as the validated engine
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("native").get().asFile)
-    // mesmo efeito do android:extractNativeLibs="true" da versão validada
+    // same effect as the validated version's android:extractNativeLibs="true"
     packaging { jniLibs { useLegacyPackaging = true } }
 }
 
-// arm64 = TCL e celulares; armeabi-v7a = Fire HD 10 (Fire OS 32 bits); x86_64 = emulador
+// arm64 = TCL and phones; armeabi-v7a = Fire HD 10 (32-bit Fire OS); x86_64 = emulator
 val buildNative = tasks.register<Exec>("buildNative") {
     val native = layout.buildDirectory.dir("native").get().asFile
     inputs.files("src/main/cpp/engine.c", "src/main/cpp/third_party/stb_vorbis.c", "src/main/cpp/third_party/dr_mp3.h", "src/main/cpp/third_party/dr_wav.h", "build_native.sh")
@@ -80,9 +87,9 @@ tasks.withType<Test>().configureEach {
     javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 }
 
-// Nomes de teste são frases entre crases, e o Kotlin/JVM recusa . ; : / [ ] < > \ neles ("Name contains
-// illegal characters"), só depois de uma compilação inteira. Esta checagem roda antes e diz onde
-// trocar (o separador do projeto é " - ").
+// Test names are sentences in backticks, and Kotlin/JVM refuses . ; : / [ ] < > \ in them ("Name contains illegal
+// characters"), only after a full compile. This check runs first and says where to change (the project's separator is "
+// - ").
 val checkTestNames = tasks.register("checkTestNames") {
     val sources = fileTree("src/test") { include("**/*.kt") }
     inputs.files(sources)
@@ -127,7 +134,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.reorderable)
     implementation(libs.zxing.core)
-    // leitor de QR do setlist: CameraX + ZXing, sem serviço do Google
+    // setlist QR scanner: CameraX + ZXing, no Google service
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)

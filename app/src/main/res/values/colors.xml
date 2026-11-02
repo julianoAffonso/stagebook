@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- launcher icon background: the same black as the icon image, so the mask shows no seam -->
+    <color name="ic_launcher_background">#0D0D0D</color>
     <color name="window_background">#FF121212</color>
 </resources>

@@ -1,6 +1,6 @@
-// Converte um OGG em WAV float 32 bits com o MESMO decodificador do motor (stb_vorbis): as amostras saem idênticas.
-// O simulador usa para provar que o caminho do WAV no motor dá exatamente o mesmo som do OGG.
-//   ogg2wav <entrada.ogg> <saída.wav>
+// Converts an OGG to 32-bit float WAV with the SAME decoder as the engine (stb_vorbis): the samples come out identical.
+// The simulator uses it to prove the engine's WAV path gives exactly the same sound as the OGG.
+// ogg2wav <input.ogg> <output.wav>
 #include <stdio.h>
 #include <stdlib.h>
 #include "stb_vorbis.c"

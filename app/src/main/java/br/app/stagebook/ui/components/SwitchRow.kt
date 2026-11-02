@@ -1,0 +1,51 @@
+package br.app.stagebook.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import br.app.stagebook.ui.theme.Spacing
+
+/**
+ * Every on/off switch in the app: text on the left (with [detail] below, in smaller type, when it needs explaining),
+ * switch on the right, and tapping anywhere on the row also toggles.
+ */
+@Composable
+fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier, detail: String? = null, enabled: Boolean = true) {
+    Row(
+        modifier.fillMaxWidth().toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+    }
+}
+
+@Composable
+private fun SwitchRowSamples() {
+    Column {
+        SwitchRow("Contagem 1-2-3-4 antes", true, {})
+        SwitchRow("Som (desligado: só pisca)", false, {})
+        SwitchRow("Com as 12 músicas", true, {}, detail = "Desligado, vão só os títulos")
+    }
+}
+
+@LightPreview
+@Composable
+private fun SwitchRowLightPreview() = PreviewSurface(dark = false) { SwitchRowSamples() }
+
+@DarkPreview
+@Composable
+private fun SwitchRowDarkPreview() = PreviewSurface(dark = true) { SwitchRowSamples() }

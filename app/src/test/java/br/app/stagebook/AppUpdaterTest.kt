@@ -1,0 +1,103 @@
+package br.app.stagebook
+
+import androidx.test.core.app.ApplicationProvider
+import br.app.stagebook.data.AppUpdater
+import br.app.stagebook.data.LibraryRepository
+import br.app.stagebook.ui.settings.SettingsViewModel
+import br.app.stagebook.ui.settings.UpdateState
+import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.io.File
+import java.net.InetSocketAddress
+
+/** Settings → Update the app, with a local "Drive" in place of the real one. */
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], application = android.app.Application::class)
+class AppUpdaterTest {
+    private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+    private lateinit var server: HttpServer
+    private var version = ""
+    private var apk = ByteArray(0)
+
+    @Before fun start() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/version") { ex ->
+            val b = version.toByteArray()
+            ex.sendResponseHeaders(if (version.isEmpty()) 404 else 200, if (b.isEmpty()) -1 else b.size.toLong())
+            ex.responseBody.use { it.write(b) }
+        }
+        server.createContext("/apk") { ex ->
+            ex.sendResponseHeaders(200, apk.size.toLong())
+            ex.responseBody.use { it.write(apk) }
+        }
+        server.start()
+    }
+
+    @After fun stop() {
+        server.stop(0)
+        Dispatchers.resetMain()
+    }
+
+    private fun updater() = AppUpdater(context).apply {
+        versionUrl = "http://127.0.0.1:${server.address.port}/version"
+        apkUrl = "http://127.0.0.1:${server.address.port}/apk"
+    }
+
+    private fun vm(u: AppUpdater) = LibraryRepository(context, CoroutineScope(Dispatchers.IO)).let { repo ->
+        SettingsViewModel(repo, context, u, br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)))
+    }
+
+    /** Waits for the update state to reach the screen (uiState only moves with someone watching). */
+    private suspend fun SettingsViewModel.waitUpdate(done: (UpdateState) -> Boolean): UpdateState =
+        withTimeout(10_000) { uiState.first { done(it.update) }.update }
+
+    @Test fun `newer published version shows up to download`() = runBlocking {
+        version = """{"versionCode":999999,"versionName":"0.3.999 (abc1234)"}"""
+        val vm = vm(updater())
+        vm.checkUpdate()
+        assertEquals(UpdateState.Available("0.3.999 (abc1234)"), vm.waitUpdate { it is UpdateState.Available })
+    }
+
+    @Test fun `same version as installed - already up to date`() = runBlocking {
+        val installed = updater().installedCode
+        version = """{"versionCode":$installed,"versionName":"igual"}"""
+        val vm = vm(updater())
+        vm.checkUpdate()
+        assertEquals(UpdateState.UpToDate, vm.waitUpdate { it == UpdateState.UpToDate })
+    }
+
+    @Test fun `no published version found - says to check the internet`() = runBlocking {
+        version = ""
+        val vm = vm(updater())
+        vm.checkUpdate()
+        assertEquals(UpdateState.Offline, vm.waitUpdate { it == UpdateState.Offline })
+    }
+
+    @Test fun `downloaded file that is not the app is not installed`() = runBlocking {
+        apk = ByteArray(200_000) { it.toByte() }   // error page, cut file…
+        val vm = vm(updater())
+        vm.downloadUpdate()
+        assertEquals(UpdateState.DownloadFailed, vm.waitUpdate { it == UpdateState.DownloadFailed })
+        assertFalse(File(context.cacheDir, "atualizacao/stagebook.apk").exists())
+        assertEquals(null, vm.installIntent())
+    }
+
+}

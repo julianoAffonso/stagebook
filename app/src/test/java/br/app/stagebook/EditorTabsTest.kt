@@ -1,0 +1,135 @@
+package br.app.stagebook
+
+import org.junit.Assert.assertEquals
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import br.app.stagebook.ui.editor.EditorError
+import br.app.stagebook.ui.editor.EditorMode
+import br.app.stagebook.ui.editor.SongEditorScreen
+import br.app.stagebook.ui.editor.SongEditorUiState
+import br.app.stagebook.ui.theme.StagebookTheme
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/** Editor (T27): the lyrics take the whole screen and the song details are collapsed on one line at the top. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], qualifiers = "pt-rBR-w1100dp-h720dp-land-xhdpi", application = android.app.Application::class)
+class EditorTabsTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test fun `new song opens with the details shown - tapping the summary collapses`() {
+        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Nome da música").assertExists()
+        // when open, the summary doesn't show (it would repeat the title): the ▲ in the Title field collapses
+        compose.onNodeWithText("Música sem título").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Recolher os dados da música").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Música sem título").assertExists()
+        compose.onNodeWithText("Nome da música").assertDoesNotExist()
+    }
+
+    @Test fun `existing song opens collapsed with the summary - tapping opens the fields`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Nome da música").assertDoesNotExist()
+        // the lyrics field doesn't show {key}/{capo}: they're in the summary
+        compose.onNodeWithText("{key: G}", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Nome da música").assertExists()
+    }
+
+    @Test fun `saving without a title opens the details with the error`() {
+        var state by mutableStateOf(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha"))
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
+        state = state.copy(title = "", error = EditorError.TITLE_EMPTY)
+        compose.waitForIdle()
+        compose.onNodeWithText("Nome da música").assertExists()
+    }
+
+    @Test fun `open - you can type the song name in the Title field`() {
+        var typed = ""
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), { typed = it }, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Nome da música").performTextInput("Hazard")
+        org.junit.Assert.assertEquals("Hazard", typed)
+    }
+
+    @Test fun `key works like capo - shows the key and + transposes a half step`() {
+        var moved = 0
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", "{key: G}\n[G]um [C]dois [D]três"), {}, {}, {}, {}, {}, {}, {}, onTranspose = { moved += it })
+            }
+        }
+        compose.onNodeWithText("G").assertExists()
+        compose.onNodeWithContentDescription("Subir meio tom").performClick()
+        org.junit.Assert.assertEquals(1, moved)
+    }
+
+    @Test fun `backing track is picked in the song details - choose, then change or remove`() {
+        var picked = 0
+        var removed = 0
+        var track by androidx.compose.runtime.mutableStateOf("")
+        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
+        compose.setContent {
+            StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = track, onPickTrack = { picked++ }, onRemoveTrack = { removed++ }) }
+        }
+        // tablet: a field next to key, capo and tags; "Nenhum" in grey without a track (user, 01/11)
+        compose.onNodeWithText("Nenhum").performClick()
+        assertEquals(1, picked)
+        track = "song-1.ogg"
+        compose.onNodeWithText("Áudio anexado").assertExists()   // attached before names were kept
+        compose.onNodeWithContentDescription("Remover o backing track").performClick()
+        assertEquals(1, removed)
+    }
+
+    @Test fun `no track row when the song can't take one (new song or player off)`() {
+        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = null) } }
+        compose.onNodeWithText("Escolher").assertDoesNotExist()
+    }
+
+    // delete is an icon in the bar (user, 01/11), only for a saved song: a new one has nothing to delete
+    @Test fun `delete shows only for a saved song`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithContentDescription("Excluir música").assertDoesNotExist()
+    }
+
+    @Test fun `deleting a saved song asks first`() {
+        var deleted = false
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha"), {}, {}, {}, {}, {}, {}, { deleted = true }) } }
+        compose.onNodeWithContentDescription("Excluir música").performClick()
+        org.junit.Assert.assertFalse(deleted)
+        compose.onNodeWithText("Apagar \"Hazard\"? Ela também sai dos setlists.").assertExists()   // the confirmation
+    }
+
+    @Test fun `the attached track shows its own name`() {
+        val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "")
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = "s1-123.ogg", trackName = "Hazard (backing)") } }
+        compose.onNodeWithText("Hazard", substring = true).performClick()   // opens the details
+        compose.onNodeWithText("Hazard (backing)").assertExists()
+    }
+
+    @Test fun `the shown name drops the extension`() {
+        assertEquals("Under Pressure", br.app.stagebook.data.TrackStore.shownName("Under Pressure.ogg"))
+        assertEquals("", br.app.stagebook.data.TrackStore.shownName(""))
+    }
+
+    @Test fun `the lyrics field says what it holds, by profile`() {
+        val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha")
+        var chords by androidx.compose.runtime.mutableStateOf(true)
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, look = br.app.stagebook.data.model.Look(chords = chords)) } }
+        compose.onNodeWithText("Letra e cifra").assertExists()
+        chords = false
+        compose.onNodeWithText("Letra").assertExists()
+    }
+}

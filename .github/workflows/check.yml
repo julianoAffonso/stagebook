@@ -1,11 +1,11 @@
-# Compila, roda os testes e o lint. Nada é publicado nem assinado aqui.
-name: Verificar
-# Só ao juntar na main (o dia a dia é na branch dev) ou à mão (Actions → Verificar → Run workflow): cada rodada
-# leva ~10 min dos minutos grátis do GitHub enquanto o repositório é privado
+# Builds, runs the tests and lint. Nothing is published or signed here (releases: release.yml).
+name: Check
+# Only when merging into main (day-to-day work is on the dev branch) or by hand (Actions → Check → Run workflow):
+# each run takes ~10 min of GitHub's Actions minutes
 on:
   push:
     branches: [main]
-    paths-ignore: [".claude/**", "**.md"]   # só memória/textos: não gasta minutos
+    paths-ignore: [".claude/**", "**.md"]   # memory/docs only: no minutes spent
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -17,17 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # a versão vem do nº de commits
+          fetch-depth: 0   # the version comes from the commit count
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      # o Ubuntu do GitHub já traz o SDK do Android (ANDROID_HOME); falta só a versão do NDK do motor
+      # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew assembleDebug testDebugUnitTest lintDebug
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: relatorios
+          name: reports
           path: app/build/reports/

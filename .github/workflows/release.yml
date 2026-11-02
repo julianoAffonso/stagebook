@@ -1,0 +1,82 @@
+# Publishing a version is a button on GitHub, nothing runs on a local machine: Actions → Release → Run workflow, on
+# main only (pressed on dev, nothing runs). With "publish" unchecked it's a dry run (builds, signs, checks and keeps the
+# APK as an artifact); checked, it also creates the v0.1.<commit count> tag and the release with the two fixed-name files the app reads from
+# releases/latest/download/. The signing key lives only in the repository secrets: it's written to a temporary file
+# and deleted at the end. The repository must be public: a private one needs a login, which the app doesn't have.
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the release (unchecked = dry run)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # create the tag and the release
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'   # from any other branch the button does nothing (no minutes spent)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the version comes from the commit count
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.STAGEBOOK_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STAGEBOOK_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.STAGEBOOK_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.STAGEBOOK_KEY_PASSWORD }}
+        run: |
+          mkdir -p ~/.android
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > ~/.android/stagebook-release.jks
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$HOME/.android/stagebook-release.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
+            > ~/.android/stagebook-release.properties
+      - run: ./gradlew testDebugUnitTest lintDebug assembleRelease
+      - name: Check signature and version
+        id: version
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          # signed with Stagebook's key? (another key = devices refuse the update)
+          CERT=a0af59f083c430bfcd0aa42ff825f01277f4afc3c3fb0f9aba80225842a1c4a5
+          "$TOOLS/apksigner" verify --print-certs "$APK" | grep -q "SHA-256 digest: $CERT"
+          badging=$("$TOOLS/aapt" dump badging "$APK" | head -1)
+          code=$(sed -E "s/.*versionCode='([0-9]+)'.*/\1/" <<<"$badging")
+          name=$(sed -E "s/.*versionName='([^']+)'.*/\1/" <<<"$badging")
+          mkdir -p out
+          cp "$APK" out/stagebook.apk
+          printf '{"versionCode":%s,"versionName":"%s"}\n' "$code" "$name" > out/stagebook-version.json
+          echo "tag=v${name%% *}" >> "$GITHUB_OUTPUT"
+      - if: ${{ !inputs.publish }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: stagebook-dry-run
+          path: out/
+      - name: Publish
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "Tag $TAG already exists: nothing new to publish."; exit 1
+          fi
+          # notes: the commit titles since the previous release
+          last=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          notes=$(git log --format='- %s' ${last:+$last..}HEAD)
+          gh release create "$TAG" out/stagebook.apk out/stagebook-version.json \
+            --target "$GITHUB_SHA" --title "Stagebook ${TAG#v}" --notes "$notes" --latest
+      - if: always()
+        run: rm -f ~/.android/stagebook-release.jks ~/.android/stagebook-release.properties
