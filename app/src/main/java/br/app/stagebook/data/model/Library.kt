@@ -148,8 +148,9 @@ data class Look(
     val pedalSeen: List<Int> = emptyList(),   // the pedal's buttons pressed in settings: listed with what each does (user, 01/11)
     val midiBtAddress: String = "",   // Bluetooth MIDI pedal chosen in Settings (the app reconnects by itself)
     val midiBtName: String = "",
-    // MIDI pedal over USB: when off, the app opens nothing on USB (it stays free for the USB audio interface)
-    val midiUsb: Boolean = true,
+    // MIDI pedal over USB: when off, the app opens nothing on USB (it stays free for the USB audio interface). Off by
+    // default (user, 02/11): it's turned on by whoever has a USB pedal; saved libraries keep their value
+    val midiUsb: Boolean = false,
     // chords (step 3): "lyrics and chords" profile (false = lyrics only), chord size relative to the lyrics and color
     val chords: Boolean = true,
     val chordScale: Float = 0.8f,
