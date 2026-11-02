@@ -79,6 +79,22 @@ class StageChordTapTest {
         assertTrue("virou a página: $position", position != -1 to -1)
     }
 
+    // on the left, to go back a page: the first page has nowhere to go, so only the diagram matters here
+    @Test fun `a tap below the last chords-only line does not open its chord`() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(
+                    StageUiState(loading = false, songs = listOf(StageSong("Teste", "", "Primeira linha de letra comprida\nSegunda\n[G]  [D]", false, id = "s1"), songs[1]), look = Look(fontSp = 34f)),
+                    0, 0, { s, p -> position = s to p },
+                )
+            }
+        }
+        val block = compose.onNodeWithText("Primeira linha", substring = true).fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput { click(Offset(block.left + 6f, block.bottom - 6f)) }
+        compose.waitForIdle()
+        assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
+    }
+
     @Test fun `holding a line offers Highlight this line next to Edit, and it reports the song line (B-28)`() {
         var highlighted = -1 to -1
         compose.setContent {
