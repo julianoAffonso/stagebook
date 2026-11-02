@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
@@ -70,19 +71,21 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
                 Text(stringResource(R.string.band_members_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             band.members.forEach { m ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(AppIcons.Check, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                // the check sits on the name's line, not the middle of the row: with a warning under the name it looked like
+                // it marked the warning (user, 02/11)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    Icon(AppIcons.Check, null, Modifier.padding(top = 2.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f).padding(start = Spacing.s)) {
                         Text(m.name, style = MaterialTheme.typography.bodyLarge)
                         val here = online[m.id]
                         when {
                             !lan || here == null -> Unit
                             // another app version: nothing works between the two until both update to the same one
-                            here.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, here.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM)
+                            here.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, here.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM, fill = false)
                             else -> Text(stringResource(R.string.band_online), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                         }
                     }
-                    IconButton(onClick = { removing = m.id }) { Icon(AppIcons.Delete, stringResource(R.string.band_remove, m.name)) }
+                    IconButton(onClick = { removing = m.id }, Modifier.offset(y = (-12).dp)) { Icon(AppIcons.Delete, stringResource(R.string.band_remove, m.name)) }   // centred on the name, like the check
                 }
             }
         }
@@ -111,7 +114,7 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
             Text(peer.name, style = MaterialTheme.typography.bodyLarge)
             when {
                 // another app version: nothing works between the two until both update to the same one
-                peer.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, peer.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM)
+                peer.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, peer.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM, fill = false)
                 peer.join == BandLink.Join.WAITING -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Text(stringResource(R.string.band_waiting), style = MaterialTheme.typography.bodySmall)
