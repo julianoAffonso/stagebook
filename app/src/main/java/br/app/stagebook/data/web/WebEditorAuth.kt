@@ -18,7 +18,7 @@ import javax.inject.Singleton
 
 /**
  * Who may use the editor on the computer (T37). Android doesn't see the computer's MAC address (Android 10+, and the
- * browser doesn't send it), so an approved browser gets a random key in a cookie, like another app: next time it
+ * browser doesn't send it), so an approved browser gets a random key in a cookie: next time it
  * doesn't ask. Only the key's hash is saved; removing a computer applies right away.
  */
 @Singleton

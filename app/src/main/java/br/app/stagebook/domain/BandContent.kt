@@ -12,7 +12,7 @@ object BandContent {
     const val MAX_TEXT = 60_000      // a long chord chart has about 10 thousand characters
     const val MAX_SONGS = 200
     const val MAX_LIST = 20_000      // the setlist text (name + titles)
-    // each way of sending has its own limit (user, 01/11: "fairer"). Internet: the free server (ntfy.sh) takes about 60
+    // each way of sending has its own limit. Internet: the free server (ntfy.sh) takes about 60
     // requests in a row, and each song and each list is one (plus the sender's card). Band on the network: one package
     // per setlist straight to the device, limited by its Received, which keeps 30. QR: one setlist (it isn't offered for
     // several).

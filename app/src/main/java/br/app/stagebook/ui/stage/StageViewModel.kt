@@ -180,7 +180,7 @@ class StageViewModel @Inject constructor(
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.setHiddenChords(it.text, hidden)) }
     }
 
-    /** Pinch zoom, saved in the song (applies in any setlist, like another app). */
+    /** Pinch zoom, saved in the song (applies in any setlist). */
     /** Auto-scroll speed (−/+ on stage), saved in settings. */
     fun keyboardCapoHintSeen() = repository.updateLook { it.copy(keyboardCapoHintSeen = true) }
 

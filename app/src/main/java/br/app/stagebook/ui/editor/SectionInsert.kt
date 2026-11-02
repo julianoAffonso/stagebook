@@ -4,7 +4,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import br.app.stagebook.domain.Sections
 
-/** Editor shortcuts, in the order they appear ("Outro" is the user's another app default). */
+/** Editor shortcuts, in the order they appear ("Outro" is a common default). */
 val SECTION_SHORTCUTS = listOf(
     Sections.Kind.INTRO,
     Sections.Kind.VERSE,

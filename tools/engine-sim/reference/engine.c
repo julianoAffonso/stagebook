@@ -29,7 +29,7 @@
 
 #define OUT_RATE 48000
 #define OUT_CH 4
-// 32 URBs x 8 pacotes = 32 ms na fila do USB. Com 8 (8 ms), o TCL ocupado (another app tocando no
+// 32 URBs x 8 pacotes = 32 ms na fila do USB. Com 8 (8 ms), o TCL ocupado (outro app tocando no
 // alto-falante) atrasava a reposição em 10-16 ms e a USB interface ficava sem áudio: solavanco (19/10/2026).
 #define NURBS 32
 #define PKTS_PER_URB 8

@@ -63,7 +63,7 @@ public class PlayerService extends Service {
     // device mid-show: it waits for USB to come back (the click would go to the speaker).
     boolean deviceOut, hadUsb;
     // the USB interface opened through Android's audio (Settings, off by default): where talking to USB directly gets no
-    // packets back (S26, B-33) but Android plays on it (the another app does). Set by StagePlayer from Settings.
+    // packets back (S26, B-33) but Android plays on it (other apps do). Set by StagePlayer from Settings.
     static volatile boolean viaAndroid;
     UsbDevice androidUsb;   // the interface open that way (deviceOut is true then)
 
