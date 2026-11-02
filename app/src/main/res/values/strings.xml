@@ -84,7 +84,7 @@
     <string name="qr_limit_batch">These songs don\'t all fit in this setlist (the QR has a limit). Pick fewer songs or create another setlist.</string>
     <string name="qr_limit_name">This name is too long for this setlist. Use a shorter one.</string>
     <string name="set_empty_title">Empty setlist</string>
-    <string name="set_empty_message">Tap \"Songs\" to choose what goes into the show.</string>
+    <string name="set_empty_message">Tap \"Songs\" to choose what goes into the setlist.</string>
     <string name="set_item_missing">(song removed)</string>
     <string name="set_reorder">Drag to change the order</string>
 
