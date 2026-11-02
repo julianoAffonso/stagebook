@@ -13,6 +13,13 @@ data class PedalPress(
     val value: Int = -1,       // CC value (0 to 127); -1 for keys, notes and program changes
 )
 
+/**
+ * Whether "Set up a button" looks at this press: a press, or any CC with its value. The Hotone's second button sends
+ * only CC 0, which reads as a release, and was never recorded (device test, 01/11); [PedalLearn] drops the 0 that is
+ * just the foot coming off another button.
+ */
+val PedalPress.learnable: Boolean get() = down || value >= 0
+
 /** MIDI button codes, above any Android keyCode: type + channel + number (CC, note or program). */
 object MidiCode {
     private const val BASE = 0x1000000

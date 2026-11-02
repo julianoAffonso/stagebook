@@ -139,6 +139,7 @@ import br.app.stagebook.data.model.SectionLang
 import br.app.stagebook.data.model.StageColumns
 import br.app.stagebook.domain.PedalAction
 import br.app.stagebook.ui.PedalHandler
+import br.app.stagebook.domain.learnable
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.SwitchRow
 import br.app.stagebook.ui.components.AppIcons
@@ -216,7 +217,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
     PedalHandler { p ->
         val ignored = p.code in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE)
         if (ignored) return@PedalHandler false
-        if (p.down) viewModel.onKey(p)
+        if (p.learnable) viewModel.onKey(p)
         true
     }
 
