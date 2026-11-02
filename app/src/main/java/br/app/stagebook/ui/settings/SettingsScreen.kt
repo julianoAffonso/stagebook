@@ -423,8 +423,8 @@ data class SettingsActions(
  */
 enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     LYRICS(R.string.settings_appearance, AppIcons.FormatSize),
-    METRONOME(R.string.metro_title, AppIcons.Metronome),   // its own item (user, 01/11); off in essential mode
-    PLAYER(R.string.settings_player, AppIcons.Play),
+    // metronome and player together (user, 02/11: Player had shrunk to two small cards): sound on the stage
+    METRONOME(R.string.metro_player_title, AppIcons.Metronome),
     PEDAL(R.string.settings_pedal, AppIcons.Pedal),
     IMPORT(R.string.settings_chord_sites, AppIcons.Public),   // "Chord sites" / "Lyrics sites" by profile ([titleOf])
     LIBRARY(R.string.settings_library, AppIcons.Folder),
@@ -442,16 +442,25 @@ object SettingsLinks {
 
 /** The section's name: the import sites say which kind, by the profile (user, 01/11: a friendlier name). */
 @StringRes
-fun SettingsSection.titleOf(look: Look): Int =
-    if (this == SettingsSection.IMPORT && !look.chords) R.string.settings_lyric_sites else title
+fun SettingsSection.titleOf(look: Look): Int = when {
+    this == SettingsSection.IMPORT && !look.chords -> R.string.settings_lyric_sites
+    // named after what essential mode left on (user, 02/11)
+    this == SettingsSection.METRONOME && !look.playerMode -> R.string.metro_title
+    this == SettingsSection.METRONOME && !look.extrasOn -> R.string.player_title
+    else -> title
+}
+
+/** The section's icon: the player's when only the player is on. */
+fun SettingsSection.iconOf(look: Look): ImageVector =
+    if (this == SettingsSection.METRONOME && !look.extrasOn) AppIcons.Play else icon
 
 /** Essential mode (T19): the section of what is turned off leaves the list. */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
-    SettingsSection.PLAYER -> look.playerMode
     // the band also works over the internet (same members); telling OBS what's playing lives here too (user, 01/11)
     SettingsSection.BAND -> look.bandOn || look.internetOn || look.extrasOn
     SettingsSection.WEB_EDITOR -> !look.essential   // essential mode turns the editor on the computer off (T37)
-    SettingsSection.METRONOME -> look.extrasOn
+    // each part leaves with its own essential-mode switch; the item only when both are off
+    SettingsSection.METRONOME -> look.extrasOn || look.playerMode
     else -> true
 }
 
@@ -529,7 +538,7 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
                         onClick = { onSection(s) },
                         containerColor = if (s == selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
                         leading = {
-                            Icon(s.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(s.iconOf(uiState.look), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         },
                         trailing = if (selected == null) ({
                             Icon(AppIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -554,7 +563,10 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
             StageColumns.TWO -> " · " + stringResource(R.string.settings_columns_two_short)
         } +
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
-    SettingsSection.METRONOME -> stringResource(if (ui.look.metroShown) R.string.metro_summary_shown else R.string.metro_summary_hidden)
+    SettingsSection.METRONOME -> listOfNotNull(
+        if (ui.look.extrasOn) stringResource(if (ui.look.metroShown) R.string.metro_summary_shown else R.string.metro_summary_hidden) else null,
+        if (ui.look.playerMode) stringResource(R.string.settings_player_on_short) else null,
+    ).joinToString(" · ")
     // the keyboard pedal, or else the saved MIDI pedal
     SettingsSection.PEDAL -> when {
         ui.look.pedalName.isNotEmpty() ->
@@ -563,7 +575,6 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
             ui.look.midiBtName + " · " + stringResource(if (ui.midi.connected.any { it.bluetooth }) R.string.settings_pedal_connected_short else R.string.settings_pedal_disconnected_short)
         else -> stringResource(R.string.settings_pedal_none_short)
     }
-    SettingsSection.PLAYER -> stringResource(if (ui.look.playerMode) R.string.settings_player_on_short else R.string.settings_player_off_short)
     SettingsSection.WEB_EDITOR -> stringResource(if (ui.look.webEditorOn) R.string.settings_web_editor_on_short else R.string.settings_web_editor_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
     SettingsSection.ABOUT -> stringResource(R.string.settings_update_installed, ui.version) +
@@ -580,13 +591,15 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.ESSENTIAL -> EssentialDetail(uiState.look, actions)
             SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft)
             SettingsSection.PEDAL -> PedalDetail(uiState, actions)
-            SettingsSection.METRONOME -> MetronomeDetail(uiState.look, actions)
+            SettingsSection.METRONOME -> {
+                if (uiState.look.extrasOn) MetronomeDetail(uiState.look, actions)
+                if (uiState.look.playerMode) PlayerDetail(uiState.look, actions)
+            }
             SettingsSection.BAND -> {
                 if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
                 AnnounceCard(uiState.look, actions)
             }
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
-            SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree)

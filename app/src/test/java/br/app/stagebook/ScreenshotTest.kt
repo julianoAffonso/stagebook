@@ -830,7 +830,7 @@ class ScreenshotTest {
     // ---- journey: linking a track to a song (phone) ----
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack1Settings() = shoot("jornada_faixa_1_ajustes_player") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.PLAYER) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
     // ---- mixer (over the stage): a 4-channel file, backing as a stereo pair and mono click on output 7 ----
