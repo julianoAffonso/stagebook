@@ -1136,20 +1136,6 @@ class ScreenshotTest {
         }
     }
 
-    // on the global mixer: the controls dim, the live meters keep their colour (user, 01/11)
-    @Test @Config(qualifiers = TABLET_TALL)
-    fun songMixerLockedTablet() = shoot("jornada_eq_musica_3_global_niveis") {
-        androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalMixerLocked provides true) {
-            androidx.compose.foundation.layout.Column(
-                androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.m),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
-            ) {
-                br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true, {}, monitorSwitch = false)
-                br.app.stagebook.ui.settings.EqCard(mixerLook.mixer, {}, { mixerLevels }, true)
-            }
-        }
-    }
-
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack2NoTrack() = shoot("jornada_faixa_2_palco_sem_faixa") {
         StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})

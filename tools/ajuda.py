@@ -148,12 +148,12 @@ SECTIONS = [
         "text_pt": [
             "O mixer tem um canal para cada canal do arquivo: volume, saída na interface, igualar o volume pela média ou pelo pico e um equalizador de 5 bandas.",
             "Tocando no nome do canal você renomeia; o ícone ao lado abre os outros ajustes, como juntar dois canais em estéreo.",
-            "No palco, o mixer abre por cima com a música tocando. O que você muda ali vale só para aquela música. Para voltar ao mixer geral, ligue Usar o mixer global.",
+            "No palco, o mixer abre por cima com a música tocando, para ajustar ouvindo. Com Usar o mixer global ligado, o que você muda vale para todas as músicas; desligado, vale só para aquela música. Em Ajustes → Player fica o mesmo mixer global, para conferir sem música tocando.",
         ],
         "text_en": [
             "The mixer has one channel per file channel: volume, interface output, level matching by average or peak, and a 5-band equalizer.",
             "Tap a channel's name to rename it; the icon next to it opens the other settings, like joining two channels as stereo.",
-            "On stage the mixer opens over the song while it plays. What you change there only applies to that song. To go back to the general mixer, turn on Use the global mixer.",
+            "On stage the mixer opens over the song while it plays, so you adjust while listening. With Use the global mixer on, what you change applies to every song; off, only to that song. Settings → Player has the same global mixer, to check it with nothing playing.",
         ],
         "figs": [Fig(("jornada_mixer_2_tablet", "jornada_mixer_1_celular", "O mixer", "The mixer")),
                  Fig(("jornada_mixer_3_editar_canal", None, "Ajustes do canal", "Channel settings")),

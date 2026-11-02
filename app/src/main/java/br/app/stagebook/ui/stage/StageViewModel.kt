@@ -167,6 +167,9 @@ class StageViewModel @Inject constructor(
         repository.updateSong(songId) { it.copy(mix = mixer?.toSongMix()) }
     }
 
+    /** The global mixer changed from the stage (the song has none of its own): every song's, like Settings → Player. */
+    fun setGlobalMix(mixer: br.app.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
+
     fun setCapo(songId: String, capo: Int) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.withCapo(it.text, capo)) }
     }
