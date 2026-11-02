@@ -673,6 +673,7 @@
     <string name="share_with_songs_hint">Whoever receives gets only the songs they don\'t have yet. The ones they already have stay as they are.</string>
     <string name="share_offline_songs">No internet right now. Sending online shows up when it\'s back.</string>
     <string name="share_offline">No internet right now, just the QR. Sending online shows up when it\'s back.</string>
+    <string name="share_sent_titles">Sending the titles only.</string>
     <string name="share_sending">Sending…</string>
     <string name="share_sent">To receive, type</string>
     <string name="share_failed">Couldn\'t send</string>
