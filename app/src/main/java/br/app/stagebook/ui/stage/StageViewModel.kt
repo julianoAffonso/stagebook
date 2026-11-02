@@ -185,6 +185,11 @@ class StageViewModel @Inject constructor(
     /** The global mixer changed from the stage (the song has none of its own): every song's, like Settings → Player. */
     fun setGlobalMix(mixer: br.app.stagebook.domain.MixerConfig) = repository.updateLook { it.copy(mixer = mixer) }
 
+    /** The metronome's BPM changed on stage: saved in the song ({tempo}), like key and capo (user, 02/11). */
+    fun setTempo(songId: String, bpm: Int) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.setDirective(it.text, "tempo", bpm.toString())) }
+    }
+
     fun setCapo(songId: String, capo: Int) {
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = Chords.withCapo(it.text, capo)) }
     }
