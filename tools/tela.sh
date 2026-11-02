@@ -21,9 +21,24 @@ dump() {
 
 # texto com quebra de linha ou mais de 60 caracteres é letra de música: sai só o tamanho
 MASK='
+import re as _re
 def mask(s, full):
     if full or ("\n" not in s and len(s) <= 60): return s
     return f"[texto {len(s)} caracteres]"
+# the stage in Portuguese or English: its lyrics area runs from the top bar to the clock
+EDIT = ("Editar a letra nesta página", "Edit the lyrics on this page")
+TOP = EDIT + ("Tom:", "Key:", "Voltar", "Back")
+BOTTOM = ("Metrônomo", "Metronome")
+def stage_area(nodes, box):
+    if not any(n.get("content-desc", "") in EDIT for n in nodes): return None
+    top = max([box(n)[3] for n in nodes if n.get("content-desc", "").startswith(TOP)] or [0])
+    bottom = min([box(n)[1] for n in nodes if n.get("content-desc") in BOTTOM or _re.fullmatch(r"\d\d:\d\d", n.get("text", ""))] or [10**6])
+    return top, bottom
+def lyric(n, area, box):
+    # touching the lyrics area at all (a line cut at an edge too), except page numbers
+    if area is None or not n.get("text"): return False
+    y1, y2 = box(n)[1], box(n)[3]
+    return y2 > area[0] and y1 < area[1] and not _re.fullmatch(r"[\d…]+", n.get("text", "").strip())
 '
 
 # cada linha: x y | texto | descrição | clicável (1/0)  (x y = centro do elemento)
@@ -35,15 +50,14 @@ import re, sys, xml.etree.ElementTree as ET
 full = sys.argv[1] == "1"
 all_ = [n for n in ET.fromstring(sys.stdin.read()).iter("node") if n.get("text") or n.get("content-desc")]
 box = lambda n: list(map(int, re.findall(r"\d+", n.get("bounds"))))
-top = max([box(n)[3] for n in all_ if n.get("content-desc", "").startswith(("Editar a letra nesta página", "Tom:", "Voltar"))] or [0])
-bottom = min([box(n)[1] for n in all_ if n.get("content-desc") == "Metrônomo" or re.fullmatch(r"\d\d:\d\d", n.get("text", ""))] or [10**6])
-stage = not full and any(n.get("content-desc", "") == "Editar a letra nesta página" for n in all_)
+area = None if full else stage_area(all_, box)
 for n in all_:
     t, d = n.get("text", ""), n.get("content-desc", "")
+    raw = t
     t, d = mask(t, full), mask(d, full)
     x1, y1, x2, y2 = box(n)
-    if stage and t and y1 >= top and y2 <= bottom and not re.fullmatch(r"[\d…]+", t.strip()) and not t.startswith("[texto"):
-        t = f"[texto {len(t)} caracteres]"
+    if lyric(n, area, box):
+        t = f"[texto {len(raw)} caracteres]"
     c = "1" if n.get("clickable") == "true" else "0"
     print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d} | {c}")' "${1:-0}"
 }
@@ -53,13 +67,15 @@ achar() {
     dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
 alvo = sys.argv[1].strip().lower()
+all_ = [n for n in ET.fromstring(sys.stdin.read()).iter("node") if n.get("text") or n.get("content-desc")]
+box = lambda n: list(map(int, re.findall(r"\d+", n.get("bounds"))))
+area = stage_area(all_, box)
 nodes = []
-for n in ET.fromstring(sys.stdin.read()).iter("node"):
-    t, d = n.get("text", ""), n.get("content-desc", "")
-    if not (t or d): continue
-    nums = re.findall(r"\d+", n.get("bounds"))
-    x1, y1, x2, y2 = map(int, nums)
-    nodes.append(((x1+x2)//2, (y1+y2)//2, t, d, n.get("clickable") == "true"))
+for n in all_:
+    # on the stage the lyrics are never a target: a line containing the word was tapped and printed (audit 02/11)
+    if lyric(n, area, box): continue
+    x1, y1, x2, y2 = box(n)
+    nodes.append(((x1+x2)//2, (y1+y2)//2, n.get("text", ""), n.get("content-desc", ""), n.get("clickable") == "true"))
 for exato in (True, False):
     for clic in (True, None):
         for x, y, t, d, c in nodes:
