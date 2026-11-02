@@ -58,7 +58,11 @@ fun ScreenHeader(
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
             if (onBack != null) {
-                IconButton(onClick = onBack) { Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back)) }
+                // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
+                // arrow came out black on the dark background (user, 02/11)
+                IconButton(onClick = onBack) {
+                    Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back), tint = MaterialTheme.colorScheme.onSurface)
+                }
             }
             Column(Modifier.weight(1f)) {
                 Text(
