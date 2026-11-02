@@ -102,4 +102,16 @@ class TablatureTest {
         assertTrue(out, "Tab" !in out && "Parte 1 de 2" !in out && "E|" !in out)
         assertTrue(out, "[Intro]" in out && "[Primeira Parte]" in out && "Vou cantar aqui" in out && "[Segunda Parte]" in out && "Outra linha" in out)
     }
+    @Test fun `a tab part ends at the first lyrics line, even with no title after it (S26 retest, Under Pressure)`() {
+        val page = listOf(
+            "[Intro]", "D  A/D  D  A/D", "",
+            "[Tab - Intro]", "Parte 1 de 2", "D       A/D", "E|-------------|", "B|-------------|", "",
+            "D", "Uma linha inventada de exemplo", "A/D", "Outra linha da letra aqui", "", "G", "Mais uma linha cantada",
+        ).joinToString("\n")
+        val out = Tablature.strip(page)
+        assertTrue(out, "Tab" !in out && "Parte 1 de 2" !in out && "E|" !in out)
+        assertTrue(out, "Uma linha inventada de exemplo" in out && "Outra linha da letra aqui" in out && "Mais uma linha cantada" in out)
+        // the first lyrics line keeps its chord
+        assertTrue(out, "D\nUma linha inventada de exemplo" in out)
+    }
 }

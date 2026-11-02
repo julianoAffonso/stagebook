@@ -160,9 +160,16 @@ object Tablature {
         // ("Parte 1 de 2", the chords over the tab) stayed as an empty part (device test B-04)
         val out = ArrayList<String>(kept.size)
         var inTab = false
+        // chords after a blank line inside the tab part: they may be the first lyrics line's chords, kept if lyrics follow
+        val held = ArrayList<String>()
         for (line in kept) {
             val title = PART_TITLE.matchEntire(line.trim())?.groupValues?.get(1)?.trim()
-            if (title != null && !Chords.isChord(title)) inTab = TAB_PART.containsMatchIn(title)
+            if (title != null && !Chords.isChord(title)) { inTab = TAB_PART.containsMatchIn(title); held.clear() }
+            // the tab part ends at the first line of lyrics: Cifra Club often has no other title after "[Tab - Intro]",
+            // and the whole song went away with it ("Under Pressure" came out as "not a song", S26 retest)
+            else if (inTab && line.isBlank()) held.clear().also { held += "" }
+            else if (inTab && Chords.isChordLine(line)) { if (held.isNotEmpty()) held += line }
+            else if (inTab && line.isNotBlank() && !TAB_PIECE.matches(line.trim())) { inTab = false; out += held.drop(1); held.clear() }
             if (!inTab) out += line
         }
         return out.joinToString("\n").replace(BLANK_LINES, "\n\n")
@@ -170,4 +177,6 @@ object Tablature {
 
     private val PART_TITLE = Regex("""\[([^\[\]]+)]""")
     private val TAB_PART = Regex("""^(tab|tabs|tablatura|tablature)\b""", RegexOption.IGNORE_CASE)
+    // what a tab part has besides the strings: "Parte 1 de 2", "(3x)", "Riff"
+    private val TAB_PIECE = Regex("""(parte|part)\s+\d+\s+(de|of)\s+\d+|\(?\d+x\)?|riff""", RegexOption.IGNORE_CASE)
 }
