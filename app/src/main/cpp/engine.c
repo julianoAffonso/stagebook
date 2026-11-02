@@ -768,7 +768,7 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
 // Opens an output through Android (48 kHz, float): the device's own (deviceId 0, stereo) or a USB interface by its
 // Android id with its channels, for devices where talking to USB directly gets no packets back (S26, B-33: the
 // another app plays there through Android). False if Android didn't open it or didn't give 48 kHz.
-JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
+JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels, jboolean quad) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
     // a USB interface with more than 2 channels: Android lists its multichannel output only in 32-bit integers (the
@@ -785,7 +785,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, j
         // 4 channels asked by count come out as "index" channels, and Android's 4-channel output for the interface is
         // positional (quad): the conversion kept only the first two (S26, 02/11). Asked as quad they go 1:1. The call
         // exists from Android 12 (API 32): looked up at run time, the app still runs on Android 9.
-        if (deviceId > 0 && channels == 4) {
+        if (deviceId > 0 && channels == 4 && quad) {   // not when Android mixes for it by index (PlayerService)
             void (*set_mask)(AAudioStreamBuilder *, uint32_t) =
                 (void (*)(AAudioStreamBuilder *, uint32_t))dlsym(RTLD_DEFAULT, "AAudioStreamBuilder_setChannelMask");
             if (set_mask) set_mask(b, 0x33);   // AAUDIO_CHANNEL_QUAD: front left/right, back left/right
