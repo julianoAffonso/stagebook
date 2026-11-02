@@ -866,16 +866,11 @@
     <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
     <string name="usb_record_why">Para o Android lembrar da interface USB e não pedir permissão toda vez que o cabo voltar, permita o acesso ao áudio. O Stagebook não grava nada: a entrada da interface só acerta o relógio.</string>
     <string name="usb_record_allow">Permitir</string>
-    <string name="mixer_listen_on_stage">Para ajustar ouvindo, toque uma música no palco, segure o play e abra o mixer.</string>
+    <string name="mixer_listen_on_stage">O mixer e o equalizador ficam no palco, para ajustar ouvindo: toque uma música, segure o play e abra o mixer.</string>
     <string name="stage_mix_hint">Os ajustes aqui mudam o mixer global, que vale para todas as músicas. Desligue para mexer só nesta música.</string>
     <string name="stage_mix_own">Esta música tem ajustes próprios: o que você muda aqui vale só para ela.</string>
     <string name="stage_mix_general">Usar o mixer global</string>
     <string name="stage_mix_general_confirm">Esta música volta a usar o mixer global, e os ajustes próprios dela são apagados.</string>
-    <plurals name="mixer_own_songs">
-        <item quantity="one">%1$d música tem ajustes próprios de mixer, mudados no palco. O que você mudar aqui não vale para ela.</item>
-        <item quantity="many">%1$d músicas têm ajustes próprios de mixer, mudados no palco. O que você mudar aqui não vale para elas.</item>
-        <item quantity="other">%1$d músicas têm ajustes próprios de mixer, mudados no palco. O que você mudar aqui não vale para elas.</item>
-    </plurals>
     <string name="tags_more">%1$s +%2$d</string>
     <string name="tags_all">Todas</string>
     <string name="tags_filter">Tags</string>
