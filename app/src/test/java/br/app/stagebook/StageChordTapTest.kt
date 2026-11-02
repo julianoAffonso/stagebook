@@ -108,14 +108,14 @@ class StageChordTapTest {
             }
         }
         val lyric = compose.onNodeWithText("Segunda linha", substring = true).fetchSemanticsNode().boundsInRoot
-        compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.top + 180f)) }
         compose.waitForIdle()
         compose.onNodeWithText("Editar esta linha").assertExists()
         compose.onNodeWithText("Marca-texto").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Passe o dedo", substring = true).assertExists()
         // a tap on a word of the second line: it's marked, the page doesn't turn
-        compose.onRoot().performTouchInput { click(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.onRoot().performTouchInput { click(Offset(lyric.left + 40f, lyric.top + 180f)) }
         compose.waitForIdle()
         val m = marked!!
         assertEquals("s1", m[0])
@@ -125,6 +125,10 @@ class StageChordTapTest {
         compose.onNodeWithText("Pronto").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Passe o dedo", substring = true).assertDoesNotExist()
+        // below the last line there is no word: nothing is marked
+        compose.onRoot().performTouchInput { click(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.waitForIdle()
+        assertEquals(1, marks)
         // Done only closes: it doesn't highlight the word under the bar (audit 02/11)
         assertEquals(1, marks)
     }
