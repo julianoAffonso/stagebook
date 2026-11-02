@@ -193,7 +193,7 @@
     <string name="stage_backing_track">Backing track</string>
     <string name="settings_player_on_short">Player on</string>
     <string name="essential_title">Essential mode</string>
-    <string name="essential_help">For playing solo or with the battery running low. Turns off what runs in the background and removes from the screen what isn\'t used. You can turn off just one part.</string>
+    <string name="essential_help">For a simpler screen: it keeps only lyrics, chords, diagrams and the pedal, and turns off what runs in the background. You can turn off just one part.</string>
     <string name="essential_switch">Turn on essential mode</string>
     <string name="essential_keeps">Lyrics, chords, chord diagrams and pedal stay</string>
     <string name="essential_parts">What stays on</string>

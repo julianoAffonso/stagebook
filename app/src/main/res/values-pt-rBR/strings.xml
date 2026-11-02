@@ -199,7 +199,7 @@
     <string name="stage_backing_track">Backing track</string>
     <string name="settings_player_on_short">Player ligado</string>
     <string name="essential_title">Modo essencial</string>
-    <string name="essential_help">Para quem toca sozinho ou com a bateria no fim. Desliga o que roda por trás e tira da tela o que não for usado. Dá para desligar só uma parte.</string>
+    <string name="essential_help">Para quem quer a tela mais simples: deixa só letra, cifra, diagramas e pedal, e desliga o que roda por trás. Dá para desligar só uma parte.</string>
     <string name="essential_switch">Ligar o modo essencial</string>
     <string name="essential_keeps">Ficam letra, cifra, diagramas dos acordes e pedal</string>
     <string name="essential_parts">O que fica ligado</string>
