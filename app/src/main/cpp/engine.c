@@ -677,6 +677,7 @@ out:
 // routing outputs go to the device's two sides. The simulator (no AAudio) doesn't compile this.
 #if __has_include(<aaudio/AAudio.h>)
 #include <aaudio/AAudio.h>
+#include <dlfcn.h>
 #define ENGINE_HAS_DEVICE 1
 static AAudioStream *g_dev = NULL;
 static volatile int g_dev_running = 0;
@@ -781,6 +782,14 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, j
         AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
         if (deviceId > 0) AAudioStreamBuilder_setDeviceId(b, deviceId);
         AAudioStreamBuilder_setChannelCount(b, channels > 0 ? channels : 2);
+        // 4 channels asked by count come out as "index" channels, and Android's 4-channel output for the interface is
+        // positional (quad): the conversion kept only the first two (S26, 02/11). Asked as quad they go 1:1. The call
+        // exists from Android 12 (API 32): looked up at run time, the app still runs on Android 9.
+        if (deviceId > 0 && channels == 4) {
+            void (*set_mask)(AAudioStreamBuilder *, uint32_t) =
+                (void (*)(AAudioStreamBuilder *, uint32_t))dlsym(RTLD_DEFAULT, "AAudioStreamBuilder_setChannelMask");
+            if (set_mask) set_mask(b, 0x33);   // AAUDIO_CHANNEL_QUAD: front left/right, back left/right
+        }
         AAudioStreamBuilder_setFormat(b, i32 ? AAUDIO_FORMAT_PCM_I32 : AAUDIO_FORMAT_PCM_FLOAT);
         AAudioStreamBuilder_setUsage(b, AAUDIO_USAGE_MEDIA);
         AAudioStreamBuilder_setContentType(b, AAUDIO_CONTENT_TYPE_MUSIC);
