@@ -565,7 +565,8 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
         if (ui.look.bold) " · " + stringResource(R.string.settings_bold_short) else ""
     SettingsSection.METRONOME -> listOfNotNull(
         if (ui.look.extrasOn) stringResource(if (ui.look.metroShown) R.string.metro_summary_shown else R.string.metro_summary_hidden) else null,
-        if (ui.look.playerMode) stringResource(R.string.settings_player_on_short) else null,
+        // with the player alone the item is already named "Player": just "On" (user, 02/11)
+        if (ui.look.playerMode) stringResource(if (ui.look.extrasOn) R.string.settings_player_on_short else R.string.player_on_alone) else null,
     ).joinToString(" · ")
     // the keyboard pedal, or else the saved MIDI pedal
     SettingsSection.PEDAL -> when {

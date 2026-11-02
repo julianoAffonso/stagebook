@@ -835,6 +835,7 @@
     <string name="usb_record_why">So Android remembers the USB interface and doesn\'t ask for permission every time the cable comes back, allow audio access. Stagebook records nothing: the interface\'s input only keeps the clock.</string>
     <string name="usb_record_allow">Allow</string>
     <string name="player_title">Player</string>
+    <string name="player_on_alone">On</string>
     <string name="metro_player_title">Metronome and player</string>
     <string name="mixer_listen_on_stage">The mixer and equalizer are on the stage, to adjust while listening: play a song, hold play and open the mixer.</string>
     <string name="stage_mix_hint">Changes here go to the global mixer, for every song. Turn it off to change this song only.</string>
