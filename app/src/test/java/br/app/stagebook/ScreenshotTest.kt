@@ -833,7 +833,7 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.PLAYER) }
     }
 
-    // ---- mixer (Settings → Player): a 4-channel file, backing as a stereo pair and mono click on output 7 ----
+    // ---- mixer (over the stage): a 4-channel file, backing as a stereo pair and mono click on output 7 ----
     private val mixerLook = Look(
         playerMode = true,
         mixer = br.app.stagebook.domain.MixerConfig(
@@ -858,7 +858,13 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE_TALL)
     fun mixerPhone() = shoot("jornada_mixer_1_celular") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
+        androidx.compose.foundation.layout.Column(
+            androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.m),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
+        ) {
+            br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true, {})
+            br.app.stagebook.ui.settings.EqCard(mixerLook.mixer, {}, { mixerLevels }, true)
+        }
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -866,7 +872,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(), it, section = SettingsSection.PLAYER) }
+                    br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, false, {})
                 }
             }
         }
@@ -1107,7 +1113,13 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = TABLET_TALL)
     fun mixerTablet() = shoot("jornada_mixer_2_tablet") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = mixerLook), SettingsActions(mixerLevels = { mixerLevels }, monitoring = true), it, section = SettingsSection.PLAYER) }
+        androidx.compose.foundation.layout.Column(
+            androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.m),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
+        ) {
+            br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true, {})
+            br.app.stagebook.ui.settings.EqCard(mixerLook.mixer, {}, { mixerLevels }, true)
+        }
     }
 
     // the song's mixer and equalizer, opened over the stage (user, 01/11): the sheet as it opens, and its whole content

@@ -258,15 +258,6 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
         bandVm.screenOpen(open)
         onDispose { if (open) bandVm.screenOpen(false) }
     }
-    // "Monitor" switch: starts off and isn't saved
-    var monitoring by remember { mutableStateOf(false) }
-    val levels = remember { mutableStateOf(MixerLevels.SILENT) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val metering = monitoring && uiState.look.playerMode && section == SettingsSection.PLAYER
-    LaunchedEffect(metering) {
-        if (metering) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { StagePlayer.liveLevels().collect { levels.value = it } }
-        levels.value = MixerLevels.SILENT
-    }
     Box(Modifier.fillMaxSize()) {
         SettingsScreen(
             section = section,
@@ -302,10 +293,6 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onMidiUsb = viewModel::setMidiUsb,
                 onSites = viewModel::setSites,
                 onPlayerMode = viewModel::setPlayerMode,
-                onMixer = viewModel::setMixer,
-                mixerLevels = { levels.value },
-                monitoring = monitoring,
-                onMonitoring = { monitoring = it },
                 band = band,
                 bandActions = bandActions,
                 web = web,
@@ -395,9 +382,6 @@ data class SettingsActions(
     val onLanguage: (AppLanguage) -> Unit = {},
     val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onPlayerMode: (Boolean) -> Unit = {},
-    val onMixer: (MixerConfig) -> Unit = {},
-    val mixerLevels: () -> MixerLevels = { MixerLevels.SILENT },   // read only when drawing the meters
-    val monitoring: Boolean = false,
     // Settings → Band: the band state (BandViewModel) and what the screen does
     val band: BandUi = BandUi(),
     val bandActions: BandActions = BandActions(),
@@ -409,7 +393,6 @@ data class SettingsActions(
     val advanced: AdvancedUi = AdvancedUi(),
     val onTweak: (br.app.stagebook.data.device.DeviceTweak, Boolean) -> Unit = { _, _ -> },
     val onBatteryFree: () -> Unit = {},
-    val onMonitoring: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
@@ -603,7 +586,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
                 AnnounceCard(uiState.look, actions)
             }
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
-            SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions, uiState.ownMix)
+            SettingsSection.PLAYER -> PlayerDetail(uiState.look, actions)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree)
@@ -1238,7 +1221,7 @@ private fun EssentialDetail(look: Look, actions: SettingsActions) {
  * Player: the section only shows when it's on; it's turned on and off only in Essential mode (user's request, 29/10).
  */
 @Composable
-private fun PlayerDetail(look: Look, actions: SettingsActions, ownMix: Int = 0) {
+private fun PlayerDetail(look: Look, actions: SettingsActions) {
     // "USB output", not "Player" again under the screen's own title
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
@@ -1247,19 +1230,9 @@ private fun PlayerDetail(look: Look, actions: SettingsActions, ownMix: Int = 0) 
     SettingsCard(stringResource(R.string.settings_track_button)) {
         SwitchRow(stringResource(R.string.settings_track_stops), look.trackStops, actions.onTrackStops, detail = stringResource(R.string.settings_track_stops_detail))
     }
-    // songs changed in the mixer over the stage keep their own settings: what changes here doesn't reach them (user, 31/10)
-    if (ownMix > 0) {
-        Text(
-            pluralStringResource(R.plurals.mixer_own_songs, ownMix, ownMix),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-    }
-    // here nothing plays (leaving the stage stops the song): adjusting while listening is on the stage (user, 01/11)
+    // no mixer here (user, 02/11): nothing plays in Settings (leaving the stage stops the song), so it could never be
+    // adjusted by ear; the mixer and EQ are on the stage, over the playing song
     Text(stringResource(R.string.mixer_listen_on_stage), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    val (mixer, onMixer) = rememberMixerDraft(look.mixer, actions.onMixer)
-    MixerCard(mixer, onMixer, actions.mixerLevels, actions.monitoring, actions.onMonitoring)
-    EqCard(mixer, onMixer, actions.mixerLevels, actions.monitoring)
 }
 
 @Composable
