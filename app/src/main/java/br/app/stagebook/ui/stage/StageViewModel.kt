@@ -219,12 +219,12 @@ class StageViewModel @Inject constructor(
 
     /** "Highlight this line" on stage (B-28): saved in the song right away, like key and capo. */
     /** Highlighter on stage: the words from [from] to [to] of line [line] as [shown] get (or lose) their highlight. */
-    fun highlightWords(songId: String, line: Int, shown: String, from: Int, to: Int) {
+    fun highlightWords(songId: String, line: Int, shown: String, from: Int, to: Int, after: Int = 0) {
         if (songId.isEmpty()) return
         repository.updateSong(songId) { song ->
             val lines = song.text.split('\n').toMutableList()
             val saved = lines.getOrNull(line) ?: return@updateSong song
-            lines[line] = br.app.stagebook.domain.HighlightRange.toggle(saved, shown, from, to)
+            lines[line] = br.app.stagebook.domain.HighlightRange.toggle(saved, shown, from, to, after)
             song.copy(text = lines.joinToString("\n"))
         }
     }

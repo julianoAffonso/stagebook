@@ -40,4 +40,12 @@ class HighlightRangeTest {
     @Test fun `text that isn't in the saved line changes nothing`() {
         assertEquals("Saio cedo", HighlightRange.toggle("Saio cedo", "outra coisa", 0, 3))
     }
+
+    // a wrapped line's second piece repeating the first: the word is marked where the finger was (audit 02/11)
+    @Test fun `a repeated word in the second piece of a wrapped line is marked there`() {
+        val saved = "oh oh oh oh"
+        // the stage split it as "oh oh " + "oh oh": 4 letters before the second piece
+        assertEquals("oh oh ==oh== oh", HighlightRange.toggle(saved, "oh oh", 0, 0, after = 4))
+        assertEquals("==oh== oh oh oh", HighlightRange.toggle(saved, "oh oh", 0, 0))
+    }
 }

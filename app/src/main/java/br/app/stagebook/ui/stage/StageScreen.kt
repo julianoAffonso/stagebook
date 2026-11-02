@@ -273,7 +273,7 @@ fun StageScreen(
     modifier: Modifier = Modifier,
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
-    onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int) -> Unit = { _, _, _, _, _ -> },
+    onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -566,8 +566,12 @@ fun StageScreen(
                 if (start != null && source != null) {
                     // lifted on another line: up to the end (or start) of the first one, highlights never cross lines
                     val end = hit.charAt(to)?.takeIf { it.first == start.first }?.third ?: if (to.y > from.y) start.second.length - 1 else 0
+                    // a line wrapped on stage comes in pieces: the letters of the pieces before this one
+                    var k = start.first - 1
+                    var after = 0
+                    while (k >= 0 && pageLines.getOrNull(k)?.source == source) { after += pageLines[k].text.text.count { !it.isWhitespace() }; k-- }
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onHighlightWords(song.id, source, start.second, start.third, end)
+                    onHighlightWords(song.id, source, start.second, start.third, end, after)
                 }
             },
         ),
