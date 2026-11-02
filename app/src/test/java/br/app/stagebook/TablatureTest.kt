@@ -70,7 +70,8 @@ class TablatureTest {
         // transposing up a half step moves every fret and keeps the columns
         val up = Tablature.shift(text, 1)
         assertEquals(text.lines().size, up.lines().size)
-        assertTrue(up.lines().drop(2).all { it.length == text.lines()[2].length })
+        // the strings stay aligned with each other (where a fret gains a digit, every string gains the column)
+        assertTrue(up, up.lines().drop(2).map { it.length }.distinct().size == 1)
     }
     @Test fun `a half step down and back up gives the same tab, open strings included (device test B-15)`() {
         val tab = listOf(
@@ -83,9 +84,10 @@ class TablatureTest {
         // the open D can't go lower: the whole block goes up an octave and keeps its shape
         assertTrue(down, down.lines()[3].startsWith("D|-11"))
         assertTrue(down, down.lines()[0].startsWith("E|-12"))
-        // the notes come back exactly (the dashes between them may change by one where a fret had two digits)
+        // the notes come back, and the text too
         val notes = { s: String -> s.lines().map { l -> Regex("""\d+""").findAll(l.substringAfter('|')).map { it.value }.toList() } }
         assertEquals(notes(tab), notes(Tablature.shift(down, 1)))
+        assertEquals(tab, Tablature.shift(down, 1))
         assertEquals(tab, Tablature.shift(Tablature.shift(tab, 1), -1))
     }
     @Test fun `without the tablature, a tab-only part goes whole, title included (device test B-04)`() {
