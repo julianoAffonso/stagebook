@@ -41,4 +41,15 @@ class ConductSearchTest {
         val gap = ((leave.top + leave.bottom) / 2 - (text.top + text.bottom) / 2)
         assertTrue("Sair a $gap do meio do texto", gap < 8.dp && gap > (-8).dp)
     }
+
+    // with a missing song the follower's strip stays two lines: "See what's missing" is a tap on the text (02/11)
+    @Test fun `on a phone a follower with missing songs keeps Leave beside the text and opens the list from it`() {
+        val lacks = listOf(br.app.stagebook.domain.Conduct.Lack("Hi10 XPro", listOf("Música")))
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("nxtpaper", "Música", false, false, listOf("Hi10 XPro"), lacks), {}, {}, {}) } }
+        val text = compose.onNodeWithText("nxtpaper", substring = true).getUnclippedBoundsInRoot()
+        val leave = compose.onNodeWithText("Sair").getUnclippedBoundsInRoot()
+        assertTrue("Sair abaixo do texto: ${leave.top} > ${text.bottom}", leave.top < text.bottom + 24.dp)
+        compose.onNodeWithText("nxtpaper", substring = true).performClick()
+        compose.onNodeWithText("O que falta").assertExists()
+    }
 }
