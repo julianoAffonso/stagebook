@@ -368,32 +368,41 @@ class BandLink @Inject constructor(
         val socket = runCatching {
             java.net.DatagramSocket(null).apply { reuseAddress = true; broadcast = true; bind(InetSocketAddress(BEACON_PORT)) }
         }.getOrElse { Log.w(TAG, "beacon: $it"); return@coroutineScope }
-        beaconSocket = socket
-        launch {
-            val buf = ByteArray(512)
-            while (isActive) {
-                val packet = java.net.DatagramPacket(buf, buf.size)
-                runCatching { socket.receive(packet) }.getOrElse { break }
-                val parts = String(packet.data, 0, packet.length, Charsets.UTF_8).split('\n')
-                if (parts.size < 6 || parts[0] != BEACON_TAG) continue
-                val id = parts[1]
-                val peerPort = parts[2].toIntOrNull() ?: continue
-                if (id == identity.id || id.length > 64) continue
-                val v = parts[3].toIntOrNull() ?: BandProtocol.VERSION
-                val peer = Peer(id, parts[5].take(BandProtocol.MAX_NAME), packet.address, peerPort, v, parts[4].take(20))
-                beaconSeen[id] = System.currentTimeMillis()
-                _peers.update { list -> if (list.any { it == peer }) list else (list.filterNot { it.id == id } + peer).sortedBy { it.name.lowercase() } }
+        // the socket is always closed here when the beacon ends: stop() can run before this line, and the socket opened
+        // after it stayed open (audit 02/11 #7)
+        try {
+            beaconSocket = socket
+            if (!_running.value) return@coroutineScope
+            launch {
+                val buf = ByteArray(512)
+                while (isActive) {
+                    val packet = java.net.DatagramPacket(buf, buf.size)
+                    runCatching { socket.receive(packet) }.getOrElse { break }
+                    val parts = String(packet.data, 0, packet.length, Charsets.UTF_8).split('\n')
+                    if (parts.size < 6 || parts[0] != BEACON_TAG) continue
+                    val id = parts[1]
+                    val peerPort = parts[2].toIntOrNull() ?: continue
+                    // a packet read after the band stopped doesn't bring a device back to the list
+                    if (id == identity.id || id.length > 64 || !_running.value) continue
+                    val v = parts[3].toIntOrNull() ?: BandProtocol.VERSION
+                    val peer = Peer(id, parts[5].take(BandProtocol.MAX_NAME), packet.address, peerPort, v, parts[4].take(20))
+                    beaconSeen[id] = System.currentTimeMillis()
+                    _peers.update { list -> if (list.any { it == peer }) list else (list.filterNot { it.id == id } + peer).sortedBy { it.name.lowercase() } }
+                }
             }
-        }
-        while (isActive) {
-            val msg = listOf(BEACON_TAG, identity.id, port, BandProtocol.VERSION, identity.appVersion, identity.name.value.replace('\n', ' '))
-                .joinToString("\n").toByteArray(Charsets.UTF_8)
-            for (target in broadcastTargets()) runCatching { socket.send(java.net.DatagramPacket(msg, msg.size, target, BEACON_PORT)) }
-            // whoever stopped sending it leaves the list
-            val now = System.currentTimeMillis()
-            val gone = beaconSeen.filterValues { now - it > BEACON_GONE_MS }.keys
-            if (gone.isNotEmpty()) { gone.forEach(beaconSeen::remove); _peers.update { list -> list.filterNot { it.id in gone } } }
-            kotlinx.coroutines.delay(BEACON_EVERY_MS)
+            while (isActive) {
+                val msg = listOf(BEACON_TAG, identity.id, port, BandProtocol.VERSION, identity.appVersion, identity.name.value.replace('\n', ' '))
+                    .joinToString("\n").toByteArray(Charsets.UTF_8)
+                for (target in broadcastTargets()) runCatching { socket.send(java.net.DatagramPacket(msg, msg.size, target, BEACON_PORT)) }
+                // whoever stopped sending it leaves the list
+                val now = System.currentTimeMillis()
+                val gone = beaconSeen.filterValues { now - it > BEACON_GONE_MS }.keys
+                if (gone.isNotEmpty()) { gone.forEach(beaconSeen::remove); _peers.update { list -> list.filterNot { it.id in gone } } }
+                kotlinx.coroutines.delay(BEACON_EVERY_MS)
+            }
+        } finally {
+            runCatching { socket.close() }
+            if (beaconSocket === socket) beaconSocket = null
         }
     }
 
