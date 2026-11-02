@@ -5,7 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -30,8 +31,12 @@ fun ColorSwatchRow(colors: List<Int>, selected: Int, onSelect: (Int) -> Unit, mo
             val color = Color(argb)
             val isSelected = argb == selected
             Box(
+                // all the same size and round: when six don't fit (phone), they all shrink together; the last one
+                // used to be squeezed into an oval (user, 01/11)
                 modifier = Modifier
-                    .size(Sizes.swatch)
+                    .weight(1f, fill = false)
+                    .sizeIn(maxWidth = Sizes.swatch, maxHeight = Sizes.swatch)
+                    .aspectRatio(1f)
                     .clip(CircleShape)
                     .background(color)
                     .border(
