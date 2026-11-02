@@ -6,14 +6,11 @@ local.properties
 .idea/
 # lyrics (copyrighted content) never go into git: they reach the app through import
 *.json
-# signing keys never go into git (the code is public)
+# signing keys never go into git
 *.jks
 *.keystore
-# memories and skills inherited from the earlier apps, complete (they have personal data): only on this Mac
-.claude/local/
-
-# copyrighted test lyrics: out of git
+# local working notes: only on the developer's machine
+.claude/
+CLAUDE.md
 /carga/
-.claude/audit-pending
-!.claude/settings.json
 .DS_Store
