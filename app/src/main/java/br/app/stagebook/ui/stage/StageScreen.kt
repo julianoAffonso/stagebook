@@ -598,14 +598,14 @@ fun StageScreen(
             .background(Color(look.bg))
             .padding(horizontal = Spacing.l),
     ) {
-        // lean header: song, artist and the page dots. On phones the artist and year drop to their own line, full width
-        // (sharing the line with the title, they got cut)
-        val metaInline = wideLists()
+        // lean header: the song on its own line, then artist, year, key and capo below, full width, on phones and tablets
+        // (sharing the line with the title they got cut on phones and came out small on the tablet; user, 02/11)
+        val wide = wideLists()
         Row(Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
         BoxWithConstraints(Modifier.weight(1f)) {
-        val titleMax = if (metaInline && song.meta.isNotEmpty()) maxWidth * 0.8f else maxWidth
+        val titleMax = maxWidth
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
@@ -630,22 +630,10 @@ fun StageScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = titleMax),
             )
-            if (metaInline && song.meta.isNotEmpty()) {
-                Text(
-                    song.meta,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = fg.copy(alpha = 0.55f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-            }
         }
         }
-            // after the artist (user's request, 29/10): capo lit in the accent color, then the key; on phones they go
-            // to the artist line, otherwise the title gets shorter. No backing track badge: the play only shows when
-            // there is one (T29)
-            if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo, onTranspose = { onTranspose(song.id, it) }, onCapo = { onCapo(song.id, it) })
+            // capo (lit in the accent color) and key go on the artist line below. No backing track badge: the play
+            // only shows when there is one (T29)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -654,11 +642,12 @@ fun StageScreen(
         }
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
+        if (song.meta.isNotEmpty() || (hasKey && !song.missing)) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
-                    style = MaterialTheme.typography.titleSmall,
+                    // the tablet has room for a bigger line
+                    style = if (wide) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
                     color = fg.copy(alpha = 0.55f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
