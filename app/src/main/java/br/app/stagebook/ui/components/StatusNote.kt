@@ -27,7 +27,7 @@ enum class StatusTone { OK, PROBLEM, INFO }
 @Composable
 fun StatusNote(text: String, tone: StatusTone, modifier: Modifier = Modifier, content: (@Composable () -> Unit)? = null) =
     StatusBox(tone, modifier) {
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+        Text(text, style = MaterialTheme.typography.bodyMedium)
         content?.invoke()
     }
 
@@ -40,14 +40,14 @@ fun StatusBox(tone: StatusTone, modifier: Modifier = Modifier, content: @Composa
         StatusTone.PROBLEM -> colors.errorContainer to colors.onErrorContainer
         StatusTone.INFO -> colors.surfaceVariant to colors.onSurfaceVariant
     }
-    Surface(color = container, contentColor = onContainer, shape = MaterialTheme.shapes.medium, modifier = modifier.fillMaxWidth()) {
-        Row(Modifier.padding(Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.Top) {
+    Surface(color = container, contentColor = onContainer, shape = MaterialTheme.shapes.small, modifier = modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s + Spacing.xs), horizontalArrangement = Arrangement.spacedBy(Spacing.s + Spacing.xs), verticalAlignment = Alignment.Top) {
             Icon(
                 when (tone) { StatusTone.OK -> AppIcons.Check; StatusTone.PROBLEM -> AppIcons.Warning; StatusTone.INFO -> AppIcons.InfoOutline },
                 null,
-                Modifier.size(24.dp),
+                Modifier.size(18.dp),
             )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.s)) { content() }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) { content() }
         }
     }
 }

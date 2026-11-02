@@ -78,10 +78,7 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
                         when {
                             !lan || here == null -> Unit
                             // another app version: nothing works between the two until both update to the same one
-                            here.otherVersion != null -> Text(
-                                stringResource(R.string.band_other_version, here.otherVersion), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
+                            here.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, here.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                             else -> Text(stringResource(R.string.band_online), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -114,9 +111,7 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
             Text(peer.name, style = MaterialTheme.typography.bodyLarge)
             when {
                 // another app version: nothing works between the two until both update to the same one
-                peer.otherVersion != null -> Text(
-                    stringResource(R.string.band_other_version, peer.otherVersion), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                )
+                peer.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, peer.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                 peer.join == BandLink.Join.WAITING -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Text(stringResource(R.string.band_waiting), style = MaterialTheme.typography.bodySmall)
