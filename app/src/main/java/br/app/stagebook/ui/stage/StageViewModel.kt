@@ -33,6 +33,9 @@ data class StageUiState(
     val loading: Boolean = true,
     val songs: List<StageSong> = emptyList(),
     val look: Look = Look(),
+    /** Following the band: the leader's next song (the follower's stage holds only the current one); [followEnd]: it's the last. */
+    val followNext: String? = null,
+    val followEnd: Boolean = false,
 )
 
 @HiltViewModel
@@ -146,10 +149,16 @@ class StageViewModel @Inject constructor(
     /** Song the stage opens on (position in the setlist). */
     val start: Int = route.start
 
-    val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
+    val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library, conduct.role) { loaded, lib, role ->
         val set = route.setId?.let(lib::setlist)
         val ids = set?.items ?: listOfNotNull(route.songId)
+        // following, the "Next:" at the end of the song comes from the leader's setlist, which the message carries
+        // (user, 02/11: the follower saw no next song even with the same setlist)
+        val follow = (role as? br.app.stagebook.data.BandConduct.Role.Following)?.takeIf { set == null && it.songId != null && it.songId == route.songId }?.msg
+        val followNext = follow?.songs?.getOrNull(follow.index + 1)?.title
         StageUiState(
+            followNext = followNext,
+            followEnd = follow != null && followNext == null && follow.index >= 0,
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
