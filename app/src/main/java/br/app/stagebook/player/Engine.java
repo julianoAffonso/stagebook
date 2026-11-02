@@ -9,7 +9,7 @@ final class Engine {
     static native void stop();
     // no USB interface: plays on the device's output (AAudio, 48 kHz stereo); false if Android didn't open it
     // deviceId 0 = the device's own output (stereo); a USB interface's Android id with its channels (B-33)
-    static native boolean startDevice(int deviceId, int channels);
+    static native boolean startDevice(int deviceId, int channels, boolean quad);   // quad: 4 channels as speaker positions
     static native long load(String path);
     static native void play();
     static native void pause();

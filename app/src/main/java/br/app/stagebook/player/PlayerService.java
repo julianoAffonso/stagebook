@@ -233,7 +233,7 @@ public class PlayerService extends Service {
         connecting = true;
         int gen = usbGen;
         usbOps.execute(() -> {
-            boolean ok = Engine.startDevice(0, 2);
+            boolean ok = Engine.startDevice(0, 2, false);
             if (!ok) Log.w(TAG, Engine.status());
             main.post(() -> { if (gen == usbGen) deviceReady(ok); });
         });
@@ -252,38 +252,42 @@ public class PlayerService extends Service {
         int ch = 2;
         for (int n : out.getChannelCounts()) ch = Math.max(ch, n);
         final int id = out.getId(), count = Math.min(ch, 8);
-        bitPerfect(out, count);
+        final boolean byIndex = preferMixer(out, count);
         connecting = true;
         int gen = usbGen;
         setStatus(getString(R.string.player_usb_connecting));
         usbOps.execute(() -> {
-            boolean ok = Engine.startDevice(id, count);
+            boolean ok = Engine.startDevice(id, count, !byIndex);
             if (!ok) Log.w(TAG, Engine.status());
             main.post(() -> { if (gen == usbGen) androidUsbReady(ok, d, count); });
         });
     }
 
-    // Android 14+: asks Android to open the interface bit-perfect (no mixing, no conversion), with all its channels.
-    // On the S26 its normal path only delivered outputs 1-2 to the USB interface even with a 4-channel stream (02/11).
-    void bitPerfect(AudioDeviceInfo out, int count) {
-        if (Build.VERSION.SDK_INT < 34) return;
+    // Android 14+: asks Android to mix for the interface with its channels "by index" (1 to N in order, no speaker
+    // positions), bit-perfect when offered. On the S26 the positional (quad) mixing kept outputs 3-4 from the USB interface
+    // even with a 4-channel stream (02/11); Android offers it quad and by index, no bit-perfect. True when the index
+    // mixer is set: then the stream goes by index too (no quad mask).
+    boolean preferMixer(AudioDeviceInfo out, int count) {
+        if (Build.VERSION.SDK_INT < 34 || count <= 2) return false;
         try {
             AudioManager am = getSystemService(AudioManager.class);
             android.media.AudioMixerAttributes chosen = null;
             for (android.media.AudioMixerAttributes m : am.getSupportedMixerAttributes(out)) {
                 Log.i(TAG, "mixer offered: " + m);
                 android.media.AudioFormat f = m.getFormat();
-                if (m.getMixerBehavior() == android.media.AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT
-                        && f.getChannelCount() == count && f.getSampleRate() == 48000
-                        && (chosen == null || f.getEncoding() == android.media.AudioFormat.ENCODING_PCM_32BIT)) chosen = m;
+                boolean index = f.getChannelIndexMask() == (1 << count) - 1;
+                boolean bitPerfect = m.getMixerBehavior() == android.media.AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT;
+                if (index && f.getSampleRate() == 48000 && (chosen == null || bitPerfect)) chosen = m;
             }
-            if (chosen == null) { Log.i(TAG, "no bit-perfect mixer with " + count + " channels at 48 kHz"); return; }
+            if (chosen == null) { Log.i(TAG, "no mixer by index with " + count + " channels at 48 kHz"); return false; }
             android.media.AudioAttributes media = new android.media.AudioAttributes.Builder()
                     .setUsage(android.media.AudioAttributes.USAGE_MEDIA).build();
             boolean ok = am.setPreferredMixerAttributes(media, out, chosen);
-            Log.i(TAG, "bit-perfect " + (ok ? "set: " : "refused: ") + chosen);
+            Log.i(TAG, "mixer by index " + (ok ? "set: " : "refused: ") + chosen);
+            return ok;
         } catch (RuntimeException e) {
-            Log.w(TAG, "bit-perfect failed: " + e);
+            Log.w(TAG, "mixer by index failed: " + e);
+            return false;
         }
     }
 
