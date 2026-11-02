@@ -793,6 +793,7 @@
     <string name="web_receive_done">Done. It\'s in the library.</string>
     <string name="web_restore_needs">Pick at least one part.</string>
     <string name="not_song">This doesn\'t look like lyrics or chords. Stagebook keeps only song lyrics and chords, as text.</string>
+    <string name="import_search_page">This is the search page. Open the chords page and tap Import.</string>
     <plurals name="backup_skipped">
         <item quantity="one">%1$d song stayed out: it wasn\'t lyrics or chords.</item>
         <item quantity="other">%1$d songs stayed out: they weren\'t lyrics or chords.</item>

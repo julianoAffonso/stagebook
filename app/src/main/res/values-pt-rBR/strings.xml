@@ -822,6 +822,7 @@
     <string name="web_receive_done">Pronto. Já está na biblioteca.</string>
     <string name="web_restore_needs">Escolha pelo menos uma parte.</string>
     <string name="not_song">Isso não parece letra nem cifra. O Stagebook guarda só letras e cifras, em texto.</string>
+    <string name="import_search_page">Esta é a página de busca. Abra a página da cifra e toque em Importar.</string>
     <plurals name="backup_skipped">
         <item quantity="one">%1$d música ficou de fora: não era letra nem cifra.</item>
         <item quantity="many">%1$d músicas ficaram de fora: não eram letra nem cifra.</item>

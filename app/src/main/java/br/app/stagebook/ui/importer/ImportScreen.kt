@@ -199,6 +199,7 @@ fun ImportScreen(
     val notFound = stringResource(R.string.import_not_found)
     val unreadable = stringResource(R.string.import_unreadable)
     val notSong = stringResource(R.string.not_song)
+    val searchPage = stringResource(R.string.import_search_page)
     LaunchedEffect(uiState.problem) {
         val p = uiState.problem ?: return@LaunchedEffect
         snackbar.showSnackbar(
@@ -206,6 +207,7 @@ fun ImportScreen(
                 ImportProblem.NOT_FOUND -> notFound
                 ImportProblem.NOT_SONG -> notSong
                 ImportProblem.UNREADABLE -> unreadable
+                ImportProblem.SEARCH_PAGE -> searchPage
             },
         )
         onProblemShown()
