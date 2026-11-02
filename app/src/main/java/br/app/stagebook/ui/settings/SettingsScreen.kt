@@ -1040,14 +1040,23 @@ private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions)
                 }
             }
         }
+        // every button of the pedal pressed here, with what it does: the ones left as they come too, marked "default"
+        // (the list used to show only the changed ones, and the user asked where the others' commands were, 01/11)
         Text(stringResource(R.string.settings_pedal_done), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (keys.isEmpty()) {
+        val listed = (uiState.look.pedalSeen + keys.keys).distinct()
+        if (listed.isEmpty()) {
             Text(stringResource(R.string.settings_pedal_done_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            keys.forEach { (code, action) ->
-                PedalKeyRow(pedalKeyName(code), action, { actions.onPedalAction(code, it) }, { actions.onPedalAction(code, PedalAction.default(code)) })
+            listed.forEach { code ->
+                val custom = keys[code]
+                PedalKeyRow(
+                    pedalKeyName(code) + if (custom == null) " · " + stringResource(R.string.settings_pedal_default) else "",
+                    custom ?: PedalAction.default(code),
+                    { actions.onPedalAction(code, it) },
+                    onRemove = if (custom != null) ({ actions.onPedalAction(code, PedalAction.default(code)) }) else null,
+                )
             }
-            ActionButton(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size), actions.onResetPedalKeys, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
+            if (keys.isNotEmpty()) ActionButton(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size), actions.onResetPedalKeys, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
         }
     }
 }
@@ -1098,12 +1107,12 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
 )
 
 @Composable
-private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, onRemove: () -> Unit) {
+private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, onRemove: (() -> Unit)?) {
     // a choice field per button (like the button test above): the key or MIDI message is the label, the command is
     // the value, so it's visible that it can be changed; × resets that button to default
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         OptionDropdown(name, PedalAction.entries, action, onSelect, nameOf = { pedalActionLabel(it) }, modifier = Modifier.weight(1f))
-        IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
+        if (onRemove != null) IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
     }
 }
 

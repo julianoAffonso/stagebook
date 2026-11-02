@@ -145,6 +145,7 @@ data class Look(
     val metroGlow: Boolean = true,   // glow on the stage edge on the beat
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // glow color
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // buttons set to another command in settings (key → command)
+    val pedalSeen: List<Int> = emptyList(),   // the pedal's buttons pressed in settings: listed with what each does (user, 01/11)
     val midiBtAddress: String = "",   // Bluetooth MIDI pedal chosen in Settings (the app reconnects by itself)
     val midiBtName: String = "",
     // MIDI pedal over USB: when off, the app opens nothing on USB (it stays free for the USB audio interface)

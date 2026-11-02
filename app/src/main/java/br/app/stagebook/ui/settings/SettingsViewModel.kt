@@ -291,6 +291,8 @@ class SettingsViewModel @Inject constructor(
     fun onKey(p: PedalPress) {
         val code = learn.code(p, System.currentTimeMillis()) ?: return
         lastKey.value = PedalKeyUi(p.name, PedalAction.NONE, p.device, code)
+        // remembered, so the list shows every button of the pedal with what it does, also the ones left as they come
+        if (code !in repository.library.value.look.pedalSeen) repository.updateLook { it.copy(pedalSeen = it.pedalSeen + code) }
         // the saved name is the keyboard pedal's ("connected" comes from the keyboard list); MIDI has its own card
         if (!MidiCode.isMidi(p.code) && p.device.isNotEmpty() && p.device != repository.library.value.look.pedalName) {
             repository.updateLook { it.copy(pedalName = p.device) }

@@ -908,8 +908,9 @@
     <string name="settings_pedal_press">Aperte um botão do pedal. Ele aparece aqui e você escolhe o que ele faz.</string>
     <string name="settings_pedal_pressed">Botão %1$s</string>
     <string name="settings_pedal_from_tablet">teclado do tablet</string>
-    <string name="settings_pedal_done">Já configurados</string>
-    <string name="settings_pedal_done_none">Nenhum ainda. Sem configurar, o pedal comum avança e volta a página; o pedal MIDI precisa ser configurado.</string>
+    <string name="settings_pedal_done">Botões do pedal</string>
+    <string name="settings_pedal_default">padrão</string>
+    <string name="settings_pedal_done_none">Nenhum ainda. Aperte cada botão do pedal: ele aparece aqui com o que faz.</string>
     <string name="songs_add_to_set">Adicionar ao setlist</string>
     <string name="songs_add_to_set_title">Adicionar a qual setlist?</string>
     <string name="songs_already_in_set">Nada a adicionar: já está tudo em %1$s.</string>
