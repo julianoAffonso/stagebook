@@ -698,6 +698,7 @@
     <string name="share_offline_songs">Sem internet agora. O envio pela internet aparece quando ela voltar.</string>
     <string name="share_offline">Sem internet agora, só o QR. O envio pela internet aparece quando ela voltar.</string>
     <string name="share_sent_titles">Enviando só os títulos.</string>
+    <string name="conduct_searching">Procurando…</string>
     <string name="share_sending">Enviando…</string>
     <string name="share_sent">Para receber, digite</string>
     <string name="share_failed">Não deu para enviar</string>
