@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.components
 
-import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.setValue
+
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,8 +28,7 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         // one line: beside the tag filter on phones it wrapped and the field grew taller
-        // large system text: the hint gets smaller to fit instead of "Música, …" (B-20)
-        placeholder = { Text(placeholder, modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
+        placeholder = { FittingHint(placeholder) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
@@ -67,8 +67,7 @@ private fun LabeledSearchField(value: String, onValueChange: (String) -> Unit, p
         modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
         labelPosition = androidx.compose.material3.TextFieldLabelPosition.Attached(alwaysMinimize = true),
-        // large system text: the hint gets smaller to fit instead of "Música, …" (B-20)
-        placeholder = { Text(placeholder, modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
+        placeholder = { FittingHint(placeholder) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
@@ -100,3 +99,24 @@ private fun SearchFieldLightPreview() = PreviewSurface(dark = false) {
 private fun SearchFieldDarkPreview() = PreviewSurface(dark = true) {
     SearchField(value = "legião", onValueChange = {}, placeholder = "Buscar música ou artista")
 }
+
+/**
+ * The search hint on one line, smaller step by step when it doesn't fit: with large system text it read "Música, …"
+ * (device test B-20); the library's auto-size didn't act inside the text field.
+ */
+@androidx.compose.runtime.Composable
+private fun FittingHint(text: String) {
+    val base = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+    var scale by androidx.compose.runtime.remember(text) { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    Text(
+        text,
+        style = base.copy(fontSize = base.fontSize * scale),
+        maxLines = 1,
+        softWrap = false,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        onTextLayout = { if (it.hasVisualOverflow && scale > MIN_HINT_SCALE) scale -= HINT_STEP },
+    )
+}
+
+private const val MIN_HINT_SCALE = 0.6f
+private const val HINT_STEP = 0.05f
