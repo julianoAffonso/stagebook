@@ -102,8 +102,21 @@ class BandConduct @Inject constructor(
         scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, index = index)) }
     }
 
-    /** "Look for the band": 30 s of search on stage; whoever shows up gets the current song. */
-    fun search() = link.burst(evenOnStage = true)
+    /**
+     * "Look for the band": 30 s of search on stage; whoever shows up gets the current song. Also sends the current song
+     * to everyone now and twice more: a member who reopened the app still looked online to the leader, so the "came
+     * back" resend never fired and a late follower never joined (device test, 02/11).
+     */
+    fun search() {
+        link.burst(evenOnStage = true)
+        scope.launch {
+            repeat(SEARCH_SENDS) { i ->
+                if (i > 0) kotlinx.coroutines.delay(SEARCH_EVERY_MS)
+                val now = _role.value as? Role.Conducting ?: return@launch
+                send(now.setId, now.msg.copy(type = Conduct.OPEN))
+            }
+        }
+    }
 
     fun end() {
         val now = (_role.value as? Role.Conducting)?.msg ?: return
@@ -157,6 +170,8 @@ class BandConduct @Inject constructor(
 
     companion object {
         const val ALIVE_MS = 3 * 60_000L
+        const val SEARCH_SENDS = 3
+        const val SEARCH_EVERY_MS = 5_000L
         const val GONE_MS = 10 * 60_000L
     }
 }
