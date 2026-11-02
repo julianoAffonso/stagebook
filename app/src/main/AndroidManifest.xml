@@ -21,6 +21,8 @@
     <!-- banda na rede local: achar os aparelhos no Wi-Fi (anúncio mDNS), só com o app aberto -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- Android 17+: the band finds and is found on the local network only with this permission (31/10) -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <!-- ler o QR do setlist: pedida só ao abrir o leitor -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
@@ -29,8 +31,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- the USB interface also records (most mixers do): without this, Android greys out "Always" in its USB chooser and asks
+         again every time the cable comes back (device test, 02/11). Nothing is recorded: the input only sets the clock -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- pedido padrão do Android para sair da economia de bateria (tocar com a tela apagada), com aviso antes -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Settings → Advanced: Android settings written by the app; granted once from a computer (adb pm grant) -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
 
     <application
         android:name=".StagebookApp"
@@ -41,12 +48,22 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- plugging in a USB Audio 2.0 interface: Android asks to open the app and
+                 grants the USB permission (user, 01/11). singleTask: the open app comes
+                 back instead of a second copy -->
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/usb_audio_filter" />
         </activity>
         <service
             android:name=".player.PlayerService"

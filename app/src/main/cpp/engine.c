@@ -1,11 +1,12 @@
-// Motor do Stagebook: decodifica OGG (stb_vorbis), MP3/WAV (dr_mp3/dr_wav), reamostra para 48 kHz e envia
-// os canais da faixa direto para a interface USB Audio Class 2 via usbfs (sem o mixer do Android).
-// O fluxo USB fica sempre ativo (silêncio quando pausado): a interface repete o último
-// trecho recebido quando o fluxo para, o que vira um apito contínuo.
+// Stagebook's engine: decodes OGG (stb_vorbis), MP3/WAV (dr_mp3/dr_wav), resamples to 48 kHz and sends the track's
+// channels straight to the USB Audio Class 2 interface through usbfs (bypassing Android's mixer). The USB stream always
+// stays active (silence when paused): the interface repeats the last chunk it got when the stream stops, which becomes
+// a continuous whine.
 #include <jni.h>
 #include <errno.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,7 @@
 
 #define STB_VORBIS_HEADER_ONLY
 #include "stb_vorbis.c"
-// MP3 e WAV (Stagebook, autorizado pelo usuário em 24/10): decodificadores de arquivo único, domínio público
+// MP3 and WAV: single-file decoders, public domain
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 #define DR_WAV_IMPLEMENTATION
@@ -29,33 +30,34 @@
 
 #define TAG "stagebook"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
-// Diagnóstico (resumo a cada 5 s, pacotes de entrada): 1 para religar.
+// Diagnostics (summary every 5 s, input packets): 1 to turn back on.
 #define DIAG 0
 #define LOGD(...) do { if (DIAG) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__); } while (0)
 
 #define OUT_RATE 48000
 #define OUT_CH 4
-// canais da fonte guardados no ring (Stagebook): até 8, cada um como veio; a mistura padrão remonta os 4 de antes
+// source channels kept in the ring (Stagebook): up to 8, each as it came; the default mix rebuilds the 4 from before
 #define LANES_MAX 8
-// 32 URBs x 8 pacotes = 32 ms na fila do USB. Com 8 (8 ms), o TCL ocupado (another app tocando no
-// alto-falante) atrasava a reposição em 10-16 ms e a interface ficava sem áudio: solavanco (19/10/2026).
+// 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
+// refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
 #define NURBS 32
 #define PKTS_PER_URB 8
-#define TAIL_URBS 500                 // ~500 ms de silêncio antes de soltar o endpoint
-#define RING_FRAMES OUT_RATE          // 1 s de folga entre decoder e USB (era 250 ms: com a câmera do QR,
-                                      // importação e telas ao mesmo tempo, o decoder atrasava e engasgava; 19/10/2026)
-#define FADE_FRAMES 240               // 5 ms de fade em play/pausa
+#define TAIL_URBS 500                 // ~500 ms of silence before releasing the endpoint
+#define RING_FRAMES OUT_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
+                                      // import and screens at the same time, the decoder fell behind and stuttered;
+                                      // 19/10/2026)
+#define FADE_FRAMES 240               // 5 ms fade on play/pause
 
-// ---- estado compartilhado ----
-// g_vmx: o arquivo (stb_vorbis) e o reamostrador — abrir, buscar e decodificar levam tempo (disco).
-// g_mx: o ring e os contadores, que a thread USB lê a cada 1 ms; só fica preso por cópias curtas.
-// Ordem: g_vmx antes de g_mx. A thread USB só pega g_mx.
+// ---- shared state ----
+// g_vmx: the file (stb_vorbis) and the resampler; opening, seeking and decoding take time (disk).
+// g_mx: the ring and the counters, which the USB thread reads every 1 ms; held only for short copies.
+// Order: g_vmx before g_mx. The USB thread only takes g_mx.
 static pthread_mutex_t g_vmx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_mx = PTHREAD_MUTEX_INITIALIZER;
 static float g_ring[RING_FRAMES * LANES_MAX];
 static int g_ring_r = 0, g_ring_w = 0, g_ring_n = 0;
 
-// ---- fonte de áudio: OGG (stb_vorbis, exatamente as chamadas da versão validada), MP3 ou WAV ----
+// ---- audio source: OGG (stb_vorbis, exactly the validated version's calls), MP3 or WAV ----
 typedef struct { stb_vorbis *v; drmp3 *mp3; drwav *wav; } src_t;
 
 static int src_ok(const src_t *s) { return s->v || s->mp3 || s->wav; }
@@ -65,14 +67,14 @@ static int ends_with(const char *p, const char *ext) {
     return n >= m && strcasecmp(p + n - m, ext) == 0;
 }
 
-// abre pelo tipo do arquivo; OGG primeiro, como sempre (rate, canais e duração em quadros da fonte)
+// opens by file type; OGG first, as always (rate, channels and duration in source frames)
 static src_t src_open(const char *path, int *err, int *rate, int *ch, long *len) {
     src_t s = {0};
     if (ends_with(path, ".mp3")) {
         s.mp3 = malloc(sizeof(drmp3));
         if (s.mp3 && drmp3_init_file(s.mp3, path, NULL)) {
             *rate = (int)s.mp3->sampleRate; *ch = (int)s.mp3->channels;
-            *len = (long)drmp3_get_pcm_frame_count(s.mp3);   // percorre o arquivo: fora do g_vmx
+            *len = (long)drmp3_get_pcm_frame_count(s.mp3);   // walks the file: outside g_vmx
             drmp3_seek_to_pcm_frame(s.mp3, 0);
         } else { free(s.mp3); s.mp3 = NULL; *err = -2; }
     } else if (ends_with(path, ".wav")) {
@@ -88,7 +90,7 @@ static src_t src_open(const char *path, int *err, int *rate, int *ch, long *len)
             *len = stb_vorbis_stream_length_in_samples(s.v);
         }
     }
-    // até 8 canais (os buffers de decodificação cabem 8)
+    // up to 8 channels (the decode buffers hold 8)
     if (src_ok(&s) && *ch > 8) {
         if (s.v) stb_vorbis_close(s.v);
         if (s.mp3) { drmp3_uninit(s.mp3); free(s.mp3); }
@@ -98,7 +100,7 @@ static src_t src_open(const char *path, int *err, int *rate, int *ch, long *len)
     return s;
 }
 
-// quadros lidos (0 = fim): mesmo contrato do stb_vorbis_get_samples_float_interleaved
+// frames read (0 = end): same contract as stb_vorbis_get_samples_float_interleaved
 static int src_read(src_t *s, int ch, float *buf, int frames) {
     if (s->v) return stb_vorbis_get_samples_float_interleaved(s->v, ch, buf, frames * ch);
     if (s->mp3) return (int)drmp3_read_pcm_frames_f32(s->mp3, (drmp3_uint64)frames, buf);
@@ -120,25 +122,25 @@ static void src_close(src_t *s) {
 }
 
 static src_t g_src = {0};
-#define ENGINE_HAS_SRC 1   // o simulador lê a faixa por aqui (OGG, MP3 ou WAV)
-#define ENGINE_HAS_MIX 1   // a mistura é só por canal (setMix): o simulador manda a configuração equivalente
+#define ENGINE_HAS_SRC 1   // the simulator reads the track through here (OGG, MP3 or WAV)
+#define ENGINE_HAS_MIX 1   // mixing is per channel only (setMix): the simulator sends the equivalent setup
 static int g_src_rate = 0, g_src_ch = 0;
-static long g_src_len = 0;            // duração em quadros da fonte
+static long g_src_len = 0;            // duration in source frames
 static int g_eof = 0;
 
 static volatile int g_playing = 0;
 
-// Equalizador do backing (canais 1/2): 5 biquads em série (RBJ), protegidos por g_mx.
+// Backing equalizer (channels 1/2): 5 biquads in series (RBJ), protected by g_mx.
 #define EQ_BANDS 5
 static const double EQ_FREQ[EQ_BANDS] = {80, 250, 1000, 3500, 10000};
 typedef struct { float b0, b1, b2, a1, a2; } eq_coef;
 static eq_coef g_eq[EQ_BANDS];
 static float g_eq_z[EQ_BANDS][LANES_MAX][2];      // estado [banda][canal][z1,z2]
 static int g_eq_on = 0;
-// Limitador do backing com o EQ ligado (19/10/2026): o reforço não abaixa mais o volume todo; só os
-// picos que passariam de LIM_CEIL são segurados, na hora (sem estourar), e o ganho volta em ~150 ms.
-// Antes, a proteção abaixava a entrada do EQ no tamanho do maior reforço (+6 dB = backing 6 dB mais
-// baixo), e o usuário achou que abaixava demais. Com o EQ desligado o som é o validado, bit a bit.
+// Backing limiter with the EQ on (19/10/2026): the boost no longer lowers the whole volume; only peaks that would go
+// over LIM_CEIL are held, instantly (without clipping), and the gain comes back in ~150 ms. Before, the protection
+// lowered the EQ input by the size of the largest boost (+6 dB = backing 6 dB lower), which lowered it too
+// much. With the EQ off the sound is the validated one, bit for bit.
 #define LIM_CEIL 0.891f                    // -1 dBFS
 #define LIM_REL (1.0f / (0.15f * OUT_RATE))
 static float g_lim = 1.0f;
@@ -176,30 +178,30 @@ static inline float eq_run(int ch, float x) {
 }
 
 
-// Medidores ao vivo (20/10/2026), só com a chave "Monitorar ao vivo" da tela. Desligada, o laço USB e
-// o decoder fazem o mesmo de antes: leem g_meter_on uma vez por URB / por bloco e pulam a medição.
-// Só leem o sinal: nunca mudam o que vai para a mesa.
+// Live meters (20/10/2026), only with the screen's "Monitor live" switch. Off, the USB loop and the decoder do the same
+// as before: they read g_meter_on once per URB / per block and skip measuring. They only read the signal: they never
+// change what goes to the desk.
 static volatile int g_meter_on = 0;
-static float g_pk[OUT_CH];                // pico de cada canal na saída (ganhos aplicados, antes do corte), com g_mx
-static float g_lpk[LANES_MAX];            // pico de cada canal do arquivo depois do fader, normalização e EQ (o medidor do mixer), com g_mx
-// Espectro do backing: FFT no decoder (fora do laço USB), em mono, antes do EQ e dos ganhos.
-// SP_BINS faixas logarítmicas de SP_LO a SP_HI Hz (a tela usa as mesmas bordas). Uma FFT de SP_N pontos
-// a cada SP_HOP quadros. O decoder anda até 1 s na frente da saída: cada bloco guarda o quadro (desde o
-// seek) em que termina, e a leitura só junta os blocos que a USB já tocou.
-#define SP_N 4096                         // 85 ms, 11,7 Hz por raia: separa os graves
-#define SP_HOP 1024                       // ~47 FFTs por segundo de música
+static float g_pk[OUT_CH];                // peak of each channel at the output (gains applied, before clipping), with g_mx
+static float g_lpk[LANES_MAX];            // peak of each file channel after fader, normalization and EQ (the mixer meter), with g_mx
+// Backing spectrum: FFT in the decoder (outside the USB loop), in mono, before the EQ and gains. SP_BINS log bands from
+// SP_LO to SP_HI Hz (the screen uses the same edges). One SP_N-point FFT every SP_HOP frames. The decoder runs up to 1
+// s ahead of the output: each block keeps the frame (since the seek) where it ends, and reading only gathers the blocks
+// USB has already played.
+#define SP_N 4096                         // 85 ms, 11.7 Hz per bin: separates the lows
+#define SP_HOP 1024                       // ~47 FFTs per second of music
 #define SP_BINS 48
 #define SP_LO 30.0
 #define SP_HI 16000.0
-#define MB_BLOCKS 64                      // ~1,4 s de blocos de ~21 ms: cobre o ring de 1 s
-static struct { long end; float pk[SP_BINS]; } g_mb[MB_BLOCKS];   // com g_mx
+#define MB_BLOCKS 64                      // ~1.4 s of ~21 ms blocks: covers the 1 s ring
+static struct { long end; float pk[SP_BINS]; } g_mb[MB_BLOCKS];   // with g_mx
 static int g_mb_w = 0;
-static long g_mb_read = 0;                // último quadro já entregue à tela
-// só o decoder usa (com g_vmx); tabelas prontas em sp_init
-static float g_sp_in[SP_N];               // últimas SP_N amostras (circular)
-static int g_sp_pos = 0, g_sp_new = 0;    // onde entra a próxima; quantas chegaram desde a última FFT
+static long g_mb_read = 0;                // last frame already delivered to the screen
+// used only by the decoder (with g_vmx); tables ready in sp_init
+static float g_sp_in[SP_N];               // last SP_N samples (circular)
+static int g_sp_pos = 0, g_sp_new = 0;    // where the next one goes; how many arrived since the last FFT
 static float g_sp_win[SP_N], g_sp_re[SP_N], g_sp_im[SP_N], g_sp_cos[SP_N / 2], g_sp_sin[SP_N / 2];
-static int g_sp_k0[SP_BINS], g_sp_k1[SP_BINS];   // raias da FFT de cada faixa (inclusive)
+static int g_sp_k0[SP_BINS], g_sp_k1[SP_BINS];   // FFT bins of each band (inclusive)
 
 static void sp_init(void) {
     for (int i = 0; i < SP_N; i++) g_sp_win[i] = (float)(0.5 - 0.5 * cos(2 * M_PI * i / SP_N));   // Hann
@@ -207,15 +209,15 @@ static void sp_init(void) {
     for (int b = 0; b < SP_BINS; b++) {
         double lo = SP_LO * pow(SP_HI / SP_LO, (double)b / SP_BINS), hi = SP_LO * pow(SP_HI / SP_LO, (double)(b + 1) / SP_BINS);
         int k0 = (int)ceil(lo * SP_N / OUT_RATE), k1 = (int)floor(hi * SP_N / OUT_RATE);
-        if (k1 < k0) k0 = k1 = (int)lround(sqrt(lo * hi) * SP_N / OUT_RATE);   // faixa mais estreita que uma raia
+        if (k1 < k0) k0 = k1 = (int)lround(sqrt(lo * hi) * SP_N / OUT_RATE);   // band narrower than one bin
         g_sp_k0[b] = k0; g_sp_k1[b] = k1;
     }
 }
 
-// FFT das últimas SP_N amostras (janela de Hann) e o pico de cada faixa; 1 = seno de 0 dBFS
+// FFT of the last SP_N samples (Hann window) and the peak of each band; 1 = 0 dBFS sine
 static void sp_run(float *out) {
     for (int i = 0; i < SP_N; i++) { g_sp_re[i] = g_sp_in[(g_sp_pos + i) % SP_N] * g_sp_win[i]; g_sp_im[i] = 0; }
-    for (int i = 1, j = 0; i < SP_N; i++) {   // ordem de bits invertida
+    for (int i = 1, j = 0; i < SP_N; i++) {   // bit-reversed order
         int bit = SP_N >> 1;
         for (; j & bit; bit >>= 1) j ^= bit;
         j ^= bit;
@@ -237,34 +239,33 @@ static void sp_run(float *out) {
             float v = g_sp_re[k] * g_sp_re[k] + g_sp_im[k] * g_sp_im[k];
             if (v > m) m = v;
         }
-        out[b] = sqrtf(m) * (4.0f / SP_N);    // Hann: seno de amplitude A dá A·N/4 na raia
+        out[b] = sqrtf(m) * (4.0f / SP_N);    // Hann: a sine of amplitude A gives A·N/4 on the bin
     }
 }
 
-static void mb_reset_locked(void) /* com g_mx */ {
+static void mb_reset_locked(void) /* with g_mx */ {
     for (int i = 0; i < MB_BLOCKS; i++) g_mb[i].end = -1;
     g_mb_read = 0;
 }
 
-static long g_base_ms = 0;           // posição (ms) do último seek
-static long g_consumed = 0;           // quadros de saída tocados desde o seek
-static float g_fade = 0.0f;           // 0..1, rampa para evitar estalo
+static long g_base_ms = 0;           // position (ms) of the last seek
+static long g_consumed = 0;           // output frames played since the seek
+static float g_fade = 0.0f;           // 0..1, ramp to avoid clicks
 
-// reamostrador (Catmull-Rom) — histórico de 4 quadros da fonte
+// resampler (Catmull-Rom): history of 4 source frames
 static float g_hist[4][LANES_MAX];
-static int g_lanes = 4;               // canais da fonte no ring (até LANES_MAX), definido ao carregar
+static int g_lanes = 4;               // source channels in the ring (up to LANES_MAX), set on load
 static double g_frac = 0.0;
 static int g_hist_fill = 0;
 
 static volatile int g_usb_stop = 0, g_usb_running = 0, g_dec_stop = 0;
-// diagnóstico de engasgos: zerados a cada janela de log
+// stutter diagnostics: reset every log window
 static long st_underrun = 0, st_pkt_err = 0, st_urb_err = 0;
 static int st_ring_min = RING_FRAMES;
 static double st_gap_max = 0;
-// Feedback implícito: a entrada da interface chega no ritmo do relógio dela. Comparamos o
-// total de quadros que ela produziu com o total que enviamos; se a saída se adianta
-// (ou atrasa) mais de FB_HI quadros, os pacotes passam a levar 5 (ou 7) quadros em vez
-// de 6 até a diferença voltar a FB_LO. Nenhum quadro de música é descartado.
+// Implicit feedback: the interface's input arrives at its clock's pace. We compare the total frames it produced with
+// the total we sent; if the output runs ahead (or behind) by more than FB_HI frames, packets carry 5 (or 7) frames
+// instead of 6 until the difference is back to FB_LO. No music frame is dropped.
 static int g_in_ep = -1, g_in_maxpkt = 0, g_in_fb = 0;
 static long g_tot_in = 0, g_tot_out = 0, g_fb_off = 0;
 static int g_fb_locked = 0, g_fb_mode = 0;
@@ -274,8 +275,8 @@ static long st_fb_adj = 0, st_in_frames = 0, st_out_frames = 0, st_fb_d = 0;
 static pthread_t g_usb_thr, g_dec_thr;
 static int g_fd = -1, g_ep = 0, g_maxpkt = 0, g_subslot = 4, g_dev_ch = 4, g_intf = 1, g_alt = 1;
 
-// Envia o URB; se o endpoint sumiu (alguém trocou a alternate setting da interface),
-// reativa a alt de streaming e tenta de novo.
+// Submits the URB; if the endpoint vanished (someone changed the interface's alternate setting), reactivates the
+// streaming alt and tries again.
 static int submit(struct usbdevfs_urb *u) {
     if (ioctl(g_fd, USBDEVFS_SUBMITURB, u) == 0) return 0;
     if (errno != ENOENT && errno != EINVAL) return -1;
@@ -285,6 +286,14 @@ static int submit(struct usbdevfs_urb *u) {
     return ioctl(g_fd, USBDEVFS_SUBMITURB, u);
 }
 static char g_status[256] = "parado";
+// the status is written by the USB thread and AAudio's error callback and read from Java: its own small lock, never
+// the audio's (audio audit A4: a status read while USB dropped could come out mixed)
+static pthread_mutex_t g_stmx = PTHREAD_MUTEX_INITIALIZER;
+static void set_status(const char *fmt, ...) {
+    char b[sizeof g_status];
+    va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
+    pthread_mutex_lock(&g_stmx); memcpy(g_status, b, sizeof b); pthread_mutex_unlock(&g_stmx);
+}
 
 static double now_s(void) {
     struct timespec ts;
@@ -292,20 +301,38 @@ static double now_s(void) {
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
-// ---- mistura por canal (Stagebook, 24/10/2026) ----
-// A única mistura do Stagebook (decisão do usuário: num app público, supor "1-2 backing, 3-4 click" é um risco).
-// O app manda a configuração de cada backing track (setMix); sem ela, cada canal vai para a saída de mesmo número,
-// com ganho 1 — nada é adivinhado. Com a configuração equivalente à antiga, o som é idêntico ao validado na mesa
-// (simulador). Protegida por g_mx.
-static float g_ch_gain[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // fader × liga/desliga de cada canal da fonte
-static float g_ch_norm[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // normalização de cada canal
-static int g_ch_eq = 0;                     // bits: canais que passam pelo EQ (cada um separado)
-static float g_route[LANES_MAX][LANES_MAX] = {   // [saída][canal da fonte]: quanto do canal vai para a saída
+// ---- per-channel mixing (Stagebook, 24/10/2026) ----
+// Stagebook's only mix (user's decision: in a public app, assuming "1-2 backing, 3-4 click" is a risk). The app sends
+// each backing track's setup (setMix); without it, each channel goes to the output with the same number, at gain 1:
+// nothing is guessed. With the setup equivalent to the old one, the sound is identical to the one validated on the desk
+// (simulator). Protected by g_mx.
+static float g_ch_gain[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // fader × on/off of each source channel
+static float g_ch_norm[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // normalization of each channel
+static int g_ch_eq = 0;                     // bits: channels that go through the EQ (each separate)
+static float g_route[LANES_MAX][LANES_MAX] = {   // [output][source channel]: how much of the channel goes to the output
     {1}, {0, 1}, {0, 0, 1}, {0, 0, 0, 1}, {0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1},
 };
 
-// canais da fonte → saídas: ganho e normalização por canal, EQ nos marcados (limitador junto em todos eles,
-// para não deslocar a imagem, como no par do backing) e soma pela matriz de roteamento
+// source channels → outputs: gain and normalization per channel, EQ on the marked ones (with the limiter shared by all
+// of them, so the image doesn't shift, like the backing pair) and summed through the routing matrix
+// ---- metronome click into USB outputs (user, 02/11): the drummer hears it through the desk. Added after the song's
+// mix, on the interface's clock, sample by sample like MetronomeClick; off (g_clk_spb 0) nothing changes. Under g_mx.
+static float *g_clk_buf[2] = {0, 0};   // normal and accent click, 48 kHz
+static int g_clk_len[2] = {0, 0};
+static long g_clk_spb = 0;              // samples per beat; 0 = off
+static long g_clk_pos = 0;              // samples since the click started
+static int g_clk_out[2] = {-1, -1};     // outputs it goes to (-1 = none)
+
+static inline void click_add_locked(float *out) {
+    if (g_clk_spb <= 0) return;
+    long beat = g_clk_pos / g_clk_spb, at = g_clk_pos % g_clk_spb;
+    int k = beat % 4 == 0 ? 1 : 0;      // the first beat of each bar sounds higher
+    g_clk_pos++;
+    if (at >= g_clk_len[k]) return;
+    for (int q = 0; q < 2; q++)
+        if (g_clk_out[q] >= 0 && g_clk_out[q] < LANES_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
+}
+
 static inline void mix_custom(const float *lane, float *out) {
     float s[LANES_MAX];
     float p = 0;
@@ -331,7 +358,7 @@ static inline void mix_custom(const float *lane, float *out) {
     }
 }
 
-// ---- ring (protegido por g_mx) ----
+// ---- ring (protected by g_mx) ----
 static void ring_clear_locked(void) { g_ring_r = g_ring_w = g_ring_n = 0; }
 
 static int ring_space_locked(void) { return RING_FRAMES - g_ring_n; }
@@ -351,18 +378,18 @@ static int ring_pop_locked(float *fr) {
 }
 
 
-static void resampler_reset_locked(void)   /* com g_vmx */ {
+static void resampler_reset_locked(void)   /* with g_vmx */ {
     g_frac = 0.0; g_hist_fill = 0; memset(g_hist, 0, sizeof g_hist);
     memset(g_sp_in, 0, sizeof g_sp_in); g_sp_pos = 0; g_sp_new = 0;
 }
 
-// ---- thread do decoder ----
-// decodifica e reamostra com g_vmx (sem travar a USB) e só pega g_mx para copiar no ring
-static float g_dec_out[4096 * LANES_MAX];   // só a thread do decoder usa
+// ---- decoder thread ----
+// decodes and resamples with g_vmx (without blocking USB) and only takes g_mx to copy into the ring
+static float g_dec_out[4096 * LANES_MAX];   // used only by the decoder thread
 
 static void *dec_main(void *arg) {
     float buf[1024 * 8];
-    // prioridade de áudio do Android (-16): na frente da tela, da câmera e da importação, abaixo do USB (-19)
+    // Android audio priority (-16): ahead of the screen, camera and import, below USB (-19)
     if (setpriority(PRIO_PROCESS, gettid(), -16) < 0) LOGI("decoder: prioridade negada (%s)", strerror(errno));
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
@@ -370,8 +397,8 @@ static void *dec_main(void *arg) {
         int active = src_ok(&g_src) && g_playing && !g_eof;
         int work = active && ring_space_locked() > 2048;
         pthread_mutex_unlock(&g_mx);
-        // tocando, o ring (250 ms) só esvazia 2048 quadros em ~43 ms: 5 ms de folga sobra;
-        // parado, 20 ms basta (o play só espera o primeiro bloco) e a CPU acorda bem menos
+        // while playing, the ring (250 ms) only drains 2048 frames in ~43 ms: 5 ms of slack is plenty; stopped, 20 ms
+        // is enough (play only waits for the first block) and the CPU wakes far less
         if (!work) { pthread_mutex_unlock(&g_vmx); usleep(active ? 5000 : 20000); continue; }
 
         int want = 512;
@@ -385,16 +412,16 @@ static void *dec_main(void *arg) {
         int n = 0, cap = (int)(sizeof g_dec_out / sizeof(float) / LANES_MAX);
         double step = (double)g_src_rate / OUT_RATE;
         for (int i = 0; i < got; i++) {
-            // empurra o quadro novo no histórico
+            // pushes the new frame into the history
             memmove(g_hist[0], g_hist[1], sizeof(float) * LANES_MAX * 3);
-            // os canais da fonte como vieram (a mistura é na saída)
+            // the source channels as they came (mixing happens at the output)
             for (int c = 0; c < g_lanes; c++) g_hist[3][c] = buf[i * g_src_ch + c];
             if (g_hist_fill < 4) { g_hist_fill++; if (g_hist_fill < 4) continue; }
             if (g_src_rate == OUT_RATE) {
                 if (n < cap) memcpy(&g_dec_out[n++ * LANES_MAX], g_hist[2], sizeof(float) * LANES_MAX);
                 continue;
             }
-            // gera saídas enquanto a posição fracionária estiver entre hist[1] e hist[2]
+            // produces outputs while the fractional position is between hist[1] and hist[2]
             while (g_frac < 1.0) {
                 float t = (float)g_frac, *out = &g_dec_out[n * LANES_MAX];
                 if (n < cap) {
@@ -411,13 +438,13 @@ static void *dec_main(void *arg) {
         int fft = 0;
         float spk[SP_BINS];
         if (g_meter_on) {
-            // o espectro é dos canais que passam pelo EQ (a média deles); sem nenhum marcado, dos canais 1/2
+            // the spectrum is of the channels that go through the EQ (their average); with none marked, channels 1/2
             int mask = g_ch_eq, cnt = 0;
             for (int c = 0; c < g_lanes; c++) if (mask & (1 << c)) cnt++;
             for (int i = 0; i < n; i++) {
                 float *d = &g_dec_out[i * LANES_MAX];
                 if (cnt == 0) {
-                    g_sp_in[g_sp_pos] = 0.5f * (d[0] + (g_lanes > 1 ? d[1] : d[0]));   // fonte mono: o mesmo canal dos dois lados
+                    g_sp_in[g_sp_pos] = 0.5f * (d[0] + (g_lanes > 1 ? d[1] : d[0]));   // mono source: the same channel on both sides
                 } else {
                     float a = 0;
                     for (int c = 0; c < g_lanes; c++) if (mask & (1 << c)) a += d[c];
@@ -431,7 +458,7 @@ static void *dec_main(void *arg) {
         pthread_mutex_lock(&g_mx);
         for (int i = 0; i < n && ring_space_locked() > 0; i++) ring_push_locked(&g_dec_out[i * LANES_MAX]);
         if (fft) {
-            g_mb[g_mb_w].end = g_consumed + g_ring_n;   // quadro (desde o seek) em que este bloco acaba de tocar
+            g_mb[g_mb_w].end = g_consumed + g_ring_n;   // frame (since the seek) at which this block finishes playing
             memcpy(g_mb[g_mb_w].pk, spk, sizeof spk);
             g_mb_w = (g_mb_w + 1) % MB_BLOCKS;
         }
@@ -441,13 +468,26 @@ static void *dec_main(void *arg) {
     return NULL;
 }
 
-// ---- amostra para o formato da interface ----
+// ---- sample to the interface format ----
 static void put_sample(uint8_t *p, float s) {
     if (s > 1) s = 1;
     if (s < -1) s = -1;
     if (g_subslot == 2) { int16_t v = (int16_t)(s * 32767); memcpy(p, &v, 2); }
     else if (g_subslot == 3) { int32_t v = (int32_t)(s * 8388607); p[0] = v; p[1] = v >> 8; p[2] = v >> 16; }
     else { int32_t v = (int32_t)(s * 8388607) << 8; memcpy(p, &v, 4); }
+}
+
+// URBs the kernel didn't hand back because the interface vanished (REAPURB keeps answering ENODEV after an unplug):
+// before, they were simply left behind, a leak on every drop. They're freed on the next start, after Java has closed
+// the old connection: from then on the kernel no longer touches them (audio audit P2).
+static struct usbdevfs_urb *g_parked[2 * NURBS];
+static int g_nparked = 0;
+
+static void park_urb(struct usbdevfs_urb *u) { if (g_nparked < 2 * NURBS) g_parked[g_nparked++] = u; }
+
+static void free_parked(void) {
+    for (int i = 0; i < g_nparked; i++) { free(g_parked[i]->buffer); free(g_parked[i]); }
+    g_nparked = 0;
 }
 
 // ---- thread USB ----
@@ -460,10 +500,10 @@ static void *usb_main(void *arg) {
     double acc = 0;
     int tail = 0, tail_urbs = 0, errors = 0;
     long reaped = 0;
-    int inflight = 0, n_in = 0;          // URBs com o kernel; só se libera memória com zero
+    int inflight = 0, n_in = 0;          // URBs held by the kernel; memory is only freed at zero
 
-    // prioridade de áudio (a mesma do AudioTrack): sem ela, com a CPU ocupada ou quente, a
-    // thread pode perder a vez e a fila de 8 ms de URBs esvaziar; se o sistema negar, segue normal
+    // audio priority (the same as AudioTrack): without it, with the CPU busy or hot, the thread can lose its turn and
+    // the 8 ms URB queue can run dry; if the system refuses, it carries on
     if (setpriority(PRIO_PROCESS, gettid(), -19) < 0) LOGI("usb: prioridade negada (%s)", strerror(errno));
 
     for (int u = 0; u < NURBS; u++) {
@@ -489,8 +529,9 @@ static void *usb_main(void *arg) {
                 else if (g_fb_mode == 1 && d > -FB_LO) g_fb_mode = 0; \
                 if (g_fb_mode) { nf += g_fb_mode; st_fb_adj++; } \
             } \
-            g_tot_out += nf; st_out_frames += nf; \
+            /* the packet's ceiling first: a frame cut here isn't counted as sent (audio audit A2) */ \
             if (nf * frame_bytes > g_maxpkt) nf = g_maxpkt / frame_bytes; \
+            g_tot_out += nf; st_out_frames += nf; \
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail; \
@@ -501,6 +542,7 @@ static void *usb_main(void *arg) {
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
                 float outv[LANES_MAX]; \
                 mix_custom(lane, outv); \
+                click_add_locked(outv); \
                 for (int c = 0; c < g_dev_ch; c++) { \
                     float s = c < LANES_MAX ? outv[c] : 0; \
                     if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
@@ -534,24 +576,24 @@ static void *usb_main(void *arg) {
     for (int u = 0; u < NURBS; u++) {
         FILL(urbs[u]);
         if (submit(urbs[u]) < 0) {
-            snprintf(g_status, sizeof g_status, "erro USB ao iniciar: %s", strerror(errno));
+            set_status("erro USB ao iniciar: %s", strerror(errno));
             goto out;
         }
         inflight++;
     }
-    snprintf(g_status, sizeof g_status, "USB ativo");
+    set_status("USB ativo");
 
     while (tail_urbs < TAIL_URBS + NURBS - 1) {
         if (!tail && g_usb_stop) tail = 1;
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
             if (errno == EINTR) continue;
-            snprintf(g_status, sizeof g_status, "USB caiu: %s", strerror(errno));
+            set_status("USB caiu: %s", strerror(errno));
             goto out;
         }
         inflight--;
         if (done->endpoint & 0x80) {
-            if (DIAG) {   // diagnóstico: os primeiros URBs de entrada
+            if (DIAG) {   // diagnostics: the first input URBs
                 static int dbg = 0;
                 if (dbg < 6) {
                     dbg++;
@@ -577,7 +619,7 @@ static void *usb_main(void *arg) {
         reaped++;
         if (done->status != 0) { errors++; st_urb_err++; }
         for (int k = 0; k < done->number_of_packets; k++) if (done->iso_frame_desc[k].status) st_pkt_err++;
-        if (DIAG) {   // estatísticas a cada 5 s: com DIAG 0 nem lê o relógio
+        if (DIAG) {   // stats every 5 s: with DIAG 0 it doesn't even read the clock
             static double last = 0, win = 0;
             double t = now_s();
             if (last > 0 && t - last > st_gap_max) st_gap_max = t - last;
@@ -597,21 +639,21 @@ static void *usb_main(void *arg) {
             }
         }
         if (tail) tail_urbs++;
-        if (tail_urbs >= TAIL_URBS) continue;   // drena o que ainda está na fila
+        if (tail_urbs >= TAIL_URBS) continue;   // drains what is still in the queue
         FILL(done);
         if (submit(done) < 0) {
-            snprintf(g_status, sizeof g_status, "USB caiu: %s", strerror(errno));
+            set_status("USB caiu: %s", strerror(errno));
             goto out;
         }
         inflight++;
     }
-    snprintf(g_status, sizeof g_status, "parado (urbs=%ld erros=%d)", reaped, errors);
+    set_status("parado (urbs=%ld erros=%d)", reaped, errors);
 
 out:
     for (int u = 0; u < NURBS; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, urbs[u]);
     for (int u = 0; u < n_in; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, in_urbs[u]);
-    // espera o kernel devolver cada URB (descartado ou com a mesa desconectada, volta na hora);
-    // um erro aqui quer dizer que não sobrou nenhum com ele
+    // waits for the kernel to return each URB (discarded or with the desk disconnected, it returns right away); an
+    // error here means none are left with it
     while (inflight > 0) {
         struct usbdevfs_urb *d;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &d) == 0) inflight--;
@@ -620,16 +662,19 @@ out:
     if (inflight == 0) {
         for (int u = 0; u < NURBS; u++) { free(urbs[u]->buffer); free(urbs[u]); }
         for (int u = 0; u < n_in; u++) { free(in_urbs[u]->buffer); free(in_urbs[u]); }
+    } else {
+        for (int u = 0; u < NURBS; u++) park_urb(urbs[u]);
+        for (int u = 0; u < n_in; u++) park_urb(in_urbs[u]);
     }
-    LOGI("usb fim: %s", g_status);
+    pthread_mutex_lock(&g_stmx); LOGI("usb fim: %s", g_status); pthread_mutex_unlock(&g_stmx);
     g_usb_running = 0;
     return NULL;
 }
 
 
-// ---- saída do aparelho (AAudio): sem interface USB, toca pelo Android ----
-// Caminho à parte: a USB acima não muda. Mesma mistura (mix_custom), mesmo fade e mesma posição; as duas
-// primeiras saídas do roteamento vão para os dois lados do aparelho. O simulador (sem AAudio) não compila isto.
+// ---- device output (AAudio): without a USB interface, plays through Android ----
+// A separate path: the USB above doesn't change. Same mix (mix_custom), same fade and same position; the first two
+// routing outputs go to the device's two sides. The simulator (no AAudio) doesn't compile this.
 #if __has_include(<aaudio/AAudio.h>)
 #include <aaudio/AAudio.h>
 #define ENGINE_HAS_DEVICE 1
@@ -639,7 +684,15 @@ static volatile int g_dev_running = 0;
 static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *data, int32_t nf) {
     float *o = (float *)data;
     int ch = AAudioStream_getChannelCount(st);
-    pthread_mutex_lock(&g_mx);
+    // AAudio's real-time callback never waits without a limit (audio audit P4): the lock is held only for short copies
+    // (microseconds), so it tries for up to 1 ms, the same as before in practice; if something held it longer, this
+    // block goes out silent instead of stalling Android's audio
+    int locked = 0;
+    for (double until = now_s() + 0.001; !(locked = pthread_mutex_trylock(&g_mx) == 0) && now_s() < until; ) {}
+    if (!locked) {
+        memset(o, 0, sizeof(float) * (size_t)nf * (size_t)ch);
+        return AAUDIO_CALLBACK_RESULT_CONTINUE;
+    }
     int mon = g_meter_on;
     for (int f = 0; f < nf; f++) {
         float lane[LANES_MAX] = {0};
@@ -650,6 +703,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
         float outv[LANES_MAX];
         mix_custom(lane, outv);
+        click_add_locked(outv);   // only set when this output is a USB interface (StagePlayer.usbClick)
         for (int c = 0; c < ch; c++) {
             float v = c < LANES_MAX ? outv[c] : 0;
             if (mon && c < OUT_CH && fabsf(v) > g_pk[c]) g_pk[c] = fabsf(v);
@@ -660,15 +714,16 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
 
-// fone tirado, Bluetooth caiu...: o fluxo morre; o vigia do app vê isRunning() falso e abre de novo
+// headphones unplugged, Bluetooth dropped...: the stream dies; the app's watchdog sees isRunning() false and opens
+// again
 static void dev_error(AAudioStream *st, void *ud, aaudio_result_t err) {
-    snprintf(g_status, sizeof g_status, "saída do aparelho caiu: %s", AAudio_convertResultToText(err));
+    set_status("saída do aparelho caiu: %s", AAudio_convertResultToText(err));
     g_dev_running = 0;
 }
 
 static void dev_close(void) {
     g_playing = 0; g_meter_on = 0;
-    usleep(20000);   // o fade de 5 ms termina antes de fechar: sem estalo
+    usleep(20000);   // the 5 ms fade finishes before closing: no click
     if (g_dev) { AAudioStream_requestStop(g_dev); AAudioStream_close(g_dev); g_dev = NULL; }
     g_dev_running = 0;
     g_dec_stop = 1;
@@ -677,11 +732,12 @@ static void dev_close(void) {
 #endif
 
 // ---- JNI ----
-#define FN(name) Java_com_juliano_stagebook_player_Engine_##name
+#define FN(name) Java_br_app_stagebook_player_Engine_##name
 
 JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint maxpkt, jint ch, jint subslot,
                                      jint intf, jint alt, jint in_ep, jint in_maxpkt, jint in_fb) {
     if (g_usb_running) return JNI_TRUE;
+    free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
@@ -705,14 +761,17 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
     g_fd = -1;
 }
 
-// Abre a saída do aparelho (48 kHz, estéreo, float). Falso se o Android não abriu ou não deu 48 kHz.
-JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
+// Opens an output through Android (48 kHz, float): the device's own (deviceId 0, stereo) or a USB interface by its
+// Android id with its channels, for devices where talking to USB directly gets no packets back (S26, B-33: the
+// other apps play there through Android). False if Android didn't open it or didn't give 48 kHz.
+JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
     AAudioStreamBuilder *b = NULL;
     if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
     AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
-    AAudioStreamBuilder_setChannelCount(b, 2);
+    if (deviceId > 0) AAudioStreamBuilder_setDeviceId(b, deviceId);
+    AAudioStreamBuilder_setChannelCount(b, channels > 0 ? channels : 2);
     AAudioStreamBuilder_setFormat(b, AAUDIO_FORMAT_PCM_FLOAT);
     AAudioStreamBuilder_setUsage(b, AAUDIO_USAGE_MEDIA);
     AAudioStreamBuilder_setContentType(b, AAUDIO_CONTENT_TYPE_MUSIC);
@@ -721,7 +780,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
     aaudio_result_t r = AAudioStreamBuilder_openStream(b, &g_dev);
     AAudioStreamBuilder_delete(b);
     if (r != AAUDIO_OK || AAudioStream_getSampleRate(g_dev) != OUT_RATE) {
-        snprintf(g_status, sizeof g_status, "saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
+        set_status("saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
         if (g_dev) { AAudioStream_close(g_dev); g_dev = NULL; }
         return JNI_FALSE;
     }
@@ -729,7 +788,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
     pthread_create(&g_dec_thr, NULL, dec_main, NULL);
     if (AAudioStream_requestStart(g_dev) != AAUDIO_OK) { dev_close(); return JNI_FALSE; }
     g_dev_running = 1;
-    snprintf(g_status, sizeof g_status, "saída do aparelho ativa");
+    set_status("saída do aparelho ativa");
     return JNI_TRUE;
 #else
     return JNI_FALSE;
@@ -740,7 +799,7 @@ JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
     const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
     int err = 0, rate = 0, ch = 0;
     long len = 0;
-    src_t v = src_open(path, &err, &rate, &ch, &len);   // lê o disco: antes do g_vmx, a música atual segue tocando
+    src_t v = src_open(path, &err, &rate, &ch, &len);   // reads the disk: before g_vmx, the current song keeps playing
     pthread_mutex_lock(&g_vmx);
     pthread_mutex_lock(&g_mx);
     g_playing = 0; g_fade = 0; g_eof = 0;
@@ -775,7 +834,7 @@ JNIEXPORT void JNICALL FN(seek)(JNIEnv *e, jclass c, jlong ms) {
         if (ms < 0) ms = 0;
         unsigned int frame = (unsigned int)((double)ms * g_src_rate / 1000.0);
         if (g_src_len > 0 && frame >= (unsigned)g_src_len) frame = g_src_len - 1;
-        src_seek(&g_src, frame);   // lê o disco: só com g_vmx, a USB segue tocando
+        src_seek(&g_src, frame);   // reads the disk: only with g_vmx, USB keeps playing
         resampler_reset_locked();
         pthread_mutex_lock(&g_mx);
         ring_clear_locked();
@@ -805,8 +864,8 @@ JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray j
 }
 
 
-// Mistura: gains/norms por canal da fonte, eqMask com os canais que passam pelo EQ (cada um separado),
-// route[saída * LANES_MAX + canal] (LANES_MAX × LANES_MAX).
+// Mix: gains/norms per source channel, eqMask with the channels that go through the EQ (each separate), route[output *
+// LANES_MAX + channel] (LANES_MAX × LANES_MAX).
 JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloatArray jnorm, jint eqMask, jfloatArray jroute) {
     float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[LANES_MAX * LANES_MAX] = {0};
     if (jgain) (*e)->GetFloatArrayRegion(e, jgain, 0, LANES_MAX, gain);
@@ -816,13 +875,35 @@ JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloat
     memcpy(g_ch_gain, gain, sizeof gain);
     memcpy(g_ch_norm, norm, sizeof norm);
     memcpy(g_route, route, sizeof route);
-    // EQ ligando em outro canal: começa do zero (estado velho de outro canal estalaria)
+    // EQ turning on for another channel: starts from zero (another channel's old state would click)
     if (g_ch_eq != (int)eqMask) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; }
     g_ch_eq = (int)eqMask;
     pthread_mutex_unlock(&g_mx);
 }
 
-// canais da fonte guardados (para a tela montar o mixer): até LANES_MAX
+// Metronome click into USB outputs: {normal, accent} 48 kHz, samples per beat (0 = off) and up to two outputs (-1 =
+// none). Starts on beat 1 now. The arrays are copied before the lock; the old ones are freed after it.
+JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatArray ja, jlong spb, jint out1, jint out2) {
+    float *nb = NULL, *ab = NULL;
+    int nn = 0, na = 0;
+    if (spb > 0 && jn && ja) {
+        nn = (*e)->GetArrayLength(e, jn); na = (*e)->GetArrayLength(e, ja);
+        nb = malloc(sizeof(float) * (nn > 0 ? nn : 1)); ab = malloc(sizeof(float) * (na > 0 ? na : 1));
+        if (nb && ab) { (*e)->GetFloatArrayRegion(e, jn, 0, nn, nb); (*e)->GetFloatArrayRegion(e, ja, 0, na, ab); }
+        else { free(nb); free(ab); nb = ab = NULL; }
+    }
+    pthread_mutex_lock(&g_mx);
+    float *old0 = g_clk_buf[0], *old1 = g_clk_buf[1];
+    g_clk_buf[0] = nb; g_clk_buf[1] = ab;
+    g_clk_len[0] = nb ? nn : 0; g_clk_len[1] = ab ? na : 0;
+    g_clk_spb = nb && ab ? (long)spb : 0;
+    g_clk_pos = 0;
+    g_clk_out[0] = out1; g_clk_out[1] = out2;
+    pthread_mutex_unlock(&g_mx);
+    free(old0); free(old1);
+}
+
+// source channels kept (for the screen to build the mixer): up to LANES_MAX
 JNIEXPORT jint JNICALL FN(lanes)(JNIEnv *e, jclass c) { return g_lanes; }
 
 JNIEXPORT jboolean JNICALL FN(isRunning)(JNIEnv *e, jclass c) {
@@ -832,15 +913,19 @@ JNIEXPORT jboolean JNICALL FN(isRunning)(JNIEnv *e, jclass c) {
     return g_usb_running ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT jstring JNICALL FN(status)(JNIEnv *e, jclass c) { return (*e)->NewStringUTF(e, g_status); }
+JNIEXPORT jstring JNICALL FN(status)(JNIEnv *e, jclass c) {
+    char b[sizeof g_status];
+    pthread_mutex_lock(&g_stmx); memcpy(b, g_status, sizeof b); pthread_mutex_unlock(&g_stmx);
+    return (*e)->NewStringUTF(e, b);
+}
 
-// medidores ao vivo: liga/desliga a medição (desligada, o motor faz o mesmo de antes)
+// live meters: turns measuring on/off (off, the engine does the same as before)
 JNIEXPORT void JNICALL FN(setMeter)(JNIEnv *e, jclass c, jboolean on) {
     if (!on) { g_meter_on = 0; return; }
     if (g_meter_on) return;
     static int ready = 0;
     if (!ready) { sp_init(); ready = 1; }
-    pthread_mutex_lock(&g_vmx);           // o decoder só usa o espectro com g_vmx
+    pthread_mutex_lock(&g_vmx);           // the decoder only uses the spectrum with g_vmx
     memset(g_sp_in, 0, sizeof g_sp_in); g_sp_pos = 0; g_sp_new = 0;
     pthread_mutex_lock(&g_mx);
     memset(g_pk, 0, sizeof g_pk);
@@ -852,9 +937,9 @@ JNIEXPORT void JNICALL FN(setMeter)(JNIEnv *e, jclass c, jboolean on) {
     pthread_mutex_unlock(&g_vmx);
 }
 
-// picos desde a leitura anterior (lineares, 1 = 0 dBFS; acima de 1 a mesa recebe cortado):
-// {canal 1, 2, 3, 4, espectro do backing em SP_BINS faixas de SP_LO a SP_HI Hz}. O espectro já com o
-// volume e a normalização do backing, sem o EQ (a tela soma a resposta do EQ). Zera depois de ler.
+// peaks since the previous read (linear, 1 = 0 dBFS; above 1 the desk gets clipped): {channel 1, 2, 3, 4, backing
+// spectrum in SP_BINS bands from SP_LO to SP_HI Hz}. The spectrum already has the backing's volume and normalization,
+// without the EQ (the screen adds the EQ response). Reset after reading.
 JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     float out[OUT_CH + SP_BINS] = {0};
     pthread_mutex_lock(&g_mx);
@@ -867,7 +952,7 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     }
     g_mb_read = cur;
     pthread_mutex_unlock(&g_mx);
-    int first = 0;                            // o espectro vem antes dos ganhos: usa os do 1º canal com EQ (ou o 1)
+    int first = 0;                            // the spectrum comes before the gains: uses those of the 1st EQ channel (or channel 1)
     while (first < LANES_MAX - 1 && g_ch_eq && !(g_ch_eq & (1 << first))) first++;
     float gb = g_ch_gain[first] * g_ch_norm[first];
     for (int b = 0; b < SP_BINS; b++) out[OUT_CH + b] *= gb;
@@ -876,8 +961,8 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     return a;
 }
 
-// picos de cada canal do arquivo desde a leitura anterior (lineares, depois do fader, normalização e EQ), para os
-// medidores do mixer. Zera depois de ler.
+// peaks of each file channel since the previous read (linear, after fader, normalization and EQ), for the mixer meters.
+// Reset after reading.
 JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
     float out[LANES_MAX];
     pthread_mutex_lock(&g_mx);
@@ -888,12 +973,12 @@ JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
     return a;
 }
 
-// relógio da interface (feedback pela entrada): 1 travado, 0 esperando, -1 sem entrada. Só leitura.
+// interface clock (feedback through the input): 1 locked, 0 waiting, -1 no input. Read only.
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
 
-// ---- normalização ----
-// Mede a loudness integrada (LUFS, ITU-R BS.1770: filtro K + gating) dos canais 1/2
-// e o pico dos canais 3/4. Retorna {lufsBacking, picoBacking, picoClick} ou null.
+// ---- normalization ----
+// Measures the integrated loudness (LUFS, ITU-R BS.1770: K filter + gating) of channels 1/2 and the peak of channels
+// 3/4. Returns {lufsBacking, peakBacking, peakClick} or null.
 typedef struct { double b0, b1, b2, a1, a2, z1, z2; } biquad;
 
 static double bq(biquad *f, double x) {
@@ -915,8 +1000,31 @@ static void kweight_init(biquad *shelf, biquad *hp, double fs) {
     *hp = (biquad){1.0, -2.0, 1.0, 2.0 * (K * K - 1.0) / a0, (1.0 - K / Q + K * K) / a0, 0, 0};
 }
 
-// Volume de um conjunto de canais (bits em mask): {lufs, pico}. É a mesma medição do backing acima (K-weighting,
-// blocos de 400 ms, portões de -70 e -10), só que nos canais escolhidos — cada canal ou par do mixer por canal.
+// Integrated loudness from the 100 ms segments' mean squares: 400 ms blocks (4 segments, 75% overlap), the absolute
+// gate at -70 LUFS and the relative one 10 LU below (ITU-R BS.1770). Shared by analyze and analyzeMask (audio audit A3).
+static float gated_lufs(const double *segs, size_t nseg) {
+    double sumAbs = 0; long nAbs = 0;
+    for (size_t i = 0; i + 3 < nseg; i++) {
+        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
+        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
+    }
+    float lufs = -70.0f;
+    if (nAbs > 0) {
+        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
+        long n = 0;
+        for (size_t i = 0; i + 3 < nseg; i++) {
+            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
+            if (z <= 0) continue;
+            double l = -0.691 + 10 * log10(z);
+            if (l > -70.0 && l > rel) { sum += z; n++; }
+        }
+        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
+    }
+    return lufs;
+}
+
+// Loudness of a set of channels (bits in mask): {lufs, peak}. The same measurement as the backing above (K-weighting,
+// 400 ms blocks, -70 and -10 gates), but on the chosen channels: each mixer channel or pair.
 JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath, jint mask) {
     const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
     int err = 0, ch = 0, fs = 0;
@@ -951,23 +1059,7 @@ JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath
         }
     }
     src_close(&v);
-    double sumAbs = 0; long nAbs = 0;
-    for (size_t i = 0; i + 3 < nseg; i++) {
-        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
-    }
-    float lufs = -70.0f;
-    if (nAbs > 0) {
-        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
-        long n = 0;
-        for (size_t i = 0; i + 3 < nseg; i++) {
-            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-            if (z <= 0) continue;
-            double l = -0.691 + 10 * log10(z);
-            if (l > -70.0 && l > rel) { sum += z; n++; }
-        }
-        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
-    }
+    float lufs = gated_lufs(segs, nseg);
     free(segs);
     float out[2] = {lufs, (float)peak};
     jfloatArray arr = (*e)->NewFloatArray(e, 2);
@@ -979,14 +1071,14 @@ JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
     const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
     int err = 0, ch = 0, fs = 0;
     long len = 0;
-    src_t v = src_open(path, &err, &fs, &ch, &len);   // recusa mais de 8 canais (buf abaixo cabe até 8)
+    src_t v = src_open(path, &err, &fs, &ch, &len);   // refuses more than 8 channels (buf below holds up to 8)
     (*e)->ReleaseStringUTFChars(e, jpath, path);
     if (!src_ok(&v)) return NULL;
-    int nb = ch >= 2 ? 2 : 1;                 // canais do backing
+    int nb = ch >= 2 ? 2 : 1;                 // backing channels
     biquad sh[2], hp[2];
     for (int i = 0; i < 2; i++) kweight_init(&sh[i], &hp[i], fs);
 
-    int seg = fs / 10;                         // segmentos de 100 ms
+    int seg = fs / 10;                         // 100 ms segments
     size_t cap = 4096, nseg = 0;
     double *segs = malloc(cap * sizeof(double));
     double acc = 0, peakB = 0, peakC = 0;
@@ -1012,24 +1104,7 @@ JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
     }
     src_close(&v);
 
-    // blocos de 400 ms (4 segmentos) com 75% de sobreposição
-    double sumAbs = 0; long nAbs = 0;
-    for (size_t i = 0; i + 3 < nseg; i++) {
-        double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-        if (z > 0 && -0.691 + 10 * log10(z) > -70.0) { sumAbs += z; nAbs++; }
-    }
-    float lufs = -70.0f;
-    if (nAbs > 0) {
-        double rel = -0.691 + 10 * log10(sumAbs / nAbs) - 10.0, sum = 0;
-        long n = 0;
-        for (size_t i = 0; i + 3 < nseg; i++) {
-            double z = (segs[i] + segs[i + 1] + segs[i + 2] + segs[i + 3]) / 4.0;
-            if (z <= 0) continue;
-            double l = -0.691 + 10 * log10(z);
-            if (l > -70.0 && l > rel) { sum += z; n++; }
-        }
-        if (n > 0) lufs = (float)(-0.691 + 10 * log10(sum / n));
-    }
+    float lufs = gated_lufs(segs, nseg);
     free(segs);
     float out[3] = {lufs, (float)peakB, (float)peakC};
     jfloatArray arr = (*e)->NewFloatArray(e, 3);
