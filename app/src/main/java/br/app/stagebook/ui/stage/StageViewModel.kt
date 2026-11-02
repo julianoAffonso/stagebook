@@ -137,11 +137,13 @@ class StageViewModel @Inject constructor(
 
     init { stageGate.enter() }   // holds the Drive sync while the stage is open
     override fun onCleared() {
-        player.pause()   // leaving the stage stops the backing track
+        stageGate.leave()
+        // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
+        // another (the new one enters first), and the track playing goes on, as when changing songs (audit 02/11)
+        if (!stageGate.onStage.value) player.pause()
         metronome.stop()
         chordPlayer.stop()
         announcer.stop()
-        stageGate.leave()
         // leaving the stage does NOT end "Lead the band" (user's request): during a show someone steps out to check
         // something and the band stays together; only "End" releases everyone
     }
@@ -216,8 +218,15 @@ class StageViewModel @Inject constructor(
     }
 
     /** "Highlight this line" on stage (B-28): saved in the song right away, like key and capo. */
-    fun toggleLineHighlight(songId: String, line: Int) {
-        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(text = br.app.stagebook.ui.editor.toggleLineHighlight(it.text, line)) }
+    /** Highlighter on stage: the words from [from] to [to] of line [line] as [shown] get (or lose) their highlight. */
+    fun highlightWords(songId: String, line: Int, shown: String, from: Int, to: Int, after: Int = 0) {
+        if (songId.isEmpty()) return
+        repository.updateSong(songId) { song ->
+            val lines = song.text.split('\n').toMutableList()
+            val saved = lines.getOrNull(line) ?: return@updateSong song
+            lines[line] = br.app.stagebook.domain.HighlightRange.toggle(saved, shown, from, to, after)
+            song.copy(text = lines.joinToString("\n"))
+        }
     }
 
     fun setZoom(songId: String, zoom: Float) {

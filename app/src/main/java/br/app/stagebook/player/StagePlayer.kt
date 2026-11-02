@@ -64,7 +64,9 @@ class StagePlayer @Inject constructor(
     private val _usbReady = MutableStateFlow(false)
     val usbReady: StateFlow<Boolean> = _usbReady
 
-    @Volatile private var wanted: File? = null    // backing track of the open song
+    // backing track the player holds: live, the one playing goes on when the song on screen changes (TrackQueue)
+    private val queue = br.app.stagebook.domain.TrackQueue<File>()
+    private val wanted: File? get() = queue.wanted
     @Volatile private var loaded: File? = null    // what's in the engine
     // what's in the engine with its mix and normalization applied: only this one plays (the output could connect while
     // load() was still measuring, and the song started with the old gains; audit 01/11)
@@ -95,12 +97,9 @@ class StagePlayer @Inject constructor(
         }
     }
 
-    /** Song open on stage (null = no backing track): stops whatever is playing and notes the new one. */
+    /** Song open on stage (null = no backing track): loads its track, or, with a track playing, after it stops. */
     fun open(track: File?) {
-        if (track == wanted) return
-        wanted = track
-        if (_ui.value.playing || _ui.value.waiting) pause()
-        if (PlayerService.running) scope.launch { load() }
+        if (queue.open(track) && PlayerService.running) scope.launch { load() }
     }
 
     /** Ask to skip battery saving (play with the screen off)? Only once, and only if it hasn't yet. */
@@ -128,9 +127,12 @@ class StagePlayer @Inject constructor(
             ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
         }
         _ui.update { it.copy(waiting = true) }
+        queue.started()
         scope.launch {
             if (!load()) {
                 _ui.value = PlayerUi(message = context.getString(R.string.player_no_track))
+                // nothing plays: a song changed while loading gets its own track (it stayed queued; audit 02/11)
+                if (queue.stopped() && PlayerService.running) load()
                 return@launch
             }
             startIfConnected()
@@ -144,6 +146,8 @@ class StagePlayer @Inject constructor(
             Engine.pause()
             PlayerService.playing(false)
         }
+        // the song on screen changed while this track played: its track comes in now
+        if (queue.stopped() && PlayerService.running) scope.launch { load() }
     }
 
     /**
@@ -291,6 +295,9 @@ class StagePlayer @Inject constructor(
             Engine.setClick(floats(click.click(false)), floats(click.click(true)), click.samplesPerBeat(bpm), out.out, if (out.pair) out.out + 1 else -1)
             return true
         }
+
+        /** The USB interface the player is on (empty: none); the device metronome keeps away from it. */
+        fun interfaceName(): String = if (PlayerService.outputKey.startsWith("usb:")) PlayerService.outputName.orEmpty() else ""
 
         /** No click on USB (also when the player is off: the engine keeps the setting for its next start). */
         fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1)

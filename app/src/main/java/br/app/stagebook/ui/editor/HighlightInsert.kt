@@ -2,8 +2,8 @@ package br.app.stagebook.ui.editor
 
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import br.app.stagebook.ui.stage.HIGHLIGHT_MARK
-import br.app.stagebook.ui.stage.highlightMarks
+import br.app.stagebook.domain.HIGHLIGHT_MARK
+import br.app.stagebook.domain.highlightMarks
 
 /**
  * "Highlight" in the editor (vocalist, 31/10): wraps the selection in `==` so the stage paints it with a marker. No
@@ -66,23 +66,4 @@ class HighlightLook(private val marker: androidx.compose.ui.graphics.Color, priv
         }
         return androidx.compose.ui.text.input.TransformedText(out.toAnnotatedString(), androidx.compose.ui.text.input.OffsetMapping.Identity)
     }
-}
-
-/** True when line [line] of the song (0-based, in the saved text) has a highlight. */
-fun lineHighlighted(text: String, line: Int): Boolean = highlightMarks(text.split('\n').getOrNull(line).orEmpty()).isNotEmpty()
-
-/**
- * "Highlight this line" on stage (user, 01/11, B-28): the whole line (without the spaces around it) between `==`; a
- * line that already has a highlight loses its marks instead. Other lines don't change.
- */
-fun toggleLineHighlight(text: String, line: Int): String {
-    val lines = text.split('\n').toMutableList()
-    val s = lines.getOrNull(line) ?: return text
-    lines[line] = if (highlightMarks(s).isNotEmpty()) s.replace(HIGHLIGHT_MARK, "") else {
-        val start = s.indexOfFirst { !it.isWhitespace() }
-        if (start < 0) return text
-        val end = s.indexOfLast { !it.isWhitespace() } + 1
-        s.substring(0, start) + HIGHLIGHT_MARK + s.substring(start, end) + HIGHLIGHT_MARK + s.substring(end)
-    }
-    return lines.joinToString("\n")
 }
