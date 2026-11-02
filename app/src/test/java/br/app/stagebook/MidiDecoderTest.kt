@@ -4,6 +4,7 @@ import br.app.stagebook.domain.MidiCode
 import br.app.stagebook.domain.MidiDecoder
 import br.app.stagebook.domain.PedalAction
 import br.app.stagebook.domain.PedalLearn
+import br.app.stagebook.domain.learnable
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -91,6 +92,16 @@ class MidiDecoderTest {
         assertNull(MidiCode.value(cc))
         assertEquals(27, MidiCode.number(MidiCode.withValue(cc, 127)))
         assertEquals(MidiCode.Kind.CC, MidiCode.kind(MidiCode.withValue(cc, 0)))
+    }
+
+    // the Hotone's 0 button reads as a release: set up a button has to look at it too (device test, 01/11)
+    @Test fun `the Hotone CC 0 button reaches set up a button`() {
+        val (zero) = MidiDecoder("Hotone").feed(bytes(0xB0, 27, 0))
+        assertFalse(zero.down)
+        assertTrue(zero.learnable)
+        assertEquals(MidiCode.withValue(MidiCode.of(0xB0, 27), 0), PedalLearn().code(zero, 5_000))
+        val (noteOff) = MidiDecoder("").feed(bytes(0x90, 60, 100, 0x80, 60, 0)).drop(1)
+        assertFalse(noteOff.learnable)
     }
 
     // pedals that send only the press: every press counts (user, 31/10: the song moved once and then never again)
