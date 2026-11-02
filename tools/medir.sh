@@ -32,7 +32,7 @@ for ((t = 0; t < SECS; t++)); do
     sleep 1
 done
 frames=$("${ADB[@]}" shell dumpsys gfxinfo "$PKG" | tr -d '\r' | grep -E "Total frames rendered|Janky frames|50th percentile|90th percentile|95th percentile|99th percentile" | head -6)
-temp=$("${ADB[@]}" shell dumpsys battery | tr -d '\r' | awk '/temperature/ { printf "%.1f °C", $2 / 10 } /level/ { lvl = $2 } END { printf " · bateria %s%%", lvl }')
+temp=$("${ADB[@]}" shell dumpsys battery | tr -d '\r' | awk '/^ *temperature:/ && !t { t = $2 } /^ *level:/ && !l { l = $2 } END { printf "%.1f °C · bateria %s%%", t / 10, l }')
 python3 - "$BASE.csv" "$CORES" "$DEV" "$SCENARIO${LABEL:+ ($LABEL)}" "$SECS" <<'EOF' > "$BASE.txt"
 import csv, statistics, sys
 path, cores, dev, scen, secs = sys.argv[1:6]
