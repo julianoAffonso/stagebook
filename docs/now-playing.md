@@ -8,8 +8,9 @@ On stage, every time the song changes (and every 10 seconds after that), Stagebo
 network: the song that's playing. Streaming and projection software (OBS, Resolume and others) can show the title and
 artist. The lyrics never go out. To turn it off: Settings → Screen → Now Playing.
 
-- **How:** UDP broadcast to `255.255.255.255`, port **47800**, only while a local network is on (Wi-Fi, cable or a
-  phone hotspot).
+- **How:** UDP broadcast to the broadcast address of each local network the device is on (for example
+  `192.168.1.255`), port **47800**, only while a local network is on (Wi-Fi, cable or a phone hotspot). On a phone
+  sharing its hotspot it reaches the computers on the hotspot too. Listen on port 47800 on any address.
 - **What goes out** (JSON, UTF-8):
 
 ```json

@@ -8,8 +8,10 @@ No palco, a cada troca de música (e depois a cada 10 segundos), o Stagebook env
 música que está tocando. Programas de live e de projeção (OBS, Resolume e outros) podem mostrar o nome da música e o
 artista. A letra nunca vai. Para desligar: Ajustes → Tela → Now Playing.
 
-- **Como:** broadcast UDP para `255.255.255.255`, porta **47800**, só com a rede local ligada (Wi-Fi, cabo ou ponto de
-  acesso do celular).
+- **Como:** broadcast UDP para o endereço de broadcast de cada rede local em que o aparelho está (por exemplo
+  `192.168.1.255`), porta **47800**, só com a rede local ligada (Wi-Fi, cabo ou ponto de acesso do celular). Num celular
+  compartilhando o ponto de acesso, chega também aos computadores ligados nele. Escute a porta 47800 em qualquer
+  endereço.
 - **O que vai** (JSON, UTF-8):
 
 ```json
