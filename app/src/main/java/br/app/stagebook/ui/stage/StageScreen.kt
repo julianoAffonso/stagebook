@@ -243,6 +243,7 @@ fun StageRoute(
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
             onSongMix = viewModel::setSongMix,
+            onGlobalMix = viewModel::setGlobalMix,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -284,6 +285,7 @@ fun StageScreen(
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
     onSongMix: (songId: String, mixer: br.app.stagebook.domain.MixerConfig?) -> Unit = { _, _ -> },
+    onGlobalMix: (br.app.stagebook.domain.MixerConfig) -> Unit = {},
 ) {
     // the mixer over the stage, with the song playing (user, 31/10)
     var mixerOpen by remember { mutableStateOf(false) }
@@ -950,11 +952,12 @@ fun StageScreen(
                     modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
                 )
             }
-            // the song's own mix over the general one; what's changed here stays with the song (user, 31/10)
+            // the song's own mix over the global one, or the global mixer itself (user, 31/10 and 01/11)
             if (mixerOpen) StageMixerSheet(
                 look.mixer.forSong(song.mix),
                 own = song.mix != null,
-                onMixer = { onSongMix(song.id, it) },
+                onMixer = { if (song.mix != null) onSongMix(song.id, it) else onGlobalMix(it) },
+                onOwn = { onSongMix(song.id, look.mixer) },
                 onGeneral = { onSongMix(song.id, null) },
                 onDismiss = { mixerOpen = false },
             )

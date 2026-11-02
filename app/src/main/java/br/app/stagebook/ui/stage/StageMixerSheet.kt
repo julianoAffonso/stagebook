@@ -15,7 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -31,13 +30,21 @@ import br.app.stagebook.ui.theme.Spacing
 
 /**
  * The mixer over the stage (user, 31/10): from Settings → Player the backing track stopped, so the meters showed
- * silence and nothing could be heard while adjusting. Here the song keeps playing, and what's changed stays with the
- * song ([own]), starting from the general mixer; "Back to the general mixer" ([onGeneral]) drops it. "Monitor" starts
- * off and isn't saved, as in Settings.
+ * silence and nothing could be heard while adjusting. Here the song keeps playing. With "Use the global mixer" on, the
+ * controls change the global mixer, every song's (user, 01/11: read-only, it couldn't be adjusted while listening
+ * anywhere); off ([own]), they change the song's own copy ([onOwn] makes it from the global one) and "Back to the
+ * global mixer" ([onGeneral]) drops it. [onMixer] saves whichever is shown. "Monitor" starts off and isn't saved.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerConfig) -> Unit, onGeneral: () -> Unit, onDismiss: () -> Unit) {
+internal fun StageMixerSheet(
+    mixer: MixerConfig,
+    own: Boolean,
+    onMixer: (MixerConfig) -> Unit,
+    onOwn: () -> Unit,
+    onGeneral: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     var monitoring by remember { mutableStateOf(false) }
     var backToGeneral by remember { mutableStateOf(false) }
     if (backToGeneral) {
@@ -54,37 +61,21 @@ internal fun StageMixerSheet(mixer: MixerConfig, own: Boolean, onMixer: (MixerCo
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Spacing.m).padding(bottom = Spacing.l),
             verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
-            // "Use the global mixer" on top (user, 01/11): on (a song never changed), the song plays with the global
-            // mixer and the controls below only show it, disabled; turning it off makes the song's own copy and enables
-            // them; turning it on again asks first and drops the song's settings
+            // "Use the global mixer" on top: on, the controls below change the global mixer (every song); turning it off
+            // makes the song's own copy; turning it on again asks first and drops the song's settings
             br.app.stagebook.ui.components.SwitchRow(
                 stringResource(R.string.stage_mix_use_global), !own,
-                { on -> if (on) backToGeneral = true else onMixer(mixer) },
+                { on -> if (on) backToGeneral = true else onOwn() },
             )
-            // where the global mixer is, as text: a link would leave the stage in the middle of a song (user, 01/11)
+            // which mixer the controls change, as text: a link to Settings would leave the stage mid-song (user, 01/11)
             androidx.compose.material3.Text(
                 stringResource(if (own) R.string.stage_mix_own else R.string.stage_mix_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // "See live levels" stays usable on the global mixer: the meters show what's playing (user, 01/11)
-            if (!own) br.app.stagebook.ui.components.SwitchRow(stringResource(R.string.mixer_monitor), monitoring, { monitoring = it })
-            androidx.compose.foundation.layout.Box {
-                // read-only on the global mixer: the controls dim, the meters keep their colour (user, 01/11)
-                androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalMixerLocked provides !own) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                        val (shown, onShown) = br.app.stagebook.ui.settings.rememberMixerDraft(mixer, onMixer)
-                        MixerCard(shown, onShown, { levels.value }, monitoring, { monitoring = it }, monitorSwitch = own)
-                        EqCard(shown, onShown, { levels.value }, monitoring)
-                    }
-                }
-                // with the global mixer: nothing below takes a touch (it's read-only until the switch is off)
-                if (!own) androidx.compose.foundation.layout.Box(
-                    Modifier.matchParentSize().pointerInput(Unit) {
-                        awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
-                    },
-                )
-            }
+            val (shown, onShown) = br.app.stagebook.ui.settings.rememberMixerDraft(mixer, onMixer)
+            MixerCard(shown, onShown, { levels.value }, monitoring, { monitoring = it })
+            EqCard(shown, onShown, { levels.value }, monitoring)
         }
     }
 }

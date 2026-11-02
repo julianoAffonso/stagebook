@@ -1255,6 +1255,8 @@ private fun PlayerDetail(look: Look, actions: SettingsActions, ownMix: Int = 0) 
             color = MaterialTheme.colorScheme.error,
         )
     }
+    // here nothing plays (leaving the stage stops the song): adjusting while listening is on the stage (user, 01/11)
+    Text(stringResource(R.string.mixer_listen_on_stage), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val (mixer, onMixer) = rememberMixerDraft(look.mixer, actions.onMixer)
     MixerCard(mixer, onMixer, actions.mixerLevels, actions.monitoring, actions.onMonitoring)
     EqCard(mixer, onMixer, actions.mixerLevels, actions.monitoring)
