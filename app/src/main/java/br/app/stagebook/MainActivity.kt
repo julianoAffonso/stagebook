@@ -30,7 +30,7 @@ import javax.inject.Inject
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
+import androidx.compose.ui.platform.ComposeView
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.core.view.WindowCompat
@@ -39,6 +39,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import br.app.stagebook.navigation.StagebookNavHost
 import br.app.stagebook.ui.LocalPedalInput
 import br.app.stagebook.ui.PedalInput
+import br.app.stagebook.ui.PedalKeyRoot
 import br.app.stagebook.ui.theme.StagebookTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -92,7 +93,8 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) { midi.presses.collect { pedal.dispatch(it) } }
         }
         if (repository.library.value.look.bandOn && trust.members.value.isNotEmpty() && needsLocalNetwork(this)) localNetwork.launch(LOCAL_NETWORK)
-        setContent {
+        // pedal keys go through a root that sees them before Android drops the first one after a touch (PedalKeyRoot)
+        setContentView(PedalKeyRoot(this, pedal).apply { addView(ComposeView(context).apply { setContent {
             StagebookTheme {
                 val offer by updateOffer.offer.collectAsStateWithLifecycle()
                 val updateActions = remember {
@@ -117,7 +119,7 @@ class MainActivity : ComponentActivity() {
                     br.app.stagebook.ui.web.WebRequestDialog(r.name, r.ip, r.code) { ok -> webEditor.auth.answer(r.id, ok) }
                 }
             }
-        }
+        } }) })
     }
 
     override fun onStart() {

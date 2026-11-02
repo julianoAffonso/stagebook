@@ -1,8 +1,10 @@
 package br.app.stagebook.ui
 
+import android.content.Context
 import android.os.Build
 import android.view.InputDevice
 import android.view.KeyEvent
+import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +41,22 @@ class PedalInput {
 /** Pedal, Bluetooth keyboard and so on; leaves out the device's own and virtual buttons. */
 fun isExternal(d: InputDevice): Boolean =
     !d.isVirtual && (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) d.isExternal else d.name?.contains("gpio", ignoreCase = true) != true)
+
+/**
+ * The window's root: hands the keys to the pedal before the keyboard and before Android's touch mode. Right after a
+ * touch on the screen, Android uses up the first arrow key to leave touch mode, so the first pedal press did nothing
+ * (device test, 01/11). It holds focus itself, in touch mode too, so the keys always pass through it.
+ */
+class PedalKeyRoot(context: Context, private val pedal: PedalInput) : FrameLayout(context) {
+    init { isFocusableInTouchMode = true }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!hasFocus()) requestFocus()
+    }
+
+    override fun dispatchKeyEventPreIme(event: KeyEvent): Boolean = pedal.dispatch(event) || super.dispatchKeyEventPreIme(event)
+}
 
 val LocalPedalInput = staticCompositionLocalOf { PedalInput() }
 
