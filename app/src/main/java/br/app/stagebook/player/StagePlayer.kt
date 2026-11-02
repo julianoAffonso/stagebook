@@ -77,6 +77,14 @@ class StagePlayer @Inject constructor(
 
     init {
         instance = this
+        // USB through Android's audio (Settings): the service reads it on connecting; a change connects again
+        scope.launch {
+            repository.library.map { it.look.usbViaAndroid }.distinctUntilChanged().collect { via ->
+                val changed = PlayerService.viaAndroid != via
+                PlayerService.viaAndroid = via
+                if (changed) PlayerService.reconnect()
+            }
+        }
         // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
         // missing and apply right away (only with the player on)
         scope.launch {

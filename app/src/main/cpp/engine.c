@@ -703,6 +703,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
         float outv[LANES_MAX];
         mix_custom(lane, outv);
+        click_add_locked(outv);   // only set when this output is a USB interface (StagePlayer.usbClick)
         for (int c = 0; c < ch; c++) {
             float v = c < LANES_MAX ? outv[c] : 0;
             if (mon && c < OUT_CH && fabsf(v) > g_pk[c]) g_pk[c] = fabsf(v);
@@ -760,14 +761,17 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
     g_fd = -1;
 }
 
-// Opens the device output (48 kHz, stereo, float). False if Android didn't open it or didn't give 48 kHz.
-JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c) {
+// Opens an output through Android (48 kHz, float): the device's own (deviceId 0, stereo) or a USB interface by its
+// Android id with its channels, for devices where talking to USB directly gets no packets back (S26, B-33: the
+// another app plays there through Android). False if Android didn't open it or didn't give 48 kHz.
+JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
     AAudioStreamBuilder *b = NULL;
     if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
     AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
-    AAudioStreamBuilder_setChannelCount(b, 2);
+    if (deviceId > 0) AAudioStreamBuilder_setDeviceId(b, deviceId);
+    AAudioStreamBuilder_setChannelCount(b, channels > 0 ? channels : 2);
     AAudioStreamBuilder_setFormat(b, AAUDIO_FORMAT_PCM_FLOAT);
     AAudioStreamBuilder_setUsage(b, AAUDIO_USAGE_MEDIA);
     AAudioStreamBuilder_setContentType(b, AAUDIO_CONTENT_TYPE_MUSIC);

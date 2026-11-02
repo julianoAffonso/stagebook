@@ -11,6 +11,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
 import android.hardware.usb.UsbDevice;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.os.Handler;
@@ -60,6 +62,10 @@ public class PlayerService extends Service {
     // playing on the device's output (no USB interface). If USB was connected and dropped, it doesn't fall back to the
     // device mid-show: it waits for USB to come back (the click would go to the speaker).
     boolean deviceOut, hadUsb;
+    // the USB interface opened through Android's audio (Settings, off by default): where talking to USB directly gets no
+    // packets back (S26, B-33) but Android plays on it (the another app does). Set by StagePlayer from Settings.
+    static volatile boolean viaAndroid;
+    UsbDevice androidUsb;   // the interface open that way (deviceOut is true then)
 
     final Handler main = new Handler(Looper.getMainLooper());
     UsbManager um;
@@ -112,10 +118,11 @@ public class PlayerService extends Service {
                 fbRetries = 0;
             } else if (fbRetryDue()) {
                 fbRetry();
-            } else if (link == null) {
-                // permission granted through Android's window, without our request's notice
+            } else if (link == null && androidUsb == null) {
+                // permission granted through Android's window, without our request's notice; through Android no
+                // permission is needed, only Android listing the interface (it may take a moment after plugging in)
                 UsbDevice d = UsbLink.find(um);
-                if (d != null && um.hasPermission(d)) connectUsb();
+                if (d != null && (viaAndroid || um.hasPermission(d))) connectUsb();
             }
             main.postDelayed(this, WATCHDOG_MS);
         }
@@ -167,6 +174,7 @@ public class PlayerService extends Service {
     void releaseUsb() {
         link = null;
         deviceOut = false;
+        androidUsb = null;
         connected = false;
         connecting = false;
         usbGen++;
@@ -184,6 +192,7 @@ public class PlayerService extends Service {
             else useDevice();
             return;
         }
+        if (viaAndroid) { useAndroidUsb(d); return; }
         if (!um.hasPermission(d)) {
             Intent it = new Intent(ACTION_USB_PERM).setPackage(getPackageName());
             int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
@@ -224,10 +233,54 @@ public class PlayerService extends Service {
         connecting = true;
         int gen = usbGen;
         usbOps.execute(() -> {
-            boolean ok = Engine.startDevice();
+            boolean ok = Engine.startDevice(0, 2);
             if (!ok) Log.w(TAG, Engine.status());
             main.post(() -> { if (gen == usbGen) deviceReady(ok); });
         });
+    }
+
+    // The USB interface through Android's audio, with all its channels: the engine's device path aimed at it.
+    void useAndroidUsb(UsbDevice d) {
+        if (androidUsb != null || connecting) return;
+        if (deviceOut) releaseUsb();   // was on the device's own output: the interface arrived
+        AudioDeviceInfo out = null;
+        for (AudioDeviceInfo a : getSystemService(AudioManager.class).getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            if (a.getType() == AudioDeviceInfo.TYPE_USB_DEVICE) { out = a; break; }
+        }
+        // Android hasn't listed it yet (just plugged in): the watchdog tries again
+        if (out == null) { setStatus(getString(R.string.player_usb_connecting)); return; }
+        int ch = 2;
+        for (int n : out.getChannelCounts()) ch = Math.max(ch, n);
+        final int id = out.getId(), count = Math.min(ch, 8);
+        connecting = true;
+        int gen = usbGen;
+        setStatus(getString(R.string.player_usb_connecting));
+        usbOps.execute(() -> {
+            boolean ok = Engine.startDevice(id, count);
+            if (!ok) Log.w(TAG, Engine.status());
+            main.post(() -> { if (gen == usbGen) androidUsbReady(ok, d, count); });
+        });
+    }
+
+    void androidUsbReady(boolean ok, UsbDevice d, int count) {
+        connecting = false;
+        if (!ok) { setStatus(getString(R.string.player_usb_failed)); return; }
+        deviceOut = true;
+        androidUsb = d;
+        hadUsb = true;
+        outputKey = String.format(java.util.Locale.ROOT, "usb:%04x:%04x", d.getVendorId(), d.getProductId());
+        String n = d.getProductName();
+        outputName = n != null && !n.trim().isEmpty() ? n.trim() : "USB";
+        outputCount = count;
+        connected = true;
+        Log.i(TAG, "USB through Android: " + outputName + ", " + count + " channels");
+        setStatus(getString(R.string.player_usb_ready, outputName));
+    }
+
+    /** The Settings choice changed (StagePlayer): connect again the new way. */
+    static void reconnect() {
+        PlayerService s = instance;
+        if (s != null && running) s.main.post(() -> { s.releaseUsb(); s.connectUsb(); });
     }
 
     void deviceReady(boolean ok) {
@@ -266,13 +319,13 @@ public class PlayerService extends Service {
                 else { setStatus(getString(R.string.player_usb_denied)); if (!hadUsb) useDevice(); }
             } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(i.getAction())) {
                 UsbDevice d = IntentCompat.getParcelableExtra(i, UsbManager.EXTRA_DEVICE, UsbDevice.class);
-                if (d != null && UsbLink.isAudioOut(d) && link == null) {
-                    if (um.hasPermission(d)) connectUsb();
+                if (d != null && UsbLink.isAudioOut(d) && link == null && androidUsb == null) {
+                    if (!viaAndroid && um.hasPermission(d)) connectUsb();
                     else main.postDelayed(() -> { if (running && link == null) connectUsb(); }, ATTACH_GRANT_WAIT_MS);
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(i.getAction())) {
                 UsbDevice d = IntentCompat.getParcelableExtra(i, UsbManager.EXTRA_DEVICE, UsbDevice.class);
-                if (d != null && link != null && d.equals(link.dev)) {
+                if (d != null && (link != null && d.equals(link.dev) || d.equals(androidUsb))) {
                     releaseUsb();
                     fbRetries = 0;   // new cable: new attempts to get the clock
                     holdWake(false);

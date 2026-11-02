@@ -148,6 +148,9 @@ data class Look(
     // output (the first one, and the next too when [metroUsbPair]), so the drummer hears it through the desk
     val metroUsbOut: Int = -1,
     val metroUsbPair: Boolean = true,
+    // play on the USB interface through Android's audio instead of talking to USB directly (user, 02/11, B-33): for
+    // devices where the direct way gets no packets back, like the S26, while Android plays there. Off by default
+    val usbViaAndroid: Boolean = false,
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // buttons set to another command in settings (key → command)
     val pedalSeen: List<Int> = emptyList(),   // the pedal's buttons pressed in settings: listed with what each does (user, 01/11)
     val midiBtAddress: String = "",   // Bluetooth MIDI pedal chosen in Settings (the app reconnects by itself)
