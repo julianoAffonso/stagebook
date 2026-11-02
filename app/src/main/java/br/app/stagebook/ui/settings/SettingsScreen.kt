@@ -1313,10 +1313,8 @@ internal fun MixerCard(
     // also opened over the stage, with the song playing (user, 31/10: from Settings the track stopped)
     var editing by rememberSaveable { mutableIntStateOf(-1) }   // channel being edited (the first of the pair); -1 = none
     SettingsCard(stringResource(R.string.mixer_title), help = stringResource(R.string.mixer_help) + "\n\n" + stringResource(R.string.mixer_routes_help)) {
-        OptionDropdown(
-            stringResource(R.string.mixer_channels), (1..MixerConfig.MAX).toList(), mixer.channels,
-            { onMixer(mixer.copy(channels = it)) }, { it.toString() }, Modifier.lockedDim(),
-        )
+        // no channel count to pick (user, 02/11): the mixer shows as many channels as the widest track played so far
+        // (StagePlayer grows it when a track loads)
         if (monitorSwitch) SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
         // which output the shown routing belongs to (the one in use or the last used)
         Text(

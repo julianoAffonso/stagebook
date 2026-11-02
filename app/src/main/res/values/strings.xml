@@ -507,8 +507,7 @@
     <!-- player mixer (Settings → Player) -->
     <string name="mixer_title">Mixer</string>
     <string name="mixer_monitor">Monitor live levels</string>
-    <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here. Tap a channel name to pick its output, even out the volume, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
-    <string name="mixer_channels">Channels in the backing tracks</string>
+    <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here, up to the widest track played so far. Tap a channel name to pick its output, even out the volume, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
     <string name="mixer_channel">Channel %1$d</string>
     <string name="mixer_pair" tools:ignore="PluralsCandidate">Channels %1$d and %2$d</string>
     <string name="mixer_name">Name</string>
