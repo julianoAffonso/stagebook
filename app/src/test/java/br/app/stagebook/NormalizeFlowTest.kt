@@ -39,10 +39,11 @@ class NormalizeFlowTest {
     fun `button and confirmation call mark sections`() {
         var calls = 0
         compose.setContent {
-            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.LYRICS) }
+            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onNormalize = { calls++ }), section = SettingsSection.LIBRARY) }
         }
-        compose.onNodeWithText("Marcar seções nas letras sem títulos").performScrollTo().performClick()
-        compose.onNodeWithText("Marcar").performClick()
+        // in Library and backup since 02/11 (in the stage look it puzzled)
+        compose.onNode(androidx.compose.ui.test.hasText("Achar refrão e versos") and androidx.compose.ui.test.hasClickAction()).performScrollTo().performClick()
+        compose.onNodeWithText("Achar").performClick()
         compose.waitForIdle()
         assertEquals(1, calls)
     }

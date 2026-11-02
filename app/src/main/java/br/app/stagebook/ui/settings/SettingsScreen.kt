@@ -559,7 +559,9 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.BAND -> if (band.members.isEmpty()) stringResource(R.string.settings_band_none)
     else pluralStringResource(R.plurals.settings_band_short, band.members.size, band.members.size)
     SettingsSection.ESSENTIAL -> stringResource(if (ui.look.essential) R.string.essential_on_short else R.string.essential_off_short)
-    SettingsSection.LYRICS -> stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
+    // "Lyrics only" shows in the summary, so it's found without opening (user, 02/11)
+    SettingsSection.LYRICS -> (if (ui.look.chords) "" else stringResource(R.string.settings_lyrics_only) + " · ") +
+        stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
         when (ui.look.columns) {
             StageColumns.AUTO -> ""
             StageColumns.ONE -> " · " + stringResource(R.string.settings_columns_one_short)
@@ -795,7 +797,18 @@ private fun LegibilityWarnings(look: Look) {
 private fun ChordsLookCard(look: Look, actions: SettingsActions, draft: StageDraft) {
     // the size changes live in the pinned preview and only saves on release
     SettingsCard(stringResource(R.string.settings_chords_card), help = stringResource(R.string.settings_chords_show_help)) {
-        SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
+        // two buttons, like turn pages / scroll: the switch in the middle of the card wasn't found (user, 02/11)
+        Text(stringResource(R.string.settings_chords_show), style = MaterialTheme.typography.bodyLarge)
+        val shows = listOf(true to R.string.editor_lyrics_chords, false to R.string.settings_lyrics_only)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            shows.forEachIndexed { i, (on, label) ->
+                SegmentedButton(
+                    selected = look.chords == on,
+                    onClick = { actions.onChords(on) },
+                    shape = SegmentedButtonDefaults.itemShape(i, shows.size, baseShape = CircleShape),
+                ) { Text(stringResource(label)) }
+            }
+        }
         if (look.chords) {
             // the same order as the lyrics card: size, font and colour; the pinned preview above shows them (user, 01/11)
             Text(stringResource(R.string.settings_chords_size, (draft.chordScale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
@@ -904,7 +917,6 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit, @Stri
 
 @Composable
 private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
-    var confirming by rememberSaveable { mutableStateOf(false) }
     SettingsCard(stringResource(R.string.settings_sections_look), help = stringResource(R.string.settings_sections_help) + "\n\n" + stringResource(R.string.settings_translate_sections_help)) {
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
         if (look.showSections) {
@@ -924,18 +936,6 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
         }
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
         LegibilityWarnings(look)
-    }
-    SettingsCard(stringResource(R.string.settings_normalize_card), help = stringResource(R.string.settings_normalize_help)) {
-        ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, tone = ButtonTone.Tonal)
-    }
-    if (confirming) {
-        ConfirmDialog(
-            message = stringResource(R.string.settings_normalize_confirm),
-            confirmLabel = stringResource(R.string.settings_normalize_ok),
-            onConfirm = actions.onNormalize,
-            onDismiss = { confirming = false },
-            destructive = false,
-        )
     }
 }
 
@@ -1486,6 +1486,22 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 stringResource(R.string.tags_auto_ok),
                 { actions.onAutoTags(national, international, language, false) },
                 { ask = null },
+                destructive = false,
+            )
+        }
+    }
+    // finding chorus and verses in songs without part titles: tidying the library, so it lives here, not in the stage
+    // look, where it puzzled (user, 02/11)
+    SettingsCard(stringResource(R.string.settings_normalize_card)) {
+        var confirming by rememberSaveable { mutableStateOf(false) }
+        InfoText(stringResource(R.string.settings_normalize_help))
+        ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, Modifier.fillMaxWidth(), tone = ButtonTone.Tonal)
+        if (confirming) {
+            ConfirmDialog(
+                message = stringResource(R.string.settings_normalize_confirm),
+                confirmLabel = stringResource(R.string.settings_normalize_ok),
+                onConfirm = actions.onNormalize,
+                onDismiss = { confirming = false },
                 destructive = false,
             )
         }
