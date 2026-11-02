@@ -107,46 +107,54 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
     // someone is missing a song now (or the leader is gone): the whole strip turns red, so the band sees it before
     // starting
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
+    @Composable
+    fun Buttons() {
+        if (lacks.isNotEmpty()) TextButton({ showLacks = true }) { Text(stringResource(R.string.conduct_see_lacks)) }
+        when (ui) {
+            is ConductUi.Conducting -> {
+                // the search runs 30 s with nothing else on screen: the button says so meanwhile (user, 02/11: "is
+                // something supposed to happen?")
+                var searching by remember { mutableStateOf(false) }
+                LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
+                TextButton({ searching = true; onSearch() }, enabled = !searching) {
+                    Text(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
+                }
+                TextButton(onEnd) { Text(stringResource(R.string.conduct_end)) }
+            }
+            is ConductUi.Following -> TextButton(onLeave) { Text(stringResource(R.string.conduct_leave)) }
+        }
+    }
     Surface(
         color = if (alert) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Row(
-            Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = Spacing.m, vertical = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Icon(if (alert) AppIcons.Warning else AppIcons.Group, null)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    when (ui) {
-                        is ConductUi.Conducting -> stringResource(R.string.conduct_conducting, ui.set)
-                        is ConductUi.Following -> if (ui.gone) stringResource(R.string.conduct_gone, ui.from) else stringResource(R.string.conduct_following, ui.from)
-                    },
-                    style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                val detail = when {
-                    ui is ConductUi.Following && ui.missingHere -> stringResource(R.string.conduct_missing_here, ui.song)
-                    nowMissing.isNotEmpty() -> stringResource(R.string.conduct_missing_now, nowMissing.joinToString(", "))
-                    ui is ConductUi.Conducting && ui.noAnswer > 0 -> pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer)
-                    else -> null
-                }
-                detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-            }
-            if (lacks.isNotEmpty()) TextButton({ showLacks = true }) { Text(stringResource(R.string.conduct_see_lacks)) }
-            when (ui) {
-                is ConductUi.Conducting -> {
-                    // the search runs 30 s with nothing else on screen: the button says so meanwhile (user, 02/11: "is
-                    // something supposed to happen?")
-                    var searching by remember { mutableStateOf(false) }
-                    LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
-                    TextButton({ searching = true; onSearch() }, enabled = !searching) {
-                        Text(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
+        // on a phone the buttons don't fit next to the text ("End" broke letter by letter and the title vanished; user,
+        // 02/11): they go on a line of their own
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
+            val narrow = maxWidth < NARROW
+            Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Icon(if (alert) AppIcons.Warning else AppIcons.Group, null)
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            when (ui) {
+                                is ConductUi.Conducting -> stringResource(R.string.conduct_conducting, ui.set)
+                                is ConductUi.Following -> if (ui.gone) stringResource(R.string.conduct_gone, ui.from) else stringResource(R.string.conduct_following, ui.from)
+                            },
+                            style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        val detail = when {
+                            ui is ConductUi.Following && ui.missingHere -> stringResource(R.string.conduct_missing_here, ui.song)
+                            nowMissing.isNotEmpty() -> stringResource(R.string.conduct_missing_now, nowMissing.joinToString(", "))
+                            ui is ConductUi.Conducting && ui.noAnswer > 0 -> pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer)
+                            else -> null
+                        }
+                        detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
                     }
-                    TextButton(onEnd) { Text(stringResource(R.string.conduct_end)) }
+                    if (!narrow) Buttons()
                 }
-                is ConductUi.Following -> TextButton(onLeave) { Text(stringResource(R.string.conduct_leave)) }
+                if (narrow) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Buttons() }
             }
         }
     }
@@ -186,3 +194,5 @@ private fun ConductBarDarkPreview() = PreviewSurface(dark = true) { ConductBarSa
 internal fun ConductBarSamplesForTest() = ConductBarSamples()
 
 private const val SEARCH_MS = 30_000L   // BandConduct.search: the band search lasts this long
+
+private val NARROW = androidx.compose.ui.unit.Dp(560f)   // below this the conduct bar puts its buttons under the text
