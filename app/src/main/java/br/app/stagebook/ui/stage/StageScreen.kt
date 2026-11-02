@@ -241,6 +241,7 @@ fun StageRoute(
             onCapo = viewModel::setCapo,
             onAutoScroll = viewModel::setAutoScroll,
             onMetronomeSound = viewModel::metronomeSound,
+            onTempo = viewModel::setTempo,
             metroUsbReady = usbReady,
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
@@ -284,6 +285,7 @@ fun StageScreen(
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
     onMetronomeSound: (bpm: Int?) -> Unit = {},
+    onTempo: (songId: String, bpm: Int) -> Unit = { _, _ -> },
     metroUsbReady: Boolean = false,   // the player reached the USB interface: the metronome restarts there, in step
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
@@ -456,6 +458,14 @@ fun StageScreen(
     val songText = uiState.songs.getOrNull(index)?.text
     val songTempo = remember(songText) { songText?.let(Chords::tempo) ?: 0 }
     var metroBpm by remember(index, songTempo) { mutableIntStateOf(songTempo.takeIf { it > 0 } ?: Chords.DEFAULT_TEMPO) }
+    // the metronome's BPM is the song's (user, 02/11): a change made here is saved in the song, a moment after the last
+    // press; only after a press, so opening a song without a BPM doesn't write the default into it
+    var bpmTouched by remember(index) { mutableStateOf(false) }
+    LaunchedEffect(index, metroBpm, bpmTouched) {
+        if (!bpmTouched || metroBpm == songTempo) return@LaunchedEffect
+        delay(BPM_SAVE_MS)
+        uiState.songs.getOrNull(index)?.id?.takeIf { it.isNotEmpty() }?.let { onTempo(it, metroBpm) }
+    }
     var metroBeat by remember(index) { mutableIntStateOf(-1) }   // current beat since play (0 = first)
     // the sound (T33d) and the blink start together; the blink aims at the moment of each beat since the start (it
     // doesn't drift)
@@ -1020,7 +1030,7 @@ fun StageScreen(
                     }
                     if (metroDialog) MetronomeDialog(
                         bpm = metroBpm,
-                        onBpm = { metroBpm = it.coerceIn(Chords.MIN_TEMPO, Chords.MAX_TEMPO) },
+                        onBpm = { metroBpm = it.coerceIn(Chords.MIN_TEMPO, Chords.MAX_TEMPO); bpmTouched = true },
                         onPlay = { metroOn = true; metroDialog = false },
                         onDismiss = { metroDialog = false },
                     )
@@ -1685,3 +1695,5 @@ private class PressQueue {
     var from: Pair<Int, Int>? = null   // position the press left from, not settled yet
     var steps = 0                      // presses that arrived in the meantime (+ forward, - back)
 }
+
+private const val BPM_SAVE_MS = 600L   // the song's BPM is saved this long after the last + or − on the metronome
