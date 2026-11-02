@@ -28,7 +28,7 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
         modifier = modifier.fillMaxWidth(),
         // one line: beside the tag filter on phones it wrapped and the field grew taller
         // large system text: the hint gets smaller to fit instead of "Música, …" (B-20)
-        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
+        placeholder = { Text(placeholder, modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
@@ -68,7 +68,7 @@ private fun LabeledSearchField(value: String, onValueChange: (String) -> Unit, p
         label = { Text(label) },
         labelPosition = androidx.compose.material3.TextFieldLabelPosition.Attached(alwaysMinimize = true),
         // large system text: the hint gets smaller to fit instead of "Música, …" (B-20)
-        placeholder = { Text(placeholder, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
+        placeholder = { Text(placeholder, modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.bodyLarge.fontSize)) },
         leadingIcon = { Icon(AppIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
