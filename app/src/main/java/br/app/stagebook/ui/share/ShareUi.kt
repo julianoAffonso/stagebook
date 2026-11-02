@@ -330,7 +330,11 @@ fun CodeBox(sent: CloudUi.Sent, onCopy: () -> Unit = {}) {
             )
             Text(stringResource(R.string.share_qr_or), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs), style = MaterialTheme.typography.bodyMedium)
+        // "Sending 0 songs" read wrong when the songs aren't carried (user, 02/11): titles only
+        Text(
+            if (sent.songs > 0) pluralStringResource(R.plurals.share_sent_songs, sent.songs, sent.songs) else stringResource(R.string.share_sent_titles),
+            style = MaterialTheme.typography.bodyMedium,
+        )
         sent.joined.forEach { name ->
             Text(stringResource(R.string.share_joined, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         }
