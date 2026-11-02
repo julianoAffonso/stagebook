@@ -1,6 +1,8 @@
 #!/bin/bash
 # Lê e mexe na tela de um aparelho pelo adb, sem precisar olhar print (barato para a IA que testa).
 #   tools/tela.sh SERIAL textos              lista os textos e ícones visíveis, com a posição de cada um
+#                                            (texto longo ou com quebra de linha sai como [texto N caracteres]:
+#                                            é a letra da música, que nunca pode aparecer; "textos-inteiro" mostra tudo)
 #   tools/tela.sh SERIAL tocar "Ajustes"     toca no primeiro elemento cujo texto ou descrição contém isso
 #   tools/tela.sh SERIAL tem "Salvar"        sai 0 se o texto está na tela, 1 se não está
 #   tools/tela.sh SERIAL print NOME          salva a captura em ~/Desktop/stagebook-teste/NOME.png
@@ -17,21 +19,30 @@ dump() {
     "$ADB" -s "$S" exec-out cat /sdcard/ui.xml
 }
 
+# texto com quebra de linha ou mais de 60 caracteres é letra de música: sai só o tamanho
+MASK='
+def mask(s, full):
+    if full or ("\n" not in s and len(s) <= 60): return s
+    return f"[texto {len(s)} caracteres]"
+'
+
 # cada linha: x y | texto | descrição | clicável (1/0)  (x y = centro do elemento)
 nodes() {
-    dump | python3 -c '
+    dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
+full = sys.argv[1] == "1"
 for n in ET.fromstring(sys.stdin.read()).iter("node"):
     t, d = n.get("text", ""), n.get("content-desc", "")
     if not (t or d): continue
+    t, d = mask(t, full), mask(d, full)
     x1, y1, x2, y2 = map(int, re.findall(r"\d+", n.get("bounds")))
     c = "1" if n.get("clickable") == "true" else "0"
-    print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d} | {c}")'
+    print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d} | {c}")' "${1:-0}"
 }
 
 # toca no elemento cujo texto ou descrição é exatamente o pedido (de preferência clicável); se não houver, o que contém
 achar() {
-    dump | python3 -c '
+    dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
 alvo = sys.argv[1].strip().lower()
 nodes = []
@@ -48,13 +59,14 @@ for exato in (True, False):
             rot = [t.strip().lower(), d.strip().lower()]
             ok = (alvo in rot) if exato else any(alvo in r for r in rot if r)
             if ok:
-                print(f"{x} {y} | {t} | {d}"); sys.exit(0)
+                print(f"{x} {y} | {mask(t, False)} | {mask(d, False)}"); sys.exit(0)
 sys.exit(1)' "$ARG"
 }
 
 case "$CMD" in
-    textos) nodes ;;
-    tem) nodes | grep -qiF -- "$ARG" ;;
+    textos) nodes 0 ;;
+    textos-inteiro) nodes 1 ;;
+    tem) nodes 1 | grep -qiF -- "$ARG" ;;
     tocar)
         linha=$(achar) || { echo "\"$ARG\" não está na tela"; exit 1; }
         set -- $linha
