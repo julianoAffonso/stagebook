@@ -61,10 +61,13 @@ fun StagebookNavHost(
     // A song asked for while on one of those screens waits and opens on coming back to a screen that pulls, if it's
     // still the leader's current song: before, coming back showed nothing until the next song (hotspot test, 02/11)
     var pendingFollow by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    // the setlist screen busy (renaming, sharing, deleting, selecting, dragging): the song waits for it
+    val followHold = remember { androidx.compose.runtime.mutableStateOf(false) }
+    fun pulls(dest: androidx.navigation.NavDestination) = dest.pullsToStage() && !(dest.hasRoute<SetlistDetail>() && followHold.value)
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             val here = nav.currentBackStackEntry?.destination ?: return@collect
-            if (here.pullsToStage()) {
+            if (pulls(here)) {
                 pendingFollow = null
                 nav.navigate(Stage(songId = id)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
             } else {
@@ -75,7 +78,18 @@ fun StagebookNavHost(
     LaunchedEffect(nav) {
         nav.currentBackStackEntryFlow.collect { entry ->
             val id = pendingFollow ?: return@collect
-            if (entry.destination.pullsToStage()) {
+            if (pulls(entry.destination)) {
+                pendingFollow = null
+                if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
+            }
+        }
+    }
+    // the setlist screen done with what it was doing: a song that waited for it opens now
+    LaunchedEffect(nav) {
+        androidx.compose.runtime.snapshotFlow { followHold.value }.collect { busy ->
+            val id = pendingFollow ?: return@collect
+            val here = nav.currentBackStackEntry?.destination ?: return@collect
+            if (!busy && here.hasRoute<SetlistDetail>()) {
                 pendingFollow = null
                 if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
             }
@@ -93,7 +107,7 @@ fun StagebookNavHost(
         }
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings) {
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold) {
     androidx.compose.foundation.layout.Column {
     Box(Modifier.weight(1f)) {
     NavHost(
