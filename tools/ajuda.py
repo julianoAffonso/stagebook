@@ -131,11 +131,13 @@ SECTIONS = [
         "text_pt": [
             "Cada música pode ter um backing track (OGG com vários canais, MP3 ou WAV). Escolha nos Dados da música. No palco, o play só aparece nas músicas que têm um.",
             "O som sai por uma interface de áudio USB (USB Audio 2.0, 48 kHz) ou pela saída do aparelho. Se a interface desconectar no meio do show, o app espera ela voltar em vez de jogar o som no alto-falante.",
+            "Ao ligar a interface no cabo USB, o Android pergunta \"Abrir o app Stagebook para processar USB interface?\". Toque em OK: o app abre e já fica com a permissão do USB. O aviso sobre captura de áudio é o padrão do Android para qualquer app de áudio USB.",
             "Quando a música acaba, ele para e volta ao começo. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
         ],
         "text_en": [
             "Each song can have a backing track (multichannel OGG, MP3 or WAV). Pick it in Song details. On stage, play only shows on songs that have one.",
             "Sound goes out through a USB audio interface (USB Audio 2.0, 48 kHz) or the device's own output. If the interface disconnects mid-show, the app waits for it to come back instead of sending the sound to the speaker.",
+            "When you plug the interface into the USB cable, Android asks whether to open Stagebook. Tap OK: the app opens with the USB permission already given. The note about capturing audio is Android's standard one for any USB audio app.",
             "When the song ends it stops and goes back to the start. Hold play to change or remove the track and to open the song's mixer.",
         ],
         "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
