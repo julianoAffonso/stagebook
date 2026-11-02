@@ -679,13 +679,17 @@ fun StageScreen(
                         // highlighter: the finger marks from where it touched to where it lifts (a tap: one word)
                         if (latest.marking) {
                             var end = down.position
+                            // a button on top (Done, the track, the zoom badge) used the touch: it marks nothing (Done
+                            // also highlighted the word under the bar; audit 02/11)
+                            var used = down.isConsumed
                             while (true) {
                                 val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                if (change.isConsumed) used = true
                                 if (!change.pressed) break
                                 end = change.position
                                 change.consume()
                             }
-                            latest.mark(down.position, end)
+                            if (!used) latest.mark(down.position, end)
                             return@awaitEachGesture
                         }
                         // a new finger before the page goes back: the return stops and the finger takes over (otherwise
