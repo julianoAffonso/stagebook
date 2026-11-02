@@ -166,6 +166,7 @@ fun StageRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerUi by viewModel.playerUi.collectAsStateWithLifecycle()
+    val usbReady by viewModel.usbReady.collectAsStateWithLifecycle()
     var index by rememberSaveable { mutableIntStateOf(viewModel.start) }
     // pick the song's track (OGG, MP3 or WAV): copied into the app when coming back from the Android picker
     val scope = rememberCoroutineScope()
@@ -240,6 +241,7 @@ fun StageRoute(
             onCapo = viewModel::setCapo,
             onAutoScroll = viewModel::setAutoScroll,
             onMetronomeSound = viewModel::metronomeSound,
+            metroUsbReady = usbReady,
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
             onSongMix = viewModel::setSongMix,
@@ -282,6 +284,7 @@ fun StageScreen(
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
     onMetronomeSound: (bpm: Int?) -> Unit = {},
+    metroUsbReady: Boolean = false,   // the player reached the USB interface: the metronome restarts there, in step
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
     onSongMix: (songId: String, mixer: br.app.stagebook.domain.MixerConfig?) -> Unit = { _, _ -> },
@@ -456,7 +459,7 @@ fun StageScreen(
     var metroBeat by remember(index) { mutableIntStateOf(-1) }   // current beat since play (0 = first)
     // the sound (T33d) and the blink start together; the blink aims at the moment of each beat since the start (it
     // doesn't drift)
-    LaunchedEffect(metroOn, metroBpm, look.metroSound) {
+    LaunchedEffect(metroOn, metroBpm, look.metroSound, metroUsbReady) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
