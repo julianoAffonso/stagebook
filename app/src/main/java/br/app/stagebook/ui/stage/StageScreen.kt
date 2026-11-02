@@ -496,7 +496,9 @@ fun StageScreen(
         androidx.compose.runtime.snapshotFlow { metroBeat }.collectLatest { beat ->
             if (beat < 0) { metroPulse.snapTo(0f); return@collectLatest }
             metroPulse.snapTo(if (beat % 4 == 0) 1f else 0.6f)
-            metroPulse.animateTo(0f, tween(METRO_FLASH_MS))
+            // at full speed whatever Android's animation scale: at 0 (animations off, seen on a Chuwi tablet) the
+            // blink ended before being drawn and the glow never showed
+            kotlinx.coroutines.withContext(FullSpeedMotion) { metroPulse.animateTo(0f, tween(METRO_FLASH_MS)) }
         }
     }
     val countIn by remember { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
@@ -1213,6 +1215,9 @@ private class GestureTargets(
 // song's
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
+
+/** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */
+private object FullSpeedMotion : androidx.compose.ui.MotionDurationScale { override val scaleFactor = 1f }
 private const val KEYBOARD_HINT_MS = 6_000L
 private val METRO_GLOW = 20.dp          // edge glow, fading inward (it doesn't reach the lyrics)
 private val METRO_GLOW_ACCENT = 26.dp   // a bit wider on beat 1 of the bar
