@@ -395,7 +395,7 @@
     <string name="settings_chords_card">Acordes na letra</string>
     <string name="settings_chords_show">No palco</string>
     <string name="settings_lyrics_only">Só letra</string>
-    <string name="settings_chords_show_help">Desligado, o palco mostra só a letra, mesmo nas músicas com cifra.</string>
+    <string name="settings_chords_show_help">Letra e cifra: os acordes aparecem em cima da letra. Só letra: o palco mostra só a letra, mesmo nas músicas com cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
     <string name="settings_translate_sections">Nomes de seção no idioma do app</string>
