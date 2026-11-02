@@ -2,7 +2,10 @@ package br.app.stagebook.ui.band
 
 import br.app.stagebook.ui.components.InfoDialog
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -108,8 +111,8 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
     // starting
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
     @Composable
-    fun Buttons() {
-        if (lacks.isNotEmpty()) TextButton({ showLacks = true }) { Text(stringResource(R.string.conduct_see_lacks)) }
+    fun Buttons(lacksButton: Boolean) {
+        if (lacksButton && lacks.isNotEmpty()) TextButton({ showLacks = true }) { Text(stringResource(R.string.conduct_see_lacks)) }
         when (ui) {
             is ConductUi.Conducting -> {
                 // the search runs 30 s with nothing else on screen: the button says so meanwhile (user, 02/11: "is
@@ -129,15 +132,22 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        // on a phone two buttons don't fit next to the text ("End" broke letter by letter and the title vanished; user,
-        // 02/11): they go on a line of their own. A single one (the follower's Leave) stays beside the text: alone on its
-        // line it left the strip twice as tall and half empty (user, 02/11)
+        // on a phone the leader's two buttons don't fit next to the text ("End" broke letter by letter and the title
+        // vanished; user, 02/11): they go on a line of their own. The follower's Leave stays beside the text, and on a
+        // phone "See what's missing" is a tap on the text (with an arrow): as a button it pushed both onto a third line
+        // and left the strip tall and half empty (user, 02/11)
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
-            val narrow = maxWidth < NARROW && (ui is ConductUi.Conducting || lacks.isNotEmpty())
+            val small = maxWidth < NARROW
+            val narrow = small && ui is ConductUi.Conducting
+            val lacksInText = small && lacks.isNotEmpty()
             Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Icon(if (alert) AppIcons.Warning else AppIcons.Group, null)
-                    Column(Modifier.weight(1f)) {
+                    Column(
+                        Modifier.weight(1f).then(
+                            if (lacksInText) Modifier.clickable(onClickLabel = stringResource(R.string.conduct_see_lacks)) { showLacks = true } else Modifier,
+                        ),
+                    ) {
                         Text(
                             when (ui) {
                                 is ConductUi.Conducting -> stringResource(R.string.conduct_conducting, ui.set)
@@ -149,13 +159,19 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
                             ui is ConductUi.Following && ui.missingHere -> stringResource(R.string.conduct_missing_here, ui.song)
                             nowMissing.isNotEmpty() -> stringResource(R.string.conduct_missing_now, nowMissing.joinToString(", "))
                             ui is ConductUi.Conducting && ui.noAnswer > 0 -> pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer)
+                            lacksInText -> stringResource(R.string.conduct_see_lacks)
                             else -> null
                         }
-                        detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                        detail?.let {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                if (lacksInText) Icon(AppIcons.ChevronRight, null, Modifier.size(16.dp))
+                            }
+                        }
                     }
-                    if (!narrow) Buttons()
+                    if (!narrow) Buttons(lacksButton = !lacksInText)
                 }
-                if (narrow) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Buttons() }
+                if (narrow) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Buttons(lacksButton = !lacksInText) }
             }
         }
     }
