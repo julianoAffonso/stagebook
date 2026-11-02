@@ -736,7 +736,7 @@
     <string name="band_rename">Mudar o nome</string>
     <string name="band_help">É o nome que a banda vê. Para alguém entrar, os dois ficam no mesmo Wi-Fi e abrem Ajustes → Banda e transmissão. Um toca em Pedir para entrar e o outro em Autorizar. Fica guardado até alguém remover.</string>
     <string name="band_nearby">Na rede agora</string>
-    <string name="band_no_wifi">Entre no Wi-Fi do lugar, ou no ponto de acesso de um celular, para achar a banda.</string>
+    <string name="band_no_wifi">Sem Wi-Fi. Para achar a banda, conecte os aparelhos na mesma rede (pode ser o ponto de acesso de um celular).</string>
     <string name="band_searching">Procurando… Abra Ajustes → Banda e transmissão no outro aparelho também.</string>
     <string name="band_online">Conectado</string>
     <string name="band_join">Pedir para entrar</string>

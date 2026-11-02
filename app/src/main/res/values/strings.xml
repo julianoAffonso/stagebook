@@ -709,7 +709,7 @@
     <string name="band_rename">Change name</string>
     <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and broadcast. One taps Ask to join, the other taps Allow. It stays saved until someone removes it.</string>
     <string name="band_nearby">On the network now</string>
-    <string name="band_no_wifi">Get on the venue\'s Wi-Fi, or a phone\'s hotspot, to find the band.</string>
+    <string name="band_no_wifi">No Wi-Fi. To find the band, connect the devices to the same network (a phone\'s hotspot works too).</string>
     <string name="band_searching">Searching… Open Settings → Band and broadcast on the other device too.</string>
     <string name="band_online">Connected</string>
     <string name="band_join">Ask to join</string>
