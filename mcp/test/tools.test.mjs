@@ -53,7 +53,7 @@ test("connect pairs with the tablet and saves the key", async () => {
 
 test("songs: list with filters, read without and with the text", async () => {
   assert.equal((await call("list_songs")).json.count, 2);
-  assert.equal((await call("list_songs", { query: "legiao" })).json.songs[0].id, "s2");
+  assert.equal((await call("list_songs", { query: "made up" })).json.songs[0].id, "s2");
   assert.equal((await call("list_songs", { tag: "Nacional" })).json.count, 1);
   const song = (await call("get_song", { id: "s1" })).json;
   assert.equal(song.text, undefined);
@@ -86,11 +86,11 @@ test("deleting needs confirm=true", async () => {
 });
 
 test("setlists: create, read, update keeps what wasn't passed", async () => {
-  const id = (await call("create_setlist", { name: "Domingo", song_ids: ["s1"] })).json.created;
-  assert.equal((await call("get_setlist", { id })).json.songs[0].title, "Hazard");
-  await call("update_setlist", { id, name: "Domingo à noite" });
+  const id = (await call("create_setlist", { name: "Sunday", song_ids: ["s1"] })).json.created;
+  assert.equal((await call("get_setlist", { id })).json.songs[0].title, "Morning Road");
+  await call("update_setlist", { id, name: "Sunday night" });
   assert.deepEqual(tablet.sets.get(id).items, ["s1"]);
-  assert.equal(tablet.sets.get(id).name, "Domingo à noite");
+  assert.equal(tablet.sets.get(id).name, "Sunday night");
 });
 
 test("backing track upload sends the file with its name", async () => {
@@ -105,7 +105,7 @@ test("resources: the song list and a song as ChordPro", async () => {
   const list = await mcp.readResource({ uri: "stagebook://songs" });
   assert.ok(JSON.parse(list.contents[0].text).length >= 1);
   const song = await mcp.readResource({ uri: "stagebook://songs/s1" });
-  assert.match(song.contents[0].text, /\{title: Hazard\}/);
+  assert.match(song.contents[0].text, /\{title: Morning Road\}/);
   assert.match(song.contents[0].text, /\{key: A\}/);
 });
 

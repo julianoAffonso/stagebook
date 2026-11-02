@@ -4,10 +4,10 @@ import { createServer } from "node:http";
 export function fakeTablet({ approve = true } = {}) {
   const KEY = "k123";
   const songs = new Map([
-    ["s1", { id: "s1", title: "Hazard", author: "Richard Marx", year: "1991", tempo: "", text: "[G]Linha um\n[D]Linha dois", track: "", trackName: "", key: "G", capo: 0, tags: ["internacional"] }],
-    ["s2", { id: "s2", title: "Tempo Perdido", author: "Legião Urbana", year: "1986", tempo: "120", text: "[Am]Todos os [F]dias", track: "", trackName: "", key: "Am", capo: 0, tags: ["nacional"] }],
+    ["s1", { id: "s1", title: "Morning Road", author: "The Example Band", year: "1991", tempo: "", text: "[G]Linha um\n[D]Linha dois", track: "", trackName: "", key: "G", capo: 0, tags: ["internacional"] }],
+    ["s2", { id: "s2", title: "Night Train", author: "Made Up Trio", year: "1986", tempo: "120", text: "[Am]Made up [F]words", track: "", trackName: "", key: "Am", capo: 0, tags: ["nacional"] }],
   ]);
-  const sets = new Map([["t1", { id: "t1", name: "Sábado", items: ["s1"] }]]);
+  const sets = new Map([["t1", { id: "t1", name: "Saturday", items: ["s1"] }]]);
   let asked = 0;
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
