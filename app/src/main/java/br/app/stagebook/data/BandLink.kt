@@ -8,8 +8,6 @@ import br.app.stagebook.domain.BandCrypto
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.util.Log
 import androidx.compose.runtime.Immutable
@@ -38,10 +36,10 @@ import javax.inject.Singleton
 /**
  * The band on the local network (venue Wi-Fi or a phone's hotspot; no internet): announces this device, finds the
  * others and handles join requests. Uses as little of the tablet as possible (user's request, 25/10):
- * - **announcement + server** (almost nothing: Android answers and the server sits waiting): app in front, local
- *   network and (a saved band member, or a searching screen open);
- * - **search + multicast lock** (the costly part: network queries and the Wi-Fi waking for each packet): only while a
- *   screen needs it ([setScreenOpen]) and **never on stage**.
+ * - **presence beacon + server** (almost nothing: a ~100-byte broadcast every 3 s, a thread waiting for the others'
+ *   and the server waiting): app in front, local network and (a saved band member, or a searching screen open);
+ * - **search** (the multicast lock, the Wi-Fi waking for each packet): only while a screen needs it
+ *   ([setScreenOpen]) and **never on stage**, except the short "Look for the band" burst.
  */
 @Singleton
 class BandLink @Inject constructor(
@@ -89,10 +87,7 @@ class BandLink @Inject constructor(
     private val screenOpen get() = searchUsers > 0
     private var server: ServerSocket? = null
     private var serverJob: Job? = null
-    private var registration: NsdManager.RegistrationListener? = null
-    private var discovery: NsdManager.DiscoveryListener? = null
     private var multicast: WifiManager.MulticastLock? = null
-    private val nsd get() = context.getSystemService(NsdManager::class.java)
 
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
@@ -324,16 +319,12 @@ class BandLink @Inject constructor(
             setReferenceCounted(false)
             acquire()
         }
-        discover()
     }
 
     private fun stopSearch() {
         searching = false
-        discovery?.let { runCatching { nsd.stopServiceDiscovery(it) } }
-        discovery = null
         multicast?.let { if (it.isHeld) it.release() }
         multicast = null
-        synchronized(toResolve) { toResolve.clear() }
     }
 
     private fun start() {
@@ -362,89 +353,75 @@ class BandLink @Inject constructor(
                 }
             }
         }
-        register(socket.localPort)
+        beaconJob = scope.launch { beacon(socket.localPort) }
     }
 
     private fun stop() {
         stopSearch()
         _running.value = false
-        registration?.let { runCatching { nsd.unregisterService(it) } }
-        registration = null
         runCatching { server?.close() }
         server = null
         serverJob?.cancel()
+        beaconJob?.cancel()
+        runCatching { beaconSocket?.close() }
+        beaconSocket = null
+        beaconSeen.clear()
         _peers.value = emptyList()
     }
 
-    private fun register(port: Int) {
-        val info = NsdServiceInfo().apply {
-            // the band name ("nxtpaper"), not a fixed "Stagebook": it's what Android shows when it asks which device to
-            // connect to (31/10). The others read the name and id from the attributes below, so nothing else changes
-            serviceName = identity.name.value.ifBlank { "Stagebook" }
-            serviceType = BandProtocol.SERVICE_TYPE
-            setPort(port)
-            setAttribute(ATTR_ID, identity.id)
-            setAttribute(ATTR_NAME, identity.name.value)
-            setAttribute(ATTR_V, BandProtocol.VERSION.toString())
-            setAttribute(ATTR_APP, identity.appVersion)
-        }
-        val listener = object : NsdManager.RegistrationListener {
-            override fun onServiceRegistered(info: NsdServiceInfo) = Unit
-            override fun onRegistrationFailed(info: NsdServiceInfo, error: Int) { Log.w(TAG, "announcement failed: $error") }
-            override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
-            override fun onUnregistrationFailed(info: NsdServiceInfo, error: Int) = Unit
-        }
-        registration = listener
-        runCatching { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener) }
-    }
 
-    // Android's NSD resolves one service at a time: a simple queue
-    private val toResolve = ArrayDeque<NsdServiceInfo>()
-    private var resolving = false
+    // ---- presence beacon (02/11, device test N-B-08): how band devices find each other ----
+    // Android's discovery (NSD) found nobody over a Samsung hotspot (the bar case: the phone sharing its network), so it
+    // was replaced, one way only (user: no two behaviours): each device says "here I am" every few seconds as a UDP
+    // broadcast on every local network it's on, hotspot included, and listens to the others' while the band runs (on
+    // stage too: the conductor needs the list). Lighter than NSD. Only who and where: joining and sending still need
+    // the band's keys. Whoever stops sending it leaves the list after [BEACON_GONE_MS].
+    private var beaconJob: kotlinx.coroutines.Job? = null
+    @Volatile private var beaconSocket: java.net.DatagramSocket? = null
+    private val beaconSeen = java.util.concurrent.ConcurrentHashMap<String, Long>()   // id → last beacon
 
-    private fun discover() {
-        val listener = object : NsdManager.DiscoveryListener {
-            override fun onDiscoveryStarted(type: String) = Unit
-            override fun onDiscoveryStopped(type: String) = Unit
-            override fun onStartDiscoveryFailed(type: String, error: Int) { Log.w(TAG, "discovery failed: $error") }
-            override fun onStopDiscoveryFailed(type: String, error: Int) = Unit
-            override fun onServiceFound(info: NsdServiceInfo) { synchronized(toResolve) { toResolve.addLast(info) }; resolveNext() }
-            override fun onServiceLost(info: NsdServiceInfo) {
-                // without the id here: whoever had this service name goes away; the next announcement brings back
-                // whoever is still there
-                _peers.update { list -> list.filterNot { names[it.id] == info.serviceName } }
+    private suspend fun beacon(port: Int) = kotlinx.coroutines.coroutineScope {
+        val socket = runCatching {
+            java.net.DatagramSocket(null).apply { reuseAddress = true; broadcast = true; bind(InetSocketAddress(BEACON_PORT)) }
+        }.getOrElse { Log.w(TAG, "beacon: $it"); return@coroutineScope }
+        beaconSocket = socket
+        launch {
+            val buf = ByteArray(512)
+            while (isActive) {
+                val packet = java.net.DatagramPacket(buf, buf.size)
+                runCatching { socket.receive(packet) }.getOrElse { break }
+                val parts = String(packet.data, 0, packet.length, Charsets.UTF_8).split('\n')
+                if (parts.size < 6 || parts[0] != BEACON_TAG) continue
+                val id = parts[1]
+                val peerPort = parts[2].toIntOrNull() ?: continue
+                if (id == identity.id || id.length > 64) continue
+                val v = parts[3].toIntOrNull() ?: BandProtocol.VERSION
+                val peer = Peer(id, parts[5].take(BandProtocol.MAX_NAME), packet.address, peerPort, v, parts[4].take(20))
+                beaconSeen[id] = System.currentTimeMillis()
+                _peers.update { list -> if (list.any { it == peer }) list else (list.filterNot { it.id == id } + peer).sortedBy { it.name.lowercase() } }
             }
         }
-        discovery = listener
-        runCatching { nsd.discoverServices(BandProtocol.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener) }
+        while (isActive) {
+            val msg = listOf(BEACON_TAG, identity.id, port, BandProtocol.VERSION, identity.appVersion, identity.name.value.replace('\n', ' '))
+                .joinToString("\n").toByteArray(Charsets.UTF_8)
+            for (target in broadcastTargets()) runCatching { socket.send(java.net.DatagramPacket(msg, msg.size, target, BEACON_PORT)) }
+            // whoever stopped sending it leaves the list
+            val now = System.currentTimeMillis()
+            val gone = beaconSeen.filterValues { now - it > BEACON_GONE_MS }.keys
+            if (gone.isNotEmpty()) { gone.forEach(beaconSeen::remove); _peers.update { list -> list.filterNot { it.id in gone } } }
+            kotlinx.coroutines.delay(BEACON_EVERY_MS)
+        }
     }
 
-    private val names = java.util.concurrent.ConcurrentHashMap<String, String>()   // id → announced service name (NSD and IO threads)
-
-    @Suppress("DEPRECATION")   // resolveService: the replacement (registerServiceInfoCallback) is Android 14 only
-    private fun resolveNext() {
-        val next = synchronized(toResolve) { if (resolving) null else toResolve.removeFirstOrNull()?.also { resolving = true } } ?: return
-        runCatching {
-            nsd.resolveService(next, object : NsdManager.ResolveListener {
-                override fun onResolveFailed(info: NsdServiceInfo, error: Int) { done() }
-                override fun onServiceResolved(info: NsdServiceInfo) {
-                    val id = info.attributes[ATTR_ID]?.decodeToString()
-                    val name = info.attributes[ATTR_NAME]?.decodeToString().orEmpty().take(BandProtocol.MAX_NAME)
-                    val host = info.host
-                    // a resolve that arrives after the search stopped doesn't bring back a device already gone
-                    if (id != null && id != identity.id && host != null && searching) {
-                        names[id] = info.serviceName
-                        val v = info.attributes[ATTR_V]?.decodeToString()?.toIntOrNull() ?: BandProtocol.VERSION
-                        val app = info.attributes[ATTR_APP]?.decodeToString().orEmpty().take(20)
-                        _peers.update { list -> (list.filterNot { it.id == id } + Peer(id, name, host, info.port, v, app)).sortedBy { it.name.lowercase() } }
-                    }
-                    done()
-                }
-
-                fun done() { synchronized(toResolve) { resolving = false }; resolveNext() }
-            })
-        }.onFailure { synchronized(toResolve) { resolving = false } }
-    }
+    // the broadcast address of every local IPv4 network this device is on (Wi-Fi, hotspot, cable)
+    private fun broadcastTargets(): List<InetAddress> = runCatching {
+        NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+            .filter { it.isUp && !it.isLoopback }
+            .flatMap { it.interfaceAddresses }
+            .filter { it.address is Inet4Address && it.address.isSiteLocalAddress }
+            .mapNotNull { it.broadcast }
+            .distinct()
+    }.getOrDefault(emptyList())
 
     private suspend fun ask(hello: BandProtocol.Hello): Boolean {
         val req = Request(hello.id, hello.name, CompletableDeferred())
@@ -476,15 +453,15 @@ class BandLink @Inject constructor(
 
     private companion object {
         const val TAG = "stagebook"
-        const val ATTR_ID = "id"
-        const val ATTR_NAME = "name"
-        const val ATTR_V = "v"
-        const val ATTR_APP = "app"
         const val CONNECT_TIMEOUT_MS = 5_000
         const val BURST_MS = 30_000L
         const val MAX_ASK = 200   // a setlist never goes over this; guards against an odd request
         const val SESSIONS = 8
         val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // hotspot interface names on Android devices
+        const val BEACON_TAG = "stagebook-band-1"
+        const val BEACON_PORT = 47_810
+        const val BEACON_EVERY_MS = 3_000L
+        const val BEACON_GONE_MS = 12_000L
     }
 
     // went on stage: the search stops right away; left it, it comes back if the screen still needs it. Placed after all
