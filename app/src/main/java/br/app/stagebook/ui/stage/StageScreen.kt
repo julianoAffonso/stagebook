@@ -817,7 +817,10 @@ fun StageScreen(
             val stripEm = with(density) {
                 val perRow = maxOf(1, (stripRoom / (STRIP_ITEM_WIDTH.toPx() * stripScale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
-                val tall = if (stripChordCount == 0) STRIP_RESTORE_HEIGHT.toPx() else rows * STRIP_ITEM_HEIGHT.toPx()
+                // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
+                // audit 02/11)
+                val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
+                val tall = if (stripChordCount == 0) restore else rows * STRIP_ITEM_HEIGHT.toPx() + restore
                 (tall + Spacing.m.toPx()) / style.fontSize.toPx()
             }
             val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
