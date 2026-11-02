@@ -48,6 +48,9 @@ import br.app.stagebook.ui.stage.StageUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import androidx.compose.ui.test.performScrollTo
 import org.junit.Assert.assertTrue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -595,6 +598,20 @@ class ScreenshotTest {
         val on = compose.onNodeWithText(str(R.string.settings_pedal_group_on, "Hotone Control")).fetchSemanticsNode().boundsInRoot.top
         val off = compose.onNodeWithText(str(R.string.settings_pedal_group_off, "CubeTurner")).fetchSemanticsNode().boundsInRoot.top
         assertTrue("conectado em cima: $on < $off", on < off)
+    }
+
+    // a USB MIDI pedal (no hardware to test with, user 01/11): same reading as Bluetooth; its group carries its name
+    // when plugged in and "MIDI USB" when not, never "Bluetooth"
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
+    fun usbMidiPedalGroupName() {
+        val code = br.app.stagebook.domain.MidiCode.withValue(br.app.stagebook.domain.MidiCode.of(0xB0, 27), 0)
+        val usb = br.app.stagebook.data.MidiState(connected = listOf(br.app.stagebook.data.MidiDeviceUi("FS-1 USB MIDI", bluetooth = false)))
+        var state by mutableStateOf(settings.copy(look = Look(pedalName = "CubeTurner", pedalSeen = listOf(android.view.KeyEvent.KEYCODE_DPAD_LEFT, code)), midi = usb, pedalConnected = false))
+        compose.setContent { StagebookTheme { SettingsScreen(state, SettingsActions(), section = SettingsSection.PEDAL) } }
+        compose.onNodeWithText(str(R.string.settings_pedal_group_on, "FS-1 USB MIDI")).assertExists()
+        state = state.copy(midi = br.app.stagebook.data.MidiState())
+        compose.waitForIdle()
+        compose.onNodeWithText(str(R.string.settings_pedal_group_off, str(R.string.settings_pedal_kind_midi_usb))).assertExists()
     }
 
     // pedal with the button that plays/pauses the backing track (player mode on)

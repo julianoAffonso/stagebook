@@ -1056,7 +1056,13 @@ private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions)
             val midiName = uiState.midi.connected.firstOrNull()?.name ?: look.midiBtName
             val groups = listOf(
                 PedalGroup(look.pedalName.ifEmpty { stringResource(R.string.settings_pedal_kind_bt) }, uiState.pedalConnected, keyCodes),
-                PedalGroup(midiName.ifEmpty { stringResource(R.string.settings_pedal_kind_midi_bt) }, uiState.midi.connected.isNotEmpty(), midiCodes),
+                // USB and Bluetooth MIDI read the same way (one group); with none connected and no saved Bluetooth one,
+                // the buttons came from a USB pedal
+                PedalGroup(
+                    midiName.ifEmpty { stringResource(if (look.midiBtAddress.isNotEmpty()) R.string.settings_pedal_kind_midi_bt else R.string.settings_pedal_kind_midi_usb) },
+                    uiState.midi.connected.isNotEmpty(),
+                    midiCodes,
+                ),
             ).filter { it.codes.isNotEmpty() }.sortedByDescending { it.on }
             groups.forEach { g -> PedalKeyGroup(g, keys, actions, showName = groups.size > 1 || !g.on) }
         }
