@@ -27,15 +27,23 @@ def mask(s, full):
 '
 
 # cada linha: x y | texto | descrição | clicável (1/0)  (x y = centro do elemento)
+# no palco (tem "Editar a letra nesta página") a letra pode vir linha a linha, em textos curtos: todo texto abaixo da
+# barra do topo e acima do relógio sai escondido, menos números (páginas) e reticências
 nodes() {
     dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
 full = sys.argv[1] == "1"
-for n in ET.fromstring(sys.stdin.read()).iter("node"):
+all_ = [n for n in ET.fromstring(sys.stdin.read()).iter("node") if n.get("text") or n.get("content-desc")]
+box = lambda n: list(map(int, re.findall(r"\d+", n.get("bounds"))))
+top = max([box(n)[3] for n in all_ if n.get("content-desc", "").startswith(("Editar a letra nesta página", "Tom:", "Voltar"))] or [0])
+bottom = min([box(n)[1] for n in all_ if n.get("content-desc") == "Metrônomo" or re.fullmatch(r"\d\d:\d\d", n.get("text", ""))] or [10**6])
+stage = not full and any(n.get("content-desc", "") == "Editar a letra nesta página" for n in all_)
+for n in all_:
     t, d = n.get("text", ""), n.get("content-desc", "")
-    if not (t or d): continue
     t, d = mask(t, full), mask(d, full)
-    x1, y1, x2, y2 = map(int, re.findall(r"\d+", n.get("bounds")))
+    x1, y1, x2, y2 = box(n)
+    if stage and t and y1 >= top and y2 <= bottom and not re.fullmatch(r"[\d…]+", t.strip()) and not t.startswith("[texto"):
+        t = f"[texto {len(t)} caracteres]"
     c = "1" if n.get("clickable") == "true" else "0"
     print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d} | {c}")' "${1:-0}"
 }
