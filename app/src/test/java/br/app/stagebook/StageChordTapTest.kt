@@ -97,12 +97,13 @@ class StageChordTapTest {
 
     @Test fun `holding a line offers the highlighter, which marks the word under the finger`() {
         var marked: List<Any>? = null
+        var marks = 0
         compose.setContent {
             StagebookTheme {
                 StageScreen(
                     StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f)),
                     0, 0, { s, p -> position = s to p },
-                    onHighlightWords = { id, line, shown, from, to -> marked = listOf(id, line, shown, from, to) },
+                    onHighlightWords = { id, line, shown, from, to -> marked = listOf(id, line, shown, from, to); marks++ },
                 )
             }
         }
@@ -124,6 +125,8 @@ class StageChordTapTest {
         compose.onNodeWithText("Pronto").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Passe o dedo", substring = true).assertDoesNotExist()
+        // Done only closes: it doesn't highlight the word under the bar (audit 02/11)
+        assertEquals(1, marks)
     }
 
     @Test fun `with the diagram turned off in settings, tapping a chord opens nothing`() {
