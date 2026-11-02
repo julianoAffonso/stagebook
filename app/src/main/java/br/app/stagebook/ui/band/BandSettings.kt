@@ -58,7 +58,8 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
             when {
                 !band.wifi -> Text(stringResource(R.string.band_no_wifi), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 newcomers.isEmpty() -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    if (band.searching) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    // a still icon, not a spinner: this screen can stay open for minutes and the animation cost ~60% of a core on the TCL
+                    if (band.searching) Icon(AppIcons.Search, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(stringResource(R.string.band_searching), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> newcomers.forEach { NearbyRow(it, actions.onJoin) }
