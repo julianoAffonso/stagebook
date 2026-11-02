@@ -315,6 +315,24 @@ static float g_route[LANES_MAX][LANES_MAX] = {   // [output][source channel]: ho
 
 // source channels → outputs: gain and normalization per channel, EQ on the marked ones (with the limiter shared by all
 // of them, so the image doesn't shift, like the backing pair) and summed through the routing matrix
+// ---- metronome click into USB outputs (user, 02/11): the drummer hears it through the desk. Added after the song's
+// mix, on the interface's clock, sample by sample like MetronomeClick; off (g_clk_spb 0) nothing changes. Under g_mx.
+static float *g_clk_buf[2] = {0, 0};   // normal and accent click, 48 kHz
+static int g_clk_len[2] = {0, 0};
+static long g_clk_spb = 0;              // samples per beat; 0 = off
+static long g_clk_pos = 0;              // samples since the click started
+static int g_clk_out[2] = {-1, -1};     // outputs it goes to (-1 = none)
+
+static inline void click_add_locked(float *out) {
+    if (g_clk_spb <= 0) return;
+    long beat = g_clk_pos / g_clk_spb, at = g_clk_pos % g_clk_spb;
+    int k = beat % 4 == 0 ? 1 : 0;      // the first beat of each bar sounds higher
+    g_clk_pos++;
+    if (at >= g_clk_len[k]) return;
+    for (int q = 0; q < 2; q++)
+        if (g_clk_out[q] >= 0 && g_clk_out[q] < LANES_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
+}
+
 static inline void mix_custom(const float *lane, float *out) {
     float s[LANES_MAX];
     float p = 0;
@@ -524,6 +542,7 @@ static void *usb_main(void *arg) {
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
                 float outv[LANES_MAX]; \
                 mix_custom(lane, outv); \
+                click_add_locked(outv); \
                 for (int c = 0; c < g_dev_ch; c++) { \
                     float s = c < LANES_MAX ? outv[c] : 0; \
                     if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
@@ -856,6 +875,28 @@ JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloat
     if (g_ch_eq != (int)eqMask) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; }
     g_ch_eq = (int)eqMask;
     pthread_mutex_unlock(&g_mx);
+}
+
+// Metronome click into USB outputs: {normal, accent} 48 kHz, samples per beat (0 = off) and up to two outputs (-1 =
+// none). Starts on beat 1 now. The arrays are copied before the lock; the old ones are freed after it.
+JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatArray ja, jlong spb, jint out1, jint out2) {
+    float *nb = NULL, *ab = NULL;
+    int nn = 0, na = 0;
+    if (spb > 0 && jn && ja) {
+        nn = (*e)->GetArrayLength(e, jn); na = (*e)->GetArrayLength(e, ja);
+        nb = malloc(sizeof(float) * (nn > 0 ? nn : 1)); ab = malloc(sizeof(float) * (na > 0 ? na : 1));
+        if (nb && ab) { (*e)->GetFloatArrayRegion(e, jn, 0, nn, nb); (*e)->GetFloatArrayRegion(e, ja, 0, na, ab); }
+        else { free(nb); free(ab); nb = ab = NULL; }
+    }
+    pthread_mutex_lock(&g_mx);
+    float *old0 = g_clk_buf[0], *old1 = g_clk_buf[1];
+    g_clk_buf[0] = nb; g_clk_buf[1] = ab;
+    g_clk_len[0] = nb ? nn : 0; g_clk_len[1] = ab ? na : 0;
+    g_clk_spb = nb && ab ? (long)spb : 0;
+    g_clk_pos = 0;
+    g_clk_out[0] = out1; g_clk_out[1] = out2;
+    pthread_mutex_unlock(&g_mx);
+    free(old0); free(old1);
 }
 
 // source channels kept (for the screen to build the mixer): up to LANES_MAX

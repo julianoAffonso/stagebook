@@ -251,6 +251,22 @@ class StagePlayer @Inject constructor(
         /** Player mode turned off in Settings: if the player had started, turn everything off. */
         fun turnOff() { instance?.shutdown() }
 
+        /**
+         * Metronome click into the USB interface (user, 02/11): mixed by the engine on the interface's clock. False when
+         * the player isn't on a USB interface with that output: then the click stays on the device.
+         */
+        fun usbClick(bpm: Int, out: br.app.stagebook.domain.MetronomeOut): Boolean {
+            if (out.device || !PlayerService.running || !PlayerService.connected) return false
+            if (!PlayerService.outputKey.startsWith("usb:") || out.out + (if (out.pair) 1 else 0) >= PlayerService.outputCount) return false
+            fun floats(s: ShortArray) = FloatArray(s.size) { s[it] / 32768f }
+            val click = br.app.stagebook.domain.MetronomeClick
+            Engine.setClick(floats(click.click(false)), floats(click.click(true)), click.samplesPerBeat(bpm), out.out, if (out.pair) out.out + 1 else -1)
+            return true
+        }
+
+        /** No click on USB (also when the player is off: the engine keeps the setting for its next start). */
+        fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1)
+
         private const val METER_MS = 66L          // ~15 reads per second
         private const val METER_IDLE_MS = 500L    // player off: only check whether it turned on
 
