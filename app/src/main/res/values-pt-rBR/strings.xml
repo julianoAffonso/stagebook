@@ -865,6 +865,7 @@
     <string name="usb_record_why">Para o Android lembrar da interface USB e não pedir permissão toda vez que o cabo voltar, permita o acesso ao áudio. O Stagebook não grava nada: a entrada da interface só acerta o relógio.</string>
     <string name="usb_record_allow">Permitir</string>
     <string name="player_title">Player</string>
+    <string name="player_on_alone">Ligado</string>
     <string name="metro_player_title">Metrônomo e player</string>
     <string name="mixer_listen_on_stage">O mixer e o equalizador ficam no palco, para ajustar ouvindo: toque uma música, segure o play e abra o mixer.</string>
     <string name="stage_mix_hint">Os ajustes aqui mudam o mixer global, que vale para todas as músicas. Desligue para mexer só nesta música.</string>
