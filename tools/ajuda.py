@@ -131,13 +131,13 @@ SECTIONS = [
         "text_pt": [
             "Cada música pode ter um backing track (OGG com vários canais, MP3 ou WAV). Escolha nos Dados da música. No palco, o play só aparece nas músicas que têm um.",
             "O som sai por uma interface de áudio USB (USB Audio 2.0, 48 kHz) ou pela saída do aparelho. Se a interface desconectar no meio do show, o app espera ela voltar em vez de jogar o som no alto-falante.",
-            "Ao ligar a interface no cabo USB, o Android pergunta se quer abrir o Stagebook. Na primeira vez, o Stagebook pede o acesso ao áudio: permita, para o Android lembrar da interface. Depois, no aviso do Android, escolha o Stagebook e toque em Sempre: ao religar o cabo, o som volta sozinho, sem perguntar nada. O Stagebook não grava nada; a entrada da interface só acerta o relógio.",
+            "Na primeira vez que ligar a interface no cabo USB, o Android pergunta qual app abrir: toque em Stagebook e em Apenas uma vez. O Stagebook abre e pede o acesso ao áudio: permita. Tire e ponha o cabo de novo, escolha Stagebook e toque em Sempre. Pronto: ao religar o cabo, o som volta sozinho, sem perguntar nada. O Stagebook não grava nada; a entrada da interface só acerta o relógio.",
             "Quando a música acaba, ele para e volta ao começo. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
         ],
         "text_en": [
             "Each song can have a backing track (multichannel OGG, MP3 or WAV). Pick it in Song details. On stage, play only shows on songs that have one.",
             "Sound goes out through a USB audio interface (USB Audio 2.0, 48 kHz) or the device's own output. If the interface disconnects mid-show, the app waits for it to come back instead of sending the sound to the speaker.",
-            "When you plug the interface into the USB cable, Android asks whether to open Stagebook. The first time, Stagebook asks for audio access: allow it, so Android remembers the interface. Then, in Android's prompt, pick Stagebook and tap Always: when the cable comes back, the sound returns by itself, without asking anything. Stagebook records nothing; the interface's input only keeps the clock.",
+            "The first time you plug the interface into the USB cable, Android asks which app to open: tap Stagebook and Just once. Stagebook opens and asks for audio access: allow it. Unplug and plug the cable again, pick Stagebook and tap Always. That's it: when the cable comes back, the sound returns by itself, without asking anything. Stagebook records nothing; the interface's input only keeps the clock.",
             "When the song ends it stops and goes back to the start. Hold play to change or remove the track and to open the song's mixer.",
         ],
         "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
