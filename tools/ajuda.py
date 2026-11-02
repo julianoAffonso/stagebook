@@ -59,7 +59,7 @@ SECTIONS = [
             "O − e + do tom transpõem a cifra meio tom de cada vez. O do capotraste não mexe nos diagramas, só avisa em que tom vai soar.",
             "Uma linha só com um nome entre colchetes vira o título de uma parte: [Refrão], [Solo de violino]. Os atalhos no topo põem as partes mais usadas.",
             "Os acordes ficam escritos como vieram do site (A7+, E7/9, E*), e o app mostra o diagrama certo para cada um.",
-            "Para destacar uma frase, selecione-a na letra e toque em Destacar (o botão com o marca-texto). Ela fica pintada no editor e no palco. No palco também dá: segure a linha e toque em Destacar esta linha. A cor do destaque fica em Ajustes → Visual do palco.",
+            "Para destacar uma frase, selecione-a na letra e toque em Destacar (o botão com o marca-texto). Ela fica pintada no editor e no palco. No palco também dá: segure o dedo numa linha, toque em Marca-texto e passe o dedo nas palavras (passar de novo apaga). Enquanto o marca-texto está ligado, o palco não vira página com o dedo; toque em Pronto para terminar. A cor do destaque fica em Ajustes → Visual do palco.",
         ],
         "text_en": [
             "In the editor the lyrics get the whole screen. Name, artist, year, BPM, key, capo, tags and backing track are under Song details at the top; tap to open them.",
@@ -67,7 +67,7 @@ SECTIONS = [
             "The key's − and + transpose the chords a half step at a time. The capo's don't change the diagrams; they only tell you what key it will sound in.",
             "A line with just a name in brackets becomes a part title: [Chorus], [Violin solo]. The shortcuts at the top add the usual parts.",
             "Chords stay written the way the site wrote them (A7+, E7/9, E*), and the app shows the right diagram for each.",
-            "To highlight a phrase, select it in the lyrics and tap Highlight (the marker button). It shows painted in the editor and on stage. On stage too: hold the line and tap Highlight this line. The highlight color is in Settings → Stage look.",
+            "To highlight a phrase, select it in the lyrics and tap Highlight (the marker button). It shows painted in the editor and on stage. On stage too: hold a line, tap Highlighter and run your finger over the words (again removes it). While the highlighter is on, the stage doesn't turn pages by touch; tap Done to finish. The highlight color is in Settings → Stage look.",
         ],
         "figs": [Fig(("tablet_4_editor_dados", "celular_4_editor", "Dados da música abertos", "Song details open")),
                  Fig(("tablet_4_editor_tags", "celular_4_editor_tags", "Tags da música", "The song's tags")),

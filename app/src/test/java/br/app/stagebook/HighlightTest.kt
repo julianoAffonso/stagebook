@@ -70,12 +70,4 @@ class HighlightTest {
         assertEquals(open + 2 until text.lastIndexOf("=="), bg.start until bg.end)
         assertEquals(2, out.spanStyles.count { it.item.color == faded })
     }
-    @Test fun `stage - highlight this line wraps the whole line, again takes it off (B-28)`() {
-        val text = "{key: G}\n  [G]Saio cedo pela [D]rua  \noutra"
-        val on = br.app.stagebook.ui.editor.toggleLineHighlight(text, 1)
-        assertEquals("{key: G}\n  ==[G]Saio cedo pela [D]rua==  \noutra", on)
-        assertTrue(br.app.stagebook.ui.editor.lineHighlighted(on, 1))
-        assertEquals(text, br.app.stagebook.ui.editor.toggleLineHighlight(on, 1))
-        assertEquals(text, br.app.stagebook.ui.editor.toggleLineHighlight(text, 9))
-    }
 }

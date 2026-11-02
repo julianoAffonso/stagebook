@@ -229,7 +229,7 @@ fun StageRoute(
             onPosition = { i, p -> index = i; page = p },
             onZoom = viewModel::setZoom,
             onEdit = onEditSong,
-            onHighlightLine = viewModel::toggleLineHighlight,
+            onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
             playing = playerUi.playing || playerUi.waiting,
@@ -273,7 +273,7 @@ fun StageScreen(
     modifier: Modifier = Modifier,
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
-    onHighlightLine: (songId: String, line: Int) -> Unit = { _, _ -> },
+    onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int) -> Unit = { _, _, _, _, _ -> },
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -404,6 +404,8 @@ fun StageScreen(
     // can't take the lyrics away); it goes away by itself and on page turn
     val hit = remember(index) { PageHit() }
     var editOffer by remember(index) { mutableStateOf<EditOffer?>(null) }
+    // highlighter (user, 02/11): the finger marks words instead of turning pages, until "Done"; off on another song
+    var marking by remember(index) { mutableStateOf(false) }
     LaunchedEffect(editOffer) { if (editOffer != null) { delay(EDIT_OFFER_MS); editOffer = null } }
     val haptics = LocalHapticFeedback.current
     // where the track button is (a long press on it doesn't offer to edit the line)
@@ -558,6 +560,17 @@ fun StageScreen(
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
             chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
+            marking = marking,
+            mark = { from, to ->
+                val start = hit.charAt(from)
+                val source = start?.let { sourceLine(it.first) }
+                if (start != null && source != null) {
+                    // lifted on another line: up to the end (or start) of the first one, highlights never cross lines
+                    val end = hit.charAt(to)?.takeIf { it.first == start.first }?.third ?: if (to.y > from.y) start.second.length - 1 else 0
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onHighlightWords(song.id, source, start.second, start.third, end)
+                }
+            },
         ),
     )
 
@@ -672,6 +685,18 @@ fun StageScreen(
                     // the line
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
+                        // highlighter: the finger marks from where it touched to where it lifts (a tap: one word)
+                        if (latest.marking) {
+                            var end = down.position
+                            while (true) {
+                                val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                end = change.position
+                                change.consume()
+                            }
+                            latest.mark(down.position, end)
+                            return@awaitEachGesture
+                        }
                         // a new finger before the page goes back: the return stops and the finger takes over (otherwise
                         // both fought)
                         settle?.cancel()
@@ -988,6 +1013,7 @@ fun StageScreen(
                 onGeneral = { onSongMix(song.id, null) },
                 onDismiss = { mixerOpen = false },
             )
+            if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter))
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
@@ -999,8 +1025,8 @@ fun StageScreen(
                 val source = sourceLine(offer.line)
                 EditLineButtons(
                     onEdit = { editOffer = null; editAt(offer.line) },
-                    highlighted = source?.let { br.app.stagebook.ui.editor.lineHighlighted(song.text, it) },
-                    onHighlight = { editOffer = null; source?.let { onHighlightLine(song.id, it) } },
+                    canMark = source != null,
+                    onMarker = { editOffer = null; marking = true },
                     modifier = Modifier.layout { measurable, c ->
                         // above the finger (below if it doesn't fit), without leaving the screen
                         val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
@@ -1217,6 +1243,8 @@ private class GestureTargets(
     val hold: (Offset) -> Unit,
     val dismiss: () -> Boolean,   // closes the edit button; true if it was open
     val chord: (Offset) -> Boolean,   // tapped a chord: opens the diagram; true if it opened
+    val marking: Boolean = false,      // highlighter on: one finger marks words, no page turn
+    val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )
 
 /** `starts`: index in `lines` of the first line of each column (-1 = empty column). */
@@ -1322,6 +1350,24 @@ private class PageHit {
             if (over) s.substring(a, b).takeIf(Chords::isChord)?.let { return it }
         }
         return null
+    }
+
+    /**
+     * The character at point `p`: index in `lines` of its line, that line's text as shown, and the column in it. Null
+     * outside the text.
+     */
+    fun charAt(p: Offset): Triple<Int, String, Int>? {
+        val c = content ?: return null
+        val column = if (c.columns.size > 1 && p.x >= columnWidth + gutter / 2f) 1 else 0
+        val layout = layouts[column] ?: return null
+        val start = c.starts[column]
+        val x = p.x - if (column == 1) columnWidth + gutter else 0
+        val y = p.y + scroll()
+        val text = layout.layoutInput.text
+        if (start < 0 || text.isEmpty()) return null
+        val o = layout.getOffsetForPosition(Offset(x, y.coerceIn(0f, layout.size.height.toFloat()))).coerceIn(0, text.length - 1)
+        val a = text.getStringAnnotations(LINE_TAG, o, o + 1).firstOrNull() ?: return null
+        return Triple(start + a.item.toInt(), text.substring(a.start, a.end), o - a.start)
     }
 
     /** Index in `lines` of the line at point `p`, or null outside the text. */
@@ -1592,12 +1638,25 @@ private fun SongKeyBadges(
 
 /** "Edit this line" and, for a line of the song, "Highlight this line" / "Remove the highlight" side by side. */
 @Composable
-private fun EditLineButtons(onEdit: () -> Unit, highlighted: Boolean?, onHighlight: () -> Unit, modifier: Modifier = Modifier) {
+private fun EditLineButtons(onEdit: () -> Unit, canMark: Boolean, onMarker: () -> Unit, modifier: Modifier = Modifier) {
     // side by side; on a narrow phone the second goes under the first
     androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         EditOfferButton(AppIcons.Edit, stringResource(R.string.stage_edit_line), onEdit)
-        if (highlighted != null) {
-            EditOfferButton(AppIcons.Highlighter, stringResource(if (highlighted) R.string.stage_highlight_off else R.string.stage_highlight_line), onHighlight)
+        if (canMark) EditOfferButton(AppIcons.Highlighter, stringResource(R.string.stage_marker), onMarker)
+    }
+}
+
+/**
+ * While the highlighter is on: what to do and the way out, fixed over the lyrics (a message that goes away would leave
+ * the stage not turning pages with nothing saying why).
+ */
+@Composable
+private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, shape = MaterialTheme.shapes.medium, shadowElevation = 6.dp, modifier = modifier.padding(Spacing.m)) {
+        Row(Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.xs, bottom = Spacing.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Icon(AppIcons.Highlighter, null)
+            Text(stringResource(R.string.stage_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
+            androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
         }
     }
 }

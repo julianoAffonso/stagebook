@@ -95,14 +95,14 @@ class StageChordTapTest {
         assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
     }
 
-    @Test fun `holding a line offers Highlight this line next to Edit, and it reports the song line (B-28)`() {
-        var highlighted = -1 to -1
+    @Test fun `holding a line offers the highlighter, which marks the word under the finger`() {
+        var marked: List<Any>? = null
         compose.setContent {
             StagebookTheme {
                 StageScreen(
                     StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f)),
                     0, 0, { s, p -> position = s to p },
-                    onHighlightLine = { id, line -> highlighted = (if (id == "s1") 1 else 0) to line },
+                    onHighlightWords = { id, line, shown, from, to -> marked = listOf(id, line, shown, from, to) },
                 )
             }
         }
@@ -110,9 +110,20 @@ class StageChordTapTest {
         compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
         compose.waitForIdle()
         compose.onNodeWithText("Editar esta linha").assertExists()
-        compose.onNodeWithText("Destacar esta linha").performClick()
+        compose.onNodeWithText("Marca-texto").performClick()
         compose.waitForIdle()
-        assertEquals(1 to 1, highlighted)
+        compose.onNodeWithText("Passe o dedo", substring = true).assertExists()
+        // a tap on a word of the second line: it's marked, the page doesn't turn
+        compose.onRoot().performTouchInput { click(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.waitForIdle()
+        val m = marked!!
+        assertEquals("s1", m[0])
+        assertEquals(1, m[1])
+        assertTrue("linha mostrada: ${m[2]}", (m[2] as String).contains("Segunda"))
+        assertEquals("não virou a página", -1 to -1, position)
+        compose.onNodeWithText("Pronto").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Passe o dedo", substring = true).assertDoesNotExist()
     }
 
     @Test fun `with the diagram turned off in settings, tapping a chord opens nothing`() {

@@ -126,8 +126,9 @@
     <string name="stage_end">Fim do setlist</string>
     <string name="stage_edit">Editar a letra nesta página</string>
     <string name="stage_edit_line">Editar esta linha</string>
-    <string name="stage_highlight_line">Destacar esta linha</string>
-    <string name="stage_highlight_off">Tirar o destaque</string>
+    <string name="stage_marker">Marca-texto</string>
+    <string name="stage_marker_hint">Passe o dedo nas palavras para destacar. Passe de novo para apagar.</string>
+    <string name="stage_marker_done">Pronto</string>
     <string name="stage_zoom">Zoom desta música: %1$d%%</string>
     <string name="stage_zoom_reset">Padrão</string>
     <string name="set_remove">Tirar</string>
