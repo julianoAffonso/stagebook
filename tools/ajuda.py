@@ -134,6 +134,7 @@ SECTIONS = [
             "Em alguns aparelhos, como celulares Samsung e tablets mais simples, a interface conecta mas o som não sai ou sai picotado. Nesse caso ligue Tocar pela interface através do Android, em Ajustes → Metrônomo e player: o som vai pelo áudio do Android, com todos os canais da interface.",
             "Na primeira vez que ligar a interface no cabo USB, o Android pergunta qual app abrir: toque em Stagebook e em Apenas uma vez. O Stagebook abre e pede o acesso ao áudio: permita. Tire e ponha o cabo de novo, escolha Stagebook e toque em Sempre. Pronto: ao religar o cabo, o som volta sozinho, sem perguntar nada. O Stagebook não grava nada; a entrada da interface só acerta o relógio.",
             "Quando a música acaba, ele para e volta ao começo. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
+            "Trocar de música com a faixa tocando não para a faixa: ela continua até você tocar em parar ou ela acabar, e o botão de parar fica em qualquer música enquanto isso. Depois o play já toca a música que está na tela.",
         ],
         "text_en": [
             "Each song can have a backing track (multichannel OGG, MP3 or WAV). Pick it in Song details. On stage, play only shows on songs that have one.",
@@ -141,6 +142,7 @@ SECTIONS = [
             "On some devices, like Samsung phones and simpler tablets, the interface connects but there's no sound or it stutters. Then turn on Play on the interface through Android, in Settings → Metronome and player: the sound goes through Android's audio, with all the interface's channels.",
             "The first time you plug the interface into the USB cable, Android asks which app to open: tap Stagebook and Just once. Stagebook opens and asks for audio access: allow it. Unplug and plug the cable again, pick Stagebook and tap Always. That's it: when the cable comes back, the sound returns by itself, without asking anything. Stagebook records nothing; the interface's input only keeps the clock.",
             "When the song ends it stops and goes back to the start. Hold play to change or remove the track and to open the song's mixer.",
+            "Changing songs while a track plays doesn't stop it: it goes on until you tap stop or it ends, and the stop button stays on any song meanwhile. Then play plays the song on screen.",
         ],
         "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
                  Fig(("jornada_faixa_4_menu", None, "Trocar ou tirar a faixa", "Change or remove the track"))],
