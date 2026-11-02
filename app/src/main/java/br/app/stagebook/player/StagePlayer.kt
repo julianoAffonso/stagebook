@@ -296,6 +296,9 @@ class StagePlayer @Inject constructor(
             return true
         }
 
+        /** The USB interface the player is on (empty: none); the device metronome keeps away from it. */
+        fun interfaceName(): String = if (PlayerService.outputKey.startsWith("usb:")) PlayerService.outputName.orEmpty() else ""
+
         /** No click on USB (also when the player is off: the engine keeps the setting for its next start). */
         fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1)
 
