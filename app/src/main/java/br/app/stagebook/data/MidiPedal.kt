@@ -139,7 +139,7 @@ class MidiPedal @Inject constructor(
     private fun openDevice(info: MidiDeviceInfo) {
         val m = manager ?: return
         if (synchronized(lock) { info.id in open }) return
-        // a mixer or sound card with MIDI (the USB interface) is not a pedal; opening it took the player's interface (B-34)
+        // a mixer or sound card with MIDI is not a pedal; opening it took the player's interface (B-34)
         if (info.type == MidiDeviceInfo.TYPE_USB) {
             @Suppress("DEPRECATION")
             val usb = info.properties.getParcelable<android.hardware.usb.UsbDevice>(MidiDeviceInfo.PROPERTY_USB_DEVICE)

@@ -251,7 +251,7 @@ public class PlayerService extends Service {
             if (a.getType() != AudioDeviceInfo.TYPE_USB_DEVICE) continue;
             if (out == null) out = a;
             CharSequence name = a.getProductName();
-            // Android names it "USB-Audio - USB interface" (seen on the S26): the interface's name inside it
+            // Android names it "USB-Audio - <interface name>" (seen on the S26): the interface's name inside it
             if (!wanted.isEmpty() && name != null && name.toString().toLowerCase(java.util.Locale.ROOT).contains(wanted.toLowerCase(java.util.Locale.ROOT))) { out = a; break; }
         }
         // Android hasn't listed it yet (just plugged in): the watchdog tries again

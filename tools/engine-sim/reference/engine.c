@@ -1,6 +1,6 @@
 // Motor de referência (validado na mesa): decodifica OGG (stb_vorbis), reamostra para 48 kHz e envia
 // 4 canais direto para a interface USB Audio Class 2 via usbfs (sem o mixer do Android).
-// O fluxo USB fica sempre ativo (silêncio quando pausado): a USB interface repete o último
+// O fluxo USB fica sempre ativo (silêncio quando pausado): a interface repete o último
 // trecho recebido quando o fluxo para, o que vira um apito contínuo.
 #include <jni.h>
 #include <errno.h>
@@ -30,7 +30,7 @@
 #define OUT_RATE 48000
 #define OUT_CH 4
 // 32 URBs x 8 pacotes = 32 ms na fila do USB. Com 8 (8 ms), o TCL ocupado (outro app tocando no
-// alto-falante) atrasava a reposição em 10-16 ms e a USB interface ficava sem áudio: solavanco (19/10/2026).
+// alto-falante) atrasava a reposição em 10-16 ms e a interface ficava sem áudio: solavanco (19/10/2026).
 #define NURBS 32
 #define PKTS_PER_URB 8
 #define TAIL_URBS 500                 // ~500 ms de silêncio antes de soltar o endpoint
@@ -195,7 +195,7 @@ static volatile int g_usb_stop = 0, g_usb_running = 0, g_dec_stop = 0;
 static long st_underrun = 0, st_pkt_err = 0, st_urb_err = 0;
 static int st_ring_min = RING_FRAMES;
 static double st_gap_max = 0;
-// Feedback implícito: a entrada da USB interface chega no ritmo do relógio dela. Comparamos o
+// Feedback implícito: a entrada da interface chega no ritmo do relógio dela. Comparamos o
 // total de quadros que ela produziu com o total que enviamos; se a saída se adianta
 // (ou atrasa) mais de FB_HI quadros, os pacotes passam a levar 5 (ou 7) quadros em vez
 // de 6 até a diferença voltar a FB_LO. Nenhum quadro de música é descartado.
@@ -660,7 +660,7 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv *e, jclass c) {
     return a;
 }
 
-// relógio da USB interface (feedback pela entrada): 1 travado, 0 esperando, -1 sem entrada. Só leitura.
+// relógio da interface (feedback pela entrada): 1 travado, 0 esperando, -1 sem entrada. Só leitura.
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
 
 // ---- normalização ----
