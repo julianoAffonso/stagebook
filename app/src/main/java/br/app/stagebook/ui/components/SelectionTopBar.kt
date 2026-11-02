@@ -39,7 +39,8 @@ fun SelectionTopBar(
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         IconButton(onClick = onClose) { Icon(AppIcons.Close, stringResource(R.string.songs_select_cancel)) }
-        Text(count.toString(), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).padding(start = Spacing.s))
+        // one line always: on a phone "199" broke into "19" over "9" next to the six actions (device test B-30)
+        Text(count.toString(), style = MaterialTheme.typography.headlineSmall, maxLines = 1, softWrap = false, modifier = Modifier.weight(1f).padding(start = Spacing.s))
         // select all as an icon too: a ⋮ with a single option was one tap too many (user, 01/11)
         TipIcon(stringResource(R.string.songs_select_all), AppIcons.SelectAll, onSelectAll)
         actions.forEach { TipIcon(it.label, it.icon, it.onClick) }
