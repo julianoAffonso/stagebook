@@ -6,6 +6,10 @@ local.properties
 .idea/
 # lyrics (copyrighted content) never go into git: they reach the app through import
 *.json
+# the MCP's own project files are code, not lyrics
+!mcp/package.json
+!mcp/package-lock.json
+!mcp/tsconfig.json
 # signing keys never go into git
 *.jks
 *.keystore

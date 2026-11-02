@@ -1,0 +1,120 @@
+# Stagebook MCP
+
+**English** · [Português (Brasil)](README.pt-BR.md)
+
+Lets AI assistants read and edit the songs and setlists on your Stagebook tablet: "build a 15-song setlist for Saturday
+without repeating artists", "move every Skank song down a half tone", "check the chords of Hazard", "import this page".
+It's a [Model Context Protocol](https://modelcontextprotocol.io) server that runs on your computer and talks to the
+tablet over the local network, through the same connection as **Settings → Edit on the computer**. Nothing goes to the
+internet, and the app itself doesn't change: what the assistant saves shows on the stage right away.
+
+Works with Claude Code, Claude Desktop and any assistant that runs local MCP servers (Cursor, VS Code with Copilot,
+Windsurf, Gemini CLI, OpenAI Codex CLI…).
+
+## What it can do
+
+| Area | Tools |
+|---|---|
+| Connection | `stagebook_connect` (finds the tablet and asks to come in), `stagebook_status` |
+| Songs | `list_songs` (filters: text, tag, key), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
+| Import | `import_song` (pasted lyrics/chords in any common format, or a song page address) |
+| Backing tracks | `set_backing_track` (OGG, MP3 or WAV from this computer), `remove_backing_track` |
+| Setlists | `list_setlists`, `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
+| Receiving | `receive_by_code` (the 3 words), `receive_create`, `band_inbox`, `band_sync`, `open_band_item` |
+| Backup | `restore_backup` (inspect a `.stagebook` file, add what's missing or replace the library) |
+
+Also **resources** (`stagebook://songs`, `stagebook://setlists`, `stagebook://songs/{id}` as ChordPro) and **prompts**
+(`build_setlist`, `fix_chords`, `transpose_for_singer`).
+
+Deleting, removing a track and replacing the library need `confirm: true`: the assistant has to ask you first.
+
+## Install
+
+Needs [Node.js](https://nodejs.org) 20 or newer.
+
+```sh
+git clone https://github.com/julianoAffonso/stagebook.git
+cd stagebook/mcp
+npm install
+npm run build
+```
+
+The server is `node /full/path/to/stagebook/mcp/dist/index.js`. Use that path in your assistant's settings below.
+
+## Connect your assistant
+
+**Claude Code**
+
+```sh
+claude mcp add stagebook -- node /full/path/to/stagebook/mcp/dist/index.js
+```
+
+**Claude Desktop** — Settings → Developer → Edit config (`claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "stagebook": { "command": "node", "args": ["/full/path/to/stagebook/mcp/dist/index.js"] } } }
+```
+
+**Cursor** (`~/.cursor/mcp.json`) and **Windsurf** (`~/.codeium/windsurf/mcp_config.json`): the same `mcpServers` block.
+
+**VS Code** (`.vscode/mcp.json` in a project, or the user `mcp.json`):
+
+```json
+{ "servers": { "stagebook": { "type": "stdio", "command": "node", "args": ["/full/path/to/stagebook/mcp/dist/index.js"] } } }
+```
+
+**Gemini CLI** (`~/.gemini/settings.json`): the same `mcpServers` block as Claude Desktop.
+
+**OpenAI Codex CLI** (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.stagebook]
+command = "node"
+args = ["/full/path/to/stagebook/mcp/dist/index.js"]
+```
+
+ChatGPT's own app only connects to remote servers (over the internet), so it can't reach the tablet on your Wi-Fi.
+
+## First use
+
+1. On the tablet: open Stagebook and turn on **Settings → Edit on the computer**. It shows the address
+   (e.g. `http://192.168.0.10:8090`). The computer and the tablet must be on the same Wi-Fi.
+2. Ask the assistant to connect to Stagebook. It searches the network (or you give it the address) and the tablet shows
+   a request with a code.
+3. If the code matches, tap **Allow** on the tablet. The key is saved on this computer
+   (`~/.config/stagebook-mcp/config.json`, readable only by you); next time it connects without asking.
+
+The editor turns itself off on the tablet when unused: turn it on again when you want to use the assistant. The key
+lasts 90 days without use; **Settings → Edit on the computer → Authorized computers** removes it at any time.
+
+### Settings
+
+| Variable | What for |
+|---|---|
+| `STAGEBOOK_URL` | The tablet's address, skipping the search (e.g. `http://192.168.0.10:8090`). |
+| `STAGEBOOK_KEY` | A key instead of the saved one. |
+| `STAGEBOOK_CONFIG` | Another place for the saved address and key. |
+
+## If it doesn't connect
+
+- **"Stagebook wasn't found" / "Couldn't reach"**: the tablet's Stagebook must be open with **Settings → Edit on the
+  computer** on, on the same Wi-Fi as the computer (not a guest network). Pass the address shown there to the connect tool.
+- **On a Mac, "macOS blocked the connection"**: macOS asks before an app talks to devices on the local network. Open
+  **System Settings → Privacy & Security → Local Network** and turn on the app that runs the assistant (Claude, Terminal,
+  iTerm, Cursor, VS Code…), then restart that app.
+- **"No longer accepts this computer's key"**: it was removed on the tablet or went 90 days unused. Connect again.
+
+## Privacy
+
+Everything stays on your network: the server talks only to the tablet. The assistant sees what its tools return
+(titles, artists, chords and, when it asks for them, the lyrics) and sends that to its AI provider like the rest of your
+conversation. Lyrics are copyrighted: the server tells the assistant not to reproduce them in full.
+
+## Development
+
+```sh
+npm test   # builds and runs the tests against a fake tablet
+```
+
+The tools are in `src/server.ts`; the calls to the tablet in `src/client.ts` (the same HTTP API as the computer editor's
+page, in the app's `data/web/`).
