@@ -12,8 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,6 +23,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onLongClick
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -53,7 +58,7 @@ fun stripChords(text: String): List<String> {
  * The song's chord diagrams (top or end of the stage), in the shape saved in the song ({define}) or the easiest one.
  * Reads the song text: picking another shape on stage updates the list right away.
  */
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChordStrip(
     text: String,
@@ -83,8 +88,7 @@ fun ChordStrip(
             Box(
                 // the cell widens to fill the row; the drawing stays at its own size (scaled up, it looked blown up on
                 // the TCL; user, 02/11)
-                Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT)
-                    .combinedClickable(onClickLabel = null, onLongClickLabel = stringResource(R.string.stage_chord_hide, c), onLongClick = { onHide(c) }, onClick = {}),
+                Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT).longPressOnly(stringResource(R.string.stage_chord_hide, c)) { onHide(c) },
                 contentAlignment = Alignment.TopCenter,
             ) {
                 ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * STRIP_DRAW, compact = true)
@@ -108,3 +112,23 @@ fun ChordStrip(
     }
     }
 }
+
+/**
+ * A long press only: a tap isn't taken, so it still turns the stage's page (a clickable here swallowed page turns over
+ * the whole chord list; audit 02/11). The label reaches accessibility as the long-press action.
+ */
+private fun Modifier.longPressOnly(label: String, onLong: () -> Unit): Modifier = this
+    .semantics { onLongClick(label) { onLong(); true } }
+    .pointerInput(onLong) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            // null only when the time ran out with the finger still down; a lift or a swipe (the page taking the
+            // drag) ends it without the long press
+            val ended = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() ?: Unit }
+            if (ended == null) {
+                onLong()
+                // the rest of this touch belongs to the long press
+                do { val e = awaitPointerEvent(); e.changes.forEach { it.consume() } } while (e.changes.any { it.pressed })
+            }
+        }
+    }
