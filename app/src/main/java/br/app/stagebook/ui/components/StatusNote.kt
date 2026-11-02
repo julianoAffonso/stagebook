@@ -25,29 +25,32 @@ enum class StatusTone { OK, PROBLEM, INFO }
  * inside the box (the button that fixes it, for example).
  */
 @Composable
-fun StatusNote(text: String, tone: StatusTone, modifier: Modifier = Modifier, content: (@Composable () -> Unit)? = null) =
-    StatusBox(tone, modifier) {
+fun StatusNote(text: String, tone: StatusTone, modifier: Modifier = Modifier, fill: Boolean = true, content: (@Composable () -> Unit)? = null) =
+    StatusBox(tone, modifier, fill) {
         Text(text, style = MaterialTheme.typography.bodyMedium)
         content?.invoke()
     }
 
-/** The same box with any [content] (a text with a link, for example), in the box's text color. */
+/**
+ * The same box with any [content] (a text with a link, for example), in the box's text color. [fill] false: only as wide
+ * as the text (inside a list row, where a full-width box weighed too much).
+ */
 @Composable
-fun StatusBox(tone: StatusTone, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun StatusBox(tone: StatusTone, modifier: Modifier = Modifier, fill: Boolean = true, content: @Composable () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val (container, onContainer) = when (tone) {
         StatusTone.OK -> colors.primaryContainer to colors.onPrimaryContainer
         StatusTone.PROBLEM -> colors.errorContainer to colors.onErrorContainer
         StatusTone.INFO -> colors.surfaceVariant to colors.onSurfaceVariant
     }
-    Surface(color = container, contentColor = onContainer, shape = MaterialTheme.shapes.small, modifier = modifier.fillMaxWidth()) {
+    Surface(color = container, contentColor = onContainer, shape = MaterialTheme.shapes.small, modifier = if (fill) modifier.fillMaxWidth() else modifier) {
         Row(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s + Spacing.xs), horizontalArrangement = Arrangement.spacedBy(Spacing.s + Spacing.xs), verticalAlignment = Alignment.Top) {
             Icon(
                 when (tone) { StatusTone.OK -> AppIcons.Check; StatusTone.PROBLEM -> AppIcons.Warning; StatusTone.INFO -> AppIcons.InfoOutline },
                 null,
                 Modifier.size(18.dp),
             )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) { content() }
+            Column(if (fill) Modifier.weight(1f) else Modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) { content() }
         }
     }
 }
