@@ -11,6 +11,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -47,15 +49,31 @@ fun StagebookNavHost(
     updateOffer: UpdateOffer? = null,
     updateActions: AppUpdateActions = AppUpdateActions(),
     followSongs: Flow<String> = emptyFlow(),
+    followingSong: kotlinx.coroutines.flow.StateFlow<String?> = kotlinx.coroutines.flow.MutableStateFlow(null),
 ) {
     val nav = rememberNavController()
     // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
     // editing or importing, it doesn't pull the person off the screen: the "Following" strip shows the current song
+    // A song asked for while on one of those screens waits and opens on coming back to Home, if it's still the leader's
+    // current song: before, coming back showed nothing until the next song (device test over a hotspot, 02/11)
+    var pendingFollow by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             val here = nav.currentBackStackEntry?.destination ?: return@collect
             if (here.hasRoute<Home>() || here.hasRoute<Stage>()) {
+                pendingFollow = null
                 nav.navigate(Stage(songId = id)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
+            } else {
+                pendingFollow = id
+            }
+        }
+    }
+    LaunchedEffect(nav) {
+        nav.currentBackStackEntryFlow.collect { entry ->
+            val id = pendingFollow ?: return@collect
+            if (entry.destination.hasRoute<Home>()) {
+                pendingFollow = null
+                if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
             }
         }
     }

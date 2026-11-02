@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +50,11 @@ class BandConduct @Inject constructor(
     private val _openSong = MutableSharedFlow<String>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Follower: the song to open on stage now. */
     val openSong: SharedFlow<String> = _openSong
+
+    /** Follower: the leader's current song here (null = not following, or missing here). */
+    val followingSong: StateFlow<String?> by lazy {   // lazy: [scope] is declared further down
+        _role.map { (it as? Role.Following)?.songId }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+    }
 
     @Volatile private var leftFrom: String? = null
     private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
