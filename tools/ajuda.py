@@ -218,6 +218,18 @@ SECTIONS = [
                  Fig(("editor_web_4_importar", None, "Importar no computador", "Importing on the computer"))],
     },
     {
+        "id": "desempenho", "pt": "Quanto o app pesa", "en": "How light it is",
+        "text_pt": [
+            "O Stagebook foi medido em três aparelhos: um tablet TCL NXTPAPER 11 Plus, um Galaxy S26 Ultra e um tablet Chuwi Hi10 XPro, mais simples. Parado na lista ou no palco, ele usa de 0,1% a 1,5% de um núcleo do processador; virando página, até 13%; tocando um backing track numa interface USB, 15%. Os três aparelhos têm 8 núcleos, então mesmo tocando ele usa menos de 2% do processador inteiro.",
+            "A memória fica entre 115 e 255 MB, conforme o aparelho e a tela. O modo essencial quase não muda esses números: o ganho dele é deixar na tela só o que você usa.",
+        ],
+        "text_en": [
+            "Stagebook was measured on three devices: a TCL NXTPAPER 11 Plus tablet, a Galaxy S26 Ultra and a simpler Chuwi Hi10 XPro tablet. Idle on the list or the stage it uses 0.1% to 1.5% of one processor core; turning pages, up to 13%; playing a backing track on a USB interface, 15%. All three devices have 8 cores, so even playing it uses less than 2% of the whole processor.",
+            "Memory stays between 115 and 255 MB, depending on the device and the screen. Essential mode barely changes these numbers: its gain is keeping on screen only what you use.",
+        ],
+        "figs": [],
+    },
+    {
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
             "Quando sai uma versão nova, o app avisa ao abrir. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda.",

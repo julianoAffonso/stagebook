@@ -38,6 +38,21 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 Interfaces só USB Audio 1.0, ou só de 44,1 kHz, ainda não funcionam. Sem interface, o player toca no fone, no
 Bluetooth ou no alto-falante do aparelho.
 
+## Quanto o app pesa
+Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** núcleo; os três têm 8 núcleos):
+
+| Tela | TCL NXTPAPER 11 Plus | Galaxy S26 Ultra | Chuwi Hi10 XPro |
+|---|---|---|---|
+| Lista de músicas, parada | 1,4% · 194 MB | 0,1% · 136 MB | 1,5% · 117 MB |
+| Palco, parado | 1,4% · 219 MB | 0,3% · 167 MB | — |
+| Palco, virando página a cada 3 s | 12,7% · 198 MB | 3,8% · 146 MB | — |
+| Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB |
+| Backing track tocando numa interface USB | 15% · 202 MB | — | — |
+| Ajustes da banda, parado | 3,1% · 205 MB | 7,2% · 186 MB | — |
+
+Mesmo tocando uma faixa, o Stagebook usa menos de 2% do processador inteiro. O modo essencial quase não muda esses
+números: o ganho dele é a tela mais simples.
+
 ## Instalar
 Baixe o `stagebook.apk` nos [Releases](../../releases). Depois disso o app avisa quando sai versão nova e se atualiza.
 Precisa de Android 9 ou mais novo.
