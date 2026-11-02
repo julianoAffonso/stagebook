@@ -13,6 +13,9 @@ VARIANT=release; [ "${2:-}" = "--debug" ] && VARIANT=debug
 ADB=(adb -s "$SERIAL")
 # audit-pending marker: its path lives outside the repository (~/.cache/stagebook-audit-mark holds it; none = no check)
 MARK=$(cat "$HOME/.cache/stagebook-audit-mark" 2>/dev/null || true)
+# without it the audit lock is off: say so instead of installing quietly (audit 02/11)
+[ -n "$MARK" ] || echo "aviso: sem ~/.cache/stagebook-audit-mark, a trava de auditoria está desligada" >&2
+MARK="${MARK/#\~/$HOME}"   # a path written with ~
 
 [ -z "$(git status --porcelain)" ] || { echo "recusado: há mudança sem commit"; exit 1; }
 [ -z "$MARK" ] || [ ! -e "$MARK" ] || { echo "recusado: auditoria pendente ($MARK)"; exit 1; }
