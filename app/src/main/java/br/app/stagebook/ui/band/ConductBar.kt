@@ -129,10 +129,11 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        // on a phone the buttons don't fit next to the text ("End" broke letter by letter and the title vanished; user,
-        // 02/11): they go on a line of their own
+        // on a phone two buttons don't fit next to the text ("End" broke letter by letter and the title vanished; user,
+        // 02/11): they go on a line of their own. A single one (the follower's Leave) stays beside the text: alone on its
+        // line it left the strip twice as tall and half empty (user, 02/11)
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
-            val narrow = maxWidth < NARROW
+            val narrow = maxWidth < NARROW && (ui is ConductUi.Conducting || lacks.isNotEmpty())
             Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Icon(if (alert) AppIcons.Warning else AppIcons.Group, null)
