@@ -168,11 +168,18 @@ fun SetlistDetailScreen(
     var items by remember(uiState.items) { mutableStateOf(uiState.items) }
     val latestItems by rememberUpdatedState(items)
     val dragStart = remember { DragStart() }
+    var dragNow by remember { mutableStateOf(false) }
+    // busy here holds a band follower on this screen until done (a rename or a reorder isn't lost; audit 02/11)
+    val followHold = br.app.stagebook.ui.components.LocalFollowHold.current
+    val busy = renaming || sharing || deleting || removingMany || selecting || dragNow
+    LaunchedEffect(busy) { followHold.value = busy }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { followHold.value = false } }
     val listState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         items = items.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
     fun dropped() {
+        dragNow = false
         val key = dragStart.key ?: return
         dragStart.key = null
         val to = latestItems.indexOfFirst { it.key == key }
@@ -242,7 +249,7 @@ fun SetlistDetailScreen(
                                                 else IconButton(
                                                     onClick = {},
                                                     modifier = Modifier.draggableHandle(
-                                                        onDragStarted = { dragStart.key = item.key; dragStart.index = latestItems.indexOfFirst { it.key == item.key } },
+                                                        onDragStarted = { dragNow = true; dragStart.key = item.key; dragStart.index = latestItems.indexOfFirst { it.key == item.key } },
                                                         onDragStopped = { dropped() },
                                                     ),
                                                 ) {
