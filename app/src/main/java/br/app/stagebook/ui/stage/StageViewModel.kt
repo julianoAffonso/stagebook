@@ -74,6 +74,9 @@ class StageViewModel @Inject constructor(
         when {
             bpm == null -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
             look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb) -> metronome.stop()
+            // a USB output chosen and the interface plugged in: the metronome turns the player on, track or not, and
+            // sounds there once it's connected ([usbReady] restarts it on the stage); meanwhile nothing on the device
+            look.playerMode && !usb.device && player.connectForClick() -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
             else -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm) }
         }
     }
@@ -86,6 +89,7 @@ class StageViewModel @Inject constructor(
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
+    val usbReady: StateFlow<Boolean> = player.usbReady
 
     fun togglePlay() = player.toggle(repository.library.value.look.trackStops)
     fun needsBatteryAsk() = player.needsBatteryAsk()

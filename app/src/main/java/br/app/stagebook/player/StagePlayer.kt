@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import br.app.stagebook.data.interfaceKinds
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -59,6 +60,9 @@ class StagePlayer @Inject constructor(
     private val engine = Mutex()   // load and seek read the disk: off the UI thread and one at a time
     private val _ui = MutableStateFlow(PlayerUi())
     val ui: StateFlow<PlayerUi> = _ui
+    // the player is on a USB interface: the metronome can sound there (user, 02/11)
+    private val _usbReady = MutableStateFlow(false)
+    val usbReady: StateFlow<Boolean> = _usbReady
 
     @Volatile private var wanted: File? = null    // backing track of the open song
     @Volatile private var loaded: File? = null    // what's in the engine
@@ -132,6 +136,17 @@ class StagePlayer @Inject constructor(
             Engine.pause()
             PlayerService.playing(false)
         }
+    }
+
+    /**
+     * The metronome chose a USB output (user, 02/11): with a USB audio interface plugged in, turns the player on as play
+     * does, with or without a track; [usbReady] says when it's there. False when no interface is plugged in.
+     */
+    fun connectForClick(): Boolean {
+        val usb = context.getSystemService(android.hardware.usb.UsbManager::class.java) ?: return false
+        if (usb.deviceList.values.none { br.app.stagebook.data.isUsbAudio(it.interfaceKinds()) }) return false
+        if (!PlayerService.running) ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
+        return true
     }
 
     /** Turns off the player (closing player mode): releases USB, engine and service. */
@@ -227,6 +242,7 @@ class StagePlayer @Inject constructor(
 
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
+        _usbReady.value = PlayerService.running && PlayerService.connected && PlayerService.outputKey.startsWith("usb:")
         // another output connected: Settings start showing its routing, and the engine starts using it
         val out = OutputInfo(PlayerService.outputKey, PlayerService.outputName, PlayerService.outputCount)
         if (PlayerService.connected && out.key.isNotEmpty() && out != mixer.output) {
