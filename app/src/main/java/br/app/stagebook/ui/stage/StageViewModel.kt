@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @Immutable
@@ -70,6 +71,7 @@ class StageViewModel @Inject constructor(
      * (user, 02/11), otherwise on the device's regular output.
      */
     fun metronomeSound(bpm: Int?) {
+        clickFallback?.cancel()
         val look = repository.library.value.look
         val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
         when {
@@ -77,7 +79,12 @@ class StageViewModel @Inject constructor(
             look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb) -> metronome.stop()
             // a USB output chosen and the interface plugged in: the metronome turns the player on, track or not, and
             // sounds there once it's connected ([usbReady] restarts it on the stage); meanwhile nothing on the device
-            look.playerMode && !usb.device && player.connectForClick() -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
+            look.playerMode && !usb.device && player.connectForClick() -> {
+                metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff()
+                // the interface never got ready (USB permission refused, an error): the device after a while instead of
+                // silence (audit 02/11 #4); if it gets ready later the stage restarts the metronome there
+                clickFallback = viewModelScope.launch { kotlinx.coroutines.delay(USB_WAIT_MS); if (!player.usbReady.value) metronome.start(bpm) }
+            }
             else -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm) }
         }
     }
@@ -90,6 +97,8 @@ class StageViewModel @Inject constructor(
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
+    private var clickFallback: kotlinx.coroutines.Job? = null
+
     // short drops ignored: the interface reconnecting for its clock restarted the metronome twice (audit 02/11 #3)
     val usbReady: StateFlow<Boolean> = player.usbReady.ignoringShortDrops(USB_DROP_MS)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, player.usbReady.value)
@@ -207,4 +216,5 @@ class StageViewModel @Inject constructor(
     }
 }
 
+private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome
