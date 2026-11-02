@@ -34,8 +34,11 @@ import br.app.stagebook.ui.components.ChordDiagram
 import br.app.stagebook.ui.editor.usedChords
 
 /** Width and height of each diagram in the chord list (the stage reserves the space with them). */
-val STRIP_ITEM_WIDTH: Dp = 76.dp
-val STRIP_ITEM_HEIGHT: Dp = 94.dp   // nome (≈20) + desenho (56 × 1,15) + folga
+val STRIP_ITEM_WIDTH: Dp = 118.dp
+val STRIP_ITEM_HEIGHT: Dp = 140.dp   // nome (≈24) + desenho (90 × 1,15) + folga
+
+/** The drawings 60% bigger than the small ones (user, 02/11: too small), drawn at that size so the lines stay thin. */
+private const val STRIP_DRAW = 1.6f
 
 /** Room kept at the end of the chord list's first row for its ×. */
 val STRIP_CLOSE_WIDTH: Dp = 36.dp
@@ -84,7 +87,7 @@ fun ChordStrip(
                     .combinedClickable(onClickLabel = null, onLongClickLabel = stringResource(R.string.stage_chord_hide, c), onLongClick = { onHide(c) }, onClick = {}),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true)
+                ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * STRIP_DRAW, compact = true)
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
