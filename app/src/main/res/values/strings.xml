@@ -240,6 +240,7 @@
     <string name="settings_chord_list_bottom">End</string>
     <string name="stage_chord_hide">Hide %1$s from the list</string>
     <string name="stage_chord_hide_confirm">Hide %1$s from this song\'s chord list?</string>
+    <string name="stage_chords_hide_all">Hide this song\'s chords</string>
     <string name="stage_chord_hide_ok">Hide</string>
     <plurals name="stage_chords_restore">
         <item quantity="one">Show the hidden chord again</item>

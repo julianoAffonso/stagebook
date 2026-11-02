@@ -74,9 +74,27 @@ class StageScrollHitTest {
             }
         }
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("Esconder G da lista").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Esconder os acordes desta música").assertIsDisplayed()
         page = 2
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("Esconder G da lista").assertIsNotDisplayed()
+        compose.onNodeWithContentDescription("Esconder os acordes desta música").assertIsNotDisplayed()
+    }
+
+    // one × in the corner hides the whole list in this song (user, 02/11), instead of one × per chord
+    @Test fun `the corner x hides every chord of the song`() {
+        var hidden: Set<String>? = null
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(
+                    StageUiState(false, listOf(StageSong("Longa", "", withChords, false, id = "s1")), look = Look(chordList = ChordListPlace.TOP)),
+                    0, 0, { _, _ -> },
+                    onHiddenChords = { _, h -> hidden = h },
+                )
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Esconder os acordes desta música").performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertTrue("escondidos: $hidden", hidden != null && "G" in hidden!!)
     }
 }

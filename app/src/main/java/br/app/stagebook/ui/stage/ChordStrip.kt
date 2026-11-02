@@ -12,7 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +39,9 @@ import br.app.stagebook.ui.editor.usedChords
 val STRIP_ITEM_WIDTH: Dp = 76.dp
 val STRIP_ITEM_HEIGHT: Dp = 94.dp   // nome (≈20) + desenho (56 × 1,15) + folga
 
+/** Room kept at the end of the chord list's first row for its ×. */
+val STRIP_CLOSE_WIDTH: Dp = 36.dp
+
 /** The song's chords, in the order they appear, minus the ones the user hid from the list (all of them, no limit). */
 fun stripChords(text: String): List<String> {
     val hidden = Chords.hiddenChords(text)
@@ -43,14 +52,16 @@ fun stripChords(text: String): List<String> {
  * The song's chord diagrams (top or end of the stage), in the shape saved in the song ({define}) or the easiest one.
  * Reads the song text: picking another shape on stage updates the list right away.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChordStrip(
     text: String,
     instrument: Instrument,
     color: Color,
     modifier: Modifier = Modifier,
+    scale: Float = 1f,   // the stage grows the diagrams to fill the width (user, 02/11: they took ~3/4 of the TCL)
     onHide: (String) -> Unit = {},
+    onHideAll: () -> Unit = {},
     onRestore: () -> Unit = {},
 ) {
     val hiddenCount = remember(text) { Chords.hiddenChords(text).size }
@@ -63,17 +74,20 @@ fun ChordStrip(
             )
         }
     }
-    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+    Box(modifier.fillMaxWidth()) {
+    FlowRow(Modifier.padding(end = STRIP_CLOSE_WIDTH), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
         items.forEach { (c, shape, keys) ->
-            Box {
-                ChordDiagram(c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true)
-                // quiet ×: removes the chord from this song's list (the stage asks to confirm)
-                Box(
-                    Modifier.align(Alignment.TopEnd).size(28.dp).clip(CircleShape).clickable { onHide(c) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(AppIcons.Close, stringResource(R.string.stage_chord_hide, c), Modifier.size(14.dp), tint = color.copy(alpha = 0.45f))
-                }
+            // holding a chord takes it off this song's list (the stage asks to confirm); one × for the whole list below,
+            // instead of one on every chord (user, 02/11)
+            Box(
+                Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT * scale)
+                    .combinedClickable(onClickLabel = null, onLongClickLabel = stringResource(R.string.stage_chord_hide, c), onLongClick = { onHide(c) }, onClick = {}),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                ChordDiagram(
+                    c, instrument, shape, keys, color, width = if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp, compact = true,
+                    modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale; transformOrigin = TransformOrigin(0.5f, 0f) },
+                )
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
@@ -85,5 +99,12 @@ fun ChordStrip(
                 }
             }
         }
+    }
+    // quiet × in the corner: hides the whole list in this song (the ↶ above brings it back)
+    if (items.isNotEmpty()) {
+        Box(Modifier.align(Alignment.TopEnd).size(STRIP_CLOSE_WIDTH).clip(CircleShape).clickable(onClick = onHideAll), contentAlignment = Alignment.Center) {
+            Icon(AppIcons.Close, stringResource(R.string.stage_chords_hide_all), Modifier.size(18.dp), tint = color.copy(alpha = 0.45f))
+        }
+    }
     }
 }
