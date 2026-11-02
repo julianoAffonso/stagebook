@@ -5,6 +5,9 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.hasSetTextAction
 import br.app.stagebook.ui.band.BandActions
 import br.app.stagebook.ui.band.BandDetail
 import br.app.stagebook.ui.band.BandUi
@@ -27,5 +30,16 @@ class BandSearchingStillTest {
         compose.onNodeWithText("Procurando", substring = true).assertExists()
         val spinners = compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.ProgressBarRangeInfo, ProgressBarRangeInfo.Indeterminate))
         assertEquals(0, spinners.fetchSemanticsNodes().size)
+    }
+
+    // OK saves the typed name; the dialog closing right after must not save the old one again (device test, 02/11)
+    @Test fun `renaming keeps the new name`() {
+        val saved = mutableListOf<String>()
+        compose.setContent { StagebookTheme { BandDetail(BandUi(name = "Galaxy S26", nameConfirmed = true), BandActions(onName = { saved += it })) } }
+        compose.onNodeWithText("Mudar o nome").performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("Teclado")
+        compose.onNodeWithText("OK").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("Teclado"), saved)
     }
 }

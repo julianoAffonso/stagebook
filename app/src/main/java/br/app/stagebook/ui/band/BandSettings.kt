@@ -94,7 +94,9 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
         TextInputDialog(
             stringResource(R.string.band_name_title), band.name, stringResource(R.string.band_name_hint),
             onConfirm = { actions.onName(it); renaming = false },
-            onDismiss = { actions.onName(band.name); renaming = false },   // closing also confirms the suggestion
+            // closing also confirms the suggestion, but not after OK: the dialog closes itself after OK, and saving
+            // band.name (still the old one) there undid the new name (device test, 02/11)
+            onDismiss = { if (renaming) { actions.onName(band.name); renaming = false } },
         )
     }
     removing?.let { id ->
