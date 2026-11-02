@@ -137,11 +137,13 @@ class StageViewModel @Inject constructor(
 
     init { stageGate.enter() }   // holds the Drive sync while the stage is open
     override fun onCleared() {
-        player.pause()   // leaving the stage stops the backing track
+        stageGate.leave()
+        // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
+        // another (the new one enters first), and the track playing goes on, as when changing songs (audit 02/11)
+        if (!stageGate.onStage.value) player.pause()
         metronome.stop()
         chordPlayer.stop()
         announcer.stop()
-        stageGate.leave()
         // leaving the stage does NOT end "Lead the band" (user's request): during a show someone steps out to check
         // something and the band stays together; only "End" releases everyone
     }
