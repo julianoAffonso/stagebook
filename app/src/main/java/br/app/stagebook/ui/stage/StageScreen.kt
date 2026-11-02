@@ -1378,8 +1378,15 @@ private class PageHit {
         val x = p.x - if (column == 1) columnWidth + gutter else 0
         val y = p.y + scroll()
         val text = layout.layoutInput.text
-        if (start < 0 || text.isEmpty()) return null
-        val o = layout.getOffsetForPosition(Offset(x, y.coerceIn(0f, layout.size.height.toFloat()))).coerceIn(0, text.length - 1)
+        if (start < 0 || text.isEmpty() || layout.lineCount == 0) return null
+        // outside the text (above it or below the last line) there is no character: the touch marks nothing
+        if (y < 0 || y > layout.getLineBottom(layout.lineCount - 1)) return null
+        // held to the screen line under the finger: past the end of a line with chords (its own paragraph, no break
+        // after it) the offset was the next line's first letter (audit 02/11)
+        val ln = layout.getLineForVerticalPosition(y)
+        val first = layout.getLineStart(ln)
+        val last = maxOf(first, layout.getLineEnd(ln, visibleEnd = true) - 1)
+        val o = layout.getOffsetForPosition(Offset(x, y)).coerceIn(first, last).coerceIn(0, text.length - 1)
         val a = text.getStringAnnotations(LINE_TAG, o, o + 1).firstOrNull() ?: return null
         return Triple(start + a.item.toInt(), text.substring(a.start, a.end), o - a.start)
     }
