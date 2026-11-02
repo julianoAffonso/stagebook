@@ -47,7 +47,7 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 | Palco, parado | 1,4% · 219 MB | 0,3% · 167 MB | 0,4% · 121 MB |
 | Palco, virando página a cada 3 s | 12,7% · 198 MB | 3,8% · 146 MB | 2,9% · 120 MB |
 | Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB |
-| Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | — | 2,4% · 124 MB (acompanhando) |
+| Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | 0,8% · 186 MB (acompanhando) | 2,4% · 124 MB (acompanhando) |
 | Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — |
 | Backing track tocando numa interface USB | 15% · 202 MB | — | — |
 | Ajustes da banda, parado | 3,1% · 205 MB | 7,2% · 186 MB | 0,6% · 123 MB |
