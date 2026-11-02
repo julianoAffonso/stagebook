@@ -39,6 +39,13 @@ class HighlightTest {
     @Test fun `editor - the selection is wrapped`() {
         val v = toggleHighlight(TextFieldValue("eu quero você", TextRange(3, 8)))
         assertEquals("eu ==quero== você", v.text)
+        // the cursor after the closing mark, nothing selected: the next key doesn't replace the phrase (B-28)
+        assertEquals(TextRange(12), v.selection)
+    }
+
+    @Test fun `editor - leftover marks alone are not highlighted`() {
+        val v = TextFieldValue("linha\n==", TextRange(8))
+        assertEquals(v, toggleHighlight(v))
     }
 
     @Test fun `editor - no selection highlights the word at the cursor`() {

@@ -641,9 +641,9 @@ $("highlight").onclick = () => {
   }
   while (a < b && /\s/.test(s[a])) a++;
   while (b > a && /\s/.test(s[b - 1])) b--;
-  if (a === b) { say("status", t.highlightHint); return; }
+  if (a === b || /^=+$/.test(s.slice(a, b))) { say("status", t.highlightHint); return; }
   f.value = s.slice(0, a) + mark + s.slice(a, b) + mark + s.slice(b);
-  f.setSelectionRange(a + 2, b + 2);
+  f.setSelectionRange(b + 4, b + 4);   // the cursor after the closing mark, so the next key doesn't replace the phrase
   dirty = true; f.focus();
 };
 $("convert").onclick = () => { if ($("paste").value.trim()) runImport({ text: $("paste").value }); };

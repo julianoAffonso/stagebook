@@ -33,9 +33,12 @@ fun toggleHighlight(value: TextFieldValue): TextFieldValue {
     }
     while (start < end && text[start].isWhitespace()) start++
     while (end > start && text[end - 1].isWhitespace()) end--
-    if (start == end) return value
+    // nothing to highlight, or only leftover marks ("=="): unchanged, the editor says how
+    if (start == end || text.substring(start, end).all { it == '=' }) return value
     val out = text.substring(0, start) + HIGHLIGHT_MARK + text.substring(start, end) + HIGHLIGHT_MARK + text.substring(end)
-    return TextFieldValue(out, TextRange(start + w, end + w))
+    // the cursor after the closing mark, nothing selected: the phrase stayed selected and the next key replaced it
+    // (device test B-28)
+    return TextFieldValue(out, TextRange(end + 2 * w))
 }
 
 /**
