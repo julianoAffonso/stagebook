@@ -15,7 +15,6 @@ import java.io.Writer
  * with the pair key; the receiver answers [Kind.OK].
  */
 object BandProtocol {
-    const val SERVICE_TYPE = "_stagebook._tcp."
     const val VERSION = 2   // 2: "Quem conduz" (Kind.CONDUCT)
 
     /** Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). */
