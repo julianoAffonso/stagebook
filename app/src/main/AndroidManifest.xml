@@ -34,8 +34,6 @@
     <!-- the USB interface also records (the USB interface): without this, Android greys out "Always" in its USB chooser and asks
          again every time the cable comes back (device test, 02/11). Nothing is recorded: the input only sets the clock -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- bit-perfect output on the USB interface through Android (Android 14+): the interface's channels 1:1 (B-33) -->
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- pedido padrão do Android para sair da economia de bateria (tocar com a tela apagada), com aviso antes -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Settings → Advanced: Android settings written by the app; granted once from a computer (adb pm grant) -->
