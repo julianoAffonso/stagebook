@@ -21,7 +21,7 @@ enum class StatusTone { OK, PROBLEM, INFO }
 
 /**
  * A state the app reports (the battery is free, there's no Wi-Fi, another version): a tinted box with an icon, so it
- * doesn't read like one more setting among the others (user, 02/11: "it confused me"). [content] goes under the text,
+ * doesn't read like one more setting among the others. [content] goes under the text,
  * inside the box (the button that fixes it, for example).
  */
 @Composable

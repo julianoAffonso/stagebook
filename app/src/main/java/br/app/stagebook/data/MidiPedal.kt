@@ -54,7 +54,7 @@ data class MidiState(
 )
 
 /**
- * MIDI pedal, like another app: a USB device comes in by itself when plugged in; Bluetooth (BLE MIDI) is searched once
+ * MIDI pedal: a USB device comes in by itself when plugged in; Bluetooth (BLE MIDI) is searched once
  * in Settings, saved, and the app reconnects by itself when it comes back (or drops during the show). Each message
  * becomes a [PedalPress] with a MIDI code, and the command comes from the choice made in settings.
  */

@@ -2,7 +2,7 @@
 # main only (pressed on dev, nothing runs). With "publish" unchecked it's a dry run (builds, signs, checks and keeps the
 # APK as an artifact); checked, it also creates the v0.1.<commit count> tag and the release with the two fixed-name files the app reads from
 # releases/latest/download/. The signing key lives only in the repository secrets: it's written to a temporary file
-# and deleted at the end. With the repository private the app can't download the release (it needs a login).
+# and deleted at the end. The repository must be public: a private one needs a login, which the app doesn't have.
 name: Release
 on:
   workflow_dispatch:

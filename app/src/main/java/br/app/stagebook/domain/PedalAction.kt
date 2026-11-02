@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * The pedal works like a keyboard: each key runs a stage command. Common pedal keys come preset; in Settings → Pedal
- * each button can be set to another command (like another app).
+ * each button can be set to another command.
  */
 @Serializable
 enum class PedalAction {

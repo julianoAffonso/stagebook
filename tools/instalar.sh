@@ -11,10 +11,11 @@ cd "$(dirname "$0")/.."
 SERIAL="${1:?uso: tools/instalar.sh <serial> [--debug]}"
 VARIANT=release; [ "${2:-}" = "--debug" ] && VARIANT=debug
 ADB=(adb -s "$SERIAL")
-MARK="$HOME/Desktop/previous-app/.claude/auditoria-pendente"
+# audit-pending marker: its path lives outside the repository (~/.cache/stagebook-audit-mark holds it; none = no check)
+MARK=$(cat "$HOME/.cache/stagebook-audit-mark" 2>/dev/null || true)
 
 [ -z "$(git status --porcelain)" ] || { echo "recusado: há mudança sem commit"; exit 1; }
-[ ! -e "$MARK" ] || { echo "recusado: auditoria pendente ($MARK)"; exit 1; }
+[ -z "$MARK" ] || [ ! -e "$MARK" ] || { echo "recusado: auditoria pendente ($MARK)"; exit 1; }
 "${ADB[@]}" get-state >/dev/null 2>&1 || { echo "recusado: aparelho $SERIAL não responde no adb"; exit 1; }
 services="$("${ADB[@]}" shell dumpsys activity services br.app.stagebook 2>/dev/null)" || { echo "recusado: não deu para ler o estado do player"; exit 1; }
 if grep -q "br.app.stagebook/.player.PlayerService" <<<"$services"; then

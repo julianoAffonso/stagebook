@@ -1,7 +1,7 @@
 # Builds, runs the tests and lint. Nothing is published or signed here (releases: release.yml).
 name: Check
 # Only when merging into main (day-to-day work is on the dev branch) or by hand (Actions → Check → Run workflow):
-# each run takes ~10 min of GitHub's free minutes while the repository is private
+# each run takes ~10 min of GitHub's Actions minutes
 on:
   push:
     branches: [main]

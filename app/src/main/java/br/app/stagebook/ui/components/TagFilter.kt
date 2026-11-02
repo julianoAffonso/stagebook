@@ -25,8 +25,8 @@ import androidx.compose.ui.res.pluralStringResource
 import br.app.stagebook.R
 
 /**
- * Tag filter: one field that opens every tag, with a box each, several at a time (user, 01/11: "a simple combo, but
- * multiple choice"). The menu stays open while ticking; "All" clears the filter.
+ * Tag filter: one field that opens every tag, with a box each, several at a time (a simple
+ * combo, but multiple choice). The menu stays open while ticking; "All" clears the filter.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

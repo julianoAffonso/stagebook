@@ -940,7 +940,7 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
 }
 
 /**
- * Pedal (user, 01/11: "the logic of adding the pedal is a bit odd", "hard to find where", "confusing texts"): two
+ * Pedal: two
  * cards in the order things are done. Connect: every pedal in one place, with its state, and how to add each kind.
  * Buttons: press one, see which it is and choose what it does; right below, the ones already set.
  */
@@ -1032,7 +1032,7 @@ private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions)
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    // like another app: the button pressed can be set to another stage command
+                    // the button pressed can be set to another stage command
                     PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
                 }
             }

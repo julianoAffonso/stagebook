@@ -103,7 +103,7 @@ class LibraryTest {
         // a title is missing: the reader refuses instead of creating an incomplete setlist
         assertNull(QrPayload.parse("STAGEBOOK1\n3\nShow\nHazard\nMalandragem"))
         // the old format no longer works
-        assertNull(QrPayload.parse("LETRAS3\n1\nShow\nHazard"))   // no compatibility with the previous app app
+        assertNull(QrPayload.parse("LETRAS3\n1\nShow\nHazard"))   // an old format: not read
     }
 
     @Test

@@ -22,7 +22,7 @@
 
 #define STB_VORBIS_HEADER_ONLY
 #include "stb_vorbis.c"
-// MP3 and WAV (Stagebook, authorized by the user on 24/10): single-file decoders, public domain
+// MP3 and WAV: single-file decoders, public domain
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 #define DR_WAV_IMPLEMENTATION
@@ -139,7 +139,7 @@ static float g_eq_z[EQ_BANDS][LANES_MAX][2];      // estado [banda][canal][z1,z2
 static int g_eq_on = 0;
 // Backing limiter with the EQ on (19/10/2026): the boost no longer lowers the whole volume; only peaks that would go
 // over LIM_CEIL are held, instantly (without clipping), and the gain comes back in ~150 ms. Before, the protection
-// lowered the EQ input by the size of the largest boost (+6 dB = backing 6 dB lower), and the user found it lowered too
+// lowered the EQ input by the size of the largest boost (+6 dB = backing 6 dB lower), which lowered it too
 // much. With the EQ off the sound is the validated one, bit for bit.
 #define LIM_CEIL 0.891f                    // -1 dBFS
 #define LIM_REL (1.0f / (0.15f * OUT_RATE))
@@ -763,7 +763,7 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
 
 // Opens an output through Android (48 kHz, float): the device's own (deviceId 0, stereo) or a USB interface by its
 // Android id with its channels, for devices where talking to USB directly gets no packets back (S26, B-33: the
-// another app plays there through Android). False if Android didn't open it or didn't give 48 kHz.
+// other apps play there through Android). False if Android didn't open it or didn't give 48 kHz.
 JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;

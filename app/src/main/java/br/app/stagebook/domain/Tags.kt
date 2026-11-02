@@ -4,7 +4,7 @@ import br.app.stagebook.data.model.Song
 
 /**
  * Song tags (vocalist, 01/11: separate Brazilian songs from international ones). Free names; the same tag in another
- * case is the same tag. Filtering by several tags shows the songs that have all of them (user, 01/11: "or" would
+ * case is the same tag. Filtering by several tags shows the songs that have all of them ("or" would
  * confuse).
  */
 object Tags {

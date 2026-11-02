@@ -96,7 +96,7 @@ class AppUpdaterTest {
         val vm = vm(updater())
         vm.downloadUpdate()
         assertEquals(UpdateState.DownloadFailed, vm.waitUpdate { it == UpdateState.DownloadFailed })
-        assertFalse(File(context.cacheDir, "atualizacao/letras.apk").exists())
+        assertFalse(File(context.cacheDir, "atualizacao/stagebook.apk").exists())
         assertEquals(null, vm.installIntent())
     }
 

@@ -115,8 +115,8 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
         if (lacksButton && lacks.isNotEmpty()) TextButton({ showLacks = true }) { Text(stringResource(R.string.conduct_see_lacks)) }
         when (ui) {
             is ConductUi.Conducting -> {
-                // the search runs 30 s with nothing else on screen: the button says so meanwhile (user, 02/11: "is
-                // something supposed to happen?")
+                // the search runs 30 s with nothing else on screen: the button says so meanwhile, otherwise
+                // nothing seems to happen
                 var searching by remember { mutableStateOf(false) }
                 LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
                 TextButton({ searching = true; onSearch() }, enabled = !searching) {

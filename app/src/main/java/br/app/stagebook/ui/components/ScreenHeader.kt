@@ -68,8 +68,8 @@ fun ScreenHeader(
                 Text(
                     title,
                     // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones a
-                    // smaller one that can wrap to two lines, centred on the icons (user, 01/11: "Show de sába…" was
-                    // cut next to the setlist's icons); on tablets always big (it fits)
+                    // smaller one that can wrap to two lines, centred on the icons (a long setlist name was
+                    // cut next to its icons); on tablets always big (it fits)
                     style = when {
                         wide -> MaterialTheme.typography.headlineLarge
                         onBack != null -> MaterialTheme.typography.titleMedium

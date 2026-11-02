@@ -15,7 +15,7 @@ object Sections {
         BRIDGE("Ponte", "Bridge", listOf("bridge", "ponte")),
         SOLO("Solo", "Solo", listOf("solo", "guitar solo", "solo de guitarra")),
         INTERLUDE("Interlúdio", "Interlude", listOf("interlude", "interludio", "instrumental", "break", "passagem")),
-        OUTRO("Fim", "Outro", listOf("outro", "final", "fim", "ending", "coda", "encerramento")),   // "Fim": the user's another app default
+        OUTRO("Fim", "Outro", listOf("outro", "final", "fim", "ending", "coda", "encerramento")),   // "Fim": a common default
         // the user's library also names these parts (01/11)
         RIFF("Riff", "Riff", listOf("riff", "riff de abertura", "opening riff")),
         PRELUDE("Prelúdio", "Prelude", listOf("prelude", "preludio")),

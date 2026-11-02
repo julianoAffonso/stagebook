@@ -48,7 +48,7 @@ class SetlistMatcherTest {
         assertTrue(QrPayload.parse(atual) != null)
         assertFalse(QrPayload.isNewer(atual))
         assertTrue(QrPayload.isNewer(listOf("STAGEBOOK2", "1", "Show", "A").joinToString("\n")))
-        assertFalse(QrPayload.isNewer("LETRAS3\n1\nShow\nA"))   // the old Letras format is just not a setlist
+        assertFalse(QrPayload.isNewer("LETRAS3\n1\nShow\nA"))   // an old format is just not a setlist
     }
 
     @Test fun `cut QR or QR of something else does not become a setlist`() {
