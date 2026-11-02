@@ -65,22 +65,27 @@ fun ChordText(
             }
             drawContent()
             val l = laid ?: return@drawWithContent
-            var lastLine = -1
-            var lastEnd = 0f
             val gap = if (chordStyle.fontSize.isSp) chordStyle.fontSize.toPx() * 0.3f else 0f
+            // positions first: each chord over its letter, moved right if it would touch the one before; then, from the
+            // end of each line, moved left if it would pass the right edge, pushing the ones before it along so they
+            // keep their gap ("D7(9-)" went past the edge, then touched "Am7", device test B-14)
+            class Placed(val line: Int, var x: Float, val chord: androidx.compose.ui.text.TextLayoutResult)
+            val placed = ArrayList<Placed>(chordsAt.size)
             chordsAt.forEach { a ->
                 if (a.start >= l.layoutInput.text.length) return@forEach
                 val line = l.getLineForOffset(a.start)
                 var x = l.getHorizontalPosition(a.start, true)
-                if (line == lastLine) x = maxOf(x, lastEnd + gap)
-                val chord = byName.getValue(a.item)
-                // a chord over the end of the line moves left to stay whole: "D7(9-)" over the last letters went past the
-                // right edge (device test B-14)
-                x = x.coerceAtMost((l.size.width - chord.size.width).toFloat()).coerceAtLeast(0f)
-                drawText(chord, topLeft = Offset(x, l.getLineTop(line)))
-                lastLine = line
-                lastEnd = x + chord.size.width
+                val before = placed.lastOrNull()
+                if (before != null && before.line == line) x = maxOf(x, before.x + before.chord.size.width + gap)
+                placed += Placed(line, x, byName.getValue(a.item))
             }
+            for (i in placed.indices.reversed()) {
+                val p = placed[i]
+                val next = placed.getOrNull(i + 1)?.takeIf { it.line == p.line }
+                val limit = if (next != null) next.x - gap - p.chord.size.width else (l.size.width - p.chord.size.width).toFloat()
+                p.x = minOf(p.x, limit).coerceAtLeast(0f)
+            }
+            placed.forEach { p -> drawText(p.chord, topLeft = Offset(p.x, l.getLineTop(p.line))) }
         },
         onTextLayout = { laid = it; onTextLayout(it) },
     )
