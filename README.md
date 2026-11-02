@@ -55,6 +55,13 @@ Measured on real devices for one minute per screen (CPU as a share of **one** co
 Even playing a track, Stagebook uses less than 2% of the whole processor. Essential mode barely changes these numbers:
 its gain is a simpler screen.
 
+## Use with AI assistants (MCP)
+Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex
+and other AI assistants read and edit your library: "build a 15-song setlist for Saturday", "move every song by this
+artist down a half tone", "check the chords of this song", "import this page". It runs on your computer and talks to the
+tablet over your Wi-Fi through **Settings → Edit on the computer**; you approve the computer once on the tablet.
+Install and setup for each assistant: [mcp/README.md](mcp/README.md).
+
 ## Install
 Download `stagebook.apk` from the [Releases](../../releases). After that the app tells you when a new version is out
 and updates itself. Needs Android 9 or newer.
