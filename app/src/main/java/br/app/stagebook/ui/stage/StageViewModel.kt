@@ -2,6 +2,7 @@ package br.app.stagebook.ui.stage
 
 import br.app.stagebook.player.PlayerUi
 import br.app.stagebook.player.StagePlayer
+import br.app.stagebook.domain.ignoringShortDrops
 import br.app.stagebook.data.TrackStore
 import br.app.stagebook.domain.Chords
 import br.app.stagebook.domain.Voicings
@@ -89,7 +90,9 @@ class StageViewModel @Inject constructor(
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
-    val usbReady: StateFlow<Boolean> = player.usbReady
+    // short drops ignored: the interface reconnecting for its clock restarted the metronome twice (audit 02/11 #3)
+    val usbReady: StateFlow<Boolean> = player.usbReady.ignoringShortDrops(USB_DROP_MS)
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, player.usbReady.value)
 
     fun togglePlay() = player.toggle(repository.library.value.look.trackStops)
     fun needsBatteryAsk() = player.needsBatteryAsk()
@@ -203,3 +206,5 @@ class StageViewModel @Inject constructor(
         if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(zoom = zoom) }
     }
 }
+
+private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome
