@@ -52,7 +52,8 @@ export function buildServer(client: StagebookClient): McpServer {
         "Stagebook is an Android app for lyrics, chords (ChordPro), setlists and backing tracks used live by musicians. " +
         "These tools edit the library on the person's tablet over the local network; the stage updates right away. " +
         "First use: call stagebook_connect (the person approves on the tablet). Song text is ChordPro: chords in brackets " +
-        "before the syllable ([G]Hoje eu [D]vou), sections as [Verso 1]/[Refrão] lines or {start_of_chorus}; key, capo and " +
+        "before the syllable ([G]Here I [D]go), sections as [Verse 1]/[Chorus] lines (Portuguese names work too) or " +
+        "{start_of_chorus}; key, capo and " +
         "BPM are separate fields. Ask before deleting anything. Song lyrics are copyrighted: don't reproduce them in full " +
         "to the person unless they ask for their own song.",
     },
