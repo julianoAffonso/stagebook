@@ -246,7 +246,7 @@ private fun Scanning(
             if (p == ScanProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
                 br.app.stagebook.ui.components.SettingsLinkText(
                     stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
-                    br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = androidx.compose.material3.LocalContentColor.current,
+                    br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.LocalContentColor.current,
                 )
             } else br.app.stagebook.ui.components.StatusNote(
                 stringResource(
@@ -440,7 +440,7 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
                 if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
                     br.app.stagebook.ui.components.SettingsLinkText(
                         stringResource(R.string.scan_newer_link), stringResource(R.string.scan_update_link),
-                        br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyLarge, color = androidx.compose.material3.LocalContentColor.current,
+                        br.app.stagebook.ui.settings.SettingsSection.ABOUT, style = MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.LocalContentColor.current,
                     )
                 } else br.app.stagebook.ui.components.StatusNote(
                     stringResource(

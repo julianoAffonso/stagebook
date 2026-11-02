@@ -308,10 +308,13 @@ private fun QueueBar(q: ImportQueue.State, site: String, exhausted: Boolean, onS
                 stringResource(R.string.queue_title, q.setName, q.position, q.total, item.title),
                 style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
-            if (exhausted) br.app.stagebook.ui.components.SettingsLinkText(
-                stringResource(R.string.queue_none), stringResource(R.string.queue_sites_link),
-                br.app.stagebook.ui.settings.SettingsSection.IMPORT, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-            ) else Text(
+            if (exhausted) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
+                br.app.stagebook.ui.components.SettingsLinkText(
+                    stringResource(R.string.queue_none), stringResource(R.string.queue_sites_link),
+                    br.app.stagebook.ui.settings.SettingsSection.IMPORT, style = MaterialTheme.typography.bodyMedium,
+                    color = androidx.compose.material3.LocalContentColor.current,
+                )
+            } else Text(
                 stringResource(R.string.queue_searching, site),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
