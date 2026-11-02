@@ -788,12 +788,7 @@ private fun LegibilityWarnings(look: Look) {
         // the lyrics over the marker, as the screen shows it on this background (user, 01/11)
         if (!Contrast.legible(look.fg, Contrast.over(look.highlightColor, look.bg))) add(R.string.settings_illegible_highlight)
     }
-    problems.forEach { msg ->
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-            Icon(AppIcons.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-            Text(stringResource(msg), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-        }
-    }
+    problems.forEach { msg -> br.app.stagebook.ui.components.StatusNote(stringResource(msg), br.app.stagebook.ui.components.StatusTone.PROBLEM) }
 }
 
 @Composable
@@ -986,9 +981,9 @@ private fun PedalConnectCard(uiState: SettingsUiState, actions: SettingsActions)
                 SongListItem(title = f.name, subtitle = stringResource(R.string.settings_midi_choose), onClick = { actions.onMidiChoose(f) })
             }
             when {
-                midi.bluetoothOff -> Text(stringResource(R.string.settings_midi_bt_off), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                midi.bluetoothOff -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.settings_midi_bt_off), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                 midi.searched && !midi.scanning && midi.found.isEmpty() ->
-                    Text(stringResource(R.string.settings_midi_found_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    br.app.stagebook.ui.components.StatusNote(stringResource(R.string.settings_midi_found_none), br.app.stagebook.ui.components.StatusTone.PROBLEM)
             }
         }
         HelpTip(stringResource(R.string.settings_pedal_kinds_help), label = stringResource(R.string.settings_pedal_kinds_label))

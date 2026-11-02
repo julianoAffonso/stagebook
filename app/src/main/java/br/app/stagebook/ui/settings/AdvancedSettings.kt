@@ -29,6 +29,8 @@ import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.PreviewSurface
 import br.app.stagebook.ui.components.SettingsCard
+import br.app.stagebook.ui.components.StatusNote
+import br.app.stagebook.ui.components.StatusTone
 import br.app.stagebook.ui.components.SwitchRow
 import br.app.stagebook.ui.theme.Spacing
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -82,12 +84,12 @@ fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBa
         if (!ui.canWrite) PermissionCard()
         SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
             // freeing the app from battery saving only Android does, with the user's tap: a button, not a switch
-            Text(
+            StatusNote(
                 stringResource(if (ui.batteryFree) R.string.advanced_battery_free else R.string.advanced_battery_restricted),
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (ui.batteryFree) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
-            )
-            if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, icon = AppIcons.Eco, tone = ButtonTone.Tonal)
+                if (ui.batteryFree) StatusTone.OK else StatusTone.PROBLEM,
+            ) {
+                if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, icon = AppIcons.Eco, tone = ButtonTone.Tonal)
+            }
             Tweaks(ui, DeviceTweak.Group.PLAY, onTweak)
         }
         SettingsCard(stringResource(R.string.advanced_battery)) { Tweaks(ui, DeviceTweak.Group.BATTERY, onTweak) }
@@ -113,11 +115,12 @@ private fun Tweaks(ui: AdvancedUi, group: DeviceTweak.Group, onTweak: (DeviceTwe
 private fun PermissionCard() {
     val context = LocalContext.current
     SettingsCard(stringResource(R.string.advanced_permission)) {
-        Text(stringResource(R.string.advanced_permission_text), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-        Text(DeviceTweaks.GRANT, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
-        ActionButton(stringResource(R.string.advanced_permission_copy), onClick = {
-            context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", DeviceTweaks.GRANT))
-        }, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
+        StatusNote(stringResource(R.string.advanced_permission_text), StatusTone.PROBLEM) {
+            Text(DeviceTweaks.GRANT, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+            ActionButton(stringResource(R.string.advanced_permission_copy), onClick = {
+                context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", DeviceTweaks.GRANT))
+            }, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
+        }
     }
 }
 

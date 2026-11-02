@@ -38,7 +38,7 @@ fun FactoryResetDialog(onBackupFirst: () -> Unit, onReset: () -> Unit, onDismiss
         title = { Text(stringResource(R.string.reset_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                Text(stringResource(R.string.reset_warning), style = MaterialTheme.typography.bodyMedium)
+                br.app.stagebook.ui.components.StatusNote(stringResource(R.string.reset_warning), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                 TextButton(onClick = onBackupFirst) { Text(stringResource(R.string.reset_backup_first)) }
                 Text(stringResource(R.string.reset_type_code), style = MaterialTheme.typography.bodyMedium)
                 Text(code, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.error)
