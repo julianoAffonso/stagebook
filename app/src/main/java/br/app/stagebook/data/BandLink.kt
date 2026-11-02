@@ -285,24 +285,8 @@ class BandLink @Inject constructor(
         updateSearch()
     }
 
-    /**
-     * Is there a local network? On Wi-Fi (or cable), or **running a hotspot**: the phone sharing internet at the bar
-     * gets internet over 4G, but the others' network goes through one of its interfaces (wlan/ap/swlan) with a local
-     * address.
-     */
-    fun onWifi(): Boolean {
-        val cm = context.getSystemService(ConnectivityManager::class.java)
-        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
-        if (caps != null && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))) return true
-        return hotspotUp()
-    }
-
-    private fun hotspotUp(): Boolean = runCatching {
-        NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().any { nif ->
-            nif.isUp && !nif.isLoopback && HOTSPOT.any { nif.name.startsWith(it) } &&
-                nif.inetAddresses.toList().any { it is Inet4Address && it.isSiteLocalAddress }
-        }
-    }.getOrDefault(false)
+    /** Is there a local network (Wi-Fi, cable or a hotspot)? The same rule as the screens ([Connectivity.onLocalNetwork]). */
+    fun onWifi(): Boolean = Connectivity.onLocalNetwork(context)
 
     private var searching = false
 
@@ -460,7 +444,6 @@ class BandLink @Inject constructor(
         const val BURST_MS = 30_000L
         const val MAX_ASK = 200   // a setlist never goes over this; guards against an odd request
         const val SESSIONS = 8
-        val HOTSPOT = listOf("wlan", "ap", "swlan", "softap")   // hotspot interface names on Android devices
         const val BEACON_TAG = "stagebook-band-1"
         const val BEACON_PORT = 47_810
         const val BEACON_EVERY_MS = 3_000L
