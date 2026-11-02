@@ -70,6 +70,13 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         hideSystemBars()
+        // recreated (font size, language): the system's hide animation of the status bar stays stuck half way and the bar
+        // stays drawn over the app even though it reports hidden; showing and hiding it again a moment later frees it
+        // (device test B-19: only leaving and coming back cleared it)
+        if (savedInstanceState != null) {
+            window.decorView.postDelayed({ WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars()) }, BARS_RESET_MS)
+            window.decorView.postDelayed({ hideSystemBars() }, BARS_RESET_MS * 2)
+        }
         // "keep the screen on" applies while the app is in front; outside it Android dims as usual
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -157,6 +164,8 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = pedal.dispatch(event) || super.dispatchKeyEvent(event)
 }
+
+private const val BARS_RESET_MS = 250L
 
 // the local network permission (a string: the constant isn't in older SDK stubs)
 const val LOCAL_NETWORK = "android.permission.ACCESS_LOCAL_NETWORK"
