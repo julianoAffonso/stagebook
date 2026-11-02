@@ -95,24 +95,42 @@ class StageChordTapTest {
         assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
     }
 
-    @Test fun `holding a line offers Highlight this line next to Edit, and it reports the song line (B-28)`() {
-        var highlighted = -1 to -1
+    @Test fun `holding a line offers the highlighter, which marks the word under the finger`() {
+        var marked: List<Any>? = null
+        var marks = 0
         compose.setContent {
             StagebookTheme {
                 StageScreen(
                     StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f)),
                     0, 0, { s, p -> position = s to p },
-                    onHighlightLine = { id, line -> highlighted = (if (id == "s1") 1 else 0) to line },
+                    onHighlightWords = { id, line, shown, from, to, _ -> marked = listOf(id, line, shown, from, to); marks++ },
                 )
             }
         }
         val lyric = compose.onNodeWithText("Segunda linha", substring = true).fetchSemanticsNode().boundsInRoot
-        compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.top + 180f)) }
         compose.waitForIdle()
         compose.onNodeWithText("Editar esta linha").assertExists()
-        compose.onNodeWithText("Destacar esta linha").performClick()
+        compose.onNodeWithText("Marca-texto").performClick()
         compose.waitForIdle()
-        assertEquals(1 to 1, highlighted)
+        compose.onNodeWithText("Passe o dedo", substring = true).assertExists()
+        // a tap on a word of the second line: it's marked, the page doesn't turn
+        compose.onRoot().performTouchInput { click(Offset(lyric.left + 40f, lyric.top + 180f)) }
+        compose.waitForIdle()
+        val m = marked!!
+        assertEquals("s1", m[0])
+        assertEquals(1, m[1])
+        assertTrue("linha mostrada: ${m[2]}", (m[2] as String).contains("Segunda"))
+        assertEquals("não virou a página", -1 to -1, position)
+        compose.onNodeWithText("Pronto").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Passe o dedo", substring = true).assertDoesNotExist()
+        // below the last line there is no word: nothing is marked
+        compose.onRoot().performTouchInput { click(Offset(lyric.left + 40f, lyric.bottom - 20f)) }
+        compose.waitForIdle()
+        assertEquals(1, marks)
+        // Done only closes: it doesn't highlight the word under the bar (audit 02/11)
+        assertEquals(1, marks)
     }
 
     @Test fun `with the diagram turned off in settings, tapping a chord opens nothing`() {
@@ -136,5 +154,13 @@ class StageChordTapTest {
         compose.waitForIdle()
         compose.onNodeWithText("Trocar o backing track").assertExists()
         assertEquals(0, compose.onAllNodesWithText("Editar esta linha").fetchSemanticsNodes().size)
+    }
+
+    // live, the track playing goes on when the song changes: on a song without a track the button stays, to stop it
+    @Test fun `with a track playing, a song without a track still shows the stop button`() {
+        compose.setContent {
+            StagebookTheme { StageScreen(StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f, playerMode = true)), 0, 0, { _, _ -> }, playing = true) }
+        }
+        compose.onNodeWithContentDescription("Parar o backing track e voltar ao início").assertExists()
     }
 }

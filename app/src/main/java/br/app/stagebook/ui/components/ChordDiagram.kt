@@ -45,11 +45,12 @@ fun ChordDiagram(
     compact: Boolean = false,   // stage chord list: smaller, with the same width for all
 ) {
     Column(
-        if (compact) modifier.width(STRIP_WIDTH) else modifier,
+        if (compact) modifier.width(maxOf(STRIP_WIDTH, width + 20.dp)) else modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
     ) {
-        val nameStyle = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold)
+        // compact (the stage's chord list) grows with the drawing: a bigger list gets a bigger name
+        val nameStyle = (if (compact && width < 72.dp) MaterialTheme.typography.titleSmall else if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold)
         Text(chord, style = nameStyle, color = color, maxLines = 1)
         // the fret number in the same size as the chord name (user's request, 30/10)
         if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width, nameStyle.fontSize)

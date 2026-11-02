@@ -35,8 +35,15 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
                     .build()
             }.getOrNull() ?: return@Thread
             // the device's own output, never the USB interface: with the interface playing through Android (the
-            // "through Android" option), the default output is the interface and the click went there too
+            // "through Android" option), the default output is the interface and the click went there too. Picked again
+            // when headphones come or go while it plays (audit 02/11: plugged later, they got nothing)
+            val audio = context.getSystemService(AudioManager::class.java)
             deviceOutput()?.let { track.setPreferredDevice(it) }
+            val follow = object : android.media.AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) { deviceOutput()?.let { track.setPreferredDevice(it) } }
+                override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) { deviceOutput()?.let { track.setPreferredDevice(it) } }
+            }
+            audio?.registerAudioDeviceCallback(follow, null)
             val buf = ShortArray(CHUNK)
             var pos = 0L
             try {
@@ -47,6 +54,7 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
                     pos += buf.size
                 }
             } finally {
+                audio?.unregisterAudioDeviceCallback(follow)
                 runCatching { track.stop() }
                 track.release()
             }
@@ -58,16 +66,20 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
         worker = null
     }
 
-    /** Headphones (wired or Bluetooth) when connected, otherwise the speaker. */
+    /** Headphones (wired, USB-C or Bluetooth) when connected, otherwise the speaker. */
     private fun deviceOutput(): AudioDeviceInfo? {
-        val outs = context.getSystemService(AudioManager::class.java)?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) ?: return null
+        val all = context.getSystemService(AudioManager::class.java)?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) ?: return null
+        // some interfaces call themselves a USB headset: never the one the player is using
+        val iface = br.app.stagebook.player.StagePlayer.interfaceName()
+        val outs = all.filterNot { iface.isNotEmpty() && it.productName?.toString()?.contains(iface) == true }
         return DEVICE_PREFERENCE.firstNotNullOfOrNull { type -> outs.firstOrNull { it.type == type } }
     }
 
     private companion object {
         const val CHUNK = 960   // 20 ms per write
         val DEVICE_PREFERENCE = listOf(
-            AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            // USB-C headphones and dongles are headsets, not the interface (audit 02/11: the click went to the speaker)
+            AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET,
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
         )
     }

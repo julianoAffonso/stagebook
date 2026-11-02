@@ -229,7 +229,7 @@ fun StageRoute(
             onPosition = { i, p -> index = i; page = p },
             onZoom = viewModel::setZoom,
             onEdit = onEditSong,
-            onHighlightLine = viewModel::toggleLineHighlight,
+            onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
             playing = playerUi.playing || playerUi.waiting,
@@ -273,7 +273,7 @@ fun StageScreen(
     modifier: Modifier = Modifier,
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
-    onHighlightLine: (songId: String, line: Int) -> Unit = { _, _ -> },
+    onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -404,6 +404,8 @@ fun StageScreen(
     // can't take the lyrics away); it goes away by itself and on page turn
     val hit = remember(index) { PageHit() }
     var editOffer by remember(index) { mutableStateOf<EditOffer?>(null) }
+    // highlighter (user, 02/11): the finger marks words instead of turning pages, until "Done"; off on another song
+    var marking by remember(index) { mutableStateOf(false) }
     LaunchedEffect(editOffer) { if (editOffer != null) { delay(EDIT_OFFER_MS); editOffer = null } }
     val haptics = LocalHapticFeedback.current
     // where the track button is (a long press on it doesn't offer to edit the line)
@@ -476,7 +478,11 @@ fun StageScreen(
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
-        val start = androidx.compose.runtime.withFrameNanos { it }
+        // the time of the next frame, but never waiting for it longer than a beat: once on the TCL the beats stopped
+        // (icon dim, no glow) while the metronome stayed on, as if no frame came; without a frame the time comes from
+        // System.nanoTime, the clock frame times use too, so the count doesn't drift (audit 02/11)
+        suspend fun now() = kotlinx.coroutines.withTimeoutOrNull(periodNanos / 1_000_000) { androidx.compose.runtime.withFrameNanos { it } } ?: System.nanoTime()
+        val start = now()
         var now = start
         while (true) {
             // the beat from the clock, not counted: back from the screen off, it jumps to the current beat instead of
@@ -484,15 +490,16 @@ fun StageScreen(
             val beat = metroBeatAt(now - start, periodNanos)
             metroBeat = beat
             delay(((start + (beat + 1) * periodNanos - now) / 1_000_000).coerceAtLeast(0))
-            now = androidx.compose.runtime.withFrameNanos { it }
+            now = now()
         }
     }
     DisposableEffect(Unit) { onDispose { onMetronomeSound(null) } }
     // the beat blink: on the icon and on the screen edge (user's request, 29/10), stronger on beat 1 of the bar
     val metroPulse = remember { androidx.compose.animation.core.Animatable(0f) }
     // the beat is read here and in the draw phase only: reading it in composition recomposed the whole stage on every
-    // beat, for the whole show (audit 30/10)
-    LaunchedEffect(Unit) {
+    // beat, for the whole show (audit 30/10). Keyed by the song: the beat counter is a new one for each song, and this
+    // kept watching the first song's, so after changing songs the metronome stopped blinking (device test, 02/11)
+    LaunchedEffect(index) {
         androidx.compose.runtime.snapshotFlow { metroBeat }.collectLatest { beat ->
             if (beat < 0) { metroPulse.snapTo(0f); return@collectLatest }
             metroPulse.snapTo(if (beat % 4 == 0) 1f else 0.6f)
@@ -501,7 +508,7 @@ fun StageScreen(
             kotlinx.coroutines.withContext(FullSpeedMotion) { metroPulse.animateTo(0f, tween(METRO_FLASH_MS)) }
         }
     }
-    val countIn by remember { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
+    val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
     val metroColor = Color(look.metroGlowColor)
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
@@ -543,6 +550,8 @@ fun StageScreen(
                 // a long press on the track button belongs to it (change/remove), not "edit this line"
                 if (trackButton?.contains(p) == true) return@GestureTargets
                 val line = hit.lineAt(p)
+                // the chord list has its own long press (take a chord off the list)
+                if (line != null && pageLines.getOrNull(line)?.source == -1) return@GestureTargets
                 if (!song.missing && line != null) {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     editOffer = EditOffer(p, line)
@@ -550,6 +559,21 @@ fun StageScreen(
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
             chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
+            marking = marking,
+            mark = { from, to ->
+                val start = hit.charAt(from)
+                val source = start?.let { sourceLine(it.first) }
+                if (start != null && source != null) {
+                    // lifted on another line: up to the end (or start) of the first one, highlights never cross lines
+                    val end = hit.charAt(to)?.takeIf { it.first == start.first }?.third ?: if (to.y > from.y) start.second.length - 1 else 0
+                    // a line wrapped on stage comes in pieces: the letters of the pieces before this one
+                    var k = start.first - 1
+                    var after = 0
+                    while (k >= 0 && pageLines.getOrNull(k)?.source == source) { after += pageLines[k].text.text.count { !it.isWhitespace() }; k-- }
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onHighlightWords(song.id, source, start.second, start.third, end, after)
+                }
+            },
         ),
     )
 
@@ -577,14 +601,14 @@ fun StageScreen(
             .background(Color(look.bg))
             .padding(horizontal = Spacing.l),
     ) {
-        // lean header: song, artist and the page dots. On phones the artist and year drop to their own line, full width
-        // (sharing the line with the title, they got cut)
-        val metaInline = wideLists()
+        // lean header: the song on its own line, then artist, year, key and capo below, full width, on phones and tablets
+        // (sharing the line with the title they got cut on phones and came out small on the tablet; user, 02/11)
+        val wide = wideLists()
         Row(Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
         BoxWithConstraints(Modifier.weight(1f)) {
-        val titleMax = if (metaInline && song.meta.isNotEmpty()) maxWidth * 0.8f else maxWidth
+        val titleMax = maxWidth
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
@@ -609,22 +633,10 @@ fun StageScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = titleMax),
             )
-            if (metaInline && song.meta.isNotEmpty()) {
-                Text(
-                    song.meta,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = fg.copy(alpha = 0.55f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-            }
         }
         }
-            // after the artist (user's request, 29/10): capo lit in the accent color, then the key; on phones they go
-            // to the artist line, otherwise the title gets shorter. No backing track badge: the play only shows when
-            // there is one (T29)
-            if (!song.missing && metaInline && look.chords) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo, onTranspose = { onTranspose(song.id, it) }, onCapo = { onCapo(song.id, it) })
+            // capo (lit in the accent color) and key go on the artist line below. No backing track badge: the play
+            // only shows when there is one (T29)
             if (!song.missing) {
                 IconButton(onClick = { editAt(hit.firstLine()) }) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
@@ -633,11 +645,12 @@ fun StageScreen(
         }
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        if (!metaInline && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
+        if (song.meta.isNotEmpty() || (hasKey && !song.missing)) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
-                    style = MaterialTheme.typography.titleSmall,
+                    // the tablet has room for a bigger line
+                    style = if (wide) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
                     color = fg.copy(alpha = 0.55f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -664,6 +677,22 @@ fun StageScreen(
                     // the line
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
+                        // highlighter: the finger marks from where it touched to where it lifts (a tap: one word)
+                        if (latest.marking) {
+                            var end = down.position
+                            // a button on top (Done, the track, the zoom badge) used the touch: it marks nothing (Done
+                            // also highlighted the word under the bar; audit 02/11)
+                            var used = down.isConsumed
+                            while (true) {
+                                val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                if (change.isConsumed) used = true
+                                if (!change.pressed) break
+                                end = change.position
+                                change.consume()
+                            }
+                            if (!used) latest.mark(down.position, end)
+                            return@awaitEachGesture
+                        }
                         // a new finger before the page goes back: the return stops and the finger takes over (otherwise
                         // both fought)
                         settle?.cancel()
@@ -771,11 +800,29 @@ fun StageScreen(
             // of diagrams at this width, so the pagination counts it.
             val density = LocalDensity.current
             val stripChordCount = remember(shownText) { stripChords(shownText).size }
-            val stripPlace = if (look.chords && stripChordCount > 0) look.chordList else ChordListPlace.NONE
+            // all hidden: the list stays as the ↶ that brings them back
+            val stripHidden = remember(shownText) { Chords.hiddenChords(shownText).size }
+            val stripPlace = if (look.chords && (stripChordCount > 0 || stripHidden > 0)) look.chordList else ChordListPlace.NONE
+            // the diagrams fill the width: as many rows as needed, the chords spread evenly over them, each cell widened to
+            // the row's width (up to STRIP_MAX_SCALE: a few chords don't end up far apart)
+            // the corner × keeps its own room, so it never sits on a chord
+            val stripRoom = with(density) { columnWidth - STRIP_CLOSE_WIDTH.toPx() }
+            val stripScale = with(density) {
+                val item = STRIP_ITEM_WIDTH.toPx()
+                val perRowMax = maxOf(1, (stripRoom / item).toInt())
+                val rows = maxOf(1, (stripChordCount + perRowMax - 1) / perRowMax)
+                val perRow = maxOf(1, (stripChordCount + rows - 1) / rows)
+                // a whole pixel less per chord: rounding up put the last chord of a full row on a row of its own
+                (((stripRoom / perRow).toInt() - 1) / item).coerceIn(1f, STRIP_MAX_SCALE)
+            }
             val stripEm = with(density) {
-                val perRow = maxOf(1, columnWidth / STRIP_ITEM_WIDTH.roundToPx())
+                val perRow = maxOf(1, (stripRoom / (STRIP_ITEM_WIDTH.toPx() * stripScale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
-                (rows * STRIP_ITEM_HEIGHT.toPx() + Spacing.m.toPx()) / style.fontSize.toPx()
+                // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
+                // audit 02/11)
+                val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
+                val tall = if (stripChordCount == 0) restore else rows * STRIP_ITEM_HEIGHT.toPx() + restore
+                (tall + Spacing.m.toPx()) / style.fontSize.toPx()
             }
             val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
                 val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth)
@@ -917,7 +964,9 @@ fun StageScreen(
                                     Color(look.chordColor),
                                     // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
                                     Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },
+                                    scale = stripScale,
                                     onHide = { hidingChord = it },
+                                    onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
                                 )
                             }
@@ -954,14 +1003,15 @@ fun StageScreen(
             }
             SideEffect { autoAvailable = scrollMode && !song.missing && maxScroll > 0 }
             // player (player mode only): transparent play/pause in the bottom right corner, over the lyrics
-            // only songs with a backing track show the button (T29, user's decision); the track is picked in the editor
-            if (look.playerMode && !song.missing && song.track.isNotEmpty()) {
+            // only songs with a backing track show the button (T29, user's decision); the track is picked in the editor.
+            // A track playing goes on when the song changes, so the button stays (to stop it) on any song meanwhile
+            if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
                 TrackButton(
-                    hasTrack = song.track.isNotEmpty(),
+                    hasTrack = song.track.isNotEmpty() || playing,
                     playing = playing,
                     stops = look.trackStops,
                     fg = fg,
-                    onClick = { if (song.track.isEmpty()) onPickTrack(song.id) else onTogglePlay() },
+                    onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
                     onChange = { onPickTrack(song.id) },
                     onRemove = { onRemoveTrack(song.id) },
                     // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button
@@ -979,6 +1029,7 @@ fun StageScreen(
                 onGeneral = { onSongMix(song.id, null) },
                 onDismiss = { mixerOpen = false },
             )
+            if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter))
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
@@ -990,8 +1041,8 @@ fun StageScreen(
                 val source = sourceLine(offer.line)
                 EditLineButtons(
                     onEdit = { editOffer = null; editAt(offer.line) },
-                    highlighted = source?.let { br.app.stagebook.ui.editor.lineHighlighted(song.text, it) },
-                    onHighlight = { editOffer = null; source?.let { onHighlightLine(song.id, it) } },
+                    canMark = source != null,
+                    onMarker = { editOffer = null; marking = true },
                     modifier = Modifier.layout { measurable, c ->
                         // above the finger (below if it doesn't fit), without leaving the screen
                         val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
@@ -1208,6 +1259,8 @@ private class GestureTargets(
     val hold: (Offset) -> Unit,
     val dismiss: () -> Boolean,   // closes the edit button; true if it was open
     val chord: (Offset) -> Boolean,   // tapped a chord: opens the diagram; true if it opened
+    val marking: Boolean = false,      // highlighter on: one finger marks words, no page turn
+    val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )
 
 /** `starts`: index in `lines` of the first line of each column (-1 = empty column). */
@@ -1215,6 +1268,8 @@ private class GestureTargets(
 // song's
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
+private const val STRIP_MAX_SCALE = 2.5f
+private val STRIP_RESTORE_HEIGHT = 40.dp   // the chord list with every chord hidden: just the ↶
 
 /** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */
 private object FullSpeedMotion : androidx.compose.ui.MotionDurationScale { override val scaleFactor = 1f }
@@ -1313,6 +1368,31 @@ private class PageHit {
             if (over) s.substring(a, b).takeIf(Chords::isChord)?.let { return it }
         }
         return null
+    }
+
+    /**
+     * The character at point `p`: index in `lines` of its line, that line's text as shown, and the column in it. Null
+     * outside the text.
+     */
+    fun charAt(p: Offset): Triple<Int, String, Int>? {
+        val c = content ?: return null
+        val column = if (c.columns.size > 1 && p.x >= columnWidth + gutter / 2f) 1 else 0
+        val layout = layouts[column] ?: return null
+        val start = c.starts[column]
+        val x = p.x - if (column == 1) columnWidth + gutter else 0
+        val y = p.y + scroll()
+        val text = layout.layoutInput.text
+        if (start < 0 || text.isEmpty() || layout.lineCount == 0) return null
+        // outside the text (above it or below the last line) there is no character: the touch marks nothing
+        if (y < 0 || y > layout.getLineBottom(layout.lineCount - 1)) return null
+        // held to the screen line under the finger: past the end of a line with chords (its own paragraph, no break
+        // after it) the offset was the next line's first letter (audit 02/11)
+        val ln = layout.getLineForVerticalPosition(y)
+        val first = layout.getLineStart(ln)
+        val last = maxOf(first, layout.getLineEnd(ln, visibleEnd = true) - 1)
+        val o = layout.getOffsetForPosition(Offset(x, y)).coerceIn(first, last).coerceIn(0, text.length - 1)
+        val a = text.getStringAnnotations(LINE_TAG, o, o + 1).firstOrNull() ?: return null
+        return Triple(start + a.item.toInt(), text.substring(a.start, a.end), o - a.start)
     }
 
     /** Index in `lines` of the line at point `p`, or null outside the text. */
@@ -1583,12 +1663,25 @@ private fun SongKeyBadges(
 
 /** "Edit this line" and, for a line of the song, "Highlight this line" / "Remove the highlight" side by side. */
 @Composable
-private fun EditLineButtons(onEdit: () -> Unit, highlighted: Boolean?, onHighlight: () -> Unit, modifier: Modifier = Modifier) {
+private fun EditLineButtons(onEdit: () -> Unit, canMark: Boolean, onMarker: () -> Unit, modifier: Modifier = Modifier) {
     // side by side; on a narrow phone the second goes under the first
     androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         EditOfferButton(AppIcons.Edit, stringResource(R.string.stage_edit_line), onEdit)
-        if (highlighted != null) {
-            EditOfferButton(AppIcons.Highlighter, stringResource(if (highlighted) R.string.stage_highlight_off else R.string.stage_highlight_line), onHighlight)
+        if (canMark) EditOfferButton(AppIcons.Highlighter, stringResource(R.string.stage_marker), onMarker)
+    }
+}
+
+/**
+ * While the highlighter is on: what to do and the way out, fixed over the lyrics (a message that goes away would leave
+ * the stage not turning pages with nothing saying why).
+ */
+@Composable
+private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, shape = MaterialTheme.shapes.medium, shadowElevation = 6.dp, modifier = modifier.padding(Spacing.m)) {
+        Row(Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.xs, bottom = Spacing.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Icon(AppIcons.Highlighter, null)
+            Text(stringResource(R.string.stage_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
+            androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
         }
     }
 }

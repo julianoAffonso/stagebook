@@ -142,7 +142,8 @@ class SongEditorViewModel @Inject constructor(
                 year = draft?.year?.ifBlank { null } ?: song?.year.orEmpty(),
                 // imported without a key: the app computes it from the chords (the Key field shows it, and the user can
                 // change it)
-                text = draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty(),
+                // the app's own lines (hidden chords, picked shapes) stay out of the text box and come back on save
+                text = br.app.stagebook.domain.InternalMarks.split(draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty()).first,
                 unsaved = imported,
                 tags = song?.tags.orEmpty(),
             )
@@ -208,7 +209,7 @@ class SongEditorViewModel @Inject constructor(
         if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(s.text))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
+        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         finished = true
         // batch importing into a setlist: the song takes its place and the queue moves on

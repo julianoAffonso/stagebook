@@ -1,5 +1,7 @@
 package br.app.stagebook
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -45,6 +47,23 @@ class StageMetronomeTest {
         compose.onNodeWithContentDescription("Parar o metrônomo").performClick()
         frames(3)
         compose.onNodeWithContentDescription("Metrônomo").assertExists()
+    }
+
+    // after changing songs in a setlist (or the band leader moving on) the blink and the count-in followed the first
+    // song's beat counter, which no longer moved: the metronome stayed on without blinking (device test, 02/11)
+    @Test fun `after changing songs the metronome still counts`() {
+        val two = StageUiState(false, listOf(StageSong("Uma", "", "linha", false, id = "a"), StageSong("Outra", "", "linha", false, id = "b")), look = Look())
+        var index by androidx.compose.runtime.mutableIntStateOf(0)
+        compose.setContent { StagebookTheme { StageScreen(two, index, 0, { s, _ -> index = s }) } }
+        compose.mainClock.autoAdvance = false
+        fun frames(n: Int) = repeat(n) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        index = 1
+        frames(3)
+        compose.onNodeWithContentDescription("Metrônomo").performClick()
+        frames(3)
+        compose.onNodeWithContentDescription("Começar o metrônomo").performClick()
+        frames(3)
+        compose.onNodeWithText("1").assertExists()
     }
 
     // the user can hide it in Settings → Stage (user, 31/10)

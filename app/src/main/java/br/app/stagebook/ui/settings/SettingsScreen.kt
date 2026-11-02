@@ -559,7 +559,9 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.BAND -> if (band.members.isEmpty()) stringResource(R.string.settings_band_none)
     else pluralStringResource(R.plurals.settings_band_short, band.members.size, band.members.size)
     SettingsSection.ESSENTIAL -> stringResource(if (ui.look.essential) R.string.essential_on_short else R.string.essential_off_short)
-    SettingsSection.LYRICS -> stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
+    // "Lyrics only" shows in the summary, so it's found without opening (user, 02/11)
+    SettingsSection.LYRICS -> (if (ui.look.chords) "" else stringResource(R.string.settings_lyrics_only) + " · ") +
+        stringResource(R.string.settings_font_size, ui.look.fontSp.roundToInt()) +
         when (ui.look.columns) {
             StageColumns.AUTO -> ""
             StageColumns.ONE -> " · " + stringResource(R.string.settings_columns_one_short)
@@ -674,19 +676,10 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         help = stringResource(R.string.settings_stage_mode_help) + "\n\n" + stringResource(R.string.settings_auto_scroll_help) + "\n\n" + stringResource(R.string.settings_columns_help),
     ) {
         Text(stringResource(R.string.settings_stage_mode), style = MaterialTheme.typography.bodyLarge)
-        val modes = listOf(
-            br.app.stagebook.data.model.StageMode.PAGES to R.string.settings_stage_mode_pages,
-            br.app.stagebook.data.model.StageMode.SCROLL to R.string.settings_stage_mode_scroll,
+        br.app.stagebook.ui.components.SegmentedChoice(
+            listOf(br.app.stagebook.ui.components.Choice(br.app.stagebook.data.model.StageMode.PAGES, R.string.settings_stage_mode_pages), br.app.stagebook.ui.components.Choice(br.app.stagebook.data.model.StageMode.SCROLL, R.string.settings_stage_mode_scroll)),
+            look.stageMode, actions.onStageMode,
         )
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            modes.forEachIndexed { i, (m, label) ->
-                SegmentedButton(
-                    selected = look.stageMode == m,
-                    onClick = { actions.onStageMode(m) },
-                    shape = SegmentedButtonDefaults.itemShape(i, modes.size, baseShape = CircleShape),
-                ) { Text(stringResource(label)) }
-            }
-        }
         if (look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL) {
             var level by remember(look.autoScroll) { mutableFloatStateOf(look.autoScroll.toFloat()) }
             Text(stringResource(R.string.settings_auto_scroll, level.roundToInt()), style = MaterialTheme.typography.bodyLarge)
@@ -711,22 +704,14 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
 @Composable
 private fun PageColumns(look: Look, actions: SettingsActions) {
         Text(stringResource(R.string.settings_columns), style = MaterialTheme.typography.bodyLarge)
-        val options = listOf(
-            Triple(StageColumns.AUTO, R.string.settings_columns_auto, AppIcons.AutoColumns),
-            Triple(StageColumns.ONE, R.string.settings_columns_never, AppIcons.OneColumn),
-            Triple(StageColumns.TWO, R.string.settings_columns_always, AppIcons.TwoColumns),
+        br.app.stagebook.ui.components.SegmentedChoice(
+            listOf(
+                br.app.stagebook.ui.components.Choice(StageColumns.AUTO, R.string.settings_columns_auto, AppIcons.AutoColumns),
+                br.app.stagebook.ui.components.Choice(StageColumns.ONE, R.string.settings_columns_never, AppIcons.OneColumn),
+                br.app.stagebook.ui.components.Choice(StageColumns.TWO, R.string.settings_columns_always, AppIcons.TwoColumns),
+            ),
+            look.columns, actions.onColumns,
         )
-        // pill ends, like the buttons in the rest of the app (Material 3 Expressive)
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            options.forEachIndexed { i, (c, label, icon) ->
-                SegmentedButton(
-                    selected = look.columns == c,
-                    onClick = { actions.onColumns(c) },
-                    shape = SegmentedButtonDefaults.itemShape(i, options.size, baseShape = CircleShape),
-                    icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(SegmentedButtonDefaults.IconSize)) },
-                ) { Text(stringResource(label)) }
-            }
-        }
 }
 
 /** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
@@ -795,7 +780,9 @@ private fun LegibilityWarnings(look: Look) {
 private fun ChordsLookCard(look: Look, actions: SettingsActions, draft: StageDraft) {
     // the size changes live in the pinned preview and only saves on release
     SettingsCard(stringResource(R.string.settings_chords_card), help = stringResource(R.string.settings_chords_show_help)) {
-        SwitchRow(stringResource(R.string.settings_chords_show), look.chords, actions.onChords)
+        // two buttons, like turn pages / scroll: the switch in the middle of the card wasn't found (user, 02/11)
+        Text(stringResource(R.string.settings_chords_show), style = MaterialTheme.typography.bodyLarge)
+        br.app.stagebook.ui.components.SegmentedChoice(listOf(br.app.stagebook.ui.components.Choice(true, R.string.editor_lyrics_chords), br.app.stagebook.ui.components.Choice(false, R.string.settings_lyrics_only)), look.chords, actions.onChords)
         if (look.chords) {
             // the same order as the lyrics card: size, font and colour; the pinned preview above shows them (user, 01/11)
             Text(stringResource(R.string.settings_chords_size, (draft.chordScale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
@@ -824,36 +811,20 @@ private fun ChordShapesCard(look: Look, actions: SettingsActions) {
             // how the chord sounds when tapping "Play" on the diagram (T20); in essential mode there is no sound (T19)
             if (look.extrasOn) {
             Text(stringResource(R.string.settings_chord_play), style = MaterialTheme.typography.bodyLarge)
-            val playModes = listOf(
-                br.app.stagebook.data.model.ChordPlayMode.ARPEGGIO to R.string.settings_chord_play_arpeggio,
-                br.app.stagebook.data.model.ChordPlayMode.CHORD to R.string.settings_chord_play_chord,
-                br.app.stagebook.data.model.ChordPlayMode.BOTH to R.string.settings_chord_play_both,
+            br.app.stagebook.ui.components.SegmentedChoice(
+                listOf(
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.data.model.ChordPlayMode.ARPEGGIO, R.string.settings_chord_play_arpeggio),
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.data.model.ChordPlayMode.CHORD, R.string.settings_chord_play_chord),
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.data.model.ChordPlayMode.BOTH, R.string.settings_chord_play_both),
+                ),
+                look.chordPlay, actions.onChordPlay,
             )
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                playModes.forEachIndexed { i, (m, label) ->
-                    SegmentedButton(
-                        selected = look.chordPlay == m,
-                        onClick = { actions.onChordPlay(m) },
-                        shape = SegmentedButtonDefaults.itemShape(i, playModes.size, baseShape = CircleShape),
-                    ) { Text(stringResource(label)) }
-                }
-            }
             }
             Text(stringResource(R.string.settings_chord_list), style = MaterialTheme.typography.bodyLarge)
-            val places = listOf(
-                ChordListPlace.NONE to R.string.settings_chord_list_none,
-                ChordListPlace.TOP to R.string.settings_chord_list_top,
-                ChordListPlace.BOTTOM to R.string.settings_chord_list_bottom,
+            br.app.stagebook.ui.components.SegmentedChoice(
+                listOf(br.app.stagebook.ui.components.Choice(ChordListPlace.NONE, R.string.settings_chord_list_none), br.app.stagebook.ui.components.Choice(ChordListPlace.TOP, R.string.settings_chord_list_top), br.app.stagebook.ui.components.Choice(ChordListPlace.BOTTOM, R.string.settings_chord_list_bottom)),
+                look.chordList, actions.onChordList,
             )
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                places.forEachIndexed { i, (p, label) ->
-                    SegmentedButton(
-                        selected = look.chordList == p,
-                        onClick = { actions.onChordList(p) },
-                        shape = SegmentedButtonDefaults.itemShape(i, places.size, baseShape = CircleShape),
-                    ) { Text(stringResource(label)) }
-                }
-            }
             // sample: G on the chosen instrument, as it shows on stage
             ChordDiagram(
                 "G",
@@ -904,7 +875,6 @@ private fun FontPicker(selected: StageFont, onSelect: (StageFont) -> Unit, @Stri
 
 @Composable
 private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
-    var confirming by rememberSaveable { mutableStateOf(false) }
     SettingsCard(stringResource(R.string.settings_sections_look), help = stringResource(R.string.settings_sections_help) + "\n\n" + stringResource(R.string.settings_translate_sections_help)) {
         SwitchRow(stringResource(R.string.settings_show_sections), look.showSections, actions.onShowSections)
         if (look.showSections) {
@@ -924,18 +894,6 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
         }
         SwitchRow(stringResource(R.string.settings_translate_sections), look.translateSections, actions.onTranslateSections)
         LegibilityWarnings(look)
-    }
-    SettingsCard(stringResource(R.string.settings_normalize_card), help = stringResource(R.string.settings_normalize_help)) {
-        ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, tone = ButtonTone.Tonal)
-    }
-    if (confirming) {
-        ConfirmDialog(
-            message = stringResource(R.string.settings_normalize_confirm),
-            confirmLabel = stringResource(R.string.settings_normalize_ok),
-            onConfirm = actions.onNormalize,
-            onDismiss = { confirming = false },
-            destructive = false,
-        )
     }
 }
 
@@ -1486,6 +1444,22 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
                 stringResource(R.string.tags_auto_ok),
                 { actions.onAutoTags(national, international, language, false) },
                 { ask = null },
+                destructive = false,
+            )
+        }
+    }
+    // finding chorus and verses in songs without part titles: tidying the library, so it lives here, not in the stage
+    // look, where it puzzled (user, 02/11)
+    SettingsCard(stringResource(R.string.settings_normalize_card)) {
+        var confirming by rememberSaveable { mutableStateOf(false) }
+        InfoText(stringResource(R.string.settings_normalize_help))
+        ActionButton(stringResource(R.string.settings_normalize), { confirming = true }, Modifier.fillMaxWidth(), tone = ButtonTone.Tonal)
+        if (confirming) {
+            ConfirmDialog(
+                message = stringResource(R.string.settings_normalize_confirm),
+                confirmLabel = stringResource(R.string.settings_normalize_ok),
+                onConfirm = actions.onNormalize,
+                onDismiss = { confirming = false },
                 destructive = false,
             )
         }
