@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -135,7 +137,13 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
             if (lacks.isNotEmpty()) TextButton({ showLacks = true }) { Text(stringResource(R.string.conduct_see_lacks)) }
             when (ui) {
                 is ConductUi.Conducting -> {
-                    TextButton(onSearch) { Text(stringResource(R.string.conduct_search)) }
+                    // the search runs 30 s with nothing else on screen: the button says so meanwhile (user, 02/11: "is
+                    // something supposed to happen?")
+                    var searching by remember { mutableStateOf(false) }
+                    LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
+                    TextButton({ searching = true; onSearch() }, enabled = !searching) {
+                        Text(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
+                    }
                     TextButton(onEnd) { Text(stringResource(R.string.conduct_end)) }
                 }
                 is ConductUi.Following -> TextButton(onLeave) { Text(stringResource(R.string.conduct_leave)) }
@@ -176,3 +184,5 @@ private fun ConductBarDarkPreview() = PreviewSurface(dark = true) { ConductBarSa
 /** For the screenshots (ScreenshotTest). */
 @Composable
 internal fun ConductBarSamplesForTest() = ConductBarSamples()
+
+private const val SEARCH_MS = 30_000L   // BandConduct.search: the band search lasts this long
