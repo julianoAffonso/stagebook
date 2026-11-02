@@ -251,6 +251,10 @@ class StagePlayer @Inject constructor(
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
         _usbReady.value = PlayerService.running && PlayerService.connected && PlayerService.outputKey.startsWith("usb:")
+        // the click belongs to the USB output: the player turned off or now on the device's own output, it goes (audit
+        // 02/11 #5: it stayed in the engine and, on outputs 1-2, would sound on the speaker). A quick reconnect of the
+        // same interface keeps it; the stage puts it back if the interface returns after a longer drop
+        if (!PlayerService.running || (PlayerService.connected && !PlayerService.outputKey.startsWith("usb:"))) usbClickOff()
         // another output connected: Settings start showing its routing, and the engine starts using it
         val out = OutputInfo(PlayerService.outputKey, PlayerService.outputName, PlayerService.outputCount)
         if (PlayerService.connected && out.key.isNotEmpty() && out != mixer.output) {
