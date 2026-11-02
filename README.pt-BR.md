@@ -55,6 +55,13 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 Mesmo tocando uma faixa, o Stagebook usa menos de 2% do processador inteiro. O modo essencial quase não muda esses
 números: o ganho dele é a tela mais simples.
 
+## Usar com assistentes de IA (MCP)
+O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
+Gemini CLI, o Codex e outros assistentes de IA lerem e editarem a sua biblioteca: "monta um setlist de 15 músicas para
+sábado", "passa as músicas deste artista meio tom abaixo", "confere os acordes desta música", "importa esta página". Ele
+roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Editar no computador**; você autoriza o
+computador uma vez no tablet. Instalação e configuração de cada assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).
+
 ## Instalar
 Baixe o `stagebook.apk` nos [Releases](../../releases). Depois disso o app avisa quando sai versão nova e se atualiza.
 Precisa de Android 9 ou mais novo.

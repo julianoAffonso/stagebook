@@ -1,0 +1,115 @@
+// End to end: a real MCP client calls the tools; the fake tablet answers like Stagebook does.
+import { test, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { StagebookClient } from "../dist/client.js";
+import { buildServer } from "../dist/server.js";
+import { fakeTablet } from "./fake-tablet.mjs";
+
+let tablet, mcp, dir;
+const call = async (name, args = {}) => {
+  const r = await mcp.callTool({ name, arguments: args });
+  const body = r.content[0].text;
+  return { error: !!r.isError, body, json: (() => { try { return JSON.parse(body); } catch { return body; } })() };
+};
+
+before(async () => {
+  dir = mkdtempSync(join(tmpdir(), "sbmcp-"));
+  process.env.STAGEBOOK_CONFIG = join(dir, "config.json");
+  tablet = await fakeTablet();
+  const server = buildServer(new StagebookClient(undefined, undefined));
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  await server.connect(a);
+  mcp = new Client({ name: "test", version: "1" });
+  await mcp.connect(b);
+});
+after(() => tablet.server.close());
+
+test("lists every tool, with deletes marked destructive", async () => {
+  const { tools } = await mcp.listTools();
+  const names = tools.map((t) => t.name);
+  for (const n of ["stagebook_connect", "list_songs", "get_song", "create_song", "update_song", "delete_song", "transpose_song", "set_capo", "import_song", "list_setlists", "create_setlist", "update_setlist", "delete_setlist", "receive_by_code", "band_inbox", "restore_backup", "set_backing_track"]) assert.ok(names.includes(n), n);
+  assert.equal(tools.find((t) => t.name === "delete_song").annotations.destructiveHint, true);
+});
+
+test("before connecting, a call explains what to do instead of failing", async () => {
+  const r = await call("list_songs");
+  assert.equal(r.error, true);
+  assert.match(r.body, /Edit on the computer/);
+});
+
+test("connect pairs with the tablet and saves the key", async () => {
+  const r = await call("stagebook_connect", { url: tablet.url });
+  assert.equal(r.error, false, r.body);
+  assert.match(r.body, /4821/);
+  // the next call waits for the approval (the fake tablet approves on the second poll)
+  const s = await call("stagebook_status");
+  assert.equal(s.json.device, "TCL");
+});
+
+test("songs: list with filters, read without and with the text", async () => {
+  assert.equal((await call("list_songs")).json.count, 2);
+  assert.equal((await call("list_songs", { query: "made up" })).json.songs[0].id, "s2");
+  assert.equal((await call("list_songs", { tag: "Nacional" })).json.count, 1);
+  const song = (await call("get_song", { id: "s1" })).json;
+  assert.equal(song.text, undefined);
+  assert.deepEqual(song.chords, ["G", "D"]);
+  assert.match((await call("get_song", { id: "s1", include_text: true })).json.text, /Linha um/);
+});
+
+test("songs: create, refuse a repeat, update a field, transpose", async () => {
+  const id = (await call("create_song", { title: "Nova", author: "Banda", text: "[C]la la" })).json.created;
+  assert.ok(id);
+  const again = await call("create_song", { title: "Nova", author: "Banda", text: "[C]la" });
+  assert.equal(again.error, true);
+  assert.match(again.body, /already a song/);
+  await call("update_song", { id, tempo: "98" });
+  const s = (await call("get_song", { id, include_text: true })).json;
+  assert.equal(s.tempo, "98");
+  assert.equal(s.text, "[C]la la");
+  const t = (await call("transpose_song", { id: "s1", semitones: 2 })).json;
+  assert.equal(t.to, "A");
+  assert.match(tablet.songs.get("s1").text, /\[A\]Linha um/);
+});
+
+test("deleting needs confirm=true", async () => {
+  const no = await mcp.callTool({ name: "delete_song", arguments: { id: "s2" } });
+  assert.equal(no.isError, true);
+  assert.ok(tablet.songs.has("s2"));
+  const yes = await call("delete_song", { id: "s2", confirm: true });
+  assert.equal(yes.error, false);
+  assert.ok(!tablet.songs.has("s2"));
+});
+
+test("setlists: create, read, update keeps what wasn't passed", async () => {
+  const id = (await call("create_setlist", { name: "Sunday", song_ids: ["s1"] })).json.created;
+  assert.equal((await call("get_setlist", { id })).json.songs[0].title, "Morning Road");
+  await call("update_setlist", { id, name: "Sunday night" });
+  assert.deepEqual(tablet.sets.get(id).items, ["s1"]);
+  assert.equal(tablet.sets.get(id).name, "Sunday night");
+});
+
+test("backing track upload sends the file with its name", async () => {
+  const f = join(dir, "faixa.ogg");
+  writeFileSync(f, Buffer.alloc(1024, 1));
+  const r = await call("set_backing_track", { id: "s1", path: f });
+  assert.equal(r.error, false, r.body);
+  assert.equal(tablet.songs.get("s1").trackName, "faixa.ogg");
+});
+
+test("resources: the song list and a song as ChordPro", async () => {
+  const list = await mcp.readResource({ uri: "stagebook://songs" });
+  assert.ok(JSON.parse(list.contents[0].text).length >= 1);
+  const song = await mcp.readResource({ uri: "stagebook://songs/s1" });
+  assert.match(song.contents[0].text, /\{title: Morning Road\}/);
+  assert.match(song.contents[0].text, /\{key: A\}/);
+});
+
+test("prompts are listed", async () => {
+  const { prompts } = await mcp.listPrompts();
+  assert.deepEqual(prompts.map((p) => p.name).sort(), ["build_setlist", "fix_chords", "transpose_for_singer"]);
+});
