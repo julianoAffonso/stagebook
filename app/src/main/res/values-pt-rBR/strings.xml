@@ -393,7 +393,8 @@
     <string name="font_serif">Serifada</string>
     <string name="font_mono">Monoespaçada</string>
     <string name="settings_chords_card">Acordes na letra</string>
-    <string name="settings_chords_show">Mostrar acordes</string>
+    <string name="settings_chords_show">No palco</string>
+    <string name="settings_lyrics_only">Só letra</string>
     <string name="settings_chords_show_help">Desligado, o palco mostra só a letra, mesmo nas músicas com cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
@@ -418,9 +419,9 @@
     <string name="section_link">Link</string>
     <string name="settings_show_sections">Mostrar os títulos das seções</string>
     <string name="settings_sections_size">Tamanho dos títulos: %1$d%% da letra</string>
-    <string name="settings_normalize">Marcar seções nas letras sem títulos</string>
-    <string name="settings_normalize_ok">Marcar</string>
-    <string name="settings_normalize_confirm">Marcar as seções nas músicas que não têm nenhum título?\n\nO app acha cada parte pelo que se repete. A estrofe que volta é o refrão. Os títulos que já existem e a letra não mudam.</string>
+    <string name="settings_normalize">Achar refrão e versos</string>
+    <string name="settings_normalize_ok">Achar</string>
+    <string name="settings_normalize_confirm">Achar o refrão e os versos nas músicas que não têm nenhum título de parte?\n\nO app acha cada parte pelo que se repete. A estrofe que volta é o refrão. Os títulos que já existem e a letra não mudam.</string>
     <plurals name="settings_unidentified">
         <item quantity="one">%d música não tinha partes repetidas e ficou como estava.</item>
         <item quantity="many">%d músicas não tinham partes repetidas e ficaram como estavam.</item>
@@ -452,8 +453,8 @@
     <string name="settings_columns_help">Automático decide para cada música: divide em 2 colunas quando a letra não cabe numa página e as frases são curtas. O pedal vira as duas colunas juntas.</string>
     <string name="settings_bold_short">negrito</string>
     <string name="settings_sections_look">Títulos de seção</string>
-    <string name="settings_normalize_card">Marcar seções</string>
-    <string name="settings_normalize_help">Nas letras sem nenhum título de seção, acha as partes pelo que se repete. A estrofe que volta é o refrão. Os títulos que já existem ficam como estão.</string>
+    <string name="settings_normalize_card">Achar refrão e versos</string>
+    <string name="settings_normalize_help">Nas músicas sem títulos de parte, o app acha o refrão (a estrofe que se repete) e os versos e põe os títulos. A letra não muda, e os títulos que já existem ficam como estão.</string>
     <string name="settings_pedal_command">O que este botão faz</string>
     <string name="settings_pedal_cmd_next">Avançar a página</string>
     <string name="settings_pedal_cmd_previous">Voltar a página</string>

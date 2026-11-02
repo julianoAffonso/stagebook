@@ -384,7 +384,8 @@
     <string name="font_serif">Serif</string>
     <string name="font_mono">Monospace</string>
     <string name="settings_chords_card">Chords in the lyrics</string>
-    <string name="settings_chords_show">Show chords</string>
+    <string name="settings_chords_show">On stage</string>
+    <string name="settings_lyrics_only">Lyrics only</string>
     <string name="settings_chords_show_help">When off, the stage shows only the lyrics, even for songs with chords.</string>
     <string name="settings_chords_size">Chord size: %1$d%% of the lyrics</string>
     <string name="settings_chords_color">Chord color</string>
@@ -409,9 +410,9 @@
     <string name="section_link">Link</string>
     <string name="settings_show_sections">Show section titles</string>
     <string name="settings_sections_size">Title size: %1$d%% of the lyrics</string>
-    <string name="settings_normalize">Mark sections in lyrics without titles</string>
-    <string name="settings_normalize_ok">Mark</string>
-    <string name="settings_normalize_confirm">Mark sections in songs that have no titles?\n\nThe app finds each part by what repeats. The verse that comes back is the chorus. Existing titles and the lyrics stay the same.</string>
+    <string name="settings_normalize">Find chorus and verses</string>
+    <string name="settings_normalize_ok">Find</string>
+    <string name="settings_normalize_confirm">Find the chorus and verses in songs that have no part titles?\n\nThe app finds each part by what repeats. The verse that comes back is the chorus. Existing titles and the lyrics don\'t change.</string>
     <plurals name="settings_unidentified">
         <item quantity="one">%d song had no repeated parts and was left as it was.</item>
         <item quantity="other">%d songs had no repeated parts and were left as they were.</item>
@@ -441,8 +442,8 @@
     <string name="settings_columns_help">Automatic decides for each song: it splits into 2 columns when the lyrics don\'t fit on one page and the lines are short enough. The pedal turns both columns together.</string>
     <string name="settings_bold_short">bold</string>
     <string name="settings_sections_look">Section titles</string>
-    <string name="settings_normalize_card">Mark sections</string>
-    <string name="settings_normalize_help">In lyrics with no section titles, finds the parts by what repeats. The verse that comes back is the chorus. Existing titles stay as they are.</string>
+    <string name="settings_normalize_card">Find chorus and verses</string>
+    <string name="settings_normalize_help">In songs without part titles, the app finds the chorus (the verse that repeats) and the verses and adds the titles. The lyrics don\'t change, and existing titles stay as they are.</string>
     <string name="settings_pedal_command">What this button does</string>
     <string name="settings_pedal_cmd_next">Next page</string>
     <string name="settings_pedal_cmd_previous">Previous page</string>
