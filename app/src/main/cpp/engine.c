@@ -683,6 +683,8 @@ static volatile int g_dev_running = 0;
 
 static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *data, int32_t nf) {
     float *o = (float *)data;
+    int32_t *oi = (int32_t *)data;   // a USB interface whose multichannel output only takes 32-bit integers (USB interface)
+    int i32 = AAudioStream_getFormat(st) == AAUDIO_FORMAT_PCM_I32;
     int ch = AAudioStream_getChannelCount(st);
     // AAudio's real-time callback never waits without a limit (audio audit P4): the lock is held only for short copies
     // (microseconds), so it tries for up to 1 ms, the same as before in practice; if something held it longer, this
@@ -690,7 +692,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
     int locked = 0;
     for (double until = now_s() + 0.001; !(locked = pthread_mutex_trylock(&g_mx) == 0) && now_s() < until; ) {}
     if (!locked) {
-        memset(o, 0, sizeof(float) * (size_t)nf * (size_t)ch);
+        memset(o, 0, (i32 ? sizeof(int32_t) : sizeof(float)) * (size_t)nf * (size_t)ch);
         return AAUDIO_CALLBACK_RESULT_CONTINUE;
     }
     int mon = g_meter_on;
@@ -707,7 +709,8 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
         for (int c = 0; c < ch; c++) {
             float v = c < LANES_MAX ? outv[c] : 0;
             if (mon && c < OUT_CH && fabsf(v) > g_pk[c]) g_pk[c] = fabsf(v);
-            o[f * ch + c] = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
+            v = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
+            if (i32) oi[f * ch + c] = (int32_t)((double)v * 2147483647.0); else o[f * ch + c] = v;
         }
     }
     pthread_mutex_unlock(&g_mx);
@@ -767,18 +770,27 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
 JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
-    AAudioStreamBuilder *b = NULL;
-    if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
-    AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
-    if (deviceId > 0) AAudioStreamBuilder_setDeviceId(b, deviceId);
-    AAudioStreamBuilder_setChannelCount(b, channels > 0 ? channels : 2);
-    AAudioStreamBuilder_setFormat(b, AAUDIO_FORMAT_PCM_FLOAT);
-    AAudioStreamBuilder_setUsage(b, AAUDIO_USAGE_MEDIA);
-    AAudioStreamBuilder_setContentType(b, AAUDIO_CONTENT_TYPE_MUSIC);
-    AAudioStreamBuilder_setDataCallback(b, dev_cb, NULL);
-    AAudioStreamBuilder_setErrorCallback(b, dev_error, NULL);
-    aaudio_result_t r = AAudioStreamBuilder_openStream(b, &g_dev);
-    AAudioStreamBuilder_delete(b);
+    // a USB interface with more than 2 channels: Android lists its multichannel output only in 32-bit integers (the
+    // USB interface on the S26); asked in float it plays on the stereo mixer and drops channels 3 and up. Integers first,
+    // float if Android refuses them.
+    int i32 = deviceId > 0 && channels > 2;
+    aaudio_result_t r = AAUDIO_ERROR_INTERNAL;
+    for (int attempt = 0; attempt < 2 && r != AAUDIO_OK; attempt++, i32 = 0) {
+        AAudioStreamBuilder *b = NULL;
+        if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
+        AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
+        if (deviceId > 0) AAudioStreamBuilder_setDeviceId(b, deviceId);
+        AAudioStreamBuilder_setChannelCount(b, channels > 0 ? channels : 2);
+        AAudioStreamBuilder_setFormat(b, i32 ? AAUDIO_FORMAT_PCM_I32 : AAUDIO_FORMAT_PCM_FLOAT);
+        AAudioStreamBuilder_setUsage(b, AAUDIO_USAGE_MEDIA);
+        AAudioStreamBuilder_setContentType(b, AAUDIO_CONTENT_TYPE_MUSIC);
+        AAudioStreamBuilder_setDataCallback(b, dev_cb, NULL);
+        AAudioStreamBuilder_setErrorCallback(b, dev_error, NULL);
+        r = AAudioStreamBuilder_openStream(b, &g_dev);
+        AAudioStreamBuilder_delete(b);
+        if (r != AAUDIO_OK && g_dev) { AAudioStream_close(g_dev); g_dev = NULL; }
+        if (!i32) break;
+    }
     if (r != AAUDIO_OK || AAudioStream_getSampleRate(g_dev) != OUT_RATE) {
         set_status("saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
         if (g_dev) { AAudioStream_close(g_dev); g_dev = NULL; }
@@ -788,6 +800,8 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, j
     pthread_create(&g_dec_thr, NULL, dec_main, NULL);
     if (AAudioStream_requestStart(g_dev) != AAUDIO_OK) { dev_close(); return JNI_FALSE; }
     g_dev_running = 1;
+    LOGI("saída pelo Android: %d canais, %s", AAudioStream_getChannelCount(g_dev),
+         AAudioStream_getFormat(g_dev) == AAUDIO_FORMAT_PCM_I32 ? "inteiro 32 bits" : "float");
     set_status("saída do aparelho ativa");
     return JNI_TRUE;
 #else
