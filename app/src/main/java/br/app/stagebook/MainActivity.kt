@@ -17,6 +17,7 @@ import br.app.stagebook.data.AppUpdateOffer
 import br.app.stagebook.data.AppUpdater
 import br.app.stagebook.data.Languages
 import br.app.stagebook.data.MidiPedal
+import br.app.stagebook.data.interfaceKinds
 import br.app.stagebook.data.UpdateOffer
 import br.app.stagebook.navigation.AppUpdateActions
 import br.app.stagebook.ui.installApk
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
     private fun checkUsbRecord() {
         if (recordAsked || checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
         val usb = getSystemService(android.hardware.usb.UsbManager::class.java) ?: return
-        if (usb.deviceList.values.any(::isUsbAudio)) askRecord.value = true
+        if (usb.deviceList.values.any { br.app.stagebook.data.isUsbAudio(it.interfaceKinds()) }) askRecord.value = true
     }
 
     // language chosen in settings (changing it recreates the Activity)
@@ -194,9 +195,6 @@ private const val BARS_RESET_MS = 250L
 // asked once per app run: "Not now" isn't asked again until the app opens again
 private var recordAsked = false
 
-/** A USB Audio 2.0 interface (like the USB interface): the same kind the player speaks to. */
-internal fun isUsbAudio(d: android.hardware.usb.UsbDevice): Boolean =
-    (0 until d.interfaceCount).any { d.getInterface(it).let { x -> x.interfaceClass == 1 && x.interfaceSubclass == 2 && x.interfaceProtocol == 0x20 } }
 
 // the local network permission (a string: the constant isn't in older SDK stubs)
 const val LOCAL_NETWORK = "android.permission.ACCESS_LOCAL_NETWORK"
