@@ -56,7 +56,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <!-- plugging in the mixer (USB interface or another USB Audio 2.0 interface): Android asks to open the app and
-                 grants the USB permission, like the Backing app did (user, 01/11). singleTask: the open app comes
+                 grants the USB permission (user, 01/11). singleTask: the open app comes
                  back instead of a second copy -->
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />

@@ -11,7 +11,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Plugging in the mixer, Android offers to open the app (the Backing app did it; user, 01/11). */
+/** Plugging in the mixer, Android offers to open the app (user, 01/11). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class UsbAttachTest {
