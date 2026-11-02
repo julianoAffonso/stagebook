@@ -65,7 +65,7 @@ class StageMetaTest {
             ),
             repo, br.app.stagebook.data.DeviceIdentity(context),
         ),
-        br.app.stagebook.data.MetronomeSound(),
+        br.app.stagebook.data.MetronomeSound(context),
         br.app.stagebook.data.ChordPlayer(),
         br.app.stagebook.data.StageAnnouncer(
             br.app.stagebook.data.BandLink(
