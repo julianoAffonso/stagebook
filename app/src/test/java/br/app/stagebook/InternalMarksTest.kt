@@ -25,4 +25,13 @@ class InternalMarksTest {
         assertEquals(false, InternalMarks.isInternal("{c: Solo de sax}"))
         assertEquals(false, InternalMarks.isInternal("[G]defines a letra"))
     }
+
+    // the same thing typed again (another shape for the same chord): the typed line wins (audit 02/11)
+    @Test fun `a typed line for the same chord replaces the hidden one`() {
+        val saved = "{define-guitar: G base-fret 1 frets 3 2 0 0 0 3}\n[G]Saio"
+        val edited = "{define-guitar: G base-fret 3 frets x 1 3 3 3 1}\n[G]Saio"
+        assertEquals(edited, InternalMarks.restore(edited, saved))
+        // another chord's hidden shape stays
+        assertEquals("{define-guitar: C base-fret 3 frets x 1 3 3 3 1}\n" + edited, InternalMarks.restore(edited, "{define-guitar: C base-fret 3 frets x 1 3 3 3 1}\n[G]Saio"))
+    }
 }

@@ -19,10 +19,26 @@ object InternalMarks {
         return shown.joinToString("\n") to internal
     }
 
-    /** [shown] (as edited) with the app's [internal] lines back at the start; one the person typed again isn't doubled. */
+    /**
+     * [shown] (as edited) with the app's [internal] lines back at the start. A line the person typed for the same thing
+     * wins (the same directive, and for a {define} the same chord): saved first, the hidden one used to be the one read
+     * (audit 02/11).
+     */
     fun join(shown: String, internal: List<String>): String {
-        val typed = shown.split('\n').map { it.trim() }.toSet()
-        val back = internal.filter { it.trim() !in typed }
+        val typed = shown.split('\n').mapNotNull(::key).toSet()
+        val back = internal.filter { key(it) !in typed }
         return if (back.isEmpty()) shown else (back + shown).joinToString("\n")
+    }
+
+    /** The edited text with the internal lines of the song as it was saved ([saved]) put back. */
+    fun restore(edited: String, saved: String): String = join(edited, split(saved).second)
+
+    // what a line is about: the directive name, plus the chord for a {define}
+    private fun key(line: String): String? {
+        if (!isInternal(line)) return null
+        val name = directive.find(line)?.groupValues?.get(1)?.lowercase() ?: return null
+        if (!name.startsWith("define")) return name
+        val chord = line.substringAfter(':', "").trim().substringBefore(' ')
+        return "$name $chord"
     }
 }

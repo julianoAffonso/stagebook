@@ -176,7 +176,7 @@ class WebEditorApi(
         // what the editor doesn't show stays (stage zoom, backing track)
         val base = id?.let(repository::song) ?: Song()
         // the key the chords imply is saved, as in the app's editor (31/10: one app, the same rules on the computer)
-        val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.join(d.text, br.app.stagebook.domain.InternalMarks.split(base.text).second), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3)))
+        val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.restore(d.text, base.text), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3)))
         val tags = br.app.stagebook.domain.Tags.apply(emptyList(), d.tags.filter { it.isNotBlank() }, emptyList())
         val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text, tags = tags))
         afterSave(saved)
