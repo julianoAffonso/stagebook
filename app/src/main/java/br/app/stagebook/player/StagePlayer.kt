@@ -99,7 +99,7 @@ class StagePlayer @Inject constructor(
 
     /** Song open on stage (null = no backing track): loads its track, or, with a track playing, after it stops. */
     fun open(track: File?) {
-        if (queue.open(track, playing = _ui.value.playing || _ui.value.waiting) && PlayerService.running) scope.launch { load() }
+        if (queue.open(track) && PlayerService.running) scope.launch { load() }
     }
 
     /** Ask to skip battery saving (play with the screen off)? Only once, and only if it hasn't yet. */
@@ -127,9 +127,12 @@ class StagePlayer @Inject constructor(
             ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
         }
         _ui.update { it.copy(waiting = true) }
+        queue.started()
         scope.launch {
             if (!load()) {
                 _ui.value = PlayerUi(message = context.getString(R.string.player_no_track))
+                // nothing plays: a song changed while loading gets its own track (it stayed queued; audit 02/11)
+                if (queue.stopped() && PlayerService.running) load()
                 return@launch
             }
             startIfConnected()
