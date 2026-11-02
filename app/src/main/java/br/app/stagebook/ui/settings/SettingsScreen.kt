@@ -328,6 +328,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
                 onMetronome = viewModel::setMetronome,
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
+                onUsbViaAndroid = viewModel::setUsbViaAndroid,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
                 // the help lives on the web, in the app's language (user, 01/11): with no internet, a notice instead
@@ -412,6 +413,7 @@ data class SettingsActions(
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
+    val onUsbViaAndroid: (Boolean) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
     val onOpenHelp: () -> Unit = {},
@@ -1241,6 +1243,8 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     // "USB output", not "Player" again under the screen's own title
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
+        // for devices where the direct way gets no sound (S26, B-33): through Android, as other music apps (user, 02/11)
+        SwitchRow(stringResource(R.string.usb_via_android), look.usbViaAndroid, actions.onUsbViaAndroid, detail = stringResource(R.string.usb_via_android_detail))
     }
     // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10)
     SettingsCard(stringResource(R.string.settings_track_button)) {
