@@ -47,6 +47,7 @@ import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import androidx.compose.ui.test.performScrollTo
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -563,9 +564,37 @@ class ScreenshotTest {
         }
     }
 
-    @Test @Config(qualifiers = PHONE)
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h1240dp-port-xxhdpi")   // tall enough for both pedals' buttons
     fun settingsPhonePedal() = shoot("celular_5_ajustes_pedal") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PEDAL) }
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(twoPedals, SettingsActions(), it, section = SettingsSection.PEDAL) }
+    }
+
+    // two pedals: the MIDI one connected (its two buttons on the same CC, 127 and 0) on top, the regular one off and
+    // faded below (user, 01/11: the old pedal's buttons mixed into the list)
+    private val twoPedals: SettingsUiState get() {
+        val cc = br.app.stagebook.domain.MidiCode.of(0xB0, 27)
+        val up = br.app.stagebook.domain.MidiCode.withValue(cc, 127)
+        val down = br.app.stagebook.domain.MidiCode.withValue(cc, 0)
+        val left = android.view.KeyEvent.KEYCODE_DPAD_LEFT
+        val right = android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+        return settings.copy(
+            look = settings.look.copy(
+                pedalName = "CubeTurner", midiBtAddress = "AA:BB", midiBtName = "Hotone Control",
+                pedalSeen = listOf(left, right, up, down), pedalKeys = mapOf(up to PedalAction.NEXT_SONG, down to PedalAction.PREVIOUS_SONG),
+            ),
+            lastKey = PedalKeyUi("", PedalAction.PREVIOUS_SONG, "Hotone Control", down),
+            pedalConnected = false,
+            midi = br.app.stagebook.data.MidiState(connected = listOf(br.app.stagebook.data.MidiDeviceUi("Hotone Control", bluetooth = true))),
+        )
+    }
+
+    // the grouping itself: connected pedal first, each pedal under its own name
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
+    fun pedalButtonsGroupedByPedal() {
+        compose.setContent { StagebookTheme { SettingsScreen(twoPedals, SettingsActions(), section = SettingsSection.PEDAL) } }
+        val on = compose.onNodeWithText(str(R.string.settings_pedal_group_on, "Hotone Control")).fetchSemanticsNode().boundsInRoot.top
+        val off = compose.onNodeWithText(str(R.string.settings_pedal_group_off, "CubeTurner")).fetchSemanticsNode().boundsInRoot.top
+        assertTrue("conectado em cima: $on < $off", on < off)
     }
 
     // pedal with the button that plays/pauses the backing track (player mode on)

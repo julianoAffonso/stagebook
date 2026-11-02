@@ -878,6 +878,8 @@
     <string name="settings_pedal_from_tablet">tablet keyboard</string>
     <string name="settings_pedal_done">Pedal buttons</string>
     <string name="settings_pedal_default">default</string>
+    <string name="settings_pedal_group_on">%1$s · connected</string>
+    <string name="settings_pedal_group_off">%1$s · off</string>
     <string name="settings_pedal_done_none">None yet. Press each button of the pedal above: it shows here with what it does.</string>
     <string name="songs_add_to_set">Add to setlist</string>
     <string name="songs_add_to_set_title">Add to which setlist?</string>

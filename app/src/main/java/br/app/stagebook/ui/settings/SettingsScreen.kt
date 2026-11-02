@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.RadioButton
 import android.app.Activity
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.IconButton
@@ -1048,16 +1049,50 @@ private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions)
         if (listed.isEmpty()) {
             Text(stringResource(R.string.settings_pedal_done_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            listed.forEach { code ->
-                val custom = keys[code]
-                PedalKeyRow(
-                    pedalKeyName(code) + if (custom == null) " · " + stringResource(R.string.settings_pedal_default) else "",
-                    custom ?: PedalAction.default(code),
-                    { actions.onPedalAction(code, it) },
-                    onRemove = if (custom != null) ({ actions.onPedalAction(code, PedalAction.default(code)) }) else null,
-                )
-            }
-            if (keys.isNotEmpty()) ActionButton(pluralStringResource(R.plurals.settings_pedal_reset, keys.size, keys.size), actions.onResetPedalKeys, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
+            // one group per pedal, the connected one first: with two pedals the list mixed both (user, 01/11). MIDI
+            // codes are always the MIDI pedal's and keys the regular Bluetooth pedal's, so the saved list is enough
+            val look = uiState.look
+            val (midiCodes, keyCodes) = listed.partition(MidiCode::isMidi)
+            val midiName = uiState.midi.connected.firstOrNull()?.name ?: look.midiBtName
+            val groups = listOf(
+                PedalGroup(look.pedalName.ifEmpty { stringResource(R.string.settings_pedal_kind_bt) }, uiState.pedalConnected, keyCodes),
+                PedalGroup(midiName.ifEmpty { stringResource(R.string.settings_pedal_kind_midi_bt) }, uiState.midi.connected.isNotEmpty(), midiCodes),
+            ).filter { it.codes.isNotEmpty() }.sortedByDescending { it.on }
+            groups.forEach { g -> PedalKeyGroup(g, keys, actions, showName = groups.size > 1 || !g.on) }
+        }
+    }
+}
+
+private data class PedalGroup(val name: String, val on: Boolean, val codes: List<Int>)
+
+/** A pedal's buttons with what each does; a pedal that isn't connected shows faded, still editable. */
+@Composable
+private fun PedalKeyGroup(g: PedalGroup, keys: Map<Int, PedalAction>, actions: SettingsActions, showName: Boolean) {
+    Column(Modifier.fillMaxWidth().alpha(if (g.on) 1f else 0.6f), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        if (showName) {
+            Text(
+                stringResource(if (g.on) R.string.settings_pedal_group_on else R.string.settings_pedal_group_off, g.name),
+                style = MaterialTheme.typography.titleSmall,
+                color = if (g.on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        g.codes.forEach { code ->
+            val custom = keys[code]
+            PedalKeyRow(
+                pedalKeyName(code) + if (custom == null) " · " + stringResource(R.string.settings_pedal_default) else "",
+                custom ?: PedalAction.default(code),
+                { actions.onPedalAction(code, it) },
+                onRemove = if (custom != null) ({ actions.onPedalAction(code, PedalAction.default(code)) }) else null,
+            )
+        }
+        val changed = g.codes.filter { it in keys }
+        if (changed.isNotEmpty()) {
+            ActionButton(
+                pluralStringResource(R.plurals.settings_pedal_reset, changed.size, changed.size),
+                { changed.forEach { actions.onPedalAction(it, PedalAction.default(it)) } },
+                icon = AppIcons.Undo,
+                tone = ButtonTone.Tonal,
+            )
         }
     }
 }
