@@ -498,8 +498,9 @@ fun StageScreen(
     // the beat blink: on the icon and on the screen edge (user's request, 29/10), stronger on beat 1 of the bar
     val metroPulse = remember { androidx.compose.animation.core.Animatable(0f) }
     // the beat is read here and in the draw phase only: reading it in composition recomposed the whole stage on every
-    // beat, for the whole show (audit 30/10)
-    LaunchedEffect(Unit) {
+    // beat, for the whole show (audit 30/10). Keyed by the song: the beat counter is a new one for each song, and this
+    // kept watching the first song's, so after changing songs the metronome stopped blinking (device test, 02/11)
+    LaunchedEffect(index) {
         androidx.compose.runtime.snapshotFlow { metroBeat }.collectLatest { beat ->
             if (beat < 0) { metroPulse.snapTo(0f); return@collectLatest }
             metroPulse.snapTo(if (beat % 4 == 0) 1f else 0.6f)
@@ -508,7 +509,7 @@ fun StageScreen(
             kotlinx.coroutines.withContext(FullSpeedMotion) { metroPulse.animateTo(0f, tween(METRO_FLASH_MS)) }
         }
     }
-    val countIn by remember { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
+    val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
     val metroColor = Color(look.metroGlowColor)
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
