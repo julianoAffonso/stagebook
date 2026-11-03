@@ -23,7 +23,22 @@ object Chords {
     private val SPACES = Regex("\\s+")
     private val WORDS = Regex("\\S+")
     private val DOUBLE_SPACES = Regex(" {2,}")
-    private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?""", RegexOption.IGNORE_CASE)
+    // also a guitar shape written after the chord, one fret per string ("B/F#  224442", user 03/11)
+    private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?|\(?$SHAPE\)?""", RegexOption.IGNORE_CASE)
+
+    /** A guitar shape note after a chord: one fret per string, low to high, x = not played (`224442`, `x02220`). */
+    private const val SHAPE = "[0-9x]{6}"
+    private val shapeHint = Regex("""^\s*(\S+)\s+\(?($SHAPE)\)?\s*$""", RegexOption.IGNORE_CASE)
+
+    /** The guitar frets a line like `B/F#  224442` (or `[B/F#] 224442`) gives for [chord] (-1 = not played), if any. */
+    fun shapeHint(text: String, chord: String): List<Int>? = text.lineSequence()
+        .mapNotNull { shapeHint.matchEntire(it.replace("[", "").replace("]", "")) }
+        .firstOrNull { it.groupValues[1] == chord }
+        ?.groupValues?.get(2)?.map { if (it == 'x' || it == 'X') -1 else it.digitToInt() }
+
+    /** A chords-only line written without brackets (`B/F#  224442`) with its chords in brackets, as ChordPro keeps them. */
+    fun bracketChordLine(line: String): String =
+        if (line.contains('[') || !isChordLine(line)) line else line.replace(Regex("""\S+""")) { if (isChord(it.value)) "[${it.value}]" else it.value }
 
     /** Is the whole text a chord? (`G`, `F#m7/E`, `Cm7(b5)`, `G7M`, `Bb`) */
     fun isChord(s: String): Boolean = ChordName.parse(s) != null

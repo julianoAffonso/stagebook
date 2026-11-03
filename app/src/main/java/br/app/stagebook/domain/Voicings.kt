@@ -148,7 +148,9 @@ object Voicings {
     /** The shape saved in the song for the chord, if any (strings); null if there isn't one. */
     fun savedShape(text: String, instrument: Instrument, chord: String): Shape? {
         val m = text.lineSequence().mapNotNull { defineLine.matchEntire(it) }
-            .firstOrNull { it.groupValues[1] == instrument.chordPro && it.groupValues[2] == chord } ?: return null
+            .firstOrNull { it.groupValues[1] == instrument.chordPro && it.groupValues[2] == chord }
+            // no shape picked on stage: the one written in the song after the chord ("B/F#  224442"), on guitar
+            ?: return if (instrument.chordPro == "guitar") Chords.shapeHint(text, chord)?.let(::Shape) else null
         val parts = m.groupValues[3].split(SPACES)
         val base = parts.getOrNull(parts.indexOf("base-fret") + 1)?.toIntOrNull() ?: 1
         val i = parts.indexOf("frets")
