@@ -13,8 +13,6 @@
     <string name="action_stage">Palco</string>
 
     <!-- abas -->
-    <string name="nav_expand">Mostrar os nomes das abas</string>
-    <string name="nav_collapse">Esconder os nomes das abas</string>
     <string name="tab_songs">Músicas</string>
     <string name="tab_setlists">Setlists</string>
     <string name="tab_settings">Ajustes</string>

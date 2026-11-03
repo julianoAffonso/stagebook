@@ -13,8 +13,6 @@
     <string name="action_stage">Stage</string>
 
     <!-- tabs -->
-    <string name="nav_expand">Show tab names</string>
-    <string name="nav_collapse">Hide tab names</string>
     <string name="tab_songs">Songs</string>
     <string name="tab_setlists">Setlists</string>
     <string name="tab_settings">Settings</string>
