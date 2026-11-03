@@ -127,3 +127,12 @@ test("restoring settings needs confirm=true: they replace the tablet's", async (
   const adding = await call("restore_backup", { path: file, parts: ["library"] });   // adding songs needs no confirm
   assert.equal(adding.error, false);
 });
+
+test("emptying a setlist needs confirm=true", async () => {
+  const refused = await call("update_setlist", { id: "t1", song_ids: [] });
+  assert.equal(refused.error, true);
+  assert.ok(tablet.sets.get("t1").items.length > 0);
+  const done = await call("update_setlist", { id: "t1", song_ids: [], confirm: true });
+  assert.equal(done.error, false);
+  assert.equal(tablet.sets.get("t1").items.length, 0);
+});

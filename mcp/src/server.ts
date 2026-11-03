@@ -330,11 +330,18 @@ export function buildServer(client: StagebookClient): McpServer {
     "update_setlist",
     {
       title: "Update a setlist",
-      description: "Renames a setlist and/or replaces its songs (the full list, in order). Omitted fields stay.",
-      inputSchema: { id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional() },
+      description: "Renames a setlist and/or replaces its songs (the full list, in order). Omitted fields stay. Emptying it (song_ids []) needs confirm=true.",
+      inputSchema: {
+        id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional(),
+        confirm: z.boolean().optional().describe("Required true to leave the setlist with no songs."),
+      },
     },
-    safe(async ({ id, name, song_ids }: { id: string; name?: string; song_ids?: string[] }) => {
+    safe(async ({ id, name, song_ids, confirm }: { id: string; name?: string; song_ids?: string[]; confirm?: boolean }) => {
       const cur = await client.get(`/api/sets/${encodeURIComponent(id)}`);
+      // an empty list takes every song out: like deleting, it asks first (audit 03/11)
+      if (song_ids?.length === 0 && cur.songs.length > 0 && !confirm) {
+        throw new StagebookError(`This takes all ${cur.songs.length} songs out of "${cur.name}": ask the person and pass confirm=true.`);
+      }
       await client.send("PUT", `/api/sets/${encodeURIComponent(id)}`, { name: name ?? cur.name, items: song_ids ?? cur.songs.map((s: SongItem) => s.id) });
       return text({ updated: id });
     }),
