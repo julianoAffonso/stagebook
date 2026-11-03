@@ -16,8 +16,9 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
@@ -26,16 +27,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.ShortNavigationBarItemDefaults
 import androidx.compose.material3.WideNavigationRail
+import androidx.compose.ui.layout.layout
 import androidx.compose.material3.WideNavigationRailDefaults
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailItemDefaults
-import androidx.compose.material3.WideNavigationRailValue
-import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +42,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.rememberUpdatedState
@@ -63,7 +61,6 @@ import br.app.stagebook.ui.settings.SettingsRoute
 import br.app.stagebook.ui.songs.SongsRoute
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
-import kotlinx.coroutines.launch
 
 enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SONGS(R.string.tab_songs, AppIcons.MusicNote),
@@ -112,6 +109,14 @@ fun HomeScreen(
     )
     // back on a tab that isn't the start one goes to it (instead of closing the app)
     BackHandler(enabled = tab != home) { picked = home }
+    // About from the rail's logo: its own page over the tab the user was on, which back returns to (user, 03/11)
+    var aboutOpen by rememberSaveable { mutableStateOf(false) }
+    // under the app's name on the rail: the number only, without the commit ("0.1.674 (7fd22d9d)")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val appVersion = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty().substringBefore(" (")
+    }
+    BackHandler(enabled = aboutOpen) { aboutOpen = false }
 
     // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
     // once on the Fire
@@ -120,6 +125,7 @@ fun HomeScreen(
     var settingsVisit by rememberSaveable { mutableIntStateOf(0) }
     var settingsStart by rememberSaveable { mutableStateOf<SettingsSection?>(null) }   // link from the alert: opens right on the section
     val onTab: (HomeTab) -> Unit = { t ->
+        aboutOpen = false
         if (t == HomeTab.SETTINGS) {
             tabs.removeState("${HomeTab.SETTINGS}$settingsVisit")
             settingsVisit++
@@ -134,7 +140,7 @@ fun HomeScreen(
         linked?.let { onTab(HomeTab.SETTINGS); settingsStart = it; br.app.stagebook.ui.settings.SettingsLinks.pending.value = null }
     }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
+    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, onAbout = { aboutOpen = true }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
@@ -155,7 +161,9 @@ fun HomeScreen(
         }
         Column(m) {
             Box(Modifier.weight(1f)) {
-                androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status.takeIf { tab != HomeTab.SETTINGS }) {
+                if (aboutOpen) {
+                    SettingsRoute(SettingsSection.ABOUT, onLeave = { aboutOpen = false })
+                } else androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status.takeIf { tab != HomeTab.SETTINGS }) {
                 tabs.SaveableStateProvider(if (tab == HomeTab.SETTINGS) "${HomeTab.SETTINGS}$settingsVisit" else tab.name) {
                     when (tab) {
                         HomeTab.SONGS -> SongsRoute(
@@ -176,11 +184,15 @@ fun HomeScreen(
 }
 
 /**
- * Tab frame, stateless, in Google's current pattern (Material 3 Expressive): on tablets the wide rail, which the menu
- * button opens to show the names; on phones the bottom bar. The content gets the Modifier with the remaining space.
+ * Tab frame, stateless, in Google's current pattern (Material 3 Expressive): on tablets the rail, with the app's logo
+ * on top ([onAbout] when tapped); on phones the bottom bar. The content gets the Modifier with the remaining space.
  */
 @Composable
-fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), content: @Composable (Modifier) -> Unit) {
+fun HomeScaffold(
+    tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), onAbout: () -> Unit = {},
+    version: String = "",
+    content: @Composable (Modifier) -> Unit,
+) {
     // number of band news on the tab icon (like new email)
     val badged: @Composable (HomeTab) -> Unit = { t ->
         val n = badges[t] ?: 0
@@ -193,20 +205,50 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
     val shared = remember { movableContentOf<Modifier> { m -> currentContent(m) } }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= Sizes.railBreakpoint) {
-            val rail = rememberWideNavigationRailState()
-            val scope = rememberCoroutineScope()
-            val expanded = rail.targetValue == WideNavigationRailValue.Expanded
             Scaffold(contentWindowInsets = ScreenInsets, containerColor = MaterialTheme.colorScheme.background) { inner ->
                 Row(Modifier.padding(inner)) {
+                    // fixed rail with icon and name, the app's logo on top and the tabs right after it (user, 03/11: no
+                    // menu button, opening it only moved the same names beside their icons; centred tabs looked lost)
                     WideNavigationRail(
-                        state = rail,
+                        // the rail's own top space (44 dp) left the logo well below the screen's title: moved up so
+                        // the logo starts with it (user, 03/11)
+                        modifier = Modifier.layout { m, c ->
+                            val up = (RailTopSpace - Spacing.s).roundToPx()
+                            val p = m.measure(c.copy(minHeight = c.minHeight + up, maxHeight = if (c.hasBoundedHeight) c.maxHeight + up else c.maxHeight))
+                            layout(p.width, p.height - up) { p.place(0, -up) }
+                        },
                         colors = WideNavigationRailDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                         header = {
-                            IconButton(onClick = { scope.launch { rail.toggle() } }, modifier = Modifier.padding(start = Spacing.l)) {
-                                Icon(
-                                    if (expanded) AppIcons.MenuOpen else AppIcons.Menu,
-                                    contentDescription = stringResource(if (expanded) R.string.nav_collapse else R.string.nav_expand),
+                            // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
+                            // centred over the tabs' icons (the collapsed rail is 96 dp wide)
+                            // and the name below it; tapping them opens About (user, 03/11), announced as a button (audit 03/11)
+                            androidx.compose.foundation.layout.Column(
+                                Modifier.width(96.dp).clip(MaterialTheme.shapes.medium)
+                                    .clickable(onClickLabel = stringResource(R.string.settings_about), role = androidx.compose.ui.semantics.Role.Button, onClick = onAbout)
+                                    .padding(vertical = Spacing.xs),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                androidx.compose.foundation.Image(
+                                    androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground),
+                                    contentDescription = null,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier.size(Sizes.railLogo).clip(MaterialTheme.shapes.medium)
+                                        .graphicsLayer { scaleX = 1.4f; scaleY = 1.4f },
                                 )
+                                Text(
+                                    stringResource(R.string.app_name),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(top = Spacing.s),
+                                )
+                                // the installed version, small and quiet (user, 03/11)
+                                if (version.isNotEmpty()) {
+                                    Text(
+                                        version,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         },
                     ) {
@@ -216,7 +258,7 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                                 onClick = { onTabChange(t) },
                                 icon = { badged(t) },
                                 label = { Text(stringResource(t.label)) },
-                                railExpanded = expanded,
+                                railExpanded = false,
                                 colors = railColors(),
                             )
                         }
@@ -252,6 +294,9 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
         }
     }
 }
+
+/** Top space the Material wide rail keeps above its header (collapsed rail token). */
+private val RailTopSpace = 44.dp
 
 // selected tab shows only icon and name in the accent color, no background pill (simple icons across the app)
 @Composable

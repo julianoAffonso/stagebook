@@ -113,3 +113,47 @@ test("prompts are listed", async () => {
   const { prompts } = await mcp.listPrompts();
   assert.deepEqual(prompts.map((p) => p.name).sort(), ["build_setlist", "fix_chords", "transpose_for_singer"]);
 });
+
+test("restoring settings needs confirm=true: they replace the tablet's", async () => {
+  const file = join(dir, "backup.stagebook");
+  writeFileSync(file, "zip");
+  const refused = await call("restore_backup", { path: file, parts: ["settings"] });
+  assert.equal(refused.error, true);
+  assert.match(refused.body, /confirm=true/);
+  assert.equal(tablet.restores.length, 0);
+  const done = await call("restore_backup", { path: file, parts: ["settings"], confirm: true });
+  assert.equal(done.error, false);
+  assert.deepEqual(tablet.restores.at(-1).parts, ["settings"]);
+  const adding = await call("restore_backup", { path: file, parts: ["library"] });   // adding songs needs no confirm
+  assert.equal(adding.error, false);
+});
+
+test("emptying a setlist needs confirm=true", async () => {
+  const refused = await call("update_setlist", { id: "t1", song_ids: [] });
+  assert.equal(refused.error, true);
+  assert.ok(tablet.sets.get("t1").items.length > 0);
+  const done = await call("update_setlist", { id: "t1", song_ids: [], confirm: true });
+  assert.equal(done.error, false);
+  assert.equal(tablet.sets.get("t1").items.length, 0);
+});
+
+test("upload paths: ~ is the home folder, relative paths and oversize files are refused", async () => {
+  const { localFile } = await import("../dist/server.js");
+  const home = process.env.HOME;
+  process.env.HOME = dir;
+  try {
+    writeFileSync(join(dir, "song.mp3"), "abc");
+    assert.equal((await localFile("~/song.mp3", 10)).length, 3);
+    await assert.rejects(localFile("song.mp3", 10), /full path/);
+    await assert.rejects(localFile("~/song.mp3", 2), /up to/);
+    await assert.rejects(localFile("~/missing.mp3", 10), /no file/);
+  } finally { process.env.HOME = home; }
+});
+
+test("capo is saved with the song", async () => {
+  // s1: s2 was deleted by an earlier test
+  const r = await call("set_capo", { id: "s1", capo: 3 });
+  assert.equal(r.error, false, r.body);
+  assert.equal(r.json.capo, 3);
+  assert.equal(tablet.songs.get("s1").capo, 3);
+});

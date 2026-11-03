@@ -13,8 +13,6 @@
     <string name="action_stage">Stage</string>
 
     <!-- tabs -->
-    <string name="nav_expand">Show tab names</string>
-    <string name="nav_collapse">Hide tab names</string>
     <string name="tab_songs">Songs</string>
     <string name="tab_setlists">Setlists</string>
     <string name="tab_settings">Settings</string>
@@ -68,6 +66,8 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="sets_sort_newest">Newest</string>
+    <string name="sets_sort_abc">A to Z</string>
     <string name="sets_new">New setlist</string>
     <string name="sets_name">Setlist name</string>
     <string name="sets_name_hint">If empty, uses the date and time</string>

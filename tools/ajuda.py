@@ -59,6 +59,7 @@ SECTIONS = [
             "O − e + do tom transpõem a cifra meio tom de cada vez. O do capotraste não mexe nos diagramas, só avisa em que tom vai soar.",
             "Uma linha só com um nome entre colchetes vira o título de uma parte: [Refrão], [Solo de violino]. Os atalhos no topo põem as partes mais usadas.",
             "Os acordes ficam escritos como vieram do site (A7+, E7/9, E*), e o app mostra o diagrama certo para cada um.",
+            "Anotações na linha dos acordes ficam na mesma linha no palco: repetições como 2x ou (x4), barras | e rótulos como Intro:. Um acorde seguido das casas de cada corda (B/F#  224442) aparece como os outros acordes, com as casas ao lado, e o desenho dele no violão e na guitarra usa essas casas. Ao transpor, as casas acompanham o acorde.",
             "Para destacar uma frase, selecione-a na letra e toque em Marca-texto. Ela fica pintada no editor e no palco. No palco também dá: segure o dedo numa linha, toque em Marca-texto e passe o dedo nas palavras (passar de novo apaga). Enquanto o marca-texto está ligado, o palco não vira página com o dedo; toque em Pronto para terminar. A cor do destaque fica em Ajustes → Visual do palco.",
         ],
         "text_en": [
@@ -67,6 +68,7 @@ SECTIONS = [
             "The key's − and + transpose the chords a half step at a time. The capo's don't change the diagrams; they only tell you what key it will sound in.",
             "A line with just a name in brackets becomes a part title: [Chorus], [Violin solo]. The shortcuts at the top add the usual parts.",
             "Chords stay written the way the site wrote them (A7+, E7/9, E*), and the app shows the right diagram for each.",
+            "Notes on the chords line stay on that line on stage: repeats like 2x or (x4), bars | and labels like Intro:. A chord followed by the fret of each string (B/F#  224442) shows like the other chords, with the frets beside it, and its acoustic and electric guitar diagram uses those frets. When you transpose, the frets move with the chord.",
             "To highlight a phrase, select it in the lyrics and tap Highlighter. It shows painted in the editor and on stage. On stage too: hold a line, tap Highlighter and run your finger over the words (again removes it). While the highlighter is on, the stage doesn't turn pages by touch; tap Done to finish. The highlight color is in Settings → Stage look.",
         ],
         "figs": [Fig(("tablet_4_editor_dados", "celular_4_editor", "Dados da música abertos", "Song details open")),
@@ -77,12 +79,12 @@ SECTIONS = [
     {
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
-            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas.",
+            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. A lista de setlists mostra os mais recentes primeiro ou em ordem alfabética: escolha em Mais recentes | A a Z, acima da lista.",
             "Em Escolher músicas, marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar.",
             "Quando chega um setlist de alguém, o app mostra quais músicas você já tem e quais faltam. Antes de criar, ele avisa o que vai ficar de fora e oferece importar as que faltam.",
         ],
         "text_en": [
-            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order.",
+            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. The list of setlists shows the newest first or in alphabetical order: pick Newest | A to Z, above the list.",
             "In Pick songs, check the songs in the order they'll be played. Search and tags help you find them.",
             "When a setlist comes from someone, the app shows which songs you already have and which are missing. Before creating it, it tells you what will be left out and offers to import the missing ones.",
         ],
@@ -110,6 +112,7 @@ SECTIONS = [
         "text_pt": [
             "No palco a letra aparece grande, com a cifra e as partes. Toque nas laterais ou use o pedal para virar a página. Se preferir rolar, troque em Ajustes → Visual do palco.",
             "O tom e o capo ficam no topo; tocando neles você muda ali mesmo. Enquanto o palco está aberto, nada aparece por cima: o que a banda mandar fica esperando.",
+            "A seta no topo sai do palco. Num setlist, ou acompanhando a banda, ela pergunta antes, para um toque sem querer não tirar a letra da tela no show; uma música aberta pela aba Músicas sai direto.",
             "Tocando num acorde você vê o diagrama, para violão, guitarra, ukulele, cavaquinho ou teclado, com as variações e o som. Em Detalhes aparece o grau do acorde no tom da música.",
             "Os diagramas de todos os acordes da música podem ficar no início ou no fim do palco (Ajustes → Visual do palco → Lista de acordes), crescendo para ocupar a largura da tela. Segure um acorde para tirá-lo da lista; o × no canto esconde a lista inteira nessa música, e o botão com a seta traz de volta.",
             "O metrônomo começa no BPM da música, e mudar o BPM nele grava na música. Com o player ligado, o som dele pode sair numa saída da interface USB (Ajustes → Metrônomo e player → Saída do som), para o baterista ouvir pela mesa. Ao ligar o metrônomo, o app liga a interface sozinho, com ou sem faixa. No modo Rolar, a rolagem automática sobe a letra sozinha.",
@@ -117,6 +120,7 @@ SECTIONS = [
         "text_en": [
             "On stage the lyrics show large, with the chords and parts. Tap the sides or use the pedal to turn the page. If you'd rather scroll, change it in Settings → Stage look.",
             "Key and capo are at the top; tap them to change them right there. While the stage is open nothing pops up over it: whatever the band sends waits.",
+            "The arrow at the top leaves the stage. In a setlist, or following the band, it asks first, so a stray tap doesn't take the lyrics off the screen during the show; a song opened from the Songs tab leaves at once.",
             "Tap a chord to see its diagram for guitar, electric guitar, ukulele, cavaquinho or keyboard, with variations and sound. Details shows the chord's degree in the song's key.",
             "The diagrams of all the song's chords can sit at the start or end of the stage (Settings → Stage look → Chord list), grown to fill the screen's width. Hold a chord to take it off the list; the × in the corner hides the whole list in that song, and the arrow button brings it back.",
             "The metronome starts at the song's BPM, and changing the BPM there saves it in the song. With the player on, its sound can go out on a USB interface output (Settings → Metronome and player → Sound output), so the drummer hears it through the desk. Turning the metronome on turns the interface on by itself, with or without a track. In Scroll mode, auto-scroll moves the lyrics up on its own.",
@@ -241,12 +245,12 @@ SECTIONS = [
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
             "Quando sai uma versão nova, o app avisa ao abrir. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda.",
-            "Em Ajustes → Sobre ficam o idioma, a versão e o botão Abrir a ajuda, que traz para esta página (precisa de internet).",
+            "Em Ajustes → Sobre ficam o idioma, a versão e o botão Abrir a ajuda, que traz para esta página (precisa de internet). No tablet, a versão também aparece embaixo do logo, no topo da barra lateral; tocar no logo abre só o Sobre, e a seta volta para a tela onde você estava.",
             "Suas músicas e ajustes ficam no aparelho. O que vai para a banda ou pela internet vai cifrado. Não tem conta, propaganda nem rastreio.",
         ],
         "text_en": [
             "When a new version is out, the app tells you when it opens. It's best if the whole band uses the same version; a device on another one shows up marked in Settings → Band.",
-            "Settings → About has the language, the version and the Open the help button, which brings you to this page (it needs the internet).",
+            "Settings → About has the language, the version and the Open the help button, which brings you to this page (it needs the internet). On a tablet, the version also shows under the logo at the top of the side bar; tapping the logo opens just About, and the arrow takes you back to the screen you were on.",
             "Your songs and settings stay on the device. What goes to the band or over the internet is encrypted. There's no account, no ads and no tracking.",
         ],
         "figs": [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_lingua", "Ajustes → Sobre: ajuda, idioma e atualizar", "Settings → About: help, language and updating")),

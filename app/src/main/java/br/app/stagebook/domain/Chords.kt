@@ -23,7 +23,60 @@ object Chords {
     private val SPACES = Regex("\\s+")
     private val WORDS = Regex("\\S+")
     private val DOUBLE_SPACES = Regex(" {2,}")
-    private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?""", RegexOption.IGNORE_CASE)
+    // also a guitar shape written after the chord, one fret per string ("B/F#  224442", user 03/11)
+    private val chordLineExtras = Regex("""\||/|%|-+|\(?\d+\s*x\)?|\(?x\s*\d+\)?|\(?(?:$SHAPE)\)?""", RegexOption.IGNORE_CASE)
+
+    /**
+     * A guitar shape note after a chord: one fret per string, low to high, x = not played (`224442`, `x02220`), or with
+     * dashes when a fret has two digits (`10-10-12-12-12-10`, what a transposed shape can become).
+     */
+    private const val SHAPE = "[0-9x]{6}|(?:[0-9x]{1,2}-){5}[0-9x]{1,2}"
+    private val shapeToken = Regex("""\(?($SHAPE)\)?""", RegexOption.IGNORE_CASE)
+    private val shapeHint = Regex("""^\s*(\S+)\s+\(?($SHAPE)\)?\s*$""", RegexOption.IGNORE_CASE)
+
+    private fun frets(shape: String): List<Int> =
+        (if ('-' in shape) shape.split('-') else shape.map { it.toString() }).map { if (it.equals("x", true)) -1 else it.toInt() }
+
+    private fun shapeText(frets: List<Int>): String {
+        val parts = frets.map { if (it < 0) "x" else it.toString() }
+        return if (parts.all { it.length == 1 }) parts.joinToString("") else parts.joinToString("-")
+    }
+
+    /** The guitar frets a line like `B/F#  224442` (or `[B/F#] 224442`) gives for [chord] (-1 = not played), if any. */
+    fun shapeHint(text: String, chord: String): List<Int>? = shapeHints(text)[chord]
+
+    // the song's fret notes by chord, read once per text: the chord list asked for each of its ~20 chords, and each ask
+    // scanned the whole song (audit 03/11). One entry: the stage asks about the song on screen
+    @Volatile private var hintsOf: Pair<String, Map<String, List<Int>>>? = null
+
+    private fun shapeHints(text: String): Map<String, List<Int>> {
+        hintsOf?.let { (t, m) -> if (t === text || t == text) return m }
+        val m = HashMap<String, List<Int>>()
+        for (line in text.lineSequence()) {
+            if (!line.contains(' ')) continue
+            val h = shapeHint.matchEntire(line.replace("[", "").replace("]", "")) ?: continue
+            m.putIfAbsent(h.groupValues[1], frets(h.groupValues[2]))
+        }
+        hintsOf = text to m
+        return m
+    }
+
+    /** A chords-only line written without brackets (`B/F#  224442`) with its chords in brackets, as ChordPro keeps them. */
+    fun bracketChordLine(line: String): String =
+        if (line.contains('[') || !isChordLine(line)) line else line.replace(WORDS) { if (isChord(it.value)) "[${it.value}]" else it.value }
+
+    /**
+     * A shape note moved with its chord ([transpose]): every played string [semitones] frets up, an octave down when
+     * it would go past the 12th fret and every fretted string allows it, so it still plays the transposed chord (audit
+     * 03/11: the name moved and the frets stayed, so the diagram drew the old chord under the new name).
+     */
+    private fun shiftShapes(line: String, semitones: Int): String {
+        val m = shapeHint.matchEntire(line.replace("[", "").replace("]", "")) ?: return line
+        val n = ((semitones % 12) + 12) % 12
+        var moved = frets(m.groupValues[2]).map { if (it < 0) it else it + n }
+        if (moved.any { it > 12 } && moved.all { it < 0 || it >= 12 }) moved = moved.map { if (it < 0) it else it - 12 }
+        return shapeToken.replace(line) { shapeText(moved).let { t -> if (it.value.startsWith("(")) "($t)" else t } }
+    }
 
     /** Is the whole text a chord? (`G`, `F#m7/E`, `Cm7(b5)`, `G7M`, `Bb`) */
     fun isChord(s: String): Boolean = ChordName.parse(s) != null
@@ -124,12 +177,20 @@ object Chords {
      * Chords-only line (and marks like `|`, `(2x)`), with at least one chord. Accepts a label first: `Intro: G D`,
      * `[Intro] G D`.
      */
+    /** A mark that goes with chords on a chords-only line: `|`, `/`, `%`, `-`, `2x`, `(x2)`. */
+    fun isChordLineMark(token: String) = chordLineExtras.matches(token)
+
     fun isChordLine(line: String): Boolean {
         val tokens = line.trim().split(SPACES).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
         val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
-        return body.any(::isChord) && body.all { isChord(it) || chordLineExtras.matches(it) }
+        // the "all" first: a lyric line stops at its first word that isn't a chord (it ran on every line of the stage
+        // and the editor preview, and "any" parsed every word first; audit 03/11)
+        return body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)
     }
+
+    /** A label in front of chords on a chords-only line: `Intro:` or `[Solo]`. */
+    fun isChordLineLabel(t: String) = isLabel(t)
 
     private fun isLabel(t: String) =
         (t.endsWith(":") && !isChord(t.dropLast(1))) || (t.startsWith("[") && t.endsWith("]") && !isChord(t.drop(1).dropLast(1)))
@@ -155,7 +216,10 @@ object Chords {
                 continue
             }
             val next = lines.getOrNull(i + 1)
-            val lyric = next != null && next.isNotBlank() && !isChordLine(next) && !isDirective(next) && Sections.detect(next) == null
+            // a chord with its frets ("B/F#  224442") is a note of its own, never put into the lyric below (merging it
+            // dropped the frets from the song; audit 03/11)
+            val lyric = next != null && next.isNotBlank() && !isChordLine(next) && !isDirective(next) && Sections.detect(next) == null &&
+                positions(line).none { (_, t) -> shapeToken.matches(t) }
             out += if (lyric) merge(line, next!!) else chordsOnly(line)
             i += if (lyric) 2 else 1
         }
@@ -167,6 +231,8 @@ object Chords {
 
     private fun merge(chordLine: String, lyric: String): String {
         val sb = StringBuilder(lyric.trimEnd())
+        // marks like "2x" can't sit inside the lyric: they go after it, so they aren't lost (audit 03/11)
+        val notes = positions(chordLine).map { it.second }.filter { !isChord(it) && it.any(Char::isLetterOrDigit) }
         positions(chordLine).reversed().forEach { (col, token) ->
             val mark = if (isChord(token)) "[$token]" else return@forEach
             if (col >= sb.length) {
@@ -177,6 +243,7 @@ object Chords {
                 sb.insert(col, mark)
             }
         }
+        if (notes.isNotEmpty()) sb.append("   ").append(notes.joinToString(" "))
         return sb.toString()
     }
 
@@ -272,9 +339,12 @@ object Chords {
         val newKey = if (oldKey.isNotEmpty()) transposeKey(oldKey, semitones) else ""
         // the new key decides flat vs sharp; with no key, each chord keeps its own style
         val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys else null   // the key name is already the usual one
-        val body = text.split('\n').joinToString("\n") { line ->
+        val body = text.split('\n').joinToString("\n") { written ->
+            // a chords-only line written without brackets moves too: with the keyboard's capo it showed in the old key,
+            // colored as chords (audit 03/11)
+            val line = bracketChordLine(written)
             if (isDirective(line)) line
-            else bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats, newKey) + "]" else b.value }
+            else shiftShapes(bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats, newKey) + "]" else b.value }, semitones)
         }
         // the tablature moves too (T22)
         val tabbed = Tablature.shift(body, semitones)

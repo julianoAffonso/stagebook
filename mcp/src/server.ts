@@ -1,11 +1,12 @@
 // The MCP side: tools, resources and prompts over the tablet's API (client.ts). Every write goes through the same rules
 // as the app's editor (the tablet applies them), and the stage on the tablet follows right away.
 
-import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { basename, isAbsolute, join } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { StagebookClient, StagebookError, discover, save } from "./client.js";
+import { StagebookClient, StagebookError, answers, discoverAll, save } from "./client.js";
 
 export const VERSION = "0.1.0";
 
@@ -17,11 +18,13 @@ type SongItem = { id: string; title: string; author: string; year: string; key: 
 
 const text = (value: unknown) => ({ content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] });
 
-// every tool answers a StagebookError as a readable message instead of failing the call
-function safe<A>(run: (args: A) => Promise<ReturnType<typeof text>>) {
-  return async (args: A) => {
+// every tool answers a StagebookError as a readable message instead of failing the call. [signal]: the assistant gave up
+// on the call (it waits ~60 s); long calls pass it on, so an upload or a restore stops instead of finishing unseen
+// after the assistant was told it failed (audit 03/11)
+function safe<A>(run: (args: A, signal?: AbortSignal) => Promise<ReturnType<typeof text>>) {
+  return async (args: A, extra?: { signal?: AbortSignal }) => {
     try {
-      return await run(args);
+      return await run(args, extra?.signal);
     } catch (e) {
       const msg = e instanceof StagebookError ? e.message : `Unexpected error: ${(e as Error).message}`;
       return { ...text(msg), isError: true };
@@ -42,6 +45,28 @@ export function chordsIn(chordpro: string): string[] {
   return [...seen];
 }
 
+// the tablet's limits (WebEditorServer): a backing track as in the app, a backup with every track
+const TRACK_MAX = 200 * 1024 * 1024;
+const BACKUP_MAX = 1024 * 1024 * 1024;
+
+/**
+ * A file on this computer to send: `~` is the home folder, a relative path is refused (it would resolve against the
+ * assistant app's folder, not the person's), and one over the tablet's limit is refused here (the tablet closed the
+ * connection, which read as "Couldn't reach"). Read once: the copy into a new array held a backup twice (audit 03/11).
+ */
+export async function localFile(path: string, max: number): Promise<Uint8Array> {
+  const full = path === "~" || path.startsWith("~/") ? join(homedir(), path.slice(1)) : path;
+  if (!isAbsolute(full)) throw new StagebookError(`Pass the file's full path (like /Users/name/Music/song.mp3 or ~/Music/song.mp3), not "${path}".`);
+  let size: number;
+  try {
+    size = (await stat(full)).size;
+  } catch {
+    throw new StagebookError(`There's no file at ${full}.`);
+  }
+  if (size > max) throw new StagebookError(`The file is ${Math.round(size / 1048576)} MB; the tablet takes up to ${Math.round(max / 1048576)} MB.`);
+  return readFile(full);
+}
+
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 export function buildServer(client: StagebookClient): McpServer {
@@ -58,6 +83,19 @@ export function buildServer(client: StagebookClient): McpServer {
         "to the person unless they ask for their own song.",
     },
   );
+
+  /**
+   * Transpose or capo: the tablet reworks the song's text with its own rules ([route]), then the song is saved with
+   * the new text, key and capo (the two tools were the same three calls).
+   */
+  async function rework(id: string, route: string, change: Record<string, number>) {
+    const cur = (await client.get(`/api/songs/${encodeURIComponent(id)}`)) as Song;
+    const out = await client.send("POST", route, { text: cur.text, ...change, meta: { key: cur.key, capo: cur.capo } });
+    const key = out.meta?.key ?? cur.key;
+    const capo = out.meta?.capo ?? change.capo ?? cur.capo;
+    await client.send("PUT", `/api/songs/${encodeURIComponent(id)}`, { ...cur, text: out.text, key, capo });
+    return { cur, key: out.meta?.key as string | undefined, capo: out.meta?.capo as number | undefined };
+  }
 
   // ---------- connection ----------
 
@@ -77,16 +115,24 @@ export function buildServer(client: StagebookClient): McpServer {
     },
     safe(async ({ url, name }: { url?: string; name?: string }) => {
       if (url) client.url = url;
-      if (!client.url) {
-        const found = await discover();
-        if (!found) {
+      // no address given: the saved one if it still answers, otherwise search again (the tablet's address can change
+      // with the Wi-Fi; the saved one was used forever, audit 03/11)
+      else if (!client.url || !(await answers(client.url))) {
+        const found = await discoverAll();
+        if (found.length === 0) {
           throw new StagebookError(
             "Stagebook wasn't found on this network. On the tablet: open Stagebook and turn on Settings → Edit on the computer; " +
               "it shows the address to pass here. On a Mac, also check System Settings → Privacy & Security → Local Network " +
               "for the app that runs this assistant.",
           );
         }
-        client.url = found;
+        if (found.length > 1) {
+          throw new StagebookError(
+            `Stagebook answers on more than one tablet here: ${found.join(", ")}. Ask the person which address their tablet ` +
+              "shows in Settings → Edit on the computer and pass it as url.",
+          );
+        }
+        client.url = found[0];
       }
       await save({ url: client.url, key: client.key });
       const code = await client.startPair(name ?? "AI assistant");
@@ -209,10 +255,8 @@ export function buildServer(client: StagebookClient): McpServer {
       inputSchema: { id: z.string(), semitones: z.number().int().min(-11).max(11).describe("+2 = up a whole tone, -1 = down a half tone.") },
     },
     safe(async ({ id, semitones }: { id: string; semitones: number }) => {
-      const cur = (await client.get(`/api/songs/${encodeURIComponent(id)}`)) as Song;
-      const out = await client.send("POST", "/api/transpose", { text: cur.text, semitones, meta: { key: cur.key, capo: cur.capo } });
-      await client.send("PUT", `/api/songs/${encodeURIComponent(id)}`, { ...cur, text: out.text, key: out.meta?.key ?? cur.key, capo: out.meta?.capo ?? cur.capo });
-      return text({ id, from: cur.key, to: out.meta?.key });
+      const { cur, key } = await rework(id, "/api/transpose", { semitones });
+      return text({ id, from: cur.key, to: key });
     }),
   );
 
@@ -224,10 +268,8 @@ export function buildServer(client: StagebookClient): McpServer {
       inputSchema: { id: z.string(), capo: z.number().int().min(0).max(12) },
     },
     safe(async ({ id, capo }: { id: string; capo: number }) => {
-      const cur = (await client.get(`/api/songs/${encodeURIComponent(id)}`)) as Song;
-      const out = await client.send("POST", "/api/capo", { text: cur.text, capo, meta: { key: cur.key, capo: cur.capo } });
-      await client.send("PUT", `/api/songs/${encodeURIComponent(id)}`, { ...cur, text: out.text, key: out.meta?.key ?? cur.key, capo: out.meta?.capo ?? capo });
-      return text({ id, capo: out.meta?.capo ?? capo, key: out.meta?.key });
+      const r = await rework(id, "/api/capo", { capo });
+      return text({ id, capo: r.capo ?? capo, key: r.key });
     }),
   );
 
@@ -246,9 +288,9 @@ export function buildServer(client: StagebookClient): McpServer {
         save: z.boolean().optional().describe("Add it to the library right away. Default false."),
       },
     },
-    safe(async ({ text: pasted, url, title, with_tab, save: keep }: { text?: string; url?: string; title?: string; with_tab?: boolean; save?: boolean }) => {
+    safe(async ({ text: pasted, url, title, with_tab, save: keep }: { text?: string; url?: string; title?: string; with_tab?: boolean; save?: boolean }, signal) => {
       if (!pasted && !url) throw new StagebookError("Pass the text or the page address.");
-      const r = await client.send("POST", "/api/import", { text: pasted ?? "", url: url ?? "", title: title ?? "", withTab: with_tab ?? null }, undefined, 60000);
+      const r = await client.send("POST", "/api/import", { text: pasted ?? "", url: url ?? "", title: title ?? "", withTab: with_tab ?? null }, undefined, 60000, signal);
       if (r?.status === "askTab") return text("The song has tablature: call again with with_tab true (keep it) or false (chords only).");
       if (!keep) return text({ toReview: { title: r.title, author: r.author, year: r.year, tempo: r.tempo, key: r.key, capo: r.capo, chords: chordsIn(r.text ?? ""), text: r.text } });
       const created = await client.send("POST", "/api/songs", { title: r.title, author: r.author, year: r.year, tempo: r.tempo, text: r.text, key: r.key, capo: r.capo, tags: [] });
@@ -263,9 +305,9 @@ export function buildServer(client: StagebookClient): McpServer {
       description: "Uploads an audio file from this computer (OGG with any number of channels, MP3 or WAV) as the song's backing track, replacing any previous one.",
       inputSchema: { id: z.string(), path: z.string().describe("Path of the audio file on this computer.") },
     },
-    safe(async ({ id, path }: { id: string; path: string }) => {
-      const bytes = new Uint8Array(await readFile(path));
-      const r = await client.send("PUT", `/api/songs/${encodeURIComponent(id)}/track`, bytes, { name: basename(path) }, 300000);
+    safe(async ({ id, path }: { id: string; path: string }, signal) => {
+      const bytes = await localFile(path, TRACK_MAX);
+      const r = await client.send("PUT", `/api/songs/${encodeURIComponent(id)}/track`, bytes, { name: basename(path) }, 300000, signal);
       return text({ id, track: r?.trackName ?? basename(path) });
     }),
   );
@@ -322,11 +364,18 @@ export function buildServer(client: StagebookClient): McpServer {
     "update_setlist",
     {
       title: "Update a setlist",
-      description: "Renames a setlist and/or replaces its songs (the full list, in order). Omitted fields stay.",
-      inputSchema: { id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional() },
+      description: "Renames a setlist and/or replaces its songs (the full list, in order). Omitted fields stay. Emptying it (song_ids []) needs confirm=true.",
+      inputSchema: {
+        id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional(),
+        confirm: z.boolean().optional().describe("Required true to leave the setlist with no songs."),
+      },
     },
-    safe(async ({ id, name, song_ids }: { id: string; name?: string; song_ids?: string[] }) => {
+    safe(async ({ id, name, song_ids, confirm }: { id: string; name?: string; song_ids?: string[]; confirm?: boolean }) => {
       const cur = await client.get(`/api/sets/${encodeURIComponent(id)}`);
+      // an empty list takes every song out: like deleting, it asks first (audit 03/11)
+      if (song_ids?.length === 0 && cur.songs.length > 0 && !confirm) {
+        throw new StagebookError(`This takes all ${cur.songs.length} songs out of "${cur.name}": ask the person and pass confirm=true.`);
+      }
       await client.send("PUT", `/api/sets/${encodeURIComponent(id)}`, { name: name ?? cur.name, items: song_ids ?? cur.songs.map((s: SongItem) => s.id) });
       return text({ updated: id });
     }),
@@ -357,7 +406,7 @@ export function buildServer(client: StagebookClient): McpServer {
         "review: each song found in the library, new, or with candidates. Then call receive_create with the token.",
       inputSchema: { code: z.string() },
     },
-    safe(async ({ code }: { code: string }) => text(await client.send("POST", "/api/receive", { code }, undefined, 60000))),
+    safe(async ({ code }: { code: string }, signal) => text(await client.send("POST", "/api/receive", { code }, undefined, 60000, signal))),
   );
 
   server.registerTool(
@@ -417,22 +466,29 @@ export function buildServer(client: StagebookClient): McpServer {
       title: "Restore a backup file",
       description:
         "Sends a .stagebook file from this computer to the tablet. Without parts it only inspects (what the file has). " +
-        "With parts (library, tracks, settings) it restores them: replace=true swaps the library for the file's (ask first, " +
-        "pass confirm=true), replace=false only adds what's missing.",
+        "With parts (library, tracks, settings) it restores them: replace=true swaps the library for the file's, " +
+        "replace=false only adds the songs, setlists and tracks that are missing. Settings always replace the tablet's " +
+        "(stage look, pedals, USB audio interface, band). Replacing the library or restoring settings: ask first and pass confirm=true.",
       inputSchema: {
         path: z.string(),
         parts: z.array(z.enum(["library", "tracks", "settings"])).optional(),
         replace: z.boolean().optional(),
-        confirm: z.boolean().optional().describe("Required true with replace=true."),
+        confirm: z.boolean().optional().describe("Required true with replace=true or with settings in parts."),
       },
       annotations: { destructiveHint: true },
     },
-    safe(async ({ path, parts, replace, confirm }: { path: string; parts?: string[]; replace?: boolean; confirm?: boolean }) => {
-      const bytes = new Uint8Array(await readFile(path));
-      const info = await client.send("POST", "/api/backup/inspect", bytes, undefined, 600000);
+    safe(async ({ path, parts, replace, confirm }: { path: string; parts?: string[]; replace?: boolean; confirm?: boolean }, signal) => {
+      const bytes = await localFile(path, BACKUP_MAX);
+      const info = await client.send("POST", "/api/backup/inspect", bytes, undefined, 600000, signal);
       if (!parts?.length) return text({ inspected: info });
       if (replace && !confirm) throw new StagebookError("Replacing swaps the whole library for the file's: ask the person and pass confirm=true.");
-      const r = await client.send("POST", "/api/backup/restore", { token: info.token, parts, replace: !!replace }, undefined, 600000);
+      // the tablet's settings are always replaced by the file's, with replace or not (audit 03/11: it went without asking)
+      if (parts.includes("settings") && !confirm) {
+        throw new StagebookError("Restoring settings replaces the tablet's (stage look, pedals, USB audio interface, band): ask the person and pass confirm=true.");
+      }
+      // given up while the file went over: the restore doesn't start
+      if (signal?.aborted) throw new StagebookError("The call was cancelled before restoring: nothing changed on the tablet.");
+      const r = await client.send("POST", "/api/backup/restore", { token: info.token, parts, replace: !!replace }, undefined, 600000, signal);
       return text({ restored: parts, replace: !!replace, skipped: r?.skipped ?? 0 });
     }),
   );

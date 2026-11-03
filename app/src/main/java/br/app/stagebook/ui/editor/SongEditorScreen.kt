@@ -220,8 +220,10 @@ fun SongEditorScreen(
                             else -> ""
                         },
                         onBack = cancel,
-                        // 16dp below: the details field's label sits on its top border and reached up into the subtitle
-                        modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.s, bottom = Spacing.m),
+                        // 16dp below: the details field's label sits on its top border and reached up into the subtitle.
+                        // 16dp at the start, like the fields: the back arrow draws on the margin (at 8dp it sat off the
+                        // fields and its touch area went past the screen's edge; audit 03/11)
+                        modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.m),
                     ) {
                         // stage preview (the "present" icon; while previewing it becomes the pencil, back to the text)
                         IconButton(onClick = { previewing = !previewing }) {
