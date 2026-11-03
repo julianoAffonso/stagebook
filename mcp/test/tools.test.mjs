@@ -151,8 +151,9 @@ test("upload paths: ~ is the home folder, relative paths and oversize files are 
 });
 
 test("capo is saved with the song", async () => {
-  const r = await call("set_capo", { id: "s2", capo: 3 });
-  assert.equal(r.error, false);
+  // s1: s2 was deleted by an earlier test
+  const r = await call("set_capo", { id: "s1", capo: 3 });
+  assert.equal(r.error, false, r.body);
   assert.equal(r.json.capo, 3);
-  assert.equal(tablet.songs.get("s2").capo, 3);
+  assert.equal(tablet.songs.get("s1").capo, 3);
 });
