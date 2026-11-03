@@ -60,7 +60,7 @@ export class StagebookClient {
   }
 
   /** One API call. [body]: JSON object, raw bytes (uploads) or nothing. */
-  async call(method: string, path: string, body?: unknown, opts: { auth?: boolean; query?: Record<string, string>; timeoutMs?: number } = {}): Promise<{ status: number; json: any; headers: Headers }> {
+  async call(method: string, path: string, body?: unknown, opts: { auth?: boolean; query?: Record<string, string>; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<{ status: number; json: any; headers: Headers }> {
     const url = new URL(this.base() + path);
     for (const [k, v] of Object.entries(opts.query ?? {})) url.searchParams.set(k, v);
     const headers: Record<string, string> = { "X-Stagebook": "1" };
@@ -79,8 +79,10 @@ export class StagebookClient {
     }
     let res: Response;
     try {
-      res = await fetch(url, { method, headers, body: payload, signal: AbortSignal.timeout(opts.timeoutMs ?? this.timeoutMs) });
+      const limit = AbortSignal.timeout(opts.timeoutMs ?? this.timeoutMs);
+      res = await fetch(url, { method, headers, body: payload, signal: opts.signal ? AbortSignal.any([limit, opts.signal]) : limit });
     } catch (e) {
+      if (opts.signal?.aborted) throw new StagebookError("The call was cancelled.");
       throw new StagebookError(unreachable(this.base(), e));
     }
     const text = await res.text();
@@ -116,8 +118,8 @@ export class StagebookClient {
     return r.json;
   }
 
-  async send(method: string, path: string, body?: unknown, query?: Record<string, string>, timeoutMs?: number): Promise<any> {
-    const r = await this.call(method, path, body, { query, timeoutMs });
+  async send(method: string, path: string, body?: unknown, query?: Record<string, string>, timeoutMs?: number, signal?: AbortSignal): Promise<any> {
+    const r = await this.call(method, path, body, { query, timeoutMs, signal });
     if (r.status === 404) throw new StagebookError("Not found on the tablet.", 404);
     return r.json;
   }

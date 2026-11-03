@@ -59,3 +59,10 @@ test("the saved key is readable only by this user, even in a file that already e
     assert.equal(statSync(file).mode & 0o777, 0o600);
   } finally { process.env.STAGEBOOK_CONFIG = before; }
 });
+
+test("a call the assistant gave up on stops", async () => {
+  const c = new StagebookClient(tablet.url, "k123");
+  const stop = new AbortController();
+  stop.abort();
+  await assert.rejects(c.send("GET", "/api/session", undefined, undefined, 15000, stop.signal), /cancelled/);
+});

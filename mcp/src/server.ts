@@ -18,11 +18,13 @@ type SongItem = { id: string; title: string; author: string; year: string; key: 
 
 const text = (value: unknown) => ({ content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] });
 
-// every tool answers a StagebookError as a readable message instead of failing the call
-function safe<A>(run: (args: A) => Promise<ReturnType<typeof text>>) {
-  return async (args: A) => {
+// every tool answers a StagebookError as a readable message instead of failing the call. [signal]: the assistant gave up
+// on the call (it waits ~60 s); long calls pass it on, so an upload or a restore stops instead of finishing unseen
+// after the assistant was told it failed (audit 03/11)
+function safe<A>(run: (args: A, signal?: AbortSignal) => Promise<ReturnType<typeof text>>) {
+  return async (args: A, extra?: { signal?: AbortSignal }) => {
     try {
-      return await run(args);
+      return await run(args, extra?.signal);
     } catch (e) {
       const msg = e instanceof StagebookError ? e.message : `Unexpected error: ${(e as Error).message}`;
       return { ...text(msg), isError: true };
@@ -277,9 +279,9 @@ export function buildServer(client: StagebookClient): McpServer {
         save: z.boolean().optional().describe("Add it to the library right away. Default false."),
       },
     },
-    safe(async ({ text: pasted, url, title, with_tab, save: keep }: { text?: string; url?: string; title?: string; with_tab?: boolean; save?: boolean }) => {
+    safe(async ({ text: pasted, url, title, with_tab, save: keep }: { text?: string; url?: string; title?: string; with_tab?: boolean; save?: boolean }, signal) => {
       if (!pasted && !url) throw new StagebookError("Pass the text or the page address.");
-      const r = await client.send("POST", "/api/import", { text: pasted ?? "", url: url ?? "", title: title ?? "", withTab: with_tab ?? null }, undefined, 60000);
+      const r = await client.send("POST", "/api/import", { text: pasted ?? "", url: url ?? "", title: title ?? "", withTab: with_tab ?? null }, undefined, 60000, signal);
       if (r?.status === "askTab") return text("The song has tablature: call again with with_tab true (keep it) or false (chords only).");
       if (!keep) return text({ toReview: { title: r.title, author: r.author, year: r.year, tempo: r.tempo, key: r.key, capo: r.capo, chords: chordsIn(r.text ?? ""), text: r.text } });
       const created = await client.send("POST", "/api/songs", { title: r.title, author: r.author, year: r.year, tempo: r.tempo, text: r.text, key: r.key, capo: r.capo, tags: [] });
@@ -294,9 +296,9 @@ export function buildServer(client: StagebookClient): McpServer {
       description: "Uploads an audio file from this computer (OGG with any number of channels, MP3 or WAV) as the song's backing track, replacing any previous one.",
       inputSchema: { id: z.string(), path: z.string().describe("Path of the audio file on this computer.") },
     },
-    safe(async ({ id, path }: { id: string; path: string }) => {
+    safe(async ({ id, path }: { id: string; path: string }, signal) => {
       const bytes = await localFile(path, TRACK_MAX);
-      const r = await client.send("PUT", `/api/songs/${encodeURIComponent(id)}/track`, bytes, { name: basename(path) }, 300000);
+      const r = await client.send("PUT", `/api/songs/${encodeURIComponent(id)}/track`, bytes, { name: basename(path) }, 300000, signal);
       return text({ id, track: r?.trackName ?? basename(path) });
     }),
   );
@@ -395,7 +397,7 @@ export function buildServer(client: StagebookClient): McpServer {
         "review: each song found in the library, new, or with candidates. Then call receive_create with the token.",
       inputSchema: { code: z.string() },
     },
-    safe(async ({ code }: { code: string }) => text(await client.send("POST", "/api/receive", { code }, undefined, 60000))),
+    safe(async ({ code }: { code: string }, signal) => text(await client.send("POST", "/api/receive", { code }, undefined, 60000, signal))),
   );
 
   server.registerTool(
@@ -466,16 +468,18 @@ export function buildServer(client: StagebookClient): McpServer {
       },
       annotations: { destructiveHint: true },
     },
-    safe(async ({ path, parts, replace, confirm }: { path: string; parts?: string[]; replace?: boolean; confirm?: boolean }) => {
+    safe(async ({ path, parts, replace, confirm }: { path: string; parts?: string[]; replace?: boolean; confirm?: boolean }, signal) => {
       const bytes = await localFile(path, BACKUP_MAX);
-      const info = await client.send("POST", "/api/backup/inspect", bytes, undefined, 600000);
+      const info = await client.send("POST", "/api/backup/inspect", bytes, undefined, 600000, signal);
       if (!parts?.length) return text({ inspected: info });
       if (replace && !confirm) throw new StagebookError("Replacing swaps the whole library for the file's: ask the person and pass confirm=true.");
       // the tablet's settings are always replaced by the file's, with replace or not (audit 03/11: it went without asking)
       if (parts.includes("settings") && !confirm) {
         throw new StagebookError("Restoring settings replaces the tablet's (stage look, pedals, USB audio interface, band): ask the person and pass confirm=true.");
       }
-      const r = await client.send("POST", "/api/backup/restore", { token: info.token, parts, replace: !!replace }, undefined, 600000);
+      // given up while the file went over: the restore doesn't start
+      if (signal?.aborted) throw new StagebookError("The call was cancelled before restoring: nothing changed on the tablet.");
+      const r = await client.send("POST", "/api/backup/restore", { token: info.token, parts, replace: !!replace }, undefined, 600000, signal);
       return text({ restored: parts, replace: !!replace, skipped: r?.skipped ?? 0 });
     }),
   );
