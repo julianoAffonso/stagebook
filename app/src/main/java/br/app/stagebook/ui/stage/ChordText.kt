@@ -69,13 +69,20 @@ fun ChordText(
                 sections.forEach { a ->
                     val end = a.end.coerceAtMost(l.layoutInput.text.length)
                     if (a.start >= end) return@forEach
-                    val first = l.getBoundingBox(a.start)
-                    val last = l.getBoundingBox(end - 1)
-                    val h = first.bottom - first.top
-                    drawRoundRect(
-                        Color(a.item.toInt()), Offset(first.left, first.top), Size(last.right - first.left, h),
-                        androidx.compose.ui.geometry.CornerRadius(h / 2f),
-                    )
+                    // one pill per drawn line: a long title that wraps got one box from the first letter's line to the
+                    // last letter's x, covering part of line one and none of line two (audit 03/11)
+                    for (line in l.getLineForOffset(a.start)..l.getLineForOffset(end - 1)) {
+                        val from = maxOf(a.start, l.getLineStart(line))
+                        val to = minOf(end, l.getLineEnd(line, visibleEnd = true))
+                        if (from >= to) continue
+                        val first = l.getBoundingBox(from)
+                        val last = l.getBoundingBox(to - 1)
+                        val h = first.bottom - first.top
+                        drawRoundRect(
+                            Color(a.item.toInt()), Offset(minOf(first.left, last.left), first.top), Size(kotlin.math.abs(last.right - first.left), h),
+                            androidx.compose.ui.geometry.CornerRadius(h / 2f),
+                        )
+                    }
                 }
             }
             drawContent()

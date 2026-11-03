@@ -1192,6 +1192,13 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stagePhone() = shoot("celular_7_palco") { StageScreen(stage, 0, 1, { _, _ -> }, onBack = {}) }
 
+    // a long section title that wraps on a phone: one pill per drawn line (audit 03/11)
+    @Test @Config(qualifiers = PHONE)
+    fun stageLongSectionPhone() = shoot("celular_7_palco_secao_longa") {
+        val text = "{c: Solo de guitarra com o teclado dobrando a melodia}\nPrimeira linha da letra de exemplo"
+        StageScreen(stage.copy(songs = listOf(StageSong("Hazard", "Richard Marx · 1991", text, false))), 0, 0, { _, _ -> }, onBack = {})
+    }
+
     // the tag filter open: several ticked at once, and with large system text (user, 01/11)
     private val tagged = songs.copy(tags = listOf("Abertura de show", "Internacional", "Lenta", "Nacional", "Rock anos 80"), chosenTags = setOf("Nacional", "Rock anos 80"))
 
