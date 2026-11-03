@@ -11,6 +11,12 @@ fun highlightMarks(line: String): List<Int> {
     return marks.take(marks.size / 2 * 2)
 }
 
+/** Hyphen the stage puts in the room opened for a chord in the middle of a word; it isn't in the saved text. */
+const val WORD_JOIN = '\u2010'
+
+/** A stage character with no saved letter behind it: spaces and [WORD_JOIN]. */
+fun Char.isStageGap() = isWhitespace() || this == WORD_JOIN
+
 /**
  * The stage's highlighter (user, 02/11: highlighting a whole line painted words they didn't want): the finger runs over
  * some words of a line as shown on stage, and the saved line gets `==` around those words. The stage line differs from
@@ -29,7 +35,7 @@ object HighlightRange {
      */
     fun toggle(saved: String, shown: String, from: Int, to: Int, after: Int = 0): String {
         val visible = visibleLetters(saved)                       // saved index of each letter the stage shows
-        val shownLetters = shown.indices.filter { !shown[it].isWhitespace() }
+        val shownLetters = shown.indices.filter { !shown[it].isStageGap() }
         if (shownLetters.isEmpty() || visible.isEmpty()) return saved
         val shownText = shownLetters.joinToString("") { shown[it].toString() }
         val visibleText = visible.joinToString("") { saved[it].toString() }

@@ -3,6 +3,7 @@ package br.app.stagebook.ui.stage
 import br.app.stagebook.ui.components.AppMenu
 import androidx.compose.foundation.clickable
 import br.app.stagebook.domain.forSong
+import br.app.stagebook.domain.isStageGap
 import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
@@ -569,7 +570,7 @@ fun StageScreen(
                     // a line wrapped on stage comes in pieces: the letters of the pieces before this one
                     var k = start.first - 1
                     var after = 0
-                    while (k >= 0 && pageLines.getOrNull(k)?.source == source) { after += pageLines[k].text.text.count { !it.isWhitespace() }; k-- }
+                    while (k >= 0 && pageLines.getOrNull(k)?.source == source) { after += pageLines[k].text.text.count { !it.isStageGap() }; k-- }
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onHighlightWords(song.id, source, start.second, start.third, end, after)
                 }

@@ -1,6 +1,8 @@
 package br.app.stagebook
 
 import androidx.compose.ui.graphics.Color
+import br.app.stagebook.domain.HighlightRange
+import br.app.stagebook.domain.WORD_JOIN
 import br.app.stagebook.ui.stage.CHORD_TAG
 import br.app.stagebook.ui.stage.ChordLook
 import br.app.stagebook.ui.stage.chordLine
@@ -33,5 +35,25 @@ class ChordSpacingTest {
     @Test fun `lyrics already wide enough are not changed`() {
         val line = chordLine("[C]long enough words [G]here", ChordLook(true, 0.8f, Color.Yellow))
         assertTrue(line.text == "long enough words here")
+    }
+
+    // the room for a chord inside a word keeps the word readable as one (user, 03/11: a word came out as two)
+    @Test fun `room inside a word gets a hyphen`() {
+        val line = chordLine("[Csus4]gu[A9]erra e [G]paz", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text.startsWith("gu") && line.text.contains(WORD_JOIN) && line.text.contains("erra"))
+        assertTrue(line.text, !line.text.substringAfter("erra").contains(WORD_JOIN))
+    }
+
+    @Test fun `room between words stays blank`() {
+        val line = chordLine("[Csus4]oi [A9]erra", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, !line.text.contains(WORD_JOIN))
+    }
+
+    // the highlighter matches stage letters to saved ones: the hyphen isn't a saved letter
+    @Test fun `highlighting a word with a chord inside skips the hyphen`() {
+        val saved = "[Csus4]gu[A9]erra e [G]paz"
+        val shown = chordLine(saved, ChordLook(true, 1f, Color.Yellow)).text
+        val out = HighlightRange.toggle(saved, shown, 0, 0)
+        assertTrue(out, out.startsWith("[Csus4]==gu[A9]erra=="))
     }
 }
