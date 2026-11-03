@@ -1,9 +1,7 @@
-# Builds and tests the MCP server when it changes (check.yml skips mcp/: no Gradle for it). Under a minute.
+# Builds and tests the MCP server when a pull request changes it (check.yml skips mcp/: no Gradle for it). Under a
+# minute. Not again after the merge: the PR already tested the same code (and MCP publish tests before publishing).
 name: MCP check
 on:
-  push:
-    branches: [main]
-    paths: ["mcp/**", ".github/workflows/mcp-*.yml"]
   pull_request:
     branches: [main]
     paths: ["mcp/**", ".github/workflows/mcp-*.yml"]
