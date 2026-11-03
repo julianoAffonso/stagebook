@@ -43,7 +43,6 @@ import br.app.stagebook.R
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ButtonTone
-import br.app.stagebook.ui.components.CenteredContent
 import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.EmptyState
@@ -167,7 +166,8 @@ fun SongsScreen(
     // went back to the search and the keyboard opened over the list (device test B-02)
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     androidx.compose.runtime.LaunchedEffect(selecting) { if (selecting) focus.clearFocus() }
-    CenteredContent(modifier.fillMaxSize()) {
+    // full width beside the rail, like Settings (user, 03/11: centred at 840 dp left a gap after the rail)
+    Box(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             // selecting, the top bar becomes the selection's, as in Google's apps (Gmail, Files, Photos): ✕, how many and
             // the actions as icons (holding one shows its name), the rest in the ⋮ (user, 01/11)
