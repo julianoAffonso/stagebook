@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.ShortNavigationBarItemDefaults
@@ -34,8 +33,6 @@ import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailDefaults
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailItemDefaults
-import androidx.compose.material3.WideNavigationRailValue
-import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +40,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.rememberUpdatedState
@@ -63,7 +59,6 @@ import br.app.stagebook.ui.settings.SettingsRoute
 import br.app.stagebook.ui.songs.SongsRoute
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
-import kotlinx.coroutines.launch
 
 enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SONGS(R.string.tab_songs, AppIcons.MusicNote),
@@ -193,22 +188,13 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
     val shared = remember { movableContentOf<Modifier> { m -> currentContent(m) } }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= Sizes.railBreakpoint) {
-            val rail = rememberWideNavigationRailState()
-            val scope = rememberCoroutineScope()
-            val expanded = rail.targetValue == WideNavigationRailValue.Expanded
             Scaffold(contentWindowInsets = ScreenInsets, containerColor = MaterialTheme.colorScheme.background) { inner ->
                 Row(Modifier.padding(inner)) {
+                    // fixed rail with icon and name, the tabs in the middle of the height where the thumb reaches. No menu
+                    // button: opening it only moved the same three names beside their icons (user, 03/11)
                     WideNavigationRail(
-                        state = rail,
                         colors = WideNavigationRailDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-                        header = {
-                            IconButton(onClick = { scope.launch { rail.toggle() } }, modifier = Modifier.padding(start = Spacing.l)) {
-                                Icon(
-                                    if (expanded) AppIcons.MenuOpen else AppIcons.Menu,
-                                    contentDescription = stringResource(if (expanded) R.string.nav_collapse else R.string.nav_expand),
-                                )
-                            }
-                        },
+                        arrangement = Arrangement.Center,
                     ) {
                         HomeTab.entries.forEach { t ->
                             WideNavigationRailItem(
@@ -216,7 +202,7 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                                 onClick = { onTabChange(t) },
                                 icon = { badged(t) },
                                 label = { Text(stringResource(t.label)) },
-                                railExpanded = expanded,
+                                railExpanded = false,
                                 colors = railColors(),
                             )
                         }
