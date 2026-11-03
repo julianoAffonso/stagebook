@@ -621,6 +621,9 @@ fun StageScreen(
             if (onBack != null) {
                 br.app.stagebook.ui.components.BackButton({ leave() }, tint = fg.copy(alpha = 0.6f))
             }
+            // the texts on one baseline among themselves, the group centred on the arrow's line (with the arrow in the
+            // baseline group it sat below the title, user 03/11)
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
             // position in the setlist as "1 of 2" (user's choice, 30/10): "1/2" next to the page dots read as a page number
             if (uiState.songs.size > 1) {
                 Text(
@@ -649,13 +652,15 @@ fun StageScreen(
                     modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
                 )
             }
+            }
         }
         }
             if (wide && !song.missing && hasKey) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo, onTranspose = { onTranspose(song.id, it) }, onCapo = { onCapo(song.id, it) })
             // capo (lit in the accent color) and key go on the artist line below. No backing track badge: the play
             // only shows when there is one (T29)
+            // the pencil's drawing on the margin, like the arrow's (user, 03/11)
             if (!song.missing) {
-                IconButton(onClick = { editAt(hit.firstLine()) }) {
+                IconButton(onClick = { editAt(hit.firstLine()) }, modifier = Modifier.offset(x = br.app.stagebook.ui.components.HeaderIconInset)) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
                 }
             }

@@ -80,6 +80,7 @@ fun PickSongsScreen(
                     subtitle = uiState.setName,
                     onBack = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
+                    iconActions = false,
                 ) {
                     // in the fixed header: the search keyboard covered the button when it sat at the bottom
                     ActionButton(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
@@ -48,42 +49,40 @@ fun ScreenHeader(
     onBack: (() -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null,   // tapping the title (e.g. rename a setlist, user 01/11); its label for accessibility
     titleClickLabel: String? = null,
+    iconActions: Boolean = true,   // the actions are icon buttons: their drawings go out to the margin
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val wide = wideLists()
     Column(modifier.fillMaxWidth()) {
+        // the arrow and the icons on the title's line (centred on title and subtitle, the arrow sat below the title,
+        // user 03/11); the icons' drawings on the screen's margin, like the arrow's
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
-            if (onBack != null) {
-                // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
-                // arrow came out black on the dark background (user, 02/11)
-                BackButton(onBack)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    title,
-                    // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones a
-                    // smaller one that can wrap to two lines, centred on the icons (a long setlist name was
-                    // cut next to its icons); on tablets always big (it fits)
-                    style = when {
-                        wide -> MaterialTheme.typography.headlineLarge
-                        onBack != null -> MaterialTheme.typography.titleMedium
-                        else -> MaterialTheme.typography.headlineMedium
-                    },
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier,
-                )
-                if (wide && subtitle.isNotEmpty()) Subtitle(subtitle)
-            }
-            actions()
+            // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
+            // arrow came out black on the dark background (user, 02/11)
+            if (onBack != null) BackButton(onBack)
+            Text(
+                title,
+                // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones a
+                // smaller one that can wrap to two lines, centred on the icons (a long setlist name was
+                // cut next to its icons); on tablets always big (it fits)
+                style = when {
+                    wide -> MaterialTheme.typography.headlineLarge
+                    onBack != null -> MaterialTheme.typography.titleMedium
+                    else -> MaterialTheme.typography.headlineMedium
+                },
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).then(if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier),
+            )
+            Row(if (iconActions) Modifier.offset(x = HeaderIconInset) else Modifier, verticalAlignment = Alignment.CenterVertically, content = actions)
         }
-        if (!wide && subtitle.isNotEmpty()) {
-            // aligned with the title (after the back button)
+        if (subtitle.isNotEmpty()) {
+            // aligned with the title (after the back button); on phones full width below, on tablets under the title
             Subtitle(subtitle, Modifier.padding(start = if (onBack != null) BackButtonWidth + Spacing.s else 0.dp))
         }
     }
