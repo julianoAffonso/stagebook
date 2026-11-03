@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/logo.png" alt="Stagebook" width="120"></p>
 
-# Stagebook
+<h1 align="center">Stagebook</h1>
 
 [English](README.md) · **Português (Brasil)**
 
@@ -19,9 +19,9 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 - **Cifras:** acordes em cima da letra (ChordPro), transpor, capotraste, tablatura e o diagrama de cada acorde no
   violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom. Anotações na
   linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam ao transpor.
-- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Mande para quem está do lado por QR, para longe com 3
-  palavras pela internet, ou para a banda toda no mesmo Wi-Fi.
-- **Banda:** com o "Quem conduz", quem puxa o setlist troca de música e o palco de todo mundo acompanha. Antes de
+- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Mande para
+  quem está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi.
+- **Banda:** com o "Conduzir a banda", quem puxa o setlist troca de música e o palco de todo mundo acompanha. Antes de
   começar, o app avisa quem não tem alguma música.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
@@ -64,8 +64,19 @@ roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Edi
 computador uma vez no tablet. Instalação e configuração de cada assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).
 
 ## Instalar
-Baixe o `stagebook.apk` nos [Releases](../../releases). Depois disso o app avisa quando sai versão nova e se atualiza.
-Precisa de Android 9 ou mais novo.
+O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa de Android 9 ou mais novo.
+
+1. No celular ou tablet, abra a [versão mais nova](../../releases/latest) e baixe o `stagebook.apk`.
+2. Abra o arquivo baixado. Na primeira vez o Android pede para permitir instalar apps dessa fonte (o navegador ou o
+   app de arquivos): permita, volte e toque em **Instalar**. Se o Play Protect disser que não conhece o app, escolha
+   instalar mesmo assim.
+3. Pronto. Daí em diante o app avisa quando sai versão nova e se atualiza; na primeira atualização o Android pede a
+   mesma permissão, agora para o Stagebook.
+
+**Por que fora da Play Store?** O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com
+direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza
+direto por estes releases, o que a loja não permite. Assim as versões saem sem esperar revisão, e o código fica aberto
+para quem quiser conferir.
 
 ## Apoie
 O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café no
