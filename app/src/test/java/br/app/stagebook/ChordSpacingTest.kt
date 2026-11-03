@@ -89,4 +89,30 @@ class ChordSpacingTest {
         val shape = br.app.stagebook.domain.Voicings.savedShape(text, br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, "B/F#")
         assertTrue(shape?.frets == listOf(2, 2, 4, 4, 4, 2))
     }
+
+    // transposing moves the frets with the chord, and never drops them into the lyric below (audit 03/11)
+    @Test fun `transposing moves a fret note with its chord`() {
+        val out = br.app.stagebook.domain.Chords.transposeSong("B/F#  224442\nA/E    002220\n[B/F#]letra", 1)
+        assertTrue(out, out.contains("[C/G] 335553") || out.contains("[C/G]  335553") || out.lineSequence().any { it.replace(" ", "") == "[C/G]335553" })
+        assertTrue(out, out.lineSequence().any { it.replace(" ", "") == "[Bb/F]113331" || it.replace(" ", "") == "[A#/F]113331" })
+        val c = br.app.stagebook.domain.Chords.shapeHint(out, "C/G")
+        assertTrue("$c", c == listOf(3, 3, 5, 5, 5, 3))
+    }
+
+    @Test fun `a fret note above a lyric stays on its own line`() {
+        val out = br.app.stagebook.domain.Chords.fromChordsOverLyrics("B/F#  224442\numa linha de letra")
+        assertTrue(out, out.lines().first().replace(" ", "") == "[B/F#]224442" && out.lines()[1] == "uma linha de letra")
+    }
+
+    @Test fun `a repeat mark above a lyric goes after it`() {
+        val out = br.app.stagebook.domain.Chords.fromChordsOverLyrics("G       D   2x\numa linha de letra")
+        assertTrue(out, out.startsWith("[G]uma lin") && out.endsWith("2x"))
+    }
+
+    @Test fun `a shape past the 12th fret takes dashes and is still read`() {
+        val out = br.app.stagebook.domain.Chords.transposeSong("[B/F#] 224442\n[B/F#]letra", 8)
+        val g = out.lines().first { it.contains(" ") && it.startsWith("[") }
+        assertTrue(out, g.contains("10-10-12-12-12-10"))
+        assertTrue(br.app.stagebook.domain.Chords.shapeHint(out, g.substringAfter('[').substringBefore(']')) == listOf(10, 10, 12, 12, 12, 10))
+    }
 }
