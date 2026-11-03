@@ -73,4 +73,20 @@ class ChordSpacingTest {
         val line = chordLine("[A]   [B]   bis", ChordLook(true, 1f, Color.Yellow))
         assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isNotEmpty())
     }
+
+    // "B/F#  224442" at the start of a song: the chord like the others, the frets beside it as a note (user, 03/11)
+    @Test fun `a chord with its frets written beside shows as a chord line`() {
+        val raw = br.app.stagebook.domain.Chords.bracketChordLine("B/F#  224442")
+        assertTrue(raw, raw == "[B/F#]  224442")
+        val line = chordLine(raw, ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text == "B/F#   224442")
+    }
+
+    @Test fun `the written frets are the chord's guitar shape`() {
+        val text = "B/F#  224442\nA/E    x02220\n[B/F#]letra"
+        assertTrue(br.app.stagebook.domain.Chords.shapeHint(text, "B/F#") == listOf(2, 2, 4, 4, 4, 2))
+        assertTrue(br.app.stagebook.domain.Chords.shapeHint(text, "A/E") == listOf(-1, 0, 2, 2, 2, 0))
+        val shape = br.app.stagebook.domain.Voicings.savedShape(text, br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, "B/F#")
+        assertTrue(shape?.frets == listOf(2, 2, 4, 4, 4, 2))
+    }
 }

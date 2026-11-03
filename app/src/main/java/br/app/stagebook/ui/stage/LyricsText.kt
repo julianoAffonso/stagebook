@@ -129,7 +129,9 @@ fun stageLines(
         )
     }
     val tabs = Tablature.tabLines(text)
-    text.split('\n').forEachIndexed { i, raw ->
+    text.split('\n').forEachIndexed { i, written ->
+        // a chord line left without brackets ("B/F#  224442") shows like the others: chords in color, notes beside them
+        val raw = Chords.bracketChordLine(written)
         // tablature: only in the lyrics and chords profile, in monospace (the columns stay aligned)
         if (tabs[i]) {
             if (chords.show) out += StageLine(tabLine(raw.trimEnd()), i)
