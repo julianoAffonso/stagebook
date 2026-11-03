@@ -113,9 +113,7 @@ export class StagebookClient {
   }
 
   async get(path: string): Promise<any> {
-    const r = await this.call("GET", path);
-    if (r.status === 404) throw new StagebookError("Not found on the tablet.", 404);
-    return r.json;
+    return this.send("GET", path);
   }
 
   async send(method: string, path: string, body?: unknown, query?: Record<string, string>, timeoutMs?: number, signal?: AbortSignal): Promise<any> {

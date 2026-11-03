@@ -84,6 +84,19 @@ export function buildServer(client: StagebookClient): McpServer {
     },
   );
 
+  /**
+   * Transpose or capo: the tablet reworks the song's text with its own rules ([route]), then the song is saved with
+   * the new text, key and capo (the two tools were the same three calls).
+   */
+  async function rework(id: string, route: string, change: Record<string, number>) {
+    const cur = (await client.get(`/api/songs/${encodeURIComponent(id)}`)) as Song;
+    const out = await client.send("POST", route, { text: cur.text, ...change, meta: { key: cur.key, capo: cur.capo } });
+    const key = out.meta?.key ?? cur.key;
+    const capo = out.meta?.capo ?? change.capo ?? cur.capo;
+    await client.send("PUT", `/api/songs/${encodeURIComponent(id)}`, { ...cur, text: out.text, key, capo });
+    return { cur, key: out.meta?.key as string | undefined, capo: out.meta?.capo as number | undefined };
+  }
+
   // ---------- connection ----------
 
   server.registerTool(
@@ -242,10 +255,8 @@ export function buildServer(client: StagebookClient): McpServer {
       inputSchema: { id: z.string(), semitones: z.number().int().min(-11).max(11).describe("+2 = up a whole tone, -1 = down a half tone.") },
     },
     safe(async ({ id, semitones }: { id: string; semitones: number }) => {
-      const cur = (await client.get(`/api/songs/${encodeURIComponent(id)}`)) as Song;
-      const out = await client.send("POST", "/api/transpose", { text: cur.text, semitones, meta: { key: cur.key, capo: cur.capo } });
-      await client.send("PUT", `/api/songs/${encodeURIComponent(id)}`, { ...cur, text: out.text, key: out.meta?.key ?? cur.key, capo: out.meta?.capo ?? cur.capo });
-      return text({ id, from: cur.key, to: out.meta?.key });
+      const { cur, key } = await rework(id, "/api/transpose", { semitones });
+      return text({ id, from: cur.key, to: key });
     }),
   );
 
@@ -257,10 +268,8 @@ export function buildServer(client: StagebookClient): McpServer {
       inputSchema: { id: z.string(), capo: z.number().int().min(0).max(12) },
     },
     safe(async ({ id, capo }: { id: string; capo: number }) => {
-      const cur = (await client.get(`/api/songs/${encodeURIComponent(id)}`)) as Song;
-      const out = await client.send("POST", "/api/capo", { text: cur.text, capo, meta: { key: cur.key, capo: cur.capo } });
-      await client.send("PUT", `/api/songs/${encodeURIComponent(id)}`, { ...cur, text: out.text, key: out.meta?.key ?? cur.key, capo: out.meta?.capo ?? capo });
-      return text({ id, capo: out.meta?.capo ?? capo, key: out.meta?.key });
+      const r = await rework(id, "/api/capo", { capo });
+      return text({ id, capo: r.capo ?? capo, key: r.key });
     }),
   );
 
