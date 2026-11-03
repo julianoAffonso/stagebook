@@ -19,8 +19,8 @@ import br.app.stagebook.ui.theme.Sizes
 /** Room the back arrow takes in a header row: the drawn arrow and a little after it. */
 val BackButtonWidth = 28.dp
 
-// the button's own space on each side of the 24 dp arrow
-private val ButtonInset = (Sizes.touch - 24.dp) / 2
+/** An icon button's own space on each side of its 24 dp icon: header icons move out by it to sit on the margin. */
+val HeaderIconInset = (Sizes.touch - 24.dp) / 2
 
 /**
  * The back arrow of a header (Google Photos pattern): the drawn arrow lines up with the screen's margin and the title
@@ -30,7 +30,7 @@ private val ButtonInset = (Sizes.touch - 24.dp) / 2
 @Composable
 fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.onSurface) {
     Box(modifier.width(BackButtonWidth)) {
-        IconButton(onClick = onClick, modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true).offset(x = -ButtonInset)) {
+        IconButton(onClick = onClick, modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true).offset(x = -HeaderIconInset)) {
             Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back), tint = tint)
         }
     }
