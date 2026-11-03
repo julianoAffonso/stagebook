@@ -88,6 +88,12 @@ export function buildServer(client: StagebookClient): McpServer {
               "for the app that runs this assistant.",
           );
         }
+        if (found.length > 1) {
+          throw new StagebookError(
+            `Stagebook answers on more than one tablet here: ${found.join(", ")}. Ask the person which address their tablet ` +
+              "shows in Settings → Edit on the computer and pass it as url.",
+          );
+        }
         client.url = found[0];
       }
       await save({ url: client.url, key: client.key });
