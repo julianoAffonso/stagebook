@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.stage
 
 import br.app.stagebook.domain.HIGHLIGHT_MARK
+import br.app.stagebook.domain.WORD_JOIN
 import br.app.stagebook.domain.highlightMarks
 
 import androidx.compose.runtime.Composable
@@ -201,7 +202,15 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
         val chord = s.chord ?: return@forEachIndexed
         // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on)
         val need = emWidth(chord) * look.scale * BOLD + if (i < segs.lastIndex) CHORD_GAP else 0f
+        val letters = s.text.length
         while (emWidth(s.text) < need) s.text += " "
+        // room opened in the middle of a word ("gu[A9]erra") gets a hyphen, as printed chord sheets do: the bare gap
+        // read as two words (user, 03/11)
+        val next = segs.getOrNull(i + 1)?.text?.firstOrNull()
+        if (s.text.length > letters && s.text.getOrNull(letters - 1)?.isLetter() == true && next?.isLetter() == true) {
+            val mid = letters + (s.text.length - letters) / 2
+            s.text = s.text.substring(0, mid) + WORD_JOIN + s.text.substring(mid + 1)
+        }
     }
     // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
     return buildAnnotatedString {
