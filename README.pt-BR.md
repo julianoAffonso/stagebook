@@ -61,7 +61,9 @@ O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, 
 Gemini CLI, o Codex e outros assistentes de IA lerem e editarem a sua biblioteca: "monta um setlist de 15 músicas para
 sábado", "passa as músicas deste artista meio tom abaixo", "confere os acordes desta música", "importa esta página". Ele
 roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Editar no computador**; você autoriza o
-computador uma vez no tablet. Instalação e configuração de cada assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).
+computador uma vez no tablet. Está no npm como [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): com o [Node.js](https://nodejs.org) no
+computador, o Claude Code se liga com `claude mcp add stagebook -- npx -y stagebook-mcp`. Configuração de cada
+assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).
 
 ## Instalar
 O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa de Android 9 ou mais novo.
