@@ -201,10 +201,10 @@ fun HomeScaffold(
                         header = {
                             // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
                             // centred over the tabs' icons (the collapsed rail is 96 dp wide)
-                            // and the name below it; tapping them opens About (user, 03/11)
+                            // and the name below it; tapping them opens About (user, 03/11), announced as a button (audit 03/11)
                             androidx.compose.foundation.layout.Column(
                                 Modifier.width(96.dp).clip(MaterialTheme.shapes.medium)
-                                    .clickable(onClickLabel = stringResource(R.string.settings_about), onClick = onAbout)
+                                    .clickable(onClickLabel = stringResource(R.string.settings_about), role = androidx.compose.ui.semantics.Role.Button, onClick = onAbout)
                                     .padding(vertical = Spacing.xs),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
