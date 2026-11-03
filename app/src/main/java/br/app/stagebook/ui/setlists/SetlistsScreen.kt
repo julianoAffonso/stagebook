@@ -22,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -162,10 +164,17 @@ fun SetlistsScreen(
                 uiState.abc, onSortAbc, Modifier.padding(bottom = Spacing.m),
             )
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
-            // that was first, and the new one stayed hidden above it, device test B-09)
+            // that was first, and the new one stayed hidden above it, device test B-09). The same when the first item
+            // changes for any reason (a rename in A to Z), judged by where the list was before the change: the list
+            // already follows the old first item when the effect runs. Changing the order always starts at the top
+            // (it followed the old first item down the list; audit 03/11)
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             val firstId = uiState.sets.firstOrNull()?.id
-            androidx.compose.runtime.LaunchedEffect(firstId) { if (listState.firstVisibleItemIndex <= 1) listState.scrollToItem(0) }
+            val atTop by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 } }
+            val topBefore = atTop   // read while composing the change, before the list is measured with the new items
+            androidx.compose.runtime.LaunchedEffect(firstId) { if (topBefore) listState.scrollToItem(0) }
+            var shownAbc by rememberSaveable { mutableStateOf(uiState.abc) }
+            androidx.compose.runtime.LaunchedEffect(uiState.abc) { if (uiState.abc != shownAbc) { shownAbc = uiState.abc; listState.scrollToItem(0) } }
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
