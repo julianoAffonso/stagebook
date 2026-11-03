@@ -604,9 +604,12 @@ fun StageScreen(
             .background(Color(look.bg))
             .padding(horizontal = Spacing.l),
     ) {
-        // lean header: the song on its own line, then artist, year, key and capo below, full width, on phones and tablets
-        // (sharing the line with the title they got cut on phones and came out small on the tablet; user, 02/11)
+        // lean header. On the tablet one line: the title big, then artist and year smaller, key and capo at the end (two
+        // lines took too much of the lyrics, user 03/11). On phones the artist line goes below (on the title's line they
+        // got cut, user 02/11)
         val wide = wideLists()
+        // key and capo belong to chords: they don't show in the lyrics only profile
+        val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
         Row(Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
@@ -625,6 +628,7 @@ fun StageScreen(
                 Text(
                     stringResource(R.string.stage_position, index + 1, uiState.songs.size),
                     style = MaterialTheme.typography.titleMedium, color = fg.copy(alpha = 0.6f),
+                    modifier = Modifier.alignByBaseline(),
                 )
             }
             Text(
@@ -634,10 +638,22 @@ fun StageScreen(
                 color = fg,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = titleMax),
+                // on the tablet's single line the artist keeps some room
+                modifier = Modifier.widthIn(max = if (wide && song.meta.isNotEmpty()) titleMax * 0.75f else titleMax).alignByBaseline(),
             )
+            if (wide && song.meta.isNotEmpty()) {
+                Text(
+                    song.meta,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = fg.copy(alpha = 0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
+                )
+            }
         }
         }
+            if (wide && !song.missing && hasKey) SongKeyBadges(shownText, fg, showCapo = !keyboard, keyboardCapo = keyboardCapo, onTranspose = { onTranspose(song.id, it) }, onCapo = { onCapo(song.id, it) })
             // capo (lit in the accent color) and key go on the artist line below. No backing track badge: the play
             // only shows when there is one (T29)
             if (!song.missing) {
@@ -646,14 +662,11 @@ fun StageScreen(
                 }
             }
         }
-        // key and capo belong to chords: they don't show in the lyrics only profile
-        val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        if (song.meta.isNotEmpty() || (hasKey && !song.missing)) {
+        if (!wide && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
             Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
-                    // the tablet has room for a bigger line
-                    style = if (wide) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall,
                     color = fg.copy(alpha = 0.55f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
