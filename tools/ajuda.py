@@ -21,6 +21,22 @@ Fig = tuple
 
 SECTIONS = [
     {
+        "id": "instalar", "pt": "Instalar", "en": "Installing",
+        "text_pt": [
+            "O Stagebook não está na Play Store: ele sai só pelo GitHub, de graça. No aparelho, abra [github.com/julianoAffonso/stagebook/releases](https://github.com/julianoAffonso/stagebook/releases/latest) e baixe o stagebook.apk da versão mais nova. Precisa de Android 9 ou mais novo.",
+            "Abra o arquivo baixado. Na primeira vez o Android pede para permitir instalar apps dessa fonte (o navegador ou o app de arquivos): permita, volte e toque em Instalar. Se o Play Protect disser que não conhece o app, escolha instalar mesmo assim.",
+            "Depois disso não precisa voltar ao GitHub: o app avisa quando sai versão nova e se atualiza. Na primeira atualização o Android pede a mesma permissão, agora para o Stagebook.",
+            "Por que fora da Play Store? O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza direto pelo GitHub, o que a loja não permite. Assim as versões saem sem esperar revisão, e o código fica aberto para quem quiser conferir.",
+        ],
+        "text_en": [
+            "Stagebook isn't on the Play Store: it's only on GitHub, for free. On the device, open [github.com/julianoAffonso/stagebook/releases](https://github.com/julianoAffonso/stagebook/releases/latest) and download stagebook.apk from the newest version. It needs Android 9 or newer.",
+            "Open the downloaded file. The first time, Android asks to allow installing apps from that source (the browser or the files app): allow it, go back and tap Install. If Play Protect says it doesn't know the app, choose to install anyway.",
+            "After that there's no need to go back to GitHub: the app tells you when a new version is out and updates itself. On the first update Android asks for the same permission, this time for Stagebook.",
+            "Why not the Play Store? The app imports lyrics and chords from websites, and the store's rules on copyrighted content leave this kind of app open to being pulled at any time. It also updates itself straight from GitHub, which the store doesn't allow. This way new versions come out without waiting for a review, and the code is open for anyone to check.",
+        ],
+        "figs": [],
+    },
+    {
         "id": "musicas", "pt": "Músicas", "en": "Songs",
         "text_pt": [
             "A aba Músicas é a sua biblioteca. Dá para buscar pelo nome ou pelo artista e filtrar pelas tags que você criou.",
@@ -80,12 +96,12 @@ SECTIONS = [
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
             "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. A lista de setlists mostra os mais recentes primeiro ou em ordem alfabética: escolha em Mais recentes | A a Z, acima da lista.",
-            "Em Escolher músicas, marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar.",
+            "Dentro do setlist, toque em + Músicas e marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar. Compartilhar fica ao lado, e o play no topo abre o setlist no palco.",
             "Quando chega um setlist de alguém, o app mostra quais músicas você já tem e quais faltam. Antes de criar, ele avisa o que vai ficar de fora e oferece importar as que faltam.",
         ],
         "text_en": [
             "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. The list of setlists shows the newest first or in alphabetical order: pick Newest | A to Z, above the list.",
-            "In Pick songs, check the songs in the order they'll be played. Search and tags help you find them.",
+            "Inside the setlist, tap + Songs and check the songs in the order they'll be played. Search and tags help you find them. Share sits next to it, and the play button at the top opens the setlist on stage.",
             "When a setlist comes from someone, the app shows which songs you already have and which are missing. Before creating it, it tells you what will be left out and offers to import the missing ones.",
         ],
         "figs": [Fig(("tablet_2_setlists", "celular_2_setlists", "Os setlists", "The setlists")),
@@ -115,7 +131,7 @@ SECTIONS = [
             "A seta no topo sai do palco. Num setlist, ou acompanhando a banda, ela pergunta antes, para um toque sem querer não tirar a letra da tela no show; uma música aberta pela aba Músicas sai direto.",
             "Tocando num acorde você vê o diagrama, para violão, guitarra, ukulele, cavaquinho ou teclado, com as variações e o som. Em Detalhes aparece o grau do acorde no tom da música.",
             "Os diagramas de todos os acordes da música podem ficar no início ou no fim do palco (Ajustes → Visual do palco → Lista de acordes), crescendo para ocupar a largura da tela. Segure um acorde para tirá-lo da lista; o × no canto esconde a lista inteira nessa música, e o botão com a seta traz de volta.",
-            "O metrônomo começa no BPM da música, e mudar o BPM nele grava na música. Com o player ligado, o som dele pode sair numa saída da interface USB (Ajustes → Metrônomo e player → Saída do som), para o baterista ouvir pela mesa. Ao ligar o metrônomo, o app liga a interface sozinho, com ou sem faixa. No modo Rolar, a rolagem automática sobe a letra sozinha.",
+            "O metrônomo é o ícone embaixo, ao lado do relógio. Ele começa no BPM da música, e mudar o BPM nele grava na música. Com o player ligado, o som dele pode sair numa saída da interface USB (Ajustes → Metrônomo e player → Saída do som), para o baterista ouvir pela mesa. Ao ligar o metrônomo, o app liga a interface sozinho, com ou sem faixa. No modo Rolar, a rolagem automática sobe a letra sozinha.",
         ],
         "text_en": [
             "On stage the lyrics show large, with the chords and parts. Tap the sides or use the pedal to turn the page. If you'd rather scroll, change it in Settings → Stage look.",
@@ -123,7 +139,7 @@ SECTIONS = [
             "The arrow at the top leaves the stage. In a setlist, or following the band, it asks first, so a stray tap doesn't take the lyrics off the screen during the show; a song opened from the Songs tab leaves at once.",
             "Tap a chord to see its diagram for guitar, electric guitar, ukulele, cavaquinho or keyboard, with variations and sound. Details shows the chord's degree in the song's key.",
             "The diagrams of all the song's chords can sit at the start or end of the stage (Settings → Stage look → Chord list), grown to fill the screen's width. Hold a chord to take it off the list; the × in the corner hides the whole list in that song, and the arrow button brings it back.",
-            "The metronome starts at the song's BPM, and changing the BPM there saves it in the song. With the player on, its sound can go out on a USB interface output (Settings → Metronome and player → Sound output), so the drummer hears it through the desk. Turning the metronome on turns the interface on by itself, with or without a track. In Scroll mode, auto-scroll moves the lyrics up on its own.",
+            "The metronome is the icon at the bottom, next to the clock. It starts at the song's BPM, and changing the BPM there saves it in the song. With the player on, its sound can go out on a USB interface output (Settings → Metronome and player → Sound output), so the drummer hears it through the desk. Turning the metronome on turns the interface on by itself, with or without a track. In Scroll mode, auto-scroll moves the lyrics up on its own.",
         ],
         "figs": [Fig(("tablet_6_palco", "celular_7_palco", "O palco", "The stage")),
                  Fig(("tablet_6_palco_cifra", "celular_7_palco_cifra", "Com a cifra", "With chords")),
@@ -172,18 +188,18 @@ SECTIONS = [
     {
         "id": "banda", "pt": "Banda", "en": "Band",
         "text_pt": [
-            "Com os aparelhos no mesmo Wi-Fi (pode ser o ponto de acesso de um celular), um toca em Pedir para entrar e o outro em Autorizar. Depois disso eles se reconhecem até alguém remover.",
+            "Com os aparelhos no mesmo Wi-Fi (pode ser o ponto de acesso de um celular), os dois abrem Ajustes → Banda e transmissão; um toca em Pedir para entrar e o outro em Autorizar. Depois disso eles se reconhecem até alguém remover.",
             "Mandar um setlist para a banda é um toque. Quem está no mesmo Wi-Fi recebe na hora; quem não está, recebe pela internet quando abrir o app.",
-            "Quando chega algo, aparece um aviso rápido embaixo e um número no ícone da banda, no topo, até você conferir. Em Conduzir a banda, todos acompanham a música que você está tocando.",
+            "Quando chega algo, aparece um aviso rápido embaixo e um número no ícone da banda, ao lado do título da aba, até você conferir. Em Conduzir a banda, todos acompanham a música que você está tocando.",
             "Conduzir a banda é o ícone de grupo no topo do setlist: ele abre o palco e os aparelhos da banda que estão com o app aberto no mesmo Wi-Fi entram sozinhos em Acompanhando, na mesma música, e seguem cada troca. Quem acompanha não precisa ter o setlist, só as músicas; se faltar uma, a faixa embaixo fica vermelha. No fim de cada música aparece a próxima do setlist de quem conduz. Quem abriu o app depois entra sozinho em alguns segundos; se não entrar, toque em Procurar a banda. Quem está editando uma música, escolhendo músicas, recebendo ou importando não é tirado da tela: a música abre quando a pessoa volta. Sair do palco não encerra: para isso, toque em Encerrar.",
         ],
         "text_en": [
-            "With the devices on the same Wi-Fi (a phone's hotspot works too), one taps Ask to join and the other taps Approve. After that they know each other until someone removes it.",
+            "With the devices on the same Wi-Fi (a phone's hotspot works too), both open Settings → Band and broadcast; one taps Ask to join and the other taps Approve. After that they know each other until someone removes it.",
             "Sending a setlist to the band takes one tap. Whoever is on the same Wi-Fi gets it right away; the others get it over the internet when they open the app.",
-            "When something arrives you get a short notice at the bottom and a number on the band icon at the top until you check it. With Lead the band, everyone follows the song you're playing.",
+            "When something arrives you get a short notice at the bottom and a number on the band icon next to the tab's title until you check it. With Lead the band, everyone follows the song you're playing.",
             "Lead the band is the group icon at the top of a setlist: it opens the stage, and band devices with the app open on the same Wi-Fi switch to Following by themselves, on the same song, and follow every change. Followers don't need the setlist, only the songs; if one is missing, the bar at the bottom turns red. At the end of each song they see the leader's next one. Someone who opens the app later joins by themselves within seconds; if not, tap Look for the band. Someone editing a song, picking songs, receiving or importing isn't pulled off the screen: the song opens when they come back. Leaving the stage doesn't end it: tap End for that.",
         ],
-        "figs": [Fig(("jornada_banda_1_ajustes", None, "Ajustes → Banda", "Settings → Band")),
+        "figs": [Fig(("jornada_banda_1_ajustes", None, "Ajustes → Banda e transmissão", "Settings → Band and broadcast")),
                  Fig(("jornada_banda_3_compartilhar", None, "Mandar para a banda", "Send to the band")),
                  Fig(("jornada_banda_4_aviso", None, "O que a banda mandou, no topo", "What the band sent, at the top")),
                  Fig(("banda_conduzir_faixas", None, "Conduzindo a banda", "Leading the band"))],
@@ -191,18 +207,22 @@ SECTIONS = [
     {
         "id": "ajustes", "pt": "Ajustes", "en": "Settings",
         "text_pt": [
-            "O Modo essencial é o primeiro da lista. Serve para quem quer a tela mais simples: deixa só letra, cifra, diagramas e pedal, e desliga o que roda por trás. Dá para desligar só uma parte.",
+            "A lista de Ajustes segue esta ordem: Visual do palco, Metrônomo e player, Pedal, Sites de cifra (ou de letra), Biblioteca e backup, Banda e transmissão, Editar no computador, Modo essencial, Avançado e Sobre. No tablet deitado, a lista fica à esquerda e o assunto aberto à direita.",
+            "O Modo essencial serve para quem quer a tela mais simples: deixa só letra, cifra, diagramas e pedal, e desliga o que roda por trás. Dá para desligar só uma parte.",
             "Em Visual do palco você escolhe Letra e cifra ou Só letra, e ficam as fontes, as cores, o tamanho dos títulos das partes e virar página ou rolar. Em Metrônomo e player ficam o metrônomo, a saída USB e o botão da faixa no palco. Com o modo essencial desligando um dos dois, o item leva só o nome do que ficou ligado. Em Pedal você liga um pedal Bluetooth ou MIDI e escolhe o que cada botão faz. Com mais de um pedal, os botões ficam separados por pedal, com o conectado em cima.",
             "Com um pedal Bluetooth ligado, o teclado da tela pode sumir: o celular acha que o pedal é um teclado de verdade. Isso é do Android, não do app. No Gboard, ligue Configurações → Teclado físico → Mostrar teclado na tela. Em outros teclados, toque no ícone de teclado na barra de baixo e ligue Teclado na tela.",
             "Em Biblioteca e backup você salva um arquivo .stagebook com o que escolher: músicas, setlists, backing tracks e ajustes. Serve de backup e para passar músicas para outra pessoa.",
             "Em Biblioteca e backup, Achar refrão e versos põe os títulos das partes nas músicas que vieram sem nenhum: a estrofe que se repete vira o refrão. A letra não muda.",
+            "Em Avançado, Para tocar sem falhas reúne os ajustes do Android que já derrubaram a interface de áudio ou pararam o app no palco, como a economia de bateria. Eles vêm ligados; desligue um só se souber por quê.",
         ],
         "text_en": [
-            "Essential mode is first on the list. It's for a simpler screen: it leaves only lyrics, chords, diagrams and the pedal, and turns off what runs in the background. You can turn off just part of it.",
+            "The Settings list goes in this order: Stage look, Metronome and player, Pedal, Chord sites (or Lyrics sites), Library and backup, Band and broadcast, Edit on the computer, Essential mode, Advanced and About. On a tablet lying down, the list sits on the left and the open topic on the right.",
+            "Essential mode is for a simpler screen: it leaves only lyrics, chords, diagrams and the pedal, and turns off what runs in the background. You can turn off just part of it.",
             "Stage look is where you pick Lyrics and chords or Lyrics only, and has the fonts, colours, part title size and turning pages or scrolling. Metronome and player has the metronome, the USB output and the stage's track button. When essential mode turns one of them off, the item is named after the one left on. In Pedal you connect a Bluetooth or MIDI pedal and choose what each button does. With more than one pedal, the buttons are grouped by pedal, the connected one on top.",
             "With a Bluetooth pedal connected, the on-screen keyboard may disappear: the phone takes the pedal for a real keyboard. That comes from Android, not the app. In Gboard, turn on Settings → Physical keyboard → Show on-screen keyboard. In other keyboards, tap the keyboard icon on the bottom bar and turn on the on-screen keyboard.",
             "In Library and backup you save a .stagebook file with what you choose: songs, setlists, backing tracks and settings. It works as a backup and to pass songs to someone else.",
             "In Library and backup, Find chorus and verses adds part titles to songs that came without any: the verse that repeats becomes the chorus. The lyrics don't change.",
+            "In Advanced, For playing without failures gathers the Android settings that have dropped the audio interface or stopped the app on stage, like battery saving. They come on; turn one off only if you know why.",
         ],
         "figs": [Fig(("tablet_5_ajustes", "celular_5_ajustes", "Os ajustes", "Settings")),
                  Fig(("tablet_5_ajustes_essencial", None, "Modo essencial", "Essential mode")),
@@ -214,13 +234,13 @@ SECTIONS = [
         "text_pt": [
             "Em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090. Abra no navegador do computador, no mesmo Wi-Fi, e toque em Pedir para entrar. O aparelho mostra um código de 4 números; autorize só se for o mesmo da página.",
             "No computador dá para editar as músicas com teclado (Ctrl+S salva), mudar tom, capo e tags, destacar frases (botão Marca-texto), montar setlists e importar colando a cifra, colando o endereço da página ou soltando arquivos.",
-            "Enquanto o editor está ligado, o ícone do computador aparece no topo das abas. Tocando nele você vê o endereço e pode fechar o editor. Ele também desliga sozinho depois de 5 minutos sem uso ou quando você fecha o app.",
+            "Enquanto o editor está ligado, o ícone do computador aparece ao lado do título das abas. Tocando nele você vê o endereço e pode fechar o editor. Ele também desliga sozinho depois de 5 minutos sem uso ou quando você fecha o app.",
             "Também dá para usar assistentes de IA, como o Claude, o Cursor ou o Gemini, pelo mesmo editor: com o servidor MCP do Stagebook instalado no computador, você pede \"monta um setlist para sábado\" ou \"passa estas músicas meio tom abaixo\" e eles fazem no tablet. Na primeira vez o tablet mostra um pedido com código, como no navegador. Como instalar: no README do Stagebook no GitHub, parte Usar com assistentes de IA.",
         ],
         "text_en": [
             "In Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090. Open it in the computer's browser, on the same Wi-Fi, and tap Ask to come in. The device shows a 4-digit code; approve only if it matches the page.",
             "On the computer you can edit songs with a keyboard (Ctrl+S saves), change key, capo and tags, highlight phrases (Highlighter button), build setlists and import by pasting chords, pasting a page address or dropping files.",
-            "While the editor is on, the computer icon shows at the top of the tabs. Tap it to see the address and close the editor. It also turns off by itself after 5 minutes unused or when you close the app.",
+            "While the editor is on, the computer icon shows next to the tabs' titles. Tap it to see the address and close the editor. It also turns off by itself after 5 minutes unused or when you close the app.",
             "You can also use AI assistants, like Claude, Cursor or Gemini, through the same editor: with Stagebook's MCP server installed on the computer, you ask \"build a setlist for Saturday\" or \"move these songs down a half tone\" and they do it on the tablet. The first time, the tablet shows a request with a code, as with the browser. How to install: in Stagebook's README on GitHub, under Use with AI assistants.",
         ],
         "figs": [Fig((None, "celular_5_ajustes_editor_web", "Ligando o editor no tablet", "Turning on the editor on the tablet")),
@@ -244,12 +264,12 @@ SECTIONS = [
     {
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
-            "Quando sai uma versão nova, o app avisa ao abrir. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda.",
+            "Quando sai uma versão nova, o app avisa ao abrir. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda e transmissão.",
             "Em Ajustes → Sobre ficam o idioma, a versão e o botão Abrir a ajuda, que traz para esta página (precisa de internet). No tablet, a versão também aparece embaixo do logo, no topo da barra lateral; tocar no logo abre só o Sobre, e a seta volta para a tela onde você estava.",
             "Suas músicas e ajustes ficam no aparelho. O que vai para a banda ou pela internet vai cifrado. Não tem conta, propaganda nem rastreio.",
         ],
         "text_en": [
-            "When a new version is out, the app tells you when it opens. It's best if the whole band uses the same version; a device on another one shows up marked in Settings → Band.",
+            "When a new version is out, the app tells you when it opens. It's best if the whole band uses the same version; a device on another one shows up marked in Settings → Band and broadcast.",
             "Settings → About has the language, the version and the Open the help button, which brings you to this page (it needs the internet). On a tablet, the version also shows under the logo at the top of the side bar; tapping the logo opens just About, and the arrow takes you back to the screen you were on.",
             "Your songs and settings stay on the device. What goes to the band or over the internet is encrypted. There's no account, no ads and no tracking.",
         ],
@@ -281,18 +301,22 @@ nav.toc b { display:block; color:var(--muted); font-size:12px; text-transform:up
 nav.toc a { display:block; color:var(--fg); text-decoration:none; padding:4px 8px; border-radius:10px; }
 nav.toc a:hover { background:var(--raised); }
 section { padding-top: 24px; min-width: 0; }
+section a { color: var(--accent); }
 h2 { font-size: 24px; margin: 0 0 8px; color: var(--accent); text-wrap: balance; }
 p { max-width: 70ch; } code { background:var(--raised); padding:1px 6px; border-radius:6px; font-size: 14px; }
-.figs { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin: 16px 0 8px; }
-figure { margin:0; background:var(--surface); border-radius:20px; padding:12px; }
-figure.wide { grid-column: 1 / -1; }
+/* two lying captures per row on a tablet; a standing one (phone) keeps its own width, no empty frame around it */
+.figs { display:flex; flex-wrap:wrap; gap: 20px; margin: 16px 0 8px; align-items:flex-start; }
+figure { margin:0; background:var(--surface); border-radius:20px; padding:12px; flex: 1 1 360px; min-width:0; max-width:100%; }
+figure.tall { flex: 0 1 auto; }
 figure img { width:100%; height:auto; border-radius:12px; display:block; }
-figure img.phone { max-height: 560px; width:auto; max-width:100%; margin: 0 auto; }
+figure.tall img { height: 440px; width:auto; max-width:100%; }
 figcaption { color:var(--muted); font-size:14px; margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .switch { margin-left:auto; display:flex; background:var(--raised); border-radius:999px; padding:2px; }
 .switch button { border:0; background:none; color:var(--fg); font: 600 12px system-ui, sans-serif; padding:4px 10px; border-radius:999px; cursor:pointer; }
 .switch button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
-@media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } nav.toc { position: static; } }
+/* standing tablet or phone: the contents become a compact strip of links instead of a tall list */
+@media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } nav.toc { position: static; padding: 12px; }
+  nav.toc a { display:inline-block; background:var(--raised); margin: 0 4px 6px 0; padding: 4px 12px; border-radius: 999px; font-size: 14px; } }
 """
 
 JS = """
@@ -301,8 +325,7 @@ document.querySelectorAll('figure[data-tablet][data-phone]').forEach(f => {
   f.querySelectorAll('.switch button').forEach(b => b.onclick = () => {
     const phone = b.dataset.d === 'phone';
     img.src = phone ? f.dataset.phone : f.dataset.tablet;
-    img.className = phone ? 'phone' : '';
-    f.classList.toggle('wide', !phone);
+    f.classList.toggle('tall', phone);
     f.querySelectorAll('.switch button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   });
 });
@@ -310,9 +333,10 @@ document.querySelectorAll('figure[data-tablet][data-phone]').forEach(f => {
 
 
 def md(text):
-    """**bold** and `code` (the only marks the texts use)."""
+    """**bold**, `code` and [text](https://link) (the only marks the texts use)."""
     out = html.escape(text)
     out = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", out)
+    out = re.sub(r"\[(.+?)\]\((https://[^)\s]+)\)", r'<a href="\2">\1</a>', out)
     return re.sub(r"`(.+?)`", r"<code>\1</code>", out)
 
 
@@ -356,9 +380,10 @@ def build(lang):
                 attrs = f' data-tablet="{t_img}" data-phone="{p_img}"'
                 switch = (f'<span class="switch"><button data-d="tablet" aria-pressed="true">{ui["tablet"]}</button>'
                           f'<button data-d="phone" aria-pressed="false">{ui["phone"]}</button></span>')
-            # a lying tablet capture takes the whole row (side by side it was too small to read)
-            wide = "" if cls else ' class="wide"'
-            figs.append(f'<figure{wide}{attrs}><img src="{first}" class="{cls}" alt="{cap}" loading="lazy"><figcaption>{cap}{switch}</figcaption></figure>')
+            # lying captures go two per row (user, 03/11: one per row made the page very long); a standing one keeps
+            # its own width
+            tall = ' class="tall"' if cls else ""
+            figs.append(f'<figure{tall}{attrs}><img src="{first}" alt="{cap}" loading="lazy"><figcaption>{cap}{switch}</figcaption></figure>')
         paras = "".join(f"<p>{md(p)}</p>" for p in s["text_" + key])
         body.append(f'<section id="{s["id"]}"><h2>{html.escape(s[key])}</h2>{paras}<div class="figs">{"".join(figs)}</div></section>')
     page = f"""<!doctype html>
