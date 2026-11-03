@@ -60,9 +60,7 @@ fun ScreenHeader(
             if (onBack != null) {
                 // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
                 // arrow came out black on the dark background (user, 02/11)
-                IconButton(onClick = onBack) {
-                    Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back), tint = MaterialTheme.colorScheme.onSurface)
-                }
+                BackButton(onBack)
             }
             Column(Modifier.weight(1f)) {
                 Text(
@@ -86,7 +84,7 @@ fun ScreenHeader(
         }
         if (!wide && subtitle.isNotEmpty()) {
             // aligned with the title (after the back button)
-            Subtitle(subtitle, Modifier.padding(start = if (onBack != null) Sizes.touch + Spacing.s else 0.dp))
+            Subtitle(subtitle, Modifier.padding(start = if (onBack != null) BackButtonWidth + Spacing.s else 0.dp))
         }
     }
 }
