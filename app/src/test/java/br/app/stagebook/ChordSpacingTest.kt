@@ -56,4 +56,21 @@ class ChordSpacingTest {
         val out = HighlightRange.toggle(saved, shown, 0, 0)
         assertTrue(out, out.startsWith("[Csus4]==gu[A9]erra=="))
     }
+
+    // "x4" after the chords stays on their line, not under them as lyrics (user, 03/11)
+    @Test fun `a repeat mark stays on the chords line`() {
+        val line = chordLine("[Em]   [G]   [C]   [B]   x4", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text == "Em   G   C   B   x4")
+        assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
+    }
+
+    @Test fun `marks between chords keep their order`() {
+        val line = chordLine("[G7/B] - [Cm] - [Fm] (2x)", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text == "G7/B   -   Cm   -   Fm   (2x)")
+    }
+
+    @Test fun `a real word is still lyrics`() {
+        val line = chordLine("[A]   [B]   bis", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isNotEmpty())
+    }
 }

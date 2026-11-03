@@ -191,10 +191,16 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     if (segs.isEmpty()) return AnnotatedString(raw.trimEnd())
     segs.last().text += raw.substring(last)
     val lyric = segs.joinToString("") { it.text }
-    if (lyric.isBlank()) {
+    // chords only, maybe with marks like "x4" or "|" (user, 03/11: "[A] [B] 2x" put the 2x under the chords, as lyrics):
+    // the chords in their color and the marks between them, in order, on one line
+    if (lyric.isBlank() || lyric.trim().split(SPACES).all(Chords::isChordLineMark)) {
         return buildAnnotatedString {
-            withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) {
-                append(segs.mapNotNull { it.chord }.joinToString("   "))
+            segs.forEach { s ->
+                if (s.chord != null) {
+                    if (length > 0) append("   ")
+                    withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) { append(s.chord) }
+                }
+                s.text.trim().split(SPACES).filter { it.isNotEmpty() }.forEach { if (length > 0) append("   "); append(it) }
             }
         }
     }
@@ -263,6 +269,7 @@ internal fun highlighted(line: AnnotatedString, color: Color): AnnotatedString {
 }
 
 // rough width of text in em, by kind of letter (proportional font): enough to keep one chord off the next
+private val SPACES = Regex("""\s+""")
 private const val BOLD = 1.1f
 private const val CHORD_GAP = 0.5f
 

@@ -124,6 +124,9 @@ object Chords {
      * Chords-only line (and marks like `|`, `(2x)`), with at least one chord. Accepts a label first: `Intro: G D`,
      * `[Intro] G D`.
      */
+    /** A mark that goes with chords on a chords-only line: `|`, `/`, `%`, `-`, `2x`, `(x2)`. */
+    fun isChordLineMark(token: String) = chordLineExtras.matches(token)
+
     fun isChordLine(line: String): Boolean {
         val tokens = line.trim().split(SPACES).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
