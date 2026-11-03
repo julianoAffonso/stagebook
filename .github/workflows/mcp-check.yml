@@ -1,0 +1,25 @@
+# Builds and tests the MCP server when it changes (check.yml skips mcp/: no Gradle for it). Under a minute.
+name: MCP check
+on:
+  push:
+    branches: [main]
+    paths: ["mcp/**", ".github/workflows/mcp-*.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["mcp/**", ".github/workflows/mcp-*.yml"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm test
