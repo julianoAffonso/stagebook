@@ -136,3 +136,16 @@ test("emptying a setlist needs confirm=true", async () => {
   assert.equal(done.error, false);
   assert.equal(tablet.sets.get("t1").items.length, 0);
 });
+
+test("upload paths: ~ is the home folder, relative paths and oversize files are refused", async () => {
+  const { localFile } = await import("../dist/server.js");
+  const home = process.env.HOME;
+  process.env.HOME = dir;
+  try {
+    writeFileSync(join(dir, "song.mp3"), "abc");
+    assert.equal((await localFile("~/song.mp3", 10)).length, 3);
+    await assert.rejects(localFile("song.mp3", 10), /full path/);
+    await assert.rejects(localFile("~/song.mp3", 2), /up to/);
+    await assert.rejects(localFile("~/missing.mp3", 10), /no file/);
+  } finally { process.env.HOME = home; }
+});
