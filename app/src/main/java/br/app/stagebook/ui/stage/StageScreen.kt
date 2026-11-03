@@ -619,9 +619,7 @@ fun StageScreen(
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
             if (onBack != null) {
-                IconButton(onClick = { leave() }) {
-                    Icon(AppIcons.Back, stringResource(R.string.action_back), tint = fg.copy(alpha = 0.6f))
-                }
+                br.app.stagebook.ui.components.BackButton({ leave() }, tint = fg.copy(alpha = 0.6f))
             }
             // position in the setlist as "1 of 2" (user's choice, 30/10): "1/2" next to the page dots read as a page number
             if (uiState.songs.size > 1) {

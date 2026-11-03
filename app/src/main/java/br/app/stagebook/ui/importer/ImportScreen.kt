@@ -233,12 +233,12 @@ fun ImportScreen(
         Box(Modifier.fillMaxSize().padding(inner)) {
             Column(Modifier.fillMaxSize()) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = Spacing.s, vertical = Spacing.s),
+                    Modifier.fillMaxWidth().padding(start = Spacing.m, end = Spacing.s, top = Spacing.s, bottom = Spacing.s),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                 ) {
                     // back arrow, like on every inner screen (Google Photos pattern)
-                    IconButton(onClick = onClose) { Icon(AppIcons.Back, stringResource(R.string.action_back)) }
+                    br.app.stagebook.ui.components.BackButton(onClose, tint = androidx.compose.material3.LocalContentColor.current)
                     TextField(
                         value = address,
                         onValueChange = { address = it },
