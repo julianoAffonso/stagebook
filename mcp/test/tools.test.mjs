@@ -149,3 +149,10 @@ test("upload paths: ~ is the home folder, relative paths and oversize files are 
     await assert.rejects(localFile("~/missing.mp3", 10), /no file/);
   } finally { process.env.HOME = home; }
 });
+
+test("capo is saved with the song", async () => {
+  const r = await call("set_capo", { id: "s2", capo: 3 });
+  assert.equal(r.error, false);
+  assert.equal(r.json.capo, 3);
+  assert.equal(tablet.songs.get("s2").capo, 3);
+});

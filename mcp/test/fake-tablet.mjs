@@ -48,6 +48,7 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
       const d = JSON.parse(body); const up = { G: "A", D: "E", A: "B", E: "F#" };
       return send(200, { text: d.text.replace(/\[([A-G])\]/g, (_, c) => `[${up[c] ?? c}]`), meta: { key: up[d.meta.key] ?? d.meta.key, capo: d.meta.capo } });
     }
+    if (url.pathname === "/api/capo") { const d = JSON.parse(body); return send(200, { text: d.text, meta: { key: d.meta.key, capo: d.capo } }); }
     if (url.pathname === "/api/sets" && req.method === "GET") return send(200, [...sets.values()].map((t) => ({ id: t.id, name: t.name, count: t.items.length })));
     if (url.pathname === "/api/sets" && req.method === "POST") { const d = JSON.parse(body); const id = "t" + (sets.size + 1); sets.set(id, { id, name: d.name || "data", items: d.items }); return send(200, { id }); }
     const t = url.pathname.match(/^\/api\/sets\/([^/]+)$/);
