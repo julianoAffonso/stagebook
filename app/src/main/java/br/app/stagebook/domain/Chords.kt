@@ -321,7 +321,10 @@ object Chords {
         val newKey = if (oldKey.isNotEmpty()) transposeKey(oldKey, semitones) else ""
         // the new key decides flat vs sharp; with no key, each chord keeps its own style
         val useFlats = if (newKey.isNotEmpty()) newKey in flatKeys else null   // the key name is already the usual one
-        val body = text.split('\n').joinToString("\n") { line ->
+        val body = text.split('\n').joinToString("\n") { written ->
+            // a chords-only line written without brackets moves too: with the keyboard's capo it showed in the old key,
+            // colored as chords (audit 03/11)
+            val line = bracketChordLine(written)
             if (isDirective(line)) line
             else shiftShapes(bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "[" + transposeChord(b.groupValues[1], semitones, useFlats, newKey) + "]" else b.value }, semitones)
         }

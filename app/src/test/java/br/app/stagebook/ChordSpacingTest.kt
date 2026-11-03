@@ -115,4 +115,10 @@ class ChordSpacingTest {
         assertTrue(out, g.contains("10-10-12-12-12-10"))
         assertTrue(br.app.stagebook.domain.Chords.shapeHint(out, g.substringAfter('[').substringBefore(']')) == listOf(10, 10, 12, 12, 12, 10))
     }
+
+    // the keyboard's capo transposes on the fly: a chords-only line without brackets moves with the rest (audit 03/11)
+    @Test fun `transposing moves a chords-only line written without brackets`() {
+        val out = br.app.stagebook.domain.Chords.transpose("A   E\n[A]letra", 2)
+        assertTrue(out, out.lines().first().replace(" ", "") == "[B][F#]")
+    }
 }
