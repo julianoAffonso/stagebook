@@ -13,8 +13,6 @@
     <string name="action_stage">Palco</string>
 
     <!-- abas -->
-    <string name="nav_expand">Mostrar os nomes das abas</string>
-    <string name="nav_collapse">Esconder os nomes das abas</string>
     <string name="tab_songs">Músicas</string>
     <string name="tab_setlists">Setlists</string>
     <string name="tab_settings">Ajustes</string>
@@ -71,6 +69,8 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="sets_sort_newest">Mais recentes</string>
+    <string name="sets_sort_abc">A a Z</string>
     <string name="sets_new">Novo setlist</string>
     <string name="sets_name">Nome do setlist</string>
     <string name="sets_name_hint">Se ficar vazio, usa a data e a hora</string>

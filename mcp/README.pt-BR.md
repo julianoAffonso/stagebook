@@ -26,7 +26,13 @@ Copilot, Windsurf, Gemini CLI, OpenAI Codex CLI…).
 Tem também **recursos** (`stagebook://songs`, `stagebook://setlists`, `stagebook://songs/{id}` em ChordPro) e **roteiros
 prontos** (`build_setlist`, `fix_chords`, `transpose_for_singer`).
 
-Apagar, tirar uma faixa e substituir a biblioteca pedem `confirm: true`: o assistente precisa perguntar a você antes.
+Apagar, tirar uma faixa, esvaziar um setlist, substituir a biblioteca e restaurar os ajustes (eles substituem o visual
+do palco, os pedais, a interface de áudio USB e a banda do tablet) pedem `confirm: true`: o assistente precisa
+perguntar a você antes.
+
+Os arquivos a enviar (backing tracks, backups) vão com o caminho completo; `~` é a sua pasta pessoal. O tablet aceita
+faixas de até 200 MB e backups de até 1 GB. Se o assistente desistir de uma chamada longa, o envio ou a restauração
+param também.
 
 ## Instalar
 
@@ -80,7 +86,8 @@ O app do ChatGPT só se conecta a servidores remotos (pela internet), então nã
 1. No tablet: abra o Stagebook e ligue **Ajustes → Editar no computador**. Ele mostra o endereço
    (ex.: `http://192.168.0.10:8090`). O computador e o tablet precisam estar no mesmo Wi-Fi.
 2. Peça ao assistente para conectar no Stagebook. Ele procura na rede (ou você passa o endereço) e o tablet mostra um
-   pedido com um código.
+   pedido com um código. Se mais de um tablet com o Stagebook responder (uma banda no mesmo Wi-Fi), ele pergunta qual
+   endereço é o seu; se o endereço do seu tablet mudou, ele procura de novo.
 3. Se o código bater, toque em **Permitir** no tablet. A chave fica guardada neste computador
    (`~/.config/stagebook-mcp/config.json`, que só você lê); da próxima vez ele conecta sem perguntar.
 
@@ -104,6 +111,10 @@ dias sem uso; **Ajustes → Editar no computador → Computadores autorizados** 
   Abra **Ajustes do Sistema → Privacidade e Segurança → Rede Local** e ligue o app que roda o assistente (Claude,
   Terminal, iTerm, Cursor, VS Code…). Depois reabra esse app.
 - **"No longer accepts this computer's key"**: a chave foi removida no tablet ou passou 90 dias sem uso. Conecte de novo.
+- **"Already showing a request, or one was just denied"**: responda o pedido no tablet; depois de um Negar, ele espera
+  5 minutos para aceitar outro.
+- **"Not found on the tablet, or that part is turned off"**: receber por código precisa da internet ligada, e as
+  ferramentas de banda precisam da banda ligada, nos Ajustes do tablet.
 
 ## Privacidade
 

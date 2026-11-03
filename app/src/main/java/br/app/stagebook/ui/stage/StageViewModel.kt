@@ -36,6 +36,8 @@ data class StageUiState(
     /** Following the band: the leader's next song (the follower's stage holds only the current one); [followEnd]: it's the last. */
     val followNext: String? = null,
     val followEnd: Boolean = false,
+    /** A show (a setlist, or following the band): leaving asks first. A single song from the library leaves at once. */
+    val live: Boolean = false,
 )
 
 @HiltViewModel
@@ -161,6 +163,7 @@ class StageViewModel @Inject constructor(
         StageUiState(
             followNext = followNext,
             followEnd = follow != null && followNext == null && follow.index >= 0,
+            live = set != null || role is br.app.stagebook.data.BandConduct.Role.Following,
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)

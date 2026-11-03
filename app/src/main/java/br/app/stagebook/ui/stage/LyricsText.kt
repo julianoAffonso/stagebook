@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.stage
 
 import br.app.stagebook.domain.HIGHLIGHT_MARK
+import br.app.stagebook.domain.WORD_JOIN
 import br.app.stagebook.domain.highlightMarks
 
 import androidx.compose.runtime.Composable
@@ -35,7 +36,7 @@ const val CHORD_LIST_TAG = "chordlist"
 const val TAB_TAG = "tab"
 
 // a section title line: pagination keeps it with the verse after it (device test B-13)
-const val SECTION_TAG = "section"
+const val SECTION_TAG = "section"   // item: the pill's color (ARGB)
 const val TAB_EM = 0.7f
 
 /** An empty line [heightEm] tall, reserved for the chord list (paginated like the others). */
@@ -112,15 +113,15 @@ fun stageLines(
         if (!showSections) return blank(at)
         out += StageLine(
             buildAnnotatedString {
-                // more emphasis (user's request, 29/10): adjustable size and a light background in the section color
+                // more emphasis (user's request, 29/10): adjustable size and a light background in the section color,
+                // drawn by [ChordText] as a rounded pill with room around the letters (user, 03/11: the box tight on the
+                // letters looked bad)
                 withStyle(
-                    SpanStyle(
-                        fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em, fontFamily = sectionFont,
-                        background = sectionColor.copy(alpha = SECTION_BACKGROUND_ALPHA),
-                    ),
+                    SpanStyle(fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em, fontFamily = sectionFont),
                 ) {
-                    pushStringAnnotation(SECTION_TAG, "")
-                    append(label.uppercase())
+                    pushStringAnnotation(SECTION_TAG, sectionColor.copy(alpha = SECTION_BACKGROUND_ALPHA).toArgb().toString())
+                    // room inside the pill: an en space on each side keeps its left edge on the lyrics' edge
+                    append("\u2002" + label.uppercase() + "\u2002")
                     pop()
                 }
             },
@@ -128,7 +129,9 @@ fun stageLines(
         )
     }
     val tabs = Tablature.tabLines(text)
-    text.split('\n').forEachIndexed { i, raw ->
+    text.split('\n').forEachIndexed { i, written ->
+        // a chord line left without brackets ("B/F#  224442") shows like the others: chords in color, notes beside them
+        val raw = Chords.bracketChordLine(written)
         // tablature: only in the lyrics and chords profile, in monospace (the columns stay aligned)
         if (tabs[i]) {
             if (chords.show) out += StageLine(tabLine(raw.trimEnd()), i)
@@ -190,10 +193,18 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     if (segs.isEmpty()) return AnnotatedString(raw.trimEnd())
     segs.last().text += raw.substring(last)
     val lyric = segs.joinToString("") { it.text }
-    if (lyric.isBlank()) {
+    // chords only, maybe with marks like "x4" or "|" (user, 03/11: "[A] [B] 2x" put the 2x under the chords, as lyrics):
+    // the chords in their color and the marks between them, in order, on one line
+    // a label in front ("Intro: G D") counts too: it took the lyrics path, with the chords floating above (audit 03/11)
+    val words = lyric.trim().split(SPACES)
+    if (lyric.isBlank() || words.withIndex().all { (i, w) -> Chords.isChordLineMark(w) || (i == 0 && Chords.isChordLineLabel(w)) }) {
         return buildAnnotatedString {
-            withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) {
-                append(segs.mapNotNull { it.chord }.joinToString("   "))
+            segs.forEach { s ->
+                if (s.chord != null) {
+                    if (length > 0) append("   ")
+                    withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) { append(s.chord) }
+                }
+                s.text.trim().split(SPACES).filter { it.isNotEmpty() }.forEach { if (length > 0) append("   "); append(it) }
             }
         }
     }
@@ -201,7 +212,15 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
         val chord = s.chord ?: return@forEachIndexed
         // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on)
         val need = emWidth(chord) * look.scale * BOLD + if (i < segs.lastIndex) CHORD_GAP else 0f
+        val letters = s.text.length
         while (emWidth(s.text) < need) s.text += " "
+        // room opened in the middle of a word ("gu[A9]erra") gets a hyphen, as printed chord sheets do: the bare gap
+        // read as two words (user, 03/11)
+        val next = segs.getOrNull(i + 1)?.text?.firstOrNull()
+        if (s.text.length > letters && s.text.getOrNull(letters - 1)?.isLetter() == true && next?.isLetter() == true) {
+            val mid = letters + (s.text.length - letters) / 2
+            s.text = s.text.substring(0, mid) + WORD_JOIN + s.text.substring(mid + 1)
+        }
     }
     // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
     return buildAnnotatedString {
@@ -254,6 +273,7 @@ internal fun highlighted(line: AnnotatedString, color: Color): AnnotatedString {
 }
 
 // rough width of text in em, by kind of letter (proportional font): enough to keep one chord off the next
+private val SPACES = Regex("""\s+""")
 private const val BOLD = 1.1f
 private const val CHORD_GAP = 0.5f
 

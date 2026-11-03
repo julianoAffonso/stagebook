@@ -17,8 +17,9 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 - **Stage:** full screen, always lit, in pages or scrolling. Turn with a Bluetooth or MIDI pedal (USB and Bluetooth),
   a tap or auto-scroll. Each pedal button can do something else.
 - **Chords:** chords above the lyrics (ChordPro), transpose, capo, tablature and each chord's diagram on acoustic or
-  electric guitar, ukulele, cavaquinho or keyboard, with sound. It also shows the key's harmonic field.
-- **Setlists:** build the show and drag to reorder. Send it to whoever is next to you by QR, far away with 3 words over
+  electric guitar, ukulele, cavaquinho or keyboard, with sound. It also shows the key's harmonic field. Notes on the
+  chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you transpose.
+- **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Send it to whoever is next to you by QR, far away with 3 words over
   the internet, or to the whole band on the same Wi-Fi.
 - **Band:** with "Lead the band", whoever leads the setlist changes songs and everyone's stage follows. Before
   starting, the app says who is missing a song.
