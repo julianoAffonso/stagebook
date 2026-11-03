@@ -1,8 +1,9 @@
 // The MCP side: tools, resources and prompts over the tablet's API (client.ts). Every write goes through the same rules
 // as the app's editor (the tablet applies them), and the stage on the tablet follows right away.
 
-import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { basename, isAbsolute, join } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { StagebookClient, StagebookError, answers, discoverAll, save } from "./client.js";
@@ -40,6 +41,28 @@ export function chordsIn(chordpro: string): string[] {
   const seen = new Set<string>();
   for (const m of chordpro.matchAll(/\[([A-G][^\[\]\s]*)\]/g)) seen.add(m[1]);
   return [...seen];
+}
+
+// the tablet's limits (WebEditorServer): a backing track as in the app, a backup with every track
+const TRACK_MAX = 200 * 1024 * 1024;
+const BACKUP_MAX = 1024 * 1024 * 1024;
+
+/**
+ * A file on this computer to send: `~` is the home folder, a relative path is refused (it would resolve against the
+ * assistant app's folder, not the person's), and one over the tablet's limit is refused here (the tablet closed the
+ * connection, which read as "Couldn't reach"). Read once: the copy into a new array held a backup twice (audit 03/11).
+ */
+export async function localFile(path: string, max: number): Promise<Uint8Array> {
+  const full = path === "~" || path.startsWith("~/") ? join(homedir(), path.slice(1)) : path;
+  if (!isAbsolute(full)) throw new StagebookError(`Pass the file's full path (like /Users/name/Music/song.mp3 or ~/Music/song.mp3), not "${path}".`);
+  let size: number;
+  try {
+    size = (await stat(full)).size;
+  } catch {
+    throw new StagebookError(`There's no file at ${full}.`);
+  }
+  if (size > max) throw new StagebookError(`The file is ${Math.round(size / 1048576)} MB; the tablet takes up to ${Math.round(max / 1048576)} MB.`);
+  return readFile(full);
 }
 
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -272,7 +295,7 @@ export function buildServer(client: StagebookClient): McpServer {
       inputSchema: { id: z.string(), path: z.string().describe("Path of the audio file on this computer.") },
     },
     safe(async ({ id, path }: { id: string; path: string }) => {
-      const bytes = new Uint8Array(await readFile(path));
+      const bytes = await localFile(path, TRACK_MAX);
       const r = await client.send("PUT", `/api/songs/${encodeURIComponent(id)}/track`, bytes, { name: basename(path) }, 300000);
       return text({ id, track: r?.trackName ?? basename(path) });
     }),
@@ -444,7 +467,7 @@ export function buildServer(client: StagebookClient): McpServer {
       annotations: { destructiveHint: true },
     },
     safe(async ({ path, parts, replace, confirm }: { path: string; parts?: string[]; replace?: boolean; confirm?: boolean }) => {
-      const bytes = new Uint8Array(await readFile(path));
+      const bytes = await localFile(path, BACKUP_MAX);
       const info = await client.send("POST", "/api/backup/inspect", bytes, undefined, 600000);
       if (!parts?.length) return text({ inspected: info });
       if (replace && !confirm) throw new StagebookError("Replacing swaps the whole library for the file's: ask the person and pass confirm=true.");
