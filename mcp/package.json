@@ -1,8 +1,29 @@
 {
   "name": "stagebook-mcp",
   "version": "0.1.0",
-  "description": "MCP server for Stagebook: lets AI assistants (Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex\u2026) read and edit the songs and setlists on your Stagebook tablet over the local network.",
-  "license": "SEE LICENSE IN ../LICENSE.md",
+  "description": "MCP server for Stagebook: lets AI assistants (Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex…) read and edit the songs and setlists on your Stagebook tablet over the local network.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "author": "Juliano Affonso",
+  "homepage": "https://github.com/julianoAffonso/stagebook/tree/main/mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/julianoAffonso/stagebook.git",
+    "directory": "mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/julianoAffonso/stagebook/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "stagebook",
+    "setlist",
+    "chords",
+    "chordpro",
+    "lyrics",
+    "backing-track"
+  ],
   "type": "module",
   "bin": {
     "stagebook-mcp": "dist/index.js"
@@ -15,8 +36,10 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test test/",
-    "start": "node dist/index.js"
+    "test": "npm run build && node --test \"test/*.test.mjs\"",
+    "start": "node dist/index.js",
+    "prepack": "npm run build && cp ../LICENSE.md LICENSE.md",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
