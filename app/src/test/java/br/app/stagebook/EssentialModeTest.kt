@@ -79,6 +79,9 @@ class EssentialModeTest {
     @Test fun `band on the network off ends Lead the band and does not come back`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(15_000) { repo.loaded.first { it } }
+        // The library is saved between tests: one that left the band off would end the conducting as soon as it starts
+        repo.updateLook { it.copy(bandOn = true) }
+        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
         val link = br.app.stagebook.data.BandLink(
             context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
             br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
