@@ -61,7 +61,9 @@ Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Deskt
 and other AI assistants read and edit your library: "build a 15-song setlist for Saturday", "move every song by this
 artist down a half tone", "check the chords of this song", "import this page". It runs on your computer and talks to the
 tablet over your Wi-Fi through **Settings → Edit on the computer**; you approve the computer once on the tablet.
-Install and setup for each assistant: [mcp/README.md](mcp/README.md).
+It's on npm as [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): with [Node.js](https://nodejs.org) on
+the computer, Claude Code connects with `claude mcp add stagebook -- npx -y stagebook-mcp`. Setup for each assistant:
+[mcp/README.md](mcp/README.md).
 
 ## Install
 Stagebook isn't on the Play Store; it's only here, for free. Needs Android 9 or newer.
