@@ -17,8 +17,9 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. Cada botão do pedal pode fazer outra coisa.
 - **Cifras:** acordes em cima da letra (ChordPro), transpor, capotraste, tablatura e o diagrama de cada acorde no
-  violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom.
-- **Setlists:** monte o show e arraste para mudar a ordem. Mande para quem está do lado por QR, para longe com 3
+  violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom. Anotações na
+  linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam ao transpor.
+- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Mande para quem está do lado por QR, para longe com 3
   palavras pela internet, ou para a banda toda no mesmo Wi-Fi.
 - **Banda:** com o "Quem conduz", quem puxa o setlist troca de música e o palco de todo mundo acompanha. Antes de
   começar, o app avisa quem não tem alguma música.
