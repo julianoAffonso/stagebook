@@ -43,10 +43,23 @@ object Chords {
     }
 
     /** The guitar frets a line like `B/F#  224442` (or `[B/F#] 224442`) gives for [chord] (-1 = not played), if any. */
-    fun shapeHint(text: String, chord: String): List<Int>? = text.lineSequence()
-        .mapNotNull { shapeHint.matchEntire(it.replace("[", "").replace("]", "")) }
-        .firstOrNull { it.groupValues[1] == chord }
-        ?.groupValues?.get(2)?.let(::frets)
+    fun shapeHint(text: String, chord: String): List<Int>? = shapeHints(text)[chord]
+
+    // the song's fret notes by chord, read once per text: the chord list asked for each of its ~20 chords, and each ask
+    // scanned the whole song (audit 03/11). One entry: the stage asks about the song on screen
+    @Volatile private var hintsOf: Pair<String, Map<String, List<Int>>>? = null
+
+    private fun shapeHints(text: String): Map<String, List<Int>> {
+        hintsOf?.let { (t, m) -> if (t === text || t == text) return m }
+        val m = HashMap<String, List<Int>>()
+        for (line in text.lineSequence()) {
+            if (!line.contains(' ')) continue
+            val h = shapeHint.matchEntire(line.replace("[", "").replace("]", "")) ?: continue
+            m.putIfAbsent(h.groupValues[1], frets(h.groupValues[2]))
+        }
+        hintsOf = text to m
+        return m
+    }
 
     /** A chords-only line written without brackets (`B/F#  224442`) with its chords in brackets, as ChordPro keeps them. */
     fun bracketChordLine(line: String): String =
@@ -171,7 +184,9 @@ object Chords {
         val tokens = line.trim().split(SPACES).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
         val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
-        return body.any(::isChord) && body.all { isChord(it) || chordLineExtras.matches(it) }
+        // the "all" first: a lyric line stops at its first word that isn't a chord (it ran on every line of the stage
+        // and the editor preview, and "any" parsed every word first; audit 03/11)
+        return body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)
     }
 
     /** A label in front of chords on a chords-only line: `Intro:` or `[Solo]`. */
