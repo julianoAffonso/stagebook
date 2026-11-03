@@ -68,6 +68,8 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="sets_sort_newest">Newest</string>
+    <string name="sets_sort_abc">A to Z</string>
     <string name="sets_new">New setlist</string>
     <string name="sets_name">Setlist name</string>
     <string name="sets_name_hint">If empty, uses the date and time</string>

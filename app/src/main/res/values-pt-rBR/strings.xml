@@ -71,6 +71,8 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="sets_sort_newest">Mais recentes</string>
+    <string name="sets_sort_abc">A a Z</string>
     <string name="sets_new">Novo setlist</string>
     <string name="sets_name">Nome do setlist</string>
     <string name="sets_name_hint">Se ficar vazio, usa a data e a hora</string>

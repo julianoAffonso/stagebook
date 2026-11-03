@@ -91,6 +91,7 @@ fun SetlistsRoute(
         onSendBand = viewModel::sendBand,
         onBandSearch = viewModel::bandSearch,
         songsIn = viewModel::songsIn,
+        onSortAbc = viewModel::sortAbc,
     )
     br.app.stagebook.ui.share.BandResultMessage(viewModel.bandResult)
 }
@@ -119,6 +120,7 @@ fun SetlistsScreen(
     received: Int = 0,
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,
+    onSortAbc: (Boolean) -> Unit = {},
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
@@ -151,6 +153,14 @@ fun SetlistsScreen(
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
+            // order: newest first or A to Z (user, 03/11), only when there's something to order
+            if (!selecting && uiState.sets.size > 1) br.app.stagebook.ui.components.SegmentedChoice(
+                listOf(
+                    br.app.stagebook.ui.components.Choice(false, R.string.sets_sort_newest),
+                    br.app.stagebook.ui.components.Choice(true, R.string.sets_sort_abc),
+                ),
+                uiState.abc, onSortAbc, Modifier.padding(bottom = Spacing.m),
+            )
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
             // that was first, and the new one stayed hidden above it, device test B-09)
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
