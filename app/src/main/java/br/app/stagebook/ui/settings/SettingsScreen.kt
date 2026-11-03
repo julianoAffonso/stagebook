@@ -164,7 +164,11 @@ import br.app.stagebook.ui.theme.StagePalette
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel = hiltViewModel()) {   // start: section open on entry (link from the alert)
+fun SettingsRoute(
+    start: SettingsSection? = null,   // start: section open on entry (link from the alert)
+    onLeave: (() -> Unit)? = null,   // set: only [start], on its own page, whose back arrow calls this (About from the rail's logo)
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -261,6 +265,7 @@ fun SettingsRoute(start: SettingsSection? = null, viewModel: SettingsViewModel =
         SettingsScreen(
             section = section,
             onSection = { section = it },
+            onLeave = onLeave,
             uiState = uiState,
             actions = SettingsActions(
                 onFont = viewModel::setFont,
@@ -438,6 +443,21 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     ABOUT(R.string.settings_about, AppIcons.Info),   // always last: the app, update, privacy, code, support
 }
 
+/** One section on its own page: header with the back arrow, the pinned preview, then the content that scrolls. */
+@Composable
+private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: () -> Unit) {
+    CenteredContent(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
+            ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
+            SectionPinned(open, uiState.look, draft)
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                SectionDetail(open, uiState, actions, draft)
+                Spacer(Modifier.height(Spacing.l))
+            }
+        }
+    }
+}
+
 /** A Settings section asked for by a link somewhere in the app (the Home screen opens it). */
 object SettingsLinks {
     val pending = kotlinx.coroutines.flow.MutableStateFlow<SettingsSection?>(null)
@@ -474,6 +494,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     section: SettingsSection? = null,
     onSection: (SettingsSection?) -> Unit = {},
+    onLeave: (() -> Unit)? = null,
 ) {
     Crossfade(uiState.loading, modifier.fillMaxSize(), label = "settings") { loading ->
         if (loading) {
@@ -485,7 +506,11 @@ fun SettingsScreen(
             val draft = remember(uiState.look.fontSp, uiState.look.sectionScale, uiState.look.chordScale) {
                 StageDraft(uiState.look.fontSp, uiState.look.sectionScale, uiState.look.chordScale)
             }
-            if (maxWidth >= Sizes.contentMax) {
+            val alone = section?.takeIf { onLeave != null }
+            if (alone != null && onLeave != null) {
+                // opened by itself (About from the rail's logo, user 03/11): no section list, back leaves Settings
+                SectionPage(alone, uiState, actions, draft, onLeave)
+            } else if (maxWidth >= Sizes.contentMax) {
                 // tablet in landscape: fixed list on the left, open section on the right
                 val open = section ?: SettingsSection.LYRICS
                 Row(Modifier.fillMaxSize()) {
@@ -511,16 +536,7 @@ fun SettingsScreen(
                     if (open == null) {
                         SectionList(uiState, null, onSection, Modifier.fillMaxSize(), band = actions.band)
                     } else {
-                        CenteredContent(Modifier.fillMaxSize()) {
-                            Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
-                                ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = { onSection(null) })
-                                SectionPinned(open, uiState.look, draft)
-                                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                                    SectionDetail(open, uiState, actions, draft)
-                                    Spacer(Modifier.height(Spacing.l))
-                                }
-                            }
-                        }
+                        SectionPage(open, uiState, actions, draft) { onSection(null) }
                     }
                 }
             }

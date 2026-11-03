@@ -31,6 +31,7 @@ import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.ShortNavigationBarItemDefaults
 import androidx.compose.material3.WideNavigationRail
+import androidx.compose.ui.layout.layout
 import androidx.compose.material3.WideNavigationRailDefaults
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailItemDefaults
@@ -108,6 +109,14 @@ fun HomeScreen(
     )
     // back on a tab that isn't the start one goes to it (instead of closing the app)
     BackHandler(enabled = tab != home) { picked = home }
+    // About from the rail's logo: its own page over the tab the user was on, which back returns to (user, 03/11)
+    var aboutOpen by rememberSaveable { mutableStateOf(false) }
+    // under the app's name on the rail: the number only, without the commit ("0.1.674 (7fd22d9d)")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val appVersion = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty().substringBefore(" (")
+    }
+    BackHandler(enabled = aboutOpen) { aboutOpen = false }
 
     // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
     // once on the Fire
@@ -116,6 +125,7 @@ fun HomeScreen(
     var settingsVisit by rememberSaveable { mutableIntStateOf(0) }
     var settingsStart by rememberSaveable { mutableStateOf<SettingsSection?>(null) }   // link from the alert: opens right on the section
     val onTab: (HomeTab) -> Unit = { t ->
+        aboutOpen = false
         if (t == HomeTab.SETTINGS) {
             tabs.removeState("${HomeTab.SETTINGS}$settingsVisit")
             settingsVisit++
@@ -130,7 +140,7 @@ fun HomeScreen(
         linked?.let { onTab(HomeTab.SETTINGS); settingsStart = it; br.app.stagebook.ui.settings.SettingsLinks.pending.value = null }
     }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, onAbout = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.ABOUT }) { m ->
+    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, onAbout = { aboutOpen = true }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
@@ -151,7 +161,9 @@ fun HomeScreen(
         }
         Column(m) {
             Box(Modifier.weight(1f)) {
-                androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status.takeIf { tab != HomeTab.SETTINGS }) {
+                if (aboutOpen) {
+                    SettingsRoute(SettingsSection.ABOUT, onLeave = { aboutOpen = false })
+                } else androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status.takeIf { tab != HomeTab.SETTINGS }) {
                 tabs.SaveableStateProvider(if (tab == HomeTab.SETTINGS) "${HomeTab.SETTINGS}$settingsVisit" else tab.name) {
                     when (tab) {
                         HomeTab.SONGS -> SongsRoute(
@@ -178,6 +190,7 @@ fun HomeScreen(
 @Composable
 fun HomeScaffold(
     tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), onAbout: () -> Unit = {},
+    version: String = "",
     content: @Composable (Modifier) -> Unit,
 ) {
     // number of band news on the tab icon (like new email)
@@ -197,6 +210,13 @@ fun HomeScaffold(
                     // fixed rail with icon and name, the app's logo on top and the tabs right after it (user, 03/11: no
                     // menu button, opening it only moved the same names beside their icons; centred tabs looked lost)
                     WideNavigationRail(
+                        // the rail's own top space (44 dp) left the logo well below the screen's title: moved up so
+                        // the logo starts with it (user, 03/11)
+                        modifier = Modifier.layout { m, c ->
+                            val up = (RailTopSpace - Spacing.s).roundToPx()
+                            val p = m.measure(c.copy(minHeight = c.minHeight + up, maxHeight = if (c.hasBoundedHeight) c.maxHeight + up else c.maxHeight))
+                            layout(p.width, p.height - up) { p.place(0, -up) }
+                        },
                         colors = WideNavigationRailDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                         header = {
                             // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
@@ -221,6 +241,14 @@ fun HomeScaffold(
                                     color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.padding(top = Spacing.s),
                                 )
+                                // the installed version, small and quiet (user, 03/11)
+                                if (version.isNotEmpty()) {
+                                    Text(
+                                        version,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         },
                     ) {
@@ -266,6 +294,9 @@ fun HomeScaffold(
         }
     }
 }
+
+/** Top space the Material wide rail keeps above its header (collapsed rail token). */
+private val RailTopSpace = 44.dp
 
 // selected tab shows only icon and name in the accent color, no background pill (simple icons across the app)
 @Composable

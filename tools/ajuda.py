@@ -245,12 +245,12 @@ SECTIONS = [
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
             "Quando sai uma versão nova, o app avisa ao abrir. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda.",
-            "Em Ajustes → Sobre ficam o idioma, a versão e o botão Abrir a ajuda, que traz para esta página (precisa de internet). No tablet, tocar no logo do Stagebook, no topo da barra lateral, também abre o Sobre.",
+            "Em Ajustes → Sobre ficam o idioma, a versão e o botão Abrir a ajuda, que traz para esta página (precisa de internet). No tablet, a versão também aparece embaixo do logo, no topo da barra lateral; tocar no logo abre só o Sobre, e a seta volta para a tela onde você estava.",
             "Suas músicas e ajustes ficam no aparelho. O que vai para a banda ou pela internet vai cifrado. Não tem conta, propaganda nem rastreio.",
         ],
         "text_en": [
             "When a new version is out, the app tells you when it opens. It's best if the whole band uses the same version; a device on another one shows up marked in Settings → Band.",
-            "Settings → About has the language, the version and the Open the help button, which brings you to this page (it needs the internet). On a tablet, tapping the Stagebook logo at the top of the side bar opens About too.",
+            "Settings → About has the language, the version and the Open the help button, which brings you to this page (it needs the internet). On a tablet, the version also shows under the logo at the top of the side bar; tapping the logo opens just About, and the arrow takes you back to the screen you were on.",
             "Your songs and settings stay on the device. What goes to the band or over the internet is encrypted. There's no account, no ads and no tracking.",
         ],
         "figs": [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_lingua", "Ajustes → Sobre: ajuda, idioma e atualizar", "Settings → About: help, language and updating")),
