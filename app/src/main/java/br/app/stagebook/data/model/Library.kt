@@ -188,6 +188,8 @@ data class Look(
     // import: the sites for each kind; the first in each list is the default (where the importer opens)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
     val chordSites: List<ImportSite> = ImportSites.CHORDS,
+    // Setlists tab in A to Z instead of newest first (user, 03/11)
+    val setsAbc: Boolean = false,
 ) {
     companion object {
         const val MIN_FONT = 16f

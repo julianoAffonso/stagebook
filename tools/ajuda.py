@@ -77,12 +77,12 @@ SECTIONS = [
     {
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
-            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas.",
+            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. A lista de setlists mostra os mais recentes primeiro ou em ordem alfabética: escolha em Mais recentes | A a Z, acima da lista.",
             "Em Escolher músicas, marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar.",
             "Quando chega um setlist de alguém, o app mostra quais músicas você já tem e quais faltam. Antes de criar, ele avisa o que vai ficar de fora e oferece importar as que faltam.",
         ],
         "text_en": [
-            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order.",
+            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. The list of setlists shows the newest first or in alphabetical order: pick Newest | A to Z, above the list.",
             "In Pick songs, check the songs in the order they'll be played. Search and tags help you find them.",
             "When a setlist comes from someone, the app shows which songs you already have and which are missing. Before creating it, it tells you what will be left out and offers to import the missing ones.",
         ],

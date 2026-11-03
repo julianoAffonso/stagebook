@@ -300,7 +300,8 @@ class LibraryRepository @Inject constructor(
             val newSets = sets.filter { it.name.trim().lowercase() !in names }
                 .map { it.copy(id = newId(), items = it.items.mapNotNull(idOf::get)) }
             addedSets = newSets.size
-            lib.copy(songs = all, sets = lib.sets + newSets)
+            // at the top, like a new one: the stored order is newest first (the Setlists tab's "Newest")
+            lib.copy(songs = all, sets = newSets + lib.sets)
         }
         return added to addedSets
     }
