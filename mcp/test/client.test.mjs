@@ -66,3 +66,8 @@ test("a call the assistant gave up on stops", async () => {
   stop.abort();
   await assert.rejects(c.send("GET", "/api/session", undefined, undefined, 15000, stop.signal), /cancelled/);
 });
+
+test("a 404 says it may be a part turned off on the tablet", async () => {
+  const c = new StagebookClient(tablet.url, "k123");
+  await assert.rejects(c.get("/api/band/inbox"), (e) => e.status === 404 && /turned off/.test(e.message));
+});
