@@ -53,4 +53,12 @@ class HomeScaffoldStateTest {
         compose.waitForIdle()
         compose.onNodeWithText("toques 2").assertExists()
     }
+
+    // the logo and name on top of the tablet's rail open About (user, 03/11)
+    @Test fun `tapping the rail's logo opens About`() {
+        var about = 0
+        compose.setContent { StagebookTheme { HomeScaffold(HomeTab.entries.first(), {}, onAbout = { about++ }) { m -> Box(m) } } }
+        compose.onNodeWithText("Stagebook").performClick()
+        org.junit.Assert.assertEquals(1, about)
+    }
 }

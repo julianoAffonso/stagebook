@@ -130,7 +130,7 @@ fun HomeScreen(
         linked?.let { onTab(HomeTab.SETTINGS); settingsStart = it; br.app.stagebook.ui.settings.SettingsLinks.pending.value = null }
     }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges) { m ->
+    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, onAbout = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.ABOUT }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
@@ -172,11 +172,14 @@ fun HomeScreen(
 }
 
 /**
- * Tab frame, stateless, in Google's current pattern (Material 3 Expressive): on tablets the wide rail, which the menu
- * button opens to show the names; on phones the bottom bar. The content gets the Modifier with the remaining space.
+ * Tab frame, stateless, in Google's current pattern (Material 3 Expressive): on tablets the rail, with the app's logo
+ * on top ([onAbout] when tapped); on phones the bottom bar. The content gets the Modifier with the remaining space.
  */
 @Composable
-fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), content: @Composable (Modifier) -> Unit) {
+fun HomeScaffold(
+    tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), onAbout: () -> Unit = {},
+    content: @Composable (Modifier) -> Unit,
+) {
     // number of band news on the tab icon (like new email)
     val badged: @Composable (HomeTab) -> Unit = { t ->
         val n = badges[t] ?: 0
@@ -198,8 +201,13 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                         header = {
                             // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
                             // centred over the tabs' icons (the collapsed rail is 96 dp wide)
-                            // and the name below it (user, 03/11)
-                            androidx.compose.foundation.layout.Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            // and the name below it; tapping them opens About (user, 03/11)
+                            androidx.compose.foundation.layout.Column(
+                                Modifier.width(96.dp).clip(MaterialTheme.shapes.medium)
+                                    .clickable(onClickLabel = stringResource(R.string.settings_about), onClick = onAbout)
+                                    .padding(vertical = Spacing.xs),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
                                 androidx.compose.foundation.Image(
                                     androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground),
                                     contentDescription = null,
