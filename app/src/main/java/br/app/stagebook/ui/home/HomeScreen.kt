@@ -16,8 +16,9 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
@@ -190,11 +191,23 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
         if (maxWidth >= Sizes.railBreakpoint) {
             Scaffold(contentWindowInsets = ScreenInsets, containerColor = MaterialTheme.colorScheme.background) { inner ->
                 Row(Modifier.padding(inner)) {
-                    // fixed rail with icon and name, the tabs in the middle of the height where the thumb reaches. No menu
-                    // button: opening it only moved the same three names beside their icons (user, 03/11)
+                    // fixed rail with icon and name, the app's logo on top and the tabs right after it (user, 03/11: no
+                    // menu button, opening it only moved the same names beside their icons; centred tabs looked lost)
                     WideNavigationRail(
                         colors = WideNavigationRailDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-                        arrangement = Arrangement.Center,
+                        header = {
+                            // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
+                            // centred over the tabs' icons (the collapsed rail is 96 dp wide)
+                            Box(Modifier.width(96.dp), contentAlignment = Alignment.Center) {
+                                androidx.compose.foundation.Image(
+                                    androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground),
+                                    contentDescription = stringResource(R.string.app_name),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier.size(Sizes.railLogo).clip(MaterialTheme.shapes.medium)
+                                        .graphicsLayer { scaleX = 1.4f; scaleY = 1.4f },
+                                )
+                            }
+                        },
                     ) {
                         HomeTab.entries.forEach { t ->
                             WideNavigationRailItem(
