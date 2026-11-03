@@ -69,17 +69,24 @@ fun ChordText(
                 sections.forEach { a ->
                     val end = a.end.coerceAtMost(l.layoutInput.text.length)
                     if (a.start >= end) return@forEach
+                    // the room the en spaces give: visibleEnd leaves the closing one out, and a wrapped line has neither,
+                    // so the pill's round ends cut the letters at its edges (user, 03/11); added back where it's missing
+                    val room = l.getBoundingBox(a.start).width
+                    val firstLine = l.getLineForOffset(a.start)
+                    val lastLine = l.getLineForOffset(end - 1)
                     // one pill per drawn line: a long title that wraps got one box from the first letter's line to the
                     // last letter's x, covering part of line one and none of line two (audit 03/11)
-                    for (line in l.getLineForOffset(a.start)..l.getLineForOffset(end - 1)) {
+                    for (line in firstLine..lastLine) {
                         val from = maxOf(a.start, l.getLineStart(line))
                         val to = minOf(end, l.getLineEnd(line, visibleEnd = true))
                         if (from >= to) continue
                         val first = l.getBoundingBox(from)
                         val last = l.getBoundingBox(to - 1)
+                        val left = if (line == firstLine) first.left else first.left - room
+                        val right = if (line == lastLine && to == end) last.right else last.right + room
                         val h = first.bottom - first.top
                         drawRoundRect(
-                            Color(a.item.toInt()), Offset(minOf(first.left, last.left), first.top), Size(kotlin.math.abs(last.right - first.left), h),
+                            Color(a.item.toInt()), Offset(left, first.top), Size(right - left, h),
                             androidx.compose.ui.geometry.CornerRadius(h / 2f),
                         )
                     }
