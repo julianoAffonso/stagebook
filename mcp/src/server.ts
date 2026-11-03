@@ -1,6 +1,7 @@
 // The MCP side: tools, resources and prompts over the tablet's API (client.ts). Every write goes through the same rules
 // as the app's editor (the tablet applies them), and the stage on the tablet follows right away.
 
+import { readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join } from "node:path";
@@ -8,7 +9,8 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { z } from "zod";
 import { StagebookClient, StagebookError, answers, discoverAll, save } from "./client.js";
 
-export const VERSION = "0.1.0";
+// the one in package.json (it ships beside dist/), so the two never disagree
+export const VERSION: string = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 type Song = {
   id: string; title: string; author: string; year: string; tempo: string; text: string;
