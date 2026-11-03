@@ -151,7 +151,9 @@ import br.app.stagebook.ui.components.ConfirmDialog
 /** Page "-1" = the song's last page (going back from a song lands at the end of the previous one). */
 private const val LAST_PAGE = -1
 
-private val SPACES = Regex("\\s+")
+// the en spaces around a section title split words too (\s leaves them out; with them the title measured as one
+// word about 1 em wider in the longest-word check; audit 03/11)
+private val SPACES = Regex("[\\s\u2002]+")
 
 /** With the fingers still for this long, the pinch rebuilds the pages (before that, it only scales the text). */
 private const val PINCH_REFLOW_MS = 120L
