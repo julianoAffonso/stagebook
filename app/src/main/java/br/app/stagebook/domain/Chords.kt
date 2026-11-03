@@ -174,6 +174,9 @@ object Chords {
         return body.any(::isChord) && body.all { isChord(it) || chordLineExtras.matches(it) }
     }
 
+    /** A label in front of chords on a chords-only line: `Intro:` or `[Solo]`. */
+    fun isChordLineLabel(t: String) = isLabel(t)
+
     private fun isLabel(t: String) =
         (t.endsWith(":") && !isChord(t.dropLast(1))) || (t.startsWith("[") && t.endsWith("]") && !isChord(t.drop(1).dropLast(1)))
 

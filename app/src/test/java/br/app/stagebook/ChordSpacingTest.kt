@@ -121,4 +121,11 @@ class ChordSpacingTest {
         val out = br.app.stagebook.domain.Chords.transpose("A   E\n[A]letra", 2)
         assertTrue(out, out.lines().first().replace(" ", "") == "[B][F#]")
     }
+
+    // "Intro: G D" without brackets: the label and the chords on one chords line (audit 03/11)
+    @Test fun `a label in front of the chords stays on the chords line`() {
+        val line = chordLine(br.app.stagebook.domain.Chords.bracketChordLine("Intro: G D"), ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text == "Intro:   G   D")
+        assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
+    }
 }
