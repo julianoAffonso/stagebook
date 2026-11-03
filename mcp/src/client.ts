@@ -118,7 +118,8 @@ export class StagebookClient {
 
   async send(method: string, path: string, body?: unknown, query?: Record<string, string>, timeoutMs?: number, signal?: AbortSignal): Promise<any> {
     const r = await this.call(method, path, body, { query, timeoutMs, signal });
-    if (r.status === 404) throw new StagebookError("Not found on the tablet.", 404);
+    // the tablet answers 404 also for what is turned off there (internet, band): "not found" alone misled (audit 03/11)
+    if (r.status === 404) throw new StagebookError("Not found on the tablet, or that part is turned off there (the internet or the band, in Settings).", 404);
     return r.json;
   }
 
