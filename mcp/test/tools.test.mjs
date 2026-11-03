@@ -113,3 +113,17 @@ test("prompts are listed", async () => {
   const { prompts } = await mcp.listPrompts();
   assert.deepEqual(prompts.map((p) => p.name).sort(), ["build_setlist", "fix_chords", "transpose_for_singer"]);
 });
+
+test("restoring settings needs confirm=true: they replace the tablet's", async () => {
+  const file = join(dir, "backup.stagebook");
+  writeFileSync(file, "zip");
+  const refused = await call("restore_backup", { path: file, parts: ["settings"] });
+  assert.equal(refused.error, true);
+  assert.match(refused.body, /confirm=true/);
+  assert.equal(tablet.restores.length, 0);
+  const done = await call("restore_backup", { path: file, parts: ["settings"], confirm: true });
+  assert.equal(done.error, false);
+  assert.deepEqual(tablet.restores.at(-1).parts, ["settings"]);
+  const adding = await call("restore_backup", { path: file, parts: ["library"] });   // adding songs needs no confirm
+  assert.equal(adding.error, false);
+});

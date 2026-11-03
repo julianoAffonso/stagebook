@@ -9,6 +9,7 @@ export function fakeTablet({ approve = true } = {}) {
   ]);
   const sets = new Map([["t1", { id: "t1", name: "Saturday", items: ["s1"] }]]);
   let asked = 0;
+  const restores = [];
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
     const chunks = []; for await (const c of req) chunks.push(c);
@@ -51,7 +52,9 @@ export function fakeTablet({ approve = true } = {}) {
       if (req.method === "GET") return send(200, { id: set.id, name: set.name, songs: set.items.map((i) => item(songs.get(i))) });
       if (req.method === "PUT") { const d = JSON.parse(body); set.name = d.name; set.items = d.items; return send(200, {}); }
     }
+    if (url.pathname === "/api/backup/inspect" && req.method === "POST") return send(200, { token: "b1", songs: 2, sets: 1, tracks: 0, settings: true });
+    if (url.pathname === "/api/backup/restore" && req.method === "POST") { restores.push(JSON.parse(body)); return send(200, { skipped: 0 }); }
     send(404);
   });
-  return new Promise((ok) => server.listen(0, "127.0.0.1", () => ok({ server, url: `http://127.0.0.1:${server.address().port}`, songs, sets })));
+  return new Promise((ok) => server.listen(0, "127.0.0.1", () => ok({ server, url: `http://127.0.0.1:${server.address().port}`, songs, sets, restores })));
 }
