@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { StagebookClient, StagebookError } from "../dist/client.js";
+import { StagebookClient, StagebookError, answers } from "../dist/client.js";
 import { fakeTablet } from "./fake-tablet.mjs";
 
 let tablet;
@@ -23,4 +23,9 @@ test("a refused key is dropped, and connecting again waits for the new approval"
   const s = await c.get("/api/session");   // waits for Allow instead of sending the old key
   assert.equal(s.app, "TCL");
   assert.equal(c.key, "k123");
+});
+
+test("a saved address that no longer answers is told apart from a live one", async () => {
+  assert.equal(await answers(tablet.url), true);
+  assert.equal(await answers("http://127.0.0.1:1"), false);   // nothing listens there: connect searches again
 });
