@@ -210,11 +210,22 @@ export function problemText(code: string): string {
   return known[code] ?? `The tablet answered: ${code}`;
 }
 
+/** Does Stagebook's editor answer at [base]? (Its page's strings: the editor is on and it is Stagebook.) */
+export async function answers(base: string, timeoutMs = 600): Promise<boolean> {
+  try {
+    const res = await fetch(base.replace(/\/+$/, "") + "/api/strings", { headers: { "X-Stagebook": "1" }, signal: AbortSignal.timeout(timeoutMs) });
+    return res.ok && (await res.text()).includes("{");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Looks for Stagebook on the local networks (every address of each /24 this computer is on, ports 8090-8092): the
- * editor answers its page there while it's on. First one found wins.
+ * editor answers its page there while it's on. Returns every tablet that answers: on a band's Wi-Fi there can be
+ * several, and the request must not land on a bandmate's tablet (audit 03/11).
  */
-export async function discover(timeoutMs = 600): Promise<string | undefined> {
+export async function discoverAll(timeoutMs = 600): Promise<string[]> {
   const prefixes = new Set<string>();
   for (const list of Object.values(networkInterfaces())) {
     for (const a of list ?? []) {
@@ -223,18 +234,12 @@ export async function discover(timeoutMs = 600): Promise<string | undefined> {
   }
   const candidates: string[] = [];
   for (const p of prefixes) for (let i = 1; i < 255; i++) for (const port of PORTS) candidates.push(`http://${p}.${i}:${port}`);
-  const probe = async (u: string) => {
-    const res = await fetch(u + "/api/strings", { headers: { "X-Stagebook": "1" }, signal: AbortSignal.timeout(timeoutMs) });
-    if (!res.ok) throw new Error("no");
-    const body = await res.text();
-    if (!body.includes("{")) throw new Error("no");
-    return u;
-  };
+  const found: string[] = [];
   // in batches, so a whole /24 doesn't open hundreds of sockets at once
   for (let i = 0; i < candidates.length; i += 128) {
     const batch = candidates.slice(i, i + 128);
-    const found = await Promise.any(batch.map(probe)).catch(() => undefined);
-    if (found) return found;
+    const ok = await Promise.all(batch.map((u) => answers(u, timeoutMs)));
+    batch.forEach((u, k) => { if (ok[k]) found.push(u); });
   }
-  return undefined;
+  return found;
 }

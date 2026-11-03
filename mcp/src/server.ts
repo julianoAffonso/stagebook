@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { StagebookClient, StagebookError, discover, save } from "./client.js";
+import { StagebookClient, StagebookError, answers, discoverAll, save } from "./client.js";
 
 export const VERSION = "0.1.0";
 
@@ -77,16 +77,18 @@ export function buildServer(client: StagebookClient): McpServer {
     },
     safe(async ({ url, name }: { url?: string; name?: string }) => {
       if (url) client.url = url;
-      if (!client.url) {
-        const found = await discover();
-        if (!found) {
+      // no address given: the saved one if it still answers, otherwise search again (the tablet's address can change
+      // with the Wi-Fi; the saved one was used forever, audit 03/11)
+      else if (!client.url || !(await answers(client.url))) {
+        const found = await discoverAll();
+        if (found.length === 0) {
           throw new StagebookError(
             "Stagebook wasn't found on this network. On the tablet: open Stagebook and turn on Settings → Edit on the computer; " +
               "it shows the address to pass here. On a Mac, also check System Settings → Privacy & Security → Local Network " +
               "for the app that runs this assistant.",
           );
         }
-        client.url = found;
+        client.url = found[0];
       }
       await save({ url: client.url, key: client.key });
       const code = await client.startPair(name ?? "AI assistant");
