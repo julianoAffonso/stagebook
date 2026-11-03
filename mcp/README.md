@@ -26,7 +26,11 @@ Windsurf, Gemini CLI, OpenAI Codex CLI…).
 Also **resources** (`stagebook://songs`, `stagebook://setlists`, `stagebook://songs/{id}` as ChordPro) and **prompts**
 (`build_setlist`, `fix_chords`, `transpose_for_singer`).
 
-Deleting, removing a track and replacing the library need `confirm: true`: the assistant has to ask you first.
+Deleting, removing a track, emptying a setlist, replacing the library and restoring settings (they replace the
+tablet's stage look, pedals, USB audio interface and band) need `confirm: true`: the assistant has to ask you first.
+
+Files to send (backing tracks, backups) take a full path; `~` is your home folder. The tablet takes tracks up to
+200 MB and backups up to 1 GB. If the assistant gives up on a long call, the upload or restore stops too.
 
 ## Install
 
@@ -80,7 +84,8 @@ ChatGPT's own app only connects to remote servers (over the internet), so it can
 1. On the tablet: open Stagebook and turn on **Settings → Edit on the computer**. It shows the address
    (e.g. `http://192.168.0.10:8090`). The computer and the tablet must be on the same Wi-Fi.
 2. Ask the assistant to connect to Stagebook. It searches the network (or you give it the address) and the tablet shows
-   a request with a code.
+   a request with a code. If more than one tablet with Stagebook answers (a band on the same Wi-Fi), it asks which
+   address is yours; if your tablet's address changed, it searches again.
 3. If the code matches, tap **Allow** on the tablet. The key is saved on this computer
    (`~/.config/stagebook-mcp/config.json`, readable only by you); next time it connects without asking.
 
@@ -103,6 +108,10 @@ lasts 90 days without use; **Settings → Edit on the computer → Authorized co
   **System Settings → Privacy & Security → Local Network** and turn on the app that runs the assistant (Claude, Terminal,
   iTerm, Cursor, VS Code…), then restart that app.
 - **"No longer accepts this computer's key"**: it was removed on the tablet or went 90 days unused. Connect again.
+- **"Already showing a request, or one was just denied"**: answer the request on the tablet; after a Deny it waits
+  5 minutes before taking a new one.
+- **"Not found on the tablet, or that part is turned off"**: receiving by code needs the internet on, and the band
+  tools need the band on, in the tablet's Settings.
 
 ## Privacy
 
