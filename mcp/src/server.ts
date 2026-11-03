@@ -425,13 +425,14 @@ export function buildServer(client: StagebookClient): McpServer {
       title: "Restore a backup file",
       description:
         "Sends a .stagebook file from this computer to the tablet. Without parts it only inspects (what the file has). " +
-        "With parts (library, tracks, settings) it restores them: replace=true swaps the library for the file's (ask first, " +
-        "pass confirm=true), replace=false only adds what's missing.",
+        "With parts (library, tracks, settings) it restores them: replace=true swaps the library for the file's, " +
+        "replace=false only adds the songs, setlists and tracks that are missing. Settings always replace the tablet's " +
+        "(stage look, pedals, USB audio interface, band). Replacing the library or restoring settings: ask first and pass confirm=true.",
       inputSchema: {
         path: z.string(),
         parts: z.array(z.enum(["library", "tracks", "settings"])).optional(),
         replace: z.boolean().optional(),
-        confirm: z.boolean().optional().describe("Required true with replace=true."),
+        confirm: z.boolean().optional().describe("Required true with replace=true or with settings in parts."),
       },
       annotations: { destructiveHint: true },
     },
@@ -440,6 +441,10 @@ export function buildServer(client: StagebookClient): McpServer {
       const info = await client.send("POST", "/api/backup/inspect", bytes, undefined, 600000);
       if (!parts?.length) return text({ inspected: info });
       if (replace && !confirm) throw new StagebookError("Replacing swaps the whole library for the file's: ask the person and pass confirm=true.");
+      // the tablet's settings are always replaced by the file's, with replace or not (audit 03/11: it went without asking)
+      if (parts.includes("settings") && !confirm) {
+        throw new StagebookError("Restoring settings replaces the tablet's (stage look, pedals, USB audio interface, band): ask the person and pass confirm=true.");
+      }
       const r = await client.send("POST", "/api/backup/restore", { token: info.token, parts, replace: !!replace }, undefined, 600000);
       return text({ restored: parts, replace: !!replace, skipped: r?.skipped ?? 0 });
     }),
