@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,7 +78,10 @@ fun ScreenHeader(
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).then(if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier),
+                // the tap takes only the name itself, not the empty room up to the icons (that opened rename too; audit
+                // 03/11): the text wraps its content inside the room it is given
+                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.Start)
+                    .then(if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier),
             )
             Row(if (iconActions) Modifier.offset(x = HeaderIconInset) else Modifier, verticalAlignment = Alignment.CenterVertically, content = actions)
         }
