@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/logo.png" alt="Stagebook" width="120"></p>
 
-# Stagebook
+<h1 align="center">Stagebook</h1>
 
 **English** · [Português (Brasil)](README.pt-BR.md)
 
@@ -19,8 +19,8 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 - **Chords:** chords above the lyrics (ChordPro), transpose, capo, tablature and each chord's diagram on acoustic or
   electric guitar, ukulele, cavaquinho or keyboard, with sound. It also shows the key's harmonic field. Notes on the
   chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you transpose.
-- **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Send it to whoever is next to you by QR, far away with 3 words over
-  the internet, or to the whole band on the same Wi-Fi.
+- **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Send it to whoever is next to
+  you by QR, far away with 3 words over the internet, or to the whole band on the same Wi-Fi.
 - **Band:** with "Lead the band", whoever leads the setlist changes songs and everyone's stage follows. Before
   starting, the app says who is missing a song.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
@@ -64,8 +64,19 @@ tablet over your Wi-Fi through **Settings → Edit on the computer**; you approv
 Install and setup for each assistant: [mcp/README.md](mcp/README.md).
 
 ## Install
-Download `stagebook.apk` from the [Releases](../../releases). After that the app tells you when a new version is out
-and updates itself. Needs Android 9 or newer.
+Stagebook isn't on the Play Store; it's only here, for free. Needs Android 9 or newer.
+
+1. On the phone or tablet, open the [latest release](../../releases/latest) and download `stagebook.apk`.
+2. Open the downloaded file. The first time, Android asks to allow installing apps from that source (the browser or
+   the files app): allow it, go back and tap **Install**. If Play Protect says it doesn't know the app, choose to
+   install anyway.
+3. That's it. From then on the app tells you when a new version is out and updates itself; on the first update
+   Android asks for the same permission, this time for Stagebook.
+
+**Why not the Play Store?** The app imports lyrics and chords from websites, and the store's rules on copyrighted
+content leave this kind of app open to being pulled at any time. It also updates itself straight from these releases,
+which the store doesn't allow. This way new versions come out without waiting for a review, and the code stays open
+for anyone to check.
 
 ## Support
 Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about buying me a coffee on
