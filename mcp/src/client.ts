@@ -96,6 +96,11 @@ export class StagebookClient {
       throw new StagebookError("The tablet no longer accepts this computer's key (removed, or 90 days unused): use the connect tool again.", 401);
     }
     if (res.status === 403) throw new StagebookError("The tablet refused the call (forbidden).", 403);
+    // the tablet answers 429 to a new request while one is on its screen, and for 5 minutes after a Deny (this
+    // check sat in startPair, after the generic error had already been thrown: "HTTP 429"; audit 03/11)
+    if (res.status === 429) {
+      throw new StagebookError("The tablet is already showing a request, or one was just denied (it then waits 5 minutes): answer it there, or wait and connect again.", 429);
+    }
     if (res.status >= 400 && res.status !== 404) {
       const why = json && typeof json === "object" && json.error ? json.error : `HTTP ${res.status}`;
       throw new StagebookError(problemText(why), res.status);
@@ -117,21 +122,29 @@ export class StagebookClient {
 
   /** The approval being waited for (pairing runs past the tool call: assistants give up on a call after ~60 s). */
   pending?: Promise<string>;
+  private pendingId?: string;
 
   /**
    * Asks the tablet to let this computer in: Stagebook shows a request with a code. Returns the code at once; the wait
-   * for the person to tap Allow goes on in [pending] (up to [waitMs]), which saves the key when it comes.
+   * for the person to tap Allow goes on in [pending] (up to [waitMs], the 2 minutes the tablet keeps a request), which
+   * saves the key when it comes.
    */
-  async startPair(name: string, waitMs = 180000): Promise<string> {
+  async startPair(name: string, waitMs = 120000): Promise<string> {
     // a new request replaces whatever key was loaded (another tablet, or one the tablet no longer accepts): the next
     // call waits for this approval instead of sending the old key (audit 03/11)
     this.key = undefined;
     const asked = await this.call("POST", "/api/ask", { name }, { auth: false });
-    if (asked.status === 429) throw new StagebookError("The tablet is already showing a request: answer it there first.");
     const { id, code } = asked.json ?? {};
     if (!id) throw new StagebookError("The tablet didn't accept the request.");
-    this.pending = this.waitApproval(String(id), waitMs).finally(() => { this.pending = undefined; });
-    this.pending.catch(() => {});   // a refusal is reported by the next call that waits on it
+    // connecting twice gets the same request back: one wait for it (two polled it, and the tablet hands the answer
+    // out once, so the other said "expired" even after Allow; audit 03/11)
+    if (this.pending && this.pendingId === String(id)) return String(code ?? "");
+    this.pendingId = String(id);
+    const p: Promise<string> = this.waitApproval(String(id), waitMs).finally(() => {
+      if (this.pending === p) { this.pending = undefined; this.pendingId = undefined; }
+    });
+    this.pending = p;
+    p.catch(() => {});   // a refusal is reported by the next call that waits on it
     return String(code ?? "");
   }
 
@@ -155,14 +168,22 @@ export class StagebookClient {
       if (r.status === 404) throw new StagebookError("The request expired on the tablet: connect again.");
       await new Promise((ok) => setTimeout(ok, 1500));
     }
-    throw new StagebookError("Nobody tapped Allow on the tablet in 3 minutes: connect again.");
+    throw new StagebookError("Nobody tapped Allow on the tablet in 2 minutes: connect again.");
   }
 
-  /** Waits a while for a pending approval before a call needs the key (within one tool call's time). */
-  async awaitApproval(maxMs = 45000): Promise<void> {
+  /**
+   * Waits a while for a pending approval before a call needs the key, within one tool call's time: 40 s plus the
+   * call's own 15 s stays under the ~60 s an assistant gives a tool.
+   */
+  async awaitApproval(maxMs = 40000): Promise<void> {
     if (this.key || !this.pending) return;
-    const timeout = new Promise<void>((ok) => setTimeout(ok, maxMs));
-    await Promise.race([this.pending.then(() => undefined), timeout]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>((ok) => { timer = setTimeout(ok, maxMs); });
+    try {
+      await Promise.race([this.pending.then(() => undefined), timeout]);
+    } finally {
+      clearTimeout(timer);   // otherwise it held the process 40 s after the approval came
+    }
     if (!this.key) throw new StagebookError("Still waiting for Allow on the tablet: tap it there, then try again.");
   }
 

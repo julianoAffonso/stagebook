@@ -29,3 +29,22 @@ test("a saved address that no longer answers is told apart from a live one", asy
   assert.equal(await answers(tablet.url), true);
   assert.equal(await answers("http://127.0.0.1:1"), false);   // nothing listens there: connect searches again
 });
+
+test("a tablet already showing a request says so in words", async () => {
+  const busy = await fakeTablet({ busy: true });
+  try {
+    const c = new StagebookClient(busy.url, undefined);
+    await assert.rejects(c.startPair("test"), (e) => e.status === 429 && /already showing a request/.test(e.message));
+  } finally { busy.server.close(); }
+});
+
+test("connecting twice waits for one approval, and both calls get in", async () => {
+  const fresh = await fakeTablet();
+  try {
+    const c = new StagebookClient(fresh.url, undefined);
+    await Promise.all([c.startPair("a"), c.startPair("b")]);
+    const [x, y] = await Promise.all([c.get("/api/session"), c.get("/api/session")]);
+    assert.equal(x.app, "TCL");
+    assert.equal(y.app, "TCL");
+  } finally { fresh.server.close(); }
+});

@@ -1,7 +1,7 @@
 // A fake Stagebook "Edit on the computer" server with the same routes and rules the MCP relies on.
 import { createServer } from "node:http";
 
-export function fakeTablet({ approve = true } = {}) {
+export function fakeTablet({ approve = true, busy = false } = {}) {
   const KEY = "k123";
   const songs = new Map([
     ["s1", { id: "s1", title: "Morning Road", author: "The Example Band", year: "1991", tempo: "", text: "[G]Linha um\n[D]Linha dois", track: "", trackName: "", key: "G", capo: 0, tags: ["internacional"] }],
@@ -17,10 +17,14 @@ export function fakeTablet({ approve = true } = {}) {
     const send = (status, obj, headers = {}) => { res.writeHead(status, { "Content-Type": "application/json", ...headers }); res.end(obj === undefined ? "" : JSON.stringify(obj)); };
     if (req.headers["x-stagebook"] !== "1") return send(403);
     if (url.pathname === "/api/strings") return send(200, { title: "Stagebook" });
-    if (url.pathname === "/api/ask" && req.method === "POST") return send(200, { id: "r1", code: "4821" });
+    if (url.pathname === "/api/ask" && req.method === "POST") return busy ? send(429, { error: "busy" }) : send(200, { id: "r1", code: "4821" });
     if (url.pathname === "/api/ask" && req.method === "GET") {
       if (!approve) return send(403);
-      return ++asked < 2 ? send(202, {}) : send(200, {}, { "Set-Cookie": `stagebook_key=${KEY}; Path=/; HttpOnly` });
+      // like the tablet: the answer goes out once, then the request is gone
+      if (asked < 0) return send(404);
+      if (++asked < 2) return send(202, {});
+      asked = -1;
+      return send(200, {}, { "Set-Cookie": `stagebook_key=${KEY}; Path=/; HttpOnly` });
     }
     if (req.headers.cookie !== `stagebook_key=${KEY}`) return send(401);
     const item = (s) => ({ id: s.id, title: s.title, author: s.author, year: s.year, key: s.key, tags: s.tags });
