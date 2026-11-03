@@ -225,7 +225,7 @@ class StageFlowTest {
     }
 
     @Test fun `the back arrow asks and leaves the stage`() {
-        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f), live = true)
         var back = 0
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = { back++ }) } }
         compose.onNodeWithContentDescription("Voltar").performClick()
@@ -236,6 +236,16 @@ class StageFlowTest {
         assertEquals("cancelar fica no palco", 0, back)
         compose.onNodeWithContentDescription("Voltar").performClick()
         compose.onNodeWithText("Sair").performClick()
+        compose.waitForIdle()
+        assertEquals(1, back)
+    }
+
+    // a song opened from the library (no setlist, not following) leaves at once (user, 03/11)
+    @Test fun `outside a show the back arrow leaves at once`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))
+        var back = 0
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = { back++ }) } }
+        compose.onNodeWithContentDescription("Voltar").performClick()
         compose.waitForIdle()
         assertEquals(1, back)
     }

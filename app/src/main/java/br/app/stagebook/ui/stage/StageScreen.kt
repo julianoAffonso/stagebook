@@ -302,10 +302,12 @@ fun StageScreen(
     var shownChord by remember { mutableStateOf<String?>(null) }
     val fg = Color(look.fg)
     // leaving the stage (arrow or back gesture) asks first: an accidental tap during the show doesn't take the lyrics
-    // off the screen (user's request, 23/10)
+    // off the screen (user's request, 23/10). Only in a show: a song opened from the library leaves at once (user,
+    // 03/11: editing several songs, the question every time was in the way)
     var askExit by rememberSaveable { mutableStateOf(false) }
+    val leave = { if (uiState.live) { askExit = true } else { onBack?.invoke() } }
     if (onBack != null) {
-        BackHandler { askExit = true }
+        BackHandler { leave() }
         if (askExit) {
             ConfirmDialog(
                 stringResource(R.string.stage_exit_confirm),
@@ -614,7 +616,7 @@ fun StageScreen(
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
             if (onBack != null) {
-                IconButton(onClick = { askExit = true }) {
+                IconButton(onClick = { leave() }) {
                     Icon(AppIcons.Back, stringResource(R.string.action_back), tint = fg.copy(alpha = 0.6f))
                 }
             }
