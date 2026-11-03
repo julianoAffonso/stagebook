@@ -195,7 +195,9 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     val lyric = segs.joinToString("") { it.text }
     // chords only, maybe with marks like "x4" or "|" (user, 03/11: "[A] [B] 2x" put the 2x under the chords, as lyrics):
     // the chords in their color and the marks between them, in order, on one line
-    if (lyric.isBlank() || lyric.trim().split(SPACES).all(Chords::isChordLineMark)) {
+    // a label in front ("Intro: G D") counts too: it took the lyrics path, with the chords floating above (audit 03/11)
+    val words = lyric.trim().split(SPACES)
+    if (lyric.isBlank() || words.withIndex().all { (i, w) -> Chords.isChordLineMark(w) || (i == 0 && Chords.isChordLineLabel(w)) }) {
         return buildAnnotatedString {
             segs.forEach { s ->
                 if (s.chord != null) {
