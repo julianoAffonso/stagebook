@@ -198,13 +198,20 @@ fun HomeScaffold(tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeT
                         header = {
                             // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
                             // centred over the tabs' icons (the collapsed rail is 96 dp wide)
-                            Box(Modifier.width(96.dp), contentAlignment = Alignment.Center) {
+                            // and the name below it (user, 03/11)
+                            androidx.compose.foundation.layout.Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 androidx.compose.foundation.Image(
                                     androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground),
-                                    contentDescription = stringResource(R.string.app_name),
+                                    contentDescription = null,
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                     modifier = Modifier.size(Sizes.railLogo).clip(MaterialTheme.shapes.medium)
                                         .graphicsLayer { scaleX = 1.4f; scaleY = 1.4f },
+                                )
+                                Text(
+                                    stringResource(R.string.app_name),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(top = Spacing.s),
                                 )
                             }
                         },
