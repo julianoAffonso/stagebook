@@ -33,11 +33,15 @@ jobs:
       - run: npm ci
       - name: Version
         id: version
+        env:
+          PUBLISH: ${{ inputs.publish }}
         run: |
           v=$(node -p "require('./package.json').version")
           echo "tag=mcp-v$v" >> "$GITHUB_OUTPUT"
           if npm view "stagebook-mcp@$v" version > /dev/null 2>&1; then
-            echo "stagebook-mcp $v is already on npm: raise the version in mcp/package.json first."; exit 1
+            msg="stagebook-mcp $v is already on npm: raise the version in mcp/package.json first."
+            # A dry run still tests and packs; only publishing stops here
+            if [ "$PUBLISH" = "true" ]; then echo "::error::$msg"; exit 1; else echo "::warning::$msg"; fi
           fi
       - if: ${{ !inputs.publish }}
         run: npm publish --dry-run   # prepublishOnly runs the tests
