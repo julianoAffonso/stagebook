@@ -41,12 +41,8 @@ param também.
 Precisa do [Node.js](https://nodejs.org) 20 ou mais novo. O servidor está no npm como
 [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): nada para baixar do GitHub.
 
-```sh
-npx -y stagebook-mcp
-```
-
-Esse é o servidor: o assistente abre ele sozinho com os ajustes abaixo (o `npx` baixa da primeira vez e mantém
-atualizado), então não precisa rodar nada à mão.
+Não precisa rodar à mão: o assistente abre ele sozinho com os ajustes abaixo (o `npx` baixa da primeira vez e mantém
+atualizado). Rodado à mão, ele só fica esperando um assistente: Ctrl+C fecha.
 
 ## Ligar no seu assistente
 

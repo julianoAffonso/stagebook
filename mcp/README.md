@@ -39,12 +39,8 @@ Files to send (backing tracks, backups) take a full path; `~` is your home folde
 Needs [Node.js](https://nodejs.org) 20 or newer. The server is on npm as
 [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): nothing to download from GitHub.
 
-```sh
-npx -y stagebook-mcp
-```
-
-That's the server: your assistant starts it by itself with the settings below (`npx` downloads it the first time and
-keeps it up to date), so there's nothing to run by hand.
+You don't run it by hand: your assistant starts it by itself with the settings below (`npx` downloads it the first time and
+keeps it up to date). Run by hand, it just waits for an assistant: Ctrl+C closes it.
 
 ## Connect your assistant
 
