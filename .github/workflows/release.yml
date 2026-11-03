@@ -21,16 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the version comes from the commit count
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
       # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.STAGEBOOK_KEYSTORE_BASE64 }}
@@ -60,7 +60,7 @@ jobs:
           printf '{"versionCode":%s,"versionName":"%s"}\n' "$code" "$name" > out/stagebook-version.json
           echo "tag=v${name%% *}" >> "$GITHUB_OUTPUT"
       - if: ${{ !inputs.publish }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: stagebook-dry-run
           path: out/
