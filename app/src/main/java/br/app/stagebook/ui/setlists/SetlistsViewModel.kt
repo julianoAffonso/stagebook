@@ -22,12 +22,12 @@ data class SetlistRowUi(val id: String, val name: String, val count: Int)
 @Immutable
 data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false)
 
-/** The Setlists tab's order: as stored (newest first) or A to Z, ignoring case and accents. */
-fun setlistOrder(sets: List<SetlistRowUi>, abc: Boolean): List<SetlistRowUi> {
-    if (!abc) return sets
-    val collator = java.text.Collator.getInstance(java.util.Locale.forLanguageTag("pt-BR")).apply { strength = java.text.Collator.PRIMARY }
-    return sets.sortedWith { a, b -> collator.compare(a.name.trim(), b.name.trim()) }
-}
+/**
+ * The Setlists tab's order: as stored (newest first) or A to Z, ignoring case and accents with the app's one text
+ * key, as tags and songs are sorted (a Collator here was a second way of doing it; audit 03/11).
+ */
+fun setlistOrder(sets: List<SetlistRowUi>, abc: Boolean): List<SetlistRowUi> =
+    if (abc) sets.sortedBy { br.app.stagebook.domain.TextKey.of(it.name.trim()) } else sets
 
 @HiltViewModel
 class SetlistsViewModel @Inject constructor(
