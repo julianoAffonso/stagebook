@@ -106,7 +106,7 @@ class ScreenshotTest {
     @Composable
     private fun Songs(modifier: Modifier = Modifier) = SongsScreen(songs, "", {}, {}, {}, {}, modifier)
 
-    @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+    @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { HomeScaffold(HomeTab.SONGS, {}, version = "0.1.674") { Songs(it) } }
 
     // no internet: Import unavailable, with the crossed cloud and the notice
     @Test @Config(qualifiers = PHONE)
@@ -1184,7 +1184,7 @@ class ScreenshotTest {
 
     // Fire in portrait
     @Test @Config(qualifiers = TABLET_PORTRAIT)
-    fun homeSongsTabletPortrait() = shoot("tablet_em_pe_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+    fun homeSongsTabletPortrait() = shoot("tablet_em_pe_1_musicas") { HomeScaffold(HomeTab.SONGS, {}, version = "0.1.674") { Songs(it) } }
 
     @Test @Config(qualifiers = TABLET_PORTRAIT)
     fun stageTabletPortrait() = shoot("tablet_em_pe_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }

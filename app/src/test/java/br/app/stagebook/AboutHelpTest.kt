@@ -1,6 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -32,6 +33,18 @@ class AboutHelpTest {
         }
         compose.onNodeWithText(context.getString(R.string.about_help_open)).performScrollTo().performClick()
         assertEquals(1, opened)
+    }
+
+    // the rail's logo opens About by itself, on a wide tablet too: no section list, and back leaves it (user, 03/11)
+    @Test @Config(qualifiers = "w1100dp-h720dp-land-xhdpi")
+    fun `About opened by itself shows only About and its back arrow leaves`() {
+        var left = 0
+        compose.setContent {
+            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(), section = SettingsSection.ABOUT, onLeave = { left++ }) }
+        }
+        compose.onNodeWithText(context.getString(R.string.settings_appearance)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(context.getString(R.string.action_back)).performClick()
+        assertEquals(1, left)
     }
 
     @Test fun `the help address is the web page in each language`() {
