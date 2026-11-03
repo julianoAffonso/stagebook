@@ -90,7 +90,11 @@ export class StagebookClient {
         json = text;
       }
     }
-    if (res.status === 401) throw new StagebookError("The tablet no longer accepts this computer's key (removed, or 90 days unused): use the connect tool again.", 401);
+    if (res.status === 401) {
+      // the dead key goes: kept, the next call (after connecting again) sent it instead of waiting for Allow (audit 03/11)
+      if (opts.auth !== false) this.key = undefined;
+      throw new StagebookError("The tablet no longer accepts this computer's key (removed, or 90 days unused): use the connect tool again.", 401);
+    }
     if (res.status === 403) throw new StagebookError("The tablet refused the call (forbidden).", 403);
     if (res.status >= 400 && res.status !== 404) {
       const why = json && typeof json === "object" && json.error ? json.error : `HTTP ${res.status}`;
@@ -119,6 +123,9 @@ export class StagebookClient {
    * for the person to tap Allow goes on in [pending] (up to [waitMs]), which saves the key when it comes.
    */
   async startPair(name: string, waitMs = 180000): Promise<string> {
+    // a new request replaces whatever key was loaded (another tablet, or one the tablet no longer accepts): the next
+    // call waits for this approval instead of sending the old key (audit 03/11)
+    this.key = undefined;
     const asked = await this.call("POST", "/api/ask", { name }, { auth: false });
     if (asked.status === 429) throw new StagebookError("The tablet is already showing a request: answer it there first.");
     const { id, code } = asked.json ?? {};
