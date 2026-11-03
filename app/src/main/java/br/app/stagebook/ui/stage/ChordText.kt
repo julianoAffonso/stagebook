@@ -36,6 +36,7 @@ fun ChordText(
     val measurer = rememberTextMeasurer(cacheSize = 0)
     val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
     val marked = remember(text) { text.getStringAnnotations(HIGHLIGHT_TAG, 0, text.length) }
+    val sections = remember(text) { text.getStringAnnotations(SECTION_TAG, 0, text.length).filter { it.item.isNotEmpty() } }
     val byName = remember(text, chordStyle) { chordsAt.map { it.item }.distinct().associateWith { measurer.measure(it, chordStyle) } }
     var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     Text(
@@ -61,6 +62,20 @@ fun ChordText(
                         val bottom = if (size > 0f) base + size * 0.3f else l.getLineBottom(line)
                         drawRect(color, Offset(minOf(x0, x1), top), Size(kotlin.math.abs(x1 - x0), bottom - top))
                     }
+                }
+            }
+            // section titles: a rounded pill in the section color (the title brings its own room, [stageLines])
+            laid?.let { l ->
+                sections.forEach { a ->
+                    val end = a.end.coerceAtMost(l.layoutInput.text.length)
+                    if (a.start >= end) return@forEach
+                    val first = l.getBoundingBox(a.start)
+                    val last = l.getBoundingBox(end - 1)
+                    val h = first.bottom - first.top
+                    drawRoundRect(
+                        Color(a.item.toInt()), Offset(first.left, first.top), Size(last.right - first.left, h),
+                        androidx.compose.ui.geometry.CornerRadius(h / 2f),
+                    )
                 }
             }
             drawContent()

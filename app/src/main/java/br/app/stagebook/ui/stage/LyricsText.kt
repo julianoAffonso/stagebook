@@ -36,7 +36,7 @@ const val CHORD_LIST_TAG = "chordlist"
 const val TAB_TAG = "tab"
 
 // a section title line: pagination keeps it with the verse after it (device test B-13)
-const val SECTION_TAG = "section"
+const val SECTION_TAG = "section"   // item: the pill's color (ARGB)
 const val TAB_EM = 0.7f
 
 /** An empty line [heightEm] tall, reserved for the chord list (paginated like the others). */
@@ -113,15 +113,15 @@ fun stageLines(
         if (!showSections) return blank(at)
         out += StageLine(
             buildAnnotatedString {
-                // more emphasis (user's request, 29/10): adjustable size and a light background in the section color
+                // more emphasis (user's request, 29/10): adjustable size and a light background in the section color,
+                // drawn by [ChordText] as a rounded pill with room around the letters (user, 03/11: the box tight on the
+                // letters looked bad)
                 withStyle(
-                    SpanStyle(
-                        fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em, fontFamily = sectionFont,
-                        background = sectionColor.copy(alpha = SECTION_BACKGROUND_ALPHA),
-                    ),
+                    SpanStyle(fontWeight = FontWeight.Bold, color = sectionColor, fontSize = sectionScale.em, letterSpacing = 0.08.em, fontFamily = sectionFont),
                 ) {
-                    pushStringAnnotation(SECTION_TAG, "")
-                    append(label.uppercase())
+                    pushStringAnnotation(SECTION_TAG, sectionColor.copy(alpha = SECTION_BACKGROUND_ALPHA).toArgb().toString())
+                    // room inside the pill: an en space on each side keeps its left edge on the lyrics' edge
+                    append("\u2002" + label.uppercase() + "\u2002")
                     pop()
                 }
             },
