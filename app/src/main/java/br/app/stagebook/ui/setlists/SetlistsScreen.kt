@@ -37,7 +37,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
-import br.app.stagebook.ui.components.CenteredContent
 import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.EmptyState
@@ -132,7 +131,8 @@ fun SetlistsScreen(
     var sharing by rememberSaveable { mutableStateOf(false) }
     val selecting = selection.active
     val toggle = selection::toggle
-    CenteredContent(modifier.fillMaxSize()) {
+    // full width beside the rail, like Settings (user, 03/11: centred at 840 dp left a gap after the rail)
+    Box(modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.m)) {
             if (selecting) {
                 br.app.stagebook.ui.components.SelectionTopBar(

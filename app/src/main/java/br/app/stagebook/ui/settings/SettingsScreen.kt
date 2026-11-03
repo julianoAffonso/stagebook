@@ -446,7 +446,8 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 /** One section on its own page: header with the back arrow, the pinned preview, then the content that scrolls. */
 @Composable
 private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: () -> Unit) {
-    CenteredContent(Modifier.fillMaxSize()) {
+    // full width, like the rest of Settings beside the rail (user, 03/11)
+    Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
             SectionPinned(open, uiState.look, draft)
