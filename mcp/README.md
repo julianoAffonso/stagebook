@@ -2,6 +2,8 @@
 
 **English** · [Português (Brasil)](README.pt-BR.md)
 
+[![npm](https://img.shields.io/npm/v/stagebook-mcp)](https://www.npmjs.com/package/stagebook-mcp)
+
 Lets AI assistants read and edit the songs and setlists on your Stagebook tablet: "build a 15-song setlist for Saturday
 without repeating artists", "move every Skank song down a half tone", "check the chords of Hazard", "import this page".
 It's a [Model Context Protocol](https://modelcontextprotocol.io) server that runs on your computer and talks to the
@@ -34,7 +36,8 @@ Files to send (backing tracks, backups) take a full path; `~` is your home folde
 
 ## Install
 
-Needs [Node.js](https://nodejs.org) 20 or newer.
+Needs [Node.js](https://nodejs.org) 20 or newer. The server is on npm as
+[`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): nothing to download from GitHub.
 
 ```sh
 npx -y stagebook-mcp
@@ -118,6 +121,8 @@ Everything stays on your network: the server talks only to the tablet. The assis
 conversation. Lyrics are copyrighted: the server tells the assistant not to reproduce them in full.
 
 ## Development
+
+Only to change the server itself; to use it, [Install](#install) is all you need.
 
 ```sh
 git clone https://github.com/julianoAffonso/stagebook.git

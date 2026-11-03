@@ -2,6 +2,8 @@
 
 [English](README.md) · **Português (Brasil)**
 
+[![npm](https://img.shields.io/npm/v/stagebook-mcp)](https://www.npmjs.com/package/stagebook-mcp)
+
 Deixa assistentes de IA lerem e editarem as músicas e os setlists do seu tablet com o Stagebook: "monta um setlist de
 15 músicas para sábado sem repetir artista", "passa todas as do Skank meio tom abaixo", "confere os acordes de Hazard",
 "importa esta página". É um servidor [Model Context Protocol](https://modelcontextprotocol.io) que roda no seu computador
@@ -36,7 +38,8 @@ param também.
 
 ## Instalar
 
-Precisa do [Node.js](https://nodejs.org) 20 ou mais novo.
+Precisa do [Node.js](https://nodejs.org) 20 ou mais novo. O servidor está no npm como
+[`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): nada para baixar do GitHub.
 
 ```sh
 npx -y stagebook-mcp
@@ -121,6 +124,8 @@ artistas, acordes e, quando ele pede, a letra) e manda isso para o provedor de I
 têm direito autoral: o servidor orienta o assistente a não reproduzi-las inteiras.
 
 ## Para quem programa
+
+Só para mudar o próprio servidor; para usar, basta o [Instalar](#instalar).
 
 ```sh
 git clone https://github.com/julianoAffonso/stagebook.git
