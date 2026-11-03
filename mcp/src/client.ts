@@ -1,7 +1,7 @@
 // Talks to Stagebook's "Edit on the computer" server on the tablet: the same HTTP API its web page uses.
 // Every call carries the X-Stagebook header and, once approved on the tablet, the stagebook_key cookie.
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { networkInterfaces, homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -28,8 +28,10 @@ export async function loadSaved(): Promise<Saved> {
 
 export async function save(s: Saved): Promise<void> {
   await mkdir(dirname(configPath()), { recursive: true });
-  // the key gives access to the library: readable by this user only
+  // the key gives access to the library: readable by this user only. The mode only applies when the file is created,
+  // so an existing one (or one at STAGEBOOK_CONFIG) is set again (audit 03/11)
   await writeFile(configPath(), JSON.stringify(s, null, 2), { mode: 0o600 });
+  await chmod(configPath(), 0o600);
 }
 
 /** A problem the assistant should explain to the person, with what to do. */

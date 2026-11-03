@@ -1,10 +1,10 @@
 // The client against the fake tablet: keys, pairing and addresses (audit 03/11).
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { StagebookClient, StagebookError, answers } from "../dist/client.js";
+import { StagebookClient, StagebookError, answers, save } from "../dist/client.js";
 import { fakeTablet } from "./fake-tablet.mjs";
 
 let tablet;
@@ -47,4 +47,15 @@ test("connecting twice waits for one approval, and both calls get in", async () 
     assert.equal(x.app, "TCL");
     assert.equal(y.app, "TCL");
   } finally { fresh.server.close(); }
+});
+
+test("the saved key is readable only by this user, even in a file that already existed", async () => {
+  const file = join(mkdtempSync(join(tmpdir(), "sbmcp-k-")), "config.json");
+  writeFileSync(file, "{}", { mode: 0o644 });
+  const before = process.env.STAGEBOOK_CONFIG;
+  process.env.STAGEBOOK_CONFIG = file;
+  try {
+    await save({ url: "http://x", key: "k" });
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+  } finally { process.env.STAGEBOOK_CONFIG = before; }
 });
