@@ -1,0 +1,51 @@
+# Publishing the MCP server on npm is a button, like the app's release: Actions → MCP publish → Run workflow, on main
+# only (pressed on another branch, nothing runs). With "publish" unchecked it's a dry run (tests and shows what would be
+# published); checked, it publishes the version in mcp/package.json and tags it mcp-v<version>. No npm token is stored:
+# npm trusts this workflow through Trusted Publishing (set once on npmjs.com, in the package's settings), and the
+# package gets a provenance badge linking it to the commit.
+name: MCP publish
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish on npm (unchecked = dry run)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # the mcp-v<version> tag
+  id-token: write   # Trusted Publishing (npm checks this workflow's identity)
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24   # npm 11, which Trusted Publishing needs
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Version
+        id: version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          echo "tag=mcp-v$v" >> "$GITHUB_OUTPUT"
+          if npm view "stagebook-mcp@$v" version > /dev/null 2>&1; then
+            echo "stagebook-mcp $v is already on npm: raise the version in mcp/package.json first."; exit 1
+          fi
+      - if: ${{ !inputs.publish }}
+        run: npm publish --dry-run   # prepublishOnly runs the tests
+      - if: ${{ inputs.publish }}
+        run: npm publish --access public
+      - if: ${{ inputs.publish }}
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "$TAG"

@@ -39,26 +39,24 @@ param também.
 Precisa do [Node.js](https://nodejs.org) 20 ou mais novo.
 
 ```sh
-git clone https://github.com/julianoAffonso/stagebook.git
-cd stagebook/mcp
-npm install
-npm run build
+npx -y stagebook-mcp
 ```
 
-O servidor é `node /caminho/completo/stagebook/mcp/dist/index.js`. Use esse caminho nos ajustes do seu assistente, abaixo.
+Esse é o servidor: o assistente abre ele sozinho com os ajustes abaixo (o `npx` baixa da primeira vez e mantém
+atualizado), então não precisa rodar nada à mão.
 
 ## Ligar no seu assistente
 
 **Claude Code**
 
 ```sh
-claude mcp add stagebook -- node /caminho/completo/stagebook/mcp/dist/index.js
+claude mcp add stagebook -- npx -y stagebook-mcp
 ```
 
 **Claude Desktop** — Configurações → Desenvolvedor → Editar configuração (`claude_desktop_config.json`):
 
 ```json
-{ "mcpServers": { "stagebook": { "command": "node", "args": ["/caminho/completo/stagebook/mcp/dist/index.js"] } } }
+{ "mcpServers": { "stagebook": { "command": "npx", "args": ["-y", "stagebook-mcp"] } } }
 ```
 
 **Cursor** (`~/.cursor/mcp.json`) e **Windsurf** (`~/.codeium/windsurf/mcp_config.json`): o mesmo bloco `mcpServers`.
@@ -66,7 +64,7 @@ claude mcp add stagebook -- node /caminho/completo/stagebook/mcp/dist/index.js
 **VS Code** (`.vscode/mcp.json` num projeto, ou o `mcp.json` do usuário):
 
 ```json
-{ "servers": { "stagebook": { "type": "stdio", "command": "node", "args": ["/caminho/completo/stagebook/mcp/dist/index.js"] } } }
+{ "servers": { "stagebook": { "type": "stdio", "command": "npx", "args": ["-y", "stagebook-mcp"] } } }
 ```
 
 **Gemini CLI** (`~/.gemini/settings.json`): o mesmo bloco `mcpServers` do Claude Desktop.
@@ -75,8 +73,8 @@ claude mcp add stagebook -- node /caminho/completo/stagebook/mcp/dist/index.js
 
 ```toml
 [mcp_servers.stagebook]
-command = "node"
-args = ["/caminho/completo/stagebook/mcp/dist/index.js"]
+command = "npx"
+args = ["-y", "stagebook-mcp"]
 ```
 
 O app do ChatGPT só se conecta a servidores remotos (pela internet), então não alcança o tablet no seu Wi-Fi.
@@ -125,6 +123,9 @@ têm direito autoral: o servidor orienta o assistente a não reproduzi-las intei
 ## Para quem programa
 
 ```sh
+git clone https://github.com/julianoAffonso/stagebook.git
+cd stagebook/mcp
+npm install
 npm test   # compila e roda os testes contra um tablet de mentira
 ```
 

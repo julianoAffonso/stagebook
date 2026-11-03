@@ -73,9 +73,9 @@ jobs:
           if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
             echo "Tag $TAG already exists: nothing new to publish."; exit 1
           fi
-          # notes: the commit titles since the previous release
+          # notes: the commit titles since the previous release, without the merge commits ("Merge pull request #9…")
           last=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          notes=$(git log --format='- %s' ${last:+$last..}HEAD)
+          notes=$(git log --no-merges --format='- %s' ${last:+$last..}HEAD)
           gh release create "$TAG" out/stagebook.apk out/stagebook-version.json \
             --target "$GITHUB_SHA" --title "Stagebook ${TAG#v}" --notes "$notes" --latest
       - if: always()

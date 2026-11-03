@@ -2,12 +2,14 @@
 name: Check
 # Only when merging into main (day-to-day work is on the dev branch) or by hand (Actions → Check → Run workflow):
 # each run takes ~10 min of GitHub's Actions minutes
+# Memory/docs, the MCP server (mcp-check.yml tests it) and the button-only workflows don't touch the app: no minutes spent
 on:
   push:
     branches: [main]
-    paths-ignore: [".claude/**", "**.md"]   # memory/docs only: no minutes spent
+    paths-ignore: [".claude/**", "**.md", "mcp/**", ".github/workflows/mcp-*.yml", ".github/workflows/release.yml"]
   pull_request:
     branches: [main]
+    paths-ignore: [".claude/**", "**.md", "mcp/**", ".github/workflows/mcp-*.yml", ".github/workflows/release.yml"]
   workflow_dispatch:
 
 jobs:

@@ -37,26 +37,24 @@ Files to send (backing tracks, backups) take a full path; `~` is your home folde
 Needs [Node.js](https://nodejs.org) 20 or newer.
 
 ```sh
-git clone https://github.com/julianoAffonso/stagebook.git
-cd stagebook/mcp
-npm install
-npm run build
+npx -y stagebook-mcp
 ```
 
-The server is `node /full/path/to/stagebook/mcp/dist/index.js`. Use that path in your assistant's settings below.
+That's the server: your assistant starts it by itself with the settings below (`npx` downloads it the first time and
+keeps it up to date), so there's nothing to run by hand.
 
 ## Connect your assistant
 
 **Claude Code**
 
 ```sh
-claude mcp add stagebook -- node /full/path/to/stagebook/mcp/dist/index.js
+claude mcp add stagebook -- npx -y stagebook-mcp
 ```
 
 **Claude Desktop** — Settings → Developer → Edit config (`claude_desktop_config.json`):
 
 ```json
-{ "mcpServers": { "stagebook": { "command": "node", "args": ["/full/path/to/stagebook/mcp/dist/index.js"] } } }
+{ "mcpServers": { "stagebook": { "command": "npx", "args": ["-y", "stagebook-mcp"] } } }
 ```
 
 **Cursor** (`~/.cursor/mcp.json`) and **Windsurf** (`~/.codeium/windsurf/mcp_config.json`): the same `mcpServers` block.
@@ -64,7 +62,7 @@ claude mcp add stagebook -- node /full/path/to/stagebook/mcp/dist/index.js
 **VS Code** (`.vscode/mcp.json` in a project, or the user `mcp.json`):
 
 ```json
-{ "servers": { "stagebook": { "type": "stdio", "command": "node", "args": ["/full/path/to/stagebook/mcp/dist/index.js"] } } }
+{ "servers": { "stagebook": { "type": "stdio", "command": "npx", "args": ["-y", "stagebook-mcp"] } } }
 ```
 
 **Gemini CLI** (`~/.gemini/settings.json`): the same `mcpServers` block as Claude Desktop.
@@ -73,8 +71,8 @@ claude mcp add stagebook -- node /full/path/to/stagebook/mcp/dist/index.js
 
 ```toml
 [mcp_servers.stagebook]
-command = "node"
-args = ["/full/path/to/stagebook/mcp/dist/index.js"]
+command = "npx"
+args = ["-y", "stagebook-mcp"]
 ```
 
 ChatGPT's own app only connects to remote servers (over the internet), so it can't reach the tablet on your Wi-Fi.
@@ -122,6 +120,9 @@ conversation. Lyrics are copyrighted: the server tells the assistant not to repr
 ## Development
 
 ```sh
+git clone https://github.com/julianoAffonso/stagebook.git
+cd stagebook/mcp
+npm install
 npm test   # builds and runs the tests against a fake tablet
 ```
 
