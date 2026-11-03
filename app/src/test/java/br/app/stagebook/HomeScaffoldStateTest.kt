@@ -58,7 +58,7 @@ class HomeScaffoldStateTest {
     @Test fun `tapping the rail's logo opens About`() {
         var about = 0
         compose.setContent { StagebookTheme { HomeScaffold(HomeTab.entries.first(), {}, onAbout = { about++ }) { m -> Box(m) } } }
-        compose.onNodeWithText("Stagebook").performClick()
+        compose.onNode(androidx.compose.ui.test.hasText("Stagebook") and androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Button), useUnmergedTree = false).performClick()
         org.junit.Assert.assertEquals(1, about)
     }
 }
