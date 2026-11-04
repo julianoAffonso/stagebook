@@ -9,9 +9,10 @@ object ChordImport {
     // Every rule for reading a page lives here, by what the text says and never by site (the user can add any site).
     // A label can touch the word before it: on pages that join their fields it reads "EKey: F#mCapo:"
     private const val LABEL_START = """(?:(?<!\p{L})|(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll}))"""
-    // 4 languages: "Capotraste na 2ª casa", "Capotraste: 2ª casa", "Capo 2", "Capo: 2nd fret", "Cejilla en el 2º traste",
-    // "Capotasto al 2º tasto"; the fret may be on the next line
-    private val capoText = Regex("""$LABEL_START(?i:capotraste(?:\s+na(?:\s+casa)?)?|capotasto(?:\s+(?:al|sul))?|cejilla(?:\s+en(?:\s+el)?)?|capo(?:\s+on)?)\s*:?\s*(\d{1,2})(?!\d)""")
+    // 4 languages: "Capotraste na 2ª casa", "Capotraste: 2ª casa", "Capo no 3", "Capo: 2nd fret", "Cejilla en el 2º traste",
+    // "Capotasto al 2º tasto"; after a ":" the fret may be on the next line. It has to end there: "da capo 2 vezes" isn't one
+    private const val FRET_WORD = """(?i:[ \t]+(?:casa|traste|tasto|fret))?"""
+    private val capoText = Regex("""(?m)$LABEL_START(?i:capotraste|capotasto|cejilla|capo)(?i:[ \t]+(?:na|no|em|on|at|al|sul|en(?:[ \t]+el)?))?$FRET_WORD(?:[ \t]*:[ \t]*\n?[ \t]*|[ \t]+)(\d{1,2})(?!\d)(?i:[ªº°]|st|nd|rd|th)?$FRET_WORD(?=[ \t]*$|[ \t]*[^\p{L}\s\d]|[ \t]+\p{Lu}|\p{Lu}\p{Ll})""")
     // "Tom: G", "Key: A minor", "Tono: F♯m", "Tonalidad: Dó maior", "Tonalità: G"; the value may be on the next line. It has
     // to end there: "Tom: A música é boa" is a comment, not a key
     private const val KEY_VALUE = """([A-G]|(?i:d[oó]|r[eé]|mi|f[aá]|sol|l[aá]|si))([#b♯♭]?)(m?)(?:[ \t]+((?i:minor|menor|minore|major|maior|mayor|maggiore)))?"""
@@ -70,7 +71,10 @@ object ChordImport {
     private val pageBpm = Regex("""(?im)(\d{2,3})\s*bpm\s*$|\b(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})\b""")
     private val bpmText = Regex("""(?im)^\s*(?:\{\s*tempo\s*:\s*(\d{2,3})\s*\}|(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})|(\d{2,3})\s*bpm)\s*$""")
 
-    fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t -> (capoText.find(t) ?: bareFret.matchEntire(t))?.groupValues?.get(1)?.toIntOrNull() }?.takeIf { it in 1..12 } ?: 0
+    /** The first capo that makes sense ("Capo: 15" doesn't hide a real one further on); 0 = none. */
+    fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t ->
+        (capoText.findAll(t) + listOfNotNull(bareFret.matchEntire(t))).mapNotNull { it.groupValues[1].toIntOrNull() }.firstOrNull { it in 1..12 }
+    } ?: 0
 
     // sites pad the chord lines with non-breaking and thin spaces; Java's \s doesn't see them, so the line read as
     // lyrics and only the lyrics came in (user, 31/10)

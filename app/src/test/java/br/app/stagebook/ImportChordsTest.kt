@@ -106,6 +106,11 @@ class ImportChordsTest {
         assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))
     }
 
+    @Test fun `invisible marks in the page's text don't hide the capo`() = runBlocking {
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(text = lyrics, pageText = "Capo: \n\u200B2nd fret", site = "www.exemplo.com"), false)
+        assertEquals(2, Chords.capo((r as br.app.stagebook.data.PageImport.Song).text))
+    }
+
     @Test fun `a page far too big isn't read`() = runBlocking {
         val r = importer().fromPage(br.app.stagebook.domain.PageData(text = "linha\n".repeat(30_000), site = "www.exemplo.com"), false)
         assertEquals(br.app.stagebook.data.PageImport.Problem(br.app.stagebook.data.ImportProblem.NOT_SONG), r)

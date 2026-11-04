@@ -115,6 +115,31 @@ class ChordImportTest {
         assertEquals(0, ChordImport.capoOf("eu escapo 2 vezes"))
     }
 
+    @Test fun `capo with the connectors people write`() {
+        assertEquals(2, ChordImport.capoOf("Capo na 2ª casa"))
+        assertEquals(3, ChordImport.capoOf("Capo no 3"))
+        assertEquals(3, ChordImport.capoOf("Capotraste no 3º traste"))
+        assertEquals(2, ChordImport.capoOf("Capo on fret 2"))
+        assertEquals(2, ChordImport.capoOf("Capo 2 Tom: G"))
+    }
+
+    @Test fun `ordinary text next to a capo word isn't a capo`() {
+        assertEquals(0, ChordImport.capoOf("Capo\n\n\n1 comentário"))
+        assertEquals(0, ChordImport.capoOf("Capo: \n1 comentário"))
+        assertEquals(0, ChordImport.capoOf("da capo 2 vezes"))
+    }
+
+    @Test fun `a capo that makes no sense doesn't hide a real one`() {
+        assertEquals(2, ChordImport.capoOf("Capo: 15\nCapo: 2"))
+        assertEquals(2, ChordImport.capoOf("Capo: 15", "{capo: 2}"))
+    }
+
+    @Test fun `a lyric with the word capo stays in the song`() {
+        val cp = ChordImport.toChordPro("G    D\nda capo 2 vezes\nEm   C\nmais uma linha")
+        assertEquals(0, Chords.capo(cp))
+        assertTrue(cp, cp.contains("po 2 vezes"))
+    }
+
     @Test fun `the fret may come on the line after the label`() {
         assertEquals(2, ChordImport.capoOf("Capo: \n2nd fret"))
         assertEquals(2, ChordImport.capoOf("Cejilla: \n2nd fret"))
