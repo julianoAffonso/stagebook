@@ -12,26 +12,47 @@ object ChordImport {
     // 4 languages: "Capotraste na 2ª casa", "Capotraste: 2ª casa", "Capo 2", "Capo: 2nd fret", "Cejilla en el 2º traste",
     // "Capotasto al 2º tasto"; the fret may be on the next line
     private val capoText = Regex("""$LABEL_START(?i:capotraste(?:\s+na(?:\s+casa)?)?|capotasto(?:\s+(?:al|sul))?|cejilla(?:\s+en(?:\s+el)?)?|capo(?:\s+on)?)\s*:?\s*(\d{1,2})(?!\d)""")
-    // "Tom: G", "Key: G", "Tono: G", "Tonalidad: G", "Tonalità: G"; the key can name the chart's shapes in parentheses, in
-    // any language: "F#m (com forma de Em)", "F#m (in the shape of Em)"
-    private const val KEY = """[A-G][#b]?m?"""
-    private const val SHAPE = """(?:\s*\([^)\n]*\s($KEY)\s*\))?"""
-    private val keyText = Regex("""$LABEL_START(?i:tom|key|tono|tonalidade?|tonalit[àa])\s*:\s*($KEY)$SHAPE(?![a-z#])""")
-    private val bareKey = Regex("""\s*($KEY)$SHAPE\s*""")
+    // "Tom: G", "Key: A minor", "Tono: F♯m", "Tonalidad: Dó maior", "Tonalità: G"; the value may be on the next line. It has
+    // to end there: "Tom: A música é boa" is a comment, not a key
+    private const val KEY_VALUE = """([A-G]|(?i:d[oó]|r[eé]|mi|f[aá]|sol|l[aá]|si))([#b♯♭]?)(m?)(?:[ \t]+((?i:minor|menor|minore|major|maior|mayor|maggiore)))?"""
+    // the key may name the chart's shapes in parentheses, in any language: "F#m (com forma de Em)", "F#m (in the shape of Em)"
+    private const val SHAPE = """(?:\s*\([^)\n]*\s([A-G][#b]?m?)\s*\))?"""
+    private const val KEY_END = """(?=[ \t]*$|[ \t]*[(,;|·/–\}-]|[ \t]+(?i:capo|cejilla|bpm|tempo|tuning|afina)|\p{Lu}\p{Ll})"""
+    private val keyText = Regex("""(?m)$LABEL_START(?i:tom|key|tono|tonalidade?|tonalit[àa])[ \t]*:[ \t]*\n?[ \t]*$KEY_VALUE$SHAPE$KEY_END""")
+    private val bareKey = Regex("""\s*$KEY_VALUE$SHAPE\s*""")
+    private val solfege = mapOf("do" to "C", "re" to "D", "mi" to "E", "fa" to "F", "sol" to "G", "la" to "A", "si" to "B")
+    private val minorWords = setOf("minor", "menor", "minore")
+
+    private data class StatedKey(val key: String, val shape: String)
+
+    private fun stated(m: MatchResult): StatedKey {
+        val (note, accidental, m3, word, shape) = m.destructured
+        val letter = if (note.length == 1) note else solfege.getValue(TextKey.of(note))
+        val minor = m3.isNotEmpty() || word.lowercase() in minorWords
+        return StatedKey(letter + accidental.replace('♯', '#').replace('♭', 'b') + if (minor) "m" else "", shape)
+    }
+
+    private fun statedKey(texts: Array<out String>): StatedKey? =
+        texts.firstNotNullOfOrNull { t -> (keyText.find(t) ?: bareKey.matchEntire(t))?.let(::stated)?.takeIf { Chords.isChord(it.key) } }
+
     // the fret alone: "2", "2ª casa", "2nd fret"
     private val bareFret = Regex("""(?i)\s*(\d{1,2})\s*(?:[ªº°]|st|nd|rd|th)?(?:\s+(?:casa|traste|tasto|fret))?\s*""")
 
     /** Key and capo the page shows (to keep them in the lyrics only profile too). */
-    fun keyOf(vararg texts: String): String = texts.firstNotNullOfOrNull { t -> (keyText.find(t) ?: bareKey.matchEntire(t))?.let { m -> m.groupValues[2].ifEmpty { m.groupValues[1] } }?.takeIf(Chords::isChord) }.orEmpty()
+    fun keyOf(vararg texts: String): String = statedKey(texts)?.key.orEmpty()
 
     /**
      * The key for `{key}`, which holds the chart's shapes. Many pages give what sounds with the capo (F#m, capo 2, chart
-     * in Em): the chords tell, a key [capo] frets down that fits them (or its relative) is the one written.
+     * in Em): the chords tell. A shape in parentheses counts if it fits them and isn't just the relative key; if not, a key
+     * [capo] frets down that fits them.
      */
-    fun shapesKey(key: String, capo: Int, chart: String): String {
-        if (key.isEmpty() || capo == 0) return key
-        val shapes = Chords.transposeKey(key, -capo)
-        return if (sameField(shapes, Chords.detectKey(chart))) shapes else key
+    fun shapesKey(capo: Int, chart: String, vararg texts: String): String {
+        val page = statedKey(texts) ?: return ""
+        val found = Chords.detectKey(chart)
+        if (page.shape.isNotEmpty() && !sameField(page.shape, page.key) && sameField(page.shape, found)) return page.shape
+        if (capo == 0) return page.key
+        val shapes = Chords.transposeKey(page.key, -capo)
+        return if (sameField(shapes, found)) shapes else page.key
     }
 
     // Em and G share a harmonic field
@@ -92,7 +113,7 @@ object ChordImport {
         flush()
         var body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
         val c = capoOf(capo, text)
-        val k = shapesKey(keyOf(key, text), c, body)
+        val k = shapesKey(c, body, key, text)
         if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
         if (Chords.isChord(k)) body = Chords.setDirective(body, "key", k)
         return body

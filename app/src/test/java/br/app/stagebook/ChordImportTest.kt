@@ -72,12 +72,38 @@ class ChordImportTest {
         assertEquals("G", Chords.key(ChordImport.toChordPro(inEm, key = "G", capo = "2")))
     }
 
-    @Test fun `the shape in parentheses counts in any language`() {
-        assertEquals("Em", ChordImport.keyOf("F#m (con la forma de Em)"))
-        assertEquals("Em", ChordImport.keyOf("Tonalidad: F#m (forme de Em)"))
+    @Test fun `the shape in parentheses counts in any language, if the chords agree`() {
+        assertEquals("Em", Chords.key(ChordImport.toChordPro(inEm, key = "F#m (con la forma de Em)")))
+        assertEquals("Em", Chords.key(ChordImport.toChordPro(inEm, key = "Tonalidad: F#m (forme de Em)")))
         assertEquals("F#m", ChordImport.keyOf("Tonalidad: F#m"))
         // a chart line with a note in parentheses says nothing about the key
         assertEquals("", ChordImport.keyOf("Em (repete com G)\nletra da música"))
+    }
+
+    @Test fun `parentheses that aren't the shapes don't change the key`() {
+        // Em is the relative key; A isn't what the chart is written in
+        assertEquals("G", Chords.key(ChordImport.toChordPro(inEm, key = "Key: G (relative minor: Em)")))
+        assertEquals("G", Chords.key(ChordImport.toChordPro(inEm, key = "Tom: G (original em A)")))
+    }
+
+    @Test fun `a key written out is read whole`() {
+        assertEquals("Am", ChordImport.keyOf("Key: A minor"))
+        assertEquals("F#m", ChordImport.keyOf("Key: F# minor"))
+        assertEquals("Bb", ChordImport.keyOf("Key: B♭ major"))
+        assertEquals("F#m", ChordImport.keyOf("Key: F♯m"))
+        assertEquals("C", ChordImport.keyOf("Tom: Dó maior"))
+        assertEquals("C", ChordImport.keyOf("TONO: DO MAYOR"))
+        assertEquals("Am", ChordImport.keyOf("Tom: Lá menor"))
+        assertEquals("Am", ChordImport.keyOf("{key: A minor}"))
+        assertEquals("G", ChordImport.keyOf("Tom: G  Capo: 2"))
+    }
+
+    @Test fun `ordinary text next to a label isn't a key`() {
+        assertEquals("", ChordImport.keyOf("Tom: A música é boa"))
+        assertEquals("", ChordImport.keyOf("Tom: E aí pessoal"))
+        assertEquals("", ChordImport.keyOf("Tom:\n\n\nA noite"))
+        assertEquals("", ChordImport.keyOf("Tom:\nA noite"))
+        assertEquals("", ChordImport.keyOf("Key: BPM: 120"))
     }
 
     @Test fun `labels joined to the word before them are read, parts of other words aren't`() {

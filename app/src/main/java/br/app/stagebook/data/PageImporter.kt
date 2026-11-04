@@ -66,7 +66,7 @@ class PageImporter @Inject constructor(
             // profile changes or the song goes to someone who plays)
             var lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
             val capo = ChordImport.capoOf(page.pageText, page.chordText)
-            val key = ChordImport.shapesKey(ChordImport.keyOf(page.pageText, page.chordText), capo, page.chordText)
+            val key = ChordImport.shapesKey(capo, page.chordText, page.pageText, page.chordText)
             if (capo > 0) lyrics = Chords.setDirective(lyrics, "capo", capo.toString())
             if (key.isNotEmpty()) lyrics = Chords.setDirective(lyrics, "key", key)
             lyrics
