@@ -2,6 +2,8 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
@@ -107,6 +109,22 @@ class ChordPlayTest {
         compose.onNodeWithText("Detalhes de F#m7").assertExists()
         compose.onNodeWithText("No tom da música (F#m)").assertExists()
     }
+
+    private fun detailsWidth(): androidx.compose.ui.unit.Dp {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performScrollTo().performClick()
+        compose.waitForIdle()
+        return compose.onNodeWithTag("chord_window").getBoundsInRoot().let { it.right - it.left }
+    }
+
+    @Config(qualifiers = "pt-rBR-w412dp-h915dp-port")
+    @Test fun `Details take the whole width on an upright phone`() = assertEquals(412f, detailsWidth().value, 1f)
+
+    @Config(qualifiers = "pt-rBR-w915dp-h412dp-land")
+    @Test fun `Details stay a window on a phone on its side`() = assertTrue(detailsWidth().value < 600f)
+
+    @Config(qualifiers = "pt-rBR-w800dp-h1280dp-port")
+    @Test fun `Details stay a window on an upright tablet`() = assertTrue(detailsWidth().value < 600f)
 
     @Config(qualifiers = "pt-rBR-w320dp-h640dp")
     @GraphicsMode(GraphicsMode.Mode.NATIVE)   // real text widths: the default mode measures text too narrow to overflow

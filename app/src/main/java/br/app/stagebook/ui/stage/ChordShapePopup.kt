@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.ui.unit.dp
@@ -28,13 +29,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import br.app.stagebook.R
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.Voicings
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ChordDiagram
+import br.app.stagebook.ui.components.wideLists
 import br.app.stagebook.ui.theme.Spacing
 
 /**
@@ -75,8 +80,11 @@ fun ChordShapePopup(
     var details by rememberSaveable(chord) { mutableStateOf(false) }
     // the chord with the capo, spelled in the key that sounds: the same name here, in Details and on the stage
     val soundingKey = remember(songText) { Chords.soundingKey(Chords.key(songText), Chords.capo(songText)) }
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    // Details on an upright phone take the whole width: the field fits in fewer rows
+    val window = LocalWindowInfo.current.containerSize
+    val fullWidth = details && !wideLists() && window.height > window.width
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = !fullWidth)) {
+        Surface(Modifier.testTag("chord_window").then(if (fullWidth) Modifier.fillMaxWidth() else Modifier), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             // a phone on its side is shorter than Details: it scrolls
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 if (details) {
@@ -84,15 +92,8 @@ fun ChordShapePopup(
                     // sounds); only here: most taps never open Details, and a song with no key has to be read for one
                     val songKey = remember(songText) { soundingKey.ifEmpty { Chords.soundingKey(Chords.detectKey(songText), Chords.capo(songText)) } }
                     val sounding = if (capo > 0) Chords.transposeChord(chord, capo, key = songKey) else chord
-                    ChordDetails(sounding, songKey, onBack = { details = false })
-                    if (capo > 0) {
-                        Text(
-                            stringResource(R.string.chord_capo_note, chord, capo, sounding),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        )
-                    }
+                    ChordDetails(sounding, songKey, fullWidth, onBack = { details = false })
+                    if (capo > 0) CapoNote(stringResource(R.string.chord_capo_note, chord, capo, sounding), if (fullWidth) Modifier.fillMaxWidth() else Modifier.widthIn(max = 420.dp))
                     return@Column
                 }
                 if (count == 0) {
@@ -163,7 +164,7 @@ fun ChordShapePopup(
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
+private fun ChordDetails(chord: String, songKey: String, fullWidth: Boolean, onBack: () -> Unit) {
     val triad = remember(chord) { Chords.triad(chord) }
     val own = triad?.takeIf { !it.dim }?.let { Chords.keyName(it.root, it.minor) }
     // with a seventh, the fields use seventh chords (Gmaj7, Am7…) and the degree only lights if the seventh matches
@@ -171,7 +172,7 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     val place = remember(chord, songKey) { if (songKey.isEmpty()) null else HarmonicField.placeIn(chord, songKey) }
     val degree = place?.label
     val where = remember(chord) { HarmonicField.appearances(chord) }
-    Column(Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+    Column(if (fullWidth) Modifier.fillMaxWidth() else Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(AppIcons.Back, stringResource(R.string.chord_back_to_shape)) }
             Text(stringResource(R.string.chord_details_title, chord), style = MaterialTheme.typography.titleLarge)
@@ -202,6 +203,17 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+/** Why Details name another chord than the one tapped: the capo. It stands out, or the musician takes the name for a mistake. */
+@Composable
+private fun CapoNote(text: String, modifier: Modifier = Modifier) {
+    Surface(modifier, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer) {
+        Row(Modifier.padding(Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+            Icon(AppIcons.Capo, null)
+            Text(text, style = MaterialTheme.typography.titleSmall)
         }
     }
 }
