@@ -2,11 +2,14 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import br.app.stagebook.data.model.ChordPlayMode
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.ChordSynth
@@ -107,6 +110,41 @@ class ChordPlayTest {
         compose.onNodeWithText("Detalhes de F#m7").assertExists()
         compose.onNodeWithText("No tom da música (F#m)").assertExists()
     }
+
+    @Test fun `the capo note comes before the harmonic field`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        val note = compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").getBoundsInRoot()
+        assertTrue(note.bottom <= compose.onNodeWithText("No tom da música (F#m)").getBoundsInRoot().top)
+        assertTrue(note.top - compose.onNodeWithText("Detalhes de F#m7").getBoundsInRoot().bottom < 16.dp)   // right under the title
+        compose.onNodeWithContentDescription("Como funciona").performClick()
+        compose.onNodeWithText("Os Detalhes mostram o que soa", substring = true).assertExists()
+    }
+
+    @Config(qualifiers = "pt-rBR-w412dp-h915dp-port")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)   // real text widths: the row has to wrap
+    @Test fun `a chord left alone on the field's second row sits in the middle`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        val alone = compose.onAllNodesWithText("E7")[0].getBoundsInRoot()
+        assertEquals(206f, ((alone.left + alone.right) / 2).value, 2f)
+    }
+
+    private fun detailsWidth(): androidx.compose.ui.unit.Dp {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performScrollTo().performClick()
+        compose.waitForIdle()
+        return compose.onNodeWithTag("chord_window").getBoundsInRoot().let { it.right - it.left }
+    }
+
+    @Config(qualifiers = "pt-rBR-w412dp-h915dp-port")
+    @Test fun `Details take the whole width on an upright phone`() = assertEquals(412f, detailsWidth().value, 1f)
+
+    @Config(qualifiers = "pt-rBR-w915dp-h412dp-land")
+    @Test fun `Details stay a window on a phone on its side`() = assertTrue(detailsWidth().value < 600f)
+
+    @Config(qualifiers = "pt-rBR-w800dp-h1280dp-port")
+    @Test fun `Details stay a window on an upright tablet`() = assertTrue(detailsWidth().value < 600f)
 
     @Config(qualifiers = "pt-rBR-w320dp-h640dp")
     @GraphicsMode(GraphicsMode.Mode.NATIVE)   // real text widths: the default mode measures text too narrow to overflow
