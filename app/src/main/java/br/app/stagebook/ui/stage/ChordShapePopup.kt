@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.stage
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -72,16 +73,16 @@ fun ChordShapePopup(
     // "Details": the window's second screen, with the harmonic field (T21); the diagram stays on the first one, without
     // distractions
     var details by rememberSaveable(chord) { mutableStateOf(false) }
-    // the harmonic field is of what sounds, not of the chart's shapes (on the keyboard the chord already sounds)
-    val songKey = remember(songText) {
-        val k = Chords.key(songText).ifEmpty { Chords.detectKey(songText) }
-        val kc = Chords.capo(songText)
-        if (k.isNotEmpty() && kc > 0) Chords.transposeKey(k, kc) else k
-    }
+    // the chord with the capo, spelled in the key that sounds: the same name here, in Details and on the stage
+    val soundingKey = remember(songText) { Chords.soundingKey(Chords.key(songText), Chords.capo(songText)) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            // a phone on its side is shorter than Details: it scrolls
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 if (details) {
+                    // the harmonic field is of what sounds, not of the chart's shapes (on the keyboard the chord already
+                    // sounds); only here: most taps never open Details, and a song with no key has to be read for one
+                    val songKey = remember(songText) { soundingKey.ifEmpty { Chords.soundingKey(Chords.detectKey(songText), Chords.capo(songText)) } }
                     val sounding = if (capo > 0) Chords.transposeChord(chord, capo, key = songKey) else chord
                     ChordDetails(sounding, songKey, onBack = { details = false })
                     if (capo > 0) {
@@ -89,6 +90,7 @@ fun ChordShapePopup(
                             stringResource(R.string.chord_capo_note, chord, capo, sounding),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         )
                     }
                     return@Column
@@ -135,7 +137,7 @@ fun ChordShapePopup(
                 }
                 if (capo > 0) {
                     Text(
-                        stringResource(R.string.chord_capo_note, chord, capo, Chords.transposeChord(chord, capo)),
+                        stringResource(R.string.chord_capo_note, chord, capo, Chords.transposeChord(chord, capo, key = soundingKey)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,

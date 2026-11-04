@@ -4,7 +4,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import br.app.stagebook.data.model.ChordPlayMode
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.ChordSynth
@@ -75,6 +77,28 @@ class ChordPlayTest {
         compose.onNodeWithText("No tom da música (F#m)").assertExists()
         compose.onNodeWithText("F#m7 é o i7 neste tom.").assertExists()
         compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").assertExists()
+    }
+
+    @Test fun `the chord has the same name on both screens with a capo`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("G", Instrument.ACOUSTIC_GUITAR, "{key: G}\n{capo: 1}\n[G]um [C]dois", {}, {}) } }
+        compose.onNodeWithText("O diagrama é de G. Com capo na 1ª casa, soa Ab.").assertExists()
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("Detalhes de Ab").assertExists()
+        compose.onNodeWithText("O diagrama é de G. Com capo na 1ª casa, soa Ab.").assertExists()
+    }
+
+    @Test fun `Details work on a song without a key`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em", Instrument.ACOUSTIC_GUITAR, "{capo: 2}\n[Em]um [Am]dois [B7]tres [Em]fim", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("No tom da música (F#m)").assertExists()
+    }
+
+    @Config(qualifiers = "pt-rBR-w640dp-h320dp-land")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test fun `Details scroll on a phone on its side`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performScrollTo().performClick()
+        compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun `Details on the keyboard - the chord already is what sounds, it doesn't go up twice`() {

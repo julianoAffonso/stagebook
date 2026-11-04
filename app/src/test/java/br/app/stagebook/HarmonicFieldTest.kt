@@ -61,4 +61,15 @@ class HarmonicFieldTest {
         assertEquals("V7", HarmonicField.degreeIn("D7/F#", "G"))
         assertNull(HarmonicField.degreeIn("Caug", "G"))     // G# isn't in G
     }
+
+    @Test fun `a key that can't be read follows the chords when transposing`() {
+        val t = br.app.stagebook.domain.Chords.transposeSong("{key: C major}\n[C]um [F]dois [G]tres [C]fim", 2)
+        assertEquals("D", br.app.stagebook.domain.Chords.key(t))
+    }
+
+    @Test fun `the sounding key has the usual name`() {
+        assertEquals("Ab", br.app.stagebook.domain.Chords.soundingKey("G", 1))
+        assertEquals("Bbm", br.app.stagebook.domain.Chords.soundingKey("Am", 1))
+        assertEquals("A", br.app.stagebook.domain.Chords.soundingKey("G", 2))
+    }
 }
