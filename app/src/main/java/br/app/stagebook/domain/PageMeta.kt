@@ -9,6 +9,7 @@ data class PageData(
     val artist: String = "",
     val text: String = "",
     val chordText: String = "",   // chords with the chords above (Cifra Club)
+    val preLyrics: String = "",   // the <pre> text without the marked chord names: the lyrics, when it is a chart
     val pageText: String = "",   // all the page's visible text: key, capo and BPM are read from it (ChordImport)
     val site: String = "",
     val ldName: String = "",

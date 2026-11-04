@@ -4,9 +4,9 @@ package br.app.stagebook.data
  * Script run on the page open in the import browser. Returns JSON with the lyrics and the title/artist hints (see
  * PageData). Order: selected text > known sites > largest text block.
  *
- * Chords: `chordText` carries a page's <pre> block with the chords on the line above (with the tablature, if any: the
- * app asks whether it comes in); `text` stays lyrics only where the page marks the chords. Without a <pre>, chords are in
- * `text`. This script only gathers: what the page means (key, capo, BPM) is read from `pageText` in ChordImport.
+ * Chords: `chordText` carries the page's <pre> text with the chords on the line above (with the tablature, if any: the
+ * app asks whether it comes in) and `preLyrics` the same without the marked chord names. Without a <pre>, chords are in
+ * `text`. This script only gathers: what it all means (is it a chart? key, capo, BPM) is decided in the app (ChordImport).
  *
  * Letras.mus.br: on the normal page the lyrics are in .lyric-original; on the translation page (traducao.html) each
  * line carries the translation and the original in .romanization, and only the original is kept.
@@ -29,6 +29,7 @@ function txt(n){
 function lines(s){return s.split('\n').map(function(l){return l.trim();}).join('\n').replace(/\n{3,}/g,'\n\n').trim();}
 var h=location.hostname,x='',ti='',ar='',ch='';
 var sel=String(window.getSelection()||'').trim(); if(sel.split('\n').length>2||sel.length>80) x=sel;
+var selected=!!x;
 if(h.indexOf('letras.mus.br')>=0){
   if(!x){
     var orig=q('.lyric-original');
@@ -55,9 +56,10 @@ else if(h.indexOf('azlyrics')>=0){ if(!x){var d=document.querySelectorAll('.ring
 // chords above the lyrics live in <pre>, on any site, and some pages cut them into several: joined the way the page shows
 // them (inline pieces continue the same line); chord names (in <b>) stay out of the lyrics
 function joinPre(pre,part){return pre.map(function(e,i){var inl=i&&getComputedStyle(e).display.indexOf('inline')>=0; return (i&&!inl?'\n':'')+part(e);}).join('');}
-var pre=Array.prototype.slice.call(document.querySelectorAll('pre'));
-if(joinPre(pre,function(e){return e.textContent;}).length>200){ch=joinPre(pre,function(e){return e.textContent;});
-  if(!x)x=joinPre(pre,function(e){var l=e.cloneNode(true); Array.prototype.forEach.call(l.querySelectorAll('b'),function(b){b.remove();}); return l.textContent;});}
+var pre=Array.prototype.slice.call(document.querySelectorAll('pre')),pl='';
+// the app decides whether it really is a chart (ChordImport.hasChords); a selection wins over the whole page
+if(!selected){var all=joinPre(pre,function(e){return e.textContent;});
+  if(all.length>200){ch=all; pl=joinPre(pre,function(e){var l=e.cloneNode(true); Array.prototype.forEach.call(l.querySelectorAll('b'),function(b){b.remove();}); return l.textContent;});}}
 if(!x){var best='',bn=0; Array.prototype.forEach.call(document.querySelectorAll('div,pre,p,section,article'),function(e){
   if(e.querySelectorAll('div,section,article,nav,ul').length>4)return; var s=e.innerText||''; var n=s.split('\n').length;
   if(n>bn&&n<500){best=s;bn=n;}}); x=best;}
@@ -69,7 +71,7 @@ var ld={};Array.prototype.forEach.call(document.querySelectorAll('script[type="a
 var og=(q('meta[property="og:title"]')||{}).content||'';
 // the page's visible text: key, capo and BPM are read from it in the app (ChordImport), the same way on any site
 var bt=(document.body&&document.body.innerText)||'';
-return JSON.stringify({title:ti,artist:ar,text:x,chordText:ch,pageText:bt.slice(0,50000),site:h,ldName:ld.name||'',ldArtist:ld.artist||'',ldDate:ld.date||'',
+return JSON.stringify({title:ti,artist:ar,text:x.slice(0,200000),chordText:ch.slice(0,200000),preLyrics:pl.slice(0,200000),pageText:bt.slice(0,50000),site:h,ldName:ld.name||'',ldArtist:ld.artist||'',ldDate:ld.date||'',
  ogTitle:og,docTitle:document.title});
 })()
 """.trimIndent()

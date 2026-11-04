@@ -46,7 +46,11 @@ class PageImporter @Inject constructor(
         fromPage(PageData(title = title, text = text, chordText = if (ChordImport.hasChords(text)) text else ""), withTab)
 
     /** [withTab] null = asks first when the page has tablature (answer with true or false). */
-    suspend fun fromPage(parsed: PageData, withTab: Boolean? = null): PageImport {
+    suspend fun fromPage(source: PageData, withTab: Boolean? = null): PageImport {
+        // a page that big is no song (a log, a book): not worth reading (limits in ExtractScript)
+        if (maxOf(source.text.length, source.chordText.length) > 2 * br.app.stagebook.domain.BandContent.MAX_TEXT) return PageImport.Problem(ImportProblem.NOT_SONG)
+        // a <pre> only counts if it has chords: others (code, notes) leave the page's text as it is
+        val parsed = if (ChordImport.hasChords(source.chordText)) source.copy(text = source.preLyrics.ifBlank { source.text }) else source.copy(chordText = "")
         // the search results aren't a song: Google's summary has bits of lyrics and came in as "cifra wave tom jobim"
         // with a made-up key (device test B-05): open the chords page first
         if (SEARCH_HOST.containsMatchIn(parsed.site)) return PageImport.Problem(ImportProblem.SEARCH_PAGE)
