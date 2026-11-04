@@ -69,7 +69,11 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
-    <string name="sets_sort_newest">Mais recentes</string>
+    <string name="sets_search">Buscar setlist</string>
+    <string name="sets_search_hint">Nome do setlist</string>
+    <string name="sets_not_found">Nenhum setlist encontrado</string>
+    <string name="sets_sort">Ordem</string>
+    <string name="sets_sort_newest">Recentes</string>
     <string name="sets_sort_abc">A a Z</string>
     <string name="sets_new">Novo setlist</string>
     <string name="sets_name">Nome do setlist</string>

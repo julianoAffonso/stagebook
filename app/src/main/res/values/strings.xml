@@ -66,6 +66,10 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="sets_search">Search setlist</string>
+    <string name="sets_search_hint">Setlist name</string>
+    <string name="sets_not_found">No setlist found</string>
+    <string name="sets_sort">Order</string>
     <string name="sets_sort_newest">Newest</string>
     <string name="sets_sort_abc">A to Z</string>
     <string name="sets_new">New setlist</string>
