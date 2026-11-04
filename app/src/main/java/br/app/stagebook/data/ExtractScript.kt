@@ -63,10 +63,12 @@ if(!selected){var all=joinPre(pre,function(e){return e.textContent;});
 if(!x){var best='',bn=0; Array.prototype.forEach.call(document.querySelectorAll('div,pre,p,section,article'),function(e){
   if(e.querySelectorAll('div,section,article,nav,ul').length>4)return; var s=e.innerText||''; var n=s.split('\n').length;
   if(n>bn&&n<500){best=s;bn=n;}}); x=best;}
+// structured data allows a list or an object where a name goes; the app reads plain text
+function one(v){if(Array.isArray(v))v=v[0]; if(v&&typeof v==='object')v=v.name||v['@value']||''; return v==null?'':String(v);}
 var ld={};Array.prototype.forEach.call(document.querySelectorAll('script[type="application/ld+json"]'),function(s){
   try{var j=JSON.parse(s.textContent);(Array.isArray(j)?j:[j]).forEach(function(o){(o['@graph']||[o]).forEach(function(n){
-   var ty=String(n['@type']||''); if(/Music(Recording|Composition)|CreativeWork/.test(ty)){ if(!ld.name)ld.name=n.name;
-   var a=n.byArtist||n.composer||n.author||n.lyricist; if(a&&!ld.artist)ld.artist=(Array.isArray(a)?a[0]:a).name||'';
+   var ty=String(n['@type']||''); if(/Music(Recording|Composition)|CreativeWork/.test(ty)){ if(!ld.name)ld.name=one(n.name);
+   var a=n.byArtist||n.composer||n.author||n.lyricist; if(a&&!ld.artist)ld.artist=one(a);
    if(n.datePublished&&!ld.date)ld.date=String(n.datePublished);}});});}catch(e){}});
 var og=(q('meta[property="og:title"]')||{}).content||'';
 // the page's visible text: key, capo and BPM are read from it in the app (ChordImport), the same way on any site

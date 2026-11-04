@@ -111,6 +111,12 @@ class ImportChordsTest {
         assertEquals(2, Chords.capo((r as br.app.stagebook.data.PageImport.Song).text))
     }
 
+    @Test fun `tablature with invisible marks still asks before coming in`() = runBlocking {
+        val chart = "\u200BG    D\n\u200BSaio cedo pela rua\n\u200BEm   C\n\u200BPra você ouvir\n\u200Be|-----3-----|\n\u200BB|---0---0---|"
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(chordText = chart, site = "www.exemplo.com"), null)
+        assertEquals(br.app.stagebook.data.PageImport.AskTab, r)
+    }
+
     @Test fun `a page far too big isn't read`() = runBlocking {
         val r = importer().fromPage(br.app.stagebook.domain.PageData(text = "linha\n".repeat(30_000), site = "www.exemplo.com"), false)
         assertEquals(br.app.stagebook.data.PageImport.Problem(br.app.stagebook.data.ImportProblem.NOT_SONG), r)

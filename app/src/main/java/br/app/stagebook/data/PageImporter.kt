@@ -54,7 +54,8 @@ class PageImporter @Inject constructor(
         // the search results aren't a song: Google's summary has bits of lyrics and came in as "cifra wave tom jobim"
         // with a made-up key (device test B-05): open the chords page first
         if (SEARCH_HOST.containsMatchIn(parsed.site)) return PageImport.Problem(ImportProblem.SEARCH_PAGE)
-        if (withTab == null && (Tablature.hasTab(parsed.chordText) || Tablature.hasTab(parsed.text))) return PageImport.AskTab
+        // invisible marks start every line on some sites: the tablature only shows after they're gone
+        if (withTab == null && (Tablature.hasTab(ChordImport.plainSpaces(parsed.chordText)) || Tablature.hasTab(ChordImport.plainSpaces(parsed.text)))) return PageImport.AskTab
         val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
         val page = parsed.copy(text = tab(ChordImport.plainSpaces(parsed.text)), chordText = tab(ChordImport.plainSpaces(parsed.chordText)), pageText = ChordImport.plainSpaces(parsed.pageText))
         // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics only
