@@ -72,16 +72,25 @@ fun ChordShapePopup(
     // "Details": the window's second screen, with the harmonic field (T21); the diagram stays on the first one, without
     // distractions
     var details by rememberSaveable(chord) { mutableStateOf(false) }
-    val songKey = remember(songText, instrument) {
+    // the harmonic field is of what sounds, not of the chart's shapes (on the keyboard the chord already sounds)
+    val songKey = remember(songText) {
         val k = Chords.key(songText).ifEmpty { Chords.detectKey(songText) }
-        val kc = if (instrument == Instrument.KEYBOARD) Chords.capo(songText) else 0
+        val kc = Chords.capo(songText)
         if (k.isNotEmpty() && kc > 0) Chords.transposeKey(k, kc) else k
     }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 if (details) {
-                    ChordDetails(chord, songKey, onBack = { details = false })
+                    val sounding = if (capo > 0) Chords.transposeChord(chord, capo, key = songKey) else chord
+                    ChordDetails(sounding, songKey, onBack = { details = false })
+                    if (capo > 0) {
+                        Text(
+                            stringResource(R.string.chord_capo_note, chord, capo, sounding),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     return@Column
                 }
                 if (count == 0) {
@@ -195,10 +204,11 @@ private fun ChordDetails(chord: String, songKey: String, onBack: () -> Unit) {
     }
 }
 
-/** The 7 degrees of a field (degree on top, chord below); the one at position [lit] is lit. */
+/** The 7 degrees of a field (degree on top, chord below); the one at position [lit] is lit. Long chords go to a second row. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: Int?) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         degrees.forEachIndexed { i, d ->
             val on = i == lit
             Surface(
@@ -207,8 +217,8 @@ private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: Int?) {
                 contentColor = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
             ) {
                 Column(Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(d.roman, style = MaterialTheme.typography.labelSmall)
-                    Text(d.chord, style = MaterialTheme.typography.titleSmall)
+                    Text(d.roman, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+                    Text(d.chord, style = MaterialTheme.typography.titleSmall, maxLines = 1, softWrap = false)
                 }
             }
         }
