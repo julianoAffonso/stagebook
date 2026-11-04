@@ -180,6 +180,7 @@ class StageFlowTest {
         assertEquals("a", id)
         assertTrue("zoom $zoom deveria ter aumentado", zoom > 1.5f)
         compose.onNodeWithText("Zoom desta música", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Só a letra e as cifras").assertIsDisplayed()
     }
 
     @Test

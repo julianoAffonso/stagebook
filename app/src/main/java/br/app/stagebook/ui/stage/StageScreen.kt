@@ -1200,7 +1200,7 @@ fun StageScreen(
     }
 }
 
-/** "Zoom for this song: 120%" while adjusting, with a shortcut back to the default size. */
+/** "Zoom for this song: 120%" while adjusting, what it changes, and a shortcut back to the default size. */
 @Composable
 private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
@@ -1212,7 +1212,10 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
-                Text(stringResource(R.string.stage_zoom, percent), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Column {
+                    Text(stringResource(R.string.stage_zoom, percent), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(R.string.stage_zoom_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (percent != 100) {
                     TextButton(onClick = onReset) { Text(stringResource(R.string.stage_zoom_reset)) }
                 } else {

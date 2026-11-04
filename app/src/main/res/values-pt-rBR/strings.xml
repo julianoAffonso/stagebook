@@ -130,6 +130,7 @@
     <string name="stage_marker_hint">Passe o dedo nas palavras para destacar. Passe de novo para apagar.</string>
     <string name="stage_marker_done">Pronto</string>
     <string name="stage_zoom">Zoom desta música: %1$d%%</string>
+    <string name="stage_zoom_scope">Só a letra e as cifras</string>
     <string name="stage_zoom_reset">Padrão</string>
     <string name="set_remove">Tirar</string>
     <string name="set_tap_to_play">%1$s · toque numa para abrir o palco</string>
