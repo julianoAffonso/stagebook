@@ -9,9 +9,7 @@ data class PageData(
     val artist: String = "",
     val text: String = "",
     val chordText: String = "",   // chords with the chords above (Cifra Club)
-    val key: String = "",
-    val capo: String = "",
-    val bpm: String = "",   // "120 BPM" / "BPM: 120" / "Tempo: 120" written on the page, if any
+    val pageText: String = "",   // all the page's visible text: key, capo and BPM are read from it (ChordImport)
     val site: String = "",
     val ldName: String = "",
     val ldArtist: String = "",

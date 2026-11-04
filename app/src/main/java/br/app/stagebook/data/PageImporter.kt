@@ -56,13 +56,13 @@ class PageImporter @Inject constructor(
         // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics only
         val chordSource = page.chordText.ifBlank { page.text }
         var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
-            ChordImport.toChordPro(chordSource, page.key, page.capo)
+            ChordImport.toChordPro(chordSource, page.pageText, page.pageText)
         } else {
             // lyrics only: no chords, but the page's key and capo are kept (hidden in this profile; not lost if the
             // profile changes or the song goes to someone who plays)
             var lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
-            val capo = ChordImport.capoOf(page.capo, page.chordText)
-            val key = ChordImport.keyOf(page.key, page.chordText)
+            val capo = ChordImport.capoOf(page.pageText, page.chordText)
+            val key = ChordImport.shapesKey(ChordImport.keyOf(page.pageText, page.chordText), capo, page.chordText)
             if (capo > 0) lyrics = Chords.setDirective(lyrics, "capo", capo.toString())
             if (key.isNotEmpty()) lyrics = Chords.setDirective(lyrics, "key", key)
             lyrics
@@ -73,7 +73,7 @@ class PageImporter @Inject constructor(
             !br.app.stagebook.domain.BandContent.looksLikeSong(text)
         ) return PageImport.Problem(ImportProblem.NOT_SONG)
         // BPM from the page (or written in the text): saved in the song, the metronome starts at it
-        val bpm = ChordImport.bpmOf(page.bpm, page.chordText.ifBlank { page.text })
+        val bpm = ChordImport.bpmOf(page.pageText, page.chordText.ifBlank { page.text })
         if (bpm > 0 && Chords.tempo(text) == 0) text = Chords.setDirective(text, "tempo", bpm.toString())
         val meta = PageMeta.pick(page)
         var artist = meta.artist

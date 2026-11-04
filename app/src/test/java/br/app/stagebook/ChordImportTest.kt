@@ -40,8 +40,8 @@ class ChordImportTest {
     }
 
     @Test fun `key and capo from the page win over the text`() {
-        val cp = ChordImport.toChordPro(page, key = "A", capo = "Capotraste na 2ª casa")
-        assertEquals("A", Chords.key(cp))
+        val cp = ChordImport.toChordPro(page, key = "C", capo = "Capotraste na 2ª casa")
+        assertEquals("C", Chords.key(cp))
         assertEquals(2, Chords.capo(cp))
     }
 
@@ -56,6 +56,43 @@ class ChordImportTest {
         val cp = ChordImport.toChordPro(page, key = "F#m (in the shape of Em)", capo = "2nd fret")
         assertEquals("Em", Chords.key(cp))
         assertEquals(2, Chords.capo(cp))
+    }
+
+    // chart in Em shapes, the way a page with a capo prints it
+    private val inEm = listOf("Em7        G", "Today is gonna be the day", "D4         A7(4)", "That they're gonna throw it back", "Em7        G", "By now you should've", "C9   D4     Em7", "Somehow realized").joinToString("\n")
+
+    @Test fun `a page key that sounds with the capo becomes the chart's shapes, whatever the site`() {
+        val cp = ChordImport.toChordPro(inEm, key = "F#m", capo = "2nd fret")
+        assertEquals("Em", Chords.key(cp))
+        assertEquals(2, Chords.capo(cp))
+    }
+
+    @Test fun `a page key already in the shapes stays`() {
+        assertEquals("Em", Chords.key(ChordImport.toChordPro(inEm, key = "Em", capo = "2")))
+        assertEquals("G", Chords.key(ChordImport.toChordPro(inEm, key = "G", capo = "2")))
+    }
+
+    @Test fun `the shape in parentheses counts in any language`() {
+        assertEquals("Em", ChordImport.keyOf("F#m (con la forma de Em)"))
+        assertEquals("Em", ChordImport.keyOf("Tonalidad: F#m (forme de Em)"))
+        assertEquals("F#m", ChordImport.keyOf("Tonalidad: F#m"))
+        // a chart line with a note in parentheses says nothing about the key
+        assertEquals("", ChordImport.keyOf("Em (repete com G)\nletra da música"))
+    }
+
+    @Test fun `labels joined to the word before them are read, parts of other words aren't`() {
+        val joined = "Tuning: E A D G B EKey: F#mCapo: \n2nd fret\nEm7  0-2-2-0-3-3"
+        assertEquals("F#m", ChordImport.keyOf(joined))
+        assertEquals(2, ChordImport.capoOf(joined))
+        assertEquals("", ChordImport.keyOf("custom: A"))
+        assertEquals("", ChordImport.keyOf("Tom: Dia de festa"))
+        assertEquals(0, ChordImport.capoOf("eu escapo 2 vezes"))
+    }
+
+    @Test fun `the fret may come on the line after the label`() {
+        assertEquals(2, ChordImport.capoOf("Capo: \n2nd fret"))
+        assertEquals(2, ChordImport.capoOf("Cejilla: \n2nd fret"))
+        assertEquals(3, ChordImport.capoOf("Capotraste na casa 3"))
     }
 
     @Test fun `the page's key and capo lines don't stay in the lyrics`() {

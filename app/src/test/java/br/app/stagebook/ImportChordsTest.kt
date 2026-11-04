@@ -43,7 +43,7 @@ class ImportChordsTest {
             put("title", ""); put("artist", "")
             put("text", "Saio cedo pela rua\nPra você ouvir\nE mais uma linha")
             put("chordText", "[Intro] G  D\n\nG              D\nSaio cedo pela rua\nEm       C\nPra você ouvir\nC\nE mais uma linha")
-            put("key", "G"); put("capo", "Capotraste na 2ª casa"); put("site", "www.cifraclub.com.br")
+            put("pageText", "Tom: G\nCapotraste na 2ª casa"); put("site", "www.cifraclub.com.br")
         }.toString()
         return Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(page))
     }
@@ -104,7 +104,7 @@ class ImportChordsTest {
             put("title", ""); put("artist", "")
             put("text", "Saio cedo pela rua\nPra você ouvir\nE mais uma linha")
             put("chordText", "[Intro]\ne|---0---3---|\nB|---1---0---|\n\nG              D\nSaio cedo pela rua\nEm       C\nPra você ouvir\nC\nE mais uma linha")
-            put("key", "G"); put("site", "www.cifraclub.com.br")
+            put("pageText", "Tom: G"); put("site", "www.cifraclub.com.br")
         }.toString()
         return Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(page))
     }
