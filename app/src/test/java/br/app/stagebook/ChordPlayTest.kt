@@ -196,4 +196,13 @@ class ChordPlayTest {
         assertEquals(3, Voicings.neckCapo(text, br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR))
         assertEquals(0, Voicings.neckCapo(text, br.app.stagebook.data.model.Instrument.KEYBOARD))
     }
+
+    @Test
+    fun `an upright phone fits three chords a row, in less height`() {
+        val room = 260.dp   // a 360dp phone, the stage's margins and the list's × taken
+        val phone = br.app.stagebook.ui.stage.stripCell(room)
+        assertTrue(phone.width * 3 <= room)
+        assertTrue(phone.height < br.app.stagebook.ui.stage.STRIP_CELL.height)
+        assertEquals(br.app.stagebook.ui.stage.STRIP_CELL, br.app.stagebook.ui.stage.stripCell(500.dp))
+    }
 }
