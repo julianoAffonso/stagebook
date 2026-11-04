@@ -35,7 +35,7 @@ object Chords {
     private val shapeHint = Regex("""^\s*(\S+)\s+\(?($SHAPE)\)?\s*$""", RegexOption.IGNORE_CASE)
 
     private fun frets(shape: String): List<Int> =
-        (if ('-' in shape) shape.split('-') else shape.map { it.toString() }).map { if (it.equals("x", true)) -1 else it.toInt() }
+        (if ('-' in shape) shape.split('-') else shape.map { it.toString() }).map { it.toIntOrNull() ?: -1 }   // "x", and "xx" or "1x" that the pattern lets through
 
     private fun shapeText(frets: List<Int>): String {
         val parts = frets.map { if (it < 0) "x" else it.toString() }

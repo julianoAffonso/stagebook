@@ -23,6 +23,12 @@ class ChordImportTest {
         "Pra você ouvir",
     ).joinToString("\n")
 
+    @Test fun `a shape with xx doesn't break reading the song`() {
+        val song = "D  xx-0-2-3-2-2\n[D]linha"
+        assertEquals(listOf(-1, 0, 2, 3, 2, 2), Chords.shapeHint(song, "D"))
+        assertTrue(Chords.transposeSong(song, 2).contains("[E]linha"))
+    }
+
     @Test fun `recognizes a page with and without chords`() {
         assertTrue(ChordImport.hasChords(page))
         assertFalse(ChordImport.hasChords("só letra\nsem acorde\nnenhum"))
