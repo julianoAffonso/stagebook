@@ -129,6 +129,7 @@
       <div class="card side">
         <button id="set-new" class="outline"></button>
         <input id="sets-search" type="search">
+        <select id="sets-order"></select>
         <ul class="list" id="sets"></ul>
         <p id="sets-empty" class="muted" hidden></p>
       </div>
@@ -282,6 +283,8 @@ async function connected(session) {
   $("set-new").textContent = "+ " + t.newSet;
   $("search").placeholder = t.search;
   $("sets-search").placeholder = t.setsSearch;
+  $("sets-order").setAttribute("aria-label", t.setsOrder);
+  $("sets-order").replaceChildren(...[["false", t.setsNewest], ["true", t.setsAbc]].map(([value, name]) => Object.assign(document.createElement("option"), { value, textContent: `${t.setsOrder}: ${name}` })));
   $("f-tags").placeholder = t.tagsHint;
   $("pick").textContent = t.pick;
   $("set-pick").textContent = t.pick;
@@ -514,6 +517,9 @@ async function loadSets() {
   const r = await api("/api/sets").catch(() => null);
   if (!r || r.status !== 200) return;
   sets = await r.json();
+  const o = await api("/api/sets-order").catch(() => null);
+  if (o && o.status === 200) $("sets-order").value = String((await o.json()).abc);
+  $("sets-order").hidden = sets.length < 2;
   drawSets();
 }
 
@@ -529,6 +535,11 @@ function drawSets() {
   $("sets-empty").textContent = sets.length ? t.setsNotFound : t.noSets;
 }
 $("sets-search").oninput = drawSets;
+// the same choice as the tablet's Setlists tab: it changes there too
+$("sets-order").onchange = async () => {
+  await api("/api/sets-order", { method: "PUT", body: JSON.stringify({ abc: $("sets-order").value === "true" }) }).catch(() => null);
+  loadSets();
+};
 
 async function openSet(id) {
   if (!leaveOk()) return;

@@ -10,6 +10,7 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
   const sets = new Map([["t1", { id: "t1", name: "Saturday", items: ["s1"] }]]);
   let asked = 0;
   const restores = [];
+  let setsAbc = false;
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
     const chunks = []; for await (const c of req) chunks.push(c);
@@ -49,6 +50,7 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
       return send(200, { text: d.text.replace(/\[([A-G])\]/g, (_, c) => `[${up[c] ?? c}]`), meta: { key: up[d.meta.key] ?? d.meta.key, capo: d.meta.capo } });
     }
     if (url.pathname === "/api/capo") { const d = JSON.parse(body); return send(200, { text: d.text, meta: { key: d.meta.key, capo: d.capo } }); }
+    if (url.pathname === "/api/sets-order") { if (req.method === "PUT") setsAbc = JSON.parse(body).abc; return send(200, { abc: setsAbc }); }
     if (url.pathname === "/api/sets" && req.method === "GET") return send(200, [...sets.values()].map((t) => ({ id: t.id, name: t.name, count: t.items.length })));
     if (url.pathname === "/api/sets" && req.method === "POST") { const d = JSON.parse(body); const id = "t" + (sets.size + 1); sets.set(id, { id, name: d.name || "data", items: d.items }); return send(200, { id }); }
     const t = url.pathname.match(/^\/api\/sets\/([^/]+)$/);

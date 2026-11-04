@@ -21,7 +21,7 @@ Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Songs | `list_songs` (filters: text, tag, key), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
 | Import | `import_song` (pasted lyrics/chords in any common format, or a song page address) |
 | Backing tracks | `set_backing_track` (OGG, MP3 or WAV from this computer), `remove_backing_track` |
-| Setlists | `list_setlists`, `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
+| Setlists | `list_setlists` (filter: name), `setlist_order` (newest or A to Z, the same as the app's tab), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
 | Receiving | `receive_by_code` (the 3 words), `receive_create`, `band_inbox`, `band_sync`, `open_band_item` |
 | Backup | `restore_backup` (inspect a `.stagebook` file, add what's missing or replace the library) |
 

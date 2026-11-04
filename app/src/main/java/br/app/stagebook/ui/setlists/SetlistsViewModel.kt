@@ -29,7 +29,7 @@ data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRo
  * key, as tags and songs are sorted (a Collator here was a second way of doing it; audit 03/11).
  */
 fun setlistOrder(sets: List<SetlistRowUi>, abc: Boolean): List<SetlistRowUi> =
-    if (abc) sets.sortedBy { br.app.stagebook.domain.TextKey.of(it.name.trim()) } else sets
+    if (abc) br.app.stagebook.domain.TextKey.sorted(sets) { it.name } else sets
 
 /** The setlists whose name has the search, ignoring case and accents as the song search does. */
 fun setlistSearch(sets: List<SetlistRowUi>, query: String): List<SetlistRowUi> {
