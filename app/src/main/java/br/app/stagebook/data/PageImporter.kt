@@ -61,16 +61,12 @@ class PageImporter @Inject constructor(
         // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics only
         val chordSource = page.chordText.ifBlank { page.text }
         var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
-            ChordImport.toChordPro(chordSource, page.pageText, page.pageText)
+            ChordImport.toChordPro(chordSource, page.pageText)
         } else {
             // lyrics only: no chords, but the page's key and capo are kept (hidden in this profile; not lost if the
             // profile changes or the song goes to someone who plays)
-            var lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
-            val capo = ChordImport.capoOf(page.pageText, page.chordText)
-            val key = ChordImport.shapesKey(capo, page.chordText, page.pageText, page.chordText)
-            if (capo > 0) lyrics = Chords.setDirective(lyrics, "capo", capo.toString())
-            if (key.isNotEmpty()) lyrics = Chords.setDirective(lyrics, "key", key)
-            lyrics
+            val lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+            ChordImport.withPageInfo(lyrics, page.chordText, page.pageText, page.chordText)
         }
         if (text.lines().size < 3) return PageImport.Problem(ImportProblem.NOT_FOUND)
         // only lyrics and chords come in (the same filter as the band, plus the look of verses)

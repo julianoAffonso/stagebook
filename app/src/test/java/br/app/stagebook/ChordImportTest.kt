@@ -149,6 +149,8 @@ class ChordImportTest {
     @Test fun `the fret may come on the line after the label`() {
         assertEquals(2, ChordImport.capoOf("Capo: \n2nd fret"))
         assertEquals(2, ChordImport.capoOf("Cejilla: \n2nd fret"))
+        assertEquals(2, ChordImport.capoOf("Cejilla: \n2o traste"))
+        assertEquals(2, ChordImport.capoOf("2do traste"))
         assertEquals(3, ChordImport.capoOf("Capotraste na casa 3"))
     }
 

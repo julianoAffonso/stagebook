@@ -12,7 +12,7 @@ object ChordImport {
     // 4 languages: "Capotraste na 2ª casa", "Capotraste: 2ª casa", "Capo no 3", "Capo: 2nd fret", "Cejilla en el 2º traste",
     // "Capotasto al 2º tasto"; after a ":" the fret may be on the next line. It has to end there: "da capo 2 vezes" isn't one
     private const val FRET_WORD = """(?i:[ \t]+(?:casa|traste|tasto|fret))?"""
-    private val capoText = Regex("""(?m)$LABEL_START(?i:capotraste|capotasto|cejilla|capo)(?i:[ \t]+(?:na|no|em|on|at|al|sul|en(?:[ \t]+el)?))?$FRET_WORD(?:[ \t]*:[ \t]*\n?[ \t]*|[ \t]+)(\d{1,2})(?!\d)(?i:[ªº°]|st|nd|rd|th)?$FRET_WORD(?=[ \t]*$|[ \t]*[^\p{L}\s\d]|[ \t]+\p{Lu}|\p{Lu}\p{Ll})""")
+    private val capoText = Regex("""(?m)$LABEL_START(?i:capotraste|capotasto|cejilla|capo)(?i:[ \t]+(?:na|no|em|on|at|al|sul|en(?:[ \t]+el)?))?$FRET_WORD(?:[ \t]*:[ \t]*\n?[ \t]*|[ \t]+)(\d{1,2})(?!\d)(?i:[ªº°oa]|st|nd|rd|th|er|do|ro|to)?$FRET_WORD(?=[ \t]*$|[ \t]*[^\p{L}\s\d]|[ \t]+\p{Lu}|\p{Lu}\p{Ll})""")
     // "Tom: G", "Key: A minor", "Tono: F♯m", "Tonalidad: Dó maior", "Tonalità: G"; the value may be on the next line. It has
     // to end there: "Tom: A música é boa" is a comment, not a key
     private const val KEY_VALUE = """([A-G]|(?i:d[oó]|r[eé]|mi|f[aá]|sol|l[aá]|si))([#b♯♭]?)(m?)(?:[ \t]+((?i:minor|menor|minore|major|maior|mayor|maggiore)))?"""
@@ -37,7 +37,7 @@ object ChordImport {
         texts.firstNotNullOfOrNull { t -> (keyText.find(t) ?: bareKey.matchEntire(t))?.let(::stated)?.takeIf { Chords.isChord(it.key) } }
 
     // the fret alone: "2", "2ª casa", "2nd fret"
-    private val bareFret = Regex("""(?i)\s*(\d{1,2})\s*(?:[ªº°]|st|nd|rd|th)?(?:\s+(?:casa|traste|tasto|fret))?\s*""")
+    private val bareFret = Regex("""(?i)\s*(\d{1,2})\s*(?:[ªº°oa]|st|nd|rd|th|er|do|ro|to)?(?:\s+(?:casa|traste|tasto|fret))?\s*""")
 
     /** Key and capo the page shows (to keep them in the lyrics only profile too). */
     fun keyOf(vararg texts: String): String = statedKey(texts)?.key.orEmpty()
@@ -115,11 +115,17 @@ object ChordImport {
             }
         }
         flush()
-        var body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
-        val c = capoOf(capo, text)
-        val k = shapesKey(c, body, key, text)
-        if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
-        if (Chords.isChord(k)) body = Chords.setDirective(body, "key", k)
-        return body
+        val body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
+        return withPageInfo(body, body, key, capo, text)
+    }
+
+    /** The song with the capo and key that [texts] give for [chart] in its directives, chords or no chords in [song]. */
+    fun withPageInfo(song: String, chart: String, vararg texts: String): String {
+        val capo = capoOf(*texts)
+        val key = shapesKey(capo, chart, *texts)
+        var out = song
+        if (capo > 0) out = Chords.setDirective(out, "capo", capo.toString())
+        if (Chords.isChord(key)) out = Chords.setDirective(out, "key", key)
+        return out
     }
 }
