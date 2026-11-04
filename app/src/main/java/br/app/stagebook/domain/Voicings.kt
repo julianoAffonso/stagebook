@@ -20,6 +20,9 @@ object Voicings {
      */
     data class NeckView(val base: Int, val fromCapo: Boolean, val label: Int?)
 
+    /** The capo a shape is drawn with: none on a keyboard, whose chords already come in the key that sounds. */
+    fun neckCapo(text: String, instrument: Instrument): Int = if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(text)
+
     fun neckView(shape: Shape, capo: Int, rows: Int): NeckView {
         val base = shape.baseFret
         val fromCapo = capo > 0 && (base == 1 || shape.frets.max() <= rows)

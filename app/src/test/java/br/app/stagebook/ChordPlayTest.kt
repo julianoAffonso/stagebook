@@ -189,4 +189,11 @@ class ChordPlayTest {
         compose.onNodeWithContentDescription("Voltar ao diagrama").performClick()
         compose.onNodeWithContentDescription("Tocar").assertExists()
     }
+
+    @Test
+    fun `the keyboard draws no capo, the neck does`() {
+        val text = "{capo: 3}\n[C]Hello"
+        assertEquals(3, Voicings.neckCapo(text, br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR))
+        assertEquals(0, Voicings.neckCapo(text, br.app.stagebook.data.model.Instrument.KEYBOARD))
+    }
 }

@@ -72,7 +72,7 @@ fun ChordStrip(
     onRestore: () -> Unit = {},
 ) {
     val hiddenCount = remember(text) { Chords.hiddenChords(text).size }
-    val capo = remember(text, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(text) }   // keyboard doesn't use capo
+    val capo = remember(text, instrument) { Voicings.neckCapo(text, instrument) }
     val items = remember(text, instrument) {
         stripChords(text).map { c ->
             Triple(

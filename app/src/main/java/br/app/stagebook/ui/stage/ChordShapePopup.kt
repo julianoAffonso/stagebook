@@ -58,7 +58,7 @@ fun ChordShapePopup(
     extras: Boolean = true,   // essential mode (T19): no sound and no Details; the diagram and shapes stay
 ) {
     // with a capo, the diagram is the chart's but the sounding note goes up (T18/T20): the sound plays the real note
-    val capo = remember(songText, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(songText) }   // keyboard doesn't use capo
+    val capo = remember(songText, instrument) { Voicings.neckCapo(songText, instrument) }
     val keyboard = instrument == Instrument.KEYBOARD
     val shapes = remember(chord, instrument, songText) {
         val generated = Voicings.shapes(chord, instrument)
