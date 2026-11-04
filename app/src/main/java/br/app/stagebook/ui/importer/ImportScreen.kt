@@ -141,6 +141,8 @@ fun ImportScreen(
     var address by rememberSaveable { mutableStateOf(initialQuery) }
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
+    var reading by remember { mutableStateOf(false) }
+    val cantOpen = stringResource(R.string.import_unreadable)
     val snackbar = remember { SnackbarHostState() }
     // the app's first WebView loads all of Chromium (up to ~1 s on the Fire): the screen shows first (address bar and
     // "loading") and the browser is created on the next frame
@@ -171,7 +173,11 @@ fun ImportScreen(
         }
     LaunchedEffect(Unit) {
         withFrameNanos { }   // let the screen show first
-        webView = newWebView().also { it.loadUrl(startUrl ?: if (initialQuery.isBlank()) home else urlFor(initialQuery)) }
+        try {
+            webView = newWebView().also { it.loadUrl(startUrl ?: if (initialQuery.isBlank()) home else urlFor(initialQuery)) }
+        } catch (_: android.util.AndroidRuntimeException) {
+            snackbar.showSnackbar(cantOpen)   // the system's WebView is missing or updating
+        }
     }
     // lyrics sites have ads and scripts: with the app in the background or the screen off, they stop
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -187,6 +193,7 @@ fun ImportScreen(
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
+            webView.resumeTimers()   // pauseTimers holds every WebView in the app, and the computer's imports use one too
             webView.stopLoading()
             (webView.parent as? ViewGroup)?.removeView(webView)
             webView.destroy()
@@ -222,10 +229,13 @@ fun ImportScreen(
             Surface(color = MaterialTheme.colorScheme.surface) {
                 ActionButton(
                     stringResource(R.string.import_this),
-                    onClick = { webView?.evaluateJavascript(ExtractScript.SOURCE, onExtracted) },
+                    onClick = {
+                        reading = true   // busy only starts when the script answers: a second tap would read the page twice
+                        webView?.evaluateJavascript(ExtractScript.SOURCE) { reading = false; onExtracted(it) }
+                    },
                     modifier = Modifier.fillMaxWidth().padding(Spacing.m),
                     icon = AppIcons.Download,
-                    enabled = !uiState.busy,
+                    enabled = !uiState.busy && !reading,
                 )
             }
         },
