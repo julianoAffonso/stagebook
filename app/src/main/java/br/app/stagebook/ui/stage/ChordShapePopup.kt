@@ -108,6 +108,7 @@ fun ChordShapePopup(
                     shapes.getOrNull(i),
                     keySets.getOrNull(i),
                     MaterialTheme.colorScheme.onSurface,
+                    capo = capo,
                 )
                 // play on the variations line, left of the arrows (user, 01/11: on top of the diagram it covered the
                 // frets); still a big, full-colour button, close to the thumb

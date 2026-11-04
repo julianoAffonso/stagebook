@@ -130,6 +130,17 @@ class ChordPlayTest {
         assertEquals(206f, ((alone.left + alone.right) / 2).value, 2f)
     }
 
+    @Test fun `with a capo the diagram starts at it - a shape too high keeps its place and shows the real fret`() {
+        val open = Voicings.Shape(listOf(0, 2, 2, 0, 3, 0))
+        assertEquals(Voicings.NeckView(1, fromCapo = true, label = 2), Voicings.neckView(open, 2, 5))
+        assertEquals(Voicings.NeckView(1, fromCapo = false, label = null), Voicings.neckView(open, 0, 5))
+        val secondFret = Voicings.Shape(listOf(-1, 2, 4, 4, 3, 2))
+        assertEquals(Voicings.NeckView(1, fromCapo = true, label = 3), Voicings.neckView(secondFret, 3, 5))
+        val high = Voicings.Shape(listOf(-1, 7, 9, 9, 8, 7))
+        assertEquals(Voicings.NeckView(7, fromCapo = false, label = 9), Voicings.neckView(high, 2, 5))
+        assertEquals(Voicings.NeckView(7, fromCapo = false, label = 7), Voicings.neckView(high, 0, 5))
+    }
+
     private fun detailsWidth(): androidx.compose.ui.unit.Dp {
         compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
         compose.onNodeWithText("Detalhes").performScrollTo().performClick()

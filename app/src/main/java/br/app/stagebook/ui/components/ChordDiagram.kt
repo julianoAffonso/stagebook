@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -30,7 +31,8 @@ import br.app.stagebook.ui.theme.PianoWhite
 /**
  * How to play the chord: the neck (strings vertical, frets horizontal, dots where to press, "o" open string, "x" not
  * played, fret number when it doesn't start on the first) or the keyboard with the notes lit. [shape] for strings,
- * [keys] (MIDI notes) for keyboard. No margin of its own: the [modifier] places it.
+ * [keys] (MIDI notes) for keyboard; [capo]: the bar in the accent color, with the shape played from it. No margin of
+ * its own: the [modifier] places it.
  */
 @Composable
 fun ChordDiagram(
@@ -43,6 +45,7 @@ fun ChordDiagram(
     width: Dp = 160.dp,
     accent: Color = MaterialTheme.colorScheme.primary,
     compact: Boolean = false,   // stage chord list: smaller, with the same width for all
+    capo: Int = 0,
 ) {
     Column(
         if (compact) modifier.width(maxOf(STRIP_WIDTH, width + 20.dp)) else modifier,
@@ -53,12 +56,12 @@ fun ChordDiagram(
         val nameStyle = (if (compact && width < 72.dp) MaterialTheme.typography.titleSmall else if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold)
         Text(chord, style = nameStyle, color = color, maxLines = 1)
         // the fret number in the same size as the chord name (user's request, 30/10)
-        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, width, nameStyle.fontSize)
+        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, accent, capo, width, nameStyle.fontSize)
     }
 }
 
 @Composable
-private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width: Dp, labelSize: androidx.compose.ui.unit.TextUnit = 14.sp) {
+private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent: Color, capo: Int, width: Dp, labelSize: androidx.compose.ui.unit.TextUnit = 14.sp) {
     val measurer = rememberTextMeasurer()
     val label = TextStyle(color = color, fontSize = labelSize, fontWeight = FontWeight.Bold)
     Canvas(Modifier.size(width, width * 1.15f)) {
@@ -71,7 +74,8 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         val bottom = size.height * 0.98f
         val gap = (right - left) / (strings - 1)
         val row = (bottom - top) / frets
-        val base = shape.baseFret
+        val view = Voicings.neckView(shape, capo, frets)
+        val base = view.base
         val thin = 1.5.dp.toPx()
         // the neck itself: a soft surface behind the grid, scaled to the diagram (the same tone in both themes)
         drawRoundRect(
@@ -83,7 +87,7 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         // inlay marks on the frets the standard neck has (3, 5, 7, 9, 12 and their octaves): faint, in the middle of the fret
         val inlay = minOf(gap, row) * 0.13f
         for (r in 0 until frets) {
-            val fret = base + r
+            val fret = base + r + capo
             val y = top + (r + 0.5f) * row
             when {
                 fret % 12 == 0 && fret > 0 -> {
@@ -96,6 +100,8 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         }
         // frets: the nut is thick when it starts on the first fret
         for (i in 0..frets) drawLine(color, Offset(left, top + i * row), Offset(right, top + i * row), if (i == 0 && base == 1) 5.dp.toPx() else thin)
+        val capoBar = 7.dp.toPx()
+        if (view.fromCapo) drawLine(accent, Offset(left - gap * 0.3f, top), Offset(right + gap * 0.3f, top), capoBar, StrokeCap.Round)
         // strings get thicker towards the low ones (the first in the shape), as on a real neck
         for (s in 0 until strings) {
             val weight = thin * (1.7f - 1.2f * s / maxOf(1, strings - 1))
@@ -103,9 +109,12 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, width:
         }
         val dot = minOf(gap, row) * 0.28f
         // fret number right left of the grid, at the height of the diagram's first fret, clear of the barre's end dot
-        if (base > 1) {
-            val laid = measurer.measure("$base", label)
-            drawText(laid, topLeft = Offset(left - dot - laid.size.width - 6.dp.toPx(), top + (row - laid.size.height) / 2))
+        view.label?.let { fret ->
+            val laid = measurer.measure("$fret", if (view.fromCapo) label.copy(color = accent) else label)
+            // the capo's number sits beside its bar, a fret's in the middle of the row
+            val y = if (view.fromCapo) top - laid.size.height / 2 else top + (row - laid.size.height) / 2
+            val clear = if (view.fromCapo) gap * 0.3f + capoBar / 2 else dot
+            drawText(laid, topLeft = Offset(left - clear - laid.size.width - 6.dp.toPx(), y))
         }
         shape.frets.forEachIndexed { s, f ->
             val x = left + s * gap

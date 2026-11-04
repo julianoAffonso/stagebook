@@ -390,6 +390,20 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_detalhes.png")
     }
 
+    // with a capo the diagram shows it: the bar, its fret, and the shape played from there
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun chordCapo() {
+        val capoSong = "{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste"
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", capoSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                br.app.stagebook.ui.stage.ChordShapePopup("Em7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, capoSong, {}, {})
+            }
+        }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_capo.png")
+    }
+
     // on a phone, with a capo: the field shows what sounds (F#m7 in F#m) and long chords wrap to a second row
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test @Config(qualifiers = PHONE)
