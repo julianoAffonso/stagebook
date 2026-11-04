@@ -46,6 +46,7 @@ fun ChordDiagram(
     accent: Color = MaterialTheme.colorScheme.primary,
     compact: Boolean = false,   // stage chord list: smaller, with the same width for all
     capo: Int = 0,
+    nameColor: Color = color,   // stage chord list: the name in the chord color, the drawing in the lyrics color
 ) {
     Column(
         if (compact) modifier.width(maxOf(STRIP_WIDTH, width + 20.dp)) else modifier,
@@ -54,7 +55,7 @@ fun ChordDiagram(
     ) {
         // compact (the stage's chord list) grows with the drawing: a bigger list gets a bigger name
         val nameStyle = (if (compact && width < 72.dp) MaterialTheme.typography.titleSmall else if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold)
-        Text(chord, style = nameStyle, color = color, maxLines = 1)
+        Text(chord, style = nameStyle, color = nameColor, maxLines = 1)
         // the fret number in the same size as the chord name (user's request, 30/10)
         if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, accent, capo, width, nameStyle.fontSize)
     }
@@ -77,6 +78,8 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         val view = Voicings.neckView(shape, capo, frets)
         val base = view.base
         val thin = 1.5.dp.toPx()
+        // softer than the dots, which are what the eye looks for
+        val grid = color.copy(alpha = 0.6f)
         // the neck itself: a soft surface behind the grid, scaled to the diagram (the same tone in both themes)
         drawRoundRect(
             color.copy(alpha = 0.07f),
@@ -99,15 +102,21 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
             }
         }
         // frets: the nut is thick when it starts on the first fret
-        for (i in 0..frets) drawLine(color, Offset(left, top + i * row), Offset(right, top + i * row), if (i == 0 && base == 1) 5.dp.toPx() else thin)
+        for (i in 0..frets) {
+            val nut = i == 0 && base == 1
+            val weight = crispWidth(if (nut) 5.dp.toPx() else thin)
+            val y = crisp(top + i * row, weight)
+            drawLine(if (nut) color else grid, Offset(left, y), Offset(right, y), weight)
+        }
         val capoBar = 7.dp.toPx()
         if (view.fromCapo) drawLine(accent, Offset(left - gap * 0.3f, top), Offset(right + gap * 0.3f, top), capoBar, StrokeCap.Round)
         // strings get thicker towards the low ones (the first in the shape), as on a real neck
         for (s in 0 until strings) {
-            val weight = thin * (1.7f - 1.2f * s / maxOf(1, strings - 1))
-            drawLine(color, Offset(left + s * gap, top), Offset(left + s * gap, bottom), weight)
+            val weight = crispWidth(thin * (1.7f - 1.2f * s / maxOf(1, strings - 1)))
+            val x = crisp(left + s * gap, weight)
+            drawLine(grid, Offset(x, top), Offset(x, bottom), weight)
         }
-        val dot = minOf(gap, row) * 0.28f
+        val dot = minOf(gap, row) * 0.34f
         // fret number right left of the grid, at the height of the diagram's first fret, clear of the barre's end dot
         view.label?.let { fret ->
             val laid = measurer.measure("$fret", if (view.fromCapo) label.copy(color = accent) else label)
@@ -119,7 +128,13 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         shape.frets.forEachIndexed { s, f ->
             val x = left + s * gap
             when {
-                f < 0 -> drawText(measurer, "x", Offset(x - 4.dp.toPx(), 0f), label)
+                f < 0 -> {
+                    // drawn, not typed: a letter at the fret number's size ran over the nut in the small diagrams
+                    val y = top - row * 0.45f
+                    val arm = dot * 0.7f
+                    drawLine(color, Offset(x - arm, y - arm), Offset(x + arm, y + arm), thin, StrokeCap.Round)
+                    drawLine(color, Offset(x - arm, y + arm), Offset(x + arm, y - arm), thin, StrokeCap.Round)
+                }
                 f == 0 -> drawCircle(color, dot * 0.7f, Offset(x, top - row * 0.45f), style = Stroke(thin))
                 else -> drawCircle(color, dot, Offset(x, top + (f - base + 0.5f) * row))
             }
@@ -139,6 +154,16 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         }
     }
 }
+
+/** A line's width in whole pixels. */
+internal fun crispWidth(width: Float): Float = maxOf(1f, kotlin.math.round(width))
+
+/**
+ * Where to draw a line of [width] whole pixels so it fills whole pixels: between two, antialiasing smears it and the
+ * small diagrams look blurred, above all on low-density screens.
+ */
+internal fun crisp(position: Float, width: Float): Float =
+    if (width.toInt() % 2 == 1) kotlin.math.floor(position) + 0.5f else kotlin.math.round(position)
 
 @Composable
 private fun Keyboard(keys: List<Int>, accent: Color, width: Dp) {

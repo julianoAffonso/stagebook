@@ -64,6 +64,7 @@ fun ChordStrip(
     text: String,
     instrument: Instrument,
     color: Color,
+    nameColor: Color,
     modifier: Modifier = Modifier,
     scale: Float = 1f,   // the stage widens each cell so the list fills the width (user, 02/11: it took ~3/4 of the TCL)
     onHide: (String) -> Unit = {},
@@ -71,6 +72,7 @@ fun ChordStrip(
     onRestore: () -> Unit = {},
 ) {
     val hiddenCount = remember(text) { Chords.hiddenChords(text).size }
+    val capo = remember(text, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(text) }   // keyboard doesn't use capo
     val items = remember(text, instrument) {
         stripChords(text).map { c ->
             Triple(
@@ -91,7 +93,7 @@ fun ChordStrip(
                 Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT).longPressOnly(stringResource(R.string.stage_chord_hide, c)) { onHide(c) },
                 contentAlignment = Alignment.TopCenter,
             ) {
-                ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * STRIP_DRAW, compact = true)
+                ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * STRIP_DRAW, compact = true, capo = capo, nameColor = nameColor)
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)

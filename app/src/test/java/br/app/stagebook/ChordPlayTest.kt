@@ -141,6 +141,13 @@ class ChordPlayTest {
         assertEquals(Voicings.NeckView(7, fromCapo = false, label = 7), Voicings.neckView(high, 0, 5))
     }
 
+    @Test fun `diagram lines land on whole pixels`() {
+        assertEquals(2f, br.app.stagebook.ui.components.crispWidth(2.25f), 0f)
+        assertEquals(1f, br.app.stagebook.ui.components.crispWidth(0.3f), 0f)
+        assertEquals(10.5f, br.app.stagebook.ui.components.crisp(10.7f, 1f), 0f)
+        assertEquals(11f, br.app.stagebook.ui.components.crisp(10.7f, 2f), 0f)
+    }
+
     private fun detailsWidth(): androidx.compose.ui.unit.Dp {
         compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
         compose.onNodeWithText("Detalhes").performScrollTo().performClick()
