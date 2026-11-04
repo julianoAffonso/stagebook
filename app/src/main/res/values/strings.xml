@@ -345,6 +345,7 @@
     <string name="chord_details_where">Where else %1$s shows up</string>
     <string name="chord_details_in">%1$s in %2$s</string>
     <string name="chord_capo_note">This is the %1$s shape. With the capo on fret %2$d, it sounds %3$s.</string>
+    <string name="chord_capo_help">Details show what sounds. With a capo, the chord and the harmonic field go up with it, and you keep playing the chart\'s shape.</string>
     <string name="chord_keyboard_capo">The chart says %1$s, with the capo on fret %2$d. On keyboard, play %3$s.</string>
     <string name="stage_keyboard_capo">keyboard · capo on %1$d</string>
     <string name="stage_keyboard_capo_hint">This chart uses a capo on fret %1$d. Chords are shifted for keyboard so you play along with the band.</string>

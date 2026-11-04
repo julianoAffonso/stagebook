@@ -110,6 +110,15 @@ class ChordPlayTest {
         compose.onNodeWithText("No tom da música (F#m)").assertExists()
     }
 
+    @Test fun `the capo note comes before the harmonic field`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        val note = compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").getBoundsInRoot()
+        assertTrue(note.bottom <= compose.onNodeWithText("No tom da música (F#m)").getBoundsInRoot().top)
+        compose.onNodeWithContentDescription("Como funciona").performClick()
+        compose.onNodeWithText("Os Detalhes mostram o que soa", substring = true).assertExists()
+    }
+
     private fun detailsWidth(): androidx.compose.ui.unit.Dp {
         compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
         compose.onNodeWithText("Detalhes").performScrollTo().performClick()

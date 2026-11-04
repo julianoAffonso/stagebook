@@ -39,6 +39,7 @@ import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.Voicings
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ChordDiagram
+import br.app.stagebook.ui.components.HelpIcon
 import br.app.stagebook.ui.components.wideLists
 import br.app.stagebook.ui.theme.Spacing
 
@@ -92,8 +93,8 @@ fun ChordShapePopup(
                     // sounds); only here: most taps never open Details, and a song with no key has to be read for one
                     val songKey = remember(songText) { soundingKey.ifEmpty { Chords.soundingKey(Chords.detectKey(songText), Chords.capo(songText)) } }
                     val sounding = if (capo > 0) Chords.transposeChord(chord, capo, key = songKey) else chord
-                    ChordDetails(sounding, songKey, fullWidth, onBack = { details = false })
-                    if (capo > 0) CapoNote(stringResource(R.string.chord_capo_note, chord, capo, sounding), if (fullWidth) Modifier.fillMaxWidth() else Modifier.widthIn(max = 420.dp))
+                    val capoNote = if (capo > 0) stringResource(R.string.chord_capo_note, chord, capo, sounding) else null
+                    ChordDetails(sounding, songKey, capoNote, fullWidth, onBack = { details = false })
                     return@Column
                 }
                 if (count == 0) {
@@ -164,7 +165,7 @@ fun ChordShapePopup(
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun ChordDetails(chord: String, songKey: String, fullWidth: Boolean, onBack: () -> Unit) {
+private fun ChordDetails(chord: String, songKey: String, capoNote: String?, fullWidth: Boolean, onBack: () -> Unit) {
     val triad = remember(chord) { Chords.triad(chord) }
     val own = triad?.takeIf { !it.dim }?.let { Chords.keyName(it.root, it.minor) }
     // with a seventh, the fields use seventh chords (Gmaj7, Am7…) and the degree only lights if the seventh matches
@@ -177,6 +178,7 @@ private fun ChordDetails(chord: String, songKey: String, fullWidth: Boolean, onB
             IconButton(onClick = onBack) { Icon(AppIcons.Back, stringResource(R.string.chord_back_to_shape)) }
             Text(stringResource(R.string.chord_details_title, chord), style = MaterialTheme.typography.titleLarge)
         }
+        if (capoNote != null) CapoNote(capoNote)
         if (songKey.isNotEmpty()) {
             Text(stringResource(R.string.chord_details_song_key, songKey), style = MaterialTheme.typography.titleSmall)
             FieldRow(HarmonicField.field(songKey, sevenths), lit = place?.index)
@@ -207,13 +209,14 @@ private fun ChordDetails(chord: String, songKey: String, fullWidth: Boolean, onB
     }
 }
 
-/** Why Details name another chord than the one tapped: the capo. It stands out, or the musician takes the name for a mistake. */
+/** Why Details name another chord than the one tapped: the capo. First on the screen, so the name isn't taken for a mistake. */
 @Composable
-private fun CapoNote(text: String, modifier: Modifier = Modifier) {
-    Surface(modifier, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer) {
-        Row(Modifier.padding(Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-            Icon(AppIcons.Capo, null)
-            Text(text, style = MaterialTheme.typography.titleSmall)
+private fun CapoNote(text: String) {
+    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+        Row(Modifier.padding(start = Spacing.s, end = Spacing.xs, top = Spacing.xs, bottom = Spacing.xs), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+            Icon(AppIcons.Capo, null, tint = MaterialTheme.colorScheme.primary)
+            Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            HelpIcon(stringResource(R.string.chord_capo_help))
         }
     }
 }

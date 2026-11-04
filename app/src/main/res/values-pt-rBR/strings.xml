@@ -354,6 +354,7 @@
     <string name="chord_details_where">Onde mais %1$s aparece</string>
     <string name="chord_details_in">%1$s em %2$s</string>
     <string name="chord_capo_note">O diagrama é de %1$s. Com capo na %2$dª casa, soa %3$s.</string>
+    <string name="chord_capo_help">Os Detalhes mostram o que soa. Com capo, o acorde e o campo harmônico sobem junto, e você continua tocando o desenho da cifra.</string>
     <string name="chord_keyboard_capo">Na cifra é %1$s, com capo na %2$dª casa. No teclado, toque %3$s.</string>
     <string name="stage_keyboard_capo">teclado · capo na %1$dª</string>
     <string name="stage_keyboard_capo_hint">Esta cifra usa capo na %1$dª casa. Os acordes aparecem ajustados para o teclado, para você tocar junto com a banda.</string>
