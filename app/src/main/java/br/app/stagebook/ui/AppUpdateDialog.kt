@@ -39,27 +39,24 @@ fun AppUpdateDialog(
         title = { Text(stringResource(R.string.update_offer_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                if (offer is UpdateOffer.Available) {
-                    // several versions: each one's number heads its list, and the first is this one
-                    if (offer.notes.size < 2) Text(stringResource(R.string.update_version, offer.versionName.substringBefore(' ')), style = MaterialTheme.typography.bodyLarge)
-                    // the list gives way on a short screen: the warning and the buttons stay
-                    ReleaseNotes(offer.notes, Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))
-                    Text(
-                        stringResource(R.string.update_offer_band),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else Text(
-                    when (offer) {
-                        is UpdateOffer.Available -> ""
-                        is UpdateOffer.Downloading -> stringResource(R.string.settings_update_downloading, offer.percent)
-                        is UpdateOffer.Ready -> stringResource(R.string.update_offer_ready)
-                        UpdateOffer.Failed -> stringResource(R.string.settings_update_failed)
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                if (offer is UpdateOffer.Downloading) {
-                    LinearProgressIndicator(progress = { offer.percent / 100f }, modifier = Modifier.fillMaxWidth())
+                when (offer) {
+                    is UpdateOffer.Available -> {
+                        // several versions: each one's number heads its list, and the first is this one
+                        if (offer.notes.size < 2) OfferStatus(stringResource(R.string.update_version, offer.versionName.substringBefore(' ')))
+                        // the list gives way on a short screen: the warning and the buttons stay
+                        ReleaseNotes(offer.notes, Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))
+                        Text(
+                            stringResource(R.string.update_offer_band),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    is UpdateOffer.Downloading -> {
+                        OfferStatus(stringResource(R.string.settings_update_downloading, offer.percent))
+                        LinearProgressIndicator(progress = { offer.percent / 100f }, modifier = Modifier.fillMaxWidth())
+                    }
+                    is UpdateOffer.Ready -> OfferStatus(stringResource(R.string.update_offer_ready))
+                    UpdateOffer.Failed -> OfferStatus(stringResource(R.string.settings_update_failed))
                 }
             }
         },
@@ -80,6 +77,9 @@ fun AppUpdateDialog(
         },
     )
 }
+
+@Composable
+private fun OfferStatus(text: String) = Text(text, style = MaterialTheme.typography.bodyLarge)
 
 @LightPreview
 @Composable
