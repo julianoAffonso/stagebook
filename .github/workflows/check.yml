@@ -17,6 +17,10 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the version comes from the commit count
+      # first, it takes a second: a change to the app says what's new for the update window
+      - run: python3 -I tools/release_notes_test.py
+      - if: github.event_name == 'pull_request'
+        run: python3 -I tools/release_notes.py check "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

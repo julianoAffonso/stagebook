@@ -23,9 +23,16 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** What's new in a version, in the app's two languages. */
+@Serializable
+data class VersionNotes(val versionCode: Long, val versionName: String, val en: List<String> = emptyList(), val pt: List<String> = emptyList())
+
 /** What's published in the latest GitHub release (the Release workflow saves it with the APK). */
 @Serializable
-data class PublishedVersion(val versionCode: Long, val versionName: String)
+data class PublishedVersion(val versionCode: Long, val versionName: String, val notes: List<VersionNotes> = emptyList()) {
+    /** What someone on [installed] hasn't seen yet: every version skipped, newest first. */
+    fun notesSince(installed: Long): List<VersionNotes> = notes.filter { it.versionCode > installed }
+}
 
 /**
  * App update from the latest GitHub release: reads the published version, downloads the APK and opens the Android

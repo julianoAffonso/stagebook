@@ -70,7 +70,7 @@ sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
     data object UpToDate : UpdateState
-    data class Available(val versionName: String) : UpdateState
+    data class Available(val versionName: String, val notes: List<br.app.stagebook.data.VersionNotes> = emptyList()) : UpdateState
     data class Downloading(val percent: Int) : UpdateState
     data object Ready : UpdateState            // downloaded: Android's "Install" tap is still needed
     data object Offline : UpdateState          // couldn't find the published version (no internet?)
@@ -252,7 +252,7 @@ class SettingsViewModel @Inject constructor(
             val p = updater.published(maxAgeMs = 0)   // the user asked: read now
             update.value = when {
                 p == null -> UpdateState.Offline
-                p.versionCode > updater.installedCode -> UpdateState.Available(p.versionName)
+                p.versionCode > updater.installedCode -> UpdateState.Available(p.versionName, p.notesSince(updater.installedCode))
                 else -> UpdateState.UpToDate
             }
         }

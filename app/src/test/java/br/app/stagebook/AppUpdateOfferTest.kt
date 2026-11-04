@@ -61,6 +61,13 @@ class AppUpdateOfferTest {
         assertEquals(UpdateOffer.Available("0.3.999 (abc1234)"), o.offer.value)
     }
 
+    @Test fun `the offer brings what's new since the installed version`() {
+        version = """{"versionCode":999999,"versionName":"0.3.999","notes":[{"versionCode":999999,"versionName":"0.3.999","en":["New"],"pt":["Novo"]},{"versionCode":0,"versionName":"0.0.0","en":["Old"],"pt":["Velho"]}]}"""
+        val o = offer()
+        runBlocking { o.onEnter()?.join() }
+        assertEquals(listOf("Novo"), (o.offer.value as UpdateOffer.Available).notes.flatMap { it.pt })
+    }
+
     @Test fun `same version or no internet - nothing to offer`() {
         val installed = AppUpdater(context).installedCode
         version = """{"versionCode":$installed,"versionName":"igual"}"""
