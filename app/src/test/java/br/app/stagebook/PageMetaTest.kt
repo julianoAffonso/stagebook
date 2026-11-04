@@ -38,4 +38,19 @@ class PageMetaTest {
         assertEquals("1991", PageMeta.yearOf(PageData(ldDate = "1991-05-01")))
         assertEquals("", PageMeta.yearOf(PageData(ldDate = "s/d")))
     }
+
+    @Test fun `real titles and artists aren't taken for sites`() {
+        val cifra = "www.cifraclub.com.br"
+        assertEquals("Genius of Love", PageMeta.pick(PageData(ldName = "Genius of Love", ldArtist = "Banda", site = cifra)).title)
+        assertEquals("Vagalume", PageMeta.pick(PageData(ldName = "Vagalume", ldArtist = "Banda", site = cifra)).title)
+        assertEquals("Letras Perdidas", PageMeta.pick(PageData(ldName = "Letras Perdidas", ldArtist = "Banda", site = cifra)).title)
+        assertEquals("Lyrics Born", PageMeta.pick(PageData(ldName = "Musica", ldArtist = "Lyrics Born", site = cifra)).artist)
+        assertEquals("Let", PageMeta.pick(PageData(ldName = "Let", ldArtist = "Banda", site = "www.letras.mus.br")).title)
+    }
+
+    @Test fun `the page's own site is still left out`() {
+        assertEquals("Africa", PageMeta.pick(PageData(ogTitle = "Africa - Toto - LETRAS.MUS.BR", site = "www.letras.mus.br")).title)
+        assertEquals(true, PageMeta.isSite("Cifra Club", "www.cifraclub.com.br"))
+        assertEquals(true, PageMeta.isSite("Vagalume", ""))
+    }
 }
