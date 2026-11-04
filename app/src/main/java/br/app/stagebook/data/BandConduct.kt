@@ -1,5 +1,6 @@
 package br.app.stagebook.data
 
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.Immutable
@@ -96,9 +97,10 @@ class BandConduct @Inject constructor(
      */
     fun start(setId: String, set: String, songs: List<Conduct.Item>, index: Int = 0) {
         searchedAt = -1
-        _role.value = Role.Conducting(setId, Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index))
+        val msg = Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index)
+        _role.value = Role.Conducting(setId, msg)
         link.burst(evenOnStage = true)
-        scope.launch { send(setId, (_role.value as Role.Conducting).msg) }
+        scope.launch { send(setId, msg) }
     }
 
     /** The leader changed songs on the stage of setlist [setId]. */
@@ -140,17 +142,20 @@ class BandConduct @Inject constructor(
     // the newest writes its answers back and resends
     private val newest = br.app.stagebook.domain.Newest()
 
+    /** Leading goes on with [now]; ended meanwhile, it stays ended: checking and then writing let a send bring it back. */
+    private fun keepLeading(now: Role.Conducting): Boolean = _role.updateAndGet { if (it is Role.Conducting) now else it } is Role.Conducting
+
     private suspend fun send(setId: String, msg: Conduct.Msg) {
         val members = link.onlineMembers.value.size
         if (_role.value !is Role.Conducting) return   // ended before sending: doesn't turn back on
         val ticket = newest.ticket()
-        _role.value = Role.Conducting(setId, msg)
+        if (!keepLeading(Role.Conducting(setId, msg))) return
         val replies = link.conduct(msg)
         if (_role.value !is Role.Conducting) return   // ended while sending
         if (!newest.isNewest(ticket)) return   // a newer song went out meanwhile: this late answer would bring back the old one
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
         val noAnswer = (members - replies.size).coerceAtLeast(0)
-        _role.value = Role.Conducting(setId, withLacks, noAnswer)
+        if (!keepLeading(Role.Conducting(setId, withLacks, noAnswer))) return
         // the missing songs changed: send again so everyone sees the same alert
         if (withLacks.missing != msg.missing && newest.isNewest(ticket)) link.conduct(withLacks)
         // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)

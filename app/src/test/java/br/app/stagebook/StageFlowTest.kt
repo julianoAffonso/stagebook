@@ -180,6 +180,22 @@ class StageFlowTest {
         assertEquals("a", id)
         assertTrue("zoom $zoom deveria ter aumentado", zoom > 1.5f)
         compose.onNodeWithText("Zoom desta música", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Só a letra e as cifras").assertDoesNotExist()
+    }
+
+    @Test
+    fun `with the chord list on, the zoom badge says it changes lyrics and chords only`() {
+        val state = StageUiState(
+            loading = false,
+            songs = listOf(StageSong("Longa", "", stanzas("longa", 12), false, id = "a", zoom = 1f)),
+            look = Look(fontSp = 34f, chords = true, chordList = br.app.stagebook.data.model.ChordListPlace.TOP),
+        )
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }) } }
+        compose.onRoot().performTouchInput {
+            pinch(center - Offset(50f, 0f), center - Offset(250f, 0f), center + Offset(50f, 0f), center + Offset(250f, 0f), durationMillis = 400)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("Só a letra e as cifras").assertIsDisplayed()
     }
 
     @Test

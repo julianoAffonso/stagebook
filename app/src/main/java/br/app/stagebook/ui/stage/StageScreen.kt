@@ -847,8 +847,9 @@ fun StageScreen(
             // the row's width (up to STRIP_MAX_SCALE: a few chords don't end up far apart)
             // the corner × keeps its own room, so it never sits on a chord
             val stripRoom = with(density) { columnWidth - STRIP_CLOSE_WIDTH.toPx() }
+            val cell = with(density) { stripCell(stripRoom.toDp()) }
             val stripScale = with(density) {
-                val item = STRIP_ITEM_WIDTH.toPx()
+                val item = cell.width.toPx()
                 val perRowMax = maxOf(1, (stripRoom / item).toInt())
                 val rows = maxOf(1, (stripChordCount + perRowMax - 1) / perRowMax)
                 val perRow = maxOf(1, (stripChordCount + rows - 1) / rows)
@@ -856,12 +857,12 @@ fun StageScreen(
                 (((stripRoom / perRow).toInt() - 1) / item).coerceIn(1f, STRIP_MAX_SCALE)
             }
             val stripEm = with(density) {
-                val perRow = maxOf(1, (stripRoom / (STRIP_ITEM_WIDTH.toPx() * stripScale)).toInt())
+                val perRow = maxOf(1, (stripRoom / (cell.width.toPx() * stripScale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
                 // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
                 // audit 02/11)
                 val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
-                val tall = if (stripChordCount == 0) restore else rows * STRIP_ITEM_HEIGHT.toPx() + restore
+                val tall = if (stripChordCount == 0) restore else rows * cell.height.toPx() + restore
                 (tall + Spacing.m.toPx()) / style.fontSize.toPx()
             }
             val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
@@ -1005,6 +1006,7 @@ fun StageScreen(
                                     Color(look.chordColor),
                                     // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
                                     Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },
+                                    cell = cell,
                                     scale = stripScale,
                                     onHide = { hidingChord = it },
                                     onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
@@ -1075,6 +1077,8 @@ fun StageScreen(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
                 onReset = { zoom = 1f.coerceIn(minZoom, maxZoom); zoomTouched = true },
+                // the list's drawings keep their size: without them there's nothing to tell apart
+                scoped = look.chords && look.chordList != ChordListPlace.NONE,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             editOffer?.let { offer ->
@@ -1198,9 +1202,9 @@ fun StageScreen(
     }
 }
 
-/** "Zoom for this song: 120%" while adjusting, with a shortcut back to the default size. */
+/** "Zoom for this song: 120%" while adjusting, with a shortcut back to the default size; [scoped]: says what it changes. */
 @Composable
-private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, modifier: Modifier = Modifier) {
+private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, scoped: Boolean, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
         // read in here: during the pinch only the badge recomposes
         val percent = percent()
@@ -1210,7 +1214,10 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
-                Text(stringResource(R.string.stage_zoom, percent), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Column {
+                    Text(stringResource(R.string.stage_zoom, percent), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    if (scoped) Text(stringResource(R.string.stage_zoom_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (percent != 100) {
                     TextButton(onClick = onReset) { Text(stringResource(R.string.stage_zoom_reset)) }
                 } else {

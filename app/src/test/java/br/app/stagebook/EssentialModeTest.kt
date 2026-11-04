@@ -96,6 +96,25 @@ class EssentialModeTest {
         assertFalse(link.running.value)
     }
 
+    @Test fun `a send on its way never brings an ended Lead the band back`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(15_000) { repo.loaded.first { it } }
+        repo.updateLook { it.copy(bandOn = true) }
+        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        val link = br.app.stagebook.data.BandLink(
+            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
+            br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+        )
+        val conduct = br.app.stagebook.data.BandConduct(link, repo, br.app.stagebook.data.DeviceIdentity(context))
+        repeat(1_000) {
+            conduct.start("s1", "Ensaio", listOf(br.app.stagebook.domain.Conduct.Item("Música")))
+            kotlinx.coroutines.yield()
+            conduct.end()
+            kotlinx.coroutines.delay(1)
+            assertEquals("round $it", br.app.stagebook.data.BandConduct.Role.None, conduct.role.value)
+        }
+    }
+
     @Test fun `internet off - nothing goes out to the band internet`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(15_000) { repo.loaded.first { it } }

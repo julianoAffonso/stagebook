@@ -38,12 +38,15 @@ import br.app.stagebook.domain.Voicings
 import br.app.stagebook.ui.components.ChordDiagram
 import br.app.stagebook.ui.editor.usedChords
 
-/** Width and height of each diagram in the chord list (the stage reserves the space with them). */
-val STRIP_ITEM_WIDTH: Dp = 118.dp
-val STRIP_ITEM_HEIGHT: Dp = 140.dp   // nome (≈24) + desenho (90 × 1,15) + folga
+/** A cell of the chord list (the stage reserves the space with it) and how much bigger than the small ones its drawing is. */
+data class StripCell(val width: Dp, val height: Dp, val draw: Float)
 
 /** The drawings 60% bigger than the small ones (user, 02/11: too small), drawn at that size so the lines stay thin. */
-private const val STRIP_DRAW = 1.6f
+val STRIP_CELL = StripCell(118.dp, 140.dp, 1.6f)
+private val STRIP_CELL_SMALL = StripCell(86.dp, 112.dp, 1.28f)
+
+/** Fewer than 3 chords a row at the full size (a phone held upright): smaller cells fit 3, in less height (user, 04/11). */
+fun stripCell(room: Dp): StripCell = if (room < STRIP_CELL.width * 3) STRIP_CELL_SMALL else STRIP_CELL
 
 /** Room kept at the end of the chord list's first row for its ×. */
 val STRIP_CLOSE_WIDTH: Dp = 36.dp
@@ -66,13 +69,14 @@ fun ChordStrip(
     color: Color,
     nameColor: Color,
     modifier: Modifier = Modifier,
+    cell: StripCell = STRIP_CELL,
     scale: Float = 1f,   // the stage widens each cell so the list fills the width (user, 02/11: it took ~3/4 of the TCL)
     onHide: (String) -> Unit = {},
     onHideAll: () -> Unit = {},
     onRestore: () -> Unit = {},
 ) {
     val hiddenCount = remember(text) { Chords.hiddenChords(text).size }
-    val capo = remember(text, instrument) { if (instrument == Instrument.KEYBOARD) 0 else Chords.capo(text) }   // keyboard doesn't use capo
+    val capo = remember(text, instrument) { Voicings.neckCapo(text, instrument) }
     val items = remember(text, instrument) {
         stripChords(text).map { c ->
             Triple(
@@ -90,15 +94,15 @@ fun ChordStrip(
             Box(
                 // the cell widens to fill the row; the drawing stays at its own size (scaled up, it looked blown up on
                 // the TCL; user, 02/11)
-                Modifier.size(STRIP_ITEM_WIDTH * scale, STRIP_ITEM_HEIGHT).longPressOnly(stringResource(R.string.stage_chord_hide, c)) { onHide(c) },
+                Modifier.size(cell.width * scale, cell.height).longPressOnly(stringResource(R.string.stage_chord_hide, c)) { onHide(c) },
                 contentAlignment = Alignment.TopCenter,
             ) {
-                ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * STRIP_DRAW, compact = true, capo = capo, nameColor = nameColor)
+                ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * cell.draw, compact = true, capo = capo, nameColor = nameColor)
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
         if (hiddenCount > 0) {
-            Box(Modifier.size(STRIP_ITEM_WIDTH, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(cell.width, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(AppIcons.Undo, pluralStringResource(R.plurals.stage_chords_restore, hiddenCount, hiddenCount), Modifier.size(18.dp), tint = color.copy(alpha = 0.6f))
                     Text("$hiddenCount", style = MaterialTheme.typography.labelLarge, color = color.copy(alpha = 0.6f))
