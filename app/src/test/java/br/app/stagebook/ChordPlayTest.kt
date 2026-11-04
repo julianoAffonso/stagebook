@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import br.app.stagebook.data.model.ChordPlayMode
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.ChordSynth
@@ -115,6 +116,7 @@ class ChordPlayTest {
         compose.onNodeWithText("Detalhes").performClick()
         val note = compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").getBoundsInRoot()
         assertTrue(note.bottom <= compose.onNodeWithText("No tom da música (F#m)").getBoundsInRoot().top)
+        assertTrue(note.top - compose.onNodeWithText("Detalhes de F#m7").getBoundsInRoot().bottom < 16.dp)   // right under the title
         compose.onNodeWithContentDescription("Como funciona").performClick()
         compose.onNodeWithText("Os Detalhes mostram o que soa", substring = true).assertExists()
     }

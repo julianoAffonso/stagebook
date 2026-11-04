@@ -174,11 +174,14 @@ private fun ChordDetails(chord: String, songKey: String, capoNote: String?, full
     val degree = place?.label
     val where = remember(chord) { HarmonicField.appearances(chord) }
     Column(if (fullWidth) Modifier.fillMaxWidth() else Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(AppIcons.Back, stringResource(R.string.chord_back_to_shape)) }
-            Text(stringResource(R.string.chord_details_title, chord), style = MaterialTheme.typography.titleLarge)
+        // the note belongs to the title: right under it, not one section away
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(AppIcons.Back, stringResource(R.string.chord_back_to_shape)) }
+                Text(stringResource(R.string.chord_details_title, chord), style = MaterialTheme.typography.titleLarge)
+            }
+            if (capoNote != null) CapoNote(capoNote)
         }
-        if (capoNote != null) CapoNote(capoNote)
         if (songKey.isNotEmpty()) {
             Text(stringResource(R.string.chord_details_song_key, songKey), style = MaterialTheme.typography.titleSmall)
             FieldRow(HarmonicField.field(songKey, sevenths), lit = place?.index)
