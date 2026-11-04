@@ -114,14 +114,17 @@ SECTIONS = [
         "text_pt": [
             "Num setlist, Compartilhar mostra um QR, que o outro tablet lê com a câmera, mesmo sem internet. Ou gera 3 palavras para mandar pela internet; dá para ditar. Elas valem por 12 horas.",
             "Com Levar as músicas ligado, as letras vão junto. Quem recebe só fica com as que não tinha; as dele não mudam.",
+            "Chegou um setlist com música que você não tem? Por QR, 3 palavras ou pela banda, a tela de conferir é a mesma e mostra o que falta. Dá para pedir à banda, se alguém estiver na rede. Dá para pedir pela internet a quem mandou, se essa pessoa for da banda; as músicas chegam depois em Recebidos da banda. E dá sempre para importar dos sites.",
         ],
         "text_en": [
             "In a setlist, Share shows a QR that the other tablet reads with its camera, even offline. Or it makes 3 words to send over the internet; you can just say them. They last 12 hours.",
             "With Bring the songs on, the lyrics go too. The other person only keeps the ones they didn't have; theirs don't change.",
+            "Got a setlist with songs you don't have? By QR, 3 words or from the band, the same review screen shows what's missing. You can ask the band, if someone is on the network. You can ask the sender online, if they're in the band; the songs arrive later in Received from the band. And you can always import them from the sites.",
         ],
         "figs": [Fig(("jornada_compartilhar_1_folha", None, "Compartilhar", "Share")),
                  Fig(("jornada_compartilhar_2_codigo", None, "As 3 palavras", "The 3 words")),
-                 Fig(("jornada_qr_3_conferir_tablet", "jornada_qr_2_conferir", "Conferindo o que chegou", "Checking what arrived"))],
+                 Fig(("jornada_qr_3_conferir_tablet", "jornada_qr_2_conferir", "Conferindo o que chegou", "Checking what arrived")),
+                 Fig(("jornada_qr_5_faltam_tablet", "jornada_qr_4_faltam", "Como buscar as que faltam", "Ways to get the missing songs"))],
     },
     {
         "id": "palco", "pt": "Palco", "en": "Stage",

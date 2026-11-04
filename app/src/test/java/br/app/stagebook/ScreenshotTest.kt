@@ -1112,6 +1112,16 @@ class ScreenshotTest {
         )
     }
 
+    // a song is missing: the three ways to get it, in the order they're offered
+    @Test @Config(qualifiers = PHONE)
+    fun scanMissingOptionsPhone() = shoot("jornada_qr_4_faltam") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Ana", band = 2, internetFrom = "Ana")
+    }
+
+    @Test fun scanMissingOptionsTablet() = shoot("jornada_qr_5_faltam_tablet") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Ana", band = 2, internetFrom = "Ana")
+    }
+
     @Test fun scanReviewTablet() = shoot("jornada_qr_3_conferir_tablet") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
     }
