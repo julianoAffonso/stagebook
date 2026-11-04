@@ -62,7 +62,8 @@ jobs:
           # the file the app reads: this version's notes on top of the last ones. No notes, no version (dry run included)
           # only the app's tags: the MCP has its own (mcp-v…)
           last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
-          gh release download --pattern stagebook-version.json --output previous.json || echo '{}' > previous.json
+          # a failed download stops here: going on would publish a file without the notes of the versions before
+          if [ -n "$last" ]; then gh release download "$last" --pattern stagebook-version.json --output previous.json; else echo '{}' > previous.json; fi
           python3 -I tools/release_notes.py build "${last:+$last..}HEAD" --code "$code" --name "$name" --previous previous.json --out out/stagebook-version.json
           echo "tag=v${name%% *}" >> "$GITHUB_OUTPUT"
       - if: ${{ !inputs.publish }}
