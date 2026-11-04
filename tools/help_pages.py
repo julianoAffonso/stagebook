@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 The help (T07): docs/ajuda/ (Portuguese) and docs/help/ (English), one page each, built from the captures folder
-(tools/capturas.sh) so every picture is the app as it is now. A screen that exists on phone and tablet gets a switch
-between the two (the reader sees their own device). Run again after tools/capturas.sh.
-    tools/ajuda.py [captures folder]      (default: ~/Desktop/stagebook-capturas)
+(tools/screenshots.sh) so every picture is the app as it is now. A screen that exists on phone and tablet gets a switch
+between the two (the reader sees their own device). Run again after tools/screenshots.sh.
+    tools/help_pages.py [captures folder]      (default: ~/Desktop/stagebook-capturas)
 """
 import html
 import re
@@ -476,7 +476,7 @@ def picture(lang, name, img_dir):
     """Copies a capture into the help as a JPEG no larger than 1400 px (light pages); returns its file name."""
     src = next((CAPS / lang).rglob(f"{name}.png"), None)
     if src is None:
-        raise SystemExit(f"captura não encontrada: {lang}/{name}.png (rode tools/capturas.sh)")
+        raise SystemExit(f"captura não encontrada: {lang}/{name}.png (rode tools/screenshots.sh)")
     dst = img_dir / f"{name}.jpg"
     subprocess.run(["sips", "-Z", "1400", "-s", "format", "jpeg", "-s", "formatOptions", "82", str(src), "--out", str(dst)],
                    check=True, capture_output=True)

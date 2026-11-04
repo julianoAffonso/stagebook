@@ -4,7 +4,7 @@ Captures of the editor on the computer (T39): the real page (app/src/main/assets
 local stand-in for the tablet, with sample data, and photographed by Chrome headless in Portuguese and in English.
 The texts come from the app's own strings (the same map the tablet sends), so the page says exactly what it says on
 the tablet.
-    tools/capturas_web.py <folder>        (writes <folder>/pt-BR/*.png and <folder>/en/*.png)
+    tools/screenshots_web.py <folder>        (writes <folder>/pt-BR/*.png and <folder>/en/*.png)
 """
 import html
 import json
