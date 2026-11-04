@@ -1077,6 +1077,8 @@ fun StageScreen(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
                 onReset = { zoom = 1f.coerceIn(minZoom, maxZoom); zoomTouched = true },
+                // the list's drawings keep their size: without them there's nothing to tell apart
+                scoped = look.chords && look.chordList != ChordListPlace.NONE,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             editOffer?.let { offer ->
@@ -1200,9 +1202,9 @@ fun StageScreen(
     }
 }
 
-/** "Zoom for this song: 120%" while adjusting, what it changes, and a shortcut back to the default size. */
+/** "Zoom for this song: 120%" while adjusting, with a shortcut back to the default size; [scoped]: says what it changes. */
 @Composable
-private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, modifier: Modifier = Modifier) {
+private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, scoped: Boolean, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
         // read in here: during the pinch only the badge recomposes
         val percent = percent()
@@ -1214,7 +1216,7 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
             ) {
                 Column {
                     Text(stringResource(R.string.stage_zoom, percent), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text(stringResource(R.string.stage_zoom_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (scoped) Text(stringResource(R.string.stage_zoom_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (percent != 100) {
                     TextButton(onClick = onReset) { Text(stringResource(R.string.stage_zoom_reset)) }
