@@ -61,14 +61,14 @@ object ChordImport {
     private fun majorOf(key: String): String = if (key.endsWith("m")) Chords.transposeKey(key.dropLast(1), 3) else Chords.transposeKey(key, 0)
 
     /** BPM: what the page says ("120 BPM", "BPM: 120", "Tempo: 120"), or a line with it in the text itself; 0 = none. */
-    fun bpmOf(page: String, text: String): Int {
-        val fromText = bpmText.find(text)?.let { m -> m.groupValues.drop(1).firstOrNull { it.isNotEmpty() } }
-        val fromPage = pageBpm.find(page)?.let { m -> m.groupValues.drop(1).firstOrNull { it.isNotEmpty() } }
-        return listOf(fromPage.orEmpty(), fromText.orEmpty()).firstNotNullOfOrNull { it.toIntOrNull()?.takeIf { v -> v in Chords.MIN_TEMPO..Chords.MAX_TEMPO } } ?: 0
-    }
+    fun bpmOf(page: String, text: String): Int =
+        (pageBpm.findAll(page) + bpmText.findAll(page) + bpmText.findAll(text))
+            .mapNotNull { m -> m.groupValues.drop(1).firstOrNull { it.isNotEmpty() }?.toIntOrNull() }
+            .firstOrNull { it in Chords.MIN_TEMPO..Chords.MAX_TEMPO } ?: 0
 
-    // "N bpm" ends its line: "Verse 88 bpm" is a tempo, "174BPM Wonderwall Remix" is another song's title
-    private val pageBpm = Regex("""(?im)(\d{2,3})\s*bpm\s*$|\b(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})\b""")
+    // "N bpm" ends its line: "Verse 88 bpm" is a tempo, "174BPM Wonderwall Remix" is another song's title. "tempo" is an
+    // everyday word in Portuguese ("faz tempo 30 dias"): only with ":" or "=", and never a duration ("Tempo: 45:00")
+    private val pageBpm = Regex("""(?im)(\d{2,3})[ \t]*bpm[ \t]*$|\bbpm[ \t]*[:=]?[ \t]*(\d{2,3})\b|\btempo[ \t]*[:=][ \t]*(\d{2,3})\b(?![:\d])""")
     private val bpmText = Regex("""(?im)^\s*(?:\{\s*tempo\s*:\s*(\d{2,3})\s*\}|(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})|(\d{2,3})\s*bpm)\s*$""")
 
     /** The first capo that makes sense ("Capo: 15" doesn't hide a real one further on); 0 = none. */
