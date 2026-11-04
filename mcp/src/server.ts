@@ -334,11 +334,27 @@ export function buildServer(client: StagebookClient): McpServer {
     "list_setlists",
     {
       title: "List setlists",
-      description: "The setlists (id, name, number of songs).",
-      inputSchema: {},
+      description: "The setlists (id, name, number of songs), in the order the app's Setlists tab shows them. Optional filter.",
+      inputSchema: { query: z.string().optional().describe("Part of the name (accents and case ignored).") },
       annotations: { readOnlyHint: true },
     },
-    safe(async () => text(await client.get("/api/sets"))),
+    safe(async ({ query }: { query?: string }) => {
+      const sets = (await client.get("/api/sets")) as { name: string }[];
+      return text(query ? sets.filter((s) => norm(s.name).includes(norm(query))) : sets);
+    }),
+  );
+
+  server.registerTool(
+    "setlist_order",
+    {
+      title: "Setlists order",
+      description: "Reads the order of the app's Setlists tab or, with order, changes it there: newest first or A to Z.",
+      inputSchema: { order: z.enum(["newest", "abc"]).optional().describe("Leave it out to only read the current order.") },
+    },
+    safe(async ({ order }: { order?: "newest" | "abc" }) => {
+      const now = order ? await client.send("PUT", "/api/sets-order", { abc: order === "abc" }) : await client.get("/api/sets-order");
+      return text({ order: now.abc ? "abc" : "newest" });
+    }),
   );
 
   server.registerTool(

@@ -95,12 +95,12 @@ SECTIONS = [
     {
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
-            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. A lista de setlists mostra os mais recentes primeiro ou em ordem alfabética: escolha em Mais recentes | A a Z, acima da lista.",
+            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. Acima da lista dá para buscar pelo nome e, em Ordem, ver os mais recentes primeiro ou de A a Z.",
             "Dentro do setlist, toque em + Músicas e marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar. Compartilhar fica ao lado, e o play no topo abre o setlist no palco.",
             "Quando chega um setlist de alguém, o app mostra quais músicas você já tem e quais faltam. Antes de criar, ele avisa o que vai ficar de fora e oferece importar as que faltam.",
         ],
         "text_en": [
-            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. The list of setlists shows the newest first or in alphabetical order: pick Newest | A to Z, above the list.",
+            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. Above the list you can search by name and, in Order, show the newest first or A to Z.",
             "Inside the setlist, tap + Songs and check the songs in the order they'll be played. Search and tags help you find them. Share sits next to it, and the play button at the top opens the setlist on stage.",
             "When a setlist comes from someone, the app shows which songs you already have and which are missing. Before creating it, it tells you what will be left out and offers to import the missing ones.",
         ],
@@ -236,22 +236,130 @@ SECTIONS = [
     {
         "id": "editor-web", "pt": "Editor no computador", "en": "Editor on the computer",
         "text_pt": [
-            "Em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090. Abra no navegador do computador, no mesmo Wi-Fi, e toque em Pedir para entrar. O aparelho mostra um código de 4 números; autorize só se for o mesmo da página.",
-            "No computador dá para editar as músicas com teclado (Ctrl+S salva), mudar tom, capo e tags, destacar frases (botão Marca-texto), montar setlists e importar colando a cifra, colando o endereço da página ou soltando arquivos.",
-            "Enquanto o editor está ligado, o ícone do computador aparece ao lado do título das abas. Tocando nele você vê o endereço e pode fechar o editor. Ele também desliga sozinho depois de 5 minutos sem uso ou quando você fecha o app.",
-            "Também dá para usar assistentes de IA, como o Claude, o Cursor ou o Gemini, pelo mesmo editor: com o servidor MCP do Stagebook instalado no computador, você pede \"monta um setlist para sábado\" ou \"passa estas músicas meio tom abaixo\" e eles fazem no tablet. Na primeira vez o tablet mostra um pedido com código, como no navegador. Para instalar basta ter o Node.js no computador: o servidor está no npm como stagebook-mcp e o assistente o baixa sozinho. Como ligar cada assistente: no README do Stagebook no GitHub, parte Usar com assistentes de IA.",
+            "O editor abre o Stagebook no navegador do computador: teclado de verdade, tela grande e tudo salvo direto no aparelho. O palco atualiza na hora. Nada passa pela internet: o computador conversa só com o aparelho, no seu Wi-Fi.",
+            "### Ligar e entrar",
+            "- No aparelho, em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090.",
+            "- Abra esse endereço no navegador do computador, no mesmo Wi-Fi. Rede de convidados costuma bloquear a conversa entre aparelhos.",
+            "- Toque em Pedir para entrar. O aparelho mostra um código de 4 números. Autorize só se for o mesmo da página.",
+            "- O computador fica guardado em Computadores autorizados, e dali dá para tirá-lo a qualquer hora.",
+            "### Músicas",
+            "- À esquerda ficam a busca, o filtro de tags e a lista. Clique numa música para abrir, ou em Nova música para começar uma.",
+            "- Dá para editar nome, artista, ano, BPM, tags e a letra com as cifras. As tags que você já usa aparecem como sugestão.",
+            "- Os botões − e + mudam o tom e o capotraste, como no app. A letra só muda de vez quando você salva.",
+            "- Para destacar uma frase, selecione-a e clique em Marca-texto.",
+            "- Com a música já salva, dá para enviar a backing track em OGG, MP3 ou WAV.",
+            "- Ctrl+S salva. Saindo com algo sem salvar, a página avisa antes.",
+            "### Setlists",
+            "- A busca acha o setlist pelo nome. O combo Ordem mostra os recentes primeiro ou de A a Z, e a escolha vale também para a aba Setlists do aparelho.",
+            "- Dentro do setlist, a busca logo abaixo acrescenta músicas e as setas mudam a posição de cada uma.",
+            "### Importar",
+            "- Cole o endereço de uma página, ou a letra com as cifras em qualquer formato comum. A música abre no editor para você conferir antes de salvar.",
+            "- Solte arquivos de texto ou ChordPro na área de arquivos para trazer várias de uma vez.",
+            "- Digite as 3 palavras para receber o que alguém compartilhou, confira o que você já tem e crie o setlist.",
+            "- Em Recebidos da banda ficam os envios, com o botão para sincronizar.",
+            "- Abrir um arquivo `.stagebook` mostra o que o backup tem. Você escolhe as partes, e então junta com o que já existe ou substitui tudo.",
+            "### Enquanto está ligado",
+            "O ícone do computador aparece ao lado do título das abas. Tocando nele você vê o endereço e pode fechar o editor. Ele também desliga sozinho depois de 5 minutos sem uso ou quando você fecha o app.",
         ],
         "text_en": [
-            "In Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090. Open it in the computer's browser, on the same Wi-Fi, and tap Ask to come in. The device shows a 4-digit code; approve only if it matches the page.",
-            "On the computer you can edit songs with a keyboard (Ctrl+S saves), change key, capo and tags, highlight phrases (Highlighter button), build setlists and import by pasting chords, pasting a page address or dropping files.",
-            "While the editor is on, the computer icon shows next to the tabs' titles. Tap it to see the address and close the editor. It also turns off by itself after 5 minutes unused or when you close the app.",
-            "You can also use AI assistants, like Claude, Cursor or Gemini, through the same editor: with Stagebook's MCP server installed on the computer, you ask \"build a setlist for Saturday\" or \"move these songs down a half tone\" and they do it on the tablet. The first time, the tablet shows a request with a code, as with the browser. To install it you only need Node.js on the computer: the server is on npm as stagebook-mcp and the assistant downloads it by itself. How to connect each assistant: in Stagebook's README on GitHub, under Use with AI assistants.",
+            "The editor opens Stagebook in the computer's browser: a real keyboard, a big screen and everything saved straight to the device. The stage updates right away. Nothing goes through the internet: the computer talks only to the device, on your Wi-Fi.",
+            "### Turn it on and come in",
+            "- On the device, in Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090.",
+            "- Open that address in the computer's browser, on the same Wi-Fi. Guest networks usually block devices from talking to each other.",
+            "- Tap Ask to come in. The device shows a 4-digit code. Approve only if it matches the page.",
+            "- The computer is kept under Authorized computers, and you can remove it from there at any time.",
+            "### Songs",
+            "- On the left are the search, the tag filter and the list. Click a song to open it, or New song to start one.",
+            "- You can edit name, artist, year, BPM, tags and the lyrics with chords. Tags you already use show up as suggestions.",
+            "- The − and + buttons change the key and the capo, as in the app. The song only changes for good when you save.",
+            "- To highlight a phrase, select it and click Highlighter.",
+            "- Once the song is saved, you can send its backing track as OGG, MP3 or WAV.",
+            "- Ctrl+S saves. If you leave with something unsaved, the page warns you first.",
+            "### Setlists",
+            "- The search finds a setlist by name. The Order dropdown shows the newest first or A to Z, and the choice also applies to the device's Setlists tab.",
+            "- Inside a setlist, the search below adds songs and the arrows move each one.",
+            "### Importing",
+            "- Paste a page address, or lyrics with chords in any common format. The song opens in the editor so you can check it before saving.",
+            "- Drop text or ChordPro files on the files area to bring in several at once.",
+            "- Type the 3 words to receive what someone shared, check what you already have and create the setlist.",
+            "- Received from the band holds what they sent, with the button to sync.",
+            "- Opening a `.stagebook` file shows what the backup has. You pick the parts, then merge them with what's there or replace everything.",
+            "### While it's on",
+            "The computer icon shows next to the tabs' titles. Tap it to see the address and close the editor. It also turns off by itself after 5 minutes unused or when you close the app.",
         ],
         "figs": [Fig((None, "celular_5_ajustes_editor_web", "Ligando o editor no tablet", "Turning on the editor on the tablet")),
                  Fig(("editor_web_1_pedido", None, "Pedindo para entrar", "Asking to come in")),
                  Fig(("editor_web_2_musica", None, "Editando uma música", "Editing a song")),
-                 Fig(("editor_web_3_setlist", None, "Um setlist", "A setlist")),
+                 Fig(("editor_web_3_setlist", None, "Setlists com a busca e o combo Ordem", "Setlists with the search and the Order dropdown")),
                  Fig(("editor_web_4_importar", None, "Importar no computador", "Importing on the computer"))],
+    },
+    {
+        "id": "assistentes", "pt": "Assistentes de IA", "en": "AI assistants",
+        "text_pt": [
+            "Com o servidor MCP do Stagebook, assistentes de IA como o Claude, o Cursor ou o Gemini mexem na sua biblioteca pelo mesmo editor. Você pede em português e o assistente faz no aparelho, sem copiar e colar.",
+            "### O que você precisa",
+            "- O [Node.js](https://nodejs.org) 20 ou mais novo no computador. O servidor está no npm como `stagebook-mcp`, e o assistente o baixa e atualiza sozinho.",
+            "- O aparelho e o computador no mesmo Wi-Fi, com o Stagebook aberto e Ajustes → Editar no computador ligado.",
+            "### Ligar no assistente",
+            "- **Claude Code:** rode `claude mcp add stagebook -- npx -y stagebook-mcp`.",
+            "- **Claude Desktop, Cursor, Windsurf e Gemini CLI:** na configuração de MCP, acrescente `{ \"mcpServers\": { \"stagebook\": { \"command\": \"npx\", \"args\": [\"-y\", \"stagebook-mcp\"] } } }`.",
+            "- **VS Code e OpenAI Codex CLI:** o formato muda um pouco. Veja no [guia do servidor](https://github.com/julianoAffonso/stagebook/blob/main/mcp/README.pt-BR.md), que também diz onde fica o arquivo de cada assistente.",
+            "- O app do ChatGPT só alcança servidores pela internet, então não chega ao aparelho no seu Wi-Fi.",
+            "### Primeira conexão",
+            "- Peça ao assistente para conectar no Stagebook. Ele procura na rede, ou você passa o endereço que aparece no aparelho.",
+            "- O aparelho mostra um pedido com um código. Se bater, toque em Autorizar. Da próxima vez ele entra sem perguntar.",
+            "- A autorização dura 90 dias sem uso, e Computadores autorizados remove a qualquer hora.",
+            "### O que dá para pedir",
+            "- **Músicas:** \"acha as músicas em Sol\", \"passa esta meio tom abaixo\", \"coloca capo na 2\", \"confere as cifras desta\".",
+            "- **Importar:** \"importa esta cifra\" colando o texto ou o endereço da página.",
+            "- **Setlists:** \"monta um setlist para sábado com 15 músicas\", \"acha o setlist do casamento\", \"deixa os setlists de A a Z\".",
+            "- **Backing tracks:** \"usa este arquivo como faixa da música\", com o caminho completo do arquivo.",
+            "- **Receber:** \"recebe o setlist destas 3 palavras\", \"o que a banda mandou?\".",
+            "- **Backup:** \"o que tem neste arquivo .stagebook?\" e \"junta o que falta\".",
+            "### O que pede confirmação",
+            "Apagar, tirar uma faixa, esvaziar um setlist, substituir a biblioteca e restaurar os ajustes só acontecem depois que o assistente pergunta a você.",
+            "### Se não conectar",
+            "- **Não acha o aparelho:** confira se o Stagebook está aberto, se o editor está ligado e se os dois estão no mesmo Wi-Fi. O editor desliga sozinho sem uso. Passe o endereço ao assistente.",
+            "- **No Mac:** em Ajustes do Sistema → Privacidade e Segurança → Rede Local, ligue o app que roda o assistente e reabra esse app.",
+            "- **A chave não vale mais:** ela foi removida ou passou 90 dias sem uso. Conecte de novo.",
+            "- **Já tem um pedido na tela:** responda no aparelho. Depois de um Recusar, ele espera 5 minutos para aceitar outro.",
+            "- **Uma parte não responde:** receber por código precisa da internet ligada, e as funções de banda precisam da banda ligada, nos Ajustes do aparelho.",
+            "### Privacidade",
+            "O servidor só conversa com o aparelho. O assistente vê o que as ferramentas devolvem, como títulos, artistas, acordes e, quando ele pede, a letra, e manda isso ao provedor de IA dele, como o resto da conversa.",
+        ],
+        "text_en": [
+            "With Stagebook's MCP server, AI assistants like Claude, Cursor or Gemini work on your library through the same editor. You ask in plain words and the assistant does it on the device, with no copying and pasting.",
+            "### What you need",
+            "- [Node.js](https://nodejs.org) 20 or newer on the computer. The server is on npm as `stagebook-mcp`, and the assistant downloads and updates it by itself.",
+            "- The device and the computer on the same Wi-Fi, with Stagebook open and Settings → Edit on the computer turned on.",
+            "### Connect your assistant",
+            "- **Claude Code:** run `claude mcp add stagebook -- npx -y stagebook-mcp`.",
+            "- **Claude Desktop, Cursor, Windsurf and Gemini CLI:** in the MCP settings, add `{ \"mcpServers\": { \"stagebook\": { \"command\": \"npx\", \"args\": [\"-y\", \"stagebook-mcp\"] } } }`.",
+            "- **VS Code and OpenAI Codex CLI:** the format changes a little. See the [server guide](https://github.com/julianoAffonso/stagebook/blob/main/mcp/README.md), which also says where each assistant keeps its file.",
+            "- The ChatGPT app only reaches servers over the internet, so it can't get to the device on your Wi-Fi.",
+            "### First connection",
+            "- Ask the assistant to connect to Stagebook. It searches the network, or you give it the address shown on the device.",
+            "- The device shows a request with a code. If it matches, tap Allow. Next time it comes in without asking.",
+            "- The authorization lasts 90 days unused, and Authorized computers removes it at any time.",
+            "### What you can ask",
+            "- **Songs:** \"find the songs in G\", \"move this one down a half tone\", \"put a capo on 2\", \"check this one's chords\".",
+            "- **Importing:** \"import these chords\", pasting the text or the page address.",
+            "- **Setlists:** \"build a setlist for Saturday with 15 songs\", \"find the wedding setlist\", \"put the setlists A to Z\".",
+            "- **Backing tracks:** \"use this file as the song's track\", with the file's full path.",
+            "- **Receiving:** \"receive the setlist with these 3 words\", \"what did the band send?\".",
+            "- **Backup:** \"what's in this .stagebook file?\" and \"merge what's missing\".",
+            "### What asks you first",
+            "Deleting, removing a track, emptying a setlist, replacing the library and restoring settings only happen after the assistant asks you.",
+            "### If it doesn't connect",
+            "- **It can't find the device:** check that Stagebook is open, the editor is on and both are on the same Wi-Fi. The editor turns off when unused. Give the assistant the address.",
+            "- **On a Mac:** in System Settings → Privacy & Security → Local Network, turn on the app running the assistant and reopen that app.",
+            "- **The key no longer works:** it was removed or went 90 days unused. Connect again.",
+            "- **A request is already on screen:** answer it on the device. After a Deny, it waits 5 minutes before taking another.",
+            "- **One part doesn't answer:** receiving by code needs the internet on, and the band tools need the band on, in the device's Settings.",
+            "### Privacy",
+            "The server only talks to the device. The assistant sees what the tools return, like titles, artists, chords and, when it asks, the lyrics, and sends that to its AI provider, like the rest of the conversation.",
+        ],
+        "figs": [],
     },
     {
         "id": "desempenho", "pt": "Quanto o app pesa", "en": "How light it is",
@@ -307,6 +415,9 @@ nav.toc a:hover { background:var(--raised); }
 section { padding-top: 24px; min-width: 0; }
 section a { color: var(--accent); }
 h2 { font-size: 24px; margin: 0 0 8px; color: var(--accent); text-wrap: balance; }
+h3 { font-size: 18px; margin: 20px 0 4px; }
+section ul { margin: 4px 0 12px; padding-left: 20px; }
+section li { margin-bottom: 4px; }
 p { max-width: 70ch; } code { background:var(--raised); padding:1px 6px; border-radius:6px; font-size: 14px; }
 /* two lying captures per row on a tablet; a standing one (phone) keeps its own width, no empty frame around it */
 .figs { display:flex; flex-wrap:wrap; gap: 20px; margin: 16px 0 8px; align-items:flex-start; }
@@ -342,6 +453,23 @@ def md(text):
     out = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", out)
     out = re.sub(r"\[(.+?)\]\((https://[^)\s]+)\)", r'<a href="\2">\1</a>', out)
     return re.sub(r"`(.+?)`", r"<code>\1</code>", out)
+
+
+def blocks(lines):
+    """A text's lines: "### " is a subtitle, lines in a row starting with "- " are a list, the rest are paragraphs."""
+    out, items = [], []
+    for line in lines + [""]:
+        if line.startswith("- "):
+            items.append(f"<li>{md(line[2:])}</li>")
+            continue
+        if items:
+            out.append(f"<ul>{''.join(items)}</ul>")
+            items = []
+        if line.startswith("### "):
+            out.append(f"<h3>{md(line[4:])}</h3>")
+        elif line:
+            out.append(f"<p>{md(line)}</p>")
+    return "".join(out)
 
 
 def picture(lang, name, img_dir):
@@ -388,7 +516,7 @@ def build(lang):
             # its own width
             tall = ' class="tall"' if cls else ""
             figs.append(f'<figure{tall}{attrs}><img src="{first}" alt="{cap}" loading="lazy"><figcaption>{cap}{switch}</figcaption></figure>')
-        paras = "".join(f"<p>{md(p)}</p>" for p in s["text_" + key])
+        paras = blocks(s["text_" + key])
         body.append(f'<section id="{s["id"]}"><h2>{html.escape(s[key])}</h2>{paras}<div class="figs">{"".join(figs)}</div></section>')
     page = f"""<!doctype html>
 <html lang="{ui['lang']}">

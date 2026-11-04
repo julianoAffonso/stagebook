@@ -189,18 +189,18 @@ fun SongsScreen(
                 subtitle = br.app.stagebook.ui.components.songCountText(uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
-            SearchWithTags(
-                query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
-                // selecting, the Import/New row goes away: the list keeps its distance from the search
-                Modifier.padding(bottom = if (selecting) Spacing.m else 0.dp),
-            )
-            // while selecting, the actions are in the top bar
-            if (!selecting) Row(Modifier.padding(vertical = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            // while selecting, the actions are in the top bar. Actions first, then what acts on the list next to it: same
+            // order as the Setlists tab
+            if (!selecting) Row(Modifier.padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 // secondary at the start, the main action at the end (like Google's apps). Import from sites (with
                 // internet), scan the QR or type the code: one button, one menu.
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
                 ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
             }
+            SearchWithTags(
+                query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
+                Modifier.padding(bottom = Spacing.m),
+            )
             AnimatedVisibility(!online) {
                 Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                     Icon(AppIcons.CloudOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -32,7 +32,7 @@ after(() => tablet.server.close());
 test("lists every tool, with deletes marked destructive", async () => {
   const { tools } = await mcp.listTools();
   const names = tools.map((t) => t.name);
-  for (const n of ["stagebook_connect", "list_songs", "get_song", "create_song", "update_song", "delete_song", "transpose_song", "set_capo", "import_song", "list_setlists", "create_setlist", "update_setlist", "delete_setlist", "receive_by_code", "band_inbox", "restore_backup", "set_backing_track"]) assert.ok(names.includes(n), n);
+  for (const n of ["stagebook_connect", "list_songs", "get_song", "create_song", "update_song", "delete_song", "transpose_song", "set_capo", "import_song", "list_setlists", "setlist_order", "create_setlist", "update_setlist", "delete_setlist", "receive_by_code", "band_inbox", "restore_backup", "set_backing_track"]) assert.ok(names.includes(n), n);
   assert.equal(tools.find((t) => t.name === "delete_song").annotations.destructiveHint, true);
 });
 
@@ -156,4 +156,14 @@ test("capo is saved with the song", async () => {
   assert.equal(r.error, false, r.body);
   assert.equal(r.json.capo, 3);
   assert.equal(tablet.songs.get("s1").capo, 3);
+});
+
+test("setlists filter by name and their order reads and changes", async () => {
+  const made = await call("create_setlist", { name: "Sábado à noite" });
+  assert.equal(made.error, false);
+  const found = JSON.parse((await call("list_setlists", { query: "SABADO" })).body);
+  assert.deepEqual(found.map((s) => s.name), ["Sábado à noite"]);
+  assert.equal(JSON.parse((await call("setlist_order")).body).order, "newest");
+  assert.equal(JSON.parse((await call("setlist_order", { order: "abc" })).body).order, "abc");
+  assert.equal(JSON.parse((await call("setlist_order")).body).order, "abc");
 });

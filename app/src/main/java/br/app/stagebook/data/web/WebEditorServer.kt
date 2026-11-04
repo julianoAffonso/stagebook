@@ -222,6 +222,11 @@ class WebEditorServer @Inject constructor(
             // the app's own texts, so the page says the same as the tablet (and is translated with it)
             "songs" to R.string.tab_songs,
             "search" to R.string.songs_search,
+            "setsSearch" to R.string.sets_search,
+            "setsNotFound" to R.string.sets_not_found,
+            "setsOrder" to R.string.sets_sort,
+            "setsNewest" to R.string.sets_sort_newest,
+            "setsAbc" to R.string.sets_sort_abc,
             "newSong" to R.string.songs_new,
             "noSongs" to R.string.songs_empty_title,
             "notFound" to R.string.songs_not_found,

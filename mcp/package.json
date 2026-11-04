@@ -1,6 +1,6 @@
 {
   "name": "stagebook-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MCP server for Stagebook: lets AI assistants (Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex…) read and edit the songs and setlists on your Stagebook tablet over the local network.",
   "license": "SEE LICENSE IN LICENSE.md",
   "author": "Juliano Affonso",

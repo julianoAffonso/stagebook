@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import br.app.stagebook.ui.setlists.SetlistRowUi
 import br.app.stagebook.ui.setlists.setlistOrder
+import br.app.stagebook.ui.setlists.setlistSearch
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -13,4 +14,12 @@ class SetlistOrderTest {
 
     @Test fun `a to z ignores case and accents`() =
         assertEquals(listOf("abertura", "Bar do Zé", "Ensaio", "sábado"), setlistOrder(sets, abc = true).map { it.name })
+
+    @Test fun `search ignores case and accents`() =
+        assertEquals(listOf("sábado"), setlistSearch(sets, "SABADO").map { it.name })
+
+    @Test fun `search keeps the order it was given`() =
+        assertEquals(listOf("Bar do Zé", "sábado"), setlistSearch(setlistOrder(sets, abc = true), "ba").map { it.name })
+
+    @Test fun `a blank search shows everything`() = assertEquals(sets, setlistSearch(sets, "  "))
 }

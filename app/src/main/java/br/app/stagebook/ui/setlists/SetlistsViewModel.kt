@@ -1,5 +1,7 @@
 package br.app.stagebook.ui.setlists
 
+import br.app.stagebook.ui.songs.typingDelay
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -20,14 +22,20 @@ import javax.inject.Inject
 data class SetlistRowUi(val id: String, val name: String, val count: Int)
 
 @Immutable
-data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false)
+data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false, val total: Int = sets.size)
 
 /**
  * The Setlists tab's order: as stored (newest first) or A to Z, ignoring case and accents with the app's one text
  * key, as tags and songs are sorted (a Collator here was a second way of doing it; audit 03/11).
  */
 fun setlistOrder(sets: List<SetlistRowUi>, abc: Boolean): List<SetlistRowUi> =
-    if (abc) sets.sortedBy { br.app.stagebook.domain.TextKey.of(it.name.trim()) } else sets
+    if (abc) br.app.stagebook.domain.TextKey.sorted(sets) { it.name } else sets
+
+/** The setlists whose name has the search, ignoring case and accents as the song search does. */
+fun setlistSearch(sets: List<SetlistRowUi>, query: String): List<SetlistRowUi> {
+    val key = br.app.stagebook.domain.TextKey.of(query)
+    return if (key.isEmpty()) sets else sets.filter { br.app.stagebook.domain.TextKey.of(it.name).contains(key) }
+}
 
 @HiltViewModel
 class SetlistsViewModel @Inject constructor(
@@ -65,8 +73,12 @@ class SetlistsViewModel @Inject constructor(
     val internetOn: StateFlow<Boolean> = repository.library.map { it.look.internetOn }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.internetOn)
 
-    val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
-        SetlistsUiState(!loaded, setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) }, lib.look.setsAbc), lib.look.setsAbc)
+    private val query = MutableStateFlow("")
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library, query.debounce(::typingDelay)) { loaded, lib, q ->
+        val rows = setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) }, lib.look.setsAbc)
+        SetlistsUiState(!loaded, setlistSearch(rows, q), lib.look.setsAbc, lib.sets.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistsUiState())
 
     /** Empty name = current date and time. Returns the id to open the new setlist. */
@@ -74,6 +86,8 @@ class SetlistsViewModel @Inject constructor(
         repository.createSetlist(name.ifBlank { br.app.stagebook.data.model.Setlist.defaultName() })
 
     fun delete(id: String) = repository.deleteSetlist(id)
+
+    fun onQueryChange(q: String) { query.value = q }
 
     fun sortAbc(abc: Boolean) = repository.updateLook { it.copy(setsAbc = abc) }
 

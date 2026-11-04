@@ -68,13 +68,18 @@ fun SetlistsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val nameLimit by viewModel.nameLimit.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var query by rememberSaveable { mutableStateOf("") }
+    androidx.compose.runtime.LaunchedEffect(query) { viewModel.onQueryChange(query) }
     if (nameLimit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_name), viewModel::dismissNameLimit)
     SetlistsScreen(
         uiState = uiState,
         // double tap on OK created two setlists: after the first one the screen is already leaving
-        onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onOpen(viewModel.create(name)) },
-        onOpen = onOpen,
-        onPlay = onPlay,
+        onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name)) } },
+        // found what they were looking for: coming back the whole list shows, as in Songs
+        onOpen = { query = ""; onOpen(it) },
+        onPlay = { query = ""; onPlay(it) },
+        query = query,
+        onQueryChange = { query = it },
         onScan = onScan,
         online = online,
         internetOn = internetOn,
@@ -122,6 +127,8 @@ fun SetlistsScreen(
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,
     onSortAbc: (Boolean) -> Unit = {},
+    query: String = "",
+    onQueryChange: (String) -> Unit = {},
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
@@ -147,7 +154,7 @@ fun SetlistsScreen(
                 )
             } else ScreenHeader(
                 title = stringResource(R.string.sets_title),
-                subtitle = br.app.stagebook.ui.components.setCountText(uiState.sets.size),
+                subtitle = br.app.stagebook.ui.components.setCountText(uiState.total),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
@@ -155,13 +162,15 @@ fun SetlistsScreen(
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
                 ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
-            // order: newest first or A to Z (user, 03/11), only when there's something to order
-            if (!selecting && uiState.sets.size > 1) br.app.stagebook.ui.components.SegmentedChoice(
-                listOf(
-                    br.app.stagebook.ui.components.Choice(false, R.string.sets_sort_newest),
-                    br.app.stagebook.ui.components.Choice(true, R.string.sets_sort_abc),
-                ),
-                uiState.abc, onSortAbc, Modifier.padding(bottom = Spacing.m),
+            // the search and the order beside it, as Songs has them (user, 04/11); order only when there's something to order
+            br.app.stagebook.ui.components.SearchWithFilter(
+                query, onQueryChange, stringResource(R.string.sets_search), stringResource(R.string.sets_search_hint), Modifier.padding(bottom = Spacing.m),
+                filter = if (uiState.total < 2) null else { m ->
+                    br.app.stagebook.ui.components.ChoiceFilter(
+                        stringResource(R.string.sets_sort), listOf(false, true), uiState.abc, onSortAbc,
+                        { abc -> stringResource(if (abc) R.string.sets_sort_abc else R.string.sets_sort_newest) }, m,
+                    )
+                },
             )
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
             // that was first, and the new one stayed hidden above it, device test B-09). The same when the first item
@@ -178,7 +187,8 @@ fun SetlistsScreen(
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                    uiState.sets.isEmpty() -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
+                    uiState.total == 0 -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
+                    uiState.sets.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.sets_not_found), "")
                     else -> LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.l)) {
                         items(uiState.sets, key = { it.id }) { set ->
                             SongListItem(
