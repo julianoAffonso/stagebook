@@ -43,7 +43,7 @@ class ImportChordsTest {
             put("title", ""); put("artist", "")
             put("text", "Saio cedo pela rua\nPra você ouvir\nE mais uma linha")
             put("chordText", "[Intro] G  D\n\nG              D\nSaio cedo pela rua\nEm       C\nPra você ouvir\nC\nE mais uma linha")
-            put("key", "G"); put("capo", "Capotraste na 2ª casa"); put("site", "www.cifraclub.com.br")
+            put("pageText", "Tom: G\nCapotraste na 2ª casa"); put("site", "www.cifraclub.com.br")
         }.toString()
         return Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(page))
     }
@@ -82,6 +82,46 @@ class ImportChordsTest {
         assertTrue(importer.fromPage(page.copy(site = "www.cifraclub.com.br"), false) is br.app.stagebook.data.PageImport.Song)
     }
 
+    private fun importer(chords: Boolean = true) = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        repo.updateLook { it.copy(chords = chords) }
+        br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context))
+    }
+
+    private val lyrics = "Saio cedo pela rua\nPra você ouvir\nE mais uma linha\nE outra linha aqui\nE a última linha"
+    private val code = "function a() {\n  return 1\n}\n".repeat(20)
+
+    @Test fun `a pre without chords doesn't replace the page's lyrics`() = runBlocking {
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(text = lyrics, chordText = code, preLyrics = code, site = "www.exemplo.com"), false)
+        val text = (r as br.app.stagebook.data.PageImport.Song).text
+        assertTrue(text, text.contains("Saio cedo pela rua"))
+        assertTrue(text, !text.contains("function"))
+    }
+
+    @Test fun `a pre without chords doesn't hide the chords in the text`() = runBlocking {
+        val chart = "G              D\nSaio cedo pela rua\nEm       C\nPra você ouvir\nG    D\nE mais uma linha"
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(text = chart, chordText = code, preLyrics = code, site = "www.exemplo.com"), false)
+        val text = (r as br.app.stagebook.data.PageImport.Song).text
+        assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))
+    }
+
+    @Test fun `invisible marks in the page's text don't hide the capo`() = runBlocking {
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(text = lyrics, pageText = "Capo: \n\u200B2nd fret", site = "www.exemplo.com"), false)
+        assertEquals(2, Chords.capo((r as br.app.stagebook.data.PageImport.Song).text))
+    }
+
+    @Test fun `tablature with invisible marks still asks before coming in`() = runBlocking {
+        val chart = "\u200BG    D\n\u200BSaio cedo pela rua\n\u200BEm   C\n\u200BPra você ouvir\n\u200Be|-----3-----|\n\u200BB|---0---0---|"
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(chordText = chart, site = "www.exemplo.com"), null)
+        assertEquals(br.app.stagebook.data.PageImport.AskTab, r)
+    }
+
+    @Test fun `a page far too big isn't read`() = runBlocking {
+        val r = importer().fromPage(br.app.stagebook.domain.PageData(text = "linha\n".repeat(30_000), site = "www.exemplo.com"), false)
+        assertEquals(br.app.stagebook.data.PageImport.Problem(br.app.stagebook.data.ImportProblem.NOT_SONG), r)
+    }
+
     @Test fun `lyrics and chords come in as ChordPro with key and capo`() {
         val text = import(chords = true)
         assertEquals("G", Chords.key(text))
@@ -104,7 +144,7 @@ class ImportChordsTest {
             put("title", ""); put("artist", "")
             put("text", "Saio cedo pela rua\nPra você ouvir\nE mais uma linha")
             put("chordText", "[Intro]\ne|---0---3---|\nB|---1---0---|\n\nG              D\nSaio cedo pela rua\nEm       C\nPra você ouvir\nC\nE mais uma linha")
-            put("key", "G"); put("site", "www.cifraclub.com.br")
+            put("pageText", "Tom: G"); put("site", "www.cifraclub.com.br")
         }.toString()
         return Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(page))
     }

@@ -1,9 +1,12 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import br.app.stagebook.data.model.ChordPlayMode
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.domain.ChordSynth
@@ -17,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Playing the chord (T20): the diagram's notes (with a capo, the real note), the sound in each mode and the button in
@@ -64,6 +68,58 @@ class ChordPlayTest {
         compose.onNodeWithText("O diagrama é de", substring = true).assertDoesNotExist()   // keyboard: no diagram note with capo
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertEquals(Voicings.keys("C").first(), played)
+    }
+
+    @Test fun `Details with a capo - the field is of what sounds, not of the chart's shape`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("Detalhes de F#m7").assertExists()
+        compose.onNodeWithText("No tom da música (F#m)").assertExists()
+        compose.onNodeWithText("F#m7 é o i7 neste tom.").assertExists()
+        compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").assertExists()
+    }
+
+    @Test fun `the chord has the same name on both screens with a capo`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("G", Instrument.ACOUSTIC_GUITAR, "{key: G}\n{capo: 1}\n[G]um [C]dois", {}, {}) } }
+        compose.onNodeWithText("O diagrama é de G. Com capo na 1ª casa, soa Ab.").assertExists()
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("Detalhes de Ab").assertExists()
+        compose.onNodeWithText("O diagrama é de G. Com capo na 1ª casa, soa Ab.").assertExists()
+    }
+
+    @Test fun `Details work on a song without a key`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em", Instrument.ACOUSTIC_GUITAR, "{capo: 2}\n[Em]um [Am]dois [B7]tres [Em]fim", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("No tom da música (F#m)").assertExists()
+    }
+
+    @Config(qualifiers = "pt-rBR-w640dp-h320dp-land")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test fun `Details scroll on a phone on its side`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performScrollTo().performClick()
+        compose.onNodeWithText("O diagrama é de Em7. Com capo na 2ª casa, soa F#m7.").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun `Details on the keyboard - the chord already is what sounds, it doesn't go up twice`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("F#m7", Instrument.KEYBOARD, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        compose.onNodeWithText("Detalhes de F#m7").assertExists()
+        compose.onNodeWithText("No tom da música (F#m)").assertExists()
+    }
+
+    @Config(qualifiers = "pt-rBR-w320dp-h640dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)   // real text widths: the default mode measures text too narrow to overflow
+    @Test fun `Details on a narrow phone - long chords stay on one line`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("D#m7", Instrument.ACOUSTIC_GUITAR, "{key: C#}\n[C#]um [D#m7]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        val cells = compose.onAllNodesWithText("m7", substring = true).fetchSemanticsNodes()
+        assertTrue(cells.size >= 4)
+        cells.forEach { cell ->
+            val layouts = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
+            cell.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!(layouts)
+            if (layouts.single().layoutInput.text.text.length < 10) assertEquals(layouts.single().layoutInput.text.text, 1, layouts.single().lineCount)
+        }
     }
 
     @Test fun `Details - degree in the song's key, the chord's field and where else it shows up - and back`() {

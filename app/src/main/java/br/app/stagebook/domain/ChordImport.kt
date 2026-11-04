@@ -6,23 +6,75 @@ package br.app.stagebook.domain
  */
 object ChordImport {
     private val tabLine = Regex("""^\s*[A-Ga-g][#b]?\s*\|[-0-9hpbr/\\|~x\s]*$""")
-    // key and capo the way sites write them in 4 languages: "Tom: G", "Key: G", "Tono: G", "Tonalità: G"; "Capotraste
-    // na 2ª casa", "Capo 2", "Capo: 2nd fret", "Cejilla en el 2º traste", "Capotasto al 2º tasto"
-    private val capoText = Regex("""(?i)\b(?:capotraste\s+na|capotasto\s+(?:al|sul)|cejilla(?:\s+en(?:\s+el)?)?|capo(?:\s+on)?)\s*:?\s*(\d{1,2})""")
-    private val keyText = Regex("""(?i)\b(?:tom|key|tono|tonalit[àa])\s*:\s*([A-G][#b]?m?)(?![\w#])""")
+    // Every rule for reading a page lives here, by what the text says and never by site (the user can add any site).
+    // A label can touch the word before it: on pages that join their fields it reads "EKey: F#mCapo:"
+    private const val LABEL_START = """(?:(?<!\p{L})|(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll}))"""
+    // 4 languages: "Capotraste na 2ª casa", "Capotraste: 2ª casa", "Capo no 3", "Capo: 2nd fret", "Cejilla en el 2º traste",
+    // "Capotasto al 2º tasto"; after a ":" the fret may be on the next line. It has to end there: "da capo 2 vezes" isn't one
+    private const val FRET_WORD = """(?i:[ \t]+(?:casa|traste|tasto|fret))?"""
+    private val capoText = Regex("""(?m)$LABEL_START(?i:capotraste|capotasto|cejilla|capo)(?i:[ \t]+(?:na|no|em|on|at|al|sul|en(?:[ \t]+el)?))?$FRET_WORD(?:[ \t]*:[ \t]*\n?[ \t]*|[ \t]+)(\d{1,2})(?!\d)(?i:[ªº°oa]|st|nd|rd|th|er|do|ro|to)?$FRET_WORD(?=[ \t]*$|[ \t]*[^\p{L}\s\d]|[ \t]+\p{Lu}|\p{Lu}\p{Ll})""")
+    // "Tom: G", "Key: A minor", "Tono: F♯m", "Tonalidad: Dó maior", "Tonalità: G"; the value may be on the next line. It has
+    // to end there: "Tom: A música é boa" is a comment, not a key
+    private const val KEY_VALUE = """([A-G]|(?i:d[oó]|r[eé]|mi|f[aá]|sol|l[aá]|si))([#b♯♭]?)(m?)(?:[ \t]+((?i:minor|menor|minore|major|maior|mayor|maggiore)))?"""
+    // the key may name the chart's shapes in parentheses, in any language: "F#m (com forma de Em)", "F#m (in the shape of Em)"
+    private const val SHAPE = """(?:\s*\([^)\n]*\s([A-G][#b]?m?)\s*\))?"""
+    private const val KEY_END = """(?=[ \t]*$|[ \t]*[(,;|·/–\}-]|[ \t]+(?i:capo|cejilla|bpm|tempo|tuning|afina)|\p{Lu}\p{Ll})"""
+    private val keyText = Regex("""(?m)$LABEL_START(?i:tom|key|tono|tonalidade?|tonalit[àa])[ \t]*:[ \t]*\n?[ \t]*$KEY_VALUE$SHAPE$KEY_END""")
+    private val bareKey = Regex("""\s*$KEY_VALUE$SHAPE\s*""")
+    private val solfege = mapOf("do" to "C", "re" to "D", "mi" to "E", "fa" to "F", "sol" to "G", "la" to "A", "si" to "B")
+    private val minorWords = setOf("minor", "menor", "minore")
 
-    /** Key and capo the page shows (to keep them in the lyrics only profile too). */
-    fun keyOf(vararg texts: String): String = texts.firstNotNullOfOrNull { t -> keyText.find(t)?.groupValues?.get(1)?.takeIf(Chords::isChord) ?: t.trim().takeIf(Chords::isChord) }.orEmpty()
+    private data class StatedKey(val key: String, val shape: String)
 
-    /** BPM: the page's, or a line "BPM 120"/"Tempo: 120"/"{tempo: 120}" in the text itself; 0 = none. */
-    fun bpmOf(page: String, text: String): Int {
-        val fromText = bpmText.find(text)?.let { m -> m.groupValues.drop(1).firstOrNull { it.isNotEmpty() } }
-        return listOf(page.trim(), fromText.orEmpty()).firstNotNullOfOrNull { it.toIntOrNull()?.takeIf { v -> v in Chords.MIN_TEMPO..Chords.MAX_TEMPO } } ?: 0
+    private fun stated(m: MatchResult): StatedKey {
+        val (note, accidental, m3, word, shape) = m.destructured
+        val letter = if (note.length == 1) note else solfege.getValue(TextKey.of(note))
+        val minor = m3.isNotEmpty() || word.lowercase() in minorWords
+        return StatedKey(letter + accidental.replace('♯', '#').replace('♭', 'b') + if (minor) "m" else "", shape)
     }
 
+    private fun statedKey(texts: Array<out String>): StatedKey? =
+        texts.firstNotNullOfOrNull { t -> (keyText.find(t) ?: bareKey.matchEntire(t))?.let(::stated)?.takeIf { Chords.isChord(it.key) } }
+
+    // the fret alone: "2", "2ª casa", "2nd fret"
+    private val bareFret = Regex("""(?i)\s*(\d{1,2})\s*(?:[ªº°oa]|st|nd|rd|th|er|do|ro|to)?(?:\s+(?:casa|traste|tasto|fret))?\s*""")
+
+    /** Key and capo the page shows (to keep them in the lyrics only profile too). */
+    fun keyOf(vararg texts: String): String = statedKey(texts)?.key.orEmpty()
+
+    /**
+     * The key for `{key}`, which holds the chart's shapes. Many pages give what sounds with the capo (F#m, capo 2, chart
+     * in Em): the chords tell. A shape in parentheses counts if it fits them and isn't just the relative key; if not, a key
+     * [capo] frets down that fits them.
+     */
+    fun shapesKey(capo: Int, chart: String, vararg texts: String): String {
+        val page = statedKey(texts) ?: return ""
+        val found = Chords.detectKey(chart)
+        if (page.shape.isNotEmpty() && !sameField(page.shape, page.key) && sameField(page.shape, found)) return page.shape
+        if (capo == 0) return page.key
+        val shapes = Chords.transposeKey(page.key, -capo)
+        return if (sameField(shapes, found)) shapes else page.key
+    }
+
+    // Em and G share a harmonic field
+    private fun sameField(a: String, b: String): Boolean = b.isNotEmpty() && majorOf(a) == majorOf(b)
+    private fun majorOf(key: String): String = if (key.endsWith("m")) Chords.transposeKey(key.dropLast(1), 3) else Chords.transposeKey(key, 0)
+
+    /** BPM: what the page says ("120 BPM", "BPM: 120", "Tempo: 120"), or a line with it in the text itself; 0 = none. */
+    fun bpmOf(page: String, text: String): Int =
+        (pageBpm.findAll(page) + bpmText.findAll(page) + bpmText.findAll(text))
+            .mapNotNull { m -> m.groupValues.drop(1).firstOrNull { it.isNotEmpty() }?.toIntOrNull() }
+            .firstOrNull { it in Chords.MIN_TEMPO..Chords.MAX_TEMPO } ?: 0
+
+    // "N bpm" ends its line: "Verse 88 bpm" is a tempo, "174BPM Wonderwall Remix" is another song's title. "tempo" is an
+    // everyday word in Portuguese ("faz tempo 30 dias"): only with ":" or "=", and never a duration ("Tempo: 45:00")
+    private val pageBpm = Regex("""(?im)(\d{2,3})[ \t]*bpm[ \t]*$|\bbpm[ \t]*[:=]?[ \t]*(\d{2,3})\b|\btempo[ \t]*[:=][ \t]*(\d{2,3})\b(?![:\d])""")
     private val bpmText = Regex("""(?im)^\s*(?:\{\s*tempo\s*:\s*(\d{2,3})\s*\}|(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})|(\d{2,3})\s*bpm)\s*$""")
 
-    fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t -> capoText.find(t)?.groupValues?.get(1)?.toIntOrNull() ?: t.trim().toIntOrNull() }?.takeIf { it in 1..12 } ?: 0
+    /** The first capo that makes sense ("Capo: 15" doesn't hide a real one further on); 0 = none. */
+    fun capoOf(vararg texts: String): Int = texts.firstNotNullOfOrNull { t ->
+        (capoText.findAll(t) + listOfNotNull(bareFret.matchEntire(t))).mapNotNull { it.groupValues[1].toIntOrNull() }.firstOrNull { it in 1..12 }
+    } ?: 0
 
     // sites pad the chord lines with non-breaking and thin spaces; Java's \s doesn't see them, so the line read as
     // lyrics and only the lyrics came in (user, 31/10)
@@ -63,11 +115,17 @@ object ChordImport {
             }
         }
         flush()
-        var body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
-        val k = keyOf(key, text)
-        val c = capoOf(capo, text)
-        if (c in 1..12) body = Chords.setDirective(body, "capo", c.toString())
-        if (Chords.isChord(k)) body = Chords.setDirective(body, "key", k)
-        return body
+        val body = parts.joinToString("\n").replace(TextPatterns.MANY_BLANK, "\n\n").trim()
+        return withPageInfo(body, body, key, capo, text)
+    }
+
+    /** The song with the capo and key that [texts] give for [chart] in its directives, chords or no chords in [song]. */
+    fun withPageInfo(song: String, chart: String, vararg texts: String): String {
+        val capo = capoOf(*texts)
+        val key = shapesKey(capo, chart, *texts)
+        var out = song
+        if (capo > 0) out = Chords.setDirective(out, "capo", capo.toString())
+        if (Chords.isChord(key)) out = Chords.setDirective(out, "key", key)
+        return out
     }
 }

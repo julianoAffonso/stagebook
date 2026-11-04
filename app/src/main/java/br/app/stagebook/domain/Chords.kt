@@ -35,7 +35,7 @@ object Chords {
     private val shapeHint = Regex("""^\s*(\S+)\s+\(?($SHAPE)\)?\s*$""", RegexOption.IGNORE_CASE)
 
     private fun frets(shape: String): List<Int> =
-        (if ('-' in shape) shape.split('-') else shape.map { it.toString() }).map { if (it.equals("x", true)) -1 else it.toInt() }
+        (if ('-' in shape) shape.split('-') else shape.map { it.toString() }).map { it.toIntOrNull() ?: -1 }   // "x", and "xx" or "1x" that the pattern lets through
 
     private fun shapeText(frets: List<Int>): String {
         val parts = frets.map { if (it < 0) "x" else it.toString() }
@@ -357,7 +357,8 @@ object Chords {
      */
     fun transposeSong(text: String, semitones: Int): String {
         val base = fromChordsOverLyrics(text).let { t ->
-            if (key(t).isNotEmpty()) t else detectKey(t).takeIf { it.isNotEmpty() }?.let { setDirective(t, "key", it) } ?: t
+            // a key that can't be read ("C major" typed by hand) would stay behind while the chords move
+            if (ChordName.parse(key(t)) != null) t else detectKey(t).takeIf { it.isNotEmpty() }?.let { setDirective(t, "key", it) } ?: t
         }
         return transpose(base, semitones)
     }
@@ -421,7 +422,7 @@ object Chords {
         if (key(text).isNotEmpty()) text else detectKey(text).takeIf { it.isNotEmpty() }?.let { setDirective(text, "key", it) } ?: text
 
     /** Key that sounds with the capo: the shapes stay, the sound goes up [capo] frets (G with capo 2 sounds A). */
-    fun soundingKey(key: String, capo: Int): String = if (key.isEmpty() || capo == 0) key else transposeChord(key, capo)
+    fun soundingKey(key: String, capo: Int): String = if (key.isEmpty() || capo == 0) key else transposeKey(key, capo)
 
     // ---- "lyrics only" profile ----
 

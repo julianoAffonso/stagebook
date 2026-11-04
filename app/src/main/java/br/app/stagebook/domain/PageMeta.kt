@@ -9,9 +9,8 @@ data class PageData(
     val artist: String = "",
     val text: String = "",
     val chordText: String = "",   // chords with the chords above (Cifra Club)
-    val key: String = "",
-    val capo: String = "",
-    val bpm: String = "",   // "120 BPM" / "BPM: 120" / "Tempo: 120" written on the page, if any
+    val preLyrics: String = "",   // the <pre> text without the marked chord names: the lyrics, when it is a chart
+    val pageText: String = "",   // all the page's visible text: key, capo and BPM are read from it (ChordImport)
     val site: String = "",
     val ldName: String = "",
     val ldArtist: String = "",
@@ -27,7 +26,9 @@ data class PageData(
 object PageMeta {
     data class TitleArtist(val title: String, val artist: String)
 
-    private val siteNames = Regex(".*(letrasmus|letras|vagalume|cifraclub|cifras|genius|azlyrics|musixmatch|lyrics|google).*")
+    // whole names only: "Genius of Love" and "Lyrics Born" are a song and an artist
+    private val siteNames = Regex("(letrasmus|letras|vagalume|cifraclub|cifras|genius|azlyrics|musixmatch|lyrics|google)(br|com|combr|net)?")
+    private const val MIN_SITE_NAME = 4
     private val separator = Regex("\\s[-–|]\\s")
     private val suffix = Regex("(?i)\\s*[-|–]\\s*(letra|lyrics|cifra).*$")
     private val prefix = Regex("(?i)^letra( de| da)?\\s+")
@@ -60,7 +61,10 @@ object PageMeta {
         val k = TextKey.of(s).replace(" ", "")
         if (k.isEmpty()) return true
         val h = TextKey.of(host.removePrefix("www.")).replace(" ", "")
-        return (h.isNotEmpty() && (h.startsWith(k) || k.contains(h))) || siteNames.matches(k)
+        val name = siteNames.matchEntire(k)?.groupValues?.get(1)
+        if (h.isEmpty()) return name != null
+        // on another site "Vagalume" is a song; a short title can just begin like the host ("Let" on letras.mus.br)
+        return (k.length >= MIN_SITE_NAME && h.startsWith(k)) || k.contains(h) || (name != null && name in h)
     }
 
     /** "Africa - Toto - LETRAS.MUS.BR" → Africa / Toto */

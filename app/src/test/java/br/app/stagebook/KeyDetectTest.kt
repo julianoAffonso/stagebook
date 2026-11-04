@@ -42,12 +42,23 @@ class KeyDetectTest {
     }
 
     @Test fun `import - BPM from the page or written in the text`() {
-        assertEquals(128, br.app.stagebook.domain.ChordImport.bpmOf("128", ""))
+        assertEquals(128, br.app.stagebook.domain.ChordImport.bpmOf("BPM: 128", ""))
         assertEquals(96, br.app.stagebook.domain.ChordImport.bpmOf("", "Intro\nBPM: 96\n[G]linha"))
         assertEquals(110, br.app.stagebook.domain.ChordImport.bpmOf("", "110 bpm\nletra"))
         assertEquals(72, br.app.stagebook.domain.ChordImport.bpmOf("", "{tempo: 72}\nletra"))
         assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("", "a letra fala de 120 caminhos"))   // a loose number isn't a BPM
-        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("999", ""))
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("BPM: 999", ""))
+        assertEquals(88, br.app.stagebook.domain.ChordImport.bpmOf("Verse 88 bpm\n1\n&\n2", ""))
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("Wonderwall Remix, 174BPM Wonderwall Songs", ""))
+        assertEquals(120, br.app.stagebook.domain.ChordImport.bpmOf("Tempo: 120", ""))
+        // "tempo" is also an everyday word
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("faz tempo 30 dias", ""))
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("por tanto tempo\n45 anos", ""))
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("Tempo 45:00", ""))
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("Tempo: 45:00", ""))
+        assertEquals(0, br.app.stagebook.domain.ChordImport.bpmOf("muito tempo 120 vezes", ""))
+        // the first one that makes sense counts
+        assertEquals(120, br.app.stagebook.domain.ChordImport.bpmOf("tempo 15\nBPM: 15\nBPM: 120", ""))
     }
 
     @Test fun `key moves a half step at a time with the usual name`() {

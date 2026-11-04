@@ -1,6 +1,5 @@
 package br.app.stagebook.data.web
 
-import kotlinx.coroutines.sync.withLock
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
@@ -28,15 +27,23 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
     private val oneAtATime = kotlinx.coroutines.sync.Mutex()
     private val main = Handler(Looper.getMainLooper())
 
-    suspend fun read(url: String, script: String = ExtractScript.SOURCE): String? = oneAtATime.withLock {
-        withContext(Dispatchers.Main) {
-            var view: WebView? = null
-            try {
-                withTimeoutOrNull(TIMEOUT_MS) { load(url, script) { view = it } }
-            } finally {
-                main.removeCallbacksAndMessages(null)   // a pending read never runs on a destroyed page
-                view?.apply { stopLoading(); destroy() }
+    suspend fun read(url: String, script: String = ExtractScript.SOURCE): String? {
+        // another import is using the page: each wait holds a connection of the editor, and the caller gives up at 60 s
+        withTimeoutOrNull(BUSY_WAIT_MS) { oneAtATime.lock() } ?: return null
+        return try {
+            withContext(Dispatchers.Main) {
+                var view: WebView? = null
+                try {
+                    withTimeoutOrNull(TIMEOUT_MS) { load(url, script) { view = it } }
+                } catch (_: android.util.AndroidRuntimeException) {
+                    null   // the system's WebView is missing or being updated: no page, not a closed app
+                } finally {
+                    main.removeCallbacksAndMessages(null)   // a pending read never runs on a destroyed page
+                    view?.apply { stopLoading(); destroy() }
+                }
             }
+        } finally {
+            oneAtATime.unlock()
         }
     }
 
@@ -47,6 +54,18 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
             settings.domStorageEnabled = true
             webViewClient = object : WebViewClient() {
                 private var done = false
+                // a redirect starts another page: wait for that one, not the first to finish
+                override fun onPageStarted(view: WebView, started: String, favicon: android.graphics.Bitmap?) {
+                    done = false
+                    main.removeCallbacksAndMessages(null)
+                }
+                // offline or a bad address: there's no page to read, and the error page would look like one
+                override fun onReceivedError(view: WebView, request: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) {
+                    if (!request.isForMainFrame) return
+                    done = true
+                    main.removeCallbacksAndMessages(null)
+                    if (cont.isActive) cont.resume(null)
+                }
                 override fun onPageFinished(view: WebView, finished: String) {
                     if (done) return
                     done = true
@@ -67,6 +86,7 @@ class WebPageReader @Inject constructor(@ApplicationContext private val context:
 
     companion object {
         private const val TIMEOUT_MS = 25_000L
+        private const val BUSY_WAIT_MS = 15_000L
         private const val HIDDEN_WIDTH = 1080
         private const val HIDDEN_HEIGHT = 2000
         const val SETTLE_MS = 1_500L

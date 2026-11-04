@@ -390,6 +390,21 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_detalhes.png")
     }
 
+    // on a phone, with a capo: the field shows what sounds (F#m7 in F#m) and long chords wrap to a second row
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun chordDetailsCapoPhone() {
+        val capoSong = "{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste\n[D4]Outra [A7(4)]linha"
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.stage.ChordShapePopup("Em7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, capoSong, {}, {})
+            }
+        }
+        compose.onNodeWithText(str(R.string.chord_details)).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_6_acorde_detalhes.png")
+    }
+
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun chordDetailsSeventh() {
         compose.setContent {
@@ -1095,6 +1110,16 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
             br.app.stagebook.ui.setlists.ScanUi.Scanning(br.app.stagebook.ui.setlists.ScanProblem.INCOMPLETE), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},
         )
+    }
+
+    // a song is missing: the three ways to get it, in the order they're offered
+    @Test @Config(qualifiers = PHONE)
+    fun scanMissingOptionsPhone() = shoot("jornada_qr_4_faltam") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Ana", band = 2, internetFrom = "Ana")
+    }
+
+    @Test fun scanMissingOptionsTablet() = shoot("jornada_qr_5_faltam_tablet") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Ana", band = 2, internetFrom = "Ana")
     }
 
     @Test fun scanReviewTablet() = shoot("jornada_qr_3_conferir_tablet") {

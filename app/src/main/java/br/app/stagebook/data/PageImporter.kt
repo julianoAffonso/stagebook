@@ -46,26 +46,27 @@ class PageImporter @Inject constructor(
         fromPage(PageData(title = title, text = text, chordText = if (ChordImport.hasChords(text)) text else ""), withTab)
 
     /** [withTab] null = asks first when the page has tablature (answer with true or false). */
-    suspend fun fromPage(parsed: PageData, withTab: Boolean? = null): PageImport {
+    suspend fun fromPage(source: PageData, withTab: Boolean? = null): PageImport {
+        // a page that big is no song (a log, a book): not worth reading (limits in ExtractScript)
+        if (maxOf(source.text.length, source.chordText.length) > 2 * br.app.stagebook.domain.BandContent.MAX_TEXT) return PageImport.Problem(ImportProblem.NOT_SONG)
+        // a <pre> only counts if it has chords: others (code, notes) leave the page's text as it is
+        val parsed = if (ChordImport.hasChords(source.chordText)) source.copy(text = source.preLyrics.ifBlank { source.text }) else source.copy(chordText = "")
         // the search results aren't a song: Google's summary has bits of lyrics and came in as "cifra wave tom jobim"
         // with a made-up key (device test B-05): open the chords page first
         if (SEARCH_HOST.containsMatchIn(parsed.site)) return PageImport.Problem(ImportProblem.SEARCH_PAGE)
-        if (withTab == null && (Tablature.hasTab(parsed.chordText) || Tablature.hasTab(parsed.text))) return PageImport.AskTab
+        // invisible marks start every line on some sites: the tablature only shows after they're gone
+        if (withTab == null && (Tablature.hasTab(ChordImport.plainSpaces(parsed.chordText)) || Tablature.hasTab(ChordImport.plainSpaces(parsed.text)))) return PageImport.AskTab
         val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
-        val page = parsed.copy(text = tab(ChordImport.plainSpaces(parsed.text)), chordText = tab(ChordImport.plainSpaces(parsed.chordText)))
+        val page = parsed.copy(text = tab(ChordImport.plainSpaces(parsed.text)), chordText = tab(ChordImport.plainSpaces(parsed.chordText)), pageText = ChordImport.plainSpaces(parsed.pageText))
         // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics only
         val chordSource = page.chordText.ifBlank { page.text }
         var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
-            ChordImport.toChordPro(chordSource, page.key, page.capo)
+            ChordImport.toChordPro(chordSource, page.pageText)
         } else {
             // lyrics only: no chords, but the page's key and capo are kept (hidden in this profile; not lost if the
             // profile changes or the song goes to someone who plays)
-            var lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
-            val capo = ChordImport.capoOf(page.capo, page.chordText)
-            val key = ChordImport.keyOf(page.key, page.chordText)
-            if (capo > 0) lyrics = Chords.setDirective(lyrics, "capo", capo.toString())
-            if (key.isNotEmpty()) lyrics = Chords.setDirective(lyrics, "key", key)
-            lyrics
+            val lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+            ChordImport.withPageInfo(lyrics, page.chordText, page.pageText, page.chordText)
         }
         if (text.lines().size < 3) return PageImport.Problem(ImportProblem.NOT_FOUND)
         // only lyrics and chords come in (the same filter as the band, plus the look of verses)
@@ -73,7 +74,7 @@ class PageImporter @Inject constructor(
             !br.app.stagebook.domain.BandContent.looksLikeSong(text)
         ) return PageImport.Problem(ImportProblem.NOT_SONG)
         // BPM from the page (or written in the text): saved in the song, the metronome starts at it
-        val bpm = ChordImport.bpmOf(page.bpm, page.chordText.ifBlank { page.text })
+        val bpm = ChordImport.bpmOf(page.pageText, page.chordText.ifBlank { page.text })
         if (bpm > 0 && Chords.tempo(text) == 0) text = Chords.setDirective(text, "tempo", bpm.toString())
         val meta = PageMeta.pick(page)
         var artist = meta.artist
