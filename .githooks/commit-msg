@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Enable once per clone: git config core.hooksPath .githooks
+tools/privacy-check.sh message "$1" && tools/privacy-check.sh staged
