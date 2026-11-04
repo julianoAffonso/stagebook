@@ -31,8 +31,8 @@ import br.app.stagebook.ui.theme.PianoWhite
 /**
  * How to play the chord: the neck (strings vertical, frets horizontal, dots where to press, "o" open string, "x" not
  * played, fret number when it doesn't start on the first) or the keyboard with the notes lit. [shape] for strings,
- * [keys] (MIDI notes) for keyboard; [capo]: the bar in the accent color, with the shape played from it. No margin of
- * its own: the [modifier] places it.
+ * [keys] (MIDI notes) for keyboard; [capo]: a fret of its own on top, with the bar across, and the shape right below
+ * it. No margin of its own: the [modifier] places it.
  */
 @Composable
 fun ChordDiagram(
@@ -57,17 +57,18 @@ fun ChordDiagram(
         val nameStyle = (if (compact && width < 72.dp) MaterialTheme.typography.titleSmall else if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Bold)
         Text(chord, style = nameStyle, color = nameColor, maxLines = 1)
         // the fret number in the same size as the chord name (user's request, 30/10)
-        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, accent, capo, width, nameStyle.fontSize)
+        if (instrument == Instrument.KEYBOARD) Keyboard(keys.orEmpty(), accent, width) else Fretboard(shape, Voicings.strings(instrument), color, capo, width, nameStyle.fontSize)
     }
 }
 
 @Composable
-private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent: Color, capo: Int, width: Dp, labelSize: androidx.compose.ui.unit.TextUnit = 14.sp) {
+private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, capo: Int, width: Dp, labelSize: androidx.compose.ui.unit.TextUnit = 14.sp) {
     val measurer = rememberTextMeasurer()
     val label = TextStyle(color = color, fontSize = labelSize, fontWeight = FontWeight.Bold)
     Canvas(Modifier.size(width, width * 1.15f)) {
         if (shape == null) return@Canvas
-        val frets = 5
+        val view = Voicings.neckView(shape, capo, 5)
+        val frets = if (view.fromCapo) 6 else 5   // the capo's fret comes on top of the shape's
         // equal margins on both sides: the grid sits in the middle, under the name (the left one holds the fret number)
         val left = size.width * 0.18f
         val right = size.width * 0.82f
@@ -75,8 +76,8 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         val bottom = size.height * 0.98f
         val gap = (right - left) / (strings - 1)
         val row = (bottom - top) / frets
-        val view = Voicings.neckView(shape, capo, frets)
         val base = view.base
+        val first = if (view.fromCapo) capo else base + capo   // the real fret of the first row
         val thin = 1.5.dp.toPx()
         // softer than the dots, which are what the eye looks for
         val grid = color.copy(alpha = 0.6f)
@@ -90,7 +91,7 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         // inlay marks on the frets the standard neck has (3, 5, 7, 9, 12 and their octaves): faint, in the middle of the fret
         val inlay = minOf(gap, row) * 0.13f
         for (r in 0 until frets) {
-            val fret = base + r + capo
+            val fret = first + r
             val y = top + (r + 0.5f) * row
             when {
                 fret % 12 == 0 && fret > 0 -> {
@@ -103,13 +104,11 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         }
         // frets: the nut is thick when it starts on the first fret
         for (i in 0..frets) {
-            val nut = i == 0 && base == 1
+            val nut = i == 0 && first == 1
             val weight = crispWidth(if (nut) 5.dp.toPx() else thin)
             val y = crisp(top + i * row, weight)
             drawLine(if (nut) color else grid, Offset(left, y), Offset(right, y), weight)
         }
-        val capoBar = 7.dp.toPx()
-        if (view.fromCapo) drawLine(accent, Offset(left - gap * 0.3f, top), Offset(right + gap * 0.3f, top), capoBar, StrokeCap.Round)
         // strings get thicker towards the low ones (the first in the shape), as on a real neck
         for (s in 0 until strings) {
             val weight = crispWidth(thin * (1.7f - 1.2f * s / maxOf(1, strings - 1)))
@@ -119,11 +118,8 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
         val dot = minOf(gap, row) * 0.34f
         // fret number right left of the grid, at the height of the diagram's first fret, clear of the barre's end dot
         view.label?.let { fret ->
-            val laid = measurer.measure("$fret", if (view.fromCapo) label.copy(color = accent) else label)
-            // the capo's number sits beside its bar, a fret's in the middle of the row
-            val y = if (view.fromCapo) top - laid.size.height / 2 else top + (row - laid.size.height) / 2
-            val clear = if (view.fromCapo) gap * 0.3f + capoBar / 2 else dot
-            drawText(laid, topLeft = Offset(left - clear - laid.size.width - 6.dp.toPx(), y))
+            val laid = measurer.measure("$fret", label)
+            drawText(laid, topLeft = Offset(left - dot - laid.size.width - 6.dp.toPx(), top + (row - laid.size.height) / 2))
         }
         shape.frets.forEachIndexed { s, f ->
             val x = left + s * gap
@@ -138,6 +134,10 @@ private fun Fretboard(shape: Voicings.Shape?, strings: Int, color: Color, accent
                 f == 0 -> drawCircle(color, dot * 0.7f, Offset(x, top - row * 0.45f), style = Stroke(thin))
                 else -> drawCircle(color, dot, Offset(x, top + (f - base + 0.5f) * row))
             }
+        }
+        // the capo: a bar across every string, in its own fret
+        if (view.fromCapo) {
+            drawRoundRect(color, Offset(left - dot, top + row / 2 - dot * 0.8f), Size(right - left + 2 * dot, dot * 1.6f), CornerRadius(dot))
         }
         // barre only when the shape needs it (more than 4 fretted notes): the bar on the lowest fret
         val pressed = shape.frets.withIndex().filter { it.value > 0 }

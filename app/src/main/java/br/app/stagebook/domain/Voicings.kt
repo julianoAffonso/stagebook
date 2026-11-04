@@ -14,9 +14,9 @@ object Voicings {
     }
 
     /**
-     * How a shape sits on the neck with a [capo]. Under the capo the diagram starts at it, like a nut in another place
-     * ([base] 1, [fromCapo]); a shape too high for that keeps its own start. [label]: the fret number beside the grid,
-     * the capo's or the first row's real fret.
+     * How a shape sits on the neck with a [capo]. The capo gets a fret of its own on top of the grid and the shape comes
+     * right below it ([fromCapo]; [base] 0, so a shape's fret is its row); a shape too high for that keeps its own start.
+     * [label]: the real fret of the first row, the capo's when it is there.
      */
     data class NeckView(val base: Int, val fromCapo: Boolean, val label: Int?)
 
@@ -24,7 +24,7 @@ object Voicings {
         val base = shape.baseFret
         val fromCapo = capo > 0 && (base == 1 || shape.frets.max() <= rows)
         return when {
-            fromCapo -> NeckView(1, true, capo)
+            fromCapo -> NeckView(0, true, capo)
             base > 1 -> NeckView(base, false, base + capo)
             else -> NeckView(base, false, null)
         }
