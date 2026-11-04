@@ -19,7 +19,7 @@ import javax.inject.Singleton
 
 /** What the new version notice shows. */
 sealed interface UpdateOffer {
-    data class Available(val versionName: String) : UpdateOffer
+    data class Available(val versionName: String, val notes: List<VersionNotes> = emptyList()) : UpdateOffer
     data class Downloading(val percent: Int) : UpdateOffer
     data class Ready(val apk: File) : UpdateOffer   // downloaded: Android's "Install" is still needed
     data object Failed : UpdateOffer
@@ -55,7 +55,7 @@ class AppUpdateOffer @Inject constructor(
             if (order.declinedToday(p.versionCode)) return@launch
             stage.onStage.first { !it }   // on stage: wait until leaving
             code = p.versionCode
-            _offer.value = UpdateOffer.Available(p.versionName)
+            _offer.value = UpdateOffer.Available(p.versionName, p.notesSince(updater.installedCode))
         }
         return job
     }

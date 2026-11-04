@@ -13,6 +13,23 @@ object Voicings {
         val baseFret: Int get() = frets.filter { it > 0 }.let { f -> if (f.isEmpty() || f.max() <= 4) 1 else f.min() }
     }
 
+    /**
+     * How a shape sits on the neck with a [capo]. The capo gets a fret of its own on top of the grid and the shape comes
+     * right below it ([fromCapo]; [base] 0, so a shape's fret is its row); a shape too high for that keeps its own start.
+     * [label]: the real fret of the first row, the capo's when it is there.
+     */
+    data class NeckView(val base: Int, val fromCapo: Boolean, val label: Int?)
+
+    fun neckView(shape: Shape, capo: Int, rows: Int): NeckView {
+        val base = shape.baseFret
+        val fromCapo = capo > 0 && (base == 1 || shape.frets.max() <= rows)
+        return when {
+            fromCapo -> NeckView(0, true, capo)
+            base > 1 -> NeckView(base, false, base + capo)
+            else -> NeckView(base, false, null)
+        }
+    }
+
     // tunings in MIDI notes, from the lowest string (on the neck) to the highest
     private val tunings = mapOf(
         Instrument.ACOUSTIC_GUITAR to intArrayOf(40, 45, 50, 55, 59, 64),     // E A D G B E

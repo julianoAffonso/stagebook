@@ -491,7 +491,9 @@
     </plurals>
     <string name="settings_import_failed">Esse arquivo não é uma biblioteca do Stagebook.</string>
     <string name="update_offer_title">Nova versão do Stagebook</string>
-    <string name="update_offer_message">Saiu a versão %1$s. Atualizar agora? Suas músicas, setlists e ajustes continuam.\n\nA banda toda deve estar na mesma versão. Senão, envios, sincronia e a virada de página entre os aparelhos podem falhar.</string>
+    <string name="update_offer_band">Suas músicas, setlists e ajustes continuam. A banda toda deve estar na mesma versão. Senão, envios, sincronia e a virada de página entre os aparelhos podem falhar.</string>
+    <string name="update_version">Versão %1$s</string>
+    <string name="update_notes_title">O que mudou</string>
     <string name="update_offer_update">Atualizar</string>
     <string name="update_offer_later">Agora não</string>
     <string name="update_offer_retry">Tentar de novo</string>

@@ -390,6 +390,20 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_detalhes.png")
     }
 
+    // with a capo the diagram shows it: the bar, its fret, and the shape played from there
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun chordCapo() {
+        val capoSong = "{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste"
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", capoSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                br.app.stagebook.ui.stage.ChordShapePopup("Em7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, capoSong, {}, {})
+            }
+        }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_capo.png")
+    }
+
     // on a phone, with a capo: the field shows what sounds (F#m7 in F#m) and long chords wrap to a second row
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test @Config(qualifiers = PHONE)
@@ -490,13 +504,39 @@ class ScreenshotTest {
     @Test fun chordPopupCavaquinho() = chordPopup("tablet_6_acorde_cavaquinho", "D", br.app.stagebook.data.model.Instrument.CAVAQUINHO)
     @Test fun chordPopupElectricGuitar() = chordPopup("tablet_6_acorde_guitarra", "A", br.app.stagebook.data.model.Instrument.ELECTRIC_GUITAR)
 
+    private val notes = listOf(
+        br.app.stagebook.data.VersionNotes(
+            733, "0.1.733",
+            en = listOf("The capo shows on the chord diagram, in a fret of its own.", "Saving a song opens it on stage."),
+            pt = listOf("O capo aparece no desenho do acorde, numa casa própria.", "Salvar uma música agora abre ela no palco."),
+        ),
+    )
+    private val skippedNotes = notes + br.app.stagebook.data.VersionNotes(
+        729, "0.1.729",
+        en = listOf("Deleting the song open on stage goes back to the previous screen."),
+        pt = listOf("Excluir a música aberta no palco volta para a tela anterior."),
+    )
+
+    // what's new, on a phone: one version, and someone who skipped versions
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun updateOfferPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.733 (abc1234)", skippedNotes), {}, {}, {}, {})
+            }
+        }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_8_versao_nova.png")
+    }
+
     /** New app version offered on open (another window). */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun updateOfferTablet() {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
-                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.3.101 (abc1234)"), {}, {}, {}, {})
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.733 (abc1234)", notes), {}, {}, {}, {})
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_versao_nova.png")
@@ -555,7 +595,7 @@ class ScreenshotTest {
     @Test fun settingsUpdateTablet() = shoot("tablet_5_ajustes_atualizar") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
             SettingsScreen(
-                settings.copy(update = br.app.stagebook.ui.settings.UpdateState.Available("0.3.52 (9f1c2ab)")),
+                settings.copy(update = br.app.stagebook.ui.settings.UpdateState.Available("0.1.733 (abc1234)", notes)),
                 SettingsActions(),
                 it,
                 section = br.app.stagebook.ui.settings.SettingsSection.ABOUT,

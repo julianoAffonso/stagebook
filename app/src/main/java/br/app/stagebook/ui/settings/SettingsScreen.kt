@@ -1542,6 +1542,7 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
             val error = up == UpdateState.Offline || up == UpdateState.DownloadFailed
             Text(it, style = MaterialTheme.typography.bodyLarge, color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
         }
+        if (up is UpdateState.Available) br.app.stagebook.ui.components.ReleaseNotes(up.notes)
         if (up is UpdateState.Downloading) {
             LinearProgressIndicator(progress = { up.percent / 100f }, modifier = Modifier.fillMaxWidth())
         }

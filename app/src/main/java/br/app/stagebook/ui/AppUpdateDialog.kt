@@ -3,6 +3,8 @@ package br.app.stagebook.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +19,7 @@ import br.app.stagebook.data.UpdateOffer
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.PreviewSurface
+import br.app.stagebook.ui.components.ReleaseNotes
 import br.app.stagebook.ui.theme.Spacing
 
 /** New app version: asks, shows the download and opens the Android installer. */
@@ -36,9 +39,19 @@ fun AppUpdateDialog(
         title = { Text(stringResource(R.string.update_offer_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                Text(
+                if (offer is UpdateOffer.Available) {
+                    // several versions: each one's number heads its list, and the first is this one
+                    if (offer.notes.size < 2) Text(stringResource(R.string.update_version, offer.versionName.substringBefore(' ')), style = MaterialTheme.typography.bodyLarge)
+                    // the list gives way on a short screen: the warning and the buttons stay
+                    ReleaseNotes(offer.notes, Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))
+                    Text(
+                        stringResource(R.string.update_offer_band),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else Text(
                     when (offer) {
-                        is UpdateOffer.Available -> stringResource(R.string.update_offer_message, offer.versionName)
+                        is UpdateOffer.Available -> ""
                         is UpdateOffer.Downloading -> stringResource(R.string.settings_update_downloading, offer.percent)
                         is UpdateOffer.Ready -> stringResource(R.string.update_offer_ready)
                         UpdateOffer.Failed -> stringResource(R.string.settings_update_failed)

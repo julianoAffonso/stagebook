@@ -1001,6 +1001,7 @@ fun StageScreen(
                                 ChordStrip(
                                     shownText,
                                     look.instrument,
+                                    fg,
                                     Color(look.chordColor),
                                     // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
                                     Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },

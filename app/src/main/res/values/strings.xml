@@ -481,7 +481,9 @@
     </plurals>
     <string name="settings_import_failed">This file isn\'t a Stagebook library.</string>
     <string name="update_offer_title">New Stagebook version</string>
-    <string name="update_offer_message">Version %1$s is out. Update now? Songs, setlists and settings stay.\n\nThe whole band should be on the same version. Otherwise sending, sync and page turns between devices may not work.</string>
+    <string name="update_offer_band">Songs, setlists and settings stay. The whole band should be on the same version. Otherwise sending, sync and page turns between devices may not work.</string>
+    <string name="update_version">Version %1$s</string>
+    <string name="update_notes_title">What\'s new</string>
     <string name="update_offer_update">Update</string>
     <string name="update_offer_later">Not now</string>
     <string name="update_offer_retry">Try again</string>

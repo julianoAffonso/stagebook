@@ -52,6 +52,7 @@ data class SongEditorUiState(
 /** How the editor exits: close, or (when batch importing into a setlist) open the next song or the finished setlist. */
 sealed interface EditorExit {
     data object Close : EditorExit
+    data class Saved(val songId: String) : EditorExit
     data object NextImport : EditorExit
     data class SetlistReady(val setId: String) : EditorExit
 }
@@ -218,7 +219,7 @@ class SongEditorViewModel @Inject constructor(
             importQueue.saved(id)
             done.trySend(if (importQueue.state.value != null) EditorExit.NextImport else EditorExit.SetlistReady(queue.setId))
         } else {
-            done.trySend(EditorExit.Close)
+            done.trySend(EditorExit.Saved(id))
         }
     }
 
