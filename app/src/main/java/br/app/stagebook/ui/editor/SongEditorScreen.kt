@@ -98,11 +98,13 @@ fun SongEditorRoute(
     viewModel: SongEditorViewModel = hiltViewModel(),
     onNextImport: () -> Unit = onDone,
     onSetlistReady: (String) -> Unit = { onDone() },
+    onSaved: (String) -> Unit = { onDone() },
 ) {
     LaunchedEffect(viewModel) {
         viewModel.onDone.collect { e ->
             when (e) {
                 EditorExit.Close -> onDone()
+                is EditorExit.Saved -> onSaved(e.songId)
                 EditorExit.NextImport -> onNextImport()
                 is EditorExit.SetlistReady -> onSetlistReady(e.setId)
             }

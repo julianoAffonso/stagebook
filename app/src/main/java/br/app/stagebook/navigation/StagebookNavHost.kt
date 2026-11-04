@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -41,6 +42,15 @@ import br.app.stagebook.data.UpdateOffer
 // below came back with the screen allowed to dim).
 private inline fun NavBackStackEntry.ifResumed(go: () -> Unit) {
     if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) go()
+}
+
+/**
+ * Saved: the song on stage, in place of the editor, so back goes to where the editor was opened from. Opened from the
+ * stage it just returns to it: that stage already knows its origin, a setlist or a single song.
+ */
+internal fun NavController.showSaved(songId: String) {
+    if (previousBackStackEntry?.destination?.hasRoute<Stage>() == true) popBackStack()
+    else navigate(Stage(songId = songId)) { popUpTo<SongEditor> { inclusive = true } }
 }
 
 // screens the leader's song can take the follower away from: nothing is being typed or chosen there
@@ -129,9 +139,10 @@ fun StagebookNavHost(
                 onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
             )
         }
-        composable<SongEditor> {
+        composable<SongEditor> { entry ->
             SongEditorRoute(
                 onDone = dropUnlessResumed { nav.popBackStack() },
+                onSaved = { id -> entry.ifResumed { nav.showSaved(id) } },
                 // import queue: saves, opens the next song in the importer; when done, opens the setlist
                 onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
                 onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },

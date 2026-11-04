@@ -167,6 +167,7 @@ class EditorFlowTest {
             val saved = repo.library.value.songs.single { it.title == "Música nova com faixa" }
             assertEquals(vm.track, saved.track)
             assertTrue(tracks.file(saved.track).exists())
+            assertEquals(br.app.stagebook.ui.editor.EditorExit.Saved(saved.id), vm.onDone.first())
         } finally {
             Dispatchers.resetMain()
         }
