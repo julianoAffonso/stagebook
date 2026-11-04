@@ -3,6 +3,8 @@
 
     Release-Note: English sentence · Frase em português
 
+A change to the app that people won't notice says so with "Release-Note: none", which never reaches the file.
+
   check RANGE   for pull requests: fails if the range changes the app and has no note, or if a note is malformed
   build RANGE --code N --name X --previous FILE --out FILE
                 for the Release workflow: writes stagebook-version.json with this version's notes on top of the last
@@ -17,18 +19,26 @@ import sys
 MAX_VERSIONS = 10   # the file the app reads on every launch stays small
 MAX_LENGTH = 120    # a sentence in a window on a phone
 LINE = re.compile(r"^Release-Note:[ \t]*(.*)$", re.MULTILINE)
-HOW = "Add to a commit: Release-Note: English sentence · Frase em português"
+HOW = "Add to a commit: Release-Note: English sentence · Frase em português (or Release-Note: none, if nobody will notice)"
+INTERNAL = "none"
+# Say what people will notice; a change they won't notice is INTERNAL, not one of these.
+GENERIC = {"bug fixes", "fixes", "improvements", "internal fixes", "internal improvements", "ajustes", "ajustes internos",
+           "correções", "correções de bugs", "correções internas", "melhorias", "melhorias internas"}
 
 
 def parse(message):
     """The (en, pt) notes of a commit message. Raises ValueError on a malformed one."""
     notes = []
     for line in LINE.findall(message):
+        if line.strip() == INTERNAL:
+            continue
         parts = [p.strip() for p in line.split(" · ")]
         if len(parts) != 2 or not all(parts):
             raise ValueError(f"needs English · Portuguese: {line!r}")
         if max(map(len, parts)) > MAX_LENGTH:
             raise ValueError(f"longer than {MAX_LENGTH} characters: {line!r}")
+        if any(part.rstrip(".!").casefold() in GENERIC for part in parts):
+            raise ValueError(f"too generic, say what people will notice or use {INTERNAL}: {line!r}")
         notes.append(tuple(parts))
     return notes
 
@@ -37,10 +47,17 @@ def git(*args):
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
 
 
+def messages_of(commits):
+    return git("log", "--no-merges", "--reverse", "--format=%B%x00", commits).split("\0")
+
+
 def notes_in(commits):
     """Notes of the range, oldest first, each sentence once."""
-    messages = git("log", "--no-merges", "--reverse", "--format=%B%x00", commits).split("\0")
-    return list(dict.fromkeys(note for message in messages for note in parse(message)))
+    return list(dict.fromkeys(note for message in messages_of(commits) for note in parse(message)))
+
+
+def marked_internal(commits):
+    return any(line.strip() == INTERNAL for message in messages_of(commits) for line in LINE.findall(message))
 
 
 def app_changed(commits):
@@ -61,7 +78,7 @@ def with_history(code, name, notes, previous):
 
 def check(args):
     notes = notes_in(args.commits)
-    if not notes and app_changed(args.commits):
+    if not notes and app_changed(args.commits) and not marked_internal(args.commits):
         sys.exit(f"The app changed and no commit says what's new. {HOW}")
     print(f"{len(notes)} release notes")
 
