@@ -118,6 +118,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
 import br.app.stagebook.data.model.Look
@@ -224,7 +225,8 @@ fun StageRoute(
     LaunchedEffect(playerUi.message) {
         if (playerUi.message.isNotEmpty()) message.show(playerUi.message, long = true)
     }
-    if (!uiState.loading && uiState.songs.isNotEmpty()) {
+    val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
+    if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
         StageScreen(
             uiState = uiState,
             index = index.coerceIn(0, uiState.songs.lastIndex),
@@ -254,11 +256,28 @@ fun StageRoute(
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
             // a deleted (or empty) setlist doesn't open a black stage with no explanation
-            if (!uiState.loading) {
+            if (!uiState.loading && !emptied) {
                 EmptyState(AppIcons.QueueMusic, stringResource(R.string.stage_empty_title), stringResource(R.string.stage_empty_message))
             }
         }
     }
+}
+
+/**
+ * The stage had a song and lost the last one (deleted in the editor or from the computer): leaves for the screen it
+ * was opened from and returns true, so nothing is drawn meanwhile. Checked on resume because coming back from the
+ * editor the way back is refused until then. A stage that opened with nothing stays, to explain why.
+ */
+@Composable
+internal fun leaveWhenEmptied(loading: Boolean, showing: Boolean, onLeave: () -> Unit): Boolean {
+    var hadSong by rememberSaveable { mutableStateOf(false) }
+    val emptied = hadSong && !loading && !showing
+    LifecycleResumeEffect(loading, showing) {
+        if (!loading && showing) hadSong = true
+        if (emptied) onLeave()
+        onPauseOrDispose {}
+    }
+    return emptied
 }
 
 /**
