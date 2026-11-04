@@ -221,11 +221,11 @@ private fun CapoNote(text: String) {
     }
 }
 
-/** The 7 degrees of a field (degree on top, chord below); the one at position [lit] is lit. Long chords go to a second row. */
+/** The 7 degrees of a field (degree on top, chord below); the one at position [lit] is lit. Long chords go to a second row, centered so a lone one doesn't look lost. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun FieldRow(degrees: List<HarmonicField.Degree>, lit: Int?) {
-    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         degrees.forEachIndexed { i, d ->
             val on = i == lit
             Surface(

@@ -119,6 +119,15 @@ class ChordPlayTest {
         compose.onNodeWithText("Os Detalhes mostram o que soa", substring = true).assertExists()
     }
 
+    @Config(qualifiers = "pt-rBR-w412dp-h915dp-port")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)   // real text widths: the row has to wrap
+    @Test fun `a chord left alone on the field's second row sits in the middle`() {
+        compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
+        compose.onNodeWithText("Detalhes").performClick()
+        val alone = compose.onAllNodesWithText("E7")[0].getBoundsInRoot()
+        assertEquals(206f, ((alone.left + alone.right) / 2).value, 2f)
+    }
+
     private fun detailsWidth(): androidx.compose.ui.unit.Dp {
         compose.setContent { StagebookTheme { ChordShapePopup("Em7", Instrument.ACOUSTIC_GUITAR, "{key: Em}\n{capo: 2}\n[Em7]um [G]dois", {}, {}) } }
         compose.onNodeWithText("Detalhes").performScrollTo().performClick()
