@@ -53,7 +53,7 @@ else if(h.indexOf('genius.com')>=0){ if(!x)x=Array.prototype.map.call(document.q
 else if(h.indexOf('cifraclub')>=0){ var p=q('pre'); if(p){var c=p.cloneNode(true);
   ch=c.textContent;
   var l=c.cloneNode(true); Array.prototype.forEach.call(l.querySelectorAll('b'),function(e){e.remove();}); if(!x)x=l.textContent;}
-  ti=t(q('h1')); ar=t(q('h2')); ky=t(q('#cifra_tom')); cp=t(q('#cifra_capo'));}
+  ti=t(q('h1')); ar=t(q('h2')); ky=t(q('[data-anchor="--chord-tone"]')||q('#cifra_tom')); cp=t(q('[data-anchor="--chord-capo"]')||q('#cifra_capo'));}
 else if(h.indexOf('azlyrics')>=0){ if(!x){var d=document.querySelectorAll('.ringtone ~ div'); if(d.length)x=t(d[0]);}
   ti=t(q('h1')); ar=t(q('.lyricsh h2'));}
 if(!x){var best='',bn=0; Array.prototype.forEach.call(document.querySelectorAll('div,pre,p,section,article'),function(e){
@@ -66,8 +66,8 @@ var ld={};Array.prototype.forEach.call(document.querySelectorAll('script[type="a
    if(n.datePublished&&!ld.date)ld.date=String(n.datePublished);}});});}catch(e){}});
 var og=(q('meta[property="og:title"]')||{}).content||'';
 // key and capo written on the page (Cifra Club and the like), if the site didn't give them above
-var bt=(document.body&&document.body.innerText)||''; var km=bt.match(/Tom:\s*([A-G][#b]?m?)/); if(!ky&&km)ky=km[1];
-var cm=bt.match(/Capotraste na \d+/i); if(!cp&&cm)cp=cm[0];
+var bt=(document.body&&document.body.innerText)||''; var km=bt.match(/(?:Tom|Key):\s*([A-G][#b]?m?(?: \((?:com forma de|in the shape of) [A-G][#b]?m?\))?)/); if(!ky&&km)ky=km[1];
+var cm=bt.match(/Capotraste(?: na|:)\s*\d+/i); if(!cp&&cm)cp=cm[0];
 // BPM written on the page (any site): "120 BPM", "BPM: 120", "Tempo: 120"
 var bm=bt.match(/(\d{2,3})\s*bpm\b/i)||bt.match(/\b(?:bpm|tempo)\s*[:=]?\s*(\d{2,3})\b/i); var bp=bm?bm[1]:'';
 return JSON.stringify({title:ti,artist:ar,text:x,chordText:ch,key:ky,capo:cp,bpm:bp,site:h,ldName:ld.name||'',ldArtist:ld.artist||'',ldDate:ld.date||'',

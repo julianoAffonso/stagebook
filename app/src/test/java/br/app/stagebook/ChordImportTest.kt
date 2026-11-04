@@ -45,6 +45,34 @@ class ChordImportTest {
         assertEquals(2, Chords.capo(cp))
     }
 
+    @Test fun `Cifra Club's current page gives the shapes' key and the capo`() {
+        // the chart is written in the shapes (Em); F#m is what it sounds like with the capo, which the app works out
+        val cp = ChordImport.toChordPro(page, key = "F#m (com forma de Em)", capo = "2ª casa")
+        assertEquals("Em", Chords.key(cp))
+        assertEquals(2, Chords.capo(cp))
+    }
+
+    @Test fun `Cifra Club's English page gives the shapes' key and the capo`() {
+        val cp = ChordImport.toChordPro(page, key = "F#m (in the shape of Em)", capo = "2nd fret")
+        assertEquals("Em", Chords.key(cp))
+        assertEquals(2, Chords.capo(cp))
+    }
+
+    @Test fun `the page's key and capo lines don't stay in the lyrics`() {
+        val cp = ChordImport.toChordPro("Tom: F#m (com forma de Em)\nCapotraste: 2ª casa\n" + page.substringAfter('\n'))
+        assertEquals("Em", Chords.key(cp))
+        assertEquals(2, Chords.capo(cp))
+        assertFalse(cp, cp.contains("forma de"))
+        assertFalse(cp, cp.contains("Capotraste"))
+    }
+
+    @Test fun `a bare fret is a capo, a number starting the lyrics isn't`() {
+        assertEquals(2, ChordImport.capoOf("2ª casa"))
+        assertEquals(3, ChordImport.capoOf("3"))
+        assertEquals(2, ChordImport.capoOf("Capotraste: 2ª casa"))
+        assertEquals(0, ChordImport.capoOf("2 corações\nsem você"))
+    }
+
     @Test fun `key and capo in the 4 languages`() {
         assertEquals("A", ChordImport.keyOf("Key: A"))
         assertEquals("Bb", ChordImport.keyOf("Tono: Bb"))
