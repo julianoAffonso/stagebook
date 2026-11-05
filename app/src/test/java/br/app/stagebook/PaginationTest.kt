@@ -24,7 +24,7 @@ class PaginationTest {
 
     @Test
     fun `verse longer than the page is cut by line`() {
-        assertEquals(listOf(0..1, 3..7, 8..9), Pagination.paginate(lines(2, 7), 50))
+        assertEquals(listOf(0..4, 5..9), Pagination.paginate(lines(2, 7), 50))
     }
 
     @Test
@@ -65,5 +65,22 @@ class PaginationTest {
         val title = Pagination.Line(100, false, title = true)
         val text = Pagination.Line(100, false)
         assertEquals(listOf(0..3), Pagination.paginate(listOf(title, text, title, text), 400))
+    }
+
+    // À Francesa on the S26 on its side (05/11): the column is low, the verse gets cut anyway and the intro was left alone
+    @Test fun `a verse that gets cut anyway starts right after the short one before it`() {
+        val title = Pagination.Line(100, false, title = true)
+        val text = Pagination.Line(100, false)
+        val blank = Pagination.Line(100, true)
+        val lines = listOf(title, text, blank, title) + List(8) { text }
+        assertEquals(listOf(0..5, 6..11), Pagination.paginate(lines, 600))
+    }
+
+    @Test fun `a verse doesn't start on the last line of a page`() {
+        val text = Pagination.Line(100, false)
+        val title = Pagination.Line(100, false, title = true)
+        val blank = Pagination.Line(100, true)
+        val lines = List(4) { text } + blank + title + List(8) { text }
+        assertEquals("só o título caberia", 5, Pagination.paginate(lines, 600)[1].first)
     }
 }

@@ -2,10 +2,11 @@ package br.app.stagebook.domain
 
 /**
  * Splits the lyrics into stage pages (the pedal turns the whole page, no scrolling). Breaks between verses and before a
- * section title, which goes with its verse. Only a verse longer than the page is cut, by line.
+ * section title, which goes with its verse. Only a verse longer than the page is cut, by line, right after what came before.
  */
 object Pagination {
     private const val THIN_PAGE = 3   // a page under a third full counts as thin
+    private const val OPENING_LINES = 2   // a title alone at the end of a page says nothing
 
     /** A lyrics line already measured at the screen width (the height counts automatic wrapping). */
     data class Line(val height: Int, val blank: Boolean, val title: Boolean = false)
@@ -41,8 +42,10 @@ object Pagination {
                     start = block.first; end = block.last; used = h
                 }
                 else -> {
-                    // verse longer than the page: cut by line
-                    flush()
+                    // verse longer than the page: cut by line. It gets cut anyway, so it goes on from here when its
+                    // opening fits; a new page left the short verse before it alone (an intro, in a low column)
+                    val opening = block.take(OPENING_LINES).sumOf { lines[it].height }
+                    if (start >= 0 && used + gap + opening <= pageHeight) used += gap else flush()
                     for (i in block) {
                         val lh = lines[i].height
                         if (start >= 0 && used + lh > pageHeight) flush()
