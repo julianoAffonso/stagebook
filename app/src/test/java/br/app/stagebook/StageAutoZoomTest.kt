@@ -59,6 +59,24 @@ class StageAutoZoomTest {
         assertEquals(0, pages())
     }
 
+    // the chord list sits on one page only, and on a phone on its side it can be taller than the room for the lyrics
+    @Test @Config(qualifiers = "pt-rBR-w891dp-h411dp-land-xxhdpi")
+    fun `the chord list doesn't take the room of every page`() {
+        val chords = listOf("Am", "Dm7", "G7", "C", "F", "E7", "Bm", "D", "A", "Em", "B7", "Gm", "Cm", "Fm", "Eb")
+        val song = (0..14).joinToString("\n\n") { v -> (0..3).joinToString("\n") { "[${chords[(v + it) % chords.size]}]Linha da letra $v" } }
+        val look = Look(fontSp = 30f, chords = true, chordList = br.app.stagebook.data.model.ChordListPlace.TOP, columns = StageColumns.ONE)
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = look)
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }) } }
+        compose.waitForIdle()
+        compose.onRoot().performTouchInput {
+            pinch(center - Offset(100f, 0f), center - Offset(101f, 0f), center + Offset(100f, 0f), center + Offset(101f, 0f), durationMillis = 200)
+        }
+        compose.waitForIdle()
+        val text = compose.onNodeWithText("Zoom em", substring = true).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].first().text
+        val percent = text.filter(Char::isDigit).toInt()
+        assertTrue("foi ao máximo: $text", percent < 140)
+    }
+
     @Test fun `opening a song saves nothing`() {
         show()
         compose.mainClock.advanceTimeBy(5_000)

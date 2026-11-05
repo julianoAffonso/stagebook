@@ -845,19 +845,25 @@ fun StageScreen(
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
             val autoFit = remember(autoWanted, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
                 if (!autoWanted || lines.isEmpty()) null else {
-                    fun sheets(z: Float, w: Int, cols: Int, room: Int): StageFit.Sheets {
+                    fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
                         // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
                         val zoomed = styleFor(z)
                         val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w)
-                        val measured = lineHeights(measurer, shown.map { it.text }, zoomed, w)
-                        val pages = Pagination.paginate(measured, room)
-                        return StageFit.Sheets(pages.chunked(cols).size, Pagination.cutsVerse(measured, room), Pagination.thinFirstPage(measured, pages, room))
+                        val text = lineHeights(measurer, shown.map { it.text }, zoomed, w)
+                        // the chord list is a line of the song, on one page only
+                        val strip = Pagination.Line(stripSize(w).second.toInt(), false)
+                        val measured = when (stripPlace) {
+                            ChordListPlace.TOP -> listOf(strip) + text
+                            ChordListPlace.BOTTOM -> text + strip
+                            ChordListPlace.NONE -> text
+                        }
+                        val pages = Pagination.paginate(measured, height)
+                        return StageFit.Sheets(pages.chunked(cols).size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, pages, height))
                     }
                     val min = StageFit.autoMinZoom(look.fontSp)
-                    fun room(w: Int) = if (stripPlace == ChordListPlace.NONE) height else height - stripSize(w).second.toInt()
                     val cols = when {
                         look.columns != StageColumns.AUTO -> StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
-                        sheets(minOf(min, fitOne), width, 1, room(width)).count <= 1 -> 1
+                        sheets(minOf(min, fitOne), width, 1).count <= 1 -> 1
                         else -> StageFit.columns(
                             StageColumns.AUTO,
                             fitsOnePageInOneColumn = false,
@@ -869,7 +875,7 @@ fun StageScreen(
                     val w = if (cols == 2) halfWidth else width
                     val limit = if (cols == 2) fitTwo else fitOne
                     val top = minOf(StageFit.AUTO_MAX_ZOOM, Look.MAX_STAGE_FONT / look.fontSp, limit)
-                    StageFit.autoZoom(minOf(min, limit), top) { sheets(it, w, cols, room(w)) } to cols
+                    StageFit.autoZoom(minOf(min, limit), top) { sheets(it, w, cols) } to cols
                 }
             }
             SideEffect { autoZoomNow = autoFit?.first ?: 1f }
