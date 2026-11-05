@@ -965,8 +965,6 @@
     <string name="help_url">https://julianoaffonso.github.io/stagebook/help/</string>
     <string name="settings_translate_guide">translation guide</string>
     <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md</string>
-    <string name="auto_blocker_title">Auto Blocker</string>
     <string name="auto_blocker_open">Open Auto Blocker</string>
     <string name="auto_blocker_hint">If the install is blocked, turn off Samsung\'s Auto Blocker and come back.</string>
-    <string name="auto_blocker_info">Samsung\'s Auto Blocker stops apps from outside the stores, Stagebook updates included. Turn it off before updating. It comes back on by itself.</string>
 </resources>

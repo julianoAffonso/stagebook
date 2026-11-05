@@ -81,7 +81,7 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
 }
 
 @Composable
-fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit, onAutoBlocker: () -> Unit = {}) {
+fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (!ui.canWrite) PermissionCard()
         SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
@@ -93,11 +93,6 @@ fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBa
                 if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, icon = AppIcons.Eco, tone = ButtonTone.Tonal)
             }
             Tweaks(ui, DeviceTweak.Group.PLAY, onTweak)
-        }
-        // works without the computer's permission: it only opens Samsung's screen
-        if (ui.autoBlocker) SettingsCard(stringResource(R.string.auto_blocker_title)) {
-            Text(stringResource(R.string.auto_blocker_info), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ActionButton(stringResource(R.string.auto_blocker_open), onClick = onAutoBlocker, icon = AppIcons.Public, tone = ButtonTone.Tonal)
         }
         SettingsCard(stringResource(R.string.advanced_battery)) { Tweaks(ui, DeviceTweak.Group.BATTERY, onTweak) }
         SettingsCard(stringResource(R.string.advanced_computer)) { Tweaks(ui, DeviceTweak.Group.COMPUTER, onTweak) }
@@ -158,7 +153,7 @@ private val DeviceTweak.detail: Int
     }
 
 /** A device with every tweak at its default (as a TCL with the permission looks on first open). */
-internal val sampleAdvanced = AdvancedUi(canWrite = true, on = DeviceTweak.entries.associateWith { it.default }, batteryFree = false, autoBlocker = true)
+internal val sampleAdvanced = AdvancedUi(canWrite = true, on = DeviceTweak.entries.associateWith { it.default }, batteryFree = false)
 
 @LightPreview
 @Composable
