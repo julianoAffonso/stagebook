@@ -2,15 +2,47 @@
 name: Check
 # Only on pull requests into main (day-to-day work is on the dev branch) or by hand (Actions → Check → Run workflow):
 # each run takes ~10 min of GitHub's Actions minutes. Not again after the merge: the PR already tested the same code.
-# Memory/docs, the MCP server (mcp-check.yml tests it) and the button-only workflows don't touch the app: no minutes spent
+# Memory/docs, the MCP server (mcp-check.yml tests it) and the button-only workflows don't touch the app: no build. The
+# job is skipped, not the workflow: a required check that never runs would hold the pull request forever (a skip passes)
 on:
   pull_request:
     branches: [main]
-    paths-ignore: [".claude/**", "**.md", "mcp/**", ".github/workflows/mcp-*.yml", ".github/workflows/release.yml"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true   # a new push replaces the run of the old one
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      app: ${{ steps.diff.outputs.app }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # by hand there's no range: build
+          app=true
+          if [ -n "$BASE" ]; then
+            git diff --name-only "$BASE...$HEAD" \
+              | grep -vE '^(\.claude/|docs/|mcp/|tools/help_|tools/screenshots|\.github/workflows/(help|mcp-|privacy|release))|\.md$' \
+              | grep -q . || app=false
+          fi
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+
   check:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -28,7 +60,7 @@ jobs:
       # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew assembleDebug testDebugUnitTest lintDebug
+      - run: ./gradlew --build-cache assembleDebug testDebugUnitTest lintDebug
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

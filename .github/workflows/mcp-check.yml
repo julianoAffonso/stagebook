@@ -7,8 +7,15 @@ on:
     paths: ["mcp/**", ".github/workflows/mcp-*.yml"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true   # a new push replaces the run of the old one
+
 jobs:
-  check:
+  mcp:   # not "check": that name is the app's required check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:

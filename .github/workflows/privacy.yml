@@ -4,6 +4,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: privacy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true   # a new push replaces the run of the old one
+
 jobs:
   privacy:
     runs-on: ubuntu-latest
