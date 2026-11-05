@@ -13,9 +13,6 @@ fun Context.installApk(canInstall: Boolean, installer: Intent?) {
     if (!canInstall) {
         startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.fromParts("package", packageName, null)))
     } else {
-        installer?.let {
-            br.app.stagebook.data.device.AutoBlocker.beforeInstall(this)
-            startActivity(it)
-        }
+        installer?.let(::startActivity)
     }
 }

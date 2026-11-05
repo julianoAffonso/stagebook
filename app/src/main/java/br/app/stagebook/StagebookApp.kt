@@ -24,7 +24,6 @@ class StagebookApp : Application() {
     override fun onCreate() {
         super.onCreate()
         // Settings → Advanced: what Android put back by itself is written again (only with the permission)
-        br.app.stagebook.data.device.AutoBlocker.afterInstall(this)
         backgroundScope(Dispatchers.IO).launch { DeviceTweaks.ensure(this@StagebookApp) }
         // backing tracks no song points to any more (deleted songs) leave the disk
         backgroundScope(Dispatchers.IO).launch {

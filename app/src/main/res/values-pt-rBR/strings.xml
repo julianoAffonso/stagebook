@@ -1006,6 +1006,4 @@
     <string name="auto_blocker_open">Abrir o Bloqueador automático</string>
     <string name="auto_blocker_hint">Se a instalação for bloqueada, desligue o Bloqueador automático da Samsung e volte.</string>
     <string name="auto_blocker_info">O Bloqueador automático da Samsung impede apps de fora das lojas, inclusive as atualizações do Stagebook. Desligue antes de atualizar. Ele volta a ligar sozinho.</string>
-    <string name="auto_blocker_bypass">Desligar só para atualizar o Stagebook</string>
-    <string name="auto_blocker_bypass_detail">Desliga enquanto a atualização instala e liga de novo logo depois. Fica valendo para as próximas.</string>
 </resources>
