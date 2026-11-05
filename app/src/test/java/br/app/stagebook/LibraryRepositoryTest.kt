@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -33,6 +34,10 @@ class LibraryRepositoryTest {
 
     private fun waitWrites() = Thread.sleep(400)
 
+    private fun waitSaved(name: String, text: String) = runBlocking {
+        withTimeout(10_000) { while (File(dir, name).takeIf { it.exists() }?.readText()?.contains(text) != true) delay(20) }
+    }
+
     @Test
     fun `failing write (disk) does not crash the app and the song stays in memory`() {
         val r = repo()
@@ -48,9 +53,10 @@ class LibraryRepositoryTest {
     fun `corrupted file - keeps the original and opens the previous version`() {
         val r = repo()
         r.saveSong(Song(title = "Primeira", text = "a"))
-        waitWrites()
+        waitSaved("stagebook.json", "Primeira")
         r.saveSong(Song(title = "Segunda", text = "b"))
-        waitWrites()
+        // a save still on its way would land on top of the damaged file: a fixed wait lost this race on a slow machine
+        waitSaved("stagebook.json", "Segunda")
         File(dir, "stagebook.json").writeText("{ isto não é json")   // powered off in the middle of something else
         val again = repo()
         assertTrue("abre a cópia anterior", again.findSong("Primeira", "") != null)
@@ -78,7 +84,7 @@ class LibraryRepositoryTest {
     fun `many changes in a row end up saved with the newest state`() {
         val r = repo()
         repeat(30) { r.saveSong(Song(title = "Música $it", text = "letra $it")) }
-        waitWrites()
+        waitSaved("stagebook.json", "Música 29")
         val disk = LibraryCodec.decode(File(dir, "stagebook.json").readText()) { "x" }
         assertEquals(r.library.value.songs.size, disk.songs.size)
         assertTrue(disk.songs.size >= 30)
