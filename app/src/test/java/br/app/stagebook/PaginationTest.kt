@@ -3,6 +3,7 @@ package br.app.stagebook
 import br.app.stagebook.domain.Pagination
 import br.app.stagebook.domain.Pagination.Line
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class PaginationTest {
@@ -48,5 +49,21 @@ class PaginationTest {
         val lines = listOf(L(30), L(30), blank, title, blank, L(25), L(25))
         val pages = Pagination.paginate(lines, 100)
         assertEquals(listOf(0..1, 3..6), pages)
+    }
+
+    // À Francesa on the S26 (05/11): verse and chorus with no blank line between them were one verse too tall for the
+    // page, so it was cut and the intro stayed alone
+    @Test fun `a section starts a new verse even without a blank line`() {
+        val title = Pagination.Line(100, false, title = true)
+        val text = Pagination.Line(100, false)
+        val lines = listOf(title, text, text, title, text, text)
+        assertEquals(listOf(0..2, 3..5), Pagination.paginate(lines, 400))
+        assertFalse(Pagination.cutsVerse(lines, 400))
+    }
+
+    @Test fun `sections without a blank line between them share the page`() {
+        val title = Pagination.Line(100, false, title = true)
+        val text = Pagination.Line(100, false)
+        assertEquals(listOf(0..3), Pagination.paginate(listOf(title, text, title, text), 400))
     }
 }

@@ -132,7 +132,7 @@
     <string name="stage_marker_done">Done</string>
     <string name="stage_zoom">Zoom at %1$d%%</string>
     <string name="stage_zoom_scope">Lyrics and chords only</string>
-    <string name="stage_zoom_reset">Default</string>
+    <string name="stage_zoom_reset">100%</string>
     <string name="set_remove">Remove</string>
     <string name="set_tap_to_play">%1$s · tap one to open the stage</string>
     <string name="stage_empty_title">Nothing to play</string>

@@ -88,7 +88,7 @@ class StageAutoZoomTest {
         show()
         pinch()
         val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.right
-        listOf("Automático", "Padrão").forEach {
+        listOf("Automático", "100%").forEach {
             val box = compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot
             assertTrue("$it passou da borda: $box", box.right <= width + 0.5f && box.left >= 0f)
             assertTrue("$it espremido: $box", box.width > box.height)
@@ -117,16 +117,16 @@ class StageAutoZoomTest {
         show(zoom = 1.3f)
         pinch()
         val before = compose.onNodeWithText("Automático").fetchSemanticsNode().boundsInRoot.left
-        compose.onNodeWithText("Padrão").performClick()
+        compose.onNodeWithText("100%").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Padrão").assertDoesNotExist()
+        compose.onNodeWithText("100%").assertDoesNotExist()
         assertEquals(before, compose.onNodeWithText("Automático").fetchSemanticsNode().boundsInRoot.left, 0.5f)
     }
 
     @Test fun `the pinch badge also chooses 100 percent`() {
         show()
         pinch()
-        compose.onNodeWithText("Padrão").performClick()
+        compose.onNodeWithText("100%").performClick()
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()

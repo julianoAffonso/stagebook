@@ -45,7 +45,7 @@ class StageFitTest {
             val line = Pagination.Line((100 * z).toInt(), false)
             if (i > 0 && i % verse == 0) listOf(Pagination.Line((100 * z).toInt(), true), line) else listOf(line)
         }
-        StageFit.Sheets(Pagination.paginate(measured, page).size, Pagination.cutsVerse(measured, page))
+        StageFit.Sheets(Pagination.paginate(measured, page).size, Pagination.cutsVerse(measured, page), false)
     }
 
     @Test
@@ -77,9 +77,24 @@ class StageFitTest {
     }
 
     @Test
-    fun `the smallest size follows the one in Settings and stays legible`() {
+    fun `a short first verse doesn't end up alone on the page`() {
+        val verses = listOf(1, 8, 8)   // lines per verse: an intro and two long ones
+        val at = { z: Float ->
+            val measured = verses.flatMapIndexed { v, n ->
+                val lines = List(n) { Pagination.Line((100 * z).toInt(), false) }
+                if (v > 0) listOf(Pagination.Line((100 * z).toInt(), true)) + lines else lines
+            }
+            val pages = Pagination.paginate(measured, 1000)
+            StageFit.Sheets(pages.size, Pagination.cutsVerse(measured, 1000), Pagination.thinFirstPage(measured, pages, 1000))
+        }
+        assertTrue("o mínimo aproveita a página", !at(0.6f).thinFirst)
+        assertTrue(!at(StageFit.autoZoom(0.6f, 1.5f, at)).thinFirst)
+    }
+
+    @Test
+    fun `the smallest size stays legible`() {
         assertEquals(22f / 30f, StageFit.autoMinZoom(30f), 0.001f)
-        assertEquals(0.6f, StageFit.autoMinZoom(49f), 0.001f)
+        assertEquals(22f / 49f, StageFit.autoMinZoom(49f), 0.001f)
         assertEquals(1f, StageFit.autoMinZoom(18f), 0.001f)
     }
 

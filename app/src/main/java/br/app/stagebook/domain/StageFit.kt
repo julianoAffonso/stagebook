@@ -18,7 +18,6 @@ object StageFit {
     /** Largest automatic zoom over the size in Settings. */
     const val AUTO_MAX_ZOOM = 1.5f
     private const val AUTO_MIN_FONT = 22f
-    private const val AUTO_MIN_SHARE = 0.6f
     private const val AUTO_STEPS = 5
 
     /**
@@ -45,10 +44,10 @@ object StageFit {
     }
 
     /** How a song lays out at some zoom. */
-    data class Sheets(val count: Int, val cutsVerse: Boolean)
+    data class Sheets(val count: Int, val cutsVerse: Boolean, val thinFirst: Boolean = false)
 
-    /** Smallest automatic zoom for lyrics at [fontSp]: legible, and never far from the size chosen in Settings. */
-    fun autoMinZoom(fontSp: Float): Float = minOf(1f, maxOf(AUTO_MIN_FONT, fontSp * AUTO_MIN_SHARE) / fontSp)
+    /** Smallest automatic zoom for lyrics at [fontSp]: the page comes first, down to a size still legible on stage. */
+    fun autoMinZoom(fontSp: Float): Float = minOf(1f, AUTO_MIN_FONT / fontSp)
 
     /**
      * Automatic zoom for a song nobody zoomed: the largest size with the fewest pages reachable, no verse cut. A song
@@ -58,7 +57,7 @@ object StageFit {
     fun autoZoom(min: Float, max: Float, at: (Float) -> Sheets): Float {
         if (max <= min) return max
         val floor = at(min)
-        fun fits(s: Sheets) = s.count <= floor.count && (floor.cutsVerse || !s.cutsVerse)
+        fun fits(s: Sheets) = s.count <= floor.count && (floor.cutsVerse || !s.cutsVerse) && (floor.thinFirst || !s.thinFirst)
         if (fits(at(max))) return max
         var low = min
         var high = max

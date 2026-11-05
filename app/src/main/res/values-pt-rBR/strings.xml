@@ -137,7 +137,7 @@
     <string name="stage_marker_done">Pronto</string>
     <string name="stage_zoom">Zoom em %1$d%%</string>
     <string name="stage_zoom_scope">Só a letra e as cifras</string>
-    <string name="stage_zoom_reset">Padrão</string>
+    <string name="stage_zoom_reset">100%</string>
     <string name="set_remove">Tirar</string>
     <string name="set_tap_to_play">%1$s · toque numa para abrir o palco</string>
     <string name="stage_empty_title">Nada para tocar</string>

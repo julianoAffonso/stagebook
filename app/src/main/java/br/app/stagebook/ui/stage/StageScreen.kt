@@ -843,11 +843,15 @@ fun StageScreen(
                 scale to tall + Spacing.m.toPx()
             }
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
-            val autoFit = remember(autoWanted, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
+            val autoFit = remember(autoWanted, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
                 if (!autoWanted || lines.isEmpty()) null else {
                     fun sheets(z: Float, w: Int, cols: Int, room: Int): StageFit.Sheets {
-                        val measured = measureLines(styleFor(z), w)
-                        return StageFit.Sheets(Pagination.sheets(measured, room, cols).size, Pagination.cutsVerse(measured, room))
+                        // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
+                        val zoomed = styleFor(z)
+                        val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w)
+                        val measured = lineHeights(measurer, shown.map { it.text }, zoomed, w)
+                        val pages = Pagination.paginate(measured, room)
+                        return StageFit.Sheets(pages.chunked(cols).size, Pagination.cutsVerse(measured, room), Pagination.thinFirstPage(measured, pages, room))
                     }
                     val min = StageFit.autoMinZoom(look.fontSp)
                     fun room(w: Int) = if (stripPlace == ChordListPlace.NONE) height else height - stripSize(w).second.toInt()
