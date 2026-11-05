@@ -66,6 +66,7 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="list_filtered">%1$d shown</string>
     <string name="sets_search">Search setlist</string>
     <string name="sets_search_hint">Setlist name</string>
     <string name="sets_not_found">No setlist found</string>

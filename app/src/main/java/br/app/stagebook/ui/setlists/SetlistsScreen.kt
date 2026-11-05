@@ -154,7 +154,9 @@ fun SetlistsScreen(
                 )
             } else ScreenHeader(
                 title = stringResource(R.string.sets_title),
-                subtitle = br.app.stagebook.ui.components.setCountText(uiState.total),
+                subtitle = br.app.stagebook.ui.components.filteredCountText(
+                    br.app.stagebook.ui.components.setCountText(uiState.total), uiState.sets.size, uiState.query.isNotBlank(),
+                ),
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
@@ -175,15 +177,14 @@ fun SetlistsScreen(
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
             // that was first, and the new one stayed hidden above it, device test B-09). The same when the first item
             // changes for any reason (a rename in A to Z), judged by where the list was before the change: the list
-            // already follows the old first item when the effect runs. Changing the order always starts at the top
-            // (it followed the old first item down the list; audit 03/11)
+            // already follows the old first item when the effect runs. Changing the order or the search always starts at
+            // the top (it followed the old first item down the list; audit 03/11)
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             val firstId = uiState.sets.firstOrNull()?.id
             val atTop by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 } }
             val topBefore = atTop   // read while composing the change, before the list is measured with the new items
             androidx.compose.runtime.LaunchedEffect(firstId) { if (topBefore) listState.scrollToItem(0) }
-            var shownAbc by rememberSaveable { mutableStateOf(uiState.abc) }
-            androidx.compose.runtime.LaunchedEffect(uiState.abc) { if (uiState.abc != shownAbc) { shownAbc = uiState.abc; listState.scrollToItem(0) } }
+            br.app.stagebook.ui.components.ScrollToTopOn("${uiState.abc}|${uiState.query}", listState)
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }

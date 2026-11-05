@@ -224,6 +224,7 @@ class WebEditorServer @Inject constructor(
             "search" to R.string.songs_search,
             "setsSearch" to R.string.sets_search,
             "setsNotFound" to R.string.sets_not_found,
+            "listFiltered" to R.string.list_filtered,
             "setsOrder" to R.string.sets_sort,
             "setsNewest" to R.string.sets_sort_newest,
             "setsAbc" to R.string.sets_sort_abc,

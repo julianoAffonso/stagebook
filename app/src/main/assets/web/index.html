@@ -90,6 +90,7 @@
         <button id="new" class="outline"></button>
         <input id="search" type="search">
         <select id="tag-filter" aria-label="Tags" hidden></select>
+        <p id="list-count" class="muted" hidden></p>
         <ul class="list" id="songs"></ul>
         <p id="list-empty" class="muted" hidden></p>
       </div>
@@ -130,6 +131,7 @@
         <button id="set-new" class="outline"></button>
         <input id="sets-search" type="search">
         <select id="sets-order"></select>
+        <p id="sets-count" class="muted" hidden></p>
         <ul class="list" id="sets"></ul>
         <p id="sets-empty" class="muted" hidden></p>
       </div>
@@ -351,6 +353,12 @@ function drawTagFilter() {
   f.hidden = tags.length === 0;
 }
 
+// how many the filter left, only while there's one
+function showCount(id, shown, filtering) {
+  $(id).hidden = !filtering;
+  $(id).textContent = fill(t.listFiltered, shown);
+}
+
 function drawList() {
   const q = plain($("search").value.trim());
   const tag = $("tag-filter").value.toLowerCase();
@@ -361,6 +369,7 @@ function drawList() {
     if (current && current.id === s.id) el.className = "on";
     return el;
   }));
+  showCount("list-count", shown.length, q || tag);
   $("list-empty").hidden = shown.length > 0;
   $("list-empty").textContent = songs.length ? t.notFound : t.noSongs;
 }
@@ -487,9 +496,9 @@ async function sendTrack(file) {
 
 // the list redraws a moment after typing stops, not on every letter
 let searchTimer = 0;
-$("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(drawList, 150); };
+$("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { drawList(); $("songs").scrollTop = 0; }, 150); };
 $("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "", key: "", capo: 0, tags: [] }); };
-$("tag-filter").onchange = drawList;
+$("tag-filter").onchange = () => { drawList(); $("songs").scrollTop = 0; };
 $("save").onclick = save;
 $("delete").onclick = removeSong;
 $("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
@@ -531,14 +540,16 @@ function drawSets() {
     if (currentSet && currentSet.id === s.id) el.className = "on";
     return el;
   }));
+  showCount("sets-count", shown.length, q);
   $("sets-empty").hidden = shown.length > 0;
   $("sets-empty").textContent = sets.length ? t.setsNotFound : t.noSets;
 }
-$("sets-search").oninput = drawSets;
+$("sets-search").oninput = () => { drawSets(); $("sets").scrollTop = 0; };
 // the same choice as the tablet's Setlists tab: it changes there too
 $("sets-order").onchange = async () => {
   await api("/api/sets-order", { method: "PUT", body: JSON.stringify({ abc: $("sets-order").value === "true" }) }).catch(() => null);
-  loadSets();
+  await loadSets();
+  $("sets").scrollTop = 0;
 };
 
 async function openSet(id) {
