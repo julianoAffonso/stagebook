@@ -33,3 +33,4 @@ Think of a bandmate explaining at rehearsal, not a manual.
 ## The editor on the computer
 The texts starting with `web_` are the web editor's page (Settings → Edit on the computer). They are in the same
 `strings.xml` and the page follows the app's language, so translating the file translates the editor too.
+
