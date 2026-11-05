@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
@@ -50,6 +52,7 @@ fun ScreenHeader(
     onBack: (() -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null,   // tapping the title (e.g. rename a setlist, user 01/11); its label for accessibility
     titleClickLabel: String? = null,
+    onClearFilter: (() -> Unit)? = null,   // a filter is on: an × after the subtitle turns it off
     iconActions: Boolean = true,   // the actions are icon buttons: their drawings go out to the margin
     actions: @Composable RowScope.() -> Unit = {},
 ) {
@@ -87,7 +90,20 @@ fun ScreenHeader(
         }
         if (subtitle.isNotEmpty()) {
             // aligned with the title (after the back button); on phones full width below, on tablets under the title
-            Subtitle(subtitle, Modifier.padding(start = if (onBack != null) BackButtonWidth + Spacing.s else 0.dp))
+            Row(Modifier.padding(start = if (onBack != null) BackButtonWidth + Spacing.s else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+                Subtitle(subtitle)
+                if (onClearFilter != null) ClearFilterButton(onClearFilter)
+            }
+        }
+    }
+}
+
+// as tall as the subtitle's line, so the list doesn't move when a filter turns on; the touch area goes past it
+@Composable
+private fun ClearFilterButton(onClick: () -> Unit) {
+    Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+        IconButton(onClick, Modifier.requiredSize(48.dp)) {
+            Icon(AppIcons.Close, stringResource(R.string.filters_clear), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

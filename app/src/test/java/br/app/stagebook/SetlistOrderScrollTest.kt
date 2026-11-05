@@ -6,7 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import br.app.stagebook.ui.setlists.SetlistRowUi
 import br.app.stagebook.ui.setlists.SetlistsScreen
@@ -16,6 +18,7 @@ import br.app.stagebook.ui.songs.SongRowUi
 import br.app.stagebook.ui.songs.SongsScreen
 import br.app.stagebook.ui.songs.SongsUiState
 import br.app.stagebook.ui.theme.StagebookTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,7 +45,7 @@ class SetlistOrderScrollTest {
     @Test fun `a search starts the setlists at the top and the header says how many are left`() {
         val sets = ('A'..'T').map { SetlistRowUi("$it", "Show $it", 3) }
         var state by mutableStateOf(SetlistsUiState(loading = false, sets = sets))
-        compose.setContent { StagebookTheme { SetlistsScreen(state, {}, {}, {}, {}) } }
+        compose.setContent { StagebookTheme { SetlistsScreen(state, {}, {}, {}, {}, query = state.query) } }
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(sets.lastIndex)
         compose.onNodeWithText("Show A").assertDoesNotExist()
         state = SetlistsUiState(loading = false, sets = sets.drop(1) + sets.first(), total = sets.size, query = "show")
@@ -67,5 +70,23 @@ class SetlistOrderScrollTest {
         val songs = listOf(SongRowUi("1", "Song", ""))
         compose.setContent { StagebookTheme { SongsScreen(SongsUiState(loading = false, songs = songs, total = 1), "", {}, {}, {}, {}) } }
         compose.onNodeWithText("no filtro", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun `the x beside the count clears the search and the tags`() {
+        var query = "rock"
+        var tags = setOf("Rock")
+        compose.setContent { StagebookTheme { SongsScreen(SongsUiState(loading = false, total = 3, chosenTags = tags, query = query), query, { query = it }, {}, {}, {}, onTagsChange = { tags = it }) } }
+        compose.onNodeWithContentDescription("Limpar filtros").performClick()
+        assertEquals("", query)
+        assertEquals(emptySet<String>(), tags)
+    }
+
+    @Test fun `the x clears the setlists search and shows only with one`() {
+        var query by mutableStateOf("show")
+        compose.setContent { StagebookTheme { SetlistsScreen(SetlistsUiState(loading = false, total = 3), {}, {}, {}, {}, query = query, onQueryChange = { query = it }) } }
+        compose.onNodeWithContentDescription("Limpar filtros").performClick()
+        compose.waitForIdle()
+        assertEquals("", query)
+        compose.onNodeWithContentDescription("Limpar filtros").assertDoesNotExist()
     }
 }

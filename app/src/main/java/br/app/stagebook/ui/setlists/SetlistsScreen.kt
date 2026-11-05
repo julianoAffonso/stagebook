@@ -155,8 +155,9 @@ fun SetlistsScreen(
             } else ScreenHeader(
                 title = stringResource(R.string.sets_title),
                 subtitle = br.app.stagebook.ui.components.filteredCountText(
-                    br.app.stagebook.ui.components.setCountText(uiState.total), uiState.sets.size, uiState.query.isNotBlank(),
+                    br.app.stagebook.ui.components.setCountText(uiState.total), uiState.sets.size, query.isNotBlank(),
                 ),
+                onClearFilter = if (query.isNotBlank()) { { onQueryChange("") } } else null,
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)

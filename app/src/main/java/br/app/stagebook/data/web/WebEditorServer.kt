@@ -225,6 +225,7 @@ class WebEditorServer @Inject constructor(
             "setsSearch" to R.string.sets_search,
             "setsNotFound" to R.string.sets_not_found,
             "listFiltered" to R.string.list_filtered,
+            "filtersClear" to R.string.filters_clear,
             "setsOrder" to R.string.sets_sort,
             "setsNewest" to R.string.sets_sort_newest,
             "setsAbc" to R.string.sets_sort_abc,

@@ -154,6 +154,7 @@ fun SongsScreen(
         if (r.count == 0) res.getString(R.string.songs_already_in_set, r.set)
         else res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
     val wide = wideLists()
+    val filtering = query.isNotBlank() || uiState.chosenTags.isNotEmpty()
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
@@ -188,8 +189,9 @@ fun SongsScreen(
                 title = stringResource(R.string.songs_title),
                 subtitle = br.app.stagebook.ui.components.filteredCountText(
                     br.app.stagebook.ui.components.songCountText(uiState.total), uiState.songs.size,
-                    uiState.query.isNotBlank() || uiState.chosenTags.isNotEmpty(),
+                    filtering,
                 ),
+                onClearFilter = if (filtering) { { onQueryChange(""); onTagsChange(emptySet()) } } else null,
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // while selecting, the actions are in the top bar. Actions first, then what acts on the list next to it: same
