@@ -83,5 +83,11 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />
         </provider>
+        <!-- Auto Blocker back on after an update: Android doesn't reopen the app by itself -->
+        <receiver android:name=".data.device.AutoBlockerBackOn" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
