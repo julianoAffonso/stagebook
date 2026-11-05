@@ -1,12 +1,12 @@
 #!/bin/bash
 # Lê e mexe na tela de um aparelho pelo adb, sem precisar olhar print (barato para a IA que testa).
-#   tools/tela.sh SERIAL textos              lista os textos e ícones visíveis, com a posição de cada um
+#   tools/screen.sh SERIAL textos              lista os textos e ícones visíveis, com a posição de cada um
 #                                            (texto longo ou com quebra de linha sai como [texto N caracteres]:
 #                                            é a letra da música, que nunca pode aparecer; "textos-inteiro" mostra tudo)
-#   tools/tela.sh SERIAL tocar "Ajustes"     toca no primeiro elemento cujo texto ou descrição contém isso
-#   tools/tela.sh SERIAL tem "Salvar"        sai 0 se o texto está na tela, 1 se não está
-#   tools/tela.sh SERIAL print NOME          salva a captura em ~/Desktop/stagebook-teste/NOME.png
-#   tools/tela.sh SERIAL abrir | fechar      abre ou fecha o Stagebook
+#   tools/screen.sh SERIAL tocar "Ajustes"     toca no primeiro elemento cujo texto ou descrição contém isso
+#   tools/screen.sh SERIAL tem "Salvar"        sai 0 se o texto está na tela, 1 se não está
+#   tools/screen.sh SERIAL print NOME          salva a captura em ~/Desktop/stagebook-teste/NOME.png
+#   tools/screen.sh SERIAL abrir | fechar      abre ou fecha o Stagebook
 set -uo pipefail
 [ $# -ge 2 ] || { sed -n '2,7p' "$0"; exit 1; }
 S=$1; CMD=$2; ARG=${3:-}
@@ -63,7 +63,7 @@ for n in all_:
 }
 
 # toca no elemento cujo texto ou descrição é exatamente o pedido (de preferência clicável); se não houver, o que contém
-achar() {
+find_node() {
     dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
 alvo = sys.argv[1].strip().lower()
@@ -92,7 +92,7 @@ case "$CMD" in
     textos-inteiro) nodes 1 ;;
     tem) nodes 1 | grep -qiF -- "$ARG" ;;
     tocar)
-        linha=$(achar) || { echo "\"$ARG\" não está na tela"; exit 1; }
+        linha=$(find_node) || { echo "\"$ARG\" não está na tela"; exit 1; }
         set -- $linha
         "$ADB" -s "$S" shell input tap "$1" "$2"
         echo "toquei em $1,$2: $linha" ;;

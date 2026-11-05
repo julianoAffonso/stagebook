@@ -1,7 +1,7 @@
 #!/bin/bash
 # Conecta o adb do Mac aos aparelhos de teste pela Depuração por Wi-Fi (Android 11+).
-#   tools/conectar.sh                      conecta todos os aparelhos que estão anunciando e diz quem é quem
-#   tools/conectar.sh parear IP:PORTA COD  pareia um aparelho novo (uma vez só por aparelho)
+#   tools/connect.sh                      conecta todos os aparelhos que estão anunciando e diz quem é quem
+#   tools/connect.sh parear IP:PORTA COD  pareia um aparelho novo (uma vez só por aparelho)
 # No aparelho: Opções do desenvolvedor → Depuração por Wi-Fi ligada, no mesmo Wi-Fi do Mac. A porta muda cada vez
 # que a depuração liga, por isso ela sai do Bonjour do macOS (dns-sd) e não do mDNS do adb (desligado em alguns Macs:
 # o do adb 37 aborta com o anúncio do Quick Share). No fim grava ~/.cache/stagebook-aparelhos.env com TCL=, S26=,
@@ -15,9 +15,9 @@ ENV_FILE="$HOME/.cache/stagebook-aparelhos.env"
 browse() { dns-sd "$@" & local p=$!; sleep 3; kill $p 2>/dev/null; wait $p 2>/dev/null; }
 
 if [ "${1:-}" = "parear" ]; then
-    [ $# -eq 3 ] || { echo "uso: tools/conectar.sh parear IP:PORTA CODIGO (da tela \"Parear o dispositivo com um código\")"; exit 1; }
+    [ $# -eq 3 ] || { echo "uso: tools/connect.sh parear IP:PORTA CODIGO (da tela \"Parear o dispositivo com um código\")"; exit 1; }
     "$ADB" pair "$2" "$3" || exit 1
-    echo "pareado; agora rode tools/conectar.sh"
+    echo "pareado; agora rode tools/connect.sh"
     exit 0
 fi
 
@@ -52,5 +52,5 @@ while read -r serial estado _; do
     achou=1
 done < <("$ADB" devices | tail -n +2 | grep -v '^$')
 mv "$ENV_FILE.tmp" "$ENV_FILE"
-[ $achou -eq 1 ] || { echo "nenhum aparelho conectado: ligue a Depuração por Wi-Fi no aparelho (mesmo Wi-Fi do Mac) ou pareie (tools/conectar.sh parear)"; exit 1; }
+[ $achou -eq 1 ] || { echo "nenhum aparelho conectado: ligue a Depuração por Wi-Fi no aparelho (mesmo Wi-Fi do Mac) ou pareie (tools/connect.sh parear)"; exit 1; }
 echo "seriais em $ENV_FILE (source para usar \$TCL, \$S26, \$FIRE)"

@@ -2,7 +2,9 @@
 """Tests of release_notes.py: python3 -I tools/release_notes_test.py"""
 import importlib.util
 import pathlib
+import types
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location("release_notes", pathlib.Path(__file__).with_name("release_notes.py"))
 notes = importlib.util.module_from_spec(spec)
@@ -28,6 +30,37 @@ class Parse(unittest.TestCase):
     def test_a_long_sentence_is_refused(self):
         with self.assertRaises(ValueError):
             notes.parse(f"Release-Note: {'x' * 121} · curta")
+
+
+    def test_a_generic_sentence_is_refused(self):
+        for line in ("Internal fixes · Correções internas", "Fixed the player · Melhorias.", "Bug Fixes! · Tocador novo"):
+            with self.assertRaises(ValueError):
+                notes.parse(f"Release-Note: {line}")
+
+    def test_a_sentence_that_only_starts_generic_is_kept(self):
+        self.assertEqual([("Fixes for the player", "Correções no tocador")],
+                         notes.parse("Release-Note: Fixes for the player · Correções no tocador"))
+
+    def test_an_internal_change_has_no_note(self):
+        self.assertEqual([], notes.parse("Title · Título\n\nRelease-Note: none\n"))
+
+
+class Check(unittest.TestCase):
+    def run_check(self, message):
+        def git(*args):
+            return f"{message}\0" if "--format=%B%x00" in args else "app/src/main/Tela.kt\n"
+        with mock.patch.object(notes, "git", git):
+            notes.check(types.SimpleNamespace(commits="a..b"))
+
+    def test_the_app_changed_without_a_note_fails(self):
+        with self.assertRaises(SystemExit):
+            self.run_check("Title · Título\n")
+
+    def test_the_app_changed_with_a_note_passes(self):
+        self.run_check("Title · Título\n\nRelease-Note: One · Um\n")
+
+    def test_the_app_changed_marked_internal_passes(self):
+        self.run_check("Title · Título\n\nRelease-Note: none\n")
 
 
 class History(unittest.TestCase):

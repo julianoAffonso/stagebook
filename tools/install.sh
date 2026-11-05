@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Instala a versão do último commit num aparelho de teste, com as travas do projeto.
-#   tools/instalar.sh <serial> [--debug]  (os seriais saem de: source ~/.cache/stagebook-aparelhos.env → $TCL, $S26)
+#   tools/install.sh <serial> [--debug]  (os seriais saem de: source ~/.cache/stagebook-aparelhos.env → $TCL, $S26)
 # --debug: a versão de desenvolvimento, para um aparelho que já tem ela (a assinatura precisa ser a mesma)
 # Recusa, sem instalar, se: há mudança sem commit, a marca de auditoria existe, o aparelho não responde, ou o player
 # do Stagebook está ligado (instalar com o player ligado corta o som no meio). Usa a versão final assinada (release),
@@ -8,7 +8,7 @@
 # desinstala). Imprime "instalado: <versão>" só depois de ler a versão no aparelho e conferir que é a do commit.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SERIAL="${1:?uso: tools/instalar.sh <serial> [--debug]}"
+SERIAL="${1:?uso: tools/install.sh <serial> [--debug]}"
 VARIANT=release; [ "${2:-}" = "--debug" ] && VARIANT=debug
 ADB=(adb -s "$SERIAL")
 # audit-pending marker: its path lives outside the repository (~/.cache/stagebook-audit-mark holds it; none = no check)

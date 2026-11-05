@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Captures folder (T39): every screenshot of the app, in Portuguese and in English, sorted by journey. Used to check
 # the screens and to build the help. Run again after any change to a feature, screen or text (mandate of 30/10).
-#   tools/capturas.sh [destination]   (default: ~/Desktop/stagebook-capturas)
+#   tools/screenshots.sh [destination]   (default: ~/Desktop/stagebook-capturas)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 DEST="${1:-$HOME/Desktop/stagebook-capturas}"
@@ -15,6 +15,6 @@ for lang in pt-BR en; do
 done
 
 # the editor on the computer: its real page with sample data, photographed by Chrome (same two languages)
-python3 -I tools/capturas_web.py "$WORK" > "$WORK/web.log" 2>&1 || { echo "capturas do editor web falharam: veja $WORK/web.log"; tail -20 "$WORK/web.log"; trap - EXIT; exit 1; }
-python3 -I tools/capturas_jornadas.py "$WORK" "$DEST"
+python3 -I tools/screenshots_web.py "$WORK" > "$WORK/web.log" 2>&1 || { echo "capturas do editor web falharam: veja $WORK/web.log"; tail -20 "$WORK/web.log"; trap - EXIT; exit 1; }
+python3 -I tools/screenshots_journeys.py "$WORK" "$DEST"
 echo "capturas em: $DEST"

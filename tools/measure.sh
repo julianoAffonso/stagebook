@@ -1,7 +1,7 @@
 #!/bin/bash
 # Measures Stagebook on a device for one scenario: CPU % every second, memory (PSS, Java, native, graphics) every 5 s,
 # threads, and at the end frames (gfxinfo), temperature and battery. Phase D of the device test (CPU and RAM).
-#   tools/medir.sh <serial> <scenario> <seconds> [label]
+#   tools/measure.sh <serial> <scenario> <seconds> [label]
 # The scenario is only a name for the files: set it up on the device first (screen, essential mode on or off).
 # Output: ~/stagebook-teste/medidas/<device>-<scenario>[-label].csv and a summary (mean, p95, peak) on screen and in .txt.
 set -euo pipefail
