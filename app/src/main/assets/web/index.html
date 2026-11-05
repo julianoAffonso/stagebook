@@ -26,6 +26,7 @@
   button { font: inherit; border: 0; border-radius: 999px; padding: 10px 24px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
   button.text { background: none; color: var(--text); padding: 10px 12px; }
   button.outline { background: none; color: var(--text); border: 1px solid var(--line); }
+  #list-clear, #sets-clear { color: var(--error); opacity: .7; }
   button.icon { background: none; color: var(--text); width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 40px; }
   button:disabled { opacity: .4; cursor: default; }
   button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -90,6 +91,7 @@
         <button id="new" class="outline"></button>
         <input id="search" type="search">
         <select id="tag-filter" aria-label="Tags" hidden></select>
+        <div class="row" id="list-filtered" hidden><span id="list-count" class="muted grow"></span><button class="icon" id="list-clear">×</button></div>
         <ul class="list" id="songs"></ul>
         <p id="list-empty" class="muted" hidden></p>
       </div>
@@ -130,6 +132,7 @@
         <button id="set-new" class="outline"></button>
         <input id="sets-search" type="search">
         <select id="sets-order"></select>
+        <div class="row" id="sets-filtered" hidden><span id="sets-count" class="muted grow"></span><button class="icon" id="sets-clear">×</button></div>
         <ul class="list" id="sets"></ul>
         <p id="sets-empty" class="muted" hidden></p>
       </div>
@@ -283,6 +286,7 @@ async function connected(session) {
   $("set-new").textContent = "+ " + t.newSet;
   $("search").placeholder = t.search;
   $("sets-search").placeholder = t.setsSearch;
+  ["list-clear", "sets-clear"].forEach((id) => { $(id).title = t.filtersClear; $(id).setAttribute("aria-label", t.filtersClear); });
   $("sets-order").setAttribute("aria-label", t.setsOrder);
   $("sets-order").replaceChildren(...[["false", t.setsNewest], ["true", t.setsAbc]].map(([value, name]) => Object.assign(document.createElement("option"), { value, textContent: `${t.setsOrder}: ${name}` })));
   $("f-tags").placeholder = t.tagsHint;
@@ -351,6 +355,12 @@ function drawTagFilter() {
   f.hidden = tags.length === 0;
 }
 
+// how many the filter left, only while there's one
+function showCount(list, shown, filtering) {
+  $(list + "-filtered").hidden = !filtering;
+  $(list + "-count").textContent = fill(t.listFiltered, shown);
+}
+
 function drawList() {
   const q = plain($("search").value.trim());
   const tag = $("tag-filter").value.toLowerCase();
@@ -361,6 +371,7 @@ function drawList() {
     if (current && current.id === s.id) el.className = "on";
     return el;
   }));
+  showCount("list", shown.length, q || tag);
   $("list-empty").hidden = shown.length > 0;
   $("list-empty").textContent = songs.length ? t.notFound : t.noSongs;
 }
@@ -487,9 +498,10 @@ async function sendTrack(file) {
 
 // the list redraws a moment after typing stops, not on every letter
 let searchTimer = 0;
-$("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(drawList, 150); };
+$("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { drawList(); $("songs").scrollTop = 0; }, 150); };
 $("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "", key: "", capo: 0, tags: [] }); };
-$("tag-filter").onchange = drawList;
+$("tag-filter").onchange = () => { drawList(); $("songs").scrollTop = 0; };
+$("list-clear").onclick = () => { $("search").value = ""; $("tag-filter").value = ""; drawList(); $("songs").scrollTop = 0; };
 $("save").onclick = save;
 $("delete").onclick = removeSong;
 $("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
@@ -531,14 +543,17 @@ function drawSets() {
     if (currentSet && currentSet.id === s.id) el.className = "on";
     return el;
   }));
+  showCount("sets", shown.length, q);
   $("sets-empty").hidden = shown.length > 0;
   $("sets-empty").textContent = sets.length ? t.setsNotFound : t.noSets;
 }
-$("sets-search").oninput = drawSets;
+$("sets-search").oninput = () => { drawSets(); $("sets").scrollTop = 0; };
+$("sets-clear").onclick = () => { $("sets-search").value = ""; drawSets(); $("sets").scrollTop = 0; };
 // the same choice as the tablet's Setlists tab: it changes there too
 $("sets-order").onchange = async () => {
   await api("/api/sets-order", { method: "PUT", body: JSON.stringify({ abc: $("sets-order").value === "true" }) }).catch(() => null);
-  loadSets();
+  await loadSets();
+  $("sets").scrollTop = 0;
 };
 
 async function openSet(id) {

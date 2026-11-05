@@ -120,6 +120,13 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
+    fun homeSongsFilteredPhone() = shoot("celular_1_musicas_filtradas") {
+        HomeScaffold(HomeTab.SONGS, {}) {
+            SongsScreen(songs.copy(songs = songs.songs.take(2), chosenTags = setOf("Nacional"), tags = listOf("Internacional", "Nacional")), "", {}, {}, {}, {}, it)
+        }
+    }
+
+    @Test @Config(qualifiers = PHONE)
     fun homeSongsPhone() = shoot("celular_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {

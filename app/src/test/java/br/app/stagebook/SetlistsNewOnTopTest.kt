@@ -37,7 +37,7 @@ class SetlistsNewOnTopTest {
     @Test fun `a search with no match says so and the header keeps the total`() {
         compose.setContent { StagebookTheme { SetlistsScreen(SetlistsUiState(false, emptyList(), total = 3), {}, {}, {}, {}, query = "xyz") } }
         compose.onNodeWithText("Nenhum setlist encontrado").assertIsDisplayed()
-        compose.onNodeWithText("3 setlists").assertIsDisplayed()
+        compose.onNodeWithText("3 setlists · 0 no filtro").assertIsDisplayed()
     }
 
     @Test fun `the order sits beside the search and changes from its menu`() {

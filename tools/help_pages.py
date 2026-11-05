@@ -39,16 +39,17 @@ SECTIONS = [
     {
         "id": "musicas", "pt": "Músicas", "en": "Songs",
         "text_pt": [
-            "A aba Músicas é a sua biblioteca. Dá para buscar pelo nome ou pelo artista e filtrar pelas tags que você criou.",
+            "A aba Músicas é a sua biblioteca. Dá para buscar pelo nome ou pelo artista e filtrar pelas tags que você criou. Com um filtro ligado, o total no topo mostra também quantas sobraram, a lista volta ao começo e o × ao lado limpa tudo.",
             "Tocando numa música, ela abre no palco. Segurando, você seleciona várias de uma vez para pôr num setlist, mudar as tags, compartilhar ou apagar.",
             "Ao lado do título podem aparecer alguns ícones: a folha quando o modo essencial está ligado, o grupo com um número quando a banda mandou algo, e o computador quando o editor web está ligado. Tocando no ícone você vai direto para o assunto.",
         ],
         "text_en": [
-            "The Songs tab is your library. You can search by title or artist and filter by the tags you created.",
+            "The Songs tab is your library. You can search by title or artist and filter by the tags you created. With a filter on, the total at the top also shows how many are left, the list goes back to the start and the × next to it clears everything.",
             "Tap a song and it opens on stage. Hold it to select several at once and add them to a setlist, change their tags, share or delete them.",
             "A few icons may show next to the title: the leaf when essential mode is on, the group with a number when the band sent something, and the computer when the web editor is on. Tapping an icon takes you straight to it.",
         ],
         "figs": [Fig(("tablet_1_musicas", "celular_1_musicas", "A lista de músicas", "The song list")),
+                 Fig((None, "celular_1_musicas_filtradas", "Com um filtro ligado", "With a filter on")),
                  Fig(("tablet_1_musicas_tags_abertas", None, "Filtro por tags", "Filter by tags")),
                  Fig(("jornada_musicas_1_selecao", None, "Várias músicas selecionadas", "Several songs selected"))],
     },
@@ -95,12 +96,12 @@ SECTIONS = [
     {
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
-            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. Acima da lista dá para buscar pelo nome e, em Ordem, ver os mais recentes primeiro ou de A a Z.",
+            "Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora; tocando no nome você troca. Para mudar a ordem, arraste as músicas. Acima da lista dá para buscar pelo nome e, em Ordem, ver os mais recentes primeiro ou de A a Z. Com uma busca, o total no topo mostra também quantos sobraram, e o × ao lado limpa.",
             "Dentro do setlist, toque em + Músicas e marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar. Compartilhar fica ao lado, e o play no topo abre o setlist no palco.",
             "Quando chega um setlist de alguém, o app mostra quais músicas você já tem e quais faltam. Antes de criar, ele avisa o que vai ficar de fora e oferece importar as que faltam.",
         ],
         "text_en": [
-            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. Above the list you can search by name and, in Order, show the newest first or A to Z.",
+            "To create a setlist, tap New setlist. With no name it takes the date and time; tap the name to change it. Drag songs to change the order. Above the list you can search by name and, in Order, show the newest first or A to Z. With a search on, the total at the top also shows how many are left, and the × next to it clears it.",
             "Inside the setlist, tap + Songs and check the songs in the order they'll be played. Search and tags help you find them. Share sits next to it, and the play button at the top opens the setlist on stage.",
             "When a setlist comes from someone, the app shows which songs you already have and which are missing. Before creating it, it tells you what will be left out and offers to import the missing ones.",
         ],

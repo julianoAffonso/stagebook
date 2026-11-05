@@ -22,7 +22,7 @@ import javax.inject.Inject
 data class SetlistRowUi(val id: String, val name: String, val count: Int)
 
 @Immutable
-data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false, val total: Int = sets.size)
+data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false, val total: Int = sets.size, val query: String = "")
 
 /**
  * The Setlists tab's order: as stored (newest first) or A to Z, ignoring case and accents with the app's one text
@@ -78,7 +78,7 @@ class SetlistsViewModel @Inject constructor(
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library, query.debounce(::typingDelay)) { loaded, lib, q ->
         val rows = setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) }, lib.look.setsAbc)
-        SetlistsUiState(!loaded, setlistSearch(rows, q), lib.look.setsAbc, lib.sets.size)
+        SetlistsUiState(!loaded, setlistSearch(rows, q), lib.look.setsAbc, lib.sets.size, q)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistsUiState())
 
     /** Empty name = current date and time. Returns the id to open the new setlist. */

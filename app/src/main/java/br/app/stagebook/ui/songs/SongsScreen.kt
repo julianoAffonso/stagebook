@@ -154,6 +154,7 @@ fun SongsScreen(
         if (r.count == 0) res.getString(R.string.songs_already_in_set, r.set)
         else res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
     val wide = wideLists()
+    val filtering = query.isNotBlank() || uiState.chosenTags.isNotEmpty()
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
@@ -186,7 +187,11 @@ fun SongsScreen(
                 )
             } else ScreenHeader(
                 title = stringResource(R.string.songs_title),
-                subtitle = br.app.stagebook.ui.components.songCountText(uiState.total),
+                subtitle = br.app.stagebook.ui.components.filteredCountText(
+                    br.app.stagebook.ui.components.songCountText(uiState.total), uiState.songs.size,
+                    filtering,
+                ),
+                onClearFilter = if (filtering) { { onQueryChange(""); onTagsChange(emptySet()) } } else null,
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
             // while selecting, the actions are in the top bar. Actions first, then what acts on the list next to it: same
@@ -207,12 +212,15 @@ fun SongsScreen(
                     Text(stringResource(R.string.import_needs_internet), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            br.app.stagebook.ui.components.ScrollToTopOn("${uiState.query}|${uiState.chosenTags.sorted()}", listState)
             Crossfade(targetState = uiState.loading, label = "songs") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.total == 0 -> EmptyState(AppIcons.MusicNote, stringResource(R.string.songs_empty_title), stringResource(R.string.songs_empty_message))
                     uiState.songs.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.songs_not_found), "")
                     else -> LazyColumn(
+                        state = listState,
                         verticalArrangement = Arrangement.spacedBy(if (wide) Spacing.xs else Spacing.s),
                         contentPadding = PaddingValues(bottom = Spacing.l),
                     ) {

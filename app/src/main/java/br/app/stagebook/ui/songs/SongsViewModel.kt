@@ -43,6 +43,7 @@ data class SongsUiState(
     val tags: List<String> = emptyList(),        // every tag in the library (the filter's options)
     val chosenTags: Set<String> = emptySet(),
     val sets: List<SetPick> = emptyList(),        // setlists to add a selection to
+    val query: String = "",                       // the search these rows came from
 )
 
 @Immutable
@@ -110,6 +111,7 @@ class SongsViewModel @Inject constructor(
             tags = all,
             chosenTags = kept,
             sets = sets,
+            query = q,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 

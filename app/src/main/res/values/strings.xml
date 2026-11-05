@@ -66,6 +66,8 @@
 
     <!-- setlists -->
     <string name="sets_title">Setlists</string>
+    <string name="list_filtered">%1$d shown</string>
+    <string name="filters_clear">Clear filters</string>
     <string name="sets_search">Search setlist</string>
     <string name="sets_search_hint">Setlist name</string>
     <string name="sets_not_found">No setlist found</string>
@@ -74,7 +76,7 @@
     <string name="sets_sort_abc">A to Z</string>
     <string name="sets_new">New setlist</string>
     <string name="sets_name">Setlist name</string>
-    <string name="sets_name_hint">If empty, uses the date and time</string>
+    <string name="sets_name_hint">Empty uses date and time</string>
     <string name="sets_empty_title">No setlists yet</string>
     <string name="sets_empty_message">Build your first show and turn the songs with the pedal.</string>
     <string name="sets_delete_confirm">Delete the setlist \"%1$s\"? The songs stay in the library.</string>
