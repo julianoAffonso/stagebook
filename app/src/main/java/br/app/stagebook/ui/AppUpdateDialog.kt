@@ -34,8 +34,9 @@ fun AppUpdateDialog(
 ) {
     val downloading = offer is UpdateOffer.Downloading
     AlertDialog(
-        // downloading: tapping outside doesn't close it (the download goes on and the notice comes back ready)
-        onDismissRequest = { if (!downloading) (if (offer is UpdateOffer.Available) onLater() else onClose()) },
+        // downloading: tapping outside doesn't close it (the download goes on and the notice comes back ready).
+        // Only the "Not now" button puts the version off: a stray tap outside would hide it until tomorrow
+        onDismissRequest = { if (!downloading) onClose() },
         properties = DialogProperties(dismissOnClickOutside = !downloading),
         title = { Text(stringResource(R.string.update_offer_title)) },
         text = {
