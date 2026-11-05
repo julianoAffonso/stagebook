@@ -35,7 +35,8 @@ jobs:
           app=true
           if [ -n "$BASE" ]; then
             git diff --name-only "$BASE...$HEAD" \
-              | grep -qvE '^(\.claude/|docs/|mcp/|tools/help_|tools/screenshots|\.github/workflows/(help|mcp-|privacy|release))|\.md$' || app=false
+              | grep -vE '^(\.claude/|docs/|mcp/|tools/help_|tools/screenshots|\.github/workflows/(help|mcp-|privacy|release))|\.md$' \
+              | grep -q . || app=false
           fi
           echo "app=$app" >> "$GITHUB_OUTPUT"
 
