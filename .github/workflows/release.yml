@@ -15,6 +15,11 @@ on:
 permissions:
   contents: write   # create the tag and the release
 
+# two presses of the button wait in line: never two versions at once
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     if: github.ref == 'refs/heads/main'   # from any other branch the button does nothing (no minutes spent)
@@ -43,7 +48,7 @@ jobs:
           printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
             "$HOME/.android/stagebook-release.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
             > ~/.android/stagebook-release.properties
-      - run: ./gradlew testDebugUnitTest lintDebug assembleRelease
+      - run: ./gradlew --build-cache testDebugUnitTest lintDebug assembleRelease
       - name: Check signature and version
         id: version
         env:

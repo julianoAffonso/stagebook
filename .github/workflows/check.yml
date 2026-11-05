@@ -6,8 +6,15 @@ name: Check
 on:
   pull_request:
     branches: [main]
-    paths-ignore: [".claude/**", "**.md", "mcp/**", ".github/workflows/mcp-*.yml", ".github/workflows/release.yml"]
+    paths-ignore: [".claude/**", "**.md", "docs/**", "mcp/**", "tools/help_*.py", "tools/screenshots*", ".github/workflows/help.yml", ".github/workflows/mcp-*.yml", ".github/workflows/privacy.yml", ".github/workflows/release.yml"]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true   # a new push replaces the run of the old one
 
 jobs:
   check:
@@ -28,7 +35,7 @@ jobs:
       # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew assembleDebug testDebugUnitTest lintDebug
+      - run: ./gradlew --build-cache assembleDebug testDebugUnitTest lintDebug
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

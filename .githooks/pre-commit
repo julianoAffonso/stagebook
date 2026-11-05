@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
-# A commit only goes in with validation green: a filter in a pipe has hidden failures before.
+# A commit only goes in with the checks of what it touches green: a filter in a pipe has hidden failures before.
 unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
-git diff --cached --name-only | grep -qE '^(app|mcp|tools)/' || exit 0
-tools/validate.sh || { echo "Commit refused: validation failed"; exit 1; }
+files=$(git diff --cached --name-only)
+touches() { grep -qE "$1" <<<"$files"; }
+if touches '^(app/|gradle/|build\.gradle|settings\.gradle|gradle\.properties)'; then
+  tools/validate.sh || { echo "Commit refused: validation failed"; exit 1; }
+fi
+if touches '^mcp/'; then
+  (cd mcp && npm test) || { echo "Commit refused: MCP tests failed"; exit 1; }
+fi
+if touches '^tools/.*\.py$'; then
+  for t in tools/*_test.py; do python3 -I "$t" > /dev/null 2>&1 || { echo "Commit refused: $t failed"; exit 1; }; done
+fi
+if touches '^docs/'; then
+  python3 -I tools/help_check.py pages || { echo "Commit refused: the help has a problem"; exit 1; }
+fi
