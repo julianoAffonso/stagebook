@@ -88,15 +88,15 @@ class ScreenshotTest {
             SongRowUi("5", "Por Enquanto", "Legião Urbana · 1985"),
         ),
         total = 5,
-        tags = listOf("Internacional", "Nacional"),
+        tags = listOf(s("Internacional"), s("Nacional")),
     )
     private val set = SetlistDetailUiState(
         loading = false,
-        name = "Show de sábado",
+        name = s("Show de sábado"),
         items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false) },
     )
-    private val lyrics = "[Verse 1]\nPrimeira linha da letra de exemplo\nSegunda linha ==um pouco mais comprida== que a outra\nTerceira linha\n\n" +
-        "[Chorus]\nO refrão aparece aqui\nE repete mais uma vez\n\n[Verse 2]\nMais uma estrofe\nCom outra linha\nE a última"
+    private val lyrics = s("[Verse 1]\nPrimeira linha da letra de exemplo\nSegunda linha ==um pouco mais comprida== que a outra\nTerceira linha\n\n" +
+        "[Chorus]\nO refrão aparece aqui\nE repete mais uma vez\n\n[Verse 2]\nMais uma estrofe\nCom outra linha\nE a última")
 
     private fun shoot(name: String, content: @Composable () -> Unit) {
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
@@ -122,7 +122,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun homeSongsFilteredPhone() = shoot("celular_1_musicas_filtradas") {
         HomeScaffold(HomeTab.SONGS, {}) {
-            SongsScreen(songs.copy(songs = songs.songs.take(2), chosenTags = setOf("Nacional"), tags = listOf("Internacional", "Nacional")), "", {}, {}, {}, {}, it)
+            SongsScreen(songs.copy(songs = songs.songs.take(2), chosenTags = setOf(s("Nacional")), tags = listOf(s("Internacional"), s("Nacional"))), "", {}, {}, {}, {}, it)
         }
     }
 
@@ -131,14 +131,14 @@ class ScreenshotTest {
 
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {
         HomeScaffold(HomeTab.SETLISTS, {}) {
-            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
         }
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistsPhone() = shoot("celular_2_setlists") {
         HomeScaffold(HomeTab.SETLISTS, {}) {
-            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
         }
     }
 
@@ -152,7 +152,7 @@ class ScreenshotTest {
     }
 
     // setlist journey (user, 01/11): list, select, inside, select songs, add songs with the tag filter, add from Songs
-    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6), SetlistRowUi("3", "Casamento", 22)))
+    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6), SetlistRowUi("3", "Casamento", 22)))
 
     private fun journey(name: String, content: @Composable () -> Unit, then: () -> Unit = {}) {
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
@@ -173,7 +173,7 @@ class ScreenshotTest {
     }) {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
         compose.onNodeWithText("Casamento").performClick()
-        compose.onNodeWithText("Show de sábado").performClick()
+        compose.onNodeWithText(s("Show de sábado")).performClick()
         compose.onNodeWithContentDescription(str(R.string.share_title)).performClick()
     }
 
@@ -186,11 +186,11 @@ class ScreenshotTest {
     @Test fun setlistJourney5Add() = journey("jornada_setlist_5_adicionar", {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
-                setName = "Show de sábado",
+                setName = s("Show de sábado"),
                 rows = songs.songs.filter { it.id != "1" && it.id != "4" }.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = false, selected = it.id == "2") },
                 selectedCount = 1,
-                tags = listOf("Internacional", "Nacional"),
-                chosenTags = setOf("Nacional"),
+                tags = listOf(s("Internacional"), s("Nacional")),
+                chosenTags = setOf(s("Nacional")),
             ),
             "", {}, {}, {}, {},
         )
@@ -198,7 +198,7 @@ class ScreenshotTest {
 
     @Test fun setlistJourney6FromSongs() = journey("jornada_setlist_6_das_musicas", {
         HomeScaffold(HomeTab.SONGS, {}) {
-            SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", "Show de sábado"), br.app.stagebook.ui.songs.SetPick("3", "Casamento"))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
+            SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", s("Show de sábado")), br.app.stagebook.ui.songs.SetPick("3", "Casamento"))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
         }
     }) {
         compose.onNodeWithContentDescription(str(R.string.songs_add_to_set)).performClick()
@@ -218,18 +218,18 @@ class ScreenshotTest {
     /** Editing the lyrics: the section shortcut strip shows at the top. */
     @Test @Config(qualifiers = PHONE)
     fun editorChordsPhone() = shoot("celular_4_editor_cifra") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
     // lyrics only profile: the editor shows no chords
     @Test @Config(qualifiers = PHONE)
     fun editorLyricsOnlyPhone() = shoot("celular_4_editor_so_letra") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(chords = false))
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(chords = false))
     }
 
     // T18: with a capo, the editor states the shape and the sounding key
     @Test fun editorCapoTablet() = shoot("tablet_4_editor_capo") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
     // T27: song details open (new song)
@@ -243,8 +243,8 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 SongEditorScreen(
-                    SongEditorUiState(false, EditorMode.EDIT, "Canção de teste", "Banda Fictícia", "1999", chordSong, tags = listOf("Nacional", "Rock")),
-                    {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "faixa.ogg", trackName = "Canção de teste (playback)",
+                    SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "1999", chordSong, tags = listOf(s("Nacional"), "Rock")),
+                    {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = s("faixa.ogg"), trackName = s("Canção de teste (playback)"),
                 )
             }
         }
@@ -253,10 +253,10 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
-    @Test fun editorTagsTablet() = editorOpen("tablet_4_editor_tags") { compose.onNodeWithText("Canção de teste", substring = true).performClick() }
+    @Test fun editorTagsTablet() = editorOpen("tablet_4_editor_tags") { compose.onNodeWithText(s("Canção de teste"), substring = true).performClick() }
 
     @Test @Config(qualifiers = PHONE)
-    fun editorTagsPhone() = editorOpen("celular_4_editor_tags") { compose.onNodeWithText("Canção de teste", substring = true).performClick() }
+    fun editorTagsPhone() = editorOpen("celular_4_editor_tags") { compose.onNodeWithText(s("Canção de teste"), substring = true).performClick() }
 
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
@@ -267,7 +267,7 @@ class ScreenshotTest {
     private fun chordPopup(name: String, chord: String, instrument: br.app.stagebook.data.model.Instrument, extras: Boolean = true) {
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
                 br.app.stagebook.ui.stage.ChordShapePopup(chord, instrument, chordSong, {}, {}, extras = extras)
             }
         }
@@ -307,7 +307,7 @@ class ScreenshotTest {
     @Test fun backupPartsDialog() {
         compose.setContent {
             StagebookTheme {
-                br.app.stagebook.ui.settings.BackupPartsDialog("Abrir arquivo", "Abrir", br.app.stagebook.data.Backup.Part.entries.toSet(), { _, _ -> }, {}, warning = "Os ajustes do arquivo substituem os daqui.")
+                br.app.stagebook.ui.settings.BackupPartsDialog(s("Abrir arquivo"), s("Abrir"), br.app.stagebook.data.Backup.Part.entries.toSet(), { _, _ -> }, {}, warning = s("Os ajustes do arquivo substituem os daqui."))
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_5_backup_restaurar.png")
@@ -348,7 +348,7 @@ class ScreenshotTest {
     @Test fun chordPopupCapo() {
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
                 br.app.stagebook.ui.stage.ChordShapePopup("G", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
@@ -380,7 +380,7 @@ class ScreenshotTest {
 
     // keyboard with a capo chart: chords in the sounding key, the notice at the top and the first-time message
     @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.KEYBOARD)), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.KEYBOARD)), 0, 0, { _, _ -> }, onBack = {})
     }
 
     // T21: the chord's second screen (harmonic field)
@@ -388,7 +388,7 @@ class ScreenshotTest {
     @Test fun chordDetails() {
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
                 br.app.stagebook.ui.stage.ChordShapePopup("C", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
@@ -400,10 +400,10 @@ class ScreenshotTest {
     // with a capo the diagram shows it: the bar, its fret, and the shape played from there
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun chordCapo() {
-        val capoSong = "{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste"
+        val capoSong = s("{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste")
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", capoSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), capoSong, false))), 0, 0, { _, _ -> }, onBack = {})
                 br.app.stagebook.ui.stage.ChordShapePopup("Em7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, capoSong, {}, {})
             }
         }
@@ -415,7 +415,7 @@ class ScreenshotTest {
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test @Config(qualifiers = PHONE)
     fun chordDetailsCapoPhone() {
-        val capoSong = "{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste\n[D4]Outra [A7(4)]linha"
+        val capoSong = s("{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste\n[D4]Outra [A7(4)]linha")
         compose.setContent {
             StagebookTheme {
                 br.app.stagebook.ui.stage.ChordShapePopup("Em7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, capoSong, {}, {})
@@ -430,7 +430,7 @@ class ScreenshotTest {
     @Test fun chordDetailsSeventh() {
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
                 br.app.stagebook.ui.stage.ChordShapePopup("D7", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, chordSong, {}, {})
             }
         }
@@ -495,9 +495,9 @@ class ScreenshotTest {
     @Test fun inboxVersions() {
         val now = System.currentTimeMillis()
         val items = listOf(
-            br.app.stagebook.data.BandInbox.Item("1", "a", "Celular da Ana", "STAGEBOOK1\n12\nShow de sábado", at = now - 600_000),
-            br.app.stagebook.data.BandInbox.Item("2", "b", "Tablet do Beto", "STAGEBOOK1\n12\nShow de sábado", at = now - 60_000),
-            br.app.stagebook.data.BandInbox.Item("3", "c", "Celular do Caio", "STAGEBOOK1\n8\nEnsaio", at = now - 300_000, updated = true),
+            br.app.stagebook.data.BandInbox.Item("1", "a", s("Celular da Ana"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 600_000),
+            br.app.stagebook.data.BandInbox.Item("2", "b", s("Tablet do Beto"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 60_000),
+            br.app.stagebook.data.BandInbox.Item("3", "c", s("Celular do Caio"), "STAGEBOOK1\n8\nEnsaio", at = now - 300_000, updated = true),
         )
         compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_2_recebidos_versoes.png")
@@ -549,14 +549,26 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_versao_nova.png")
     }
 
+    /** Downloaded on a Samsung: Auto Blocker may stop the install. */
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun updateReadyAutoBlockerTablet() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Ready(java.io.File("update.apk")), {}, {}, {}, {}, onAutoBlocker = {})
+            }
+        }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_bloqueador.png")
+    }
+
     @Test fun pickSongsTablet() = shoot("tablet_9_escolher_musicas") {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
-                setName = "Show de sábado",
+                setName = s("Show de sábado"),
                 rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
                 selectedCount = 2,
-                tags = listOf("Internacional", "Nacional"),
-                chosenTags = setOf("Nacional"),
+                tags = listOf(s("Internacional"), s("Nacional")),
+                chosenTags = setOf(s("Nacional")),
             ),
             "", {}, {}, {}, {},
         )
@@ -566,7 +578,7 @@ class ScreenshotTest {
     fun pickSongsPhone() = shoot("celular_9_escolher_musicas") {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
-                setName = "Show de sábado",
+                setName = s("Show de sábado"),
                 rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
                 selectedCount = 2,
             ),
@@ -590,8 +602,8 @@ class ScreenshotTest {
         androidx.compose.foundation.layout.Column {
             androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
             br.app.stagebook.ui.band.ConductBar(
-                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf("Baixo"),
-                    listOf(br.app.stagebook.domain.Conduct.Lack("Baixo", listOf("Garota de Ipanema")))),
+                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")),
+                    listOf(br.app.stagebook.domain.Conduct.Lack(s("Baixo"), listOf("Garota de Ipanema")))),
                 {}, {}, {},
             )
         }
@@ -765,21 +777,21 @@ class ScreenshotTest {
     }
 
     // T22: tablature on stage (monospace, fitting the column)
-    private val tabSong = "{key: G}\n[Intro]\n{start_of_tab}\ne|-----------------0-----3-----5-----7-----8-----10----12-----|\nB|-------1-----3-----5-----6-----8-----10----12----13---------|\nG|---0-----2-----4-----5-----7-----9-----11----12-------------|\n{end_of_tab}\n\n[Verso 1]\n[G]Saio cedo pela [D]rua sem saber"
+    private val tabSong = s("{key: G}\n[Intro]\n{start_of_tab}\ne|-----------------0-----3-----5-----7-----8-----10----12-----|\nB|-------1-----3-----5-----6-----8-----10----12----13---------|\nG|---0-----2-----4-----5-----7-----9-----11----12-------------|\n{end_of_tab}\n\n[Verso 1]\n[G]Saio cedo pela [D]rua sem saber")
 
     @Test fun stageTabTablet() = shoot("tablet_6_palco_tab") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Com tablatura", "Banda Fictícia", tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Com tablatura"), s("Banda Fictícia"), tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun stageTabPhone() = shoot("celular_7_palco_tab") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Com tablatura", "Banda Fictícia", tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Com tablatura"), s("Banda Fictícia"), tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
     @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
     // made-up chart (no real lyrics): chords above, a chords-only line, a ChordPro section and a comment
-    private val chordSong = """
+    private val chordSong = s("""
         {key: G}
         {capo: 2}
         [Intro]
@@ -797,15 +809,15 @@ class ScreenshotTest {
         {end_of_chorus}
         {c: Solo de sax}
         [Am7] [D7/F#] [G7M]
-    """.trimIndent()
+    """.trimIndent())
 
     @Test fun stageChordsTablet() = shoot("tablet_6_palco_cifra") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
     // T08/T09: backing track and capo lit, first after the artist; the key after
     private val stageBadges = stage.copy(
-        songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, track = "faixa.ogg")),
+        songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, track = s("faixa.ogg"))),
         look = stage.look.copy(chords = true, playerMode = true),
     )
 
@@ -844,7 +856,7 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun stageChordsPhone() = shoot("celular_7_palco_cifra") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
     // chord list at the top, with C in a chosen shape (barre on the 3rd): the list shows the chosen one
@@ -852,7 +864,7 @@ class ScreenshotTest {
 
     @Test fun stageChordListTopTablet() = shoot("tablet_6_palco_acordes_topo") {
         StageScreen(
-            stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSongDefined, false)), look = stage.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)),
+            stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSongDefined, false)), look = stage.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)),
             0, 0, { _, _ -> }, onBack = {},
         )
     }
@@ -860,14 +872,14 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stageChordListTopPhone() = shoot("celular_7_palco_acordes_topo") {
         StageScreen(
-            stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSongDefined, false)), look = stage.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)),
+            stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSongDefined, false)), look = stage.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.TOP)),
             0, 0, { _, _ -> }, onBack = {},
         )
     }
 
     @Test fun stageChordListBottomTablet() = shoot("tablet_7_palco_acordes_fim") {
         StageScreen(
-            stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSongDefined, false)), look = stage.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.BOTTOM)),
+            stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSongDefined, false)), look = stage.look.copy(chordList = br.app.stagebook.data.model.ChordListPlace.BOTTOM)),
             0, -1, { _, _ -> }, onBack = {},
         )
     }
@@ -877,16 +889,16 @@ class ScreenshotTest {
     private val playerLook = Look(fontSp = 34f, playerMode = true)
 
     @Test fun stagePlayerNoTrackTablet() = shoot("tablet_11_player_sem_faixa") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
     }
 
     @Test fun stagePlayerTrackTablet() = shoot("tablet_11_player_com_faixa") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun stagePlayerPlayingPhone() = shoot("celular_11_player_tocando") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true)
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true)
     }
 
     // ---- journey: linking a track to a song (phone) ----
@@ -905,7 +917,7 @@ class ScreenshotTest {
             .withStrip(0) { it.copy(name = "Backing", stereo = true, eq = true, norm = br.app.stagebook.domain.NormMode.VOLUME, gainDb = -3f) }
             .withStrip(2) { it.copy(name = "Click", norm = br.app.stagebook.domain.NormMode.PEAK, center = true) }
             .withOutput(2, 6)
-            .withStrip(3) { it.copy(name = "Guia", on = false) },
+            .withStrip(3) { it.copy(name = s("Guia"), on = false) },
     )
 
     // playing: channel meters (the backing's 2nd side a bit lower, the click hitting the peak) and the spectrum
@@ -962,14 +974,14 @@ class ScreenshotTest {
 
     // ---- scanning a setlist QR: review (found, uncertain, missing) ----
     private val scanReview = br.app.stagebook.ui.setlists.ScanUi.Review(
-        "Show de sábado",
+        s("Show de sábado"),
         listOf(
-            br.app.stagebook.ui.setlists.ScanRow("Canção de teste", "", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", "Canção de teste", "Banda Fictícia")), "1"),
-            br.app.stagebook.ui.setlists.ScanRow("Noite clara", "", false, listOf(
-                br.app.stagebook.ui.setlists.SongRef("2", "Noite Clara", "Banda A"), br.app.stagebook.ui.setlists.SongRef("3", "Noite Clara", "Banda B"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"))), "1"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "", false, listOf(
+                br.app.stagebook.ui.setlists.SongRef("2", s("Noite Clara"), "Banda A"), br.app.stagebook.ui.setlists.SongRef("3", s("Noite Clara"), "Banda B"),
             ), null),
-            br.app.stagebook.ui.setlists.ScanRow("Estrada longa", "", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", "Estrada Longa", "Banda C")), "4"),
-            br.app.stagebook.ui.setlists.ScanRow("Música que não tenho", "", false, emptyList(), null),
+            br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada Longa"), "Banda C")), "4"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Música que não tenho"), "", false, emptyList(), null),
         ),
     )
 
@@ -985,8 +997,8 @@ class ScreenshotTest {
         ImportScreen(
             ImportUiState(), "", {}, {}, {},
             queue = br.app.stagebook.data.ImportQueue.State(
-                "x", "Show de sábado", listOf("1", null, "4", null),
-                listOf(br.app.stagebook.data.ImportQueue.Item("Música que não tenho", "", 1), br.app.stagebook.data.ImportQueue.Item("Outra que falta", "", 3)), 3,
+                "x", s("Show de sábado"), listOf("1", null, "4", null),
+                listOf(br.app.stagebook.data.ImportQueue.Item(s("Música que não tenho"), "", 1), br.app.stagebook.data.ImportQueue.Item(s("Outra que falta"), "", 3)), 3,
             ),
             queueSite = { "Cifra Club" },
         )
@@ -1009,9 +1021,9 @@ class ScreenshotTest {
                 androidx.compose.material3.Text(str(R.string.share_sent), style = MaterialTheme.typography.headlineSmall)
                 br.app.stagebook.ui.share.CodeBox(
                     br.app.stagebook.ui.share.CloudUi.Sent(
-                        "47-violao-lua", "Show de sábado", 12, 0,
-                        br.app.stagebook.domain.QrEncoder.encode(br.app.stagebook.domain.ShareCode.qrText("47-violao-lua").toByteArray(), 600).asImageBitmap(),
-                        joined = listOf("Celular da Ana"),
+                        s("47-violao-lua"), s("Show de sábado"), 12, 0,
+                        br.app.stagebook.domain.QrEncoder.encode(br.app.stagebook.domain.ShareCode.qrText(s("47-violao-lua")).toByteArray(), 600).asImageBitmap(),
+                        joined = listOf(s("Celular da Ana")),
                     ),
                 )
             }
@@ -1063,14 +1075,14 @@ class ScreenshotTest {
     // ---- band on the local network: Settings → Band (on the network: one in the band, one request waiting, one new)
     // ----
     private val bandSample = br.app.stagebook.ui.band.BandUi(
-        name = "Meu tablet", wifi = true, searching = true,
+        name = s("Meu tablet"), wifi = true, searching = true,
         nearby = listOf(
-            br.app.stagebook.ui.band.NearbyUi("1", "Celular da Ana", member = true),
-            br.app.stagebook.ui.band.NearbyUi("2", "Teclado do Caio", member = false, join = br.app.stagebook.data.BandLink.Join.WAITING),
-            br.app.stagebook.ui.band.NearbyUi("3", "Baixo", member = false),
-            br.app.stagebook.ui.band.NearbyUi("4", "Bateria", member = true, otherVersion = "0.2.90"),
+            br.app.stagebook.ui.band.NearbyUi("1", s("Celular da Ana"), member = true),
+            br.app.stagebook.ui.band.NearbyUi("2", s("Teclado do Caio"), member = false, join = br.app.stagebook.data.BandLink.Join.WAITING),
+            br.app.stagebook.ui.band.NearbyUi("3", s("Baixo"), member = false),
+            br.app.stagebook.ui.band.NearbyUi("4", s("Bateria"), member = true, otherVersion = "0.2.90"),
         ),
-        members = listOf(br.app.stagebook.ui.band.MemberUi("1", "Celular da Ana", 0), br.app.stagebook.ui.band.MemberUi("4", "Bateria", 0)),
+        members = listOf(br.app.stagebook.ui.band.MemberUi("1", s("Celular da Ana"), 0), br.app.stagebook.ui.band.MemberUi("4", s("Bateria"), 0)),
     )
 
     @Test @Config(qualifiers = "pt-rBR-w412dp-h1600dp-port-xxhdpi")
@@ -1094,7 +1106,7 @@ class ScreenshotTest {
         // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
-                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Show de sábado", 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
             }
         }
     }
@@ -1103,7 +1115,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun scanAskBandPhone() = shoot("jornada_banda_5_pedir") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows + br.app.stagebook.ui.setlists.ScanRow("Outra que faltava", "", false, emptyList(), null, carried = true, fromBand = true)),
+            scanReview.copy(rows = scanReview.rows + br.app.stagebook.ui.setlists.ScanRow(s("Outra que faltava"), "", false, emptyList(), null, carried = true, fromBand = true)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, band = 2,
         )
     }
@@ -1114,13 +1126,13 @@ class ScreenshotTest {
             scanReview.copy(
                 name = "", songsOnly = true,
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow("Canção de teste", "", true, emptyList(), "1", differs = true),
-                    br.app.stagebook.ui.setlists.ScanRow("Estrada longa", "", true, emptyList(), "4", differs = true, useIncoming = true),
-                    br.app.stagebook.ui.setlists.ScanRow("Noite clara", "", true, emptyList(), "2"),
-                    br.app.stagebook.ui.setlists.ScanRow("Música nova", "", false, emptyList(), null, carried = true, fromBand = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, emptyList(), "1", differs = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "", true, emptyList(), "4", differs = true, useIncoming = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "", true, emptyList(), "2"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "", false, emptyList(), null, carried = true, fromBand = true),
                 ),
             ),
-            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Celular da Ana",
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
         )
     }
 
@@ -1129,12 +1141,12 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
             scanReview.copy(
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow("Canção de teste", "", true, emptyList(), "1"),
-                    br.app.stagebook.ui.setlists.ScanRow("Canção de exemplo", "", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
-                    br.app.stagebook.ui.setlists.ScanRow("Outra canção", "", false, emptyList(), null, wantChords = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, emptyList(), "1"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de exemplo"), "", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Outra canção"), "", false, emptyList(), null, wantChords = true),
                 ),
             ),
-            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = "Celular da Ana",
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
         )
     }
 
@@ -1198,7 +1210,7 @@ class ScreenshotTest {
     @Test fun songMixerSheetTablet() {
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = mixerLook), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = mixerLook), 0, 0, { _, _ -> }, onBack = {})
             }
         }
         compose.onNodeWithContentDescription(str(R.string.stage_play)).performTouchInput { longClick() }
@@ -1222,12 +1234,12 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack2NoTrack() = shoot("jornada_faixa_2_palco_sem_faixa") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack3WithTrack() = shoot("jornada_faixa_3_palco_com_faixa") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
     }
 
     /** Long press on play: the menu to change or remove the track (opens in another window). */
@@ -1236,7 +1248,7 @@ class ScreenshotTest {
     fun journeyTrack4Menu() {
         compose.setContent {
             StagebookTheme {
-                StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
             }
         }
         compose.onNodeWithContentDescription(str(R.string.stage_play)).performTouchInput { longClick() }
@@ -1245,7 +1257,7 @@ class ScreenshotTest {
     }
 
     @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
-        StageScreen(stage.copy(songs = listOf(StageSong("Canção de teste", "Banda Fictícia", chordSong, false)), look = stage.look.copy(chords = false)), 0, 0, { _, _ -> }, onBack = {})
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false)), look = stage.look.copy(chords = false)), 0, 0, { _, _ -> }, onBack = {})
     }
 
     @Test fun stageTabletOneColumn() = shoot("tablet_6_palco_1coluna") {
@@ -1267,12 +1279,12 @@ class ScreenshotTest {
     // a long section title that wraps on a phone: one pill per drawn line (audit 03/11)
     @Test @Config(qualifiers = PHONE)
     fun stageLongSectionPhone() = shoot("celular_7_palco_secao_longa") {
-        val text = "{c: Solo de guitarra com o teclado dobrando a melodia}\nPrimeira linha da letra de exemplo"
+        val text = s("{c: Solo de guitarra com o teclado dobrando a melodia}\nPrimeira linha da letra de exemplo")
         StageScreen(stage.copy(songs = listOf(StageSong("Hazard", "Richard Marx · 1991", text, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
     // the tag filter open: several ticked at once, and with large system text (user, 01/11)
-    private val tagged = songs.copy(tags = listOf("Abertura de show", "Internacional", "Lenta", "Nacional", "Rock anos 80"), chosenTags = setOf("Nacional", "Rock anos 80"))
+    private val tagged = songs.copy(tags = listOf(s("Abertura de show"), s("Internacional"), s("Lenta"), s("Nacional"), s("Rock anos 80")), chosenTags = setOf(s("Nacional"), s("Rock anos 80")))
 
     private fun tagFilterOpen(name: String, fontScale: Float) {
         compose.setContent {
@@ -1281,7 +1293,7 @@ class ScreenshotTest {
                 StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SongsScreen(tagged, "", {}, {}, {}, {}) } }
             }
         }
-        compose.onNodeWithText(if (fontScale > 0f && compose.onAllNodesWithText("2 tags").fetchSemanticsNodes().isNotEmpty()) "2 tags" else "Nacional +1").performClick()
+        compose.onNodeWithText(if (fontScale > 0f && compose.onAllNodesWithText("2 tags").fetchSemanticsNodes().isNotEmpty()) "2 tags" else s("Nacional +1")).performClick()
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
@@ -1303,6 +1315,66 @@ private fun str(id: Int, vararg args: Any): String =
 // where the captures go and in which language (-PshotsDir, -PshotsLang; empty = the usual folder, Portuguese)
 private val SHOTS_DIR = System.getProperty("shots.dir")?.takeIf { it.isNotEmpty() } ?: "build/outputs/roborazzi"
 private val SHOTS_LANG = System.getProperty("shots.lang")?.takeIf { it.isNotEmpty() }
+
+// the sample data in the English captures: the longest first, so a title isn't caught by a shorter one
+private val SAMPLES_EN = listOf(
+    "{c: Solo de guitarra com o teclado dobrando a melodia}" to "{c: Guitar solo with the keyboard doubling the melody}",
+    "Segunda linha ==um pouco mais comprida== que a outra" to "Second line ==a little longer== than the other",
+    "Os ajustes do arquivo substituem os daqui." to "The file's settings replace the ones here.",
+    "[G]Saio cedo pela [D]rua sem saber" to "[G]Leaving early down the [D]road I go",
+    "Primeira linha da letra de exemplo" to "First line of the sample lyrics",
+    "[C]Oh, [G]oh, ==[D]canta comigo==" to "[C]Oh, [G]oh, ==[D]sing with me==",
+    "[Em]Pra cantar o que [C]sobrar" to "[Em]For whatever's left to [C]sing",
+    "[G]Levo o violão e [D]um papel" to "[G]Just a guitar and [D]a page",
+    "[Em]Onde a estrada vai [C]dar" to "[Em]Where it ends I do not [C]know",
+    "Canção de teste (playback)" to "Test song (playback)",
+    "[C]Até o [D]sol voltar[G]" to "[C]Till the [D]sun comes back[G]",
+    "O refrão aparece aqui" to "The chorus shows up here",
+    "E repete mais uma vez" to "And repeats once more",
+    "Música que não tenho" to "A song I don't have",
+    "Outra [A7(4)]linha" to "Another [A7(4)]line",
+    "Outra que faltava" to "The other missing song",
+    "Linha de [G]teste" to "Test [G]line",
+    "Canção de exemplo" to "Sample song",
+    "{c: Solo de sax}" to "{c: Sax solo}",
+    "Mais uma estrofe" to "One more verse",
+    "Abertura de show" to "Show opener",
+    "Teclado do Caio" to "Caio's keyboard",
+    "Outra que falta" to "Another missing song",
+    "Canção de teste" to "Test song",
+    "Com outra linha" to "With another line",
+    "Celular do Caio" to "Caio's phone",
+    "Show de sábado" to "Saturday show",
+    "Celular da Ana" to "Ana's phone",
+    "Terceira linha" to "Third line",
+    "Banda Fictícia" to "Fictional Band",
+    "Tablet do Beto" to "Beto's tablet",
+    "Estrada Longa" to "Long Road",
+    "Abrir arquivo" to "Open file",
+    "Abrir" to "Open",
+    "47-violao-lua" to "47-guitar-moon",
+    "Estrada longa" to "Long road",
+    "Com tablatura" to "With tablature",
+    "Internacional" to "International",
+    "Rock anos 80" to "80s rock",
+    "Outra canção" to "Another song",
+    "Noite clara" to "Clear night",
+    "Nacional +1" to "Local +1",
+    "Noite Clara" to "Clear Night",
+    "Música nova" to "New song",
+    "Meu tablet" to "My tablet",
+    "E a última" to "And the last one",
+    "[Verso 1]" to "[Verse 1]",
+    "faixa.ogg" to "track.ogg",
+    "Nacional" to "Local",
+    "Bateria" to "Drums",
+    "Lenta" to "Slow",
+    "Baixo" to "Bass",
+    "Guia" to "Guide",
+)
+
+/** Sample data in the language of the capture: the English help shows no Portuguese songs. */
+private fun s(text: String) = if (SHOTS_LANG?.startsWith("en") == true) SAMPLES_EN.fold(text) { acc, (pt, en) -> acc.replace(pt, en) } else text
 
 private const val TABLET = "pt-rBR-w1280dp-h800dp-land-hdpi"
 private const val TABLET_PORTRAIT = "pt-rBR-w800dp-h1280dp-port-hdpi"

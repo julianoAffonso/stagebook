@@ -245,7 +245,8 @@ fun SettingsRoute(
     val advanced by advancedVm.ui.collectAsStateWithLifecycle()
     // read again every time the section opens and when coming back from Android's settings (battery request)
     LifecycleResumeEffect(section == SettingsSection.ADVANCED) {
-        if (section == SettingsSection.ADVANCED) advancedVm.refresh()
+        // About too: its update card asks whether this is a Samsung with Auto Blocker
+        if (section == SettingsSection.ADVANCED || section == SettingsSection.ABOUT) advancedVm.refresh()
         onPauseOrDispose { }
     }
     // without the local network permission (where Android has it) the system hides this device from the band (the S26
@@ -305,6 +306,8 @@ fun SettingsRoute(
                 advanced = advanced,
                 onTweak = advancedVm::set,
                 onBatteryFree = { runCatching { context.startActivity(advancedVm.batteryRequest()) } },
+                onAutoBlocker = { br.app.stagebook.data.device.AutoBlocker.open(context) },
+                onAutoBlockerBypass = advancedVm::setAutoBlockerBypass,
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         viewModel.setLanguage(lang)
@@ -399,6 +402,8 @@ data class SettingsActions(
     val advanced: AdvancedUi = AdvancedUi(),
     val onTweak: (br.app.stagebook.data.device.DeviceTweak, Boolean) -> Unit = { _, _ -> },
     val onBatteryFree: () -> Unit = {},
+    val onAutoBlocker: () -> Unit = {},
+    val onAutoBlockerBypass: (Boolean) -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
@@ -625,7 +630,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
-            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree)
+            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree, actions.onAutoBlocker, actions.onAutoBlockerBypass)
             SettingsSection.ABOUT -> AboutDetail(uiState, actions)
         }
     }
@@ -1549,8 +1554,13 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
         when (up) {
             is UpdateState.Available, UpdateState.DownloadFailed ->
                 ActionButton(stringResource(R.string.settings_update_download), actions.onDownloadUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
-            UpdateState.Ready ->
+            UpdateState.Ready -> {
                 ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
+                if (actions.advanced.autoBlocker && !actions.advanced.autoBlockerBypass) {
+                    InfoText(stringResource(R.string.auto_blocker_hint))
+                    ActionButton(stringResource(R.string.auto_blocker_open), actions.onAutoBlocker, Modifier.fillMaxWidth(), icon = AppIcons.Public, tone = ButtonTone.Tonal)
+                }
+            }
             is UpdateState.Downloading -> Unit
             else -> ActionButton(
                 stringResource(if (up == UpdateState.Checking) R.string.settings_update_checking else R.string.settings_update_check),

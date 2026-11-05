@@ -48,6 +48,8 @@ data class AdvancedUi(
     val canWrite: Boolean = false,
     val on: Map<DeviceTweak, Boolean> = emptyMap(),   // only the tweaks this device has
     val batteryFree: Boolean = true,
+    val autoBlocker: Boolean = false,   // a Samsung with Auto Blocker
+    val autoBlockerBypass: Boolean = false,
 )
 
 @HiltViewModel
@@ -67,6 +69,13 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
         }
     }
 
+    fun setAutoBlockerBypass(on: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            br.app.stagebook.data.device.AutoBlocker.setBypass(context, on)
+            _ui.value = read()
+        }
+    }
+
     /** Android's request to free Stagebook from battery saving (one tap on Allow). */
     @SuppressLint("BatteryLife")   // a music player that must keep playing with the screen off; not on a store that forbids it
     fun batteryRequest(): Intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${context.packageName}".toUri())
@@ -75,11 +84,13 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
         canWrite = DeviceTweaks.canWrite(context),
         on = DeviceTweak.entries.filter { DeviceTweaks.available(context, it) }.associateWith { DeviceTweaks.isOn(context, it) },
         batteryFree = DeviceTweaks.batteryFree(context),
+        autoBlocker = br.app.stagebook.data.device.AutoBlocker.available(context),
+        autoBlockerBypass = br.app.stagebook.data.device.AutoBlocker.bypass(context),
     )
 }
 
 @Composable
-fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit) {
+fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit, onAutoBlocker: () -> Unit = {}, onAutoBlockerBypass: (Boolean) -> Unit = {}) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (!ui.canWrite) PermissionCard()
         SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
@@ -91,6 +102,13 @@ fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBa
                 if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, icon = AppIcons.Eco, tone = ButtonTone.Tonal)
             }
             Tweaks(ui, DeviceTweak.Group.PLAY, onTweak)
+        }
+        // works without the computer's permission: it only opens Samsung's screen
+        if (ui.autoBlocker) SettingsCard(stringResource(R.string.auto_blocker_title)) {
+            Text(stringResource(R.string.auto_blocker_info), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            ActionButton(stringResource(R.string.auto_blocker_open), onClick = onAutoBlocker, icon = AppIcons.Public, tone = ButtonTone.Tonal)
+            // like the other switches here: shown, not switchable, without the computer's permission
+            SwitchRow(stringResource(R.string.auto_blocker_bypass), ui.autoBlockerBypass, onAutoBlockerBypass, detail = stringResource(R.string.auto_blocker_bypass_detail), enabled = ui.canWrite)
         }
         SettingsCard(stringResource(R.string.advanced_battery)) { Tweaks(ui, DeviceTweak.Group.BATTERY, onTweak) }
         SettingsCard(stringResource(R.string.advanced_computer)) { Tweaks(ui, DeviceTweak.Group.COMPUTER, onTweak) }
@@ -151,7 +169,7 @@ private val DeviceTweak.detail: Int
     }
 
 /** A device with every tweak at its default (as a TCL with the permission looks on first open). */
-internal val sampleAdvanced = AdvancedUi(canWrite = true, on = DeviceTweak.entries.associateWith { it.default }, batteryFree = false)
+internal val sampleAdvanced = AdvancedUi(canWrite = true, on = DeviceTweak.entries.associateWith { it.default }, batteryFree = false, autoBlocker = true)
 
 @LightPreview
 @Composable

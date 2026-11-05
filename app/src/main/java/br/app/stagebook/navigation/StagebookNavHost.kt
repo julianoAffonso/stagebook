@@ -105,7 +105,13 @@ fun StagebookNavHost(
             }
         }
     }
-    if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose)
+    val appContext = androidx.compose.ui.platform.LocalContext.current
+    // with the bypass on the app handles it, so there's nothing to ask
+    val autoBlocker = remember(appContext, updateOffer) {
+        val blocker = br.app.stagebook.data.device.AutoBlocker
+        if (blocker.available(appContext) && !blocker.bypass(appContext)) ({ blocker.open(appContext) }) else null
+    }
+    if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose, autoBlocker)
     // the "Lead the band" strip sits below any screen (the stage included) while the mode is on. Short messages
     // (snackbar) from any screen, at the bottom, above the "Lead the band" strip
     val message = rememberAppMessage()

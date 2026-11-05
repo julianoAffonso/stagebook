@@ -30,6 +30,7 @@ fun AppUpdateDialog(
     onLater: () -> Unit,
     onInstall: () -> Unit,
     onClose: () -> Unit,
+    onAutoBlocker: (() -> Unit)? = null,   // a Samsung with Auto Blocker, which may stop the install
 ) {
     val downloading = offer is UpdateOffer.Downloading
     AlertDialog(
@@ -55,7 +56,13 @@ fun AppUpdateDialog(
                         OfferStatus(stringResource(R.string.settings_update_downloading, offer.percent))
                         LinearProgressIndicator(progress = { offer.percent / 100f }, modifier = Modifier.fillMaxWidth())
                     }
-                    is UpdateOffer.Ready -> OfferStatus(stringResource(R.string.update_offer_ready))
+                    is UpdateOffer.Ready -> {
+                        OfferStatus(stringResource(R.string.update_offer_ready))
+                        if (onAutoBlocker != null) {
+                            Text(stringResource(R.string.auto_blocker_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = onAutoBlocker) { Text(stringResource(R.string.auto_blocker_open)) }
+                        }
+                    }
                     UpdateOffer.Failed -> OfferStatus(stringResource(R.string.settings_update_failed))
                 }
             }

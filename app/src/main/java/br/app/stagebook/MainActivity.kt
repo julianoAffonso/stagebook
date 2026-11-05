@@ -159,6 +159,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        br.app.stagebook.data.device.AutoBlocker.afterInstall(this)   // the install was cancelled
         checkUsbRecord()   // also when the app was opened by plugging in the interface
         window.decorView.post { hideSystemBars() }
     }
