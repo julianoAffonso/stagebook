@@ -98,12 +98,13 @@ fun ScreenHeader(
     }
 }
 
-// as tall as the subtitle's line, so the list doesn't move when a filter turns on; the touch area goes past it
+// as tall as the subtitle's line, so the list doesn't move when a filter turns on; the touch area goes past it. A faded
+// red: it stands out beside the grey count without looking like a delete (user, 04/11)
 @Composable
 private fun ClearFilterButton(onClick: () -> Unit) {
     Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
         IconButton(onClick, Modifier.requiredSize(48.dp)) {
-            Icon(AppIcons.Close, stringResource(R.string.filters_clear), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(AppIcons.Close, stringResource(R.string.filters_clear), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
         }
     }
 }
