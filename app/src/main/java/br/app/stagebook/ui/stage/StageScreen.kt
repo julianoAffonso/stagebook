@@ -388,6 +388,7 @@ fun StageScreen(
     // automatic zoom: only where nobody zoomed and the page exists; it follows the screen and is never saved in the song
     val autoWanted = look.autoZoom && look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
     var autoZoomNow by remember(index) { mutableFloatStateOf(1f) }
+    val autoMemo = remember { StageFit.Memo<Pair<Float, Int>>() }
     LaunchedEffect(song.zoom, autoWanted, autoZoomNow, zoomTouched) {
         if (!zoomTouched) zoom = (if (autoWanted) autoZoomNow else song.zoom).coerceIn(minZoom, maxZoom)
     }
@@ -844,7 +845,7 @@ fun StageScreen(
             }
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
             val autoFit = remember(autoWanted, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
-                if (!autoWanted || lines.isEmpty()) null else {
+                if (!autoWanted || lines.isEmpty()) null else autoMemo.get(listOf(lines.hashCode(), width, height, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden)) {
                     fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
                         // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
                         val zoomed = styleFor(z)

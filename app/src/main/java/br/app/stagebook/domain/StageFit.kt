@@ -19,6 +19,7 @@ object StageFit {
     const val AUTO_MAX_ZOOM = 1.5f
     private const val AUTO_MIN_FONT = 22f
     private const val AUTO_STEPS = 5
+    private const val MEMO_LIMIT = 200   // a long setlist; each entry is a key and a size, not the song
 
     /**
      * How many columns on stage. Automatic, song by song: if it fits on one page with 1 column, it stays 1; otherwise 2
@@ -41,6 +42,15 @@ object StageFit {
             val mostlyShort = lineWidthsPx.isNotEmpty() && short >= lineWidthsPx.size * SHORT_LINES_SHARE
             if (!fitsOnePageInOneColumn && mostlyShort && zoomFitsTwoColumns) 2 else 1
         }
+    }
+
+    /** Sizes already found while the stage is open: going back and forth in a setlist doesn't measure a song again. */
+    class Memo<T>(private val limit: Int = MEMO_LIMIT) {
+        private val found = object : LinkedHashMap<Any, T>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Any, T>?) = size > limit
+        }
+
+        fun get(key: Any, find: () -> T): T = found.getOrPut(key, find)
     }
 
     /** How a song lays out at some zoom. */
