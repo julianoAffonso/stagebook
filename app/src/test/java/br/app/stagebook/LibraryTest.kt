@@ -14,6 +14,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import br.app.stagebook.data.model.claimOldZoom
+import br.app.stagebook.data.model.withZoom
 import org.junit.Test
 
 class LibraryTest {
@@ -156,5 +158,53 @@ class LibraryTest {
         // the choice is saved in the library
         val lib = Library(look = Look(pedalKeys = keys))
         assertEquals(keys, LibraryCodec.decode(LibraryCodec.encode(lib), newId).look.pedalKeys)
+    }
+
+    private val tablet = br.app.stagebook.data.model.screenKey(1280, 800)
+    private val phone = br.app.stagebook.data.model.screenKey(411, 891)
+
+    @Test fun `a zoom belongs to its screen`() {
+        val song = Song("a", "Hazard").withZoom(tablet, br.app.stagebook.data.model.ScreenZoom(1.4f))
+        val stage = br.app.stagebook.ui.stage.StageSong("Hazard", "", "", false, zooms = song.zooms)
+        assertEquals(1.4f, stage.onScreen(tablet).zoom, 0f)
+        assertEquals("o celular abre no automático", 1f, stage.onScreen(phone).zoom, 0f)
+    }
+
+    @Test fun `a calculated zoom isn't a choice`() {
+        val fit = br.app.stagebook.data.model.ScreenZoom(0.8f, 1, "key")
+        val stage = br.app.stagebook.ui.stage.StageSong("Hazard", "", "", false, zooms = mapOf(phone to fit)).onScreen(phone)
+        assertEquals(1f, stage.zoom, 0f)
+        assertEquals(fit, stage.fit)
+    }
+
+    @Test fun `the old zoom stays with the first screen that opens the song`() {
+        val song = Song("a", "Hazard", zoom = 1.3f).claimOldZoom(tablet)
+        assertEquals(1f, song.zoom, 0f)
+        assertEquals(br.app.stagebook.data.model.ScreenZoom(1.3f), song.zooms[tablet])
+        assertEquals("já foi", song, song.claimOldZoom(phone))
+    }
+
+    @Test fun `automatic clears only that screen`() {
+        val song = Song("a", "Hazard").withZoom(tablet, br.app.stagebook.data.model.ScreenZoom(1.4f)).withZoom(phone, br.app.stagebook.data.model.ScreenZoom(0.9f))
+        assertEquals(setOf(phone), song.withZoom(tablet, null).zooms.keys)
+    }
+
+    @Test fun `a file brings other screens and keeps mine`() {
+        val mine = br.app.stagebook.data.model.ScreenZoom(1.4f)
+        val lib = Library(songs = listOf(Song("a", "Hazard", "Richard Marx", zooms = mapOf(tablet to mine))))
+        val incoming = Song("b", "Hazard", "Richard Marx", zooms = mapOf(tablet to br.app.stagebook.data.model.ScreenZoom(0.5f), phone to br.app.stagebook.data.model.ScreenZoom(0.9f)))
+        val song = lib.mergeSongs(listOf(incoming)) { "n" }.first.songs.single()
+        assertEquals(mine, song.zooms[tablet])
+        assertEquals(0.9f, song.zooms[phone]?.zoom)
+    }
+
+    @Test fun `an old file's single zoom doesn't reach a new song`() {
+        val song = Library().mergeSongs(listOf(Song("b", "Hazard", zoom = 1.6f))) { "n" }.first.songs.single()
+        assertEquals(1f, song.zoom, 0f)
+    }
+
+    @Test fun `zooms survive the file`() {
+        val song = Song("a", "Hazard").withZoom(tablet, br.app.stagebook.data.model.ScreenZoom(0.8f, 2, "key"))
+        assertEquals(song.zooms, LibraryCodec.decodeSongs(LibraryCodec.encodeSongs(listOf(song))).single().zooms)
     }
 }

@@ -1,5 +1,7 @@
 package br.app.stagebook
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -77,30 +79,37 @@ class StageAutoZoomTest {
         assertTrue("foi ao máximo: $text", percent < 140)
     }
 
-    private class FakeSizes(var found: StageFit.Found? = null) : StageFit.Sizes {
-        val saved = ArrayList<Pair<String, StageFit.Found>>()
-        override fun get(key: String) = found
-        override fun put(key: String, found: StageFit.Found) { saved += key to found }
-    }
-
-    private fun showWith(sizes: StageFit.Sizes) {
+    @Test fun `a size calculated is kept for this screen, without the lyrics`() {
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a")), look = Look(fontSp = 30f, columns = StageColumns.ONE))
-        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, autoSizes = sizes) } }
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z }) } }
         compose.waitForIdle()
+        assertEquals(fits.toString(), 1, fits.size)
+        assertTrue(fits[0].fit, "Verso" !in fits[0].fit && fits[0].fit.isNotEmpty())
     }
 
-    @Test fun `a size found is kept on the device, without the lyrics`() {
-        val sizes = FakeSizes()
-        showWith(sizes)
-        assertEquals(sizes.saved.toString(), 1, sizes.saved.size)
-        assertTrue(sizes.saved[0].first, "Verso" !in sizes.saved[0].first)
-    }
-
-    @Test fun `a size already found isn't measured again`() {
-        val sizes = FakeSizes(StageFit.Found(1f, 1))   // not what the page would give: proves it comes from here
-        showWith(sizes)
+    @Test fun `a size already calculated isn't measured again`() {
+        var fit by androidx.compose.runtime.mutableStateOf<br.app.stagebook.data.model.ScreenZoom?>(null)
+        val look = Look(fontSp = 30f, columns = StageColumns.ONE)
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a", fit = fit)), look = look), 0, 0, { _, _ -> }, onFit = { _, z -> fits += z })
+            }
+        }
+        compose.waitForIdle()
+        fit = fits.single().copy(zoom = 1f)   // not what the page gives: proves it comes from the song
+        compose.waitForIdle()
         assertEquals(1, pages())
-        assertTrue(sizes.saved.isEmpty())
+        assertEquals(1, fits.size)
+    }
+
+    @Test fun `changed lyrics are calculated again`() {
+        val old = br.app.stagebook.data.model.ScreenZoom(1f, 1, "another song")
+        val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a", fit = old)), look = Look(fontSp = 30f, columns = StageColumns.ONE))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }) } }
+        compose.waitForIdle()
+        assertEquals(0, pages())
     }
 
     @Test fun `opening a song saves nothing`() {
@@ -115,11 +124,6 @@ class StageAutoZoomTest {
         assertEquals(1, pages())
     }
 
-    @Test fun `100 percent chosen on purpose stays`() {
-        show(zoom = StageFit.CHOSEN_DEFAULT_ZOOM)
-        assertEquals(1, pages())
-    }
-
     @Test fun `the pinch badge goes back to automatic`() {
         show()
         pinch()
@@ -128,15 +132,13 @@ class StageAutoZoomTest {
         assertEquals("a" to 1f, saved.last())
     }
 
-    @Test fun `both badge buttons fit on a phone`() {
+    @Test fun `the badge button fits on a phone`() {
         show()
         pinch()
         val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.right
-        listOf("Automático", "100%").forEach {
-            val box = compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot
-            assertTrue("$it passou da borda: $box", box.right <= width + 0.5f && box.left >= 0f)
-            assertTrue("$it espremido: $box", box.width > box.height)
-        }
+        val box = compose.onNodeWithText("Automático").fetchSemanticsNode().boundsInRoot
+        assertTrue("passou da borda: $box", box.right <= width + 0.5f && box.left >= 0f)
+        assertTrue("espremido: $box", box.width > box.height)
     }
 
     @Test fun `the notice stays still while the percent changes`() {
@@ -157,24 +159,12 @@ class StageAutoZoomTest {
         assertEquals(small, place(), 0.5f)
     }
 
-    @Test fun `at 100 percent the notice keeps its place`() {
-        show(zoom = 1.3f)
-        pinch()
-        val before = compose.onNodeWithText("Automático").fetchSemanticsNode().boundsInRoot.left
-        compose.onNodeWithText("100%").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("100%").assertDoesNotExist()
-        assertEquals(before, compose.onNodeWithText("Automático").fetchSemanticsNode().boundsInRoot.left, 0.5f)
-    }
-
-    @Test fun `the pinch badge also chooses 100 percent`() {
-        show()
+    @Test fun `switched off, the badge goes back to 100 percent`() {
+        show(zoom = 1.3f, look = Look(fontSp = 30f, columns = StageColumns.ONE, autoZoom = false))
         pinch()
         compose.onNodeWithText("100%").performClick()
         compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(1_000)
-        compose.waitForIdle()
-        assertEquals("a" to StageFit.CHOSEN_DEFAULT_ZOOM, saved.last())
+        assertEquals("a" to 1f, saved.last())
     }
 
     @Test fun `switched off, the badge has no automatic`() {

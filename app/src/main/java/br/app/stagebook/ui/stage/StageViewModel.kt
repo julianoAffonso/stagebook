@@ -23,10 +23,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import br.app.stagebook.data.model.claimOldZoom
+import br.app.stagebook.data.model.withZoom
 import javax.inject.Inject
 
 @Immutable
-data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "", val mix: br.app.stagebook.domain.SongMix? = null)
+data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "", val mix: br.app.stagebook.domain.SongMix? = null,
+    val zooms: Map<String, br.app.stagebook.data.model.ScreenZoom> = emptyMap(),
+    val fit: br.app.stagebook.data.model.ScreenZoom? = null,   // the calculated zoom saved for this screen
+) {
+    /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
+    fun onScreen(screen: String): StageSong {
+        val saved = zooms[screen] ?: return this
+        return if (saved.fit.isEmpty()) copy(zoom = saved.zoom) else copy(fit = saved)
+    }
+}
 
 @Immutable
 data class StageUiState(
@@ -51,7 +62,6 @@ class StageViewModel @Inject constructor(
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val chordPlayer: br.app.stagebook.data.ChordPlayer,
     private val announcer: br.app.stagebook.data.StageAnnouncer,
-    val autoSizes: br.app.stagebook.data.AutoZoomSizes,
 ) : ViewModel() {
     /** Now Playing: the current song for OBS and others (if on in Settings → Screen). */
     fun announce(index: Int) {
@@ -168,7 +178,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix)
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, s?.zooms.orEmpty())
             },
             look = lib.look,
         )
@@ -233,8 +243,13 @@ class StageViewModel @Inject constructor(
         }
     }
 
-    fun setZoom(songId: String, zoom: Float) {
-        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(zoom = zoom) }
+    /** Saves the zoom of [screen]: a pinch, a calculated one, or null to go back to automatic. */
+    fun setZoom(songId: String, screen: String, zoom: br.app.stagebook.data.model.ScreenZoom?) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.withZoom(screen, zoom) }
+    }
+
+    fun claimOldZoom(songId: String, screen: String) {
+        if (repository.song(songId)?.let { it.zoom != 1f && screen !in it.zooms } == true) repository.updateSong(songId) { it.claimOldZoom(screen) }
     }
 }
 

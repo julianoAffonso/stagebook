@@ -9,13 +9,7 @@ object StageFit {
     /** Minimum share of lines that must fit in half the width (without wrapping) to use 2 columns. */
     const val SHORT_LINES_SHARE = 0.9
 
-    /**
-     * 100% chosen on purpose. A song's zoom of exactly 1 means nobody chose one, the case of automatic zoom; a separate
-     * field would change the format that goes to backups and the band, and this still shows as 100%.
-     */
-    const val CHOSEN_DEFAULT_ZOOM = 1.001f
-
-    /** Goes up when the calculation changes: what's saved on devices was found the old way. */
+    /** Goes up when the calculation changes: what songs have saved was found the old way. */
     const val SIZES_VERSION = 1
 
     /** Largest automatic zoom over the size in Settings. */
@@ -44,15 +38,6 @@ object StageFit {
             val mostlyShort = lineWidthsPx.isNotEmpty() && short >= lineWidthsPx.size * SHORT_LINES_SHARE
             if (!fitsOnePageInOneColumn && mostlyShort && zoomFitsTwoColumns) 2 else 1
         }
-    }
-
-    /** The automatic zoom of a song on some screen. */
-    data class Found(val zoom: Float, val columns: Int)
-
-    /** Where the sizes already found are kept: measuring is the expensive part, so a song is measured once. */
-    interface Sizes {
-        fun get(key: String): Found?
-        fun put(key: String, found: Found)
     }
 
     /** How a song lays out at some zoom. */

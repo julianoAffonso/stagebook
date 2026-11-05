@@ -7,6 +7,18 @@ import kotlinx.serialization.Serializable
 
 // The library saved in stagebook.json.
 
+/** A song's stage zoom on one screen, over the size in Settings. [fit] empty = a pinch, the person's choice. */
+@Immutable
+@Serializable
+data class ScreenZoom(
+    val zoom: Float,
+    val columns: Int = 0,
+    val fit: String = "",   // calculated: what it was calculated for; lyrics or look changed, it's calculated again
+)
+
+/** A screen, as zooms are kept: its size says the position too, upright and on its side are two screens. */
+fun screenKey(widthDp: Int, heightDp: Int) = "${widthDp}x$heightDp"
+
 @Immutable
 @Serializable
 data class Song(
@@ -15,7 +27,8 @@ data class Song(
     val author: String = "",
     val year: String = "",
     val text: String = "",
-    val zoom: Float = 1f,   // this song's stage zoom (pinch), over the default size from settings
+    val zoom: Float = 1f,   // only old libraries: a pinch from when a song had one zoom for every screen
+    val zooms: Map<String, ScreenZoom> = emptyMap(),   // stage zoom by screen size and position, see screenKey
     // backing track file copied into the app (name in filesDir/tracks); this device only: left out of export/QR
     val track: String = "",
     val trackName: String = "",   // the track file's own name when it was attached ("" = unknown), shown in the editor
@@ -116,6 +129,14 @@ val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !ex
 
 /** Some part is off (band, internet, player, extras): the alert on open lists which. */
 val Look.anyOff: Boolean get() = !bandOn || !internetOn || !playerMode || !extrasOn
+
+/** The song with [zoom] on [screen], or back to automatic with null. The old single zoom goes: it isn't known where it came from. */
+fun Song.withZoom(screen: String, zoom: ScreenZoom?): Song =
+    copy(zoom = 1f, zooms = if (zoom == null) zooms - screen else zooms + (screen to zoom))
+
+/** The old single zoom belongs to the first screen that opens the song: it's the person's choice, and the others go automatic. */
+fun Song.claimOldZoom(screen: String): Song =
+    if (zoom == 1f || screen in zooms) this else withZoom(screen, ScreenZoom(zoom))
 
 /** Stage look: applies to every song. Colors in ARGB. */
 @Immutable

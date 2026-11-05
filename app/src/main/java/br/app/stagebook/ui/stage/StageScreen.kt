@@ -228,13 +228,19 @@ fun StageRoute(
     }
     val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
+        val config = androidx.compose.ui.platform.LocalConfiguration.current
+        val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp)
+        val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
+        val open = index.coerceIn(0, uiState.songs.lastIndex)
+        LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
         StageScreen(
-            uiState = uiState,
-            index = index.coerceIn(0, uiState.songs.lastIndex),
+            uiState = shown,
+            index = open,
             page = page,
             onPosition = { i, p -> index = i; page = p },
-            onZoom = viewModel::setZoom,
-            autoSizes = viewModel.autoSizes,
+            // 1 is no zoom: this screen goes back to automatic
+            onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
+            onFit = { id, z -> viewModel.setZoom(id, screen, z) },
             onEdit = onEditSong,
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
@@ -296,7 +302,7 @@ fun StageScreen(
     onPosition: (song: Int, page: Int) -> Unit,
     modifier: Modifier = Modifier,
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
-    autoSizes: StageFit.Sizes? = null,
+    onFit: (songId: String, zoom: br.app.stagebook.data.model.ScreenZoom) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     onBack: (() -> Unit)? = null,
@@ -844,15 +850,15 @@ fun StageScreen(
                 val tall = if (stripChordCount == 0) restore else rows * cell.height.toPx() + restore
                 scale to tall + Spacing.m.toPx()
             }
-            // what the size depends on, in values that hold from one launch to the next. A hash, not the lyrics
+            // what the size depends on, in values that hold on another launch and another device. A hash, not the lyrics
             val language = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].toLanguageTag()
-            val sizeKey = listOf(
+            val fitKey = listOf(
                 StageFit.SIZES_VERSION, shownText.hashCode(), width, height, density.density, density.fontScale, language, look.fontSp, look.bold, look.font,
                 look.columns, look.chords, look.chordScale, look.showSections, look.translateSections, look.sectionScale, look.sectionFont, stripPlace,
-            ).joinToString("|")
+            ).joinToString("|").hashCode().toString(36)
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
-            val autoFit = remember(autoWanted, sizeKey, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
-                if (!autoWanted || lines.isEmpty()) null else autoSizes?.get(sizeKey) ?: run {
+            val autoFit = remember(autoWanted, song.fit, fitKey, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
+                if (!autoWanted || lines.isEmpty()) null else song.fit?.takeIf { it.fit == fitKey } ?: run {
                     fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
                         // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
                         val zoomed = styleFor(z)
@@ -883,10 +889,12 @@ fun StageScreen(
                     val w = if (cols == 2) halfWidth else width
                     val limit = if (cols == 2) fitTwo else fitOne
                     val top = minOf(StageFit.AUTO_MAX_ZOOM, Look.MAX_STAGE_FONT / look.fontSp, limit)
-                    StageFit.Found(StageFit.autoZoom(minOf(min, limit), top) { sheets(it, w, cols) }, cols).also { autoSizes?.put(sizeKey, it) }
+                    br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(minOf(min, limit), top) { sheets(it, w, cols) }, cols, fitKey)
                 }
             }
             SideEffect { autoZoomNow = autoFit?.zoom ?: 1f }
+            // calculated here for the first time: it stays in the song, for this screen
+            LaunchedEffect(autoFit) { if (autoFit != null && autoFit != song.fit) onFit(song.id, autoFit) }
             // during a pinch the fingers rule, until it's saved in the song
             val auto = autoFit.takeIf { !zoomTouched }
             val shownZoom = auto?.zoom ?: layoutZoom
@@ -1132,13 +1140,13 @@ fun StageScreen(
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
-                onReset = { zoom = StageFit.CHOSEN_DEFAULT_ZOOM.coerceIn(minZoom, maxZoom); zoomTouched = true },
-                // back to automatic: what's saved goes, and the page decides the size again
-                onAuto = if (look.autoZoom && !scrollMode) ({
+                // what's saved for this screen goes, and the page or Settings decide the size again
+                onReset = {
                     unsavedZoom.value = false
                     zoomTouched = false
                     onZoom(song.id, 1f)
-                }) else null,
+                },
+                auto = look.autoZoom && !scrollMode,
                 // the list's drawings keep their size: without them there's nothing to tell apart
                 scoped = look.chords && look.chordList != ChordListPlace.NONE,
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -1266,7 +1274,7 @@ fun StageScreen(
 
 /** "Zoom at 120%" while adjusting, with a shortcut back to the default size; [scoped]: says what it changes. */
 @Composable
-private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, onAuto: (() -> Unit)?, scoped: Boolean, modifier: Modifier = Modifier) {
+private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, auto: Boolean, scoped: Boolean, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
         // read in here: during the pinch only the badge recomposes
         val percent = percent()
@@ -1285,14 +1293,13 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
                     }
                     if (scoped) Text(stringResource(R.string.stage_zoom_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (onAuto != null) TextButton(onClick = onAuto) { Text(stringResource(R.string.stage_zoom_auto), maxLines = 1) }
-                // at 100% it only hides: leaving would pull the rest of the notice to the side
-                val atDefault = percent == 100
+                // nothing to go back to at 100% with no automatic: it only hides, leaving would pull the notice to the side
+                val idle = !auto && percent == 100
                 TextButton(
                     onClick = onReset,
-                    enabled = !atDefault,
-                    modifier = if (atDefault) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier,
-                ) { Text(stringResource(R.string.stage_zoom_reset), maxLines = 1) }
+                    enabled = !idle,
+                    modifier = if (idle) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier,
+                ) { Text(stringResource(if (auto) R.string.stage_zoom_auto else R.string.stage_zoom_reset), maxLines = 1) }
             }
         }
     }
