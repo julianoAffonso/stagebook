@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.padding
 import br.app.stagebook.ui.theme.Spacing
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.pinch
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -768,6 +771,38 @@ class ScreenshotTest {
     // T13: scroll mode, at the 2nd step (the lyrics scrolled to the 1st line that didn't fit)
     @Test fun stageScrollTablet() = shoot("tablet_6_palco_rolar") {
         StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 1, { _, _ -> }, onBack = {})
+    }
+
+    // Page card down to the Automatic zoom switch, whole: it sits at the end of the section
+    private fun shootPageCard(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LYRICS) }
+                }
+            }
+        }
+        val detail = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.settings_auto_zoom_detail)
+        compose.onNodeWithText(detail).performScrollTo()
+        compose.onRoot().performTouchInput { swipeUp(startY = centerY, endY = centerY - 200f) }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun settingsLyricsPagesTablet() = shootPageCard("tablet_5_ajustes_pagina")
+
+    @Test @Config(qualifiers = PHONE)
+    fun settingsLyricsPagesPhone() = shootPageCard("celular_5_ajustes_pagina")
+
+    // the pinch's notice: the percent, Automatic and Default
+    @Test @Config(qualifiers = PHONE)
+    fun stageZoomBadgePhone() {
+        compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
+        compose.onRoot().performTouchInput {
+            pinch(center - Offset(100f, 0f), center - Offset(125f, 0f), center + Offset(100f, 0f), center + Offset(125f, 0f), durationMillis = 400)
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_7_palco_zoom.png")
     }
 
     @Test fun settingsLyricsScrollTablet() = shoot("tablet_5_ajustes_rolar") {

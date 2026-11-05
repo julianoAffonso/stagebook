@@ -60,6 +60,9 @@ object Pagination {
     fun sheets(lines: List<Line>, columnHeight: Int, columns: Int): List<List<IntRange>> =
         paginate(lines, columnHeight).chunked(columns.coerceAtLeast(1))
 
+    /** Whether some verse is taller than the page and has to be cut by line. */
+    fun cutsVerse(lines: List<Line>, pageHeight: Int): Boolean = blocks(lines).any { b -> b.sumOf { lines[it].height } > pageHeight }
+
     /** Verses: consecutive non-empty lines. */
     private fun blocks(lines: List<Line>): List<IntRange> {
         val out = ArrayList<IntRange>()

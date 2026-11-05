@@ -316,6 +316,7 @@ fun SettingsRoute(
                 onKeepScreenOn = viewModel::setKeepScreenOn,
                 onTrackStops = viewModel::setTrackStops,
                 onColumns = viewModel::setColumns,
+                onAutoZoom = viewModel::setAutoZoom,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
                 onChordPlay = viewModel::setChordPlay,
@@ -405,6 +406,7 @@ data class SettingsActions(
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
+    val onAutoZoom: (Boolean) -> Unit = {},
     val onStageMode: (br.app.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
     val onChordPlay: (br.app.stagebook.data.model.ChordPlayMode) -> Unit = {},
@@ -711,7 +713,10 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
                 steps = Look.MAX_AUTO_SCROLL - 2,
             )
         }
-        if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) PageColumns(look, actions)
+        if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) {
+            PageColumns(look, actions)
+            SwitchRow(stringResource(R.string.settings_auto_zoom), look.autoZoom, actions.onAutoZoom, detail = stringResource(R.string.settings_auto_zoom_detail))
+        }
     }
     ChordShapesCard(look, actions)
     // the screen stays on with the app open (it was in its own Screen item)
