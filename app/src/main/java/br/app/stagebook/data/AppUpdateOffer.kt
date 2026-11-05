@@ -79,7 +79,7 @@ class AppUpdateOffer @Inject constructor(
         }
     }
 
-    /** The notice closed after opening the installer or failing. */
+    /** The notice closed without "Not now" (installer opened, failed or left): it comes back on the next open. */
     fun dismiss() {
         order.defer(code, remember = false)
         _offer.value = null

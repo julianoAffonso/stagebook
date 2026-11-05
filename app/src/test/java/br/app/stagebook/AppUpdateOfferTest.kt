@@ -102,4 +102,14 @@ class AppUpdateOfferTest {
         o.onEnter().await()
         assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
     }
+
+    @Test fun `closing without answering - comes back on the next open`() {
+        version = """{"versionCode":999999,"versionName":"0.3.999"}"""
+        val o = offer()
+        o.onEnter().await()
+        o.dismiss()
+        assertNull(o.offer.value)
+        o.onEnter().await()
+        assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
+    }
 }
