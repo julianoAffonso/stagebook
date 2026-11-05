@@ -133,6 +133,7 @@ data class Look(
     val trackStops: Boolean = true,   // the stage's track button stops and goes back to the start; off = pauses (user, 31/10)
     val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,
+    val autoZoom: Boolean = true,   // a song nobody zoomed is sized to the page of this device (never saved in the song)
     val stageMode: StageMode = StageMode.PAGES,
     val autoScroll: Int = DEFAULT_AUTO_SCROLL,   // auto-scroll speed (1 to 10), in scroll mode
     // stage metronome: 1-2-3-4 count-in before starting and sound (off = blink only)

@@ -130,7 +130,7 @@
     <string name="stage_marker">Highlighter</string>
     <string name="stage_marker_hint">Run your finger over the words to highlight them. Again to remove.</string>
     <string name="stage_marker_done">Done</string>
-    <string name="stage_zoom">Zoom for this song: %1$d%%</string>
+    <string name="stage_zoom">Zoom at %1$d%%</string>
     <string name="stage_zoom_scope">Lyrics and chords only</string>
     <string name="stage_zoom_reset">Default</string>
     <string name="set_remove">Remove</string>
@@ -447,6 +447,9 @@
     <string name="settings_columns_two_short">2 columns</string>
     <string name="settings_columns_never">Never</string>
     <string name="settings_columns_always">Always</string>
+    <string name="stage_zoom_auto">Automatic</string>
+    <string name="settings_auto_zoom">Automatic zoom</string>
+    <string name="settings_auto_zoom_detail">Fits each song to the screen without cutting verses, until you change its zoom</string>
     <string name="settings_columns_help">Automatic decides for each song: it splits into 2 columns when the lyrics don\'t fit on one page and the lines are short enough. The pedal turns both columns together.</string>
     <string name="settings_bold_short">bold</string>
     <string name="settings_sections_look">Section titles</string>
