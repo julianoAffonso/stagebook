@@ -106,7 +106,11 @@ fun StagebookNavHost(
         }
     }
     val appContext = androidx.compose.ui.platform.LocalContext.current
-    val autoBlocker = remember(appContext) { if (br.app.stagebook.data.device.AutoBlocker.available(appContext)) ({ br.app.stagebook.data.device.AutoBlocker.open(appContext) }) else null }
+    // asks the system only when the install is at hand: the button shows there and nowhere else in this window
+    val installing = updateOffer is UpdateOffer.Ready
+    val autoBlocker = remember(appContext, installing) {
+        if (installing && br.app.stagebook.data.device.AutoBlocker.available(appContext)) ({ br.app.stagebook.data.device.AutoBlocker.open(appContext) }) else null
+    }
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose, autoBlocker)
     // the "Lead the band" strip sits below any screen (the stage included) while the mode is on. Short messages
     // (snackbar) from any screen, at the bottom, above the "Lead the band" strip
