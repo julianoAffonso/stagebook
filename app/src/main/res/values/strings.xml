@@ -253,7 +253,7 @@
         <item quantity="one">Show the hidden chord again</item>
         <item quantity="other">Show the %1$d hidden chords again</item>
     </plurals>
-    <string name="settings_chord_list_help">Shows each chord of the song once, in the order they come. On stage, × takes a chord off the list and ↺ brings it back.</string>
+    <string name="settings_chord_list_help">Shows each of the song\'s chords once, in the order they appear. On stage, hold a chord to take it off the list. The × hides the list in that song, and the arrow brings everything back.</string>
     <string name="chord_shape_none">Couldn\'t find how to play %1$s on this instrument.</string>
     <string name="chord_shape_previous">Previous shape</string>
     <string name="chord_shape_next">Next shape</string>

@@ -260,7 +260,7 @@
         <item quantity="many">Mostrar de novo os %1$d acordes escondidos</item>
         <item quantity="other">Mostrar de novo os %1$d acordes escondidos</item>
     </plurals>
-    <string name="settings_chord_list_help">Mostra cada acorde da música uma vez, na ordem em que aparecem. No palco, o × tira um acorde da lista e o ↺ devolve.</string>
+    <string name="settings_chord_list_help">Mostra cada acorde da música uma vez, na ordem em que aparecem. No palco, segure um acorde para tirá-lo da lista. O × esconde a lista nessa música, e a seta traz tudo de volta.</string>
     <string name="chord_shape_none">Não encontrei como montar %1$s neste instrumento.</string>
     <string name="chord_shape_previous">Variação anterior</string>
     <string name="chord_shape_next">Próxima variação</string>
