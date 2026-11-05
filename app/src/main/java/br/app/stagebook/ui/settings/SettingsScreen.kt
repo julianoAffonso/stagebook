@@ -305,6 +305,7 @@ fun SettingsRoute(
                 advanced = advanced,
                 onTweak = advancedVm::set,
                 onBatteryFree = { runCatching { context.startActivity(advancedVm.batteryRequest()) } },
+                onAutoBlocker = { br.app.stagebook.data.device.AutoBlocker.open(context) },
                 onLanguage = { lang ->
                     if (lang != uiState.language) {
                         viewModel.setLanguage(lang)
@@ -399,6 +400,7 @@ data class SettingsActions(
     val advanced: AdvancedUi = AdvancedUi(),
     val onTweak: (br.app.stagebook.data.device.DeviceTweak, Boolean) -> Unit = { _, _ -> },
     val onBatteryFree: () -> Unit = {},
+    val onAutoBlocker: () -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
@@ -625,7 +627,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
-            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree)
+            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree, actions.onAutoBlocker)
             SettingsSection.ABOUT -> AboutDetail(uiState, actions)
         }
     }
@@ -1549,8 +1551,13 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
         when (up) {
             is UpdateState.Available, UpdateState.DownloadFailed ->
                 ActionButton(stringResource(R.string.settings_update_download), actions.onDownloadUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
-            UpdateState.Ready ->
+            UpdateState.Ready -> {
                 ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
+                if (actions.advanced.autoBlocker) {
+                    InfoText(stringResource(R.string.auto_blocker_hint))
+                    ActionButton(stringResource(R.string.auto_blocker_open), actions.onAutoBlocker, Modifier.fillMaxWidth(), icon = AppIcons.Public, tone = ButtonTone.Tonal)
+                }
+            }
             is UpdateState.Downloading -> Unit
             else -> ActionButton(
                 stringResource(if (up == UpdateState.Checking) R.string.settings_update_checking else R.string.settings_update_check),

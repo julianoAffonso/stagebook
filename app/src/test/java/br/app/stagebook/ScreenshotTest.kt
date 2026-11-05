@@ -549,6 +549,18 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_versao_nova.png")
     }
 
+    /** Downloaded on a Samsung: Auto Blocker may stop the install. */
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun updateReadyAutoBlockerTablet() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Ready(java.io.File("update.apk")), {}, {}, {}, {}, onAutoBlocker = {})
+            }
+        }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_bloqueador.png")
+    }
+
     @Test fun pickSongsTablet() = shoot("tablet_9_escolher_musicas") {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(

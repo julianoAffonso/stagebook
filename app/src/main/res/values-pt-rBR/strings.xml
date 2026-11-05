@@ -1002,4 +1002,8 @@
     <string name="help_url">https://julianoaffonso.github.io/stagebook/ajuda/</string>
     <string name="settings_translate_guide">guia de tradução</string>
     <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.pt-BR.md</string>
+    <string name="auto_blocker_title">Bloqueador automático</string>
+    <string name="auto_blocker_open">Abrir o Bloqueador automático</string>
+    <string name="auto_blocker_hint">Se a instalação for bloqueada, desligue o Bloqueador automático da Samsung e volte.</string>
+    <string name="auto_blocker_info">O Bloqueador automático da Samsung impede apps de fora das lojas, inclusive as atualizações do Stagebook. Desligue antes de atualizar. Ele volta a ligar sozinho.</string>
 </resources>
