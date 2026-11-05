@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# A commit only goes in with validation green: a filter in a pipe has hidden failures before.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+git diff --cached --name-only | grep -qE '^(app|mcp|tools)/' || exit 0
+tools/validate.sh || { echo "Commit refused: validation failed"; exit 1; }
