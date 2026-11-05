@@ -77,6 +77,32 @@ class StageAutoZoomTest {
         assertTrue("foi ao máximo: $text", percent < 140)
     }
 
+    private class FakeSizes(var found: StageFit.Found? = null) : StageFit.Sizes {
+        val saved = ArrayList<Pair<String, StageFit.Found>>()
+        override fun get(key: String) = found
+        override fun put(key: String, found: StageFit.Found) { saved += key to found }
+    }
+
+    private fun showWith(sizes: StageFit.Sizes) {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a")), look = Look(fontSp = 30f, columns = StageColumns.ONE))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, autoSizes = sizes) } }
+        compose.waitForIdle()
+    }
+
+    @Test fun `a size found is kept on the device, without the lyrics`() {
+        val sizes = FakeSizes()
+        showWith(sizes)
+        assertEquals(sizes.saved.toString(), 1, sizes.saved.size)
+        assertTrue(sizes.saved[0].first, "Verso" !in sizes.saved[0].first)
+    }
+
+    @Test fun `a size already found isn't measured again`() {
+        val sizes = FakeSizes(StageFit.Found(1f, 1))   // not what the page would give: proves it comes from here
+        showWith(sizes)
+        assertEquals(1, pages())
+        assertTrue(sizes.saved.isEmpty())
+    }
+
     @Test fun `opening a song saves nothing`() {
         show()
         compose.mainClock.advanceTimeBy(5_000)

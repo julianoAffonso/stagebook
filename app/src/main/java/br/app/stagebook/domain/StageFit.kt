@@ -15,11 +15,13 @@ object StageFit {
      */
     const val CHOSEN_DEFAULT_ZOOM = 1.001f
 
+    /** Goes up when the calculation changes: what's saved on devices was found the old way. */
+    const val SIZES_VERSION = 1
+
     /** Largest automatic zoom over the size in Settings. */
     const val AUTO_MAX_ZOOM = 1.5f
     private const val AUTO_MIN_FONT = 22f
     private const val AUTO_STEPS = 5
-    private const val MEMO_LIMIT = 200   // a long setlist; each entry is a key and a size, not the song
 
     /**
      * How many columns on stage. Automatic, song by song: if it fits on one page with 1 column, it stays 1; otherwise 2
@@ -44,13 +46,13 @@ object StageFit {
         }
     }
 
-    /** Sizes already found while the stage is open: going back and forth in a setlist doesn't measure a song again. */
-    class Memo<T>(private val limit: Int = MEMO_LIMIT) {
-        private val found = object : LinkedHashMap<Any, T>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Any, T>?) = size > limit
-        }
+    /** The automatic zoom of a song on some screen. */
+    data class Found(val zoom: Float, val columns: Int)
 
-        fun get(key: Any, find: () -> T): T = found.getOrPut(key, find)
+    /** Where the sizes already found are kept: measuring is the expensive part, so a song is measured once. */
+    interface Sizes {
+        fun get(key: String): Found?
+        fun put(key: String, found: Found)
     }
 
     /** How a song lays out at some zoom. */

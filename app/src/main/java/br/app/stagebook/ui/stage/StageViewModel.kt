@@ -51,6 +51,7 @@ class StageViewModel @Inject constructor(
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val chordPlayer: br.app.stagebook.data.ChordPlayer,
     private val announcer: br.app.stagebook.data.StageAnnouncer,
+    val autoSizes: br.app.stagebook.data.AutoZoomSizes,
 ) : ViewModel() {
     /** Now Playing: the current song for OBS and others (if on in Settings → Screen). */
     fun announce(index: Int) {

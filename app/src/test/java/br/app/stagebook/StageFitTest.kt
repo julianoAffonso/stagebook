@@ -104,20 +104,4 @@ class StageFitTest {
         StageFit.autoZoom(0.6f, 1.5f) { calls++; layout(40, 4, 1000)(it) }
         assertTrue("$calls", calls <= 7)
     }
-
-    @Test
-    fun `a size already found isn't measured again`() {
-        val memo = StageFit.Memo<Float>()
-        var measured = 0
-        repeat(3) { memo.get("song") { measured++; 1.2f } }
-        assertEquals(1, measured)
-    }
-
-    @Test
-    fun `the memo keeps only the most recent songs`() {
-        val memo = StageFit.Memo<Int>(limit = 2)
-        var measured = 0
-        listOf("a", "b", "c", "a").forEach { memo.get(it) { measured++ } }
-        assertEquals("a saiu quando c entrou", 4, measured)
-    }
 }

@@ -72,6 +72,6 @@ class StageMetaTest {
                 context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
                 StageGate(), br.app.stagebook.data.BandInbox(context), repo,
             ),
-        ),
+        ), br.app.stagebook.data.AutoZoomSizes(context),
     )
 }
