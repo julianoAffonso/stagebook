@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <math.h>
 #include <poll.h>
+#include <signal.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -497,7 +498,21 @@ static void free_parked(void) {
     g_nparked = 0;
 }
 
-// Waits for a URB without blocking for ever: REAPURB never returns from a queue the device stopped serving.
+// REAPURB never returns from a queue the device stopped serving. It stays the way to wait, the cheapest one (polling
+// took a tablet from 15% to 61% of a core): this watcher only looks at the clock and wakes it with a signal.
+static volatile double g_last_reap = 0;
+static volatile int g_stalled = 0, g_watching = 0;
+static pthread_t g_watch_thr;
+static void wake_usb(int sig) {}
+static void *stall_watch(void *arg) {
+    while (g_watching) {
+        struct timespec t = {0, 50000000}; nanosleep(&t, NULL);
+        if (g_watching && now_s() - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
+    }
+    return NULL;
+}
+
+// Waits for what's left when closing, never for ever.
 #define REAP_STALLED -2
 static int reap_wait(struct usbdevfs_urb **out) {
     double from = now_s();
@@ -606,24 +621,27 @@ static void *usb_main(void *arg) {
         inflight++;
     }
     set_status("USB ativo");
+    g_stalled = 0; g_last_reap = now_s(); g_watching = 1;
+    { struct sigaction sa = {0}; sa.sa_handler = wake_usb; sigaction(SIGUSR2, &sa, NULL); }   // no SA_RESTART: REAPURB returns
+    pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
 
     while (tail_urbs < TAIL_URBS + nurbs - 1) {
         if (!tail && g_usb_stop) tail = 1;
         struct usbdevfs_urb *done = NULL;
-        int got = reap_wait(&done);
-        if (got == REAP_STALLED) {
-            // some devices stop returning URBs for good with a long queue, with no error: half of it, connecting again
-            if (g_queue_ms > QUEUE_MS_MIN) g_queue_ms /= 2;
-            LOGI("usb: fila parou, tentando %d ms", g_queue_ms);
-            set_status("USB caiu: fila parou");
-            goto out;
-        }
-        if (got < 0) {
+        if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
+            if (errno == EINTR && g_stalled) {
+                // some devices stop returning URBs for good with a long queue, with no error: half of it, connecting again
+                if (g_queue_ms > QUEUE_MS_MIN) g_queue_ms /= 2;
+                LOGI("usb: fila parou, tentando %d ms", g_queue_ms);
+                set_status("USB caiu: fila parou");
+                goto out;
+            }
             if (errno == EINTR) continue;
             set_status("USB caiu: %s", strerror(errno));
             goto out;
         }
         inflight--;
+        g_last_reap = now_s();
         if (done->endpoint & 0x80) {
             if (DIAG) {   // diagnostics: the first input URBs
                 static int dbg = 0;
@@ -682,6 +700,7 @@ static void *usb_main(void *arg) {
     set_status("parado (urbs=%ld erros=%d)", reaped, errors);
 
 out:
+    if (g_watching) { g_watching = 0; pthread_join(g_watch_thr, NULL); }
     for (int u = 0; u < nurbs; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, urbs[u]);
     for (int u = 0; u < n_in; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, in_urbs[u]);
     // waits for the kernel to return each URB (discarded or with the desk disconnected, it returns right away); an
