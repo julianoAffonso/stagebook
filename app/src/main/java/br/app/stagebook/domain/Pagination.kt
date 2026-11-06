@@ -1,19 +1,32 @@
 package br.app.stagebook.domain
 
 /**
- * Splits the lyrics into stage pages (the pedal turns the whole page, no scrolling). Breaks between verses; a section
- * title goes with its verse. Only a verse longer than the page is cut, by line.
+ * Splits the lyrics into stage pages (the pedal turns the whole page, no scrolling). Breaks between verses and before a
+ * section title, which goes with its verse. Only a verse longer than the page is cut, by line, right after what came before.
  */
 object Pagination {
+    private const val THIN_PAGE = 3   // a page under a third full counts as thin
+    private const val OPENING_LINES = 2   // a title alone at the end of a page says nothing
+
     /** A lyrics line already measured at the screen width (the height counts automatic wrapping). */
     data class Line(val height: Int, val blank: Boolean, val title: Boolean = false)
 
     /** Line ranges for each page (no blank lines at the edges). */
-    fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> {
+    fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> = sheets(lines, pageHeight, 1).flatten()
+
+    /**
+     * Stage sheets with `columns` columns: the columns fill in order (left, then right), each as tall as the page; the
+     * pedal turns the whole sheet. A verse taller than a column has to split, but they're read together: when the rest of
+     * this sheet can't hold it and a whole one can, it starts the next.
+     */
+    fun sheets(lines: List<Line>, pageHeight: Int, columns: Int): List<List<IntRange>> {
+        val perSheet = columns.coerceAtLeast(1)
         val blocks = blocks(lines)
-        if (blocks.isEmpty()) return listOf(IntRange.EMPTY)
-        val gap = lines.firstOrNull { it.blank }?.height ?: 0
-        val pages = ArrayList<IntRange>()
+        if (blocks.isEmpty()) return listOf(listOf(IntRange.EMPTY))
+        val blank = lines.firstOrNull { it.blank }?.height ?: 0
+        val tallest = lines.maxOf { it.height }   // a column cut by line can leave this much unused
+        val sheets = ArrayList<List<IntRange>>()
+        var pages = ArrayList<IntRange>()
         var start = -1
         var end = -1
         var used = 0
@@ -21,10 +34,18 @@ object Pagination {
         fun flush() {
             if (start >= 0) pages += start..end
             start = -1; end = -1; used = 0
+            if (pages.size == perSheet) { sheets += pages; pages = ArrayList() }
+        }
+
+        fun nextSheet() {
+            flush()
+            if (pages.isNotEmpty()) { sheets += pages; pages = ArrayList() }
         }
 
         for (block in blocks) {
             val h = block.sumOf { lines[it].height }
+            // a section right under the last line has no blank line between them
+            val gap = if (lines.getOrNull(block.first - 1)?.blank == true) blank else 0
             val need = if (start < 0) h else used + gap + h
             when {
                 need <= pageHeight -> {
@@ -32,13 +53,21 @@ object Pagination {
                     end = block.last
                     used = need
                 }
-                h <= pageHeight -> {
+                // a column nearly empty beside the verse says nothing: it goes on there and into the next column
+                h <= pageHeight && (start < 0 || used * THIN_PAGE >= pageHeight || pages.size >= perSheet - 1) -> {
                     flush()
                     start = block.first; end = block.last; used = h
                 }
                 else -> {
-                    // verse longer than the page: cut by line
-                    flush()
+                    // verse longer than the page: cut by line. It gets cut anyway, so it goes on from here when its
+                    // opening fits; a new page left the short verse before it alone (an intro, in a low column)
+                    val columnsAfter = perSheet - pages.size - 1
+                    val room = pageHeight - (if (start >= 0) used + gap else 0) + columnsAfter * (pageHeight - tallest)
+                    // not at the cost of a sheet nearly empty: an intro alone is worse than the split
+                    val filled = (pages.size * pageHeight + used) * THIN_PAGE >= perSheet * pageHeight
+                    if (filled && h > room && h <= perSheet * (pageHeight - tallest)) nextSheet()
+                    val opening = block.take(OPENING_LINES).sumOf { lines[it].height }
+                    if (start >= 0 && used + gap + opening <= pageHeight) used += gap else flush()
                     for (i in block) {
                         val lh = lines[i].height
                         if (start >= 0 && used + lh > pageHeight) flush()
@@ -49,28 +78,32 @@ object Pagination {
                 }
             }
         }
-        flush()
-        return pages
+        nextSheet()
+        return sheets
     }
-
-    /**
-     * Stage sheets with `columns` columns: the columns fill in order (left, then right), each as tall as the page; the
-     * pedal turns the whole sheet.
-     */
-    fun sheets(lines: List<Line>, columnHeight: Int, columns: Int): List<List<IntRange>> =
-        paginate(lines, columnHeight).chunked(columns.coerceAtLeast(1))
 
     /** Whether some verse is taller than the page and has to be cut by line. */
     fun cutsVerse(lines: List<Line>, pageHeight: Int): Boolean = blocks(lines).any { b -> b.sumOf { lines[it].height } > pageHeight }
 
-    /** Verses: consecutive non-empty lines. */
+    /** Whether some verse runs from one of these [sheets] to the next: the pedal would turn in the middle of it. */
+    fun crossesSheet(lines: List<Line>, sheets: List<List<IntRange>>): Boolean {
+        val sheetOf = IntArray(lines.size)
+        sheets.forEachIndexed { n, sheet -> sheet.forEach { page -> page.forEach { sheetOf[it] = n } } }
+        return blocks(lines).any { sheetOf[it.first] != sheetOf[it.last] }
+    }
+
+    /** Whether the first of several [pages] has only a sliver of text, like an intro left alone before a long verse. */
+    fun thinFirstPage(lines: List<Line>, pages: List<IntRange>, pageHeight: Int): Boolean =
+        pages.size > 1 && pages[0].sumOf { lines[it].height } * THIN_PAGE < pageHeight
+
+    /** Verses: consecutive non-empty lines, and a section title starts a new one even with no blank line before it. */
     private fun blocks(lines: List<Line>): List<IntRange> {
         val out = ArrayList<IntRange>()
         var i = 0
         while (i < lines.size) {
             if (lines[i].blank) { i++; continue }
-            val s = i
-            while (i < lines.size && !lines[i].blank) i++
+            val s = i++
+            while (i < lines.size && !lines[i].blank && !lines[i].title) i++
             out += s until i
         }
         // a section title alone (a blank line after it) goes with the next verse: it was left at the bottom of a page,

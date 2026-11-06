@@ -232,7 +232,6 @@ class SettingsViewModel @Inject constructor(
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
     fun setHighlightColor(argb: Int) = repository.updateLook { it.copy(highlightColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }
-    fun setAutoZoom(on: Boolean) = repository.updateLook { it.copy(autoZoom = on) }
     fun setMetronome(count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) =
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setMetronomeShown(on: Boolean) = repository.updateLook { it.copy(metroShown = on) }
