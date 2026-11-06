@@ -18,6 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class MetronomeSound @Inject constructor(@ApplicationContext private val context: Context) {
     @Volatile private var worker: Thread? = null
+    @Volatile private var quieter = false   // the track isn't media: it comes out lower
 
     fun start(bpm: Int) {
         stop()
@@ -26,25 +27,16 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
         val accent = MetronomeClick.click(accent = true)
         worker = Thread({
             val min = AudioTrack.getMinBufferSize(MetronomeClick.RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-            val track = runCatching {
-                AudioTrack.Builder()
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(if (br.app.stagebook.player.StagePlayer.viaAndroid()) AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY else AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                    .setAudioFormat(AudioFormat.Builder().setSampleRate(MetronomeClick.RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    .setBufferSizeInBytes(maxOf(min, CHUNK * 2))
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-            }.getOrNull() ?: return@Thread
+            val track = openTrack(min) ?: return@Thread
             // the device's own output, never the USB interface: with the interface playing through Android (the
             // "through Android" option), the default output is the interface and the click went there too. Picked again
             // when headphones come or go while it plays (audit 02/11: plugged later, they got nothing)
             val audio = context.getSystemService(AudioManager::class.java)
-            deviceOutput()?.let { track.setPreferredDevice(it) }
             val follow = object : android.media.AudioDeviceCallback() {
                 override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) { deviceOutput()?.let { track.setPreferredDevice(it) } }
                 override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) { deviceOutput()?.let { track.setPreferredDevice(it) } }
             }
             audio?.registerAudioDeviceCallback(follow, null)
-            val viaAndroid = br.app.stagebook.player.StagePlayer.viaAndroid()
             val buf = ShortArray(CHUNK)
             var pos = 0L
             try {
@@ -52,7 +44,7 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
                 while (!Thread.currentThread().isInterrupted) {
                     MetronomeClick.render(buf, pos, spb, normal, accent)
                     // accessibility audio comes out quieter than media, even at full volume
-                    if (viaAndroid) for (i in buf.indices) buf[i] = (buf[i] * ANDROID_ROUTE_GAIN).coerceIn(-32768, 32767).toShort()
+                    if (quieter) for (i in buf.indices) buf[i] = (buf[i] * ANDROID_ROUTE_GAIN).coerceIn(-32768, 32767).toShort()
                     if (track.write(buf, 0, buf.size) < 0) break
                     pos += buf.size
                 }
@@ -69,6 +61,36 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
         worker = null
     }
 
+    /**
+     * The click's track. Through Android the song is media on the interface, and each Android keeps a different kind of
+     * audio apart from it: the first one it really sends to the device's output is the one that stays.
+     */
+    private fun openTrack(min: Int): AudioTrack? {
+        val kinds = if (br.app.stagebook.player.StagePlayer.viaAndroid()) ROUTE_USAGES else listOf(AudioAttributes.USAGE_MEDIA)
+        kinds.forEachIndexed { i, usage ->
+            val track = runCatching {
+                AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(usage).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                    .setAudioFormat(AudioFormat.Builder().setSampleRate(MetronomeClick.RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                    .setBufferSizeInBytes(maxOf(min, CHUNK * 2))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+            }.getOrNull() ?: return@forEachIndexed
+            deviceOutput()?.let { track.setPreferredDevice(it) }
+            quieter = usage != AudioAttributes.USAGE_MEDIA
+            if (i == kinds.lastIndex) return track
+            track.play()
+            track.write(ShortArray(CHUNK * 2), 0, CHUNK * 2)
+            runCatching { Thread.sleep(ROUTE_WAIT_MS) }
+            val at = track.routedDevice?.type
+            android.util.Log.i("stagebook", "click usage $usage routed to $at")
+            if (at != AudioDeviceInfo.TYPE_USB_DEVICE && at != AudioDeviceInfo.TYPE_USB_HEADSET) return track
+            runCatching { track.stop() }
+            track.release()
+        }
+        return null
+    }
+
     /** Headphones (wired, USB-C or Bluetooth) when connected, otherwise the speaker. */
     private fun deviceOutput(): AudioDeviceInfo? {
         val all = context.getSystemService(AudioManager::class.java)?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) ?: return null
@@ -81,6 +103,10 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
     private companion object {
         const val CHUNK = 960   // 20 ms per write
         const val ANDROID_ROUTE_GAIN = 3
+        const val ROUTE_WAIT_MS = 120L
+        // the last one is what's left when Android won't separate them: the click goes with the song, at its normal level.
+        // Never an alarm: Android reopens the outputs for it and the song dropped when the click stopped
+        val ROUTE_USAGES = listOf(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY, AudioAttributes.USAGE_ASSISTANCE_SONIFICATION, AudioAttributes.USAGE_MEDIA)
         val DEVICE_PREFERENCE = listOf(
             // USB-C headphones and dongles are headsets, not the interface (audit 02/11: the click went to the speaker)
             AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET,
