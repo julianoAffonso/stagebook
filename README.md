@@ -40,20 +40,21 @@ Interfaces that are only USB Audio 1.0 or only 44.1 kHz don't work yet. Without 
 device's headphones, Bluetooth or speaker.
 
 ## How light it is
-Measured on real devices for one minute per screen (CPU as a share of **one** core; all three have 8 cores):
+Measured on real devices for one minute per screen (CPU as a share of **one** core; all four have 8 cores):
 
-| Screen | TCL NXTPAPER 11 Plus | Galaxy S26 Ultra | Chuwi Hi10 XPro |
-|---|---|---|---|
-| Song list, idle | 1.4% · 194 MB | 0.1% · 136 MB | 1.5% · 117 MB |
-| Stage, idle | 1.4% · 219 MB | 0.3% · 167 MB | 0.4% · 121 MB |
-| Stage, turning a page every 3 s | 12.7% · 198 MB | 3.8% · 146 MB | 2.9% · 120 MB |
-| Stage, following the band | — | 0.2% · 253 MB | 8.8% · 114 MB |
-| Leading the band for 5 minutes (9 songs, a page every 2 s) | 5.0% · 194 MB | 0.8% · 186 MB (following) | 2.4% · 124 MB (following) |
-| Sending a setlist to the band | 2.6% · 198 MB | 0.0% · 160 MB (receiving) | — |
-| Backing track playing on a USB interface | 15% · 202 MB | — | — |
-| Band settings, idle | 3.1% · 205 MB | 7.2% · 186 MB | 0.6% · 123 MB |
+| Screen | TCL NXTPAPER 11 Plus | Galaxy S26 Ultra | Chuwi Hi10 XPro | OnePlus 10 Pro |
+|---|---|---|---|---|
+| Song list, idle | 0.4% · 112 MB | 0.1% · 132 MB | 0.1% · 68 MB | 0.1% · 32 MB |
+| Stage, idle | 0.6% · 143 MB | 0.2% · 131 MB | 0.4% · 73 MB | 0.4% · 39 MB |
+| Stage, turning a page every 3 s | 3.9% · 132 MB | 5.4% · 126 MB | 5.1% · 74 MB | 14.7% · 38 MB |
+| Stage, following the band | — | 0.2% · 253 MB | 8.8% · 114 MB | — |
+| Leading the band for 5 minutes (9 songs, a page every 2 s) | 5.0% · 194 MB | 0.8% · 186 MB (following) | 2.4% · 124 MB (following) | — |
+| Sending a setlist to the band | 2.6% · 198 MB | 0.0% · 160 MB (receiving) | — | — |
+| Backing track playing on a USB interface | 15% · 202 MB | — | — | — |
+| Backing track playing on the device output | 17.1% · 147 MB | 3.9% · 140 MB | 13.9% · 71 MB | 18.9% · 44 MB |
+| Band settings, idle | 0.2% · 175 MB | 0.2% · 145 MB | 0.3% · 75 MB | 0.6% · 41 MB |
 
-Even playing a track, Stagebook uses less than 2% of the whole processor. Essential mode barely changes these numbers:
+Even playing a track, Stagebook uses less than 3% of the whole processor. Essential mode barely changes these numbers:
 its gain is a simpler screen.
 
 ## Use with AI assistants (MCP)
