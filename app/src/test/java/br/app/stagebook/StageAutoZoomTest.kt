@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
+import androidx.compose.ui.unit.dp
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.data.model.StageColumns
 import br.app.stagebook.domain.StageFit
@@ -110,6 +112,62 @@ class StageAutoZoomTest {
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }) } }
         compose.waitForIdle()
         assertEquals(0, pages())
+    }
+
+    // turning the device: the app isn't recreated (configChanges), only the room of the stage changes
+    @Test fun `turning the screen finds the size of the new position`() {
+        var upright by androidx.compose.runtime.mutableStateOf(true)
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        val look = Look(fontSp = 49f)
+        val song = (1..6).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..3).joinToString("\n") { "Uma linha da letra" } }
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = look)
+        compose.setContent {
+            StagebookTheme {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(if (upright) 400.dp else 800.dp, if (upright) 800.dp else 400.dp)) {
+                    StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z })
+                }
+            }
+        }
+        compose.waitForIdle()
+        upright = false
+        compose.waitForIdle()
+        assertEquals(fits.toString(), 2, fits.size)
+        assertTrue(fits.toString(), fits[0].fit != fits[1].fit)
+        assertTrue("o tamanho mudou com a posição: $fits", fits[0].zoom != fits[1].zoom || fits[0].columns != fits[1].columns)
+    }
+
+    // what the stage route does: the save goes to the screen of the composition that made the lambda
+    private fun turnable(): (String) -> Unit {
+        var screen by androidx.compose.runtime.mutableStateOf("em pé")
+        val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a")), look = Look(fontSp = 30f, columns = StageColumns.ONE))
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            val now = screen
+            StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, screen = now, onZoom = { _, z -> saved += now to z }) }
+        }
+        compose.mainClock.advanceTimeBy(100)
+        return { screen = it; compose.mainClock.advanceTimeBy(100) }
+    }
+
+    @Test fun `a pinch right after turning goes to the new position`() {
+        val turn = turnable()
+        pinch()
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals(listOf("em pé"), saved.map { it.first })
+        turn("deitado")
+        compose.onRoot().performTouchInput {
+            pinch(center - Offset(250f, 0f), center - Offset(150f, 0f), center + Offset(250f, 0f), center + Offset(150f, 0f), durationMillis = 400)
+        }
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals(listOf("em pé", "deitado"), saved.map { it.first })
+    }
+
+    @Test fun `a pinch not saved yet stays on the position it was made on`() {
+        val turn = turnable()
+        pinch()
+        turn("deitado")
+        compose.mainClock.advanceTimeBy(5_000)
+        assertEquals(listOf("em pé"), saved.map { it.first })
     }
 
     @Test fun `opening a song saves nothing`() {

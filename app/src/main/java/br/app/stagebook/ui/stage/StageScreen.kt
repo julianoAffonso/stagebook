@@ -238,6 +238,7 @@ fun StageRoute(
             index = open,
             page = page,
             onPosition = { i, p -> index = i; page = p },
+            screen = screen,
             // 1 is no zoom: this screen goes back to automatic
             onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
             onFit = { id, z -> viewModel.setZoom(id, screen, z) },
@@ -301,6 +302,7 @@ fun StageScreen(
     page: Int,
     onPosition: (song: Int, page: Int) -> Unit,
     modifier: Modifier = Modifier,
+    screen: String = "",   // size and position: a pinch belongs to the one it was made on
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onFit: (songId: String, zoom: br.app.stagebook.data.model.ScreenZoom) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
@@ -393,31 +395,35 @@ fun StageScreen(
     var zoom by zoomState
     val unsavedZoom = remember(index) { mutableStateOf(false) }   // pinch on this song not saved yet
     var zoomTouched by remember(index) { mutableStateOf(false) }
-    // automatic zoom: only where nobody zoomed and the page exists; it follows the screen and is never saved in the song
+    // automatic zoom: only where nobody zoomed and the page exists; what it finds is saved for this screen
     val autoWanted = look.autoZoom && look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
     var autoZoomNow by remember(index) { mutableFloatStateOf(1f) }
-    LaunchedEffect(song.zoom, autoWanted, autoZoomNow, zoomTouched) {
+    LaunchedEffect(screen, song.zoom, autoWanted, autoZoomNow, zoomTouched) {
         if (!zoomTouched) zoom = (if (autoWanted) autoZoomNow else song.zoom).coerceIn(minZoom, maxZoom)
     }
     // the live zoom is only read inside effects, the layer and the badge: reading it in composition recomposed the
     // whole stage on every pinch frame
     val songNow by rememberUpdatedState(song)
+    val saveZoom by rememberUpdatedState(onZoom)   // always the current position: the loop below outlives a turn
     LaunchedEffect(index, zoomTouched) {
         if (!zoomTouched) return@LaunchedEffect
         snapshotFlow { zoomState.floatValue }.collectLatest { z ->
             unsavedZoom.value = z != songNow.zoom
             delay(700)
-            if (z != songNow.zoom) onZoom(songNow.id, z)
+            if (unsavedZoom.value) saveZoom(songNow.id, z)   // a turn may have saved it already, on its own position
             unsavedZoom.value = false
             delay(2_500)
             zoomTouched = false
         }
     }
-    // the pedal changed songs before the pinch was saved: save on leaving it (with this song's state, kept on entry: on
-    // exit the screen is already building the next one)
-    DisposableEffect(index) {
+    // the pedal changed songs or the screen turned before the pinch was saved: save on leaving it (with this song's state
+    // and screen, kept on entry: on exit the stage is already building the next one)
+    DisposableEffect(index, screen) {
         val id = song.id
-        onDispose { if (unsavedZoom.value) onZoom(id, zoomState.floatValue) }
+        onDispose {
+            if (unsavedZoom.value) onZoom(id, zoomState.floatValue)
+            unsavedZoom.value = false
+        }
     }
     // measuring and paginating text is expensive on the Fire: during the pinch the text only scales, and the pages are
     // rebuilt when the fingers stop
