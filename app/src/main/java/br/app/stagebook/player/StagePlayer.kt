@@ -302,6 +302,9 @@ class StagePlayer @Inject constructor(
         fun interfaceName(): String = if (PlayerService.outputKey.startsWith("usb:")) PlayerService.outputName.orEmpty() else ""
 
         /** No click on USB (also when the player is off: the engine keeps the setting for its next start). */
+        /** The song plays through Android: as media too, the click would follow it to the interface. */
+        fun viaAndroid() = PlayerService.viaAndroid
+
         fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1)
 
         private const val METER_MS = 66L          // ~15 reads per second

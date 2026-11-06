@@ -28,7 +28,7 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
             val min = AudioTrack.getMinBufferSize(MetronomeClick.RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             val track = runCatching {
                 AudioTrack.Builder()
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(if (br.app.stagebook.player.StagePlayer.viaAndroid()) AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY else AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
                     .setAudioFormat(AudioFormat.Builder().setSampleRate(MetronomeClick.RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                     .setBufferSizeInBytes(maxOf(min, CHUNK * 2))
                     .setTransferMode(AudioTrack.MODE_STREAM)
