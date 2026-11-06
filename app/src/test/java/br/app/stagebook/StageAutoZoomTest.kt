@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -283,6 +284,16 @@ class StageAutoZoomTest {
         compose.waitForIdle()
         assertTrue(heights.sumOf { it.height }.toString(), heights.sumOf { it.height } <= 300 + heights.size)
         assertEquals(1, br.app.stagebook.domain.Pagination.paginate(heights, 300 + heights.size).size)
+    }
+
+    // the output's name used to cover the metronome, right when it's turned on
+    @Test fun `the player's note stays clear of the metronome`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a")), look = Look(fontSp = 30f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, note = "Saída USB: Nanocore") } }
+        compose.waitForIdle()
+        val metronome = compose.onNodeWithContentDescription("Metrônomo").fetchSemanticsNode().boundsInRoot
+        val note = compose.onNodeWithText("Saída USB: Nanocore").fetchSemanticsNode().boundsInRoot
+        assertTrue("$metronome $note", note.left >= metronome.right)
     }
 
     @Test fun `upright a song with long lines stays in one column`() {

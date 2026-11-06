@@ -223,8 +223,14 @@ fun StageRoute(
             stringResource(R.string.player_battery_later), { answer(false) },
         )
     }
+    // a short word from the player sits on the footer, clear of the metronome; what needs reading stays a message
+    var playerNote by remember { mutableStateOf("") }
     LaunchedEffect(playerUi.message) {
-        if (playerUi.message.isNotEmpty()) message.show(playerUi.message, long = true)
+        if (playerUi.message.length in 1..NOTE_MAX_CHARS) {
+            playerNote = playerUi.message
+            kotlinx.coroutines.delay(NOTE_MS)
+            playerNote = ""
+        } else if (playerUi.message.isNotEmpty()) message.show(playerUi.message, long = true)
     }
     val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
@@ -246,6 +252,7 @@ fun StageRoute(
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
+            note = playerNote,
             playing = playerUi.playing || playerUi.waiting,
             onTogglePlay = ::onPlay,
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
@@ -307,6 +314,7 @@ fun StageScreen(
     onFit: (songId: String, zoom: br.app.stagebook.data.model.ScreenZoom) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
+    note: String = "",
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -1247,6 +1255,9 @@ fun StageScreen(
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
             }
+            if (note.isNotEmpty()) {
+                Text(note, Modifier.widthIn(max = NOTE_WIDTH), style = MaterialTheme.typography.labelLarge, color = fg.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
             } else {
@@ -1429,6 +1440,9 @@ private class GestureTargets(
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
 private const val STRIP_MAX_SCALE = 2.5f
+private const val NOTE_MAX_CHARS = 40
+private const val NOTE_MS = 2_500L
+private val NOTE_WIDTH = 200.dp
 private val STRIP_RESTORE_HEIGHT = 40.dp   // the chord list with every chord hidden: just the ↶
 
 /** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */
