@@ -44,12 +44,15 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
                 override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) { deviceOutput()?.let { track.setPreferredDevice(it) } }
             }
             audio?.registerAudioDeviceCallback(follow, null)
+            val viaAndroid = br.app.stagebook.player.StagePlayer.viaAndroid()
             val buf = ShortArray(CHUNK)
             var pos = 0L
             try {
                 track.play()
                 while (!Thread.currentThread().isInterrupted) {
                     MetronomeClick.render(buf, pos, spb, normal, accent)
+                    // accessibility audio comes out quieter than media, even at full volume
+                    if (viaAndroid) for (i in buf.indices) buf[i] = (buf[i] * ANDROID_ROUTE_GAIN).coerceIn(-32768, 32767).toShort()
                     if (track.write(buf, 0, buf.size) < 0) break
                     pos += buf.size
                 }
@@ -77,6 +80,7 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
 
     private companion object {
         const val CHUNK = 960   // 20 ms per write
+        const val ANDROID_ROUTE_GAIN = 3
         val DEVICE_PREFERENCE = listOf(
             // USB-C headphones and dongles are headsets, not the interface (audit 02/11: the click went to the speaker)
             AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET,
