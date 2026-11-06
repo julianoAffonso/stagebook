@@ -234,6 +234,19 @@ class StageAutoZoomTest {
         assertEquals(expected, compose.onNodeWithText("Longa").fetchSemanticsNode().boundsInRoot.left, 1f)
     }
 
+    // the strings kept the height of a line of lyrics at any size: a small tab stood far apart and took whole columns
+    @Test fun `a tab's strings stand as close as their size`() {
+        var heights = emptyList<br.app.stagebook.domain.Pagination.Line>()
+        compose.setContent {
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val style = androidx.compose.ui.text.TextStyle(fontSize = androidx.compose.ui.unit.TextUnit(40f, androidx.compose.ui.unit.TextUnitType.Sp), lineHeight = androidx.compose.ui.unit.TextUnit(50f, androidx.compose.ui.unit.TextUnitType.Sp))
+            val lines = listOf(br.app.stagebook.ui.stage.tabLine("E|---|", 0.3f), br.app.stagebook.ui.stage.tabLine("B|---|", 0.3f), androidx.compose.ui.text.AnnotatedString("Letra"))
+            heights = br.app.stagebook.ui.stage.lineHeights(measurer, lines, style, 1000)
+        }
+        compose.waitForIdle()
+        assertTrue(heights.toString(), heights[0].tab && heights[0].height < heights[2].height / 2)
+    }
+
     @Test fun `upright a song with long lines stays in one column`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }

@@ -883,11 +883,12 @@ fun StageScreen(
             }
             val room = StageFit.Room(screen, width, height)
             var laidOut by remember { mutableStateOf(room) }
+            var lastFit by remember(index) { mutableStateOf<br.app.stagebook.data.model.ScreenZoom?>(null) }   // held for the frame of a turn
             val midTurn = StageFit.midTurn(laidOut, room)
             SideEffect { laidOut = room }
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
             val autoFit = remember(autoWanted, song.fit, fitKey, midTurn, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
-                if (!autoWanted || lines.isEmpty()) null else song.fit?.takeIf { it.fit == fitKey || midTurn } ?: run {
+                if (!autoWanted || lines.isEmpty()) null else if (midTurn) song.fit ?: lastFit else song.fit?.takeIf { it.fit == fitKey } ?: run {
                     val min = StageFit.autoMinZoom(look.fontSp)
                     val oneColumn by lazy { sheets(minOf(min, fitOne), width, 1).count }
                     val cols = when {
@@ -912,9 +913,9 @@ fun StageScreen(
                     br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }
-            SideEffect { autoZoomNow = autoFit?.zoom ?: 1f }
+            SideEffect { autoZoomNow = autoFit?.zoom ?: 1f; lastFit = autoFit }
             // calculated here for the first time: it stays in the song, for this screen
-            LaunchedEffect(autoFit, song.fit) { if (autoFit != null && autoFit != song.fit) onFit(song.id, autoFit) }
+            LaunchedEffect(autoFit, song.fit, midTurn) { if (autoFit != null && autoFit != song.fit && !midTurn) onFit(song.id, autoFit) }
             // during a pinch the fingers rule, until it's saved in the song
             val auto = autoFit.takeIf { !zoomTouched }
             // layoutZoom trails the fingers: without a pinch the saved size is drawn at once, or turning draws the old one first
@@ -1347,7 +1348,7 @@ internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, s
         val end = starts[i] + maxOf(l.length, 1) - 1
         val first = r.getLineForOffset(starts[i])
         val last = r.getLineForOffset(end)
-        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length))
+        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length), l.hasStringAnnotations(TAB_TAG, 0, l.length))
     }
 }
 

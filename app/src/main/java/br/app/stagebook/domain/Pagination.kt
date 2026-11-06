@@ -9,7 +9,7 @@ object Pagination {
     private const val OPENING_LINES = 2   // a title alone at the end of a page says nothing
 
     /** A lyrics line already measured at the screen width (the height counts automatic wrapping). */
-    data class Line(val height: Int, val blank: Boolean, val title: Boolean = false)
+    data class Line(val height: Int, val blank: Boolean, val title: Boolean = false, val tab: Boolean = false)
 
     /** Line ranges for each page (no blank lines at the edges). */
     fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> = sheets(lines, pageHeight, 1).flatten()
@@ -70,7 +70,9 @@ object Pagination {
                     if (start >= 0 && used + gap + opening <= pageHeight) used += gap else flush()
                     for (i in block) {
                         val lh = lines[i].height
-                        if (start >= 0 && used + lh > pageHeight) flush()
+                        // a tab's strings go together: split, they can't be read
+                        val together = if (lines[i].tab && lines.getOrNull(i - 1)?.tab != true) (i..block.last).takeWhile { lines[it].tab }.sumOf { lines[it].height } else lh
+                        if (start >= 0 && used + together > pageHeight) flush()
                         if (start < 0) start = i
                         end = i
                         used += lh

@@ -38,6 +38,7 @@ const val TAB_TAG = "tab"
 // a section title line: pagination keeps it with the verse after it (device test B-13)
 const val SECTION_TAG = "section"   // item: the pill's color (ARGB)
 const val TAB_EM = 0.7f
+private const val TAB_LINE_HEIGHT = 1.4f
 
 /** An empty line [heightEm] tall, reserved for the chord list (paginated like the others). */
 fun chordListLine(heightEm: Float): AnnotatedString = buildAnnotatedString {
@@ -321,7 +322,7 @@ fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): Annotated
         starts?.set(i, start)
         if (l.isEmpty()) append(' ') else append(l)
         addStringAnnotation(LINE_TAG, i.toString(), start, length)
-        val height = l.chordLineHeight()
+        val height = l.ownLineHeight()
         if (height != null) {
             addStyle(
                 ParagraphStyle(lineHeight = height.em, lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)),
@@ -329,12 +330,18 @@ fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): Annotated
                 length,
             )
         }
-        if (i < lines.lastIndex && height == null && lines[i + 1].chordLineHeight() == null) append('\n')
+        if (i < lines.lastIndex && height == null && lines[i + 1].ownLineHeight() == null) append('\n')
     }
 }
 
 /** Lyrics line with chords (with their space on top)? */
 fun AnnotatedString.isChordLine(): Boolean = chordLineHeight() != null
+
+private fun AnnotatedString.ownLineHeight(): Float? = chordLineHeight() ?: tabLineHeight()
+
+/** A tab's strings stand as close as their size: a tab shrunk to fit kept the height of a line of lyrics. */
+private fun AnnotatedString.tabLineHeight(): Float? =
+    if (hasStringAnnotations(TAB_TAG, 0, length)) spanStyles.firstOrNull { it.item.fontSize.isEm }?.let { it.item.fontSize.value * TAB_LINE_HEIGHT } else null
 
 private fun AnnotatedString.chordLineHeight(): Float? =
     getStringAnnotations(CHORD_LINE_TAG, 0, length).firstOrNull()?.item?.toFloat()

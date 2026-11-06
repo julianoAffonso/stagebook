@@ -3,6 +3,7 @@ package br.app.stagebook
 import br.app.stagebook.domain.Pagination
 import br.app.stagebook.domain.Pagination.Line
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
@@ -116,5 +117,19 @@ class PaginationTest {
         val blank = Pagination.Line(100, true)
         val lines = List(4) { text } + blank + title + List(8) { text }
         assertEquals("só o título caberia", 5, Pagination.paginate(lines, 600)[1].first)
+    }
+
+    // a tab's strings are read together: E and B in one column and the rest in the next said nothing
+    @Test fun `a tab cut from a long verse stays whole`() {
+        val text = Line(10, false)
+        val tab = Line(10, false, tab = true)
+        val lines = List(4) { text } + List(6) { tab } + List(4) { text }
+        val pages = Pagination.paginate(lines, 70)
+        assertTrue(pages.toString(), pages.any { 4 in it && 9 in it })
+    }
+
+    @Test fun `a tab taller than the page is still cut`() {
+        val tab = Line(10, false, tab = true)
+        assertEquals(listOf(0..4, 5..9), Pagination.paginate(List(10) { tab }, 50))
     }
 }
