@@ -1268,7 +1268,10 @@ fun StageScreen(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (current < pageCount - 1) {
+            // for the moment of the note the page numbers step aside: squeezed, one was left behind it
+            if (note.isNotEmpty()) {
+                Spacer(Modifier.weight(1f))
+            } else if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
             } else {
                 Text(
