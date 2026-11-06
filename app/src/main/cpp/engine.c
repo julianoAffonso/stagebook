@@ -679,7 +679,8 @@ static void *usb_main(void *arg) {
                     g_fb_win = t; g_fb_win_in = 0;
                 }
             }
-            if (tail || g_in_ep < 0) continue;
+            // an input that can't be followed only takes room on a bus already losing packets
+            if (tail || g_in_ep < 0 || g_fb_bad) continue;
             int npk = done->number_of_packets;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
