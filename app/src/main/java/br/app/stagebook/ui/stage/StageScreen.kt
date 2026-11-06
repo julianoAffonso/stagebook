@@ -1256,7 +1256,17 @@ fun StageScreen(
                 }
             }
             if (note.isNotEmpty()) {
-                Text(note, Modifier.widthIn(max = NOTE_WIDTH), style = MaterialTheme.typography.labelLarge, color = fg.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // the look of the app's messages: only its place changed, it has to be read at a glance
+                Text(
+                    note,
+                    Modifier.widthIn(max = NOTE_WIDTH)
+                        .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
+                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
