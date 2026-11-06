@@ -863,6 +863,21 @@ fun StageScreen(
                 StageFit.SIZES_VERSION, shownText.hashCode(), width, height, density.density, density.fontScale, language, look.fontSp, look.bold, look.font,
                 look.columns, look.chords, look.chordScale, look.showSections, look.translateSections, look.sectionScale, look.sectionFont, stripPlace,
             ).joinToString("|").hashCode().toString(36)
+            fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
+                // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
+                val zoomed = styleFor(z)
+                val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w)
+                val text = lineHeights(measurer, shown.map { it.text }, zoomed, w)
+                // the chord list is a line of the song, on one page only
+                val strip = Pagination.Line(stripSize(w).second.toInt(), false)
+                val measured = when (stripPlace) {
+                    ChordListPlace.TOP -> listOf(strip) + text
+                    ChordListPlace.BOTTOM -> text + strip
+                    ChordListPlace.NONE -> text
+                }
+                val sheets = Pagination.sheets(measured, height, cols)
+                return StageFit.Sheets(sheets.size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, sheets.flatten(), height), Pagination.crossesSheet(measured, sheets))
+            }
             val room = StageFit.Room(screen, width, height)
             var laidOut by remember { mutableStateOf(room) }
             val midTurn = StageFit.midTurn(laidOut, room)
@@ -870,21 +885,6 @@ fun StageScreen(
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
             val autoFit = remember(autoWanted, song.fit, fitKey, midTurn, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
                 if (!autoWanted || lines.isEmpty()) null else song.fit?.takeIf { it.fit == fitKey || midTurn } ?: run {
-                    fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
-                        // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
-                        val zoomed = styleFor(z)
-                        val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w)
-                        val text = lineHeights(measurer, shown.map { it.text }, zoomed, w)
-                        // the chord list is a line of the song, on one page only
-                        val strip = Pagination.Line(stripSize(w).second.toInt(), false)
-                        val measured = when (stripPlace) {
-                            ChordListPlace.TOP -> listOf(strip) + text
-                            ChordListPlace.BOTTOM -> text + strip
-                            ChordListPlace.NONE -> text
-                        }
-                        val sheets = Pagination.sheets(measured, height, cols)
-                        return StageFit.Sheets(sheets.size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, sheets.flatten(), height), Pagination.crossesSheet(measured, sheets))
-                    }
                     val min = StageFit.autoMinZoom(look.fontSp)
                     val oneColumn by lazy { sheets(minOf(min, fitOne), width, 1).count }
                     val cols = when {
@@ -923,10 +923,12 @@ fun StageScreen(
             val oneLines = remember(lines, styleOne, width) { lazy { measureLines(styleOne, width) } }
             // scroll (T13): always one column
             val scrollMode = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
-            val columns = remember(lines, styleOne, width, height, look.columns, shownZoom, fitTwo, scrollMode, auto) {
+            val columns = remember(lines, sourced, styleOne, width, height, look.columns, shownZoom, fitOne, fitTwo, scrollMode, auto, stripPlace, stripChordCount, stripHidden) {
                 if (scrollMode) 1
                 else if (auto != null) auto.columns
                 else if (look.columns != StageColumns.AUTO) StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
+                // a pinch keeps what the automatic size chose on its side: long lyrics in one column took three times the pages
+                else if (width > height && shownZoom <= fitTwo && sheets(shownZoom, halfWidth, 2).count < sheets(minOf(shownZoom, fitOne), width, 1).count) 2
                 else StageFit.columns(
                     StageColumns.AUTO,
                     fitsOnePageInOneColumn = Pagination.paginate(oneLines.value, height).size <= 1,

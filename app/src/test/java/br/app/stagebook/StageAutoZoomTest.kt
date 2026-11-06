@@ -202,6 +202,18 @@ class StageAutoZoomTest {
         assertEquals(fits.toString(), 2, fits.last().columns)
     }
 
+    // a pinch on its side kept the size but fell back to one column: 6 pages became 17
+    @Test @Config(qualifiers = "pt-rBR-w832dp-h384dp-land-xxhdpi")
+    fun `on its side a pinched size keeps two columns when that takes fewer pages`() {
+        val long = (1..12).joinToString("\n\n") { v -> "Verso $v com uma linha bem comprida que passa da metade da tela do aparelho deitado\nLinha curta\nOutra curta\nMais uma" }
+        val state = StageUiState(false, listOf(StageSong("Longa", "", long, false, id = "a", zoom = 0.8f)), look = Look(fontSp = 30f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }) } }
+        compose.waitForIdle()
+        val width = compose.onRoot().fetchSemanticsNode().size.width
+        val second = compose.onAllNodes(androidx.compose.ui.test.hasText("Verso", substring = true)).fetchSemanticsNodes().map { it.boundsInRoot.left }
+        assertTrue("colunas: $second", second.any { it > width / 2f })
+    }
+
     @Test fun `upright a song with long lines stays in one column`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }
