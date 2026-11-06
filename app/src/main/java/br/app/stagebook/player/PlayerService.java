@@ -48,9 +48,11 @@ public class PlayerService extends Service {
     // + the watchdog's 5 s pass, the reconnection landed on the user's play (19/10/2026)
     static final long FB_WAIT_MS = 1000;
     static final int FB_RETRIES = 3;
+    static final int ANDROID_MISSES = 3;
     static final long ATTACH_GRANT_WAIT_MS = 1500;   // waits for Android's automatic permission
     long connectedAt;
     int fbRetries;
+    int androidMisses;   // watchdog rounds with the interface plugged in and Android offering no output for it
 
     // state read by the screen (StagePlayer)
     static volatile boolean running;
@@ -259,7 +261,12 @@ public class PlayerService extends Service {
             if (!wanted.isEmpty() && name != null && name.toString().toLowerCase(java.util.Locale.ROOT).contains(wanted.toLowerCase(java.util.Locale.ROOT))) { out = a; break; }
         }
         // Android hasn't listed it yet (just plugged in): the watchdog tries again
-        if (out == null) { setStatus(getString(R.string.player_usb_connecting)); return; }
+        if (out == null) {
+            // after a while it's no longer a matter of waiting: say so instead of "connecting" for ever
+            setStatus(getString(++androidMisses < ANDROID_MISSES ? R.string.player_usb_connecting : R.string.player_usb_no_android, d.getProductName()));
+            return;
+        }
+        androidMisses = 0;
         int ch = 2;
         for (int n : out.getChannelCounts()) ch = Math.max(ch, n);
         final int id = out.getId(), count = Math.min(ch, 8);

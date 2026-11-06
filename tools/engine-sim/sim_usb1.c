@@ -36,6 +36,7 @@ static qent q[QMAX];
 static int nq = 0;
 static double line = 0;
 static long in_urbs = 0, too_big = 0, frames = 0;
+static int most_queued = 0;
 static int min_nf = 1 << 30, max_nf = 0;
 static volatile int capturing = 0;
 static float *cap;
@@ -78,6 +79,7 @@ int fake_ioctl(int fd, unsigned long req, ...) {
             if (line < t) line = t;
             line += PKTS_PER_URB / 1000.0;
             q[nq++] = (qent){u, line};
+            if (nq > most_queued) most_queued = nq;
             pthread_cond_broadcast(&cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
@@ -210,6 +212,8 @@ int main(int argc, char **argv) {
     click_test();
     snprintf(b, sizeof b, "%ld input transfers", in_urbs);
     check(in_urbs == 0, "no input stream", b);
+    snprintf(b, sizeof b, "%d queued at most", most_queued);
+    check(most_queued <= 8, "a short queue at full speed", b);   // 32 stopped a real phone for good
     FN(stop)(env, NULL);
     FN(setRate)(env, NULL, 48000);
     printf("USB Audio 1.0: %d failure(s)\n", fails);

@@ -42,7 +42,8 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 #define LANES_MAX 8
 // 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
 // refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
-#define NURBS 32
+#define NURBS 32                      // most URBs in the kernel's queue
+#define QUEUE_MS 64                   // and most audio: at full speed 32 URBs are 256 ms, and the S26 stopped returning them for good
 #define PKTS_PER_URB 8
 #define TAIL_URBS 500                 // ~500 ms of silence before releasing the endpoint
 #define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
@@ -496,6 +497,8 @@ static void free_parked(void) {
 static void *usb_main(void *arg) {
     int speed = ioctl(g_fd, USBDEVFS_GET_SPEED);
     int pkts_per_sec = (speed >= USB_SPEED_HIGH) ? 8000 : 1000;
+    int nurbs = QUEUE_MS * pkts_per_sec / (1000 * PKTS_PER_URB);
+    if (nurbs > NURBS) nurbs = NURBS;
     int frame_bytes = g_dev_ch * g_subslot;
     size_t urb_sz = sizeof(struct usbdevfs_urb) + PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
     struct usbdevfs_urb *urbs[NURBS];
@@ -508,7 +511,7 @@ static void *usb_main(void *arg) {
     // the 8 ms URB queue can run dry; if the system refuses, it carries on
     if (setpriority(PRIO_PROCESS, gettid(), -19) < 0) LOGI("usb: prioridade negada (%s)", strerror(errno));
 
-    for (int u = 0; u < NURBS; u++) {
+    for (int u = 0; u < nurbs; u++) {
         urbs[u] = calloc(1, urb_sz);
         urbs[u]->buffer = calloc(1, g_maxpkt * PKTS_PER_URB);
     }
@@ -575,7 +578,7 @@ static void *usb_main(void *arg) {
             inflight++;
         }
     }
-    for (int u = 0; u < NURBS; u++) {
+    for (int u = 0; u < nurbs; u++) {
         FILL(urbs[u]);
         if (submit(urbs[u]) < 0) {
             set_status("erro USB ao iniciar: %s", strerror(errno));
@@ -585,7 +588,7 @@ static void *usb_main(void *arg) {
     }
     set_status("USB ativo");
 
-    while (tail_urbs < TAIL_URBS + NURBS - 1) {
+    while (tail_urbs < TAIL_URBS + nurbs - 1) {
         if (!tail && g_usb_stop) tail = 1;
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
@@ -652,7 +655,7 @@ static void *usb_main(void *arg) {
     set_status("parado (urbs=%ld erros=%d)", reaped, errors);
 
 out:
-    for (int u = 0; u < NURBS; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, urbs[u]);
+    for (int u = 0; u < nurbs; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, urbs[u]);
     for (int u = 0; u < n_in; u++) ioctl(g_fd, USBDEVFS_DISCARDURB, in_urbs[u]);
     // waits for the kernel to return each URB (discarded or with the desk disconnected, it returns right away); an
     // error here means none are left with it
@@ -662,10 +665,10 @@ out:
         else if (errno != EINTR) break;
     }
     if (inflight == 0) {
-        for (int u = 0; u < NURBS; u++) { free(urbs[u]->buffer); free(urbs[u]); }
+        for (int u = 0; u < nurbs; u++) { free(urbs[u]->buffer); free(urbs[u]); }
         for (int u = 0; u < n_in; u++) { free(in_urbs[u]->buffer); free(in_urbs[u]); }
     } else {
-        for (int u = 0; u < NURBS; u++) park_urb(urbs[u]);
+        for (int u = 0; u < nurbs; u++) park_urb(urbs[u]);
         for (int u = 0; u < n_in; u++) park_urb(in_urbs[u]);
     }
     pthread_mutex_lock(&g_stmx); LOGI("usb fim: %s", g_status); pthread_mutex_unlock(&g_stmx);
