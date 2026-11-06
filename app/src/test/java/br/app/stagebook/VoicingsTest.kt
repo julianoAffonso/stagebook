@@ -11,6 +11,14 @@ class VoicingsTest {
     private fun first(chord: String, i: Instrument = Instrument.ACOUSTIC_GUITAR) =
         Voicings.shapes(chord, i).first().frets.joinToString("") { if (it < 0) "x" else it.toString() }
 
+    // a power chord lives on the low strings: asking for 4 strings ringing down to the highest left 11 of them undrawn
+    @Test fun `every power chord has a shape on guitar`() {
+        val missing = listOf("C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B").map { it + "5" }
+            .filter { Voicings.shapes(it, Instrument.ACOUSTIC_GUITAR).isEmpty() }
+        assertEquals(emptyList<String>(), missing)
+        assertEquals("133xxx", first("F5"))
+    }
+
     @Test fun `acoustic guitar starts with the known shapes`() {
         assertEquals("x32010", first("C"))
         assertEquals("320003", first("G"))

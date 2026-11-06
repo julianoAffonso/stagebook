@@ -845,6 +845,9 @@ fun StageScreen(
             // the corner × keeps its own room, so it never sits on a chord
             fun stripSize(columnWidth: Int) = with(density) {
                 val room = columnWidth - STRIP_CLOSE_WIDTH.toPx()
+                // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
+                // audit 02/11)
+                val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
                 val cell = stripCell(room.toDp())
                 val item = cell.width.toPx()
                 val perRowMax = maxOf(1, (room / item).toInt())
@@ -854,11 +857,11 @@ fun StageScreen(
                 val scale = (((room / perRowEven).toInt() - 1) / item).coerceIn(1f, STRIP_MAX_SCALE)
                 val perRow = maxOf(1, (room / (item * scale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
-                // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
-                // audit 02/11)
-                val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
-                val tall = if (stripChordCount == 0) restore else rows * cell.height.toPx() + restore
-                scale to tall + Spacing.m.toPx()
+                // a row per line of the page, so a list taller than a column runs on to the next at full size: shrunk it
+                // couldn't be read, and cut its last rows were lost (a phone on its side, user 06/11)
+                val heights = List(maxOf(rows, 1)) { if (stripChordCount == 0) 0f else cell.height.toPx() }.toMutableList()
+                heights[heights.lastIndex] += restore + Spacing.m.toPx()
+                StripLayout(scale, heights.map { it.toInt() }, cell, perRow)
             }
             // what the size depends on, in values that hold on another launch and another device. A hash, not the lyrics
             val language = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].toLanguageTag()
@@ -872,9 +875,9 @@ fun StageScreen(
                 val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w)
                 val text = lineHeights(measurer, shown.map { it.text }, zoomed, w)
                 // the chord list is a line of the song, on one page only
-                val strip = Pagination.Line(stripSize(w).second.toInt(), false)
+                val strip = stripSize(w).rows.map { Pagination.Line(it, false, chordList = true) }
                 val measured = when (stripPlace) {
-                    ChordListPlace.TOP -> listOf(strip) + text
+                    ChordListPlace.TOP -> strip + text
                     ChordListPlace.BOTTOM -> text + strip
                     ChordListPlace.NONE -> text
                 }
@@ -950,14 +953,12 @@ fun StageScreen(
             // keep the space above (otherwise the 2nd part got a gap with no chord at all). The song's chord list at
             // the top or end (only in the lyrics and chords profile): a space reserved in the text, as tall as the rows
             // of diagrams at this width, so the pagination counts it.
-            val (stripScale, stripTall) = stripSize(columnWidth)
-            val cell = with(density) { stripCell((columnWidth - STRIP_CLOSE_WIDTH.toPx()).toDp()) }
-            val stripEm = with(density) { stripTall / style.fontSize.toPx() }
-            val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
+            val stripLayout = stripSize(columnWidth)
+            val fitted = remember(sourced, style, columnWidth, stripPlace, stripLayout) {
                 val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth)
-                val strip = StageLine(chordListLine(stripEm), -1)
+                val strip = stripLayout.rows.mapIndexed { row, tall -> StageLine(chordListLine(with(density) { tall / style.fontSize.toPx() }, row), -1) }
                 when (stripPlace) {
-                    ChordListPlace.TOP -> listOf(strip) + split
+                    ChordListPlace.TOP -> strip + split
                     ChordListPlace.BOTTOM -> split + strip
                     ChordListPlace.NONE -> split
                 }
@@ -1069,7 +1070,7 @@ fun StageScreen(
             ) { content ->
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(with(LocalDensity.current) { gutter.toDp() })) {
                     content.columns.forEachIndexed { column, text ->
-                        val strip = remember(text) { text.getStringAnnotations(CHORD_LIST_TAG, 0, text.length).firstOrNull() }
+                        val strip = remember(text) { text.getStringAnnotations(CHORD_LIST_TAG, 0, text.length) }
                         var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
                         Box(Modifier.weight(1f).fillMaxHeight().then(if (scrollMode) Modifier.clipToBounds() else Modifier)) {
                             ChordText(
@@ -1085,8 +1086,8 @@ fun StageScreen(
                             )
                             // the chord list, over the space reserved for it
                             val l = laid
-                            if (strip != null && l != null && strip.start < l.layoutInput.text.length) {
-                                val top = l.getLineTop(l.getLineForOffset(strip.start)).roundToInt()
+                            if (strip.isNotEmpty() && l != null && strip.first().start < l.layoutInput.text.length) {
+                                val top = l.getLineTop(l.getLineForOffset(strip.first().start)).roundToInt()
                                 ChordStrip(
                                     shownText,
                                     look.instrument,
@@ -1094,8 +1095,10 @@ fun StageScreen(
                                     Color(look.chordColor),
                                     // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
                                     Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },
-                                    cell = cell,
-                                    scale = stripScale,
+                                    cell = stripLayout.cell,
+                                    scale = stripLayout.scale,
+                                    from = strip.first().item.toInt() * stripLayout.perRow,
+                                    until = (strip.last().item.toInt() + 1) * stripLayout.perRow,
                                     onHide = { hidingChord = it },
                                     onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
@@ -1348,7 +1351,7 @@ internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, s
         val end = starts[i] + maxOf(l.length, 1) - 1
         val first = r.getLineForOffset(starts[i])
         val last = r.getLineForOffset(end)
-        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length), l.hasStringAnnotations(TAB_TAG, 0, l.length))
+        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length), l.hasStringAnnotations(TAB_TAG, 0, l.length), l.hasStringAnnotations(CHORD_LIST_TAG, 0, l.length))
     }
 }
 
@@ -1398,6 +1401,9 @@ internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style:
     val r = measurer.measure(all, style, softWrap = false)
     return List(r.lineCount) { ceil(r.getLineRight(it) - r.getLineLeft(it)).toInt() }
 }
+
+/** The chord list on a page: each of its [rows] is a line of the song, [perRow] chords of [cell] widened by [scale]. */
+private data class StripLayout(val scale: Float, val rows: List<Int>, val cell: StripCell, val perRow: Int)
 
 /** What the gesture detector must always read up to date (it doesn't restart on every page). */
 private class GestureTargets(

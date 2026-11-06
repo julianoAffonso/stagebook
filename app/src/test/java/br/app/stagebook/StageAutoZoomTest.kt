@@ -247,6 +247,28 @@ class StageAutoZoomTest {
         assertTrue(heights.toString(), heights[0].tab && heights[0].height < heights[2].height / 2)
     }
 
+    // the list keeps its size on a low screen and every chord stays on a page: its last rows were cut off
+    @Test @Config(qualifiers = "pt-rBR-w832dp-h384dp-land-xxhdpi")
+    fun `no chord of the list is lost on its side`() {
+        val chords = listOf("Am", "Dm7", "G7", "C", "F", "E7", "Bm", "D", "A", "Em", "B7", "Gm", "Cm", "Fm", "Eb", "D5")
+        val song = "[Verso]\n" + chords.joinToString(" ") { "[$it]la" }
+        val look = Look(fontSp = 30f, chords = true, chordList = br.app.stagebook.data.model.ChordListPlace.TOP)
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = look)
+        var page by androidx.compose.runtime.mutableIntStateOf(0)
+        compose.setContent { StagebookTheme { StageScreen(state, 0, page, { _, _ -> }) } }
+        compose.waitForIdle()
+        val root = compose.onRoot().fetchSemanticsNode().size.height
+        val seen = HashSet<String>()
+        repeat(4) {
+            chords.forEach { c ->
+                compose.onAllNodesWithText(c).fetchSemanticsNodes().filter { it.boundsInRoot.top >= 0f && it.boundsInRoot.bottom <= root }.let { if (it.isNotEmpty()) seen += c }
+            }
+            page++
+            compose.waitForIdle()
+        }
+        assertEquals((chords - seen).toString(), chords.size, seen.size)
+    }
+
     @Test fun `upright a song with long lines stays in one column`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }

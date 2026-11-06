@@ -9,7 +9,7 @@ object Pagination {
     private const val OPENING_LINES = 2   // a title alone at the end of a page says nothing
 
     /** A lyrics line already measured at the screen width (the height counts automatic wrapping). */
-    data class Line(val height: Int, val blank: Boolean, val title: Boolean = false, val tab: Boolean = false)
+    data class Line(val height: Int, val blank: Boolean, val title: Boolean = false, val tab: Boolean = false, val chordList: Boolean = false)
 
     /** Line ranges for each page (no blank lines at the edges). */
     fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> = sheets(lines, pageHeight, 1).flatten()
@@ -85,18 +85,21 @@ object Pagination {
     }
 
     /** Whether some verse is taller than the page and has to be cut by line. */
-    fun cutsVerse(lines: List<Line>, pageHeight: Int): Boolean = blocks(lines).any { b -> b.sumOf { lines[it].height } > pageHeight }
+    fun cutsVerse(lines: List<Line>, pageHeight: Int): Boolean = verses(lines).any { b -> b.sumOf { lines[it].height } > pageHeight }
 
     /** Whether some verse runs from one of these [sheets] to the next: the pedal would turn in the middle of it. */
     fun crossesSheet(lines: List<Line>, sheets: List<List<IntRange>>): Boolean {
         val sheetOf = IntArray(lines.size)
         sheets.forEachIndexed { n, sheet -> sheet.forEach { page -> page.forEach { sheetOf[it] = n } } }
-        return blocks(lines).any { sheetOf[it.first] != sheetOf[it.last] }
+        return verses(lines).any { sheetOf[it.first] != sheetOf[it.last] }
     }
 
     /** Whether the first of several [pages] has only a sliver of text, like an intro left alone before a long verse. */
     fun thinFirstPage(lines: List<Line>, pages: List<IntRange>, pageHeight: Int): Boolean =
         pages.size > 1 && pages[0].sumOf { lines[it].height } * THIN_PAGE < pageHeight
+
+    /** What's read as a verse: the chord list runs on from column to column, row by row. */
+    private fun verses(lines: List<Line>) = blocks(lines).filterNot { lines[it.first].chordList }
 
     /** Verses: consecutive non-empty lines, and a section title starts a new one even with no blank line before it. */
     private fun blocks(lines: List<Line>): List<IntRange> {
@@ -105,7 +108,7 @@ object Pagination {
         while (i < lines.size) {
             if (lines[i].blank) { i++; continue }
             val s = i++
-            while (i < lines.size && !lines[i].blank && !lines[i].title) i++
+            while (i < lines.size && !lines[i].blank && !lines[i].title && lines[i].chordList == lines[s].chordList) i++
             out += s until i
         }
         // a section title alone (a blank line after it) goes with the next verse: it was left at the bottom of a page,

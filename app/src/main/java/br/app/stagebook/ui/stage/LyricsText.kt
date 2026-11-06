@@ -40,9 +40,9 @@ const val SECTION_TAG = "section"   // item: the pill's color (ARGB)
 const val TAB_EM = 0.7f
 private const val TAB_LINE_HEIGHT = 1.4f
 
-/** An empty line [heightEm] tall, reserved for the chord list (paginated like the others). */
-fun chordListLine(heightEm: Float): AnnotatedString = buildAnnotatedString {
-    withAnnotation(CHORD_LINE_TAG, heightEm.toString()) { withAnnotation(CHORD_LIST_TAG, "") { append(' ') } }
+/** An empty line [heightEm] tall, reserved for row [row] of the chord list (paginated like the others). */
+fun chordListLine(heightEm: Float, row: Int = 0): AnnotatedString = buildAnnotatedString {
+    withAnnotation(CHORD_LINE_TAG, heightEm.toString()) { withAnnotation(CHORD_LIST_TAG, row.toString()) { append(' ') } }
 }
 
 /** Lyrics line height, relative to the font (the same as the stage style). */

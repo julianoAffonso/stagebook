@@ -10,7 +10,7 @@ object StageFit {
     const val SHORT_LINES_SHARE = 0.9
 
     /** Goes up when the calculation changes: what songs have saved was found the old way. */
-    const val SIZES_VERSION = 10
+    const val SIZES_VERSION = 11
 
     /** Largest automatic zoom over the size in Settings. */
     const val AUTO_MAX_ZOOM = 1.5f

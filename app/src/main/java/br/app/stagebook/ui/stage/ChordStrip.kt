@@ -71,6 +71,8 @@ fun ChordStrip(
     modifier: Modifier = Modifier,
     cell: StripCell = STRIP_CELL,
     scale: Float = 1f,   // the stage widens each cell so the list fills the width (user, 02/11: it took ~3/4 of the TCL)
+    from: Int = 0,   // the chords of this column: a long list runs on like the lyrics, at full size
+    until: Int = Int.MAX_VALUE,
     onHide: (String) -> Unit = {},
     onHideAll: () -> Unit = {},
     onRestore: () -> Unit = {},
@@ -88,7 +90,7 @@ fun ChordStrip(
     }
     Box(modifier.fillMaxWidth()) {
     FlowRow(Modifier.padding(end = STRIP_CLOSE_WIDTH), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-        items.forEach { (c, shape, keys) ->
+        items.subList(minOf(from, items.size), minOf(until, items.size)).forEach { (c, shape, keys) ->
             // holding a chord takes it off this song's list (the stage asks to confirm); one × for the whole list below,
             // instead of one on every chord (user, 02/11)
             Box(
@@ -101,7 +103,7 @@ fun ChordStrip(
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
-        if (hiddenCount > 0) {
+        if (hiddenCount > 0 && until >= items.size) {
             Box(Modifier.size(cell.width, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(AppIcons.Undo, pluralStringResource(R.plurals.stage_chords_restore, hiddenCount, hiddenCount), Modifier.size(18.dp), tint = color.copy(alpha = 0.6f))
@@ -111,7 +113,7 @@ fun ChordStrip(
         }
     }
     // quiet × in the corner: hides the whole list in this song (the ↶ above brings it back)
-    if (items.isNotEmpty()) {
+    if (items.isNotEmpty() && from == 0) {
         Box(Modifier.align(Alignment.TopEnd).size(STRIP_CLOSE_WIDTH).clip(CircleShape).clickable(onClick = onHideAll), contentAlignment = Alignment.Center) {
             Icon(AppIcons.Close, stringResource(R.string.stage_chords_hide_all), Modifier.size(18.dp), tint = color.copy(alpha = 0.45f))
         }

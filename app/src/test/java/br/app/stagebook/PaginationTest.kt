@@ -132,4 +132,15 @@ class PaginationTest {
         val tab = Line(10, false, tab = true)
         assertEquals(listOf(0..4, 5..9), Pagination.paginate(List(10) { tab }, 50))
     }
+
+    // a list too tall for a low column: cut, its last rows were lost under the page
+    @Test fun `a long chord list runs on through the columns, row by row`() {
+        val row = Line(40, false, chordList = true)
+        val text = Line(10, false)
+        val lines = List(5) { row } + List(3) { text }
+        val sheets = Pagination.sheets(lines, 100, 2)
+        assertEquals(sheets.toString(), listOf(listOf(0..1, 2..3), listOf(4..7)), sheets)
+        assertTrue(!Pagination.crossesSheet(lines, sheets))
+        assertTrue(!Pagination.cutsVerse(lines, 100))
+    }
 }
