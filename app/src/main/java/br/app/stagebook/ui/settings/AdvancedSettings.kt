@@ -101,7 +101,7 @@ fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBa
 
 @Composable
 private fun Tweaks(ui: AdvancedUi, group: DeviceTweak.Group, onTweak: (DeviceTweak, Boolean) -> Unit) {
-    DeviceTweak.entries.filter { it.group == group && it in ui.on }.forEach { t ->
+    DeviceTweak.entries.filter { it.shown && it.group == group && it in ui.on }.forEach { t ->
         SwitchRow(
             stringResource(t.label),
             ui.on[t] == true,

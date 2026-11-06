@@ -82,6 +82,8 @@ class StagePlayer @Inject constructor(
         // USB through Android's audio (Settings): the service reads it on connecting; a change connects again
         scope.launch {
             repository.library.map { it.look.usbViaAndroid }.distinctUntilChanged().collect { via ->
+                // the two go together: with Android's USB routing off, it doesn't offer the interface as an output
+                br.app.stagebook.data.device.DeviceTweaks.set(context, br.app.stagebook.data.device.DeviceTweak.USB_ROUTING, !via)
                 val changed = PlayerService.viaAndroid != via
                 PlayerService.viaAndroid = via
                 if (changed) PlayerService.reconnect()

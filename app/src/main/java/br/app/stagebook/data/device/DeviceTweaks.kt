@@ -23,6 +23,7 @@ enum class DeviceTweak(
     val reapply: Boolean = true,
     val group: Group,
     internal val onlyIfPresent: Boolean = false,   // a setting some makers have and others don't
+    val shown: Boolean = true,   // in Settings; USB_ROUTING follows the Android route switch instead
 ) {
     // TCL: with smart long charge or sleep charge on, its charge manager made the USB audio interface drop for a
     // moment every 3 to 30 s (23/10). Cost: charges up to 100%.
@@ -31,7 +32,7 @@ enum class DeviceTweak(
         on = "0", off = "1", group = Group.PLAY, onlyIfPresent = true,
     ),
     // Android's own audio stays off the USB interface the player drives (with 0 it opens the same interface)
-    USB_ROUTING(listOf(Table.SECURE to "usb_audio_automatic_routing_disabled"), on = "1", off = "0", group = Group.PLAY),
+    USB_ROUTING(listOf(Table.SECURE to "usb_audio_automatic_routing_disabled"), on = "1", off = "0", group = Group.PLAY, shown = false),
     // Android's battery manager suggests restricting apps that use battery, and the player uses it on purpose
     BATTERY_MANAGER(listOf(Table.GLOBAL to "app_auto_restriction_enabled"), on = "0", off = "1", group = Group.PLAY),
     ANIMATIONS(
