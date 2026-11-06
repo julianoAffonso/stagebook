@@ -101,7 +101,7 @@ fun ScanSetlistRoute(
             message.show(if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), long = true)
         }
     }
-    LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
+    LaunchedEffect(Unit) { if (!camera && viewModel.readsQr) ask.launch(Manifest.permission.CAMERA) }
     // the other setlists of the same send went to Received
     val parked by viewModel.parked.collectAsStateWithLifecycle()
     LaunchedEffect(parked) {

@@ -93,13 +93,18 @@ class ScanSetlistViewModel @Inject constructor(
     private val trust: br.app.stagebook.data.BandTrust,
     private val connectivity: br.app.stagebook.data.Connectivity,
 ) : ViewModel() {
+    // who sent through the 3 words: on accepting, they join the band (and get my "ok")
+    private val senderNow = MutableStateFlow<br.app.stagebook.domain.BandProtocol.Hello?>(null)
+    private var sender by senderNow::value
+
     /** The sender, if they're in the band (the online request goes to their inbox). */
     private fun senderId(): String? = (inbox.get(route.inbox)?.fromId ?: sender?.id)?.takeIf(trust::isMember)
 
     /**
      * Sender's name, when the missing ones can be asked for online (in the band and there's internet); otherwise null.
      */
-    val internetFrom: StateFlow<String?> = combine(connectivity.online, repository.library.map { it.look.internetOn }) { a, b -> a && b }.map { on ->
+    // the sender arrives with the 3 words, after the screen is open: without them here the button never showed (test QR-11)
+    val internetFrom: StateFlow<String?> = combine(connectivity.online, repository.library.map { it.look.internetOn }, senderNow) { a, b, _ -> a && b }.map { on ->
         if (!on) null else senderId()?.let { id -> trust.member(id)?.name ?: fromName.ifBlank { null } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -116,8 +121,6 @@ class ScanSetlistViewModel @Inject constructor(
         viewModelScope.launch { internetAsked.send(bandInternet.requestSongs(id, missing)) }
     }
 
-    // who sent through the 3 words: on accepting, they join the band (and get my "ok")
-    private var sender: br.app.stagebook.domain.BandProtocol.Hello? = null
     /** How many band members are on the network now ("Ask the band" only shows with someone and with missing songs). */
     val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
@@ -166,7 +169,9 @@ class ScanSetlistViewModel @Inject constructor(
         if (code.isNotEmpty()) bandInternet.accepted(code, sender)
     }
 
-    private val _ui = MutableStateFlow<ScanUi>(if (code.isEmpty() && route.inbox.isEmpty()) ScanUi.Scanning() else ScanUi.Fetching())
+    /** The camera reads a QR here: 3 words and what the band sent need none. */
+    val readsQr: Boolean = code.isEmpty() && route.inbox.isEmpty()
+    private val _ui = MutableStateFlow<ScanUi>(if (readsQr) ScanUi.Scanning() else ScanUi.Fetching())
     val ui: StateFlow<ScanUi> = _ui
 
     // songs carried along, per review row
