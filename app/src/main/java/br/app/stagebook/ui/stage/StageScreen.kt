@@ -881,9 +881,12 @@ fun StageScreen(
                         return StageFit.Sheets(pages.chunked(cols).size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, pages, height))
                     }
                     val min = StageFit.autoMinZoom(look.fontSp)
+                    val oneColumn = sheets(minOf(min, fitOne), width, 1).count
                     val cols = when {
                         look.columns != StageColumns.AUTO -> StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
-                        sheets(minOf(min, fitOne), width, 1).count <= 1 -> 1
+                        oneColumn <= 1 -> 1
+                        // on its side one column leaves half the screen empty: two win whenever they take fewer pages
+                        width > height && min <= fitTwo && sheets(min, halfWidth, 2).count < oneColumn -> 2
                         else -> StageFit.columns(
                             StageColumns.AUTO,
                             fitsOnePageInOneColumn = false,

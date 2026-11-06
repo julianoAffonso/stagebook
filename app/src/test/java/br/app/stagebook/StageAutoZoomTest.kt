@@ -181,6 +181,26 @@ class StageAutoZoomTest {
         assertEquals(fits.toString(), 2, fits.last().columns)
     }
 
+    // lines that wrap in half the screen still take fewer pages than one column with half the screen empty
+    @Test @Config(qualifiers = "pt-rBR-w832dp-h384dp-land-xxhdpi")
+    fun `on its side long lines use two columns when that takes fewer pages`() {
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = Look(fontSp = 49f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z }) } }
+        compose.waitForIdle()
+        assertEquals(fits.toString(), 2, fits.last().columns)
+    }
+
+    @Test fun `upright a song with long lines stays in one column`() {
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = Look(fontSp = 49f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z }) } }
+        compose.waitForIdle()
+        assertEquals(fits.toString(), 1, fits.last().columns)
+    }
+
     @Test fun `opening a song saves nothing`() {
         show()
         compose.mainClock.advanceTimeBy(5_000)
