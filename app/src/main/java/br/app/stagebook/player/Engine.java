@@ -10,6 +10,8 @@ final class Engine {
     // no USB interface: plays on the device's output (AAudio, 48 kHz stereo); false if Android didn't open it
     // deviceId 0 = the device's own output (stereo); a USB interface's Android id with its channels (B-33)
     static native boolean startDevice(int deviceId, int channels);
+    // the output's rate, before start or startDevice: a USB Audio 1.0 card may only have 44.1 kHz
+    static native void setRate(int rate);
     static native long load(String path);
     static native void play();
     static native void pause();

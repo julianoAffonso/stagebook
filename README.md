@@ -32,11 +32,11 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   encrypted.
 
 ## USB player
-- A **class compliant** USB audio interface (USB Audio Class 2.0, works on a computer without a driver).
-- **48 kHz** support.
+- A **class compliant** USB audio interface (USB Audio Class 1.0 or 2.0, works on a computer without a driver).
+- **44.1 or 48 kHz** support.
 - A phone or tablet with **USB OTG** and the right cable or adapter.
 
-Interfaces that are only USB Audio 1.0 or only 44.1 kHz don't work yet. Without an interface, the player uses the
+Without an interface, the player uses the
 device's headphones, Bluetooth or speaker.
 
 ## How light it is

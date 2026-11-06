@@ -6,8 +6,8 @@ import android.hardware.usb.UsbDevice
 fun UsbDevice.interfaceKinds(): List<Triple<Int, Int, Int>> =
     (0 until interfaceCount).map { getInterface(it).run { Triple(interfaceClass, interfaceSubclass, interfaceProtocol) } }
 
-/** A USB Audio 2.0 interface (like a USB mixer): class 1, subclass 2 (streaming), protocol 0x20, the kind the player speaks to. */
-fun isUsbAudio(kinds: List<Triple<Int, Int, Int>>): Boolean = kinds.any { it == Triple(1, 2, 0x20) }
+/** A USB audio interface (like a USB mixer): class 1, subclass 2 (streaming), USB Audio 1.0 or 2.0, the kind the player speaks to. */
+fun isUsbAudio(kinds: List<Triple<Int, Int, Int>>): Boolean = kinds.any { it == Triple(1, 2, 0x20) || it == Triple(1, 2, 0) }
 
 /**
  * Something that plays audio (any audio streaming interface): a mixer or sound card, never a pedal, even when it also

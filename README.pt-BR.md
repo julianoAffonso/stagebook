@@ -32,11 +32,11 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   vai cifrado.
 
 ## Player pela USB
-- Interface de áudio USB **class compliant** (USB Audio Class 2.0, funciona no computador sem driver).
-- Que aceite **48 kHz**.
+- Interface de áudio USB **class compliant** (USB Audio Class 1.0 ou 2.0, funciona no computador sem driver).
+- Que aceite **44,1 ou 48 kHz**.
 - Celular ou tablet com **USB OTG** e o cabo ou adaptador certo.
 
-Interfaces só USB Audio 1.0, ou só de 44,1 kHz, ainda não funcionam. Sem interface, o player toca no fone, no
+Sem interface, o player toca no fone, no
 Bluetooth ou no alto-falante do aparelho.
 
 ## Quanto o app pesa

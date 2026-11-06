@@ -136,7 +136,8 @@ public class PlayerService extends Service {
     };
 
     boolean fbRetryDue() {
-        return link != null && fbRetries < FB_RETRIES && SystemClock.elapsedRealtime() - connectedAt >= FB_WAIT_MS;
+        // no input on purpose (an adaptive output follows us): there's no clock to wait for
+        return link != null && link.inEp >= 0 && fbRetries < FB_RETRIES && SystemClock.elapsedRealtime() - connectedAt >= FB_WAIT_MS;
     }
 
     void fbRetry() {
@@ -217,6 +218,7 @@ public class PlayerService extends Service {
             if (err != null) {
                 try { l.close(); } catch (RuntimeException ignored) {}
             } else {
+                Engine.setRate(l.rate);
                 Engine.start(l.conn.getFileDescriptor(), l.ep, l.maxPacket, l.channels, l.subslot,
                         l.outIfNum, l.outAltNum, l.inEp, l.inMaxPacket, l.inChannels * l.inSubslot);
                 usbOpen = l;
@@ -233,6 +235,7 @@ public class PlayerService extends Service {
         connecting = true;
         int gen = usbGen;
         usbOps.execute(() -> {
+            Engine.setRate(48000);
             boolean ok = Engine.startDevice(0, 2);
             if (!ok) Log.w(TAG, Engine.status());
             main.post(() -> { if (gen == usbGen) deviceReady(ok); });
@@ -263,6 +266,7 @@ public class PlayerService extends Service {
         int gen = usbGen;
         setStatus(getString(R.string.player_usb_connecting));
         usbOps.execute(() -> {
+            Engine.setRate(48000);
             boolean ok = Engine.startDevice(id, count);
             if (!ok) Log.w(TAG, Engine.status());
             main.post(() -> { if (gen == usbGen) androidUsbReady(ok, d, count); });

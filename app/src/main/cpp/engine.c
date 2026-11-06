@@ -34,7 +34,9 @@
 #define DIAG 0
 #define LOGD(...) do { if (DIAG) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__); } while (0)
 
-#define OUT_RATE 48000
+#define BASE_RATE 48000               // what the tracks' tools and the click are made for
+static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 card may only have 44.1 kHz
+#define OUT_RATE g_out_rate
 #define OUT_CH 4
 // source channels kept in the ring (Stagebook): up to 8, each as it came; the default mix rebuilds the 4 from before
 #define LANES_MAX 8
@@ -43,7 +45,7 @@
 #define NURBS 32
 #define PKTS_PER_URB 8
 #define TAIL_URBS 500                 // ~500 ms of silence before releasing the endpoint
-#define RING_FRAMES OUT_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
+#define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
                                       // import and screens at the same time, the decoder fell behind and stuttered;
                                       // 19/10/2026)
 #define FADE_FRAMES 240               // 5 ms fade on play/pause
@@ -853,10 +855,23 @@ JNIEXPORT jlong JNICALL FN(position)(JNIEnv *e, jclass c) {
 }
 
 
+static float g_eq_gain[EQ_BANDS];
+
+// The output's rate, before start or startDevice: the song, the EQ and the click follow it. 48 kHz changes nothing.
+JNIEXPORT void JNICALL FN(setRate)(JNIEnv *e, jclass c, jint rate) {
+    pthread_mutex_lock(&g_mx);
+    if (rate > 0 && rate != g_out_rate) {
+        g_out_rate = rate;
+        for (int i = 0; i < EQ_BANDS; i++) eq_design(i, g_eq_gain[i]);
+    }
+    pthread_mutex_unlock(&g_mx);
+}
+
 JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray jg) {
     float g[EQ_BANDS] = {0};
     (*e)->GetFloatArrayRegion(e, jg, 0, EQ_BANDS, g);
     pthread_mutex_lock(&g_mx);
+    memcpy(g_eq_gain, g, sizeof g_eq_gain);
     for (int i = 0; i < EQ_BANDS; i++) eq_design(i, g[i]);
     if (on && !g_eq_on) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; }
     g_eq_on = on;
@@ -881,6 +896,20 @@ JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloat
     pthread_mutex_unlock(&g_mx);
 }
 
+// A 48 kHz click at the output's rate, by linear interpolation: a few milliseconds of sound, once per tempo.
+static float *click_at_rate(float *in, int *n) {
+    int m = (int)((long)*n * g_out_rate / BASE_RATE);
+    float *out = malloc(sizeof(float) * (m > 0 ? m : 1));
+    if (!out) return in;
+    for (int i = 0; i < m; i++) {
+        double p = (double)i * BASE_RATE / g_out_rate;
+        int k = (int)p; float f = (float)(p - k);
+        out[i] = in[k] + (k + 1 < *n ? (in[k + 1] - in[k]) * f : 0);
+    }
+    free(in); *n = m;
+    return out;
+}
+
 // Metronome click into USB outputs: {normal, accent} 48 kHz, samples per beat (0 = off) and up to two outputs (-1 =
 // none). Starts on beat 1 now. The arrays are copied before the lock; the old ones are freed after it.
 JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatArray ja, jlong spb, jint out1, jint out2) {
@@ -891,6 +920,11 @@ JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatA
         nb = malloc(sizeof(float) * (nn > 0 ? nn : 1)); ab = malloc(sizeof(float) * (na > 0 ? na : 1));
         if (nb && ab) { (*e)->GetFloatArrayRegion(e, jn, 0, nn, nb); (*e)->GetFloatArrayRegion(e, ja, 0, na, ab); }
         else { free(nb); free(ab); nb = ab = NULL; }
+        // the click is made at 48 kHz: at another rate it keeps its pitch and the beat its tempo
+        if (nb && ab && g_out_rate != BASE_RATE) {
+            nb = click_at_rate(nb, &nn); ab = click_at_rate(ab, &na);
+            spb = (long)llround((double)spb * g_out_rate / BASE_RATE);
+        }
     }
     pthread_mutex_lock(&g_mx);
     float *old0 = g_clk_buf[0], *old1 = g_clk_buf[1];
