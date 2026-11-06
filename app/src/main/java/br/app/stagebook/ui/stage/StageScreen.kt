@@ -842,13 +842,12 @@ fun StageScreen(
             val stripPlace = if (look.chords && (stripChordCount > 0 || stripHidden > 0)) look.chordList else ChordListPlace.NONE
             // the diagrams fill the width: as many rows as needed, the chords spread evenly over them, each cell widened to
             // the row's width (up to STRIP_MAX_SCALE: a few chords don't end up far apart)
-            // the corner × keeps its own room, so it never sits on a chord
             fun stripSize(columnWidth: Int) = with(density) {
-                val room = columnWidth - STRIP_CLOSE_WIDTH.toPx()
+                val room = columnWidth.toFloat()
                 // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
                 // audit 02/11)
                 val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
-                val cell = stripCell(room.toDp())
+                val cell = stripCell(room.toDp(), height.toDp())
                 val item = cell.width.toPx()
                 val perRowMax = maxOf(1, (room / item).toInt())
                 val fewestRows = maxOf(1, (stripChordCount + perRowMax - 1) / perRowMax)
