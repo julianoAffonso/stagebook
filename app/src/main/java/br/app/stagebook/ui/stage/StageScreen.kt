@@ -227,6 +227,7 @@ fun StageRoute(
     var playerNote by remember { mutableStateOf("") }
     LaunchedEffect(playerUi.message) {
         if (playerUi.message.length in 1..NOTE_MAX_CHARS) {
+            message.host.currentSnackbarData?.dismiss()   // a warning from before the interface came back is over
             playerNote = playerUi.message
             kotlinx.coroutines.delay(NOTE_MS)
             playerNote = ""

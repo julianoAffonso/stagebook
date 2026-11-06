@@ -48,7 +48,7 @@ public class PlayerService extends Service {
     // + the watchdog's 5 s pass, the reconnection landed on the user's play (19/10/2026)
     static final long FB_WAIT_MS = 1000;
     static final int FB_RETRIES = 3;
-    static final int ANDROID_MISSES = 3;
+    static final int ANDROID_MISSES = 6;   // Android takes a while to list an interface just plugged in
     static final long ATTACH_GRANT_WAIT_MS = 1500;   // waits for Android's automatic permission
     long connectedAt;
     int fbRetries;
