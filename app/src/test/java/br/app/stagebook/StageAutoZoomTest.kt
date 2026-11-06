@@ -225,6 +225,15 @@ class StageAutoZoomTest {
         assertTrue(fits.toString(), fits.last().zoom * 49f >= 18f)
     }
 
+    // the title sits where every screen with a back arrow has it
+    @Test fun `the stage title is where the other screens have it`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a")), look = Look(fontSp = 30f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = {}) } }
+        compose.waitForIdle()
+        val expected = with(compose.density) { (br.app.stagebook.ui.theme.Spacing.m + br.app.stagebook.ui.components.BackButtonWidth + br.app.stagebook.ui.theme.Spacing.s).toPx() }
+        assertEquals(expected, compose.onNodeWithText("Longa").fetchSemanticsNode().boundsInRoot.left, 1f)
+    }
+
     @Test fun `upright a song with long lines stays in one column`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }
