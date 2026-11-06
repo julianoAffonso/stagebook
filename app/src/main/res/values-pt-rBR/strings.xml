@@ -459,7 +459,7 @@
     <string name="settings_columns_never">Nunca</string>
     <string name="settings_columns_always">Sempre</string>
     <string name="stage_zoom_auto">Automático</string>
-    <string name="settings_columns_help">Automático decide para cada música: divide em 2 colunas quando a letra não cabe numa página e as frases são curtas. O pedal vira as duas colunas juntas.</string>
+    <string name="settings_columns_help">Automático decide para cada música: divide em 2 colunas quando a letra não cabe numa página e as frases são curtas ou, deitado, quando dá menos páginas. O pedal vira as duas colunas juntas.</string>
     <string name="settings_bold_short">negrito</string>
     <string name="settings_sections_look">Títulos de seção</string>
     <string name="settings_normalize_card">Achar refrão e versos</string>
