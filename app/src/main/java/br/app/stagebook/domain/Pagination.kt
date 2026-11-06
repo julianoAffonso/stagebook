@@ -12,11 +12,21 @@ object Pagination {
     data class Line(val height: Int, val blank: Boolean, val title: Boolean = false)
 
     /** Line ranges for each page (no blank lines at the edges). */
-    fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> {
+    fun paginate(lines: List<Line>, pageHeight: Int): List<IntRange> = sheets(lines, pageHeight, 1).flatten()
+
+    /**
+     * Stage sheets with `columns` columns: the columns fill in order (left, then right), each as tall as the page; the
+     * pedal turns the whole sheet. A verse taller than a column has to split, but they're read together: when the rest of
+     * this sheet can't hold it and a whole one can, it starts the next.
+     */
+    fun sheets(lines: List<Line>, pageHeight: Int, columns: Int): List<List<IntRange>> {
+        val perSheet = columns.coerceAtLeast(1)
         val blocks = blocks(lines)
-        if (blocks.isEmpty()) return listOf(IntRange.EMPTY)
+        if (blocks.isEmpty()) return listOf(listOf(IntRange.EMPTY))
         val blank = lines.firstOrNull { it.blank }?.height ?: 0
-        val pages = ArrayList<IntRange>()
+        val tallest = lines.maxOf { it.height }   // a column cut by line can leave this much unused
+        val sheets = ArrayList<List<IntRange>>()
+        var pages = ArrayList<IntRange>()
         var start = -1
         var end = -1
         var used = 0
@@ -24,6 +34,12 @@ object Pagination {
         fun flush() {
             if (start >= 0) pages += start..end
             start = -1; end = -1; used = 0
+            if (pages.size == perSheet) { sheets += pages; pages = ArrayList() }
+        }
+
+        fun nextSheet() {
+            flush()
+            if (pages.isNotEmpty()) { sheets += pages; pages = ArrayList() }
         }
 
         for (block in blocks) {
@@ -44,6 +60,9 @@ object Pagination {
                 else -> {
                     // verse longer than the page: cut by line. It gets cut anyway, so it goes on from here when its
                     // opening fits; a new page left the short verse before it alone (an intro, in a low column)
+                    val columnsAfter = perSheet - pages.size - 1
+                    val room = pageHeight - (if (start >= 0) used + gap else 0) + columnsAfter * (pageHeight - tallest)
+                    if (h > room && h <= perSheet * (pageHeight - tallest)) nextSheet()
                     val opening = block.take(OPENING_LINES).sumOf { lines[it].height }
                     if (start >= 0 && used + gap + opening <= pageHeight) used += gap else flush()
                     for (i in block) {
@@ -56,16 +75,9 @@ object Pagination {
                 }
             }
         }
-        flush()
-        return pages
+        nextSheet()
+        return sheets
     }
-
-    /**
-     * Stage sheets with `columns` columns: the columns fill in order (left, then right), each as tall as the page; the
-     * pedal turns the whole sheet.
-     */
-    fun sheets(lines: List<Line>, columnHeight: Int, columns: Int): List<List<IntRange>> =
-        paginate(lines, columnHeight).chunked(columns.coerceAtLeast(1))
 
     /** Whether some verse is taller than the page and has to be cut by line. */
     fun cutsVerse(lines: List<Line>, pageHeight: Int): Boolean = blocks(lines).any { b -> b.sumOf { lines[it].height } > pageHeight }

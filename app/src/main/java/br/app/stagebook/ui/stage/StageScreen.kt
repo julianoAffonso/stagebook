@@ -877,8 +877,8 @@ fun StageScreen(
                             ChordListPlace.BOTTOM -> text + strip
                             ChordListPlace.NONE -> text
                         }
-                        val pages = Pagination.paginate(measured, height)
-                        return StageFit.Sheets(pages.chunked(cols).size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, pages, height))
+                        val sheets = Pagination.sheets(measured, height, cols)
+                        return StageFit.Sheets(sheets.size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, sheets.flatten(), height))
                     }
                     val min = StageFit.autoMinZoom(look.fontSp)
                     val oneColumn = sheets(minOf(min, fitOne), width, 1).count

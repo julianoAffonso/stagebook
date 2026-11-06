@@ -76,6 +76,19 @@ class PaginationTest {
         assertEquals(listOf(0..5, 6..11), Pagination.paginate(lines, 600))
     }
 
+    // a verse taller than a column has to split, but the two columns of one sheet are read together: not across the pedal
+    @Test fun `a verse too long for a column starts a sheet when it wouldn't fit the rest of this one`() {
+        assertEquals(listOf(listOf(0..7), listOf(9..18, 19..23)), Pagination.sheets(lines(8, 15), 100, 2))
+    }
+
+    @Test fun `a verse too long for a column stays on this sheet when it fits`() {
+        assertEquals(1, Pagination.sheets(lines(3, 15), 100, 2).size)
+    }
+
+    @Test fun `a verse too long for a sheet goes on from where it is`() {
+        assertEquals(listOf(0..9, 11..20, 21..30, 31..40), Pagination.sheets(lines(10, 30), 100, 2).flatten())
+    }
+
     @Test fun `a verse doesn't start on the last line of a page`() {
         val text = Pagination.Line(100, false)
         val title = Pagination.Line(100, false, title = true)

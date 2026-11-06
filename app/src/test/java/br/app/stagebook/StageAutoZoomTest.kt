@@ -185,7 +185,7 @@ class StageAutoZoomTest {
     @Test @Config(qualifiers = "pt-rBR-w832dp-h384dp-land-xxhdpi")
     fun `on its side long lines use two columns when that takes fewer pages`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
-        val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }
+        val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..12).joinToString("\n") { "Uma linha que passa da metade da tela no celular deitado" } }
         val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = Look(fontSp = 49f))
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z }) } }
         compose.waitForIdle()
