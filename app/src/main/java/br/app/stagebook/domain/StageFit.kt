@@ -47,6 +47,12 @@ object StageFit {
     /** Smallest automatic zoom for lyrics at [fontSp]: the page comes first, down to a size still legible on stage. */
     fun autoMinZoom(fontSp: Float): Float = minOf(1f, AUTO_MIN_FONT / fontSp)
 
+    /** What the stage last laid out. */
+    data class Room(val screen: String, val width: Int, val height: Int)
+
+    /** The screen turned and the stage still has the old size: anything calculated now is for a place that's gone. */
+    fun midTurn(last: Room, now: Room): Boolean = last.screen != now.screen && last.width == now.width && last.height == now.height
+
     /** Smallest zoom that may be used to keep a section whole. */
     fun autoWholeZoom(fontSp: Float): Float = minOf(1f, AUTO_WHOLE_FONT / fontSp)
 

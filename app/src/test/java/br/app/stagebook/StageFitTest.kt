@@ -116,4 +116,11 @@ class StageFitTest {
         val zoom = StageFit.autoZoom(0.5f, 1f) { StageFit.Sheets(3, false, crossesSheet = it > 0.7f) }
         assertEquals(0.7f, zoom, 0.02f)
     }
+
+    @Test fun `only the moment of the turn is told apart`() {
+        val upright = StageFit.Room("384x832", 944, 1843)
+        assertEquals("girou e o tamanho ainda é o velho", true, StageFit.midTurn(upright, upright.copy(screen = "832x384")))
+        assertEquals("o tamanho novo chegou", false, StageFit.midTurn(upright.copy(screen = "832x384"), StageFit.Room("832x384", 2204, 674)))
+        assertEquals("nada mudou", false, StageFit.midTurn(upright, upright))
+    }
 }

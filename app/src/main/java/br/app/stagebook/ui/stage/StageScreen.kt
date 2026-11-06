@@ -862,9 +862,13 @@ fun StageScreen(
                 StageFit.SIZES_VERSION, shownText.hashCode(), width, height, density.density, density.fontScale, language, look.fontSp, look.bold, look.font,
                 look.columns, look.chords, look.chordScale, look.showSections, look.translateSections, look.sectionScale, look.sectionFont, stripPlace,
             ).joinToString("|").hashCode().toString(36)
+            val room = StageFit.Room(screen, width, height)
+            var laidOut by remember { mutableStateOf(room) }
+            val midTurn = StageFit.midTurn(laidOut, room)
+            SideEffect { laidOut = room }
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
-            val autoFit = remember(autoWanted, song.fit, fitKey, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
-                if (!autoWanted || lines.isEmpty()) null else song.fit?.takeIf { it.fit == fitKey } ?: run {
+            val autoFit = remember(autoWanted, song.fit, fitKey, midTurn, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
+                if (!autoWanted || lines.isEmpty()) null else song.fit?.takeIf { it.fit == fitKey || midTurn } ?: run {
                     fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
                         // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
                         val zoomed = styleFor(z)
