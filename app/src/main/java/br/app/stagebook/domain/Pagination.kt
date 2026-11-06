@@ -62,7 +62,9 @@ object Pagination {
                     // opening fits; a new page left the short verse before it alone (an intro, in a low column)
                     val columnsAfter = perSheet - pages.size - 1
                     val room = pageHeight - (if (start >= 0) used + gap else 0) + columnsAfter * (pageHeight - tallest)
-                    if (h > room && h <= perSheet * (pageHeight - tallest)) nextSheet()
+                    // not at the cost of a sheet nearly empty: an intro alone is worse than the split
+                    val filled = (pages.size * pageHeight + used) * THIN_PAGE >= perSheet * pageHeight
+                    if (filled && h > room && h <= perSheet * (pageHeight - tallest)) nextSheet()
                     val opening = block.take(OPENING_LINES).sumOf { lines[it].height }
                     if (start >= 0 && used + gap + opening <= pageHeight) used += gap else flush()
                     for (i in block) {

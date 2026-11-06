@@ -85,6 +85,10 @@ class PaginationTest {
         assertEquals(1, Pagination.sheets(lines(3, 15), 100, 2).size)
     }
 
+    @Test fun `a verse never leaves an intro alone on its sheet`() {
+        assertEquals(2, Pagination.sheets(lines(1, 18), 100, 2).first().size)
+    }
+
     @Test fun `a verse too long for a sheet goes on from where it is`() {
         assertEquals(listOf(0..9, 11..20, 21..30, 31..40), Pagination.sheets(lines(10, 30), 100, 2).flatten())
     }
