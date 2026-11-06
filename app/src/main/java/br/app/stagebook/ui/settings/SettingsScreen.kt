@@ -1217,7 +1217,7 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     // "USB output", not "Player" again under the screen's own title
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
-        // for devices where the direct way gets no sound (S26, B-33): through Android, as other music apps (user, 02/11)
+        // for devices where the direct way gets no sound: through Android, as other music apps (user, 02/11)
         SwitchRow(stringResource(R.string.usb_via_android), look.usbViaAndroid, actions.onUsbViaAndroid, detail = stringResource(R.string.usb_via_android_detail))
     }
     // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10)
