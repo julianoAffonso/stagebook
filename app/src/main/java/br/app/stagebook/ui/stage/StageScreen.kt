@@ -821,7 +821,9 @@ fun StageScreen(
             val gutter = with(LocalDensity.current) { Spacing.xxl.roundToPx() }
             // never break a word in the middle: the lyrics don't go over the size at which the longest word fits
             val widest = remember(lines, look.fontSp, look.bold, look.font) {
+                // a tab isn't a word: it shrinks on its own (fitTabs), and it held whole songs at 10 sp with no room to pinch
                 val words = lines.asSequence()
+                    .filterNot { it.hasStringAnnotations(TAB_TAG, 0, it.length) }
                     .flatMap { it.text.split(SPACES).asSequence() }
                     .filter { it.isNotEmpty() }
                     .distinct()

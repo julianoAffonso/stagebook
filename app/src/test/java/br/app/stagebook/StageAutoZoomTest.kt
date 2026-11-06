@@ -214,6 +214,17 @@ class StageAutoZoomTest {
         assertTrue("colunas: $second", second.any { it > width / 2f })
     }
 
+    // a tab shrinks on its own: taken for a long word it held the lyrics at 10 sp and left no room to pinch
+    @Test fun `a tab doesn't hold the size of the lyrics`() {
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        val tab = "{sot}\n" + "EBGDAE".map { "$it|" + "-".repeat(200) + "|" }.joinToString("\n") + "\n{eot}"
+        val song = tab + "\n\n[C]" + verses
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = Look(fontSp = 49f, chords = true))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z }) } }
+        compose.waitForIdle()
+        assertTrue(fits.toString(), fits.last().zoom * 49f >= 18f)
+    }
+
     @Test fun `upright a song with long lines stays in one column`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }
