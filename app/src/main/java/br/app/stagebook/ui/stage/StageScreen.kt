@@ -405,6 +405,7 @@ fun StageScreen(
     // whole stage on every pinch frame
     val songNow by rememberUpdatedState(song)
     val saveZoom by rememberUpdatedState(onZoom)   // always the current position: the loop below outlives a turn
+    LaunchedEffect(screen) { zoomTouched = false }   // a pinch ends on turning: the new position shows its own zoom
     LaunchedEffect(index, zoomTouched) {
         if (!zoomTouched) return@LaunchedEffect
         snapshotFlow { zoomState.floatValue }.collectLatest { z ->

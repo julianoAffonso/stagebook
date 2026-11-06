@@ -146,7 +146,7 @@ class StageAutoZoomTest {
             StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, screen = now, onZoom = { _, z -> saved += now to z }) }
         }
         compose.mainClock.advanceTimeBy(100)
-        return { screen = it; compose.mainClock.advanceTimeBy(100) }
+        return { screen = it; compose.waitForIdle(); compose.mainClock.advanceTimeBy(100) }
     }
 
     @Test fun `a pinch right after turning goes to the new position`() {
@@ -160,6 +160,16 @@ class StageAutoZoomTest {
         }
         compose.mainClock.advanceTimeBy(1_000)
         assertEquals(listOf("em pé", "deitado"), saved.map { it.first })
+    }
+
+    @Test fun `turning ends the notice of the pinch`() {
+        val turn = turnable()
+        pinch()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithText("Automático").assertIsDisplayed()
+        turn("deitado")
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("Automático").assertDoesNotExist()
     }
 
     @Test fun `a pinch not saved yet stays on the position it was made on`() {
