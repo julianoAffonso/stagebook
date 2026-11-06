@@ -45,12 +45,12 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 #define LANES_MAX 8
 // 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
 // refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
-#define NURBS 32                      // most URBs in the kernel's queue
+#define NURBS 16                      // most URBs in the kernel's queue: 32 ms at high speed
 #define QUEUE_MS_MIN 8                // below this a busy device would run dry
 #define STALL_S 0.15                  // URBs in the kernel and none back for this long: the queue stalled
 #define QUEUE_MS 64                   // and most audio: at full speed 32 URBs are 256 ms, and the S26 stopped returning them for good
-#define PKTS_PER_URB 8
-#define TAIL_URBS 500                 // ~500 ms of silence before releasing the endpoint
+#define PKTS_PER_URB 16               // packets per URB: each URB is a system call, the USB thread's main cost
+#define TAIL_MS 500                   // silence before releasing the endpoint
 #define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
                                       // import and screens at the same time, the decoder fell behind and stuttered;
                                       // 19/10/2026)
@@ -532,6 +532,7 @@ static void *usb_main(void *arg) {
     int nurbs = g_queue_ms * pkts_per_sec / (1000 * PKTS_PER_URB);
     if (nurbs > NURBS) nurbs = NURBS;
     if (nurbs < 2) nurbs = 2;
+    int tail_max = TAIL_MS * pkts_per_sec / (1000 * PKTS_PER_URB);
     g_queue_ms = nurbs * 1000 * PKTS_PER_URB / pkts_per_sec;   // what it really is: halving a cap would change nothing
     int frame_bytes = g_dev_ch * g_subslot;
     size_t urb_sz = sizeof(struct usbdevfs_urb) + PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
@@ -625,7 +626,7 @@ static void *usb_main(void *arg) {
     { struct sigaction sa = {0}; sa.sa_handler = wake_usb; sigaction(SIGUSR2, &sa, NULL); }   // no SA_RESTART: REAPURB returns
     pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
 
-    while (tail_urbs < TAIL_URBS + nurbs - 1) {
+    while (tail_urbs < tail_max + nurbs - 1) {
         if (!tail && g_usb_stop) tail = 1;
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
@@ -689,7 +690,7 @@ static void *usb_main(void *arg) {
             }
         }
         if (tail) tail_urbs++;
-        if (tail_urbs >= TAIL_URBS) continue;   // drains what is still in the queue
+        if (tail_urbs >= tail_max) continue;   // drains what is still in the queue
         FILL(done);
         if (submit(done) < 0) {
             set_status("USB caiu: %s", strerror(errno));
