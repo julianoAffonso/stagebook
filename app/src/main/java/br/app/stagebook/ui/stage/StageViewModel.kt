@@ -153,7 +153,8 @@ class StageViewModel @Inject constructor(
         stageGate.leave()
         // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
         // another (the new one enters first), and the track playing goes on, as when changing songs (audit 02/11)
-        if (!stageGate.onStage.value) player.pause()
+        // back to the start: the same song on another stage (a setlist) went on from where it was left
+        if (!stageGate.onStage.value) player.stop()
         metronome.stop()
         chordPlayer.stop()
         announcer.stop()
