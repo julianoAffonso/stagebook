@@ -887,9 +887,10 @@ fun StageScreen(
                         else -> StageFit.columns(
                             StageColumns.AUTO,
                             fitsOnePageInOneColumn = false,
-                            lineWidthsPx = widths(measurer, lines.filter { it.isNotEmpty() && it.spanStyles.isEmpty() }, styleFor(1f)),
+                            // judged at the smallest size it may use: at the size in Settings large lyrics never fit half the screen
+                            lineWidthsPx = widths(measurer, lines.filter { it.isNotEmpty() && it.spanStyles.isEmpty() }, styleFor(min)),
                             columnWidthPx = halfWidth,
-                            zoomFitsTwoColumns = 1f <= fitTwo,
+                            zoomFitsTwoColumns = min <= fitTwo,
                         )
                     }
                     val w = if (cols == 2) halfWidth else width
@@ -900,10 +901,11 @@ fun StageScreen(
             }
             SideEffect { autoZoomNow = autoFit?.zoom ?: 1f }
             // calculated here for the first time: it stays in the song, for this screen
-            LaunchedEffect(autoFit) { if (autoFit != null && autoFit != song.fit) onFit(song.id, autoFit) }
+            LaunchedEffect(autoFit, song.fit) { if (autoFit != null && autoFit != song.fit) onFit(song.id, autoFit) }
             // during a pinch the fingers rule, until it's saved in the song
             val auto = autoFit.takeIf { !zoomTouched }
-            val shownZoom = auto?.zoom ?: layoutZoom
+            // layoutZoom trails the fingers: without a pinch the saved size is drawn at once, or turning draws the old one first
+            val shownZoom = auto?.zoom ?: if (zoomTouched) layoutZoom else song.zoom.coerceIn(minZoom, maxZoom)
             // automatic: decides by this song's lines at the size it shows (1 column)
             val styleOne = styleFor(minOf(shownZoom, fitOne))
             // heights in 1 column: automatic needs them to decide and, when it picks 1 column, they're the same as the
@@ -1030,7 +1032,7 @@ fun StageScreen(
             AnimatedContent(
                 modifier = Modifier.graphicsLayer {
                     // while the pinch hasn't stopped, the current page only scales (from the top corner)
-                    val pinchScale = minOf(zoomState.floatValue, fit) / minOf(layoutZoom, fit)
+                    val pinchScale = if (zoomTouched) minOf(zoomState.floatValue, fit) / minOf(layoutZoom, fit) else 1f
                     scaleX = pinchScale
                     scaleY = pinchScale
                     transformOrigin = TransformOrigin(0f, 0f)

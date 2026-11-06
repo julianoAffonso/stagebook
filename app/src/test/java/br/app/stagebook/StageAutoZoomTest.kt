@@ -170,6 +170,17 @@ class StageAutoZoomTest {
         assertEquals(listOf("em pé"), saved.map { it.first })
     }
 
+    // large lyrics in Settings don't fit half the screen, but the automatic size does
+    @Test @Config(qualifiers = "pt-rBR-w832dp-h384dp-land-xxhdpi")
+    fun `on its side a song with short lines uses two columns at its automatic size`() {
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha curta da letra, com mais" } }
+        val state = StageUiState(false, listOf(StageSong("Longa", "", song, false, id = "a")), look = Look(fontSp = 49f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z }) } }
+        compose.waitForIdle()
+        assertEquals(fits.toString(), 2, fits.last().columns)
+    }
+
     @Test fun `opening a song saves nothing`() {
         show()
         compose.mainClock.advanceTimeBy(5_000)
@@ -183,6 +194,36 @@ class StageAutoZoomTest {
         compose.onNodeWithText("Automático").assertIsDisplayed().performClick()
         compose.waitForIdle()
         assertEquals("a" to 1f, saved.last())
+    }
+
+    // the whole way, as the stage route does it: the song comes back from the repository with what was saved
+    @Test fun `Automatic calculates again and the page comes back`() {
+        var entry by androidx.compose.runtime.mutableStateOf<br.app.stagebook.data.model.ScreenZoom?>(null)
+        val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
+        val look = Look(fontSp = 30f, columns = StageColumns.ONE)
+        compose.setContent {
+            val song = StageSong("Longa", "", verses, false, id = "a", zooms = entry?.let { mapOf("s" to it) }.orEmpty()).onScreen("s")
+            val state = StageUiState(false, listOf(song), look = look)
+            StagebookTheme {
+                StageScreen(state, 0, 0, { _, _ -> }, screen = "s",
+                    onZoom = { _, z -> entry = if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z) },
+                    onFit = { _, z -> entry = z; fits += z })
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(0, pages())
+        pinch()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+        assertTrue("a pinça aumentou a letra", pages() > 0)
+        compose.onNodeWithText("Automático").performClick()
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+        assertEquals(fits.toString(), 2, fits.size)
+        assertEquals(fits[0], fits[1])
+        assertEquals(fits[0], entry)
+        assertEquals(0, pages())
     }
 
     @Test fun `the badge button fits on a phone`() {
