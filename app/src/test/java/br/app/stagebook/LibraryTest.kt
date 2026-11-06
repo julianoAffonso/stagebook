@@ -204,7 +204,10 @@ class LibraryTest {
     }
 
     @Test fun `zooms survive the file`() {
+        val upright = br.app.stagebook.data.model.screenKey(800, 1280)
         val song = Song("a", "Hazard").withZoom(tablet, br.app.stagebook.data.model.ScreenZoom(0.8f, 2, "key"))
+            .withZoom(upright, br.app.stagebook.data.model.ScreenZoom(1.4f)).withZoom(phone, br.app.stagebook.data.model.ScreenZoom(0.9f, 1, "other"))
         assertEquals(song.zooms, LibraryCodec.decodeSongs(LibraryCodec.encodeSongs(listOf(song))).single().zooms)
+        assertEquals("no backup também", song.zooms, LibraryCodec.decode(LibraryCodec.encode(Library(songs = listOf(song)))) { "x" }.songs.single().zooms)
     }
 }

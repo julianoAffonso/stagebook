@@ -396,7 +396,7 @@ fun StageScreen(
     val unsavedZoom = remember(index) { mutableStateOf(false) }   // pinch on this song not saved yet
     var zoomTouched by remember(index) { mutableStateOf(false) }
     // automatic zoom: only where nobody zoomed and the page exists; what it finds is saved for this screen
-    val autoWanted = look.autoZoom && look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
+    val autoWanted = look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
     var autoZoomNow by remember(index) { mutableFloatStateOf(1f) }
     LaunchedEffect(screen, song.zoom, autoWanted, autoZoomNow, zoomTouched) {
         if (!zoomTouched) zoom = (if (autoWanted) autoZoomNow else song.zoom).coerceIn(minZoom, maxZoom)
@@ -1152,7 +1152,7 @@ fun StageScreen(
                     zoomTouched = false
                     onZoom(song.id, 1f)
                 },
-                auto = look.autoZoom && !scrollMode,
+                auto = !scrollMode,
                 // the list's drawings keep their size: without them there's nothing to tell apart
                 scoped = look.chords && look.chordList != ChordListPlace.NONE,
                 modifier = Modifier.align(Alignment.TopCenter),

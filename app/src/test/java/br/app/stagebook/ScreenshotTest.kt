@@ -782,7 +782,7 @@ class ScreenshotTest {
                 }
             }
         }
-        val detail = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.settings_auto_zoom_detail)
+        val detail = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.settings_columns)
         compose.onNodeWithText(detail).performScrollTo()
         compose.onRoot().performTouchInput { swipeUp(startY = centerY, endY = centerY - 200f) }
         compose.waitForIdle()

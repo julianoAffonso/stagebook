@@ -30,7 +30,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * A song nobody zoomed fills the page of this device; a chosen zoom always wins and nothing automatic is saved. Real font
+ * A song nobody zoomed fills the page of this screen and that size is saved for it; a chosen zoom always wins. Real font
  * measurement: by default Robolectric gives each letter 1 px, and a squeezed or moving notice goes unnoticed.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -177,11 +177,6 @@ class StageAutoZoomTest {
         assertTrue(saved.toString(), saved.isEmpty())
     }
 
-    @Test fun `switched off, the size in Settings stays`() {
-        show(look = Look(fontSp = 30f, columns = StageColumns.ONE, autoZoom = false))
-        assertEquals(1, pages())
-    }
-
     @Test fun `the pinch badge goes back to automatic`() {
         show()
         pinch()
@@ -217,16 +212,16 @@ class StageAutoZoomTest {
         assertEquals(small, place(), 0.5f)
     }
 
-    @Test fun `switched off, the badge goes back to 100 percent`() {
-        show(zoom = 1.3f, look = Look(fontSp = 30f, columns = StageColumns.ONE, autoZoom = false))
+    @Test fun `scrolling, the badge goes back to 100 percent`() {
+        show(zoom = 1.3f, look = Look(fontSp = 30f, stageMode = br.app.stagebook.data.model.StageMode.SCROLL))
         pinch()
         compose.onNodeWithText("100%").performClick()
         compose.waitForIdle()
         assertEquals("a" to 1f, saved.last())
     }
 
-    @Test fun `switched off, the badge has no automatic`() {
-        show(look = Look(fontSp = 30f, columns = StageColumns.ONE, autoZoom = false))
+    @Test fun `scrolling, the badge has no automatic`() {
+        show(look = Look(fontSp = 30f, stageMode = br.app.stagebook.data.model.StageMode.SCROLL))
         pinch()
         compose.onNodeWithText("Automático").assertDoesNotExist()
     }
