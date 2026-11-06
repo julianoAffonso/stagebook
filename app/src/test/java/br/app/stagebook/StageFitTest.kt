@@ -104,4 +104,16 @@ class StageFitTest {
         StageFit.autoZoom(0.6f, 1.5f) { calls++; layout(40, 4, 1000)(it) }
         assertTrue("$calls", calls <= 7)
     }
+
+    @Test fun `the size only goes under the floor to keep a section whole`() {
+        fun crossing(below: Float) = { z: Float -> StageFit.Sheets(3, false, crossesSheet = z > below) }
+        assertEquals("nada atravessa", 0.5f, StageFit.autoFloor(0.5f, 0.4f) { StageFit.Sheets(3, false) }, 0f)
+        assertEquals("atravessa de qualquer jeito", 0.5f, StageFit.autoFloor(0.5f, 0.4f, crossing(0.3f)), 0f)
+        assertEquals("o maior que mantém inteira", 0.45f, StageFit.autoFloor(0.5f, 0.4f, crossing(0.45f)), 0.01f)
+    }
+
+    @Test fun `growing doesn't send a section over the page turn`() {
+        val zoom = StageFit.autoZoom(0.5f, 1f) { StageFit.Sheets(3, false, crossesSheet = it > 0.7f) }
+        assertEquals(0.7f, zoom, 0.02f)
+    }
 }

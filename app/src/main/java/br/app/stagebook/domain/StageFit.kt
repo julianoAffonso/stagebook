@@ -10,11 +10,12 @@ object StageFit {
     const val SHORT_LINES_SHARE = 0.9
 
     /** Goes up when the calculation changes: what songs have saved was found the old way. */
-    const val SIZES_VERSION = 5
+    const val SIZES_VERSION = 6
 
     /** Largest automatic zoom over the size in Settings. */
     const val AUTO_MAX_ZOOM = 1.5f
     private const val AUTO_MIN_FONT = 22f
+    private const val AUTO_WHOLE_FONT = 18f   // only to keep a section on one sheet
     private const val AUTO_STEPS = 5
 
     /**
@@ -41,10 +42,28 @@ object StageFit {
     }
 
     /** How a song lays out at some zoom. */
-    data class Sheets(val count: Int, val cutsVerse: Boolean, val thinFirst: Boolean = false)
+    data class Sheets(val count: Int, val cutsVerse: Boolean, val thinFirst: Boolean = false, val crossesSheet: Boolean = false)
 
     /** Smallest automatic zoom for lyrics at [fontSp]: the page comes first, down to a size still legible on stage. */
     fun autoMinZoom(fontSp: Float): Float = minOf(1f, AUTO_MIN_FONT / fontSp)
+
+    /** Smallest zoom that may be used to keep a section whole. */
+    fun autoWholeZoom(fontSp: Float): Float = minOf(1f, AUTO_WHOLE_FONT / fontSp)
+
+    /**
+     * Where the automatic zoom starts: [min], or lower down to [whole] when a section would cross a page turn and there
+     * it doesn't. A section that crosses anyway keeps [min]: shrinking wouldn't save it.
+     */
+    fun autoFloor(min: Float, whole: Float, at: (Float) -> Sheets): Float {
+        if (whole >= min || !at(min).crossesSheet || at(whole).crossesSheet) return min
+        var low = whole
+        var high = min
+        repeat(AUTO_STEPS) {
+            val mid = (low + high) / 2
+            if (at(mid).crossesSheet) high = mid else low = mid
+        }
+        return low
+    }
 
     /**
      * Automatic zoom for a song nobody zoomed: the largest size with the fewest pages reachable, no verse cut. A song
@@ -54,7 +73,8 @@ object StageFit {
     fun autoZoom(min: Float, max: Float, at: (Float) -> Sheets): Float {
         if (max <= min) return max
         val floor = at(min)
-        fun fits(s: Sheets) = s.count <= floor.count && (floor.cutsVerse || !s.cutsVerse) && (floor.thinFirst || !s.thinFirst)
+        fun fits(s: Sheets) = s.count <= floor.count && (floor.cutsVerse || !s.cutsVerse) && (floor.thinFirst || !s.thinFirst) &&
+            (floor.crossesSheet || !s.crossesSheet)
         if (fits(at(max))) return max
         var low = min
         var high = max

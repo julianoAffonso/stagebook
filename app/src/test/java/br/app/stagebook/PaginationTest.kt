@@ -89,6 +89,13 @@ class PaginationTest {
         assertEquals(listOf(0..9, 11..20, 21..30, 31..40), Pagination.sheets(lines(10, 30), 100, 2).flatten())
     }
 
+    @Test fun `a verse over the page turn is told apart`() {
+        val long = lines(10, 30)
+        assertEquals(true, Pagination.crossesSheet(long, Pagination.sheets(long, 100, 2)))
+        val short = lines(8, 15)
+        assertFalse(Pagination.crossesSheet(short, Pagination.sheets(short, 100, 2)))
+    }
+
     @Test fun `a verse doesn't start on the last line of a page`() {
         val text = Pagination.Line(100, false)
         val title = Pagination.Line(100, false, title = true)

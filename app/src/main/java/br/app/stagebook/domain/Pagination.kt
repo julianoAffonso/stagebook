@@ -82,6 +82,13 @@ object Pagination {
     /** Whether some verse is taller than the page and has to be cut by line. */
     fun cutsVerse(lines: List<Line>, pageHeight: Int): Boolean = blocks(lines).any { b -> b.sumOf { lines[it].height } > pageHeight }
 
+    /** Whether some verse runs from one of these [sheets] to the next: the pedal would turn in the middle of it. */
+    fun crossesSheet(lines: List<Line>, sheets: List<List<IntRange>>): Boolean {
+        val sheetOf = IntArray(lines.size)
+        sheets.forEachIndexed { n, sheet -> sheet.forEach { page -> page.forEach { sheetOf[it] = n } } }
+        return blocks(lines).any { sheetOf[it.first] != sheetOf[it.last] }
+    }
+
     /** Whether the first of several [pages] has only a sliver of text, like an intro left alone before a long verse. */
     fun thinFirstPage(lines: List<Line>, pages: List<IntRange>, pageHeight: Int): Boolean =
         pages.size > 1 && pages[0].sumOf { lines[it].height } * THIN_PAGE < pageHeight
