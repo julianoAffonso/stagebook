@@ -277,9 +277,15 @@ static double st_gap_max = 0;
 static int g_in_ep = -1, g_in_maxpkt = 0, g_in_fb = 0;
 static long g_tot_in = 0, g_tot_out = 0, g_fb_off = 0;
 static int g_fb_locked = 0, g_fb_mode = 0;
+// The input is only a clock if it keeps time: on some devices input packets go missing, and following what's left turned
+// into thousands of corrections a second, heard as noise. Far from the nominal rate, the output keeps its own pace.
+#define FB_MAX_OFF 0.003
+static int g_fb_bad = 0;
+static double g_fb_win = 0;
+static long g_fb_win_in = 0;
 #define FB_HI 64
 #define FB_LO 16
-static long st_fb_adj = 0, st_in_frames = 0, st_out_frames = 0, st_fb_d = 0;
+static long st_fb_adj = 0, st_in_frames = 0, st_out_frames = 0, st_fb_d = 0, st_in_lost = 0;
 static pthread_t g_usb_thr, g_dec_thr;
 static int g_fd = -1, g_ep = 0, g_maxpkt = 0, g_subslot = 4, g_dev_ch = 4, g_intf = 1, g_alt = 1;
 
@@ -537,7 +543,7 @@ static void *usb_main(void *arg) {
     int frame_bytes = g_dev_ch * g_subslot;
     size_t urb_sz = sizeof(struct usbdevfs_urb) + PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
     struct usbdevfs_urb *urbs[NURBS];
-    double acc = 0;
+    double acc = 0, lost_acc = 0;
     int tail = 0, tail_urbs = 0, errors = 0;
     long reaped = 0;
     int inflight = 0, n_in = 0;          // URBs held by the kernel; memory is only freed at zero
@@ -561,7 +567,7 @@ static void *usb_main(void *arg) {
         int mon = g_meter_on; \
         for (int k = 0; k < PKTS_PER_URB; k++) { \
             acc += (double)OUT_RATE / pkts_per_sec; int nf = (int)acc; acc -= nf; \
-            if (g_in_ep >= 0 && g_fb_locked) { \
+            if (g_in_ep >= 0 && g_fb_locked && !g_fb_bad) { \
                 long d = (g_tot_out - g_tot_in) - g_fb_off; st_fb_d = d; \
                 if (g_fb_mode == 0 && d > FB_HI) g_fb_mode = -1; \
                 else if (g_fb_mode == 0 && d < -FB_HI) g_fb_mode = 1; \
@@ -655,10 +661,24 @@ static void *usb_main(void *arg) {
                 }
             }
             for (int k = 0; k < done->number_of_packets; k++) {
-                int n = done->iso_frame_desc[k].status ? -1 : (int)done->iso_frame_desc[k].actual_length / g_in_fb;
-                if (n >= 0) { g_tot_in += n; st_in_frames += n; }
+                int n = done->iso_frame_desc[k].status ? 0 : (int)done->iso_frame_desc[k].actual_length / g_in_fb;
+                // a packet lost on the way still went by on the desk's clock: it counts for what it would have brought
+                if (n == 0) { lost_acc += (double)g_out_rate / pkts_per_sec; n = (int)lost_acc; lost_acc -= n; st_in_lost++; }
+                g_tot_in += n; st_in_frames += n; g_fb_win_in += n;
             }
-            if (!g_fb_locked && g_tot_in > 0) { g_fb_off = g_tot_out - g_tot_in; g_fb_locked = 1; }
+            if (!g_fb_locked && g_tot_in > 0) { g_fb_off = g_tot_out - g_tot_in; g_fb_locked = 1; g_fb_win = 0; }
+            if (g_fb_locked && !g_fb_bad) {
+                double t = now_s();
+                if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; }
+                else if (t - g_fb_win >= 1.0) {
+                    double hz = g_fb_win_in / (t - g_fb_win);
+                    if (fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF) {
+                        g_fb_bad = 1; g_fb_mode = 0;
+                        LOGI("usb: relogio da entrada fora (%.0f Hz), seguindo o ritmo proprio", hz);
+                    }
+                    g_fb_win = t; g_fb_win_in = 0;
+                }
+            }
             if (tail || g_in_ep < 0) continue;
             int npk = done->number_of_packets;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
@@ -792,7 +812,7 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     if (g_usb_running) return JNI_TRUE;
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
-    g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0;
+    g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
     g_usb_stop = 0; g_dec_stop = 0; g_usb_running = 1;
