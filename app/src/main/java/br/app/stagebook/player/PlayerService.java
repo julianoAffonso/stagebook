@@ -251,7 +251,8 @@ public class PlayerService extends Service {
         AudioDeviceInfo out = null;
         String wanted = d.getProductName() != null ? d.getProductName().trim() : "";
         for (AudioDeviceInfo a : getSystemService(AudioManager.class).getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
-            if (a.getType() != AudioDeviceInfo.TYPE_USB_DEVICE) continue;
+            // a card with input and output is listed as a headset on some phones (seen on the S26)
+            if (a.getType() != AudioDeviceInfo.TYPE_USB_DEVICE && a.getType() != AudioDeviceInfo.TYPE_USB_HEADSET) continue;
             if (out == null) out = a;
             CharSequence name = a.getProductName();
             // Android names it "USB-Audio - <interface name>" (seen on the S26): the interface's name inside it
