@@ -12,6 +12,9 @@ final class Engine {
     static native boolean startDevice(int deviceId, int channels);
     // the output's rate, before start or startDevice: a USB Audio 1.0 card may only have 44.1 kHz
     static native void setRate(int rate);
+    // the USB queue this interface took before here, and what the engine ended with: a stalled queue halves it
+    static native void setQueue(int ms);
+    static native int queueMs();
     static native long load(String path);
     static native void play();
     static native void pause();

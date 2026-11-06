@@ -5,6 +5,7 @@
 // one, to compare both. See run.sh.
 #include <errno.h>
 #include <math.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -23,11 +24,13 @@ void *sim_calloc(size_t n, size_t s);
 void sim_free(void *p);
 int sim_usleep(useconds_t us);
 int fake_ioctl(int fd, unsigned long req, ...);
+static int fake_poll(struct pollfd *p, nfds_t n, int ms) { struct timespec t = {0, 1000000}; nanosleep(&t, NULL); return 1; }
 
 #define calloc sim_calloc
 #define free sim_free
 #define usleep sim_usleep
 #define ioctl fake_ioctl
+#define poll fake_poll
 #define stb_vorbis_seek_frame sim_seek_frame
 #define stb_vorbis_get_samples_float_interleaved sim_get_samples
 #include ENGINE_C
@@ -35,6 +38,7 @@ int fake_ioctl(int fd, unsigned long req, ...);
 #undef free
 #undef usleep
 #undef ioctl
+#undef poll
 #undef stb_vorbis_seek_frame
 #undef stb_vorbis_get_samples_float_interleaved
 
@@ -201,7 +205,7 @@ int fake_ioctl(int fd, unsigned long req, ...) {
             pthread_cond_broadcast(&dev_cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
-        if (fail_next_reap && req == USBDEVFS_REAPURB) { fail_next_reap = 0; errno = EPROTO; r = -1; }
+        if (fail_next_reap) { fail_next_reap = 0; errno = EPROTO; r = -1; }
         else r = pop_ready((struct usbdevfs_urb **)arg, req == USBDEVFS_REAPURB);
     } else if (req == USBDEVFS_DISCARDURB) {
         r = -1; errno = EINVAL;

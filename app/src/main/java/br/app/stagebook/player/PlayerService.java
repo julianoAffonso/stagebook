@@ -114,6 +114,7 @@ public class PlayerService extends Service {
                 connectUsb();
             } else if (link != null && !Engine.isRunning()) {
                 Log.w(TAG, "USB stream dropped (" + Engine.status() + "): reconnecting");
+                usbQueues().edit().putInt(usbKey(link.dev), Engine.queueMs()).apply();   // it may have halved its queue
                 releaseUsb();
                 connectUsb();
             } else if (link != null && Engine.feedback() == 1) {
@@ -136,6 +137,10 @@ public class PlayerService extends Service {
     final Runnable fbCheck = () -> {
         if (running && Engine.isRunning() && Engine.feedback() != 1 && fbRetryDue()) fbRetry();
     };
+
+    private android.content.SharedPreferences usbQueues() { return getSharedPreferences("usb_queue", MODE_PRIVATE); }
+
+    private static String usbKey(UsbDevice d) { return String.format(java.util.Locale.ROOT, "%04x:%04x", d.getVendorId(), d.getProductId()); }
 
     boolean fbRetryDue() {
         // no input on purpose (an adaptive output follows us): there's no clock to wait for
@@ -221,6 +226,7 @@ public class PlayerService extends Service {
                 try { l.close(); } catch (RuntimeException ignored) {}
             } else {
                 Engine.setRate(l.rate);
+                Engine.setQueue(usbQueues().getInt(usbKey(d), 64));
                 Engine.start(l.conn.getFileDescriptor(), l.ep, l.maxPacket, l.channels, l.subslot,
                         l.outIfNum, l.outAltNum, l.inEp, l.inMaxPacket, l.inChannels * l.inSubslot);
                 usbOpen = l;

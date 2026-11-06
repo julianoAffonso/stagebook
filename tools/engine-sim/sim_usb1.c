@@ -3,6 +3,7 @@
 // click keeping their pitch and tempo. sim.c goes on proving that a USB Audio 2.0 desk sounds the same. See run.sh.
 #include <errno.h>
 #include <math.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -17,9 +18,12 @@
 int sim_verbose = 0;
 #define gettid() 0
 int fake_ioctl(int fd, unsigned long req, ...);
+static int fake_poll(struct pollfd *p, nfds_t n, int ms) { struct timespec t = {0, 1000000}; nanosleep(&t, NULL); return 1; }
 #define ioctl fake_ioctl
+#define poll fake_poll
 #include ENGINE_C
 #undef ioctl
+#undef poll
 
 #define RATE 44100
 #define MAX_PACKET 184

@@ -5,6 +5,7 @@
 #include <jni.h>
 #include <errno.h>
 #include <math.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -35,6 +36,7 @@
 #define LOGD(...) do { if (DIAG) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__); } while (0)
 
 #define BASE_RATE 48000               // what the tracks' tools and the click are made for
+static int g_queue_ms = 64;            // what this interface takes on this device, see QUEUE_MS
 static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 card may only have 44.1 kHz
 #define OUT_RATE g_out_rate
 #define OUT_CH 4
@@ -43,6 +45,8 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 // 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
 // refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
 #define NURBS 32                      // most URBs in the kernel's queue
+#define QUEUE_MS_MIN 8                // below this a busy device would run dry
+#define STALL_S 0.15                  // URBs in the kernel and none back for this long: the queue stalled
 #define QUEUE_MS 64                   // and most audio: at full speed 32 URBs are 256 ms, and the S26 stopped returning them for good
 #define PKTS_PER_URB 8
 #define TAIL_URBS 500                 // ~500 ms of silence before releasing the endpoint
@@ -493,12 +497,27 @@ static void free_parked(void) {
     g_nparked = 0;
 }
 
+// Waits for a URB without blocking for ever: REAPURB never returns from a queue the device stopped serving.
+#define REAP_STALLED -2
+static int reap_wait(struct usbdevfs_urb **out) {
+    double from = now_s();
+    for (;;) {
+        if (ioctl(g_fd, USBDEVFS_REAPURBNDELAY, out) == 0) return 0;
+        if (errno != EAGAIN) return -1;
+        if (now_s() - from > STALL_S) return REAP_STALLED;
+        struct pollfd p = { .fd = g_fd, .events = POLLOUT };
+        poll(&p, 1, 20);
+    }
+}
+
 // ---- thread USB ----
 static void *usb_main(void *arg) {
     int speed = ioctl(g_fd, USBDEVFS_GET_SPEED);
     int pkts_per_sec = (speed >= USB_SPEED_HIGH) ? 8000 : 1000;
-    int nurbs = QUEUE_MS * pkts_per_sec / (1000 * PKTS_PER_URB);
+    int nurbs = g_queue_ms * pkts_per_sec / (1000 * PKTS_PER_URB);
     if (nurbs > NURBS) nurbs = NURBS;
+    if (nurbs < 2) nurbs = 2;
+    g_queue_ms = nurbs * 1000 * PKTS_PER_URB / pkts_per_sec;   // what it really is: halving a cap would change nothing
     int frame_bytes = g_dev_ch * g_subslot;
     size_t urb_sz = sizeof(struct usbdevfs_urb) + PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
     struct usbdevfs_urb *urbs[NURBS];
@@ -563,7 +582,7 @@ static void *usb_main(void *arg) {
 
     struct usbdevfs_urb *in_urbs[NURBS];
     if (g_in_ep >= 0) {
-        for (int u = 0; u < NURBS; u++) {
+        for (int u = 0; u < nurbs; u++) {
             in_urbs[u] = calloc(1, urb_sz);
             in_urbs[u]->buffer = calloc(1, g_in_maxpkt * PKTS_PER_URB);
             struct usbdevfs_urb *iu = in_urbs[u];
@@ -591,7 +610,15 @@ static void *usb_main(void *arg) {
     while (tail_urbs < TAIL_URBS + nurbs - 1) {
         if (!tail && g_usb_stop) tail = 1;
         struct usbdevfs_urb *done = NULL;
-        if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
+        int got = reap_wait(&done);
+        if (got == REAP_STALLED) {
+            // some devices stop returning URBs for good with a long queue, with no error: half of it, connecting again
+            if (g_queue_ms > QUEUE_MS_MIN) g_queue_ms /= 2;
+            LOGI("usb: fila parou, tentando %d ms", g_queue_ms);
+            set_status("USB caiu: fila parou");
+            goto out;
+        }
+        if (got < 0) {
             if (errno == EINTR) continue;
             set_status("USB caiu: %s", strerror(errno));
             goto out;
@@ -661,8 +688,9 @@ out:
     // error here means none are left with it
     while (inflight > 0) {
         struct usbdevfs_urb *d;
-        if (ioctl(g_fd, USBDEVFS_REAPURB, &d) == 0) inflight--;
-        else if (errno != EINTR) break;
+        int got = reap_wait(&d);
+        if (got == 0) inflight--;
+        else if (got == REAP_STALLED || errno != EINTR) break;
     }
     if (inflight == 0) {
         for (int u = 0; u < nurbs; u++) { free(urbs[u]->buffer); free(urbs[u]); }
@@ -861,6 +889,10 @@ JNIEXPORT jlong JNICALL FN(position)(JNIEnv *e, jclass c) {
 static float g_eq_gain[EQ_BANDS];
 
 // The output's rate, before start or startDevice: the song, the EQ and the click follow it. 48 kHz changes nothing.
+// The queue this interface took before on this device, before start; queueMs says what it ended with.
+JNIEXPORT void JNICALL FN(setQueue)(JNIEnv *e, jclass c, jint ms) { if (ms >= QUEUE_MS_MIN && ms <= QUEUE_MS) g_queue_ms = ms; }
+JNIEXPORT jint JNICALL FN(queueMs)(JNIEnv *e, jclass c) { return g_queue_ms; }
+
 JNIEXPORT void JNICALL FN(setRate)(JNIEnv *e, jclass c, jint rate) {
     pthread_mutex_lock(&g_mx);
     if (rate > 0 && rate != g_out_rate) {
