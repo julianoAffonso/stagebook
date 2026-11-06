@@ -269,6 +269,22 @@ class StageAutoZoomTest {
         assertEquals((chords - seen).toString(), chords.size, seen.size)
     }
 
+    // a tab fits the view whatever it takes: taller than the column it shrinks, it's never cut
+    @Test fun `a tab taller than the page shrinks to fit it`() {
+        var heights = emptyList<br.app.stagebook.domain.Pagination.Line>()
+        compose.setContent {
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val style = androidx.compose.ui.text.TextStyle(fontSize = androidx.compose.ui.unit.TextUnit(40f, androidx.compose.ui.unit.TextUnitType.Sp), lineHeight = androidx.compose.ui.unit.TextUnit(50f, androidx.compose.ui.unit.TextUnitType.Sp))
+            val lines = List(24) { br.app.stagebook.ui.stage.StageLine(br.app.stagebook.ui.stage.tabLine("E|---|"), it) }
+            val fontPx = with(androidx.compose.ui.platform.LocalDensity.current) { style.fontSize.toPx() }
+            val fitted = br.app.stagebook.ui.stage.fitTabs(measurer, lines, style, 1000, 300, fontPx)
+            heights = br.app.stagebook.ui.stage.lineHeights(measurer, fitted.map { it.text }, style, 1000)
+        }
+        compose.waitForIdle()
+        assertTrue(heights.sumOf { it.height }.toString(), heights.sumOf { it.height } <= 300 + heights.size)
+        assertEquals(1, br.app.stagebook.domain.Pagination.paginate(heights, 300 + heights.size).size)
+    }
+
     @Test fun `upright a song with long lines stays in one column`() {
         val fits = ArrayList<br.app.stagebook.data.model.ScreenZoom>()
         val song = (1..9).joinToString("\n\n") { v -> "[Verso $v]\n" + (1..5).joinToString("\n") { "Uma linha bem comprida da letra que passa da metade da tela" } }

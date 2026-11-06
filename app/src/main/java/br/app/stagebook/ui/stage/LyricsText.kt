@@ -38,7 +38,7 @@ const val TAB_TAG = "tab"
 // a section title line: pagination keeps it with the verse after it (device test B-13)
 const val SECTION_TAG = "section"   // item: the pill's color (ARGB)
 const val TAB_EM = 0.7f
-private const val TAB_LINE_HEIGHT = 1.4f
+internal const val TAB_LINE_HEIGHT = 1.4f
 
 /** An empty line [heightEm] tall, reserved for row [row] of the chord list (paginated like the others). */
 fun chordListLine(heightEm: Float, row: Int = 0): AnnotatedString = buildAnnotatedString {

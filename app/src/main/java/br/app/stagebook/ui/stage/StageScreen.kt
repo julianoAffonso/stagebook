@@ -872,7 +872,7 @@ fun StageScreen(
             fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
                 // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
                 val zoomed = styleFor(z)
-                val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w)
+                val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w, height, with(density) { zoomed.fontSize.toPx() })
                 val text = lineHeights(measurer, shown.map { it.text }, zoomed, w)
                 // the chord list is a line of the song, on one page only
                 val strip = stripSize(w).rows.map { Pagination.Line(it, false, chordList = true) }
@@ -954,8 +954,8 @@ fun StageScreen(
             // the top or end (only in the lyrics and chords profile): a space reserved in the text, as tall as the rows
             // of diagrams at this width, so the pagination counts it.
             val stripLayout = stripSize(columnWidth)
-            val fitted = remember(sourced, style, columnWidth, stripPlace, stripLayout) {
-                val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth)
+            val fitted = remember(sourced, style, columnWidth, height, stripPlace, stripLayout) {
+                val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth, height, with(density) { style.fontSize.toPx() })
                 val strip = stripLayout.rows.mapIndexed { row, tall -> StageLine(chordListLine(with(density) { tall / style.fontSize.toPx() }, row), -1) }
                 when (stripPlace) {
                     ChordListPlace.TOP -> strip + split
@@ -1382,15 +1382,21 @@ internal fun splitWrappedChordLines(measurer: TextMeasurer, lines: List<StageLin
     return lines.flatMapIndexed { i, l -> pieces[i]?.map { StageLine(it, l.source) } ?: listOf(l) }
 }
 
-/** Tablature too wide for the column: the monospace shrinks until it fits (never wraps, or the columns get lost). */
-internal fun fitTabs(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int): List<StageLine> {
-    if (lines.none { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }) return lines
+/**
+ * Tablature bigger than the view: the monospace shrinks until it fits the column's width and the page's height, in one
+ * column or two. It never wraps or splits, or the strings stop lining up.
+ */
+internal fun fitTabs(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int, height: Int, fontPx: Float): List<StageLine> {
+    fun StageLine.isTab() = text.hasStringAnnotations(TAB_TAG, 0, text.length)
+    if (lines.none { it.isTab() }) return lines
     // the whole block stays the same size (that of the widest line), so the strings stay aligned with each other
-    val widest = lines.filter { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }
-        .maxOf { measurer.measure(it.text, style, softWrap = false).size.width }
-    if (widest <= width) return lines
-    val em = TAB_EM * width / widest * 0.98f
-    return lines.map { l -> if (l.text.hasStringAnnotations(TAB_TAG, 0, l.text.length)) StageLine(tabLine(l.text.text, em), l.source) else l }
+    val widest = lines.filter { it.isTab() }.maxOf { measurer.measure(it.text, style, softWrap = false).size.width }
+    var run = 0
+    var strings = 0
+    lines.forEach { run = if (it.isTab()) run + 1 else 0; strings = maxOf(strings, run) }
+    val em = minOf(TAB_EM, TAB_EM * width / widest * 0.98f, height / (strings * TAB_LINE_HEIGHT * fontPx) * 0.98f)
+    if (em >= TAB_EM) return lines
+    return lines.map { l -> if (l.isTab()) StageLine(tabLine(l.text.text, em), l.source) else l }
 }
 
 internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style: TextStyle): List<Int> {
