@@ -1172,6 +1172,19 @@ fun StageScreen(
                 onDismiss = { mixerOpen = false },
             )
             if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter))
+            // the look and time of the app's messages, centred above the footer: the metronome and the pages stay free
+            if (note.isNotEmpty()) {
+                Text(
+                    note,
+                    Modifier.align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
+                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
@@ -1256,23 +1269,7 @@ fun StageScreen(
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
             }
-            if (note.isNotEmpty()) {
-                // the look of the app's messages: only its place changed, it has to be read at a glance
-                Text(
-                    note,
-                    Modifier.widthIn(max = NOTE_WIDTH)
-                        .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
-                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.inverseOnSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            // for the moment of the note the page numbers step aside: squeezed, one was left behind it
-            if (note.isNotEmpty()) {
-                Spacer(Modifier.weight(1f))
-            } else if (current < pageCount - 1) {
+            if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
             } else {
                 Text(
@@ -1455,8 +1452,7 @@ private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
 private const val STRIP_MAX_SCALE = 2.5f
 private const val NOTE_MAX_CHARS = 40
-private const val NOTE_MS = 2_500L
-private val NOTE_WIDTH = 200.dp
+private const val NOTE_MS = 10_000L   // as long as the app's long messages
 private val STRIP_RESTORE_HEIGHT = 40.dp   // the chord list with every chord hidden: just the ↶
 
 /** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */

@@ -293,7 +293,7 @@ class StageAutoZoomTest {
         compose.waitForIdle()
         val metronome = compose.onNodeWithContentDescription("Metrônomo").fetchSemanticsNode().boundsInRoot
         val note = compose.onNodeWithText("Saída USB: Nanocore").fetchSemanticsNode().boundsInRoot
-        assertTrue("$metronome $note", note.left >= metronome.right)
+        assertTrue("$metronome $note", note.bottom <= metronome.top)
     }
 
     @Test fun `upright a song with long lines stays in one column`() {
