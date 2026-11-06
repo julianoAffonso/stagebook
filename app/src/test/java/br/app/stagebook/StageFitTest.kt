@@ -123,4 +123,14 @@ class StageFitTest {
         assertEquals("o tamanho novo chegou", false, StageFit.midTurn(upright.copy(screen = "832x384"), StageFit.Room("832x384", 2204, 674)))
         assertEquals("nada mudou", false, StageFit.midTurn(upright, upright))
     }
+
+    @Test fun `a size is measured only once`() {
+        var measures = 0
+        val at = StageFit.measuredOnce { measures++; StageFit.Sheets(3, false, crossesSheet = it > 0.45f) }
+        val floor = StageFit.autoFloor(0.5f, 0.4f, at)
+        val before = measures
+        at(floor)
+        at(0.5f)
+        assertEquals("o que já foi medido não mede de novo", before, measures)
+    }
 }

@@ -885,7 +885,7 @@ fun StageScreen(
                         return StageFit.Sheets(sheets.size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, sheets.flatten(), height), Pagination.crossesSheet(measured, sheets))
                     }
                     val min = StageFit.autoMinZoom(look.fontSp)
-                    val oneColumn = sheets(minOf(min, fitOne), width, 1).count
+                    val oneColumn by lazy { sheets(minOf(min, fitOne), width, 1).count }
                     val cols = when {
                         look.columns != StageColumns.AUTO -> StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
                         oneColumn <= 1 -> 1
@@ -903,8 +903,9 @@ fun StageScreen(
                     val w = if (cols == 2) halfWidth else width
                     val limit = if (cols == 2) fitTwo else fitOne
                     val top = minOf(StageFit.AUTO_MAX_ZOOM, Look.MAX_STAGE_FONT / look.fontSp, limit)
-                    val floor = StageFit.autoFloor(minOf(min, limit), minOf(StageFit.autoWholeZoom(look.fontSp), limit)) { sheets(it, w, cols) }
-                    br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top) { sheets(it, w, cols) }, cols, fitKey)
+                    val at = StageFit.measuredOnce { sheets(it, w, cols) }
+                    val floor = StageFit.autoFloor(minOf(min, limit), minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
+                    br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }
             SideEffect { autoZoomNow = autoFit?.zoom ?: 1f }

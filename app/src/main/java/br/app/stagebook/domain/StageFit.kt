@@ -53,6 +53,12 @@ object StageFit {
     /** The screen turned and the stage still has the old size: anything calculated now is for a place that's gone. */
     fun midTurn(last: Room, now: Room): Boolean = last.screen != now.screen && last.width == now.width && last.height == now.height
 
+    /** [at] measuring each zoom only once: measuring the whole song is the expensive part. */
+    fun measuredOnce(at: (Float) -> Sheets): (Float) -> Sheets {
+        val done = HashMap<Float, Sheets>()
+        return { z -> done.getOrPut(z) { at(z) } }
+    }
+
     /** Smallest zoom that may be used to keep a section whole. */
     fun autoWholeZoom(fontSp: Float): Float = minOf(1f, AUTO_WHOLE_FONT / fontSp)
 
