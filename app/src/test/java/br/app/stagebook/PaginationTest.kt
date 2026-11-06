@@ -89,6 +89,16 @@ class PaginationTest {
         assertEquals(2, Pagination.sheets(lines(1, 18), 100, 2).first().size)
     }
 
+    @Test fun `a verse goes on from a column nearly empty to the next one`() {
+        val sheets = Pagination.sheets(lines(2, 9), 100, 2)
+        assertEquals(1, sheets.size)
+        assertEquals(listOf(0..9, 10..11), sheets.single())
+    }
+
+    @Test fun `a verse doesn't split when the column before it is well used`() {
+        assertEquals(listOf(0..4, 6..14), Pagination.sheets(lines(5, 9), 100, 2).single())
+    }
+
     @Test fun `a verse too long for a sheet goes on from where it is`() {
         assertEquals(listOf(0..9, 11..20, 21..30, 31..40), Pagination.sheets(lines(10, 30), 100, 2).flatten())
     }

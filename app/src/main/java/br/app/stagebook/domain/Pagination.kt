@@ -53,7 +53,8 @@ object Pagination {
                     end = block.last
                     used = need
                 }
-                h <= pageHeight -> {
+                // a column nearly empty beside the verse says nothing: it goes on there and into the next column
+                h <= pageHeight && (start < 0 || used * THIN_PAGE >= pageHeight || pages.size >= perSheet - 1) -> {
                     flush()
                     start = block.first; end = block.last; used = h
                 }
