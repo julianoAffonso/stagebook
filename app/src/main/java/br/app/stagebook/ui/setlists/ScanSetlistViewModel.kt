@@ -65,6 +65,9 @@ sealed interface ScanUi {
     /** Camera open; [problem] = the last QR scanned didn't work. */
     data class Scanning(val problem: ScanProblem? = null) : ScanUi
 
+    /** The code was an invite to the band (user, 07/11): who invites, to accept or not. */
+    data class Invite(val name: String, val joined: Boolean = false) : ScanUi
+
     /** Fetching by the internet code, or what went wrong. */
     data class Fetching(val problem: CodeProblem? = null) : ScanUi
 
@@ -96,6 +99,15 @@ class ScanSetlistViewModel @Inject constructor(
     // who sent through the 3 words: on accepting, they join the band (and get my "ok")
     private val senderNow = MutableStateFlow<br.app.stagebook.domain.BandProtocol.Hello?>(null)
     private var sender by senderNow::value
+    // an invite read by the code: who invites (user, 07/11)
+    private var invite: br.app.stagebook.domain.BandProtocol.Hello? = null
+
+    /** Accepting the invite: who invited joins the band here, and my "ok" brings me into theirs. */
+    fun acceptInvite() {
+        val from = invite ?: return
+        bandInternet.accepted(code, from)
+        _ui.value = ScanUi.Invite(from.name, joined = true)
+    }
 
     /** The sender, if they're in the band (the online request goes to their inbox). */
     private fun senderId(): String? = (inbox.get(route.inbox)?.fromId ?: sender?.id)?.takeIf(trust::isMember)
@@ -238,6 +250,7 @@ class ScanSetlistViewModel @Inject constructor(
                 SetlistCloud.Received.NotFound -> _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND)
                 SetlistCloud.Received.Offline -> _ui.value = ScanUi.Fetching(CodeProblem.OFFLINE)
                 is SetlistCloud.Received.Newer -> _ui.value = ScanUi.Fetching(CodeProblem.NEWER)
+                is SetlistCloud.Received.Invite -> { invite = r.from; _ui.value = ScanUi.Invite(r.from.name) }
             }
         }
     }

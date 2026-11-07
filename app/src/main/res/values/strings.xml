@@ -613,6 +613,11 @@
     <string name="sets_type_code_offline">Type the 3 words (no internet)</string>
     <string name="sets_code_hint">The 3 words with dashes, like 47-violao-lua</string>
     <string name="scan_review_title">Review setlist</string>
+    <string name="invite_title">Band invite</string>
+    <string name="invite_text">%1$s invited you to their band. Accepting, you swap setlists and songs over the internet and on the same Wi-Fi.</string>
+    <string name="invite_accept">Join the band</string>
+    <string name="invite_decline">Not now</string>
+    <string name="invite_joined">You\'re in the band with %1$s.</string>
     <string name="scan_code_title">Receiving the 3 words</string>
     <string name="scan_code_loading">Fetching the setlist…</string>
     <string name="scan_code_not_found">Nothing came with these words. Check them. They last 12 hours after sending.</string>

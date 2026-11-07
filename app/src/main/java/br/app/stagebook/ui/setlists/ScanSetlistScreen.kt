@@ -138,6 +138,7 @@ fun ScanSetlistRoute(
         onUseIncoming = viewModel::useIncoming,
         onWantChords = viewModel::searchWithChords,
         onRetry = viewModel::fetch,
+        onAcceptInvite = viewModel::acceptInvite,
     )
 }
 
@@ -173,6 +174,7 @@ fun ScanSetlistScreen(
     changes: (Int) -> List<SongMerge.Change> = { emptyList() },
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
     onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
+    onAcceptInvite: () -> Unit = {},
 ) {
     var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // row with "See what changes" open
     CenteredContent(Modifier.fillMaxSize()) {
@@ -183,6 +185,7 @@ fun ScanSetlistScreen(
                         (ui as? ScanUi.Review)?.songsOnly == true -> R.string.scan_songs_title
                         // reviewing: "Review setlist", however it arrived (the camera and the code are done by now)
                         ui is ScanUi.Review -> R.string.scan_review_title
+                        ui is ScanUi.Invite -> R.string.invite_title
                         byCode -> R.string.scan_code_title
                         else -> R.string.scan_title
                     },
@@ -192,6 +195,7 @@ fun ScanSetlistScreen(
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
                 is ScanUi.Fetching -> Fetching(ui, onRetry)
+                is ScanUi.Invite -> InvitePanel(ui, onAcceptInvite, onBack)
                 is ScanUi.Review -> {
                     // missing songs: searches for the band while the review is open (to ask them before the sites)
                     val missing = !ui.songsOnly && ui.rows.any { it.chosen == null && !it.carried && it.candidates.isEmpty() }
@@ -428,6 +432,23 @@ private fun SongsReview(
             onAdd,
             Modifier.fillMaxWidth().padding(bottom = Spacing.m), icon = AppIcons.Check, enabled = new > 0 || updates > 0,
         )
+    }
+}
+
+/** An invite to the band (user, 07/11): who invites, accept or not; then that it's done. */
+@Composable
+private fun InvitePanel(ui: ScanUi.Invite, onAccept: () -> Unit, onBack: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        if (ui.joined) {
+            br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_joined, ui.name), br.app.stagebook.ui.components.StatusTone.OK)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { ActionButton(stringResource(R.string.action_ok), onBack) }
+        } else {
+            Text(stringResource(R.string.invite_text, ui.name), style = MaterialTheme.typography.bodyLarge)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                ActionButton(stringResource(R.string.invite_decline), onBack, icon = AppIcons.Close, tone = ButtonTone.Quiet)
+                ActionButton(stringResource(R.string.invite_accept), onAccept, icon = AppIcons.Group)
+            }
+        }
     }
 }
 

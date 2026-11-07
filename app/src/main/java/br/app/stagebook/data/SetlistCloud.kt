@@ -48,6 +48,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         data object Offline : Received
         /** Came from a newer Stagebook (a format this app doesn't know yet): update to receive. */
         data class Newer(val app: String) : Received
+        /** An invite to the band (user, 07/11): only who invites, to accept. */
+        data class Invite(val from: BandProtocol.Hello) : Received
     }
 
     /**
@@ -135,6 +137,21 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }
     }.getOrDefault(false)
 
+    /**
+     * An invite to the band over the internet (user, 07/11): the same channel as the 3 words, carrying only who invites
+     * (and the invite mark). Whoever accepts joins the band and sends back the usual "ok". Lasts the service's 12 h.
+     */
+    suspend fun sendInvite(): String? = withContext(Dispatchers.IO) {
+        val code = ShareCode.generate()
+        val keys = ShareCode.keys(code)
+        val sent = invite(identity.hello()).all { post(keys.topic, ShareCode.encrypt(keys.key, it)) }
+        code.takeIf { sent }
+    }
+
+    /** An invite's messages, before encrypting: who invites, then the mark. */
+    // the mark carries a word: an empty deflate reads back as nothing
+    internal fun invite(from: BandProtocol.Hello): List<ByteArray> = listOf(pack(ID_MARK, json.encodeToString(from)), pack(INVITE_MARK, "invite"))
+
     suspend fun receive(input: String): Received = withContext(Dispatchers.IO) {
         val code = ShareCode.normalize(input) ?: return@withContext Received.NotFound
         val keys = ShareCode.keys(code)
@@ -142,15 +159,21 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val lines = get("$SERVER/${keys.topic}/json?poll=1&since=all") ?: return@withContext Received.Offline
         // only what decrypts with this code (the channel is public: there may be junk from someone else); every setlist
         // in the order sent (several setlists can go in one send)
-        val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
+        read(messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) })
+    }
+
+    /** What a send's decrypted messages are: a setlist with its songs, an invite, or nothing readable. */
+    internal fun read(plain: List<ByteArray>): Received {
         // only setlists and songs in plain text (BandContent): the rest is discarded
         val lists = plain.mapNotNull { QrPayload.unpack(it) }.filter(br.app.stagebook.domain.BandContent::listOk).distinct()
         val text = lists.firstOrNull()
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
             .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
         val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
-        when {
+        val invite = plain.any { unpack(INVITE_MARK, it) != null }
+        return when {
             from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)
+            text == null && invite && from != null -> Received.Invite(from)
             text == null -> Received.NotFound
             else -> Received.Ok(text, songs, from, lists.drop(1))
         }
@@ -297,6 +320,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         private val ID_MARK = byteArrayOf('I'.code.toByte(), '1'.code.toByte())     // sender (identity)
         private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" from someone who accepted
         private val PAIR_MARK = byteArrayOf('P'.code.toByte(), '1'.code.toByte())   // package from a pair's inbox
+        private val INVITE_MARK = byteArrayOf('V'.code.toByte(), '1'.code.toByte())   // an invite to the band, nothing else
         private const val CHUNK = 2_000
         /** Marks, in the inbox, a send from a newer version (can't be read: the review asks to update). */
         const val NEWER = "\u0000newer"
