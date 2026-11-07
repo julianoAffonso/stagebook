@@ -10,6 +10,8 @@ local.properties
 !mcp/package.json
 !mcp/package-lock.json
 !mcp/tsconfig.json
+# the site's App Links file: tells Android that stagebook.app.br links open the app (public certificate fingerprint)
+!docs/.well-known/assetlinks.json
 # signing keys never go into git
 *.jks
 *.keystore

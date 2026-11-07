@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.app.stagebook",
+      "sha256_cert_fingerprints": [
+        "A0:AF:59:F0:83:C4:30:BF:CD:0A:A4:2F:F8:25:F0:12:77:F4:AF:C3:C3:FB:0F:9A:BA:80:22:58:42:A1:C4:A5"
+      ]
+    }
+  }
+]
