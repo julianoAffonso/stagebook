@@ -495,10 +495,10 @@
     <string name="song_midi_add">Add message</string>
     <string name="song_midi_remove">Remove message</string>
     <string name="song_midi_kind">Message</string>
-    <string name="song_midi_kind_program">Program change</string>
-    <string name="song_midi_kind_control">Control change</string>
-    <string name="song_midi_kind_note">Note</string>
-    <string name="song_midi_kind_bank">Bank and program</string>
+    <string name="song_midi_kind_program">Program change (PC)</string>
+    <string name="song_midi_kind_control">Control change (CC)</string>
+    <string name="song_midi_kind_note">Note (Note On/Off)</string>
+    <string name="song_midi_kind_bank">Bank and program (CC0/CC32 + PC)</string>
     <string name="song_midi_channel">Channel</string>
     <string name="song_midi_program">Program</string>
     <string name="song_midi_controller">Controller</string>

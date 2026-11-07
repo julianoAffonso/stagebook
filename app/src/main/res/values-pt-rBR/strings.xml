@@ -504,10 +504,10 @@
     <string name="song_midi_add">Adicionar mensagem</string>
     <string name="song_midi_remove">Tirar mensagem</string>
     <string name="song_midi_kind">Mensagem</string>
-    <string name="song_midi_kind_program">Program change</string>
-    <string name="song_midi_kind_control">Control change</string>
-    <string name="song_midi_kind_note">Nota</string>
-    <string name="song_midi_kind_bank">Banco e programa</string>
+    <string name="song_midi_kind_program">Program change (PC)</string>
+    <string name="song_midi_kind_control">Control change (CC)</string>
+    <string name="song_midi_kind_note">Nota (Note On/Off)</string>
+    <string name="song_midi_kind_bank">Banco e programa (CC0/CC32 + PC)</string>
     <string name="song_midi_channel">Canal</string>
     <string name="song_midi_program">Programa</string>
     <string name="song_midi_controller">Controle</string>
