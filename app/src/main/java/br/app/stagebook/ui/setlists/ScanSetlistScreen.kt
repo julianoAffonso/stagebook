@@ -358,7 +358,7 @@ private fun Review(
             title = { Text(pluralStringResource(R.plurals.scan_missing_title, ui.missing.size, ui.missing.size)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    Text(ui.missing.joinToString("\n") { "• " + it.title }, style = MaterialTheme.typography.bodyLarge)
+                    Text(ui.missing.joinToString("\n") { "• " + it.title }, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (toImport > 0) {
                         ActionButton(
                             pluralStringResource(R.plurals.scan_import_missing, toImport, toImport),
@@ -411,7 +411,7 @@ private fun SongsReview(
                         }
                         Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = tint)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text(row.title, style = MaterialTheme.typography.titleMedium)
+                            Text(row.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
                             if (row.differs) {
                                 TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(i, it) }
@@ -466,7 +466,11 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit, fromLink: Boolean
         when (ui.problem) {
             null -> {
                 CircularProgressIndicator()
-                Text(stringResource(if (fromLink) R.string.scan_link_loading else R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
+                // no Surface under this screen: without its own color the text came out dark on dark (S26, 07/11)
+                Text(
+                    stringResource(if (fromLink) R.string.scan_link_loading else R.string.scan_code_loading),
+                    style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface,
+                )
             }
             else -> {
                 if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
@@ -512,7 +516,7 @@ private fun RowItem(
                 }
                 Icon(icon, null, Modifier.size(20.dp), tint = tint)
                 Column(Modifier.weight(1f)) {
-                    Text(row.title, style = MaterialTheme.typography.titleMedium)
+                    Text(row.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     if (row.artist.isNotEmpty()) Text(row.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -565,7 +569,7 @@ private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean,
         title = { Text(stringResource(R.string.scan_changes_title)) },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                if (changes.isEmpty()) item { Text(stringResource(R.string.scan_changes_chords_only), style = MaterialTheme.typography.bodyMedium) }
+                if (changes.isEmpty()) item { Text(stringResource(R.string.scan_changes_chords_only), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 itemsIndexed(changes) { _, c ->
                     val added = c.kind == SongMerge.Kind.ADDED
                     Text(
