@@ -236,6 +236,17 @@ class ScreenshotTest {
         }
     }
 
+    // on a phone, bank and program one under the other with their whole labels, and the type wrapping (S26, 07/11)
+    @Test @Config(qualifiers = PHONE)
+    fun editorMidiPhone() {
+        val midi = br.app.stagebook.domain.SongMidi(
+            enter = listOf(br.app.stagebook.domain.MidiMessage(br.app.stagebook.domain.MidiKind.BANK_PROGRAM, channel = 1, bank = 2, number = 15)),
+        )
+        shoot("celular_4_editor_midi") {
+            Box(Modifier.fillMaxSize().padding(Spacing.l), contentAlignment = Alignment.Center) { br.app.stagebook.ui.editor.MidiPanel(midi, {}, {}) }
+        }
+    }
+
     // Settings → Pedal: where the songs' MIDI goes
     @Test @Config(qualifiers = PHONE)
     fun settingsMidiOutPhone() {
