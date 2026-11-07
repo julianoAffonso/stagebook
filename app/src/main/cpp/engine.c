@@ -916,6 +916,14 @@ static void dev_close(void) {
 JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint maxpkt, jint ch, jint subslot,
                                      jint intf, jint alt, jint in_ep, jint in_maxpkt, jint in_fb) {
     if (g_usb_running) return JNI_TRUE;
+#ifdef ENGINE_HAS_DEVICE
+    if (g_dev) dev_close();   // a device output still open: the caller skipped stop()
+#endif
+    if (g_fd >= 0) {          // the USB thread ended by itself and nobody called stop(): join both before starting again
+        g_usb_stop = 1; pthread_join(g_usb_thr, NULL);
+        g_dec_stop = 1; pthread_join(g_dec_thr, NULL);
+        g_fd = -1;
+    }
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
