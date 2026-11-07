@@ -33,6 +33,10 @@ object MetronomeClick {
     /** Whether [beat] from the start is left silent ([skip] as [COUNT_IN_SKIP]). */
     fun silent(beat: Long, skip: Long): Boolean = beat < 64 && (skip shr beat.toInt()) and 1L == 1L
 
+    /** Whether [beat] carries the accent: the first of each bar, except the count-in's first slow click, which sounds
+     *  like the second one ([skip] as [COUNT_IN_SKIP], 0 = no count-in). */
+    fun accented(beat: Long, beatsPerBar: Int, skip: Long): Boolean = beat % beatsPerBar == 0L && !(skip != 0L && beat == 0L)
+
     /** A short click: a sine with a fast decay (sounds like a metronome's "tick"). */
     fun click(accent: Boolean, rate: Int = RATE, volume: Int = FULL_VOLUME): ShortArray {
         val gain = volume.coerceIn(0, FULL_VOLUME) / FULL_VOLUME.toDouble()
@@ -53,7 +57,7 @@ object MetronomeClick {
         while (beat * spb < end) {
             val start = beat * spb
             if (silent(beat, skip)) { beat++; continue }
-            val sound = if (beat % beatsPerBar == 0L) accent else normal
+            val sound = if (accented(beat, beatsPerBar, skip)) accent else normal
             for (i in sound.indices) {
                 val at = start + i - fromSample
                 if (at in out.indices) out[at.toInt()] = sound[i]

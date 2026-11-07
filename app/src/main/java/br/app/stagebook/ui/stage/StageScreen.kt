@@ -1342,7 +1342,8 @@ fun StageScreen(
                 if (a <= 0f || !look.metroGlow) return@drawBehind
                 val c = metroColor.copy(alpha = a * METRO_GLOW_ALPHA)
                 val clear = metroColor.copy(alpha = 0f)
-                val accent = metroBeat >= 0 && metroBeat % 4 == 0   // beat 1 of the bar: wider glow
+                val accent = metroBeat >= 0 && br.app.stagebook.domain.MetronomeClick.accented(
+                    metroBeat.toLong(), 4, if (look.metroCount) br.app.stagebook.domain.MetronomeClick.COUNT_IN_SKIP else 0L)   // beat 1 of the bar: wider glow
                 val g = (if (accent) METRO_GLOW_ACCENT else METRO_GLOW).toPx().coerceAtMost(size.minDimension / 2)
                 drawRect(Brush.verticalGradient(listOf(c, clear), 0f, g), size = androidx.compose.ui.geometry.Size(size.width, g))
                 drawRect(Brush.verticalGradient(listOf(clear, c), size.height - g, size.height), topLeft = Offset(0f, size.height - g), size = androidx.compose.ui.geometry.Size(size.width, g))
