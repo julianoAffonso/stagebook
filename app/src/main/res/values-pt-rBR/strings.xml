@@ -887,7 +887,7 @@
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
     <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>
-    <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que gasta mais processador e bateria, e o dobro ou mais em aparelhos simples.</string>
+    <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que pode engasgar.</string>
     <string name="metro_player_title">Metrônomo e player</string>
     <string name="mixer_listen_on_stage">O mixer e o equalizador ficam no palco, para ajustar ouvindo: toque uma música, segure o play e abra o mixer.</string>
     <string name="stage_mix_hint">Os ajustes aqui mudam o mixer global, que vale para todas as músicas. Desligue para mexer só nesta música.</string>
