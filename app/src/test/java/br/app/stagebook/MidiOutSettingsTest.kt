@@ -1,5 +1,6 @@
 package br.app.stagebook
 
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -13,13 +14,14 @@ import br.app.stagebook.ui.settings.SettingsSection
 import br.app.stagebook.ui.settings.SettingsUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Settings → Pedal: where the songs' MIDI goes (user, 07/11). */
+/** Settings → Pedal: where the songs' MIDI goes (user, 07/11), and the ways to add a pedal. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class MidiOutSettingsTest {
@@ -49,5 +51,14 @@ class MidiOutSettingsTest {
     @Test fun `the chosen device away still shows, as not connected`() {
         show(Look(midiOut = "1:Keystation", midiOutName = "Keystation"), emptyList())
         compose.onNodeWithText("Keystation, desconectado").performScrollTo()
+    }
+
+    // S26 and Chuwi, 07/11: a blank band between "Pedal Bluetooth comum" and "Pedal MIDI Bluetooth"
+    @Test fun `the ways to add a pedal sit one right under the other`() {
+        show(Look(), emptyList())
+        val common = compose.onNodeWithText("Pedal Bluetooth comum").getBoundsInRoot()
+        val midi = compose.onNodeWithText("Pedal MIDI Bluetooth").getBoundsInRoot()
+        assertEquals(common.bottom.value, midi.top.value, 0.5f)
+        assertTrue(common.bottom - common.top <= br.app.stagebook.ui.theme.Sizes.touch)
     }
 }

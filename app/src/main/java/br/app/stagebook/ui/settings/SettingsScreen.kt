@@ -1006,16 +1006,26 @@ private fun PedalConnectCard(uiState: SettingsUiState, actions: SettingsActions)
             PedalStatusRow(look.midiBtName, stringResource(R.string.settings_pedal_kind_midi_bt), btMidiOn, onForget = actions.onMidiForget)
         }
         usb.forEach { d -> PedalStatusRow(d.name, stringResource(R.string.settings_pedal_kind_midi_usb), true) }
-        ActionButton(stringResource(R.string.settings_pedal_add_common), actions.onPairPedal, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal)
-        if (midi.supported) {
+        // the ways to add a pedal stacked as one list: two 56 dp buttons with no background, apart by the card's gap,
+        // left a blank band between them (S26 and Chuwi, 07/11)
+        Column {
             ActionButton(
-                stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_pedal_add_midi),
-                actions.onMidiScan,
-                Modifier.fillMaxWidth(),
-                icon = AppIcons.Pedal,
-                tone = ButtonTone.Tonal,
-                enabled = !midi.scanning,
+                stringResource(R.string.settings_pedal_add_common), actions.onPairPedal, Modifier.fillMaxWidth(),
+                icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal, minHeight = Sizes.touch,
             )
+            if (midi.supported) {
+                ActionButton(
+                    stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_pedal_add_midi),
+                    actions.onMidiScan,
+                    Modifier.fillMaxWidth(),
+                    icon = AppIcons.Pedal,
+                    tone = ButtonTone.Tonal,
+                    enabled = !midi.scanning,
+                    minHeight = Sizes.touch,
+                )
+            }
+        }
+        if (midi.supported) {
             if (midi.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
             midi.found.forEach { f ->
                 SongListItem(title = f.name, subtitle = stringResource(R.string.settings_midi_choose), onClick = { actions.onMidiChoose(f) })

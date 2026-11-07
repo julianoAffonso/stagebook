@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
@@ -38,7 +39,8 @@ enum class ButtonTone { Primary, Tonal, Danger, Quiet }
  * The app's action button, in Google's app pattern (T35 rule, user's decision): **the screen's only main action**
  * ([ButtonTone.Primary]) has a filled background; the others are icon + text **with no background** (Tonal = text
  * color, Danger = red, Quiet = dimmed). The main one sits at the end of the space; the others at the start. On tap, the
- * pill ripple and a slight press (the Expressive "morph").
+ * pill ripple and a slight press (the Expressive "morph"). [minHeight] drops to the touch size where buttons with no
+ * background stack as a list.
  */
 @Composable
 fun ActionButton(
@@ -48,6 +50,7 @@ fun ActionButton(
     icon: ImageVector? = null,
     tone: ButtonTone = ButtonTone.Primary,
     enabled: Boolean = true,
+    minHeight: Dp = Sizes.button,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -59,7 +62,7 @@ fun ActionButton(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .heightIn(min = Sizes.button)
+            .heightIn(min = minHeight)
             .graphicsLayer { scaleX = scale; scaleY = scale },
         enabled = enabled,
         shape = RoundedCornerShape(percent = corner),
