@@ -18,6 +18,9 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#if DIAG
+#include <sys/system_properties.h>   // debug.stagebook.rate
+#endif
 #include <linux/usbdevice_fs.h>
 #include <linux/usb/ch9.h>
 #include <android/log.h>
@@ -45,11 +48,14 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 #define LANES_MAX 8
 // 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
 // refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
-#define NURBS 16                      // most URBs in the kernel's queue: 32 ms at high speed
+#define NURBS 32                      // most URBs in the kernel's queue: 32 ms at high speed
 #define QUEUE_MS_MIN 8                // below this a busy device would run dry
 #define STALL_S 0.15                  // URBs in the kernel and none back for this long: the queue stalled
 #define QUEUE_MS 64                   // and most audio: at full speed 32 URBs are 256 ms, and the S26 stopped returning them for good
-#define PKTS_PER_URB 16               // packets per URB: each URB is a system call, the USB thread's main cost
+// Packets per URB: 1 ms at high speed, as the kernel's own driver does. Each URB is a system call, and 16 (2 ms)
+// halved that cost; but on one tablet's host controller 16-packet URBs reached the interface with hiss under the
+// music and thumps, and 8 came out clean (07/11/2026). The queue stays 32 ms.
+#define PKTS_PER_URB 8
 #define TAIL_MS 500                   // silence before releasing the endpoint
 #define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
                                       // import and screens at the same time, the decoder fell behind and stuttered;
@@ -269,6 +275,7 @@ static int g_hist_fill = 0;
 static volatile int g_usb_stop = 0, g_usb_running = 0, g_dec_stop = 0;
 // stutter diagnostics: reset every log window
 static long st_underrun = 0, st_pkt_err = 0, st_urb_err = 0;
+static long st_out_short = 0, st_out_short_bytes = 0;   // DIAG: output packets the host sent short or not at all
 static int st_ring_min = RING_FRAMES;
 static double st_gap_max = 0;
 // Implicit feedback: the interface's input arrives at its clock's pace. We compare the total frames it produced with
@@ -280,11 +287,30 @@ static int g_fb_locked = 0, g_fb_mode = 0;
 // The input is only a clock if it keeps time: on some devices input packets go missing, and following what's left turned
 // into thousands of corrections a second, heard as noise. Far from the nominal rate, the output keeps its own pace.
 #define FB_MAX_OFF 0.003
-static int g_fb_bad = 0;
+#define FB_BACK_S 5                   // seconds of a count that keeps time again before the input is followed again
+static int g_fb_bad = 0, g_fb_good = 0;
 static double g_fb_win = 0;
 static long g_fb_win_in = 0;
 #define FB_HI 64
 #define FB_LO 16
+// With an input clock that exists but can't be followed (g_fb_bad), the output is paced against the system's monotonic
+// clock instead of the bus: on some hosts the microframe clock runs off nominal (~900 ppm slow seen on one tablet) and
+// the interface, consuming at its own crystal, runs its small queue dry every few seconds. A PI loop on the frames sent
+// ahead of real time holds the rate at the nominal 48 000/s. Only there: an adaptive output follows our pace anyway, and
+// an input that keeps time still has the last word.
+static double g_pace_t0 = 0, g_pace_err = 0, g_pace_off = 0, g_pace_ratio = 0, g_pace_int = 0, g_pace_last = 0;
+static int g_pace_locked = 0;
+#define PACE_EMA 0.002               // error smoothing at ~1000 output URBs/s: a time constant of ~0.5 s
+#define PACE_TP 4.0                  // proportional: an error of e frames is removed over TP seconds
+#define PACE_TI 20.0                 // integral: a steady error feeds the ratio over TI seconds
+#define PACE_FAST_S 10.0             // after this long locked, the slow gains below
+#define PACE_EMA_SLOW 0.0005
+#define PACE_TP_SLOW 60.0
+#define PACE_TI_SLOW 120.0
+static double g_pace_lock_t = 0;
+#define PACE_MAX 0.01                // never more than 1% off nominal: beyond that something else is wrong
+static double g_pace_rate = 0;       // DIAG: the rate the pace loop aims at (debug.stagebook.rate), else g_out_rate
+#define PACE_RATE (g_pace_rate > 0 ? g_pace_rate : g_out_rate)
 static long st_fb_adj = 0, st_in_frames = 0, st_out_frames = 0, st_fb_d = 0, st_in_lost = 0;
 static pthread_t g_usb_thr, g_dec_thr;
 static int g_fd = -1, g_ep = 0, g_maxpkt = 0, g_subslot = 4, g_dev_ch = 4, g_intf = 1, g_alt = 1;
@@ -568,7 +594,7 @@ static void *usb_main(void *arg) {
         pthread_mutex_lock(&g_mx); \
         int mon = g_meter_on; \
         for (int k = 0; k < PKTS_PER_URB; k++) { \
-            acc += (double)OUT_RATE / pkts_per_sec; int nf = (int)acc; acc -= nf; \
+            acc += (double)OUT_RATE / pkts_per_sec * (g_fb_bad ? 1.0 + g_pace_ratio : 1.0); int nf = (int)acc; acc -= nf; \
             if (g_in_ep >= 0 && g_fb_locked && !g_fb_bad) { \
                 long d = (g_tot_out - g_tot_in) - g_fb_off; st_fb_d = d; \
                 if (g_fb_mode == 0 && d > FB_HI) g_fb_mode = -1; \
@@ -669,20 +695,25 @@ static void *usb_main(void *arg) {
                 g_tot_in += n; st_in_frames += n; g_fb_win_in += n;
             }
             if (!g_fb_locked && g_tot_in > 0) { g_fb_off = g_tot_out - g_tot_in; g_fb_locked = 1; g_fb_win = 0; }
-            if (g_fb_locked && !g_fb_bad) {
+            if (g_fb_locked) {
                 double t = now_s();
                 if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; }
                 else if (t - g_fb_win >= 1.0) {
                     double hz = g_fb_win_in / (t - g_fb_win);
-                    if (fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF) {
-                        g_fb_bad = 1; g_fb_mode = 0;
+                    int off = fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF;
+                    if (!g_fb_bad && off) {
+                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0;
                         LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
-                    }
+                    } else if (g_fb_bad && !off && ++g_fb_good >= FB_BACK_S) {
+                        // a passing hiccup of the host (busy for a second) must not cost the whole show: once the
+                        // count keeps time again for FB_BACK_S seconds, the input is the clock again, from where we are
+                        g_fb_bad = 0; g_fb_mode = 0; g_fb_off = g_tot_out - g_tot_in;
+                        LOGI("usb: input clock back (%.0f Hz), following it again", hz);
+                    } else if (g_fb_bad && off) g_fb_good = 0;
                     g_fb_win = t; g_fb_win_in = 0;
                 }
             }
-            // an input that can't be followed only takes room on a bus already losing packets
-            if (tail || g_in_ep < 0 || g_fb_bad) continue;
+            if (tail || g_in_ep < 0) continue;
             int npk = done->number_of_packets;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
@@ -691,8 +722,40 @@ static void *usb_main(void *arg) {
             continue;
         }
         reaped++;
+        {   // frames sent ahead of the monotonic clock, smoothed, and the PI loop on it (see g_pace_ratio)
+            double t = now_s();
+            pthread_mutex_lock(&g_mx);
+            long sent = g_tot_out;
+            pthread_mutex_unlock(&g_mx);
+            if (g_pace_t0 == 0) { g_pace_t0 = t; g_pace_last = t; }
+            double err = sent - (t - g_pace_t0) * PACE_RATE;
+            // the host's clock offset is a constant: the loop hunts it fast for PACE_FAST_S after locking, then goes
+            // nearly rigid (an interface's queue may hold only ~2 ms: every step of the ratio is a step it must absorb)
+            int slow = g_pace_locked && t - g_pace_lock_t > PACE_FAST_S;
+            g_pace_err += (err - g_pace_err) * (slow ? PACE_EMA_SLOW : PACE_EMA);
+            // the first second settles the queue: what's ahead by then is the working point, not an error
+            if (!g_pace_locked && t - g_pace_t0 >= 1.0) { g_pace_locked = 1; g_pace_lock_t = t; g_pace_off = g_pace_err; g_pace_last = t; }
+            if (g_pace_locked && t - g_pace_last >= 0.25) {
+                double e = g_pace_err - g_pace_off, dt = t - g_pace_last;
+                double ti = slow ? PACE_TI_SLOW : PACE_TI, tp = slow ? PACE_TP_SLOW : PACE_TP;
+                g_pace_last = t;
+                g_pace_int -= e / (ti * g_out_rate) * dt;
+                if (g_pace_int > PACE_MAX) g_pace_int = PACE_MAX;
+                if (g_pace_int < -PACE_MAX) g_pace_int = -PACE_MAX;
+                double r = g_pace_int - e / (tp * g_out_rate);
+                if (r > PACE_MAX) r = PACE_MAX;
+                if (r < -PACE_MAX) r = -PACE_MAX;
+                pthread_mutex_lock(&g_mx);
+                g_pace_ratio = r;
+                pthread_mutex_unlock(&g_mx);
+            }
+        }
         if (done->status != 0) { errors++; st_urb_err++; }
         for (int k = 0; k < done->number_of_packets; k++) if (done->iso_frame_desc[k].status) st_pkt_err++;
+        if (DIAG) for (int k = 0; k < done->number_of_packets; k++)
+            if (done->iso_frame_desc[k].actual_length < done->iso_frame_desc[k].length) {
+                st_out_short++; st_out_short_bytes += done->iso_frame_desc[k].length - done->iso_frame_desc[k].actual_length;
+            }
         if (DIAG) {   // stats every 5 s: with DIAG 0 it doesn't even read the clock
             static double last = 0, win = 0;
             double t = now_s();
@@ -700,14 +763,31 @@ static void *usb_main(void *arg) {
             last = t;
             if (win == 0) win = t;
             if (t - win >= 5.0) {
+#if DIAG
+                {   // DIAG: a new target rate re-anchors the pace clock so the error doesn't jump
+                    char v[PROP_VALUE_MAX] = "";
+                    double want = __system_property_get("debug.stagebook.rate", v) > 0 ? atof(v) : 0;
+                    if (want < 40000 || want > 56000) want = 0;
+                    if (want != g_pace_rate) {
+                        double old = PACE_RATE;
+                        g_pace_rate = want;
+                        if (g_pace_t0 > 0) g_pace_t0 = t - (t - g_pace_t0) * old / PACE_RATE;
+                        g_pace_int += (PACE_RATE - old) / old;   // the ratio jumps with the target; the loop then only trims
+                        LOGD("pace: target %.0f Hz", PACE_RATE);
+                    }
+                }
+#endif
                 pthread_mutex_lock(&g_mx);
                 int ring = g_ring_n, rmin = st_ring_min;
                 pthread_mutex_unlock(&g_mx);
                 LOGD("stats: playing=%d urbs=%ld urb_err=%ld pkt_err=%ld underrun=%ld ring=%dms ring_min=%dms gap_max=%.1fms "
-                     "fb=%s adjusts=%ld diff=%ld desk=%.2fHz out=%.2fHz",
+                     "fb=%s adjusts=%ld diff=%ld desk=%.2fHz out=%.2fHz pace=%+.6f short=%ld/%ldB",
                      g_playing, reaped, st_urb_err, st_pkt_err, st_underrun, ring * 1000 / OUT_RATE,
-                     rmin * 1000 / OUT_RATE, st_gap_max * 1000, g_in_ep >= 0 ? (g_fb_locked ? "locked" : "waiting") : "off",
-                     st_fb_adj, st_fb_d, st_in_frames / (t - win), st_out_frames / (t - win));
+                     rmin * 1000 / OUT_RATE, st_gap_max * 1000,
+                     g_in_ep >= 0 ? (g_fb_bad ? "bad" : g_fb_locked ? "locked" : "waiting") : "off",
+                     st_fb_adj, st_fb_d, st_in_frames / (t - win), st_out_frames / (t - win), g_pace_ratio,
+                     st_out_short, st_out_short_bytes);
+                st_out_short = st_out_short_bytes = 0;
                 st_underrun = st_pkt_err = st_urb_err = 0; st_ring_min = RING_FRAMES; st_gap_max = 0; win = t;
                 st_fb_adj = st_in_frames = st_out_frames = 0;
             }
@@ -815,7 +895,8 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     if (g_usb_running) return JNI_TRUE;
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
-    g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0;
+    g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0;
+    g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
     g_usb_stop = 0; g_dec_stop = 0; g_usb_running = 1;
