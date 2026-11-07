@@ -221,18 +221,26 @@ internal fun chordLine(written: String, look: ChordLook): AnnotatedString {
             }
         }
     }
+    var padded = false
     segs.forEachIndexed { i, s ->
         val chord = s.chord ?: return@forEachIndexed
-        // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on)
-        val need = emWidth(chord) * look.scale * BOLD + if (i < segs.lastIndex) CHORD_GAP else 0f
+        val annotation = isAnnotation(chord)
+        // an annotation moved to a word's end sits on the space after it; when the chord before already opened room
+        // there, that space was one more on top of the room (devices, 07/11: "até   ficar")
+        if (annotation && padded && s.text.firstOrNull() == ' ' && s.text.isNotBlank()) s.text = s.text.drop(1)
+        // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on). What is
+        // drawn counts ("2x", not "*2x"), and after an annotation a single space is enough
+        val gap = if (i == segs.lastIndex) 0f else if (annotation) emWidth(" ") else CHORD_GAP
+        val need = emWidth(chordLabel(chord)) * look.scale * BOLD + gap
         val letters = s.text.length
         while (emWidth(s.text) < need) s.text += " "
+        padded = s.text.length > letters
         // room opened in the middle of a word ("gu[A9]erra") gets a hyphen, as printed chord sheets do: the bare gap
-        // read as two words (user, 03/11)
+        // read as two words (user, 03/11). It goes right after the syllable, as on paper: in the middle of the room it
+        // floated away and still split the word ("fl -ores", devices 07/11)
         val next = segs.getOrNull(i + 1)?.text?.firstOrNull()
-        if (s.text.length > letters && s.text.getOrNull(letters - 1)?.isLetter() == true && next?.isLetter() == true) {
-            val mid = letters + (s.text.length - letters) / 2
-            s.text = s.text.substring(0, mid) + WORD_JOIN + s.text.substring(mid + 1)
+        if (padded && s.text.getOrNull(letters - 1)?.isLetter() == true && next?.isLetter() == true) {
+            s.text = s.text.substring(0, letters) + WORD_JOIN + s.text.substring(letters + 1)
         }
     }
     // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
