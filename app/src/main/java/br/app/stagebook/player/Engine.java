@@ -30,7 +30,7 @@ final class Engine {
     // source channels of the loaded track (up to 8)
     static native int lanes();
     // metronome click into USB outputs: normal/accent 48 kHz, samples per beat (0 = off), up to two outputs (-1 = none)
-    static native void setClick(float[] normal, float[] accent, long samplesPerBeat, int out1, int out2);
+    static native void setClick(float[] normal, float[] accent, long samplesPerBeat, int out1, int out2, long skip);
     // {lufs, peak} of the channels in mask (each mixer channel or pair)
     static native float[] analyzeMask(String path, int mask);
     static native boolean isRunning();

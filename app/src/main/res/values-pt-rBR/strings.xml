@@ -379,7 +379,8 @@
     <string name="metro_bpm">%1$d BPM</string>
     <string name="metro_slower">Mais devagar</string>
     <string name="metro_faster">Mais rápido</string>
-    <string name="metro_count">Contagem 1–2–3–4 antes</string>
+    <string name="metro_count">Contagem 1 … 2 … 1 2 3 4 antes</string>
+    <string name="metro_volume">Volume %1$d%%</string>
     <string name="metro_glow_color">Cor do brilho</string>
     <string name="metro_help">No palco, o ícone ao lado do relógio abre o metrônomo. Ele começa no BPM da música, ou em 100 se ela não tiver.</string>
     <string name="metro_in_settings">Contagem, som e brilho ficam nos %1$s.</string>

@@ -38,7 +38,8 @@ class BackupTest {
         val (repo, tracks, backup) = setup()
         tracks.file("faixa.ogg").writeBytes(OGG)
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "linha", zoom = 1.4f, track = "faixa.ogg"))
-        repo.updateLook { it.copy(fontSp = 44f) }
+        // the metronome's volume too (user, 07/11), and the show's length on the clock
+        repo.updateLook { it.copy(fontSp = 44f, metroVolume = 40, showMinutes = 150) }
         context.getSharedPreferences("player", 0).edit().putFloat("volume", 0.7f).putString("perfil", "Interface X").commit()
         val out = ByteArrayOutputStream()
         backup.write(out, Part.entries.toSet())
@@ -47,7 +48,7 @@ class BackupTest {
         assertEquals(Part.entries.toSet(), backup.inspect(ByteArrayInputStream(bytes))!!.parts)
         // changes everything and restores
         repo.restore(emptyList(), emptyList())
-        repo.updateLook { it.copy(fontSp = 20f) }
+        repo.updateLook { it.copy(fontSp = 20f, metroVolume = 100, showMinutes = 60) }
         tracks.file("faixa.ogg").delete()
         context.getSharedPreferences("player", 0).edit().clear().commit()
         assertTrue(backup.restore(ByteArrayInputStream(bytes), Part.entries.toSet()))
@@ -57,6 +58,8 @@ class BackupTest {
         assertEquals("faixa.ogg", song.track)
         assertTrue(tracks.file("faixa.ogg").readBytes().contentEquals(OGG))
         assertEquals(44f, repo.library.value.look.fontSp)
+        assertEquals(40, repo.library.value.look.metroVolume)
+        assertEquals(150, repo.library.value.look.showMinutes)
         assertEquals(0.7f, context.getSharedPreferences("player", 0).getFloat("volume", 0f))
         assertEquals("Interface X", context.getSharedPreferences("player", 0).getString("perfil", null))
     }

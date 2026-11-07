@@ -370,7 +370,8 @@
     <string name="metro_bpm">%1$d BPM</string>
     <string name="metro_slower">Slower</string>
     <string name="metro_faster">Faster</string>
-    <string name="metro_count">Count in 1–2–3–4</string>
+    <string name="metro_count">Count-in 1 … 2 … 1 2 3 4</string>
+    <string name="metro_volume">Volume %1$d%%</string>
     <string name="metro_glow_color">Glow color</string>
     <string name="metro_help">On stage, the icon next to the clock opens the metronome. It starts at the song\'s BPM, or 100 if it has none.</string>
     <string name="metro_in_settings">Count-in, sound and glow are in the %1$s.</string>

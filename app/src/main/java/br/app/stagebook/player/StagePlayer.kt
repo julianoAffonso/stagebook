@@ -289,12 +289,15 @@ class StagePlayer @Inject constructor(
          * Metronome click into the USB interface (user, 02/11): mixed by the engine on the interface's clock. False when
          * the player isn't on a USB interface with that output: then the click stays on the device.
          */
-        fun usbClick(bpm: Int, out: br.app.stagebook.domain.MetronomeOut): Boolean {
+        fun usbClick(bpm: Int, out: br.app.stagebook.domain.MetronomeOut, skip: Long = 0, volume: Int = br.app.stagebook.domain.MetronomeClick.FULL_VOLUME): Boolean {
             if (out.device || !PlayerService.running || !PlayerService.connected) return false
             if (!PlayerService.outputKey.startsWith("usb:") || out.out + (if (out.pair) 1 else 0) >= PlayerService.outputCount) return false
             fun floats(s: ShortArray) = FloatArray(s.size) { s[it] / 32768f }
             val click = br.app.stagebook.domain.MetronomeClick
-            Engine.setClick(floats(click.click(false)), floats(click.click(true)), click.samplesPerBeat(bpm), out.out, if (out.pair) out.out + 1 else -1)
+            Engine.setClick(
+                floats(click.click(false, volume = volume)), floats(click.click(true, volume = volume)), click.samplesPerBeat(bpm),
+                out.out, if (out.pair) out.out + 1 else -1, skip,
+            )
             return true
         }
 
@@ -305,7 +308,7 @@ class StagePlayer @Inject constructor(
         /** The song plays through Android: as media too, the click would follow it to the interface. */
         fun viaAndroid() = PlayerService.viaAndroid
 
-        fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1)
+        fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1, 0)
 
         private const val METER_MS = 66L          // ~15 reads per second
         private const val METER_IDLE_MS = 500L    // player off: only check whether it turned on

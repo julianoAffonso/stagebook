@@ -248,6 +248,7 @@ class SettingsViewModel @Inject constructor(
     fun setMetronome(count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) =
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setMetronomeShown(on: Boolean) = repository.updateLook { it.copy(metroShown = on) }
+    fun setMetronomeVolume(v: Int) = repository.updateLook { it.copy(metroVolume = v.coerceIn(0, br.app.stagebook.domain.MetronomeClick.FULL_VOLUME)) }
     fun setUsbViaAndroid(on: Boolean) {
         // the player may not be running yet, and Android reads this when the interface connects
         br.app.stagebook.data.device.DeviceTweaks.set(context, br.app.stagebook.data.device.DeviceTweak.USB_ROUTING, !on)

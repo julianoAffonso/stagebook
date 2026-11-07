@@ -37,4 +37,23 @@ class MetronomeClickTest {
         assertTrue(a.size < MetronomeClick.RATE / 10)
         assertTrue(!a.contentEquals(n))
     }
+
+    // count-in (user, 07/11): "1 . 2 . 1 2 3 4", so it isn't taken for the song's start
+    @Test fun `the count-in leaves beats 2 and 4 silent, then clicks every beat`() {
+        val all = ShortArray(600)
+        MetronomeClick.render(all, 0, 50, normal, accent, skip = MetronomeClick.COUNT_IN_SKIP)
+        val heard = (0 until 12).filter { all[it * 50] != 0.toShort() }
+        assertEquals(listOf(0, 2, 4, 5, 6, 7, 8, 9, 10, 11), heard)
+    }
+
+    @Test fun `the stage shows 1, 2, then 1 2 3 4, and nothing on the pauses`() =
+        assertEquals(listOf(1, 0, 2, 0, 1, 2, 3, 4, 0), (0..8).map(MetronomeClick::countLabel))
+
+    @Test fun `the volume scales the click`() {
+        val full = MetronomeClick.click(false).maxOf { kotlin.math.abs(it.toInt()) }
+        val half = MetronomeClick.click(false, volume = 50).maxOf { kotlin.math.abs(it.toInt()) }
+        assertEquals(full / 2.0, half.toDouble(), full * 0.01)
+        assertEquals(0, MetronomeClick.click(false, volume = 0).maxOf { kotlin.math.abs(it.toInt()) })
+        assertEquals(100, br.app.stagebook.data.model.Look().metroVolume)
+    }
 }

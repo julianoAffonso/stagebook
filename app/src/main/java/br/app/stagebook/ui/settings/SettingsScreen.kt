@@ -350,6 +350,7 @@ fun SettingsRoute(
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
+                onMetronomeVolume = viewModel::setMetronomeVolume,
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
                 onMetronomeMenu = viewModel::probeClickRoute,
@@ -444,6 +445,7 @@ data class SettingsActions(
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
+    val onMetronomeVolume: (Int) -> Unit = {},
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
     val onMetronomeMenu: () -> Unit = {},
@@ -1465,6 +1467,18 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
         if (!look.metroShown) return@SettingsCard
         SwitchRow(stringResource(R.string.metro_count), look.metroCount, { set(count = it) })
         SwitchRow(stringResource(R.string.metro_sound), look.metroSound, { set(sound = it) })
+        if (look.metroSound) {
+            // the click's volume, in steps of 10 (user, 07/11); saved when the finger lifts
+            var level by remember(look.metroVolume) { mutableFloatStateOf(look.metroVolume.toFloat()) }
+            Text(stringResource(R.string.metro_volume, level.roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = level,
+                onValueChange = { level = it },
+                onValueChangeFinished = { actions.onMetronomeVolume(level.roundToInt()) },
+                valueRange = 0f..br.app.stagebook.domain.MetronomeClick.FULL_VOLUME.toFloat(),
+                steps = 9,
+            )
+        }
         // the drummer hears it through the desk: a USB output (user, 02/11); only with the player on
         if (look.metroSound && look.playerMode) {
             val outputs = look.mixer.output

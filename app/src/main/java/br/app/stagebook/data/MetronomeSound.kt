@@ -27,11 +27,12 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
     /** False when, through Android, the click can't leave the USB interface: "the device" isn't a real choice then. */
     val keepsApart: StateFlow<Boolean> = _keepsApart.asStateFlow()
 
-    fun start(bpm: Int) {
+    /** Clicks at [bpm]; [skip]: the count-in's silent beats; [volume] 0–100. */
+    fun start(bpm: Int, skip: Long = 0, volume: Int = MetronomeClick.FULL_VOLUME) {
         stop()
         val spb = MetronomeClick.samplesPerBeat(bpm)
-        val normal = MetronomeClick.click(accent = false)
-        val accent = MetronomeClick.click(accent = true)
+        val normal = MetronomeClick.click(accent = false, volume = volume)
+        val accent = MetronomeClick.click(accent = true, volume = volume)
         worker = Thread({
             val min = AudioTrack.getMinBufferSize(MetronomeClick.RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             val track = openTrack(min) ?: return@Thread
@@ -49,7 +50,7 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
             try {
                 track.play()
                 while (!Thread.currentThread().isInterrupted) {
-                    MetronomeClick.render(buf, pos, spb, normal, accent)
+                    MetronomeClick.render(buf, pos, spb, normal, accent, skip = skip)
                     // accessibility audio comes out quieter than media, even at full volume
                     if (quieter) for (i in buf.indices) buf[i] = (buf[i] * ANDROID_ROUTE_GAIN).coerceIn(-32768, 32767).toShort()
                     if (track.write(buf, 0, buf.size) < 0) break

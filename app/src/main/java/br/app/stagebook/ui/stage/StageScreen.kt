@@ -558,7 +558,7 @@ fun StageScreen(
     // the USB interface becoming ready restarts it only when the metronome sounds there: with the device output, play on
     // the track (the player reaching the interface) restarted the click from beat 1 mid-song (audit 02/11)
     val usbRestart = metroUsbReady && look.playerMode && look.metroUsbOut >= 0
-    LaunchedEffect(metroOn, metroBpm, look.metroSound, usbRestart) {
+    LaunchedEffect(metroOn, metroBpm, look.metroSound, look.metroCount, look.metroVolume, usbRestart) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
@@ -592,7 +592,8 @@ fun StageScreen(
             kotlinx.coroutines.withContext(FullSpeedMotion) { metroPulse.animateTo(0f, tween(METRO_FLASH_MS)) }
         }
     }
-    val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
+    // "1 . 2 . 1 2 3 4": nothing on the pauses (user, 07/11)
+    val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat >= 0) br.app.stagebook.domain.MetronomeClick.countLabel(metroBeat) else 0 } }
     val metroColor = Color(look.metroGlowColor)
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
@@ -1492,7 +1493,6 @@ private const val KEYBOARD_HINT_MS = 6_000L
 private val METRO_GLOW = 20.dp          // edge glow, fading inward (it doesn't reach the lyrics)
 private val METRO_GLOW_ACCENT = 26.dp   // a bit wider on beat 1 of the bar
 private const val METRO_GLOW_ALPHA = 0.8f
-private const val METRO_COUNT = 4   // the count-in is one bar of 4
 private const val FLASH_ALPHA = 0.22f
 
 private data class PageContent(

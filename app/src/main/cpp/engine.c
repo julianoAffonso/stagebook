@@ -336,12 +336,14 @@ static int g_clk_len[2] = {0, 0};
 static long g_clk_spb = 0;              // samples per beat; 0 = off
 static long g_clk_pos = 0;              // samples since the click started
 static int g_clk_out[2] = {-1, -1};     // outputs it goes to (-1 = none)
+static long long g_clk_skip = 0;        // beats from the start left silent, bit n = beat n (count-in "1 . 2 . 1 2 3 4")
 
 static inline void click_add_locked(float *out) {
     if (g_clk_spb <= 0) return;
     long beat = g_clk_pos / g_clk_spb, at = g_clk_pos % g_clk_spb;
     int k = beat % 4 == 0 ? 1 : 0;      // the first beat of each bar sounds higher
     g_clk_pos++;
+    if (beat < 64 && ((g_clk_skip >> beat) & 1)) return;
     if (at >= g_clk_len[k]) return;
     for (int q = 0; q < 2; q++)
         if (g_clk_out[q] >= 0 && g_clk_out[q] < LANES_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
@@ -987,8 +989,9 @@ static float *click_at_rate(float *in, int *n) {
 }
 
 // Metronome click into USB outputs: {normal, accent} 48 kHz, samples per beat (0 = off) and up to two outputs (-1 =
-// none). Starts on beat 1 now. The arrays are copied before the lock; the old ones are freed after it.
-JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatArray ja, jlong spb, jint out1, jint out2) {
+// none), and the first beats left silent (bit n = beat n). Starts on beat 1 now. The arrays are copied before the lock;
+// the old ones are freed after it.
+JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatArray ja, jlong spb, jint out1, jint out2, jlong skip) {
     float *nb = NULL, *ab = NULL;
     int nn = 0, na = 0;
     if (spb > 0 && jn && ja) {
@@ -1009,6 +1012,7 @@ JNIEXPORT void JNICALL FN(setClick)(JNIEnv *e, jclass c, jfloatArray jn, jfloatA
     g_clk_spb = nb && ab ? (long)spb : 0;
     g_clk_pos = 0;
     g_clk_out[0] = out1; g_clk_out[1] = out2;
+    g_clk_skip = skip;
     pthread_mutex_unlock(&g_mx);
     free(old0); free(old1);
 }

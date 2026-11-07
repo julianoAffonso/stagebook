@@ -182,10 +182,10 @@ static void click_test(void) {
     a.n = c.n = 4800;
     for (int i = 0; i < 4800; i++) a.s[i] = c.s[i] = 0.5f * (float)sin(2 * M_PI * 1000.0 * i / 48000);
     cap_n = 0; capturing = 1;
-    FN(setClick)(env, NULL, (jfloatArray)a.s, (jfloatArray)c.s, 24000, 0, 1);   // 120 bpm at 48 kHz
+    FN(setClick)(env, NULL, (jfloatArray)a.s, (jfloatArray)c.s, 24000, 0, 1, 0);   // 120 bpm at 48 kHz
     sleep_s(3.3);
     capturing = 0;
-    FN(setClick)(env, NULL, NULL, NULL, 0, -1, -1);
+    FN(setClick)(env, NULL, NULL, NULL, 0, -1, -1, 0);
     long onset[16]; int n = 0; long quiet = 0;   // what was still sounding when it started is no beat
     for (long i = 0; i < cap_n && n < 16; i++) {
         if (fabsf(cap[i]) > 0.01f) { if (quiet >= 2000) onset[n++] = i; quiet = 0; } else quiet++;
@@ -198,6 +198,21 @@ static void click_test(void) {
     double hz = n > 0 ? pitch(cap + onset[0], (long)(0.09 * RATE)) : 0;
     snprintf(b, sizeof b, "%.1f Hz", hz);
     check(fabs(hz - 1000) < 15, "click keeps its pitch", b);
+
+    // count-in "1 . 2 . 1 2 3 4": beats 2 and 4 from the start silent (bits 1 and 3)
+    cap_n = 0; capturing = 1;
+    FN(setClick)(env, NULL, (jfloatArray)a.s, (jfloatArray)c.s, 24000, 0, 1, 0xA);
+    sleep_s(3.3);
+    capturing = 0;
+    FN(setClick)(env, NULL, NULL, NULL, 0, -1, -1, 0);
+    n = 0; quiet = 0;
+    for (long i = 0; i < cap_n && n < 16; i++) {
+        if (fabsf(cap[i]) > 0.01f) { if (quiet >= 2000) onset[n++] = i; quiet = 0; } else quiet++;
+    }
+    double g1 = n > 3 ? (double)(onset[1] - onset[0]) / 22050 : 0, g2 = n > 3 ? (double)(onset[2] - onset[1]) / 22050 : 0;
+    double g3 = n > 3 ? (double)(onset[3] - onset[2]) / 22050 : 0;
+    snprintf(b, sizeof b, "gaps %.2f %.2f %.2f beats, %d beats", g1, g2, g3, n);
+    check(n >= 4 && fabs(g1 - 2) < 0.01 && fabs(g2 - 2) < 0.01 && fabs(g3 - 1) < 0.01, "count-in leaves beats 2 and 4 silent", b);
 }
 
 int main(int argc, char **argv) {

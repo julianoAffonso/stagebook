@@ -173,6 +173,7 @@ data class Look(
     val metroShown: Boolean = true,   // metronome icon on the stage; off hides it (user, 31/10)
     val metroCount: Boolean = true,
     val metroSound: Boolean = true,
+    val metroVolume: Int = br.app.stagebook.domain.MetronomeClick.FULL_VOLUME,   // the click's volume, 0–100 (user, 07/11)
     val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // playing the chord on stage (T20)
     val keyboardCapoHintSeen: Boolean = false,   // the "chords in the sounding key" note already showed for keyboard
     val announce: Boolean = true,   // Now Playing: announce the current song on the local network (OBS, Resolume)
