@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- stagebook.app.br/: goes to the help in the browser's language (Portuguese or English); no network call -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<title>Stagebook</title>
+<style>body{margin:0;background:#121212;color:#ECECEC;font:16px/1.6 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}a{color:#4AF6CD}</style>
+<script>location.replace(/^pt/i.test(navigator.language || "") ? "ajuda/" : "help/");</script>
+</head>
+<body><p><a href="help/">Stagebook help</a> · <a href="ajuda/">Ajuda do Stagebook</a></p></body>
+</html>
