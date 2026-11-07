@@ -920,7 +920,8 @@ fun StageScreen(
                     val limit = if (cols == 2) fitTwo else fitOne
                     val top = minOf(StageFit.AUTO_MAX_ZOOM, Look.MAX_STAGE_FONT / look.fontSp, limit)
                     val at = StageFit.measuredOnce { sheets(it, w, cols) }
-                    val floor = StageFit.autoFloor(minOf(min, limit), minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
+                    val saving = StageFit.autoPageFloor(minOf(min, limit), minOf(StageFit.autoFewerZoom(look.fontSp), limit), at)
+                    val floor = StageFit.autoFloor(saving, minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
                     br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }

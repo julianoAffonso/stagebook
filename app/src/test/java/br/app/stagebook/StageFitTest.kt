@@ -96,6 +96,7 @@ class StageFitTest {
         assertEquals(22f / 30f, StageFit.autoMinZoom(30f), 0.001f)
         assertEquals(22f / 49f, StageFit.autoMinZoom(49f), 0.001f)
         assertEquals(1f, StageFit.autoMinZoom(18f), 0.001f)
+        assertEquals(20f / 30f, StageFit.autoFewerZoom(30f), 0.001f)
     }
 
     @Test
@@ -110,6 +111,26 @@ class StageFitTest {
         assertEquals("nada atravessa", 0.5f, StageFit.autoFloor(0.5f, 0.4f) { StageFit.Sheets(3, false) }, 0f)
         assertEquals("atravessa de qualquer jeito", 0.5f, StageFit.autoFloor(0.5f, 0.4f, crossing(0.3f)), 0f)
         assertEquals("o maior que mantém inteira", 0.45f, StageFit.autoFloor(0.5f, 0.4f, crossing(0.45f)), 0.01f)
+    }
+
+    @Test fun `the size goes a bit lower only to save a page`() {
+        fun pages(fitsBelow: Float) = { z: Float -> StageFit.Sheets(if (z > fitsBelow) 4 else 3, false) }
+        assertEquals("poupa uma página", 0.46f, StageFit.autoPageFloor(0.5f, 0.45f, pages(0.46f)), 0.002f)
+        assertEquals("nem no menor poupa", 0.5f, StageFit.autoPageFloor(0.5f, 0.45f, pages(0.4f)), 0f)
+        assertEquals("sem espaço para descer", 0.5f, StageFit.autoPageFloor(0.5f, 0.5f, pages(0.46f)), 0f)
+    }
+
+    @Test fun `saving a page doesn't cut a verse or send a section over the turn`() {
+        val cuts = { z: Float -> StageFit.Sheets(if (z > 0.46f) 4 else 3, cutsVerse = z <= 0.46f) }
+        assertEquals(0.5f, StageFit.autoPageFloor(0.5f, 0.45f, cuts), 0f)
+        val crosses = { z: Float -> StageFit.Sheets(if (z > 0.46f) 4 else 3, false, crossesSheet = z <= 0.46f) }
+        assertEquals(0.5f, StageFit.autoPageFloor(0.5f, 0.45f, crosses), 0f)
+    }
+
+    @Test fun `what the lower size saved stays saved`() {
+        val at = { z: Float -> StageFit.Sheets(if (z > 0.46f) 4 else 3, false) }
+        val floor = StageFit.autoPageFloor(0.5f, 0.45f, at)
+        assertEquals(3, at(StageFit.autoZoom(floor, 1f, at)).count)
     }
 
     @Test fun `growing doesn't send a section over the page turn`() {
