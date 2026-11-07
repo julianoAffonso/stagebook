@@ -154,13 +154,22 @@ fun rememberCodeActions(): CodeActions {
                 context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", code))
                 message.show(copied)
             },
-            share = { name, code ->
-                val msg = if (name.isEmpty()) textSongs.format(code) else text.format(name, code)
-                val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg)
-                runCatching { context.startActivity(Intent.createChooser(send, null)) }
-            },
+            share = { name, code -> shareText(context, codeMessage(text, textSongs, name, code)) },
         )
     }
+}
+
+/**
+ * The message that goes with a code: the link to tap (user, 07/11) and the 3 words to type. [name] empty = loose songs
+ * ([songs] template), else the setlist's name ([setlist] template).
+ */
+internal fun codeMessage(setlist: String, songs: String, name: String, code: String): String =
+    if (name.isEmpty()) songs.format(ShareCode.link(code), code) else setlist.format(name, ShareCode.link(code), code)
+
+/** Opens Android's share sheet with [text] (WhatsApp, email, SMS…). */
+fun shareText(context: android.content.Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+    runCatching { context.startActivity(Intent.createChooser(send, null)) }
 }
 
 /** Sending over the internet: sending, sent (with the code) or failed. */

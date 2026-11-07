@@ -52,6 +52,20 @@ object ShareCode {
     /** The code read from a QR, or null if the QR isn't a code. */
     fun fromQr(text: String): String? = text.takeIf { it.startsWith(QR_PREFIX) }?.removePrefix(QR_PREFIX)?.let(::normalize)
 
+    /**
+     * The link every internet send is shared as (setlist, songs or band invite; user, 07/11): it opens the app on the
+     * receive screen, or the site when the app isn't installed. The 3 words still work typed.
+     */
+    const val LINK_PREFIX = "https://stagebook.app.br/r#"
+
+    fun link(code: String) = LINK_PREFIX + code
+
+    // anywhere in a text (a whole message pasted, a link with or without https), but not inside another host's name
+    private val LINK = Regex("""(?<![A-Za-z0-9.-])(?:www\.)?stagebook\.app\.br/r/?#([A-Za-z0-9-]+)""", RegexOption.IGNORE_CASE)
+
+    /** The code of the first receive link in [text], or null if there is none. */
+    fun fromLink(text: String?): String? = text?.let { LINK.find(it) }?.groupValues?.get(1)?.let(::normalizeWords)
+
     /** A new code: a number from 10 to 99 and two words (~22 bits; valid 12 h on the server). */
     fun generate(): String = "${10 + random.nextInt(90)}-${WORDS[random.nextInt(WORDS.size)]}-${WORDS[random.nextInt(WORDS.size)]}"
 
@@ -59,7 +73,9 @@ object ShareCode {
      * The code as the app understands it: no accents, lowercase, parts separated by "-". Null if it doesn't look like a
      * code.
      */
-    fun normalize(input: String): String? {
+    fun normalize(input: String): String? = fromLink(input) ?: normalizeWords(input)   // a pasted link also counts
+
+    private fun normalizeWords(input: String): String? {
         val parts = TextKey.of(input).split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
         if (parts.size != 3 || parts[0].toIntOrNull() == null || parts.drop(1).any { it.any(Char::isDigit) }) return null
         return parts.joinToString("-")

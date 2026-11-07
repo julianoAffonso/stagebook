@@ -775,13 +775,13 @@
     </plurals>
     <string name="share_sent_hint">No outro aparelho, vá em Importar → Digitar as 3 palavras. Valem por 12 horas.</string>
     <string name="share_send_code">Mandar por mensagem</string>
-    <string name="share_message_songs">Músicas no Stagebook. Para receber, vá em Importar → Digitar as 3 palavras e digite %1$s. Vale por 12 horas.</string>
+    <string name="share_message_songs">Músicas no Stagebook. Toque em %1$s para receber. Ou vá em Importar → Digitar as 3 palavras e digite %2$s. Vale por 12 horas.</string>
     <string name="share_joined">%1$s aceitou e agora é da banda</string>
     <string name="share_qr_or">Se preferir, leia este QR em Importar → Ler QR.</string>
     <string name="share_copy">Copiar as palavras</string>
     <string name="share_copied">Palavras copiadas</string>
     <string name="share_code_qr">QR das palavras. Tire uma foto ou leia em Importar → Ler QR.</string>
-    <string name="share_message">Setlist \"%1$s\" no Stagebook. Para receber, vá em Importar → Digitar as 3 palavras e digite %2$s. Vale por 12 horas.</string>
+    <string name="share_message">Setlist \"%1$s\" no Stagebook. Toque em %2$s para receber. Ou vá em Importar → Digitar as 3 palavras e digite %3$s. Vale por 12 horas.</string>
     <!-- seleção na aba Músicas (compartilhar várias) -->
     <string name="songs_select_cancel">Sair da seleção</string>
     <!-- banda na rede local (Ajustes → Banda e transmissão e o pedido de entrada) -->

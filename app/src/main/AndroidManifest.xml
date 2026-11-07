@@ -73,6 +73,17 @@
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/usb_audio_filter" />
+            <!-- receive links (stagebook.app.br/r#47-violao-lua, user 07/11): every internet send
+                 (setlist, songs, band invite) opens straight on the receive screen -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="stagebook.app.br" />
+                <data android:path="/r" />
+                <data android:pathPrefix="/r/" />
+            </intent-filter>
         </activity>
         <service
             android:name=".player.PlayerService"

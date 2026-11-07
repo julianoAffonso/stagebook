@@ -56,15 +56,23 @@ internal fun NavController.showSaved(songId: String) {
 // screens the leader's song can take the follower away from: nothing is being typed or chosen there
 private fun androidx.navigation.NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>() || hasRoute<SetlistDetail>()
 
-/** [updateOffer]: new app version; shows on top of any screen, never on stage. */
+/**
+ * [updateOffer]: new app version; shows on top of any screen, never on stage. [receiveCodes]: codes of receive links
+ * (tapped in a message or copied by the site) that open the receive screen.
+ */
 @Composable
 fun StagebookNavHost(
     updateOffer: UpdateOffer? = null,
     updateActions: AppUpdateActions = AppUpdateActions(),
     followSongs: Flow<String> = emptyFlow(),
     followingSong: kotlinx.coroutines.flow.StateFlow<String?> = kotlinx.coroutines.flow.MutableStateFlow(null),
+    receiveCodes: Flow<String> = emptyFlow(),
 ) {
     val nav = rememberNavController()
+    // a receive link: the receive screen with its code, in place of another receive screen already open
+    LaunchedEffect(receiveCodes) {
+        receiveCodes.collect { code -> nav.navigate(ScanSetlist(code)) { popUpTo<ScanSetlist> { inclusive = true } } }
+    }
     // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
     // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip
     // shows the current song. Just looking at a setlist does pull (the S26 sat on the setlist while the band played, 02/11)

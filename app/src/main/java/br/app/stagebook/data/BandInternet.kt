@@ -38,6 +38,7 @@ class BandInternet @Inject constructor(
     private val inbox: BandInbox,
     private val connectivity: Connectivity,
     private val link: BandLink,
+    private val links: ReceiveLinks = ReceiveLinks(context),
 ) {
     /** One of my sends to a member's inbox, until the receipt arrives. */
     @Serializable
@@ -92,9 +93,10 @@ class BandInternet @Inject constructor(
 
     /**
      * One of my sends through the 3 words: kept for 30 days to collect the "ok"s of whoever accepts (also on the local
-     * network).
+     * network). Its link never opens this device's own receive screen (the person may copy their own message).
      */
     fun remember(code: String) {
+        links.markSeen(code)
         // under the same lock as the sync: the sync writes its lists back at the end and would drop this (audit 30/10)
         scope.launch { lock.withLock { save(KEY_CODES, MyCode.serializer(), myCodes() + MyCode(code, now() + KEEP_MS)) } }
     }

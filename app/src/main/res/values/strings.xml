@@ -749,13 +749,13 @@
     </plurals>
     <string name="share_sent_hint">On the other device, go to Import → Type the 3 words. They last 12 hours.</string>
     <string name="share_send_code">Send in a message</string>
-    <string name="share_message_songs">Songs on Stagebook. To get them, go to Import → Type the 3 words and type %1$s. Good for 12 hours.</string>
+    <string name="share_message_songs">Songs on Stagebook. Tap %1$s to get them. Or go to Import → Type the 3 words and type %2$s. Good for 12 hours.</string>
     <string name="share_joined">%1$s accepted and is now in the band</string>
     <string name="share_qr_or">If you prefer, scan this QR in Import → Scan QR.</string>
     <string name="share_copy">Copy the words</string>
     <string name="share_copied">Words copied</string>
     <string name="share_code_qr">QR of the words. Take a photo or scan it in Import → Scan QR.</string>
-    <string name="share_message">Setlist \"%1$s\" on Stagebook. To get it, go to Import → Type the 3 words and type %2$s. Good for 12 hours.</string>
+    <string name="share_message">Setlist \"%1$s\" on Stagebook. Tap %2$s to get it. Or go to Import → Type the 3 words and type %3$s. Good for 12 hours.</string>
     <!-- selection in the Songs tab (share several) -->
     <string name="songs_select_cancel">Exit selection</string>
     <!-- band on the local network (Settings → Band and broadcast and join requests) -->
