@@ -1,5 +1,10 @@
 package br.app.stagebook.domain
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
@@ -61,30 +66,69 @@ object ShareCode {
     /** What a link carries, for the site to say what was sent (`t=`): an invite, a setlist or loose songs. */
     enum class LinkKind(val tag: String) { INVITE("i"), SETLIST("l"), SONGS("m") }
 
+    /** What a receive link carries besides the code (for the site): all empty in a bare `#47-violao-lua`. */
+    data class LinkInfo(val code: String, val kind: LinkKind? = null, val from: String = "", val setlist: String = "", val lang: String = "")
+
     /**
-     * `https://stagebook.app.br/r#<code>&t=<kind>&n=<who sends>&s=<setlist>&l=<language>`: the code first (a bare
-     * `#47-violao-lua` still works), then what the site shows in the sender's language. All in the fragment, which never
-     * leaves the phone for the server. Empty parts are left out; [setlist] only goes with a setlist.
+     * `https://stagebook.app.br/r#<code>.<details>`: the code first (a bare `#47-violao-lua` still works), then what the
+     * site shows in the sender's language, as base64url (no padding) of a compact JSON `{"t","n","s","l"}`. Not a secret
+     * (user, 07/11): it only keeps the names out of plain sight and uses nothing but `[A-Za-z0-9_.-]`, which no messenger
+     * mangles (a "%" or "&" can break). All in the fragment, which never leaves the phone for the server. Empty parts are
+     * left out; [setlist] only goes with a setlist.
      */
     fun link(code: String, kind: LinkKind? = null, from: String = "", setlist: String = "", lang: String = ""): String {
-        val parts = listOfNotNull(
-            kind?.let { "t=${it.tag}" },
-            from.takeIf { it.isNotBlank() }?.let { "n=${encode(it)}" },
-            setlist.takeIf { it.isNotBlank() && kind == LinkKind.SETLIST }?.let { "s=${encode(it)}" },
-            lang.takeIf { it.isNotBlank() }?.let { "l=${encode(it)}" },
-        )
-        return LINK_PREFIX + (listOf(code) + parts).joinToString("&")
+        val details = buildJsonObject {
+            kind?.let { put("t", it.tag) }
+            from.takeIf { it.isNotBlank() }?.let { put("n", it) }
+            setlist.takeIf { it.isNotBlank() && kind == LinkKind.SETLIST }?.let { put("s", it) }
+            lang.takeIf { it.isNotBlank() }?.let { put("l", it) }
+        }
+        if (details.isEmpty()) return LINK_PREFIX + code
+        val payload = Base64.getUrlEncoder().withoutPadding().encodeToString(details.toString().toByteArray(Charsets.UTF_8))
+        return "$LINK_PREFIX$code.$payload"
     }
 
-    // like the browser's encodeURIComponent (a space is %20, not +): the site reads it with decodeURIComponent
-    private fun encode(text: String) = java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
-
     // anywhere in a text (a whole message pasted, a link with or without https), but not inside another host's name; the
-    // code is the fragment up to the first "&" (the rest is for the site)
-    private val LINK = Regex("""(?<![A-Za-z0-9.-])(?:www\.)?stagebook\.app\.br/r/?#([A-Za-z0-9-]+)""", RegexOption.IGNORE_CASE)
+    // code is the fragment up to the first "." or "&" (the rest is for the site): the details in base64 (the standard
+    // alphabet and padding too, in case something rewrote them) or the older "&t=..&n=.." parameters. A ".", "," or ")"
+    // a messenger glues to the end stays out: none is in the base64 alphabet
+    private val LINK = Regex(
+        """(?<![A-Za-z0-9.-])(?:www\.)?stagebook\.app\.br/r/?#([A-Za-z0-9-]+)(?:\.([A-Za-z0-9_+/=-]+)|((?:&[A-Za-z]=[^&\s]*)+))?""",
+        RegexOption.IGNORE_CASE,
+    )
 
     /** The code of the first receive link in [text], or null if there is none. */
     fun fromLink(text: String?): String? = text?.let { LINK.find(it) }?.groupValues?.get(1)?.let(::normalizeWords)
+
+    /** The first receive link in [text] with what it says, in either format; null if there is none. */
+    fun linkInfo(text: String?): LinkInfo? {
+        val match = text?.let { LINK.find(it) } ?: return null
+        val code = normalizeWords(match.groupValues[1]) ?: return null
+        val fields = match.groupValues[2].takeIf { it.isNotEmpty() }?.let(::readDetails)
+            ?: match.groupValues[3].takeIf { it.isNotEmpty() }?.let(::readParams).orEmpty()
+        return LinkInfo(code, LinkKind.entries.firstOrNull { it.tag == fields["t"] }, fields["n"].orEmpty(), fields["s"].orEmpty(), fields["l"].orEmpty())
+    }
+
+    // the base64 details; a "-" or "_" glued to the end (both are in the alphabet) breaks the JSON, so up to two
+    // characters are dropped before giving up
+    private fun readDetails(raw: String): Map<String, String>? {
+        val plain = raw.trimEnd('=').replace('-', '+').replace('_', '/')
+        return (0..2).asSequence().mapNotNull { cut ->
+            val body = plain.dropLast(cut).takeIf { it.isNotEmpty() && it.length % 4 != 1 } ?: return@mapNotNull null
+            runCatching {
+                val text = Base64.getDecoder().decode(body + "=".repeat((4 - body.length % 4) % 4)).toString(Charsets.UTF_8)
+                Json.parseToJsonElement(text).jsonObject.mapValues { (_, v) -> v.jsonPrimitive.content.take(MAX_DETAIL) }
+            }.getOrNull()
+        }.firstOrNull()
+    }
+
+    // the older format, "&t=l&n=Ana%20Lu", read like the browser's decodeURIComponent (a "+" stays a "+")
+    private fun readParams(raw: String): Map<String, String> = raw.split('&').filter { '=' in it }.associate { kv ->
+        val value = runCatching { java.net.URLDecoder.decode(kv.substringAfter('=').replace("+", "%2B"), "UTF-8") }.getOrDefault("")
+        kv.substringBefore('=').lowercase() to value.take(MAX_DETAIL)
+    }
+
+    private const val MAX_DETAIL = 80   // what the site shows of each part
 
     /** A new code: a number from 10 to 99 and two words (~22 bits; valid 12 h on the server). */
     fun generate(): String = "${10 + random.nextInt(90)}-${WORDS[random.nextInt(WORDS.size)]}-${WORDS[random.nextInt(WORDS.size)]}"
