@@ -447,7 +447,7 @@
     <string name="stage_show_restart">Start counting now</string>
     <string name="stage_dnd_allow">Allow</string>
     <string name="stage_dnd_later">Not now</string>
-    <string name="settings_pedal">Pedal</string>
+    <string name="settings_pedal">Pedal and MIDI</string>
     <string name="settings_pedal_none_short">No pedal found yet</string>
     <string name="settings_pedal_connected_short">connected</string>
     <string name="settings_pedal_disconnected_short">disconnected</string>

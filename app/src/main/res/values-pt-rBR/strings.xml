@@ -458,7 +458,7 @@
     <string name="stage_show_restart">Começar a contar agora</string>
     <string name="stage_dnd_allow">Autorizar</string>
     <string name="stage_dnd_later">Agora não</string>
-    <string name="settings_pedal">Pedal</string>
+    <string name="settings_pedal">Pedal e MIDI</string>
     <string name="settings_pedal_none_short">Nenhum pedal reconhecido ainda</string>
     <string name="settings_pedal_connected_short">conectado</string>
     <string name="settings_pedal_disconnected_short">desconectado</string>
