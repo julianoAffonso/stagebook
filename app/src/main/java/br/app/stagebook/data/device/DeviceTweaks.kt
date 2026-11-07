@@ -51,7 +51,7 @@ enum class DeviceTweak(
     NO_MOBILE_DATA_ALWAYS_ON(listOf(Table.GLOBAL to "mobile_data_always_on"), on = "0", off = "1", group = Group.BATTERY),
     // developer options + Wi-Fi debugging, for the computer to come in by adb without opening Android's settings.
     // Starts off and is never written again by itself. Order matters: the mode goes on first and off last (see write)
-    DEBUGGING(listOf(Table.GLOBAL to "development_settings_enabled", Table.GLOBAL to "adb_wifi_enabled"), on = "1", off = "0", default = false, reapply = false, restores = false, group = Group.COMPUTER);
+    DEBUGGING(listOf(Table.GLOBAL to "development_settings_enabled", Table.GLOBAL to "adb_wifi_enabled"), on = "1", off = "0", default = false, reapply = false, group = Group.COMPUTER);
 
     enum class Table { SYSTEM, SECURE, GLOBAL }
     enum class Group { PLAY, BATTERY, COMPUTER }
@@ -96,10 +96,11 @@ object DeviceTweaks {
         for (s in if (on) t.settings else t.settings.reversed()) {
             if (t.onlyIfPresent && read(c, s) == null) continue
             val value = when {
-                on -> { if (t.restores) keepOriginal(c, t, s); t.on }
+                on -> { if (t.restores) keepOriginal(c, s); t.on }
                 !t.restores -> t.off
-                ORIGINAL + s.second !in prefs(c) -> continue   // it already had this value: nothing to give back
-                else -> takeOriginal(c, s)
+                ORIGINAL + s.second in prefs(c) -> takeOriginal(c, s)
+                t.reapply -> continue   // never written by this app: it's the person's
+                else -> t.off   // on by other hands, and the switch says off
             }
             // a device that hides a setting must not close the app on start
             try {
@@ -118,9 +119,8 @@ object DeviceTweaks {
     }
 
     // what the device had before the first write, for turning off to give it back
-    private fun keepOriginal(c: Context, t: DeviceTweak, s: Pair<DeviceTweak.Table, String>) {
-        val now = read(c, s)
-        if (ORIGINAL + s.second !in prefs(c) && !same(now, t.on)) prefs(c).edit { putString(ORIGINAL + s.second, now ?: NO_VALUE) }
+    private fun keepOriginal(c: Context, s: Pair<DeviceTweak.Table, String>) {
+        if (ORIGINAL + s.second !in prefs(c)) prefs(c).edit { putString(ORIGINAL + s.second, read(c, s) ?: NO_VALUE) }
     }
 
     private fun takeOriginal(c: Context, s: Pair<DeviceTweak.Table, String>): String? {

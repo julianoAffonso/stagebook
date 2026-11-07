@@ -123,7 +123,17 @@ class DeviceTweaksTest {
         assertEquals("1", Settings.Global.getString(cr, "ble_scan_always_enabled"))
     }
 
-    @Test fun `debugging off is always off`() {
+    @Test fun `debugging turned on here gives back the developer mode the device had`() {
+        Settings.Global.putString(cr, "development_settings_enabled", "1")
+        Settings.Global.putString(cr, "adb_wifi_enabled", "0")
+        DeviceTweaks.set(app, DeviceTweak.DEBUGGING, true)
+        assertEquals("1", Settings.Global.getString(cr, "adb_wifi_enabled"))
+        DeviceTweaks.set(app, DeviceTweak.DEBUGGING, false)
+        assertEquals("1", Settings.Global.getString(cr, "development_settings_enabled"))
+        assertEquals("0", Settings.Global.getString(cr, "adb_wifi_enabled"))
+    }
+
+    @Test fun `debugging on by other hands turns off with the switch`() {
         Settings.Global.putString(cr, "adb_wifi_enabled", "1")
         Settings.Global.putString(cr, "development_settings_enabled", "1")
         DeviceTweaks.set(app, DeviceTweak.DEBUGGING, false)
