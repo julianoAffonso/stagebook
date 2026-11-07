@@ -288,7 +288,9 @@ static int g_fb_locked = 0, g_fb_mode = 0;
 // into thousands of corrections a second, heard as noise. Far from the nominal rate, the output keeps its own pace.
 #define FB_MAX_OFF 0.003
 #define FB_BACK_S 5                   // seconds of a count that keeps time again before the input is followed again
-static int g_fb_bad = 0, g_fb_good = 0;
+#define FB_PROBE_S 60.0               // with the input marked off, how often it is read again to see if it's back
+static int g_fb_bad = 0, g_fb_good = 0, g_fb_probing = 0;
+static double g_fb_probe_t = 0;
 static double g_fb_win = 0;
 static long g_fb_win_in = 0;
 #define FB_HI 64
@@ -302,12 +304,13 @@ static double g_pace_t0 = 0, g_pace_err = 0, g_pace_off = 0, g_pace_ratio = 0, g
 static int g_pace_locked = 0;
 #define PACE_EMA 0.002               // error smoothing at ~1000 output URBs/s: a time constant of ~0.5 s
 #define PACE_TP 4.0                  // proportional: an error of e frames is removed over TP seconds
-#define PACE_TI 20.0                 // integral: a steady error feeds the ratio over TI seconds
-#define PACE_FAST_S 10.0             // after this long locked, the slow gains below
+#define PACE_TI 8.0                  // integral: a steady error feeds the ratio over TI seconds
+#define PACE_FAST_S 20.0             // after this long locked, the slow gains below
 #define PACE_EMA_SLOW 0.0005
 #define PACE_TP_SLOW 60.0
 #define PACE_TI_SLOW 120.0
 static double g_pace_lock_t = 0;
+static int g_pace_slow = 0;
 #define PACE_MAX 0.01                // never more than 1% off nominal: beyond that something else is wrong
 static double g_pace_rate = 0;       // DIAG: the rate the pace loop aims at (debug.stagebook.rate), else g_out_rate
 #define PACE_RATE (g_pace_rate > 0 ? g_pace_rate : g_out_rate)
@@ -574,7 +577,7 @@ static void *usb_main(void *arg) {
     double acc = 0, lost_acc = 0;
     int tail = 0, tail_urbs = 0, errors = 0;
     long reaped = 0;
-    int inflight = 0, n_in = 0;          // URBs held by the kernel; memory is only freed at zero
+    int inflight = 0, n_in = 0, in_idle = 0;   // URBs held by the kernel (memory is only freed at zero); input URBs parked
 
     // audio priority (the same as AudioTrack): without it, with the CPU busy or hot, the thread can lose its turn and
     // the 8 ms URB queue can run dry; if the system refuses, it carries on
@@ -702,18 +705,20 @@ static void *usb_main(void *arg) {
                     double hz = g_fb_win_in / (t - g_fb_win);
                     int off = fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF;
                     if (!g_fb_bad && off) {
-                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0;
+                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t;
                         LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
                     } else if (g_fb_bad && !off && ++g_fb_good >= FB_BACK_S) {
                         // a passing hiccup of the host (busy for a second) must not cost the whole show: once the
                         // count keeps time again for FB_BACK_S seconds, the input is the clock again, from where we are
                         g_fb_bad = 0; g_fb_mode = 0; g_fb_off = g_tot_out - g_tot_in;
                         LOGI("usb: input clock back (%.0f Hz), following it again", hz);
-                    } else if (g_fb_bad && off) g_fb_good = 0;
+                    } else if (g_fb_bad && off) { g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; }
                     g_fb_win = t; g_fb_win_in = 0;
                 }
             }
-            if (tail || g_in_ep < 0) continue;
+            // An input that can't be followed is only read again to probe it (FB_PROBE_S): on the host that loses its
+            // packets, reading it at all costs the output (hiss and thumps heard with the input running, 07/11/2026)
+            if (tail || g_in_ep < 0 || (g_fb_bad && !g_fb_probing)) { in_idle++; continue; }
             int npk = done->number_of_packets;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
@@ -724,6 +729,17 @@ static void *usb_main(void *arg) {
         reaped++;
         {   // frames sent ahead of the monotonic clock, smoothed, and the PI loop on it (see g_pace_ratio)
             double t = now_s();
+            if (g_fb_bad && !g_fb_probing && !tail && g_in_ep >= 0 && in_idle == n_in && t - g_fb_probe_t >= FB_PROBE_S) {
+                // probe: read the input again until a second's count is off (stop) or FB_BACK_S are good (follow it)
+                g_fb_probing = 1; g_fb_good = 0; g_fb_win = 0; in_idle = 0;
+                for (int u = 0; u < n_in; u++) {
+                    struct usbdevfs_urb *iu = in_urbs[u];
+                    iu->status = 0; iu->actual_length = 0; iu->start_frame = 0; iu->error_count = 0;
+                    for (int k = 0; k < PKTS_PER_URB; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
+                    if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; break; }
+                    inflight++;
+                }
+            }
             pthread_mutex_lock(&g_mx);
             long sent = g_tot_out;
             pthread_mutex_unlock(&g_mx);
@@ -732,6 +748,7 @@ static void *usb_main(void *arg) {
             // the host's clock offset is a constant: the loop hunts it fast for PACE_FAST_S after locking, then goes
             // nearly rigid (an interface's queue may hold only ~2 ms: every step of the ratio is a step it must absorb)
             int slow = g_pace_locked && t - g_pace_lock_t > PACE_FAST_S;
+            if (slow && !g_pace_slow) { g_pace_slow = 1; g_pace_int = g_pace_ratio; }   // what P was holding, I holds from now on
             g_pace_err += (err - g_pace_err) * (slow ? PACE_EMA_SLOW : PACE_EMA);
             // the first second settles the queue: what's ahead by then is the working point, not an error
             if (!g_pace_locked && t - g_pace_t0 >= 1.0) { g_pace_locked = 1; g_pace_lock_t = t; g_pace_off = g_pace_err; g_pace_last = t; }
@@ -895,8 +912,8 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     if (g_usb_running) return JNI_TRUE;
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
-    g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0;
-    g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0;
+    g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
+    g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
     g_usb_stop = 0; g_dec_stop = 0; g_usb_running = 1;
