@@ -126,6 +126,7 @@ fun ScanSetlistRoute(
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier, onNoCamera = { message.show(resources.getString(R.string.scan_no_camera), long = true) }) },
         byCode = viewModel.code.isNotEmpty(),
+        canScanAgain = viewModel.code.isNotEmpty() || viewModel.readsQr,
         fromName = viewModel.fromName,
         band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
         asking = viewModel.asking.collectAsStateWithLifecycle().value,
@@ -159,6 +160,7 @@ fun ScanSetlistScreen(
     onCreateAndImport: (replaceId: String?) -> Unit = {},
     camera: @Composable (onText: (String) -> Unit, modifier: Modifier) -> Unit = { _, m -> Box(m) },
     byCode: Boolean = false,
+    canScanAgain: Boolean = true,   // what came from the band has nothing to read or fetch again
     onRetry: () -> Unit = {},
     onAddSongs: () -> Unit = {},
     fromName: String = "",   // came from the band: "Received from Ana"
@@ -198,7 +200,7 @@ fun ScanSetlistScreen(
                         onDispose { if (missing) onBandSearch(false) }
                     }
                     if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords, onUseIncoming)
-                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming, internetFrom, onAskInternet)
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, canScanAgain, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming, internetFrom, onAskInternet)
                     comparing?.let { i ->
                         // the diff of two lyrics, once per song compared (not on every recomposition)
                         val diff = androidx.compose.runtime.remember(i, ui.rows.getOrNull(i)) { changes(i) }
@@ -272,6 +274,7 @@ private fun Review(
     onCreate: (replaceId: String?) -> Unit,
     onCreateAndImport: (replaceId: String?) -> Unit,
     byCode: Boolean,
+    canScanAgain: Boolean,
     band: Int = 0,
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
@@ -334,7 +337,7 @@ private fun Review(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(bottom = Spacing.m)) {
-            ActionButton(
+            if (canScanAgain) ActionButton(
                 stringResource(if (byCode) R.string.scan_fetch_again else R.string.scan_again), onScanAgain, Modifier.weight(1f),
                 icon = if (byCode) AppIcons.Public else AppIcons.QrCode, tone = ButtonTone.Tonal,
             )
