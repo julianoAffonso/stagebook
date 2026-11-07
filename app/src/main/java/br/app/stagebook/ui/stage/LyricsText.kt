@@ -172,6 +172,12 @@ internal fun tabLine(raw: String, em: Float = TAB_EM): AnnotatedString = buildAn
 
 private val bracket = Regex("""\[([^\[\]]*)]""")
 
+/** A ChordPro annotation inside brackets, `[*2x]`: text above the lyrics, not a chord (no diagram, no transposing). */
+internal fun isAnnotation(inner: String) = inner.length > 1 && inner.startsWith('*')
+
+/** What the stage draws for a [CHORD_TAG] mark: the chord, or the annotation's text. */
+internal fun chordLabel(item: String) = if (isAnnotation(item)) item.drop(1) else item
+
 /**
  * Line with chords. Chords only (intro, solo): the chords themselves, in their color. With lyrics: the lyrics, with
  * space above each drawn line (taller line height) and a [CHORD_TAG] mark on the letter under each chord; the stage
@@ -185,7 +191,8 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     var last = 0
     bracket.findAll(raw).forEach { m ->
         val inner = m.groupValues[1]
-        if (!Chords.isChord(inner)) return@forEach   // [Chorus] in the middle of a line: stays as text
+        // [Chorus] in the middle of a line stays as text; a ChordPro annotation ([*2x]) sits above like a chord
+        if (!Chords.isChord(inner) && !isAnnotation(inner)) return@forEach
         val before = raw.substring(last, m.range.first)
         if (segs.isEmpty()) segs += Seg(null, before) else segs.last().text += before
         segs += Seg(inner, "")
@@ -205,7 +212,7 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
             segs.forEach { s ->
                 if (s.chord != null) {
                     if (length > 0) append("   ")
-                    withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) { append(s.chord) }
+                    withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) { append(chordLabel(s.chord)) }
                 }
                 s.text.trim().split(SPACES).filter { it.isNotEmpty() }.forEach { if (length > 0) append("   "); append(it) }
             }

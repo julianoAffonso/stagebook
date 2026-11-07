@@ -136,4 +136,15 @@ class ChordSpacingTest {
         assertTrue(line.text, line.text == "Am   G6   Am   G6   -   INTRO   RIFF   x   2")
         assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
     }
+
+    // ChordPro annotation (user, 07/11: Flores came with "at[*2x]é" and showed the bracket inside the word): the text
+    // sits above the lyrics like a chord, and it isn't one
+    @Test fun `an annotation sits above the lyrics`() {
+        val line = chordLine("[D5]Olhei at[*2x]é ficar", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, !line.text.contains('['))
+        val marks = line.getStringAnnotations(CHORD_TAG, 0, line.length).map { it.item }
+        assertTrue(marks.toString(), marks == listOf("D5", "*2x"))
+        assertTrue(br.app.stagebook.ui.stage.chordLabel("*2x") == "2x")
+        assertTrue(!br.app.stagebook.domain.Chords.isChord("*2x"))
+    }
 }

@@ -37,7 +37,7 @@ fun ChordText(
     val chordsAt = remember(text) { text.getStringAnnotations(CHORD_TAG, 0, text.length) }
     val marked = remember(text) { text.getStringAnnotations(HIGHLIGHT_TAG, 0, text.length) }
     val sections = remember(text) { text.getStringAnnotations(SECTION_TAG, 0, text.length).filter { it.item.isNotEmpty() } }
-    val byName = remember(text, chordStyle) { chordsAt.map { it.item }.distinct().associateWith { measurer.measure(it, chordStyle) } }
+    val byName = remember(text, chordStyle) { chordsAt.map { it.item }.distinct().associateWith { measurer.measure(chordLabel(it), chordStyle) } }
     var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text,

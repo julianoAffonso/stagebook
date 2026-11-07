@@ -1552,7 +1552,8 @@ private class PageHit {
             val tolerance = chordPx * 0.3f
             text.getStringAnnotations(CHORD_TAG, layout.getLineStart(line), layout.getLineEnd(line)).forEach { a ->
                 val x0 = layout.getHorizontalPosition(a.start, true)
-                if (x >= x0 - tolerance && x <= x0 + a.item.length * chordPx * 0.7f + tolerance) return a.item
+                // an annotation ([*2x]) is only text: a tap there turns the page
+                if (!isAnnotation(a.item) && x >= x0 - tolerance && x <= x0 + a.item.length * chordPx * 0.7f + tolerance) return a.item
             }
         }
         // chords-only line: the word under the finger
