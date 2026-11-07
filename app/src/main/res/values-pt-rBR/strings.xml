@@ -1055,7 +1055,7 @@
     <string name="about_help_text">Como usar cada tela, com imagens. Abre no navegador.</string>
     <string name="about_help_open">Abrir a ajuda</string>
     <string name="about_help_offline">Sem internet: a ajuda abre quando o tablet estiver conectado.</string>
-    <string name="help_url">https://julianoaffonso.github.io/stagebook/ajuda/</string>
+    <string name="help_url">https://stagebook.app.br/ajuda/</string>
     <string name="settings_translate_guide">guia de tradução</string>
     <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.pt-BR.md</string>
     <string name="auto_blocker_open">Abrir o Bloqueador automático</string>

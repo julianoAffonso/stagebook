@@ -1018,7 +1018,7 @@
     <string name="about_help_text">How to use each screen, with pictures. Opens in the browser.</string>
     <string name="about_help_open">Open the help</string>
     <string name="about_help_offline">No internet: the help opens once the tablet is online.</string>
-    <string name="help_url">https://julianoaffonso.github.io/stagebook/help/</string>
+    <string name="help_url">https://stagebook.app.br/help/</string>
     <string name="settings_translate_guide">translation guide</string>
     <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md</string>
     <string name="auto_blocker_open">Open Auto Blocker</string>
