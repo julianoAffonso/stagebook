@@ -848,7 +848,7 @@
     <string name="settings_advanced_short">Para tocar sem falhas</string>
     <string name="advanced_play">Para tocar sem falhas</string>
     <string name="advanced_play_help">Ajustes do Android que já derrubaram a interface de áudio ou pararam o app no palco. Vêm ligados; desligue um só se souber por quê. Alguns só existem em certos tablets e só aparecem neles.</string>
-    <string name="advanced_rewrite">Com a permissão, estes ajustes valem para o aparelho inteiro, e o Stagebook grava de novo sempre que abre. Mude por aqui: mudados nos ajustes do Android, eles voltam.</string>
+    <string name="advanced_rewrite">Com a permissão, estes ajustes valem para o aparelho inteiro, e o Stagebook grava de novo sempre que abre. Mude por aqui: o que você mudar nos ajustes do Android volta.</string>
     <string name="advanced_battery_free">O Android não vai parar o Stagebook para economizar bateria, nem com a tela apagada.</string>
     <string name="advanced_battery_restricted">A economia de bateria pode parar o Stagebook com a tela apagada.</string>
     <string name="advanced_battery_allow">Liberar da economia de bateria</string>
