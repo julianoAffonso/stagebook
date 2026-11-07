@@ -841,6 +841,21 @@ class ScreenshotTest {
 
     @Test fun settingsLyricsPagesTablet() = shootPageCard("tablet_5_ajustes_pagina")
 
+    // Settings → Stage look → Screen: keep the screen on and Do not disturb on stage (user, 07/11), at the section's end
+    @Test @Config(qualifiers = PHONE)
+    fun settingsScreenCardPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LYRICS) }
+                }
+            }
+        }
+        compose.onNodeWithText(str(R.string.settings_stage_dnd_detail)).performScrollTo()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_5_ajustes_tela.png")
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun settingsLyricsPagesPhone() = shootPageCard("celular_5_ajustes_pagina")
 
@@ -1167,12 +1182,25 @@ class ScreenshotTest {
             br.app.stagebook.ui.band.NearbyUi("3", s("Baixo"), member = false),
             br.app.stagebook.ui.band.NearbyUi("4", s("Bateria"), member = true, otherVersion = "0.2.90"),
         ),
-        members = listOf(br.app.stagebook.ui.band.MemberUi("1", s("Celular da Ana"), 0), br.app.stagebook.ui.band.MemberUi("4", s("Bateria"), 0)),
+        // Beto isn't on this Wi-Fi now: the empty ring next to the lit dots (user, 07/11)
+        members = listOf(
+            br.app.stagebook.ui.band.MemberUi("1", s("Celular da Ana"), 0),
+            br.app.stagebook.ui.band.MemberUi("4", s("Bateria"), 0),
+            br.app.stagebook.ui.band.MemberUi("5", s("Tablet do Beto"), 0),
+        ),
     )
 
     @Test @Config(qualifiers = "pt-rBR-w412dp-h1600dp-port-xxhdpi")
     fun bandPhone() = shoot("jornada_banda_1_ajustes") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it, section = SettingsSection.BAND) }
+    }
+
+    // an invite over the internet opens the receive screen on it (user, 07/11)
+    @Test @Config(qualifiers = PHONE)
+    fun bandInvitePhone() = shoot("jornada_banda_6_convite") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(
+            br.app.stagebook.ui.setlists.ScanUi.Invite("Ana"), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},
+        )
     }
 
     @Test @Config(qualifiers = PHONE)
