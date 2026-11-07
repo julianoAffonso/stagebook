@@ -37,8 +37,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         fun allowed() = br.app.stagebook.domain.BandContent.songOk(title, author, year, text)
     }
 
-    /** [skipped]: songs too big for one message (rare), which didn't go. */
-    data class Sent(val code: String, val songs: Int, val skipped: Int)
+    /** [skipped]: songs too big for one message (rare), which didn't go. [from]: the band name it went with (for the link). */
+    data class Sent(val code: String, val songs: Int, val skipped: Int, val from: String = "")
 
     sealed interface Received {
         /** [from]: the sender (their device), to join "the band" on accepting. */
@@ -116,7 +116,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             val body = ShareCode.encrypt(keys.key, packed)
             if (body.length > MAX_MESSAGE || !post(keys.topic, body)) return@withContext null
         }
-        Sent(code, sent, skipped)
+        Sent(code, sent, skipped, identity.name.value)
     }
 
     /** Essential mode (T19): "Internet" off, nothing leaves from here (sends, inbox, receipts, requests, 3 words). */

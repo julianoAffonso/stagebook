@@ -58,9 +58,29 @@ object ShareCode {
      */
     const val LINK_PREFIX = "https://stagebook.app.br/r#"
 
-    fun link(code: String) = LINK_PREFIX + code
+    /** What a link carries, for the site to say what was sent (`t=`): an invite, a setlist or loose songs. */
+    enum class LinkKind(val tag: String) { INVITE("i"), SETLIST("l"), SONGS("m") }
 
-    // anywhere in a text (a whole message pasted, a link with or without https), but not inside another host's name
+    /**
+     * `https://stagebook.app.br/r#<code>&t=<kind>&n=<who sends>&s=<setlist>&l=<language>`: the code first (a bare
+     * `#47-violao-lua` still works), then what the site shows in the sender's language. All in the fragment, which never
+     * leaves the phone for the server. Empty parts are left out; [setlist] only goes with a setlist.
+     */
+    fun link(code: String, kind: LinkKind? = null, from: String = "", setlist: String = "", lang: String = ""): String {
+        val parts = listOfNotNull(
+            kind?.let { "t=${it.tag}" },
+            from.takeIf { it.isNotBlank() }?.let { "n=${encode(it)}" },
+            setlist.takeIf { it.isNotBlank() && kind == LinkKind.SETLIST }?.let { "s=${encode(it)}" },
+            lang.takeIf { it.isNotBlank() }?.let { "l=${encode(it)}" },
+        )
+        return LINK_PREFIX + (listOf(code) + parts).joinToString("&")
+    }
+
+    // like the browser's encodeURIComponent (a space is %20, not +): the site reads it with decodeURIComponent
+    private fun encode(text: String) = java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+
+    // anywhere in a text (a whole message pasted, a link with or without https), but not inside another host's name; the
+    // code is the fragment up to the first "&" (the rest is for the site)
     private val LINK = Regex("""(?<![A-Za-z0-9.-])(?:www\.)?stagebook\.app\.br/r/?#([A-Za-z0-9-]+)""", RegexOption.IGNORE_CASE)
 
     /** The code of the first receive link in [text], or null if there is none. */

@@ -32,6 +32,17 @@ object Languages {
         return AppLanguage.entries.firstOrNull { it.tag == tag }?.takeIf { it in available } ?: AppLanguage.SYSTEM
     }
 
+    /**
+     * The tag of the language the app shows ("pt-BR", "en"): the chosen one, or the device's when it follows the system
+     * (English, the base, when there's no translation for it). Goes in receive links so the site opens in the sender's
+     * language.
+     */
+    fun shownTag(context: Context): String {
+        get(context).takeIf { it != AppLanguage.SYSTEM }?.let { return it.tag }
+        val system = context.resources.configuration.locales[0]
+        return available.firstOrNull { it.tag.isNotEmpty() && Locale.forLanguageTag(it.tag).language == system.language }?.tag ?: AppLanguage.EN.tag
+    }
+
     fun set(context: Context, language: AppLanguage) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = true) { putString(KEY, language.tag) }
 
