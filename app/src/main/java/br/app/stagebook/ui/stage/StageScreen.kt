@@ -2032,8 +2032,17 @@ private fun StageClock(
 
 /** The show's length, half an hour at a time, and a restart of its counter: a small window over the clock. */
 @Composable
-private fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
+    val density = LocalDensity.current
+    val gap = with(density) { Spacing.s.roundToPx() }
+    // the length gets the room of its widest value, so − and + stay put as "1h" turns into "1h30" (S26, 07/11)
+    val lengthStyle = MaterialTheme.typography.headlineSmall
+    val measurer = rememberTextMeasurer()
+    val lengthWidth = remember(measurer, lengthStyle, density) {
+        val widest = (ShowTimer.MIN_MINUTES..ShowTimer.MAX_MINUTES step ShowTimer.STEP_MINUTES)
+            .maxOf { measurer.measure(ShowTimer.lengthText(it), lengthStyle, maxLines = 1).size.width }
+        with(density) { widest.toDp() }
+    }
     androidx.compose.ui.window.Popup(
         popupPositionProvider = AboveAnchor(gap),
         onDismissRequest = onDismiss,
@@ -2047,7 +2056,7 @@ private fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onResta
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
-                    Text(ShowTimer.lengthText(length), style = MaterialTheme.typography.headlineSmall)
+                    Text(ShowTimer.lengthText(length), Modifier.widthIn(min = lengthWidth), style = lengthStyle, textAlign = TextAlign.Center, maxLines = 1)
                     IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
                 }
                 ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
