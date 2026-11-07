@@ -2,7 +2,9 @@
 <html lang="pt-BR">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Landing page of the links the app shares over the internet:
-     https://stagebook.app.br/r#<code>&t=<i invite | l setlist | m songs>&n=<sender>&s=<setlist>&l=<sender's language>
+     https://stagebook.app.br/r#<code>.<details>, where <details> is base64url (no padding) of the UTF-8 compact JSON
+     {"t": i invite | l setlist | m songs, "n": sender, "s": setlist, "l": sender's language}, empty keys left out. The
+     older https://stagebook.app.br/r#<code>&t=..&n=..&s=..&l=.. still works.
      Everything lives in the fragment, which browsers never send to any server; this page makes no network call (the CSP
      below forbids it). It speaks the sender's language when there's a translation, English otherwise. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
@@ -15,6 +17,7 @@ body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,
 main { max-width: 480px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
 header { display:flex; gap:16px; align-items:center; margin-bottom: 24px; }
 header img { width:64px; height:64px; border-radius:16px; }
+.home { display:flex; gap:16px; align-items:center; color:inherit; text-decoration:none; }
 h1 { margin:0; font-size: 30px; }
 .card { background:var(--surface); border-radius:16px; padding:24px 16px; }
 .card + .card { margin-top: 16px; }
@@ -36,7 +39,7 @@ p { margin: 0 0 16px; }
 </style></head>
 <body>
 <main>
-  <header><img src="../logo.png" alt=""><h1>Stagebook</h1></header>
+  <header><a class="home" href="../" id="home"><img src="../logo.png" alt=""><h1>Stagebook</h1></a></header>
 
   <div id="missing" class="card" hidden><p data-t="missing"></p></div>
 
@@ -68,7 +71,8 @@ p { margin: 0 0 16px; }
   var DOWNLOAD = "https://github.com/julianoAffonso/stagebook/releases/latest/download/stagebook.apk";
   var TEXT = {
     pt: {
-      missing: "Este link está incompleto. Peça para mandarem de novo.",
+      missing: "Este link está incompleto. Peça para enviarem novamente.",
+      home: "Stagebook — página inicial",
       invite: "{n} convidou você para a banda no Stagebook.",
       inviteNoName: "Você recebeu um convite para uma banda no Stagebook.",
       setlist: "{n} mandou o setlist “{s}” para você.",
@@ -90,6 +94,7 @@ p { margin: 0 0 16px; }
     },
     en: {
       missing: "This link is incomplete. Ask them to send it again.",
+      home: "Stagebook — home page",
       invite: "{n} invited you to their band on Stagebook.",
       inviteNoName: "You got an invite to a band on Stagebook.",
       setlist: "{n} sent you the setlist “{s}”.",
@@ -111,17 +116,66 @@ p { margin: 0 0 16px; }
     }
   };
 
-  // "#<code>&t=..&n=..&s=..&l=..": the code first, then the details the app adds
+  var KEYS = ["t", "n", "s", "l"];
+  // "#<code>.<details>" (or the older "#<code>&t=..&n=.."): the code up to the first "." or "&", then the details
   var hash = location.hash.replace(/^#/, "");
-  var parts = hash.split("&");
+  var cut = hash.search(/[.&]/);
+  var codePart = cut < 0 ? hash : hash.slice(0, cut);
+  var rest = cut < 0 ? "" : hash.slice(cut);
   var params = {};
-  parts.slice(1).forEach(function (kv) {
-    var at = kv.indexOf("=");
-    if (at <= 0) return;
-    var v;
-    try { v = decodeURIComponent(kv.slice(at + 1).replace(/\+/g, " ")); } catch (e) { v = ""; }
-    params[kv.slice(0, at)] = v.slice(0, 80);
-  });
+
+  // base64url of the JSON; the standard alphabet and padding are accepted too, and anything a messenger glues to the
+  // end outside the alphabet (".", ",", ")") is left out. A glued "-" or "_" breaks the JSON: up to two are dropped.
+  function readDetails(raw) {
+    var plain = (raw.match(/^[A-Za-z0-9_+\/=-]+/) || [""])[0].replace(/=+$/, "").replace(/-/g, "+").replace(/_/g, "/");
+    for (var drop = 0; drop <= 2; drop++) {
+      var body = plain.slice(0, plain.length - drop);
+      if (!body || body.length % 4 === 1) continue;
+      try {
+        var bin = atob(body + "===".slice(0, (4 - body.length % 4) % 4));
+        var text;
+        if (window.TextDecoder) {
+          var bytes = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+        } else {
+          text = decodeURIComponent(escape(bin));
+        }
+        var obj = JSON.parse(text);
+        if (!obj || typeof obj !== "object" || Array.isArray(obj)) continue;
+        var out = {};
+        KEYS.forEach(function (k) { if (typeof obj[k] === "string") out[k] = obj[k].slice(0, 80); });
+        return out;
+      } catch (e) { /* not this length: try one character less */ }
+    }
+    return {};
+  }
+
+  // the inverse, to rebuild the link the app reads (the intent and the copied link)
+  function writeDetails(p) {
+    var obj = {};
+    KEYS.forEach(function (k) { if (p[k]) obj[k] = p[k]; });
+    if (!Object.keys(obj).length) return "";
+    try {
+      var utf8 = window.TextEncoder ? new TextEncoder().encode(JSON.stringify(obj)) : null;
+      var bin = "";
+      if (utf8) { for (var i = 0; i < utf8.length; i++) bin += String.fromCharCode(utf8[i]); }
+      else bin = unescape(encodeURIComponent(JSON.stringify(obj)));
+      return "." + btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    } catch (e) { return ""; }
+  }
+
+  if (rest.charAt(0) === ".") {
+    params = readDetails(rest.slice(1));
+  } else if (rest) {
+    rest.split("&").slice(1).forEach(function (kv) {
+      var at = kv.indexOf("=");
+      if (at <= 0) return;
+      var v;
+      try { v = decodeURIComponent(kv.slice(at + 1).replace(/\+/g, " ")); } catch (e) { v = ""; }
+      params[kv.slice(0, at)] = v.slice(0, 80);
+    });
+  }
   // the sender's language when this page has it, English otherwise (also with no language in the link)
   var lang = /^pt/i.test(params.l || "") ? "pt" : "en";
   var t = TEXT[lang];
@@ -129,6 +183,7 @@ p { margin: 0 0 16px; }
   window.addEventListener("hashchange", function () { location.reload(); });
   document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
   Array.prototype.forEach.call(document.querySelectorAll("[data-t]"), function (el) { el.textContent = t[el.getAttribute("data-t")]; });
+  document.getElementById("home").setAttribute("aria-label", t.home);
 
   // The code as the app reads it: lowercase, no accents, three parts of letters/digits joined by "-".
   function normalize(raw) {
@@ -139,7 +194,7 @@ p { margin: 0 0 16px; }
     return parts.length === 3 && parts.every(function (p) { return p.length <= 24; }) ? parts.join("-") : null;
   }
 
-  var code = normalize(parts[0]);
+  var code = normalize(codePart);
   if (!code) { document.getElementById("missing").hidden = false; return; }
   document.getElementById("found").hidden = false;
   document.getElementById("code").textContent = code.split("-").join(" · ");
@@ -153,12 +208,11 @@ p { margin: 0 0 16px; }
   document.getElementById("what").textContent = fill(what);
   if (!/android/i.test(navigator.userAgent)) document.getElementById("notAndroid").hidden = false;
 
-  var extra = ["t", "n", "s", "l"].filter(function (k) { return params[k]; })
-    .map(function (k) { return "&" + k + "=" + encodeURIComponent(params[k]); }).join("");
-  var fragment = code + extra;
+  // always rebuilt in the new format: only [A-Za-z0-9_.-], whatever arrived
+  var fragment = code + writeDetails(params);
   var link = "https://stagebook.app.br/r#" + fragment;
   // Android intent: URI (parsed by Intent.parseUri). The data is everything before the LAST "#", so the link's own
-  // fragment stays as it is (the code and the details, percent-encoded: no "#" inside) and nothing after "#Intent;"
+  // fragment stays as it is (the code and the base64url details: no "#" inside) and nothing after "#Intent;"
   // may contain a "#" either: the fallback
   // URL is percent-encoded. Not installed: the browser goes to the fallback (the download).
   var intent = "intent://stagebook.app.br/r#" + fragment +

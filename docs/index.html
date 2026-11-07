@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en" class="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- stagebook.app.br/: the presentation page, in Portuguese and English in one file; no network call besides its own images -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Stagebook: your whole show on one screen</title>
+<meta name="description" content="Lyrics, chords and backing tracks on Android, for musicians on stage. Free, no ads, no account.">
+<meta name="theme-color" content="#121212">
+<link rel="icon" href="logo.png">
+<script>
+// Language before the first paint: the saved choice, else the browser's (pt* is Portuguese, everything else English).
+(function () {
+  var lang = null;
+  try { lang = localStorage.getItem("stagebook-lang"); } catch (e) {}
+  if (lang !== "pt" && lang !== "en") lang = /^pt/i.test(navigator.language || "") ? "pt" : "en";
+  document.documentElement.className = lang;
+  document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
+})();
+</script>
+<style>
+:root { --bg:#121212; --surface:#1E1E1E; --raised:#262626; --fg:#ECECEC; --muted:#A0A7A4; --accent:#4AF6CD; --on-accent:#00382C;
+        --line:#2E2E2E; --radius:16px; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow-x:hidden; }
+html.en .pt, html.pt .en { display:none !important; }
+a { color: var(--accent); }
+img { max-width:100%; height:auto; display:block; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-left, 0px)) 0 max(16px, env(safe-area-inset-right, 0px)); }
+
+/* top bar */
+.bar { display:flex; align-items:center; gap:12px; padding-top: 16px; padding-bottom: 16px; }
+.brand { display:flex; align-items:center; gap:10px; color:var(--fg); text-decoration:none; font-weight:700; font-size:18px; }
+.brand img { width:32px; height:32px; border-radius:8px; }
+.bar nav { margin-left:auto; display:flex; align-items:center; gap:16px; }
+.bar nav a.help { color:var(--fg); text-decoration:none; font-size:15px; }
+.switch { display:flex; background:var(--raised); border-radius:999px; padding:3px; }
+.switch button { border:0; background:none; color:var(--fg); font: 700 13px system-ui, sans-serif; padding:6px 12px; border-radius:999px; cursor:pointer; min-width:44px; }
+.switch button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
+.switch button:focus-visible, .btn:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* hero */
+.hero { text-align:center; padding-top: 48px; padding-bottom: 32px; }
+.hero .logo { width:96px; height:96px; border-radius:24px; margin: 0 auto 24px; box-shadow: 0 0 48px rgba(74,246,205,.18); }
+h1 { font-size: clamp(40px, 10vw, 88px); line-height: 1.02; letter-spacing: -0.03em; margin: 0 auto; max-width: 12ch; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+.promise { font-size: clamp(19px, 2.6vw, 24px); color: var(--muted); max-width: 34ch; margin: 24px auto 0; text-wrap: balance; }
+.actions { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top: 32px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:52px; padding: 0 28px; border-radius: 999px;
+       font-weight:700; font-size:17px; text-decoration:none; transition: transform .15s ease, background .15s ease; }
+.btn:active { transform: scale(.97); }
+.btn.primary { background:var(--accent); color:var(--on-accent); }
+.btn.primary:hover { background:#7DF9DB; }
+.btn.ghost { background:var(--raised); color:var(--fg); }
+.btn.ghost:hover { background:#333; }
+.fine { color:var(--muted); font-size:14px; margin: 16px 0 0; }
+.shot { margin: 48px auto 0; max-width: 980px; border-radius: 20px; overflow:hidden; background:#000;
+        border: 1px solid var(--line); box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 120px rgba(74,246,205,.10); }
+
+/* sections */
+section.wrap { padding-top: 72px; }
+@media (min-width: 880px) { section.wrap { padding-top: 120px; } }
+.kicker { color: var(--accent); font-weight:700; font-size:14px; letter-spacing:.12em; text-transform:uppercase; margin:0 0 12px; }
+h2 { font-size: clamp(32px, 6vw, 56px); line-height:1.06; letter-spacing:-0.02em; margin:0; text-wrap: balance; }
+.lead { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); margin: 20px 0 0; max-width: 46ch; }
+.lead b { color: var(--fg); font-weight:600; }
+.feature { display:grid; gap: 32px; align-items:center; }
+.frame { border-radius: var(--radius); overflow:hidden; background:#000; border:1px solid var(--line); box-shadow: 0 16px 48px rgba(0,0,0,.5); }
+@media (min-width: 880px) {
+  .feature { grid-template-columns: 5fr 7fr; gap: 56px; }
+  .feature.flip { grid-template-columns: 7fr 5fr; }
+  .feature.flip .text { order: 2; }
+}
+
+/* band */
+.band-grid { display:grid; gap: 20px; margin-top: 40px; }
+@media (min-width: 880px) { .band-grid { grid-template-columns: 1fr 1fr; align-items:start; } }
+.points { list-style:none; padding:0; margin: 32px 0 0; display:grid; gap:12px; }
+@media (min-width: 720px) { .points { grid-template-columns: 1fr 1fr; } }
+.points li { background:var(--surface); border-radius: var(--radius); padding: 20px; }
+.points b { display:block; font-size:19px; margin-bottom:4px; }
+.points span { color:var(--muted); }
+
+/* made for the stage */
+.tiles { display:grid; gap:16px; margin-top: 40px; grid-template-columns: 1fr; }
+@media (min-width: 600px) { .tiles { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 980px) { .tiles { grid-template-columns: repeat(4, 1fr); } }
+.tile { background:var(--surface); border-radius: var(--radius); padding: 24px; }
+.tile svg { width:32px; height:32px; color:var(--accent); }
+.tile h3 { font-size: 20px; margin: 16px 0 8px; line-height:1.2; }
+.tile p { color:var(--muted); margin:0; font-size:16px; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin-top: 24px; padding:0; list-style:none; }
+.chips li { background:var(--raised); border-radius:999px; padding: 6px 14px; font-size:15px; }
+
+/* the best part */
+.free { text-align:center; }
+.free h2 { font-size: clamp(40px, 9vw, 80px); }
+.free .lead { margin-left:auto; margin-right:auto; max-width: 40ch; }
+.nos { display:flex; flex-wrap:wrap; justify-content:center; gap: 12px 28px; margin: 40px 0 0; padding:0; list-style:none; font-size: clamp(20px, 3vw, 28px); font-weight:700; }
+.nos li::before { content:"\2715"; color: var(--accent); margin-right: 10px; font-size: .8em; }
+
+/* final call */
+.cta { text-align:center; padding-bottom: 96px; }
+.cta .card { background: radial-gradient(120% 140% at 50% 0%, rgba(74,246,205,.16), transparent 60%), var(--surface); border-radius: 28px; padding: 64px 20px; }
+.cta .lead { margin-left:auto; margin-right:auto; }
+
+footer { border-top: 1px solid var(--line); padding-top: 32px; padding-bottom: max(32px, env(safe-area-inset-bottom, 0px)); color: var(--muted); font-size:15px; }
+footer .wrap { display:flex; flex-wrap:wrap; gap: 12px 24px; align-items:center; }
+footer a { color: var(--fg); text-decoration:none; }
+footer a:hover { color: var(--accent); }
+footer .copy { margin-left:auto; }
+@media (max-width: 599px) { footer .copy { margin-left:0; width:100%; } .bar nav a.help { display:none; } }
+@media (prefers-reduced-motion: reduce) { .btn { transition:none; } .btn:active { transform:none; } }
+</style>
+</head>
+<body>
+
+<header class="wrap bar">
+  <a class="brand" href="./"><img src="logo.png" alt="" width="32" height="32">Stagebook</a>
+  <nav>
+    <a class="help pt" href="ajuda/">Ajuda</a><a class="help en" href="help/">Help</a>
+    <div class="switch" role="group" aria-label="Idioma / Language">
+      <button type="button" data-set="pt" aria-pressed="false" lang="pt-BR">PT</button>
+      <button type="button" data-set="en" aria-pressed="true" lang="en">EN</button>
+    </div>
+  </nav>
+</header>
+
+<main>
+<div class="wrap hero">
+  <img class="logo" src="logo.png" alt="Stagebook" width="96" height="96">
+  <h1><span class="pt">O show inteiro. <em>Numa tela só.</em></span><span class="en">Your whole show. <em>One screen.</em></span></h1>
+  <p class="promise">
+    <span class="pt">Letra, cifra e backing track no seu Android. Vire a página no pedal e continue olhando para o público.</span>
+    <span class="en">Lyrics, chords and backing tracks on your Android. Turn the page with a pedal and keep your eyes on the crowd.</span>
+  </p>
+  <div class="actions">
+    <a class="btn primary" href="https://github.com/julianoAffonso/stagebook/releases/latest/download/stagebook.apk">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 4h2v9.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17zM5 19h14v2H5z"/></svg>
+      <span class="pt">Baixar para Android</span><span class="en">Download for Android</span></a>
+    <a class="btn ghost pt" href="ajuda/">Ajuda</a><a class="btn ghost en" href="help/">Help</a>
+  </div>
+  <p class="fine"><span class="pt">Grátis · Android 9+ · celular e tablet · sem cadastro</span><span class="en">Free · Android 9+ · phone and tablet · no account</span></p>
+  <div class="shot">
+    <img src="help/img/tablet_6_palco_cifra.jpg" data-pt="ajuda/img/tablet_6_palco_cifra.jpg" width="1400" height="875"
+         alt="The stage: a song in full screen, sections in green, chords in yellow above the lyrics"
+         data-alt-pt="O palco: uma música em tela cheia, seções em verde e acordes em amarelo em cima da letra">
+  </div>
+</div>
+
+<section class="wrap" id="palco">
+  <div class="feature">
+    <div class="text">
+      <p class="kicker"><span class="pt">O palco</span><span class="en">The stage</span></p>
+      <h2><span class="pt">Grande. Aceso. Sem frescura.</span><span class="en">Big. Bright. Out of your way.</span></h2>
+      <p class="lead">
+        <span class="pt">Tela cheia, sempre acesa, escura como o palco. O zoom encaixa a música na tela sozinho, sem cortar verso. Vire com pedal Bluetooth ou MIDI, com um toque, ou deixe rolar.</span>
+        <span class="en">Full screen, always on, dark like the stage. Zoom fits the song to the screen by itself, no verse cut in half. Turn with a Bluetooth or MIDI pedal, a tap, or let it scroll.</span>
+      </p>
+    </div>
+    <div class="frame">
+      <img loading="lazy" src="help/img/tablet_6_palco_metronomo_contagem.jpg" data-pt="ajuda/img/tablet_6_palco_metronomo_contagem.jpg" width="1400" height="875"
+           alt="The stage counting in: a big 1 in the middle and the screen's edge glowing"
+           data-alt-pt="O palco na contagem: um 1 grande no meio e a borda da tela acesa">
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="acordes">
+  <div class="feature flip">
+    <div class="text">
+      <p class="kicker"><span class="pt">Cifras</span><span class="en">Chords</span></p>
+      <h2><span class="pt">Todo acorde na mão.</span><span class="en">Every chord. Right there.</span></h2>
+      <p class="lead">
+        <span class="pt">Toque num acorde e veja o desenho no violão, guitarra, ukulele, cavaquinho ou teclado. E ouça. Transponha num toque. Pôs capotraste? O app diz qual nota soa de verdade.</span>
+        <span class="en">Tap a chord and see its shape on acoustic or electric guitar, ukulele, cavaquinho or keyboard. Then hear it. Transpose in one tap. Using a capo? It tells you what actually sounds.</span>
+      </p>
+    </div>
+    <div class="frame">
+      <img loading="lazy" src="help/img/tablet_6_acorde_violao.jpg" data-pt="ajuda/img/tablet_6_acorde_violao.jpg" width="1400" height="875"
+           alt="A chord's diagram on guitar over the stage, with a play button and a note about the capo"
+           data-alt-pt="O diagrama de um acorde no violão em cima do palco, com botão de tocar e um aviso sobre o capotraste">
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="faixas">
+  <div class="feature">
+    <div class="text">
+      <p class="kicker"><span class="pt">Backing tracks</span><span class="en">Backing tracks</span></p>
+      <h2><span class="pt">A banda por trás da banda.</span><span class="en">The band behind the band.</span></h2>
+      <p class="lead">
+        <span class="pt">Faixas multicanal numa interface de áudio USB, ou direto na saída do aparelho. <b>O click vai pro baterista pela mesa; o público ouve só a música.</b> Mixer e EQ em cada música.</span>
+        <span class="en">Multichannel tracks through a USB audio interface, or straight from the device. <b>The click goes to the drummer through the desk; the crowd hears only the music.</b> A mixer and EQ for every song.</span>
+      </p>
+    </div>
+    <div class="frame">
+      <img loading="lazy" src="help/img/jornada_mixer_2_tablet.jpg" data-pt="ajuda/img/jornada_mixer_2_tablet.jpg" width="1400" height="1080"
+           alt="The mixer with Backing, Click and Guide channels, and a five-band equalizer below"
+           data-alt-pt="O mixer com os canais Backing, Click e Guia, e um equalizador de cinco faixas embaixo">
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="banda">
+  <p class="kicker"><span class="pt">Banda</span><span class="en">Band</span></p>
+  <h2><span class="pt">Um conduz. A banda inteira na mesma página.</span><span class="en">One leads. The whole band on the same page.</span></h2>
+  <p class="lead">
+    <span class="pt">Com <b>Conduzir a banda</b>, você troca de música e o palco de todo mundo vai junto.</span>
+    <span class="en">With <b>Lead the band</b>, you change the song and everyone's stage follows.</span>
+  </p>
+  <div class="band-grid">
+    <div class="frame">
+      <img loading="lazy" src="help/img/tablet_6_palco_acompanhando.jpg" data-pt="ajuda/img/tablet_6_palco_acompanhando.jpg" width="1400" height="875"
+           alt="A stage following the band's leader, with a notice of who is missing this song"
+           data-alt-pt="Um palco acompanhando quem conduz a banda, com o aviso de quem está sem esta música">
+    </div>
+    <div class="frame">
+      <img loading="lazy" src="help/img/jornada_banda_3_compartilhar.jpg" data-pt="ajuda/img/jornada_banda_3_compartilhar.jpg" width="1400" height="1182"
+           alt="Sharing a setlist: send to the band, QR without internet, or send over the internet"
+           data-alt-pt="Compartilhar um setlist: mandar para a banda, QR sem internet ou enviar pela internet">
+    </div>
+  </div>
+  <ul class="points">
+    <li><b><span class="pt">Um envio, a banda toda.</span><span class="en">One send. The whole band.</span></b>
+      <span class="pt">No mesmo Wi-Fi chega na hora. Longe, vai num link que abre o app.</span>
+      <span class="en">On the same Wi-Fi it lands right away. Far away, it goes as one link that opens the app.</span></li>
+    <li><b><span class="pt">Convite por link.</span><span class="en">Invite with a link.</span></b>
+      <span class="pt">Chame quem toca com você mandando um link.</span>
+      <span class="en">Bring in whoever plays with you by sending a link.</span></li>
+    <li><b><span class="pt">Ninguém sem música.</span><span class="en">Nobody missing a song.</span></b>
+      <span class="pt">Antes de começar, o app avisa quem está sem alguma música do setlist.</span>
+      <span class="en">Before you start, the app tells you who is missing a song from the setlist.</span></li>
+    <li><b><span class="pt">Do lado, sem internet.</span><span class="en">Next to you, no internet.</span></b>
+      <span class="pt">Quem está do lado lê um QR com a câmera.</span>
+      <span class="en">Whoever is next to you reads a QR with the camera.</span></li>
+  </ul>
+</section>
+
+<section class="wrap" id="feito-pro-palco">
+  <p class="kicker"><span class="pt">Feito pro palco</span><span class="en">Made for the stage</span></p>
+  <h2><span class="pt">Pensado pra quando as luzes apagam.</span><span class="en">Built for when the lights go down.</span></h2>
+  <div class="tiles">
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 18h18v3H3zM6 11h12l2 6H4zM12 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z"/></svg>
+      <h3><span class="pt">O pedal vira a página.</span><span class="en">The pedal turns the page.</span></h3>
+      <p><span class="pt">Pedal Bluetooth ou MIDI, por USB ou Bluetooth. Cada botão faz o que você quiser.</span><span class="en">Bluetooth or MIDI pedal, over USB or Bluetooth. Each button does what you want.</span></p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36A5.4 5.4 0 0 1 12.36 3.1 9.3 9.3 0 0 0 12 3z"/></svg>
+      <h3><span class="pt">Escuro como o palco.</span><span class="en">Dark like the stage.</span></h3>
+      <p><span class="pt">Fundo preto, acordes que saltam aos olhos, tela que não apaga no meio da música.</span><span class="en">Black background, chords that pop, a screen that never sleeps mid-song.</span></p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+      <h3><span class="pt">Leve até no tablet velho.</span><span class="en">Light, even on an old tablet.</span></h3>
+      <p><span class="pt">Menos de 2% do processador, mesmo tocando faixa. O modo essencial desliga o que você não usa.</span><span class="en">Under 2% of the processor, even playing a track. Essential mode turns off what you don't use.</span></p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1zM3.4 2 2 3.4l18.6 18.6 1.4-1.4z"/></svg>
+      <h3><span class="pt">Ninguém te liga no solo.</span><span class="en">No calls mid-solo.</span></h3>
+      <p><span class="pt">O Não perturbe entra com o palco. Toque em paz.</span><span class="en">Do not disturb comes on with the stage. Play in peace.</span></p>
+    </div>
+  </div>
+  <ul class="chips" aria-label="Mais / More">
+    <li><span class="pt">Metrônomo com contagem</span><span class="en">Metronome with count-in</span></li>
+    <li><span class="pt">Tempo de show no relógio</span><span class="en">Show timer on the clock</span></li>
+    <li><span class="pt">MIDI ao entrar e sair da música</span><span class="en">MIDI when a song shows and when you leave it</span></li>
+    <li><span class="pt">Tablatura</span><span class="en">Tablature</span></li>
+    <li><span class="pt">Importa letra e cifra de sites</span><span class="en">Imports lyrics and chords from websites</span></li>
+    <li><span class="pt">Edite no computador pelo navegador</span><span class="en">Edit on the computer in the browser</span></li>
+    <li><span class="pt">Now Playing pro OBS</span><span class="en">Now Playing for OBS</span></li>
+    <li>Backup</li>
+  </ul>
+</section>
+
+<section class="wrap free" id="gratis">
+  <p class="kicker"><span class="pt">A melhor parte</span><span class="en">The best part</span></p>
+  <h2><span class="pt">Grátis. De verdade.</span><span class="en">Free. For real.</span></h2>
+  <ul class="nos">
+    <li><span class="pt">Sem anúncio</span><span class="en">No ads</span></li>
+    <li><span class="pt">Sem cadastro</span><span class="en">No account</span></li>
+    <li><span class="pt">Sem rastreio</span><span class="en">No tracking</span></li>
+  </ul>
+  <p class="lead">
+    <span class="pt">Suas músicas ficam no seu aparelho. O que vai pra banda vai criptografado. E o código está aberto no GitHub pra quem quiser conferir.</span>
+    <span class="en">Your songs stay on your device. What goes to the band is encrypted. And the code is open on GitHub for anyone to check.</span>
+  </p>
+</section>
+
+<section class="wrap cta" id="baixar">
+  <div class="card">
+    <h2><span class="pt">Seu próximo show começa aqui.</span><span class="en">Your next show starts here.</span></h2>
+    <p class="lead">
+      <span class="pt">Fora da Play Store: vem direto do GitHub, de graça, e se atualiza sozinho.</span>
+      <span class="en">Not on the Play Store: it comes straight from GitHub, free, and updates itself.</span>
+    </p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/julianoAffonso/stagebook/releases/latest/download/stagebook.apk">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 4h2v9.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17zM5 19h14v2H5z"/></svg>
+        <span class="pt">Baixar o Stagebook</span><span class="en">Download Stagebook</span></a>
+      <a class="btn ghost pt" href="ajuda/#instalar">Como instalar</a><a class="btn ghost en" href="help/#instalar">How to install</a>
+    </div>
+    <p class="fine"><span class="pt">Android 9 ou mais novo, celular e tablet.</span><span class="en">Android 9 and up, phone and tablet.</span></p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="ajuda/">Ajuda</a>
+    <a href="help/">Help</a>
+    <a href="https://github.com/julianoAffonso/stagebook">GitHub</a>
+    <a href="https://github.com/julianoAffonso/stagebook/releases"><span class="pt">Versões</span><span class="en">Releases</span></a>
+    <a href="https://github.com/julianoAffonso/stagebook/blob/main/LICENSE.md"><span class="pt">Licença</span><span class="en">License</span></a>
+    <span class="copy">Stagebook · stagebook.app.br</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var text = {
+    pt: { title: "Stagebook: o show inteiro numa tela só",
+          desc: "Letra, cifra e backing track no Android, para músicos no palco. Grátis, sem anúncio, sem cadastro." },
+    en: { title: "Stagebook: your whole show on one screen",
+          desc: "Lyrics, chords and backing tracks on Android, for musicians on stage. Free, no ads, no account." }
+  };
+  var imgs = document.querySelectorAll("img[data-pt]");
+  for (var i = 0; i < imgs.length; i++) {
+    imgs[i].setAttribute("data-en", imgs[i].getAttribute("src"));
+    imgs[i].setAttribute("data-alt-en", imgs[i].getAttribute("alt"));
+  }
+  function apply(lang) {
+    root.className = lang;
+    root.lang = lang === "pt" ? "pt-BR" : "en";
+    document.title = text[lang].title;
+    document.querySelector('meta[name="description"]').setAttribute("content", text[lang].desc);
+    for (var i = 0; i < imgs.length; i++) {
+      var src = imgs[i].getAttribute("data-" + lang);
+      if (imgs[i].getAttribute("src") !== src) imgs[i].setAttribute("src", src);
+      imgs[i].setAttribute("alt", imgs[i].getAttribute("data-alt-" + lang));
+    }
+    var buttons = document.querySelectorAll(".switch button");
+    for (var b = 0; b < buttons.length; b++) buttons[b].setAttribute("aria-pressed", String(buttons[b].getAttribute("data-set") === lang));
+  }
+  apply(root.className === "pt" ? "pt" : "en");
+  document.querySelector(".switch").addEventListener("click", function (e) {
+    var lang = e.target && e.target.getAttribute && e.target.getAttribute("data-set");
+    if (!lang) return;
+    try { localStorage.setItem("stagebook-lang", lang); } catch (err) {}
+    apply(lang);
+  });
+})();
+</script>
+</body>
+</html>
