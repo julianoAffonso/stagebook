@@ -18,8 +18,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
-#if DIAG
-#include <sys/system_properties.h>   // debug.stagebook.rate
+#ifdef __ANDROID__
+#include <sys/system_properties.h>   // DIAG: debug.stagebook.rate
 #endif
 #include <linux/usbdevice_fs.h>
 #include <linux/usb/ch9.h>
@@ -56,6 +56,11 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 // halved that cost; but on one tablet's host controller 16-packet URBs reached the interface with hiss under the
 // music and thumps, and 8 came out clean (07/11/2026). The queue stays 32 ms.
 #define PKTS_PER_URB 8
+// Input URBs are long: on some host controllers every URB boundary on the input loses a poll or two (the frames of
+// those microframes are gone: 8 packets lost 40% of them, 16 lost 9%, 64 lost 2%), so the fewer boundaries the better;
+// the input is only a clock, so its latency doesn't matter.
+#define IN_PKTS_PER_URB 128
+#define IN_NURBS 8
 #define TAIL_MS 500                   // silence before releasing the endpoint
 #define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
                                       // import and screens at the same time, the decoder fell behind and stuttered;
@@ -573,6 +578,7 @@ static void *usb_main(void *arg) {
     g_queue_ms = nurbs * 1000 * PKTS_PER_URB / pkts_per_sec;   // what it really is: halving a cap would change nothing
     int frame_bytes = g_dev_ch * g_subslot;
     size_t urb_sz = sizeof(struct usbdevfs_urb) + PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
+    size_t in_urb_sz = sizeof(struct usbdevfs_urb) + IN_PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
     struct usbdevfs_urb *urbs[NURBS];
     double acc = 0, lost_acc = 0;
     int tail = 0, tail_urbs = 0, errors = 0;
@@ -633,15 +639,15 @@ static void *usb_main(void *arg) {
         (urb)->buffer_length = off; \
     } while (0)
 
-    struct usbdevfs_urb *in_urbs[NURBS];
+    struct usbdevfs_urb *in_urbs[IN_NURBS];
     if (g_in_ep >= 0) {
-        for (int u = 0; u < nurbs; u++) {
-            in_urbs[u] = calloc(1, urb_sz);
-            in_urbs[u]->buffer = calloc(1, g_in_maxpkt * PKTS_PER_URB);
+        for (int u = 0; u < IN_NURBS; u++) {
+            in_urbs[u] = calloc(1, in_urb_sz);
+            in_urbs[u]->buffer = calloc(1, g_in_maxpkt * IN_PKTS_PER_URB);
             struct usbdevfs_urb *iu = in_urbs[u];
             iu->type = USBDEVFS_URB_TYPE_ISO; iu->endpoint = g_in_ep; iu->flags = USBDEVFS_URB_ISO_ASAP;
-            iu->number_of_packets = PKTS_PER_URB; iu->buffer_length = g_in_maxpkt * PKTS_PER_URB;
-            for (int k = 0; k < PKTS_PER_URB; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
+            iu->number_of_packets = IN_PKTS_PER_URB; iu->buffer_length = g_in_maxpkt * IN_PKTS_PER_URB;
+            for (int k = 0; k < IN_PKTS_PER_URB; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
             n_in = u + 1;
             if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) {
                 LOGI("feedback off: the input refused a URB (%s)", strerror(errno));
@@ -718,7 +724,7 @@ static void *usb_main(void *arg) {
             }
             // An input that can't be followed is only read again to probe it (FB_PROBE_S): on the host that loses its
             // packets, reading it at all costs the output (hiss and thumps heard with the input running, 07/11/2026)
-            if (tail || g_in_ep < 0 || (g_fb_bad && !g_fb_probing)) { in_idle++; continue; }
+            if (tail || g_in_ep < 0 || (g_fb_bad && !g_fb_probing && !DIAG)) { in_idle++; continue; }
             int npk = done->number_of_packets;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
@@ -735,7 +741,7 @@ static void *usb_main(void *arg) {
                 for (int u = 0; u < n_in; u++) {
                     struct usbdevfs_urb *iu = in_urbs[u];
                     iu->status = 0; iu->actual_length = 0; iu->start_frame = 0; iu->error_count = 0;
-                    for (int k = 0; k < PKTS_PER_URB; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
+                    for (int k = 0; k < IN_PKTS_PER_URB; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
                     if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; break; }
                     inflight++;
                 }
