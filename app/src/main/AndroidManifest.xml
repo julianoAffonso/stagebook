@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- só para o navegador de "Importar da internet" e para completar artista/ano -->
+    <!-- importing from the web, the band over the internet, updates -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- músicas do Drive: sem internet ao abrir, espera a conexão voltar para baixar -->
+    <!-- what needs the internet is greyed out without it -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Ajustes → Atualizar o app: abrir o instalador com o APK baixado do Drive -->
+    <!-- Settings → Update the app: opens the installer with the APK downloaded from GitHub -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- pedal MIDI Bluetooth (BLE MIDI): procurar e conectar em Ajustes → Pedal. No Android 9 a 11 (o Fire),
          procurar BLE exige a localização; do 12 em diante, as permissões próprias do Bluetooth. -->
