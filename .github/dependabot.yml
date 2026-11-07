@@ -1,0 +1,8 @@
+# Keeps the pinned actions current: each one is a commit SHA, with its version in a comment.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
