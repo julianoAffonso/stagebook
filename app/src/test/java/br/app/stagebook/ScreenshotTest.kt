@@ -331,6 +331,18 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_metronomo.png")
     }
 
+    // the clock's show counter (user, 07/11): time left near the end, and the show's length window
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun showCounter() {
+        val start = System.currentTimeMillis() - (2 * 60 - 7) * 60_000L
+        val counting = stage.copy(look = stage.look.copy(clockMode = br.app.stagebook.data.model.StageClockMode.LEFT, showStart = start))
+        compose.setContent { StagebookTheme { StageScreen(counting, 0, 0, { _, _ -> }, onBack = {}) } }
+        compose.onNode(androidx.compose.ui.test.hasContentDescription(str(R.string.stage_clock_left), substring = true))
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_tempo_show.png")
+    }
+
     @Test fun metronomeCount() {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.mainClock.autoAdvance = false

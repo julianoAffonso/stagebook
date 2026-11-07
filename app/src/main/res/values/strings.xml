@@ -437,6 +437,14 @@
     <string name="settings_stage_dnd_missing">Android hasn\'t allowed it yet</string>
     <string name="settings_stage_dnd_help">While the stage is open, notifications don\'t pop up and the phone doesn\'t ring. Starred contacts and someone calling twice in a row still get through. When you leave the stage, everything goes back as it was. Android asks for permission once.</string>
     <string name="stage_dnd_ask">So no notification gets in the way of a song, Stagebook can turn on Do not disturb while the stage is open. Android will open a list. Turn on Stagebook there.</string>
+    <string name="stage_clock_time">Time</string>
+    <string name="stage_clock_elapsed">Show time</string>
+    <string name="stage_clock_left">Show time left</string>
+    <string name="stage_clock_next">Switch between time, show time and time left</string>
+    <string name="stage_show_title">Show length</string>
+    <string name="stage_show_shorter">Half an hour less</string>
+    <string name="stage_show_longer">Half an hour more</string>
+    <string name="stage_show_restart">Start counting now</string>
     <string name="stage_dnd_allow">Allow</string>
     <string name="stage_dnd_later">Not now</string>
     <string name="settings_pedal">Pedal</string>

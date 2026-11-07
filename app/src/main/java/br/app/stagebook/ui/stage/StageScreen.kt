@@ -5,6 +5,11 @@ import androidx.compose.foundation.clickable
 import br.app.stagebook.domain.forSong
 import br.app.stagebook.domain.isStageGap
 import br.app.stagebook.ui.components.QuestionDialog
+import br.app.stagebook.ui.components.ButtonTone
+import br.app.stagebook.ui.components.ActionButton
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.mutableLongStateOf
+import br.app.stagebook.domain.ShowTimer
 import br.app.stagebook.data.device.StageQuiet
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
@@ -281,6 +286,9 @@ fun StageRoute(
             onTranspose = viewModel::transpose,
             onCapo = viewModel::setCapo,
             onAutoScroll = viewModel::setAutoScroll,
+            onNextClock = viewModel::nextClock,
+            onStepShow = viewModel::stepShow,
+            onRestartShow = viewModel::restartShow,
             onMetronomeSound = viewModel::metronomeSound,
             onTempo = viewModel::setTempo,
             metroUsbReady = usbReady,
@@ -345,6 +353,9 @@ fun StageScreen(
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
+    onNextClock: () -> Unit = {},
+    onStepShow: (up: Boolean) -> Unit = {},
+    onRestartShow: () -> Unit = {},
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onTempo: (songId: String, bpm: Int) -> Unit = { _, _ -> },
     metroUsbReady: Boolean = false,   // the player reached the USB interface: the metronome restarts there, in step
@@ -1252,7 +1263,7 @@ fun StageScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            StageClock(fg.copy(alpha = 0.7f))
+            StageClock(look.clockMode, look.showStart, look.showMinutes, fg.copy(alpha = 0.7f), onNextClock, onStepShow, onRestartShow)
             // scroll: auto-scroll ▶/⏸ and speed (−/+), on the clock line (outside the lyrics). A single icon (lit while
             // scrolling); the small window has play and speed (user's request, 29/10). Metronome: while playing, the
             // icon becomes stop and blinks on the beat (stronger on 1); when stopped, it opens the small window
@@ -1939,19 +1950,88 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
     }
 }
 
-/** Current time in the device's format, updated at the turn of each minute. */
+/**
+ * The time in the device's format, or the show's counter (user, 07/11): a tap goes clock → show time → time left, a long
+ * press opens the show's length (in half hours) and restarts it. Updated at the turn of each minute.
+ */
 @Composable
-private fun StageClock(color: Color, modifier: Modifier = Modifier) {
+private fun StageClock(
+    mode: br.app.stagebook.data.model.StageClockMode,
+    start: Long,
+    length: Int,
+    color: Color,
+    onNext: () -> Unit,
+    onStep: (up: Boolean) -> Unit,
+    onRestart: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val format = remember(context) { DateFormat.getTimeFormat(context) }
-    var now by remember { mutableStateOf(Date()) }
-    LaunchedEffect(Unit) {
+    val clock = mode == br.app.stagebook.data.model.StageClockMode.CLOCK
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(clock, start) {
         while (true) {
-            delay(60_000 - System.currentTimeMillis() % 60_000)
-            now = Date()
+            val t = System.currentTimeMillis()
+            delay(if (clock) 60_000 - t % 60_000 else ShowTimer.untilNextMinute(start, t))
+            now = System.currentTimeMillis()
         }
     }
-    Text(format.format(now), style = MaterialTheme.typography.titleLarge, color = color, maxLines = 1, modifier = modifier)
+    var window by remember { mutableStateOf(false) }
+    val left = mode == br.app.stagebook.data.model.StageClockMode.LEFT
+    val text = when (mode) {
+        br.app.stagebook.data.model.StageClockMode.CLOCK -> format.format(Date(now))
+        br.app.stagebook.data.model.StageClockMode.ELAPSED -> ShowTimer.format(ShowTimer.elapsedMinutes(start, now))
+        br.app.stagebook.data.model.StageClockMode.LEFT -> ShowTimer.format(ShowTimer.leftMinutes(start, now, length))
+    }
+    val tint = if (left && ShowTimer.warn(start, now, length)) MaterialTheme.colorScheme.error else color
+    val label = stringResource(
+        when (mode) {
+            br.app.stagebook.data.model.StageClockMode.CLOCK -> R.string.stage_clock_time
+            br.app.stagebook.data.model.StageClockMode.ELAPSED -> R.string.stage_clock_elapsed
+            br.app.stagebook.data.model.StageClockMode.LEFT -> R.string.stage_clock_left
+        },
+    )
+    Box(modifier) {
+        Row(
+            Modifier
+                .clip(MaterialTheme.shapes.small)
+                .combinedClickable(onClickLabel = stringResource(R.string.stage_clock_next), onLongClick = { window = true }, onClick = onNext)
+                .semantics(mergeDescendants = true) { contentDescription = "$label $text" },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            // the counter carries its icon: "1:05" alone reads as the time of day
+            if (!clock) Icon(if (left) AppIcons.Hourglass else AppIcons.Timer, null, Modifier.size(Sizes.icon), tint = tint)
+            Text(text, style = MaterialTheme.typography.titleLarge, color = tint, maxLines = 1)
+        }
+        if (window) ShowLengthWindow(length, onStep, { onRestart(); window = false }) { window = false }
+    }
+}
+
+/** The show's length, half an hour at a time, and a restart of its counter: a small window over the clock. */
+@Composable
+private fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
+    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = AboveAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(stringResource(R.string.stage_show_title), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
+                    Text(ShowTimer.lengthText(length), style = MaterialTheme.typography.headlineSmall)
+                    IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
+                }
+                ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
+            }
+        }
+    }
 }
 
 /**

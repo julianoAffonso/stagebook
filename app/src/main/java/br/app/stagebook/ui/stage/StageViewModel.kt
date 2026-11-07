@@ -201,6 +201,18 @@ class StageViewModel @Inject constructor(
     /** Auto-scroll speed (−/+ on stage), saved in settings. */
     fun keyboardCapoHintSeen() = repository.updateLook { it.copy(keyboardCapoHintSeen = true) }
 
+    /** Tapping the clock: the next face; the show's counter starts the first time it shows up. */
+    fun nextClock() = repository.updateLook {
+        val mode = br.app.stagebook.domain.ShowTimer.next(it.clockMode)
+        val start = if (mode == br.app.stagebook.data.model.StageClockMode.CLOCK) it.showStart
+            else br.app.stagebook.domain.ShowTimer.startFor(it.showStart, System.currentTimeMillis())
+        it.copy(clockMode = mode, showStart = start)
+    }
+
+    fun stepShow(up: Boolean) = repository.updateLook { it.copy(showMinutes = br.app.stagebook.domain.ShowTimer.step(it.showMinutes, up)) }
+
+    fun restartShow() = repository.updateLook { it.copy(showStart = System.currentTimeMillis()) }
+
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }
 
     /** Key changed on stage ("Key G" menu): saved in the song right away, as in the editor. */

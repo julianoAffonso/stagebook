@@ -116,6 +116,13 @@ enum class StageMode {
     @SerialName("scroll") SCROLL,
 }
 
+/** What the stage clock shows; a tap moves to the next (user, 07/11). */
+enum class StageClockMode {
+    @SerialName("clock") CLOCK,
+    @SerialName("elapsed") ELAPSED,   // how long the show has run
+    @SerialName("left") LEFT,         // how much of the show is left
+}
+
 enum class StageColumns {
     @SerialName("auto") AUTO,   // 2 columns on a tablet in landscape, 1 elsewhere
     @SerialName("one") ONE,
@@ -152,6 +159,9 @@ data class Look(
     val sectionScale: Float = DEFAULT_SECTION_SCALE,   // section title size relative to the lyrics (adjustable, 29/10)
     val keepScreenOn: Boolean = true,   // screen doesn't dim with the app open (show); the stage always stays lit
     val stageDnd: Boolean = true,   // Do not disturb while the stage is in front (user, 07/11)
+    val clockMode: StageClockMode = StageClockMode.CLOCK,
+    val showMinutes: Int = br.app.stagebook.domain.ShowTimer.DEFAULT_MINUTES,   // the show's length, in half hours
+    val showStart: Long = 0L,   // when the show's counter started (epoch ms); 0 = not started
     val trackStops: Boolean = true,   // the stage's track button stops and goes back to the start; off = pauses (user, 31/10)
     val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,

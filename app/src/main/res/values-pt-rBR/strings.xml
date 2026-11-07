@@ -448,6 +448,14 @@
     <string name="settings_stage_dnd_missing">O Android ainda não autorizou</string>
     <string name="settings_stage_dnd_help">Com o palco aberto, as notificações não aparecem e o telefone não toca. Contatos favoritos e quem ligar duas vezes seguidas ainda passam. Ao sair do palco, tudo volta como estava. O Android pede autorização uma vez.</string>
     <string name="stage_dnd_ask">Para nenhuma notificação atrapalhar a música, o Stagebook pode ligar o Não perturbe com o palco aberto. O Android vai abrir uma lista. Ligue o Stagebook nela.</string>
+    <string name="stage_clock_time">Hora</string>
+    <string name="stage_clock_elapsed">Tempo de show</string>
+    <string name="stage_clock_left">Quanto falta do show</string>
+    <string name="stage_clock_next">Trocar entre hora, tempo de show e quanto falta</string>
+    <string name="stage_show_title">Duração do show</string>
+    <string name="stage_show_shorter">Meia hora a menos</string>
+    <string name="stage_show_longer">Meia hora a mais</string>
+    <string name="stage_show_restart">Começar a contar agora</string>
     <string name="stage_dnd_allow">Autorizar</string>
     <string name="stage_dnd_later">Agora não</string>
     <string name="settings_pedal">Pedal</string>
