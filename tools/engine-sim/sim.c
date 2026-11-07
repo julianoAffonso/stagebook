@@ -200,7 +200,7 @@ int fake_ioctl(int fd, unsigned long req, ...) {
                 }
             }
             if (*line < t) *line = t;
-            *line += PKTS_PER_URB / 8000.0;
+            *line += u->number_of_packets / 8000.0;   // a URB takes its own packets' worth of microframes (the input's are longer)
             q[nq++] = (qent){u, *line, 0};
             pthread_cond_broadcast(&dev_cv);
         }
