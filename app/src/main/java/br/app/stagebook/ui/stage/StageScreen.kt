@@ -247,16 +247,7 @@ fun StageRoute(
             stringResource(R.string.player_battery_later), { answer(false) },
         )
     }
-    // a short word from the player sits on the footer, clear of the metronome; what needs reading stays a message
-    var playerNote by remember { mutableStateOf("") }
-    LaunchedEffect(playerUi.message) {
-        if (playerUi.message.length in 1..NOTE_MAX_CHARS) {
-            message.host.currentSnackbarData?.dismiss()   // a warning from before the interface came back is over
-            playerNote = playerUi.message
-            kotlinx.coroutines.delay(NOTE_MS)
-            playerNote = ""
-        } else if (playerUi.message.isNotEmpty()) message.show(playerUi.message, long = true)
-    }
+    val playerNote = rememberPlayerNote(playerUi.message, viewModel::playerNoticeFresh)
     val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
         val config = androidx.compose.ui.platform.LocalConfiguration.current
@@ -1486,6 +1477,27 @@ private class GestureTargets(
     val marking: Boolean = false,      // highlighter on: one finger marks words, no page turn
     val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )
+
+/**
+ * The player's notice: a short word sits on the footer (the note returned), clear of the metronome; what needs reading
+ * stays a message. [fresh] says whether it's new: the stage is made again for each song and setlist, and the same
+ * "USB output disconnected" came back on every one while the interface was away (user, 07/11).
+ */
+@Composable
+internal fun rememberPlayerNote(notice: String, fresh: (String) -> Boolean): String {
+    val message = LocalAppMessage.current
+    var note by remember { mutableStateOf("") }
+    LaunchedEffect(notice) {
+        if (!fresh(notice)) return@LaunchedEffect
+        if (notice.length in 1..NOTE_MAX_CHARS) {
+            message.host.currentSnackbarData?.dismiss()   // a warning from before the interface came back is over
+            note = notice
+            kotlinx.coroutines.delay(NOTE_MS)
+            note = ""
+        } else if (notice.isNotEmpty()) message.show(notice, long = true)
+    }
+    return note
+}
 
 /** `starts`: index in `lines` of the first line of each column (-1 = empty column). */
 // also carries the sheet's style and columns: the page leaving in the animation isn't rebuilt (or resized) with the new

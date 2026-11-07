@@ -126,6 +126,7 @@ class StageViewModel @Inject constructor(
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
+    fun playerNoticeFresh(notice: String) = player.firstShow(notice)
     private var clickFallback: kotlinx.coroutines.Job? = null
 
     // short drops ignored: the interface reconnecting for its clock restarted the metronome twice (audit 02/11 #3)

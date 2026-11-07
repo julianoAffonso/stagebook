@@ -254,6 +254,18 @@ class StagePlayer @Inject constructor(
         }
     }
 
+    // The notice a stage last showed. The notice is the service's state ("USB output disconnected" stays while the
+    // interface is away) and the stage is made again for each song and setlist: each new one showed it again, the
+    // whole time (user, 07/11). Main thread only. An empty notice (player off) clears it.
+    private var noticeShown = ""
+
+    /** A stage is about to show the player's [notice]: false when a stage already showed this same one. */
+    fun firstShow(notice: String): Boolean {
+        if (notice == noticeShown) return false
+        noticeShown = notice
+        return true
+    }
+
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
         _usbReady.value = PlayerService.running && PlayerService.connected && PlayerService.outputKey.startsWith("usb:")
