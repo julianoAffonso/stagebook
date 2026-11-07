@@ -786,7 +786,7 @@ static void *usb_main(void *arg) {
             last = t;
             if (win == 0) win = t;
             if (t - win >= 5.0) {
-#if DIAG
+#if DIAG && defined(__ANDROID__)
                 {   // DIAG: a new target rate re-anchors the pace clock so the error doesn't jump
                     char v[PROP_VALUE_MAX] = "";
                     double want = __system_property_get("debug.stagebook.rate", v) > 0 ? atof(v) : 0;
