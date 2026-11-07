@@ -31,9 +31,11 @@ fun <T> OptionDropdown(
     nameOf: @Composable (T) -> String,
     modifier: Modifier = Modifier,
     styleOf: (@Composable (T) -> TextStyle)? = null,
+    enabledOf: (T) -> Boolean = { true },
+    onOpen: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it; if (it) onOpen() }, modifier = modifier) {
         TextField(
             value = nameOf(selected),
             onValueChange = {},
@@ -51,6 +53,7 @@ fun <T> OptionDropdown(
                 DropdownMenuItem(
                     text = { Text(nameOf(o), style = styleOf?.invoke(o) ?: MaterialTheme.typography.bodyLarge) },
                     onClick = { onSelect(o); open = false },
+                    enabled = enabledOf(o),
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }

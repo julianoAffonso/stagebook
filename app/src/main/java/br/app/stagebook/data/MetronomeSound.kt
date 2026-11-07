@@ -8,6 +8,9 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import br.app.stagebook.domain.MetronomeClick
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +22,10 @@ import javax.inject.Singleton
 class MetronomeSound @Inject constructor(@ApplicationContext private val context: Context) {
     @Volatile private var worker: Thread? = null
     @Volatile private var quieter = false   // the track isn't media: it comes out lower
+    private val _keepsApart = MutableStateFlow(true)
+
+    /** False when, through Android, the click can't leave the USB interface: "the device" isn't a real choice then. */
+    val keepsApart: StateFlow<Boolean> = _keepsApart.asStateFlow()
 
     fun start(bpm: Int) {
         stop()
@@ -68,27 +75,51 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
     private fun openTrack(min: Int): AudioTrack? {
         val kinds = if (br.app.stagebook.player.StagePlayer.viaAndroid()) ROUTE_USAGES else listOf(AudioAttributes.USAGE_MEDIA)
         kinds.forEachIndexed { i, usage ->
-            val track = runCatching {
-                AudioTrack.Builder()
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(usage).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                    .setAudioFormat(AudioFormat.Builder().setSampleRate(MetronomeClick.RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    .setBufferSizeInBytes(maxOf(min, CHUNK * 2))
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-            }.getOrNull() ?: return@forEachIndexed
-            deviceOutput()?.let { track.setPreferredDevice(it) }
+            val track = buildTrack(usage, min) ?: return@forEachIndexed
             quieter = usage != AudioAttributes.USAGE_MEDIA
-            if (i == kinds.lastIndex) return track
-            track.play()
-            track.write(ShortArray(CHUNK * 2), 0, CHUNK * 2)
-            runCatching { Thread.sleep(ROUTE_WAIT_MS) }
-            val at = track.routedDevice?.type
-            android.util.Log.i("stagebook", "click usage $usage routed to $at")
-            if (at != AudioDeviceInfo.TYPE_USB_DEVICE && at != AudioDeviceInfo.TYPE_USB_HEADSET) return track
+            if (i == kinds.lastIndex) {
+                if (kinds.size > 1) _keepsApart.value = false
+                return track
+            }
+            if (routedAway(track)) { _keepsApart.value = true; return track }
             runCatching { track.stop() }
             track.release()
         }
         return null
+    }
+
+    /**
+     * A silent try for the menu, with a USB interface connected. It only ever says no: with no song playing Android may
+     * route differently, so a real click ([openTrack]) has the last word.
+     */
+    fun probeApart() {
+        val outs = context.getSystemService(AudioManager::class.java)?.getDevices(AudioManager.GET_DEVICES_OUTPUTS) ?: return
+        if (outs.none { it.type in USB_OUTPUTS }) return
+        val min = AudioTrack.getMinBufferSize(MetronomeClick.RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        val apart = ROUTE_USAGES.dropLast(1).any { usage ->
+            val track = buildTrack(usage, min) ?: return@any false
+            try { routedAway(track) } finally { runCatching { track.stop() }; track.release() }
+        }
+        if (!apart) _keepsApart.value = false
+    }
+
+    private fun buildTrack(usage: Int, min: Int): AudioTrack? = runCatching {
+        AudioTrack.Builder()
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(usage).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+            .setAudioFormat(AudioFormat.Builder().setSampleRate(MetronomeClick.RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+            .setBufferSizeInBytes(maxOf(min, CHUNK * 2))
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
+    }.getOrNull()?.also { track -> deviceOutput()?.let { track.setPreferredDevice(it) } }
+
+    /** Plays silence for a moment: Android only says where a track goes once it plays. */
+    private fun routedAway(track: AudioTrack): Boolean {
+        track.play()
+        track.write(ShortArray(CHUNK * 2), 0, CHUNK * 2)
+        runCatching { Thread.sleep(ROUTE_WAIT_MS) }
+        val at = track.routedDevice?.type
+        android.util.Log.i("stagebook", "click routed to $at")
+        return at !in USB_OUTPUTS
     }
 
     /** Headphones (wired, USB-C or Bluetooth) when connected, otherwise the speaker. */
@@ -104,6 +135,7 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
         const val CHUNK = 960   // 20 ms per write
         const val ANDROID_ROUTE_GAIN = 3
         const val ROUTE_WAIT_MS = 120L
+        val USB_OUTPUTS = setOf(AudioDeviceInfo.TYPE_USB_DEVICE, AudioDeviceInfo.TYPE_USB_HEADSET)
         // the last one is what's left when Android won't separate them: the click goes with the song, at its normal level.
         // Never an alarm: Android reopens the outputs for it and the song dropped when the click stopped
         val ROUTE_USAGES = listOf(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY, AudioAttributes.USAGE_ASSISTANCE_SONIFICATION, AudioAttributes.USAGE_MEDIA)

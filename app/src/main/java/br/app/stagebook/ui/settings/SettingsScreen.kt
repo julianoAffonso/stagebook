@@ -170,6 +170,7 @@ fun SettingsRoute(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val clickApart by viewModel.clickApart.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
@@ -334,6 +335,8 @@ fun SettingsRoute(
                 onMetronome = viewModel::setMetronome,
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
+                onMetronomeMenu = viewModel::probeClickRoute,
+                clickApart = clickApart || !uiState.look.usbViaAndroid,
                 onUsbViaAndroid = viewModel::setUsbViaAndroid,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
@@ -420,6 +423,8 @@ data class SettingsActions(
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
+    val onMetronomeMenu: () -> Unit = {},
+    val clickApart: Boolean = true,
     val onUsbViaAndroid: (Boolean) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
@@ -1416,7 +1421,10 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             OptionDropdown(
                 stringResource(R.string.metro_out), options, chosen, { actions.onMetronomeOut(it) },
                 { o -> if (o.device) stringResource(R.string.metro_out_device) else outputs.label() + " · " + br.app.stagebook.ui.components.outputName(o.out, o.pair, outputs) },
+                enabledOf = { !it.device || actions.clickApart },
+                onOpen = actions.onMetronomeMenu,
             )
+            if (!actions.clickApart) Text(stringResource(R.string.metro_out_together), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })

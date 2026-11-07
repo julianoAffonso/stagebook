@@ -98,7 +98,10 @@ class SettingsViewModel @Inject constructor(
     private val updater: AppUpdater,
     private val midi: MidiPedal,
     private val backup: br.app.stagebook.data.Backup,
+    private val metronome: br.app.stagebook.data.MetronomeSound,
 ) : ViewModel() {
+    val clickApart = metronome.keepsApart
+
     /** Backup read and waiting for the choice of parts to restore. */
     data class PendingRestore(val uri: Uri, val contents: br.app.stagebook.data.Backup.Contents)
 
@@ -239,6 +242,9 @@ class SettingsViewModel @Inject constructor(
         // the player may not be running yet, and Android reads this when the interface connects
         br.app.stagebook.data.device.DeviceTweaks.set(context, br.app.stagebook.data.device.DeviceTweak.USB_ROUTING, !on)
         repository.updateLook { it.copy(usbViaAndroid = on) }
+    }
+    fun probeClickRoute() {
+        if (repository.library.value.look.usbViaAndroid) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { metronome.probeApart() }
     }
     fun setMetronomeOut(o: br.app.stagebook.domain.MetronomeOut) = repository.updateLook { it.copy(metroUsbOut = o.out, metroUsbPair = o.pair) }
     fun autoTags(national: String, international: String, language: String, preview: Boolean) = repository.autoTags(national, international, language, preview)
