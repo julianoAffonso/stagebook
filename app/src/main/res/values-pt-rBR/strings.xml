@@ -566,7 +566,6 @@
     <string name="mixer_join">Juntar com o canal %1$d em estéreo</string>
     <string name="mixer_norm_help">Deixa o volume deste canal igual entre as músicas, sem você mexer no fader a cada uma.\n• Não: toca como foi gravado.\n• Média: todas no mesmo volume percebido (LUFS), com pico abaixo de -1 dB. Bom para o backing.\n• Pico: todas com o mesmo pico (-6 dB). Bom para click e guia.\nO app mede cada backing track uma vez, antes do play.</string>
     <string name="eq_title">Equalizador</string>
-    <string name="eq_on">Equalizador ligado</string>
     <string name="eq_help">Uma curva só, aplicada em cada canal marcado com EQ, cada um separado. Um limitador segura os picos.</string>
     <string name="eq_hz">%1$d Hz</string>
     <string name="eq_khz">%1$s kHz</string>
@@ -877,8 +876,7 @@
     <string name="settings_track_button">Botão da faixa no palco</string>
     <string name="settings_track_stops">Parar volta ao início</string>
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
-    <string name="eq_no_channel">Ligado, ele não mudaria nada. No mixer, toque no canal que quer equalizar e ligue \"Equalizador ligado\"; depois ligue o equalizador aqui.</string>
-    <string name="eq_no_channel_title">Nenhum canal passa pelo equalizador</string>
+    <string name="eq_no_channel">Nenhum canal passa pelo equalizador. No mixer, toque num canal e ligue \"Equalizador ligado\".</string>
     <string name="usb_record_why">Para o Android lembrar da interface USB e não pedir permissão toda vez que o cabo voltar, permita o acesso ao áudio. O Stagebook não grava nada: a entrada da interface só acerta o relógio.</string>
     <string name="usb_record_allow">Permitir</string>
     <string name="player_title">Player</string>

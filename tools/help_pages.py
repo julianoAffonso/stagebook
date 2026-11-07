@@ -358,8 +358,8 @@ SECTIONS = [
                 ["With Use the global mixer on, what you change applies to every song. Off, it applies only to that song. Going back to the global one erases the song's own settings."],
                 [Fig(("jornada_eq_musica_2_inteiro", None, "Mixer e EQ da música no palco", "The song's mixer and EQ on stage"))]),
             sub("mixer-eq", "Equalizador", "Equalizer",
-                ["São 5 bandas numa curva só, aplicada em cada canal marcado com EQ, cada um separado. Um limitador segura os picos, e Zerar volta a curva ao plano. Sem nenhum canal marcado, ligar o equalizador não muda nada: o app avisa."],
-                ["It has 5 bands in a single curve, applied to each channel marked EQ, each one separately. A limiter holds the peaks, and Reset flattens the curve. With no channel marked, turning the equalizer on changes nothing: the app tells you."]),
+                ["São 5 bandas numa curva só, aplicada em cada canal marcado com EQ, cada um separado. Um limitador segura os picos, e Zerar volta a curva ao plano. Ele liga sozinho quando você marca o primeiro canal e desliga quando desmarca o último. Sem nenhum canal marcado, dá para ajustar a curva, e a tela avisa que ela ainda não vale."],
+                ["It has 5 bands in a single curve, applied to each channel marked EQ, each one separately. A limiter holds the peaks, and Reset flattens the curve. It turns on by itself when you mark the first channel and off when you unmark the last one. With no channel marked, you can still set the curve, and the screen tells you it has no effect yet."]),
         ],
     },
     {

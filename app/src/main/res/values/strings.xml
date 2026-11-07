@@ -555,7 +555,6 @@
     <string name="mixer_join">Pair with channel %1$d as stereo</string>
     <string name="mixer_norm_help">Evens out this channel\'s volume across songs, so you don\'t ride the fader on each one.\n• No: plays as recorded.\n• Average: all at the same perceived loudness (LUFS), peaks under -1 dB. Good for the backing.\n• Peak: all with the same peak (-6 dB). Good for click and guide.\nThe app measures each backing track once, before play.</string>
     <string name="eq_title">Equalizer</string>
-    <string name="eq_on">Equalizer on</string>
     <string name="eq_help">One curve, applied to each channel marked with EQ, each on its own. A limiter catches the peaks.</string>
     <string name="eq_hz">%1$d Hz</string>
     <string name="eq_khz">%1$s kHz</string>
@@ -847,8 +846,7 @@
     <string name="settings_track_button">Track button on stage</string>
     <string name="settings_track_stops">Stop goes back to the start</string>
     <string name="settings_track_stops_detail">Off, the button pauses and the song goes on from where it stopped.</string>
-    <string name="eq_no_channel">On, it would change nothing. In the mixer, tap the channel to equalize and turn on \"Equalizer on\"; then turn the equalizer on here.</string>
-    <string name="eq_no_channel_title">No channel goes through the equalizer</string>
+    <string name="eq_no_channel">No channel goes through the equalizer. In the mixer, tap a channel and turn on \"Equalizer on\".</string>
     <string name="usb_record_why">So Android remembers the USB interface and doesn\'t ask for permission every time the cable comes back, allow audio access. Stagebook records nothing: the interface\'s input only keeps the clock.</string>
     <string name="usb_record_allow">Allow</string>
     <string name="player_title">Player</string>

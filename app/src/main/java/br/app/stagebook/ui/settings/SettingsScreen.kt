@@ -1337,13 +1337,8 @@ internal fun MixerCard(
 @Composable
 internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels, monitoring: Boolean) {
     SettingsCard(stringResource(R.string.eq_title), help = stringResource(R.string.eq_help)) {
-        // turning it on with no channel going through it would change nothing: a notice, and the switch stays off until
-        // a channel is sent to the EQ (user, 31/10)
-        var noChannel by remember { mutableStateOf(false) }
-        SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { on ->
-            if (on && mixer.strips.take(mixer.channels).none { it.eq }) noChannel = true else onMixer(mixer.copy(eqOn = on))
-        }, Modifier.lockedDim())
-        if (noChannel) InfoDialog(stringResource(R.string.eq_no_channel_title), stringResource(R.string.eq_no_channel), { noChannel = false })
+        // the curve stays editable with no channel on it: the hint says what makes it count
+        if (!mixer.eqOn) Text(stringResource(R.string.eq_no_channel), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
@@ -1369,14 +1364,14 @@ internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: 
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
-                        VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
+                        VerticalFader(db, { setBand(i, it) }, valueRange = range)
                         Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
         }
         ActionButton(stringResource(R.string.eq_reset), onClick = { onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { 0f })) },
-            icon = AppIcons.Undo, tone = ButtonTone.Tonal, enabled = mixer.eqOn, modifier = Modifier.lockedDim())
+            icon = AppIcons.Undo, tone = ButtonTone.Tonal, modifier = Modifier.lockedDim())
     }
 }
 

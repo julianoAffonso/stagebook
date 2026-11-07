@@ -946,7 +946,7 @@ class ScreenshotTest {
     private val mixerLook = Look(
         playerMode = true,
         mixer = br.app.stagebook.domain.MixerConfig(
-            channels = 4, eqOn = true, eqDb = listOf(3f, 0f, -2f, 1.5f, 0f),
+            channels = 4, eqDb = listOf(3f, 0f, -2f, 1.5f, 0f),
             output = br.app.stagebook.domain.OutputInfo("usb:1234:5678", "Interface USB", 10),
         )
             .withStrip(0) { it.copy(name = "Backing", stereo = true, eq = true, norm = br.app.stagebook.domain.NormMode.VOLUME, gainDb = -3f) }

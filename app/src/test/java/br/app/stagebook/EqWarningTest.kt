@@ -2,8 +2,8 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import br.app.stagebook.domain.MixChannel
 import br.app.stagebook.domain.MixerConfig
@@ -22,24 +22,21 @@ import org.robolectric.annotation.Config
 class EqWarningTest {
     @get:Rule val compose = createComposeRule()
 
-    private val notice = "Nenhum canal passa pelo equalizador"
-    private val turnedOn = mutableListOf<Boolean>()
+    private val hint = "Nenhum canal passa pelo equalizador. No mixer, toque num canal e ligue \"Equalizador ligado\"."
 
     private fun card(mixer: MixerConfig) = compose.setContent {
-        StagebookTheme { EqCard(mixer, { turnedOn += it.eqOn }, { MixerLevels.SILENT }, monitoring = false) }
+        StagebookTheme { EqCard(mixer, {}, { MixerLevels.SILENT }, monitoring = false) }
     }
 
-    @Test fun `turning it on with no channel shows a notice and stays off`() {
-        card(MixerConfig(channels = 2, eqOn = false))
-        compose.onNodeWithText("Equalizador ligado").performClick()
-        compose.onNodeWithText(notice).assertExists()
-        org.junit.Assert.assertTrue(turnedOn.isEmpty())   // nothing saved: the switch stays off
+    @Test fun `with no channel the curve stays and a hint says what's missing`() {
+        card(MixerConfig(channels = 2))
+        compose.onNodeWithText(hint).assertExists()
+        compose.onNodeWithText("Zerar").assertIsEnabled()
     }
 
-    @Test fun `turning it on with a channel going through it turns it on`() {
-        card(MixerConfig(channels = 2, eqOn = false, strips = List(MixerConfig.MAX) { i -> MixChannel(eq = i == 1) }))
-        compose.onNodeWithText("Equalizador ligado").performClick()
-        compose.onAllNodesWithText(notice).assertCountEquals(0)
-        org.junit.Assert.assertEquals(listOf(true), turnedOn)
+    @Test fun `with a channel going through it there's no hint and no switch`() {
+        card(MixerConfig(channels = 2, strips = List(MixerConfig.MAX) { i -> MixChannel(eq = i == 1) }))
+        compose.onAllNodesWithText(hint).assertCountEquals(0)
+        compose.onAllNodesWithText("Equalizador ligado").assertCountEquals(0)
     }
 }
