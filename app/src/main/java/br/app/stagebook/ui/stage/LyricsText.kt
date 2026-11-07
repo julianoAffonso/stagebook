@@ -175,6 +175,8 @@ private val bracket = Regex("""\[([^\[\]]*)]""")
 /** A ChordPro annotation inside brackets, `[*2x]`: text above the lyrics, not a chord (no diagram, no transposing). */
 internal fun isAnnotation(inner: String) = inner.length > 1 && inner.startsWith('*')
 
+private val annotationInWord = Regex("""(\p{L})(\[\*[^\[\]]+])(\p{L}+)""")
+
 /** What the stage draws for a [CHORD_TAG] mark: the chord, or the annotation's text. */
 internal fun chordLabel(item: String) = if (isAnnotation(item)) item.drop(1) else item
 
@@ -185,7 +187,9 @@ internal fun chordLabel(item: String) = if (isAnnotation(item)) item.drop(1) els
  * The room is measured by width, not letters: "Csus4" in bold is wider than five letters of lyrics (user, 31/10: in A
  * Little Respect the chords landed on top of each other).
  */
-internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
+internal fun chordLine(written: String, look: ChordLook): AnnotatedString {
+    // an annotation isn't sung on a syllable: inside a word it goes to the word's end, or it would split the word
+    val raw = written.replace(annotationInWord, "$1$3$2")
     data class Seg(val chord: String?, var text: String)
     val segs = ArrayList<Seg>()
     var last = 0

@@ -147,4 +147,11 @@ class ChordSpacingTest {
         assertTrue(br.app.stagebook.ui.stage.chordLabel("*2x") == "2x")
         assertTrue(!br.app.stagebook.domain.Chords.isChord("*2x"))
     }
+
+    // an annotation isn't sung on a syllable: inside a word it goes to the word's end, with no hyphen (user, 07/11)
+    @Test fun `an annotation inside a word moves to its end`() {
+        val line = chordLine("As flor[*2x]es que", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text.startsWith("As flores"))
+        assertTrue(line.text, !line.text.contains(br.app.stagebook.domain.WORD_JOIN))
+    }
 }
