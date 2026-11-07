@@ -176,7 +176,8 @@ data class Look(
     val metroVolume: Int = br.app.stagebook.domain.MetronomeClick.FULL_VOLUME,   // the click's volume, 0–100 (user, 07/11)
     val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // playing the chord on stage (T20)
     val keyboardCapoHintSeen: Boolean = false,   // the "chords in the sounding key" note already showed for keyboard
-    val announce: Boolean = true,   // Now Playing: announce the current song on the local network (OBS, Resolume)
+    // Now Playing: announce the current song on the local network (OBS, Resolume); off by default (user, 07/11)
+    val announce: Boolean = false,
     val metroGlow: Boolean = true,   // glow on the stage edge on the beat
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // glow color
     // where the metronome sounds (user, 02/11): -1 = the device (headphones, speaker); otherwise the USB interface's
