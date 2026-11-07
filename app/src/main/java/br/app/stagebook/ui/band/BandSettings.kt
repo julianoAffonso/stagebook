@@ -43,6 +43,13 @@ import br.app.stagebook.ui.components.PreviewSurface
 import br.app.stagebook.ui.components.SettingsCard
 import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.Spacing
+import br.app.stagebook.ui.components.LocalAppMessage
+import br.app.stagebook.ui.share.inviteMessage
+import br.app.stagebook.ui.share.shareText
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Settings → Band: the name the band sees for this device, who is on the same network now (ask to join) and who is in
@@ -50,7 +57,12 @@ import br.app.stagebook.ui.theme.Spacing
  * member.
  */
 @Composable
-fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // lan: "Band on the network" on (T19)
+fun BandDetail(
+    band: BandUi,
+    actions: BandActions,
+    lan: Boolean = true,         // "Band on the network" on (T19)
+    internet: Boolean = false,   // "Internet" on (T19): invite over the internet
+) {
     var renaming by rememberSaveable { mutableStateOf(!band.nameConfirmed) }   // first time: asks for the name
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -104,6 +116,14 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
                     IconButton(onClick = { removing = m.id }, Modifier.offset(y = (-12).dp)) { Icon(AppIcons.Delete, stringResource(R.string.band_remove, m.name)) }   // centred on the name, like the check
                 }
             }
+            // whoever is far away joins with a link (user, 07/11); the message goes through Android's share sheet
+            if (internet) {
+                ActionButton(
+                    stringResource(if (band.inviting) R.string.share_sending else R.string.band_invite), actions.onInvite,
+                    icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = !band.inviting,
+                )
+                Text(stringResource(R.string.band_invite_detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
     if (renaming) {
@@ -156,6 +176,24 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
     }
 }
 
+/**
+ * What comes of an invite ([results]: its code, or null when it couldn't go): the message with the link goes to
+ * Android's share sheet, signed with this device's band name ([from]); a failure shows at the bottom.
+ */
+@Composable
+fun BandInviteShare(results: Flow<String?>, from: String) {
+    val context = LocalContext.current
+    val message = LocalAppMessage.current
+    val template = stringResource(R.string.band_invite_message)
+    val failed = stringResource(R.string.band_invite_failed)
+    val name by rememberUpdatedState(from)
+    LaunchedEffect(results) {
+        results.collect { code ->
+            if (code != null) shareText(context, inviteMessage(template, name, code, br.app.stagebook.data.Languages.shownTag(context))) else message.show(failed, long = true)
+        }
+    }
+}
+
 /** "Ana's tablet wants to join the band" → Allow / Don't allow (like Bluetooth), on any screen. */
 @Composable
 fun BandRequestDialog(name: String, onAnswer: (Boolean) -> Unit) {
@@ -175,8 +213,8 @@ private val sample = BandUi(
 
 @LightPreview
 @Composable
-private fun BandLightPreview() = PreviewSurface(dark = false) { BandDetail(sample, BandActions()) }
+private fun BandLightPreview() = PreviewSurface(dark = false) { BandDetail(sample, BandActions(), internet = true) }
 
 @DarkPreview
 @Composable
-private fun BandDarkPreview() = PreviewSurface(dark = true) { BandDetail(sample, BandActions()) }
+private fun BandDarkPreview() = PreviewSurface(dark = true) { BandDetail(sample, BandActions(), internet = true) }

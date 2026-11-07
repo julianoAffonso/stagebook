@@ -7,6 +7,7 @@ import br.app.stagebook.domain.ShareCode
 import br.app.stagebook.domain.ShareCode.LinkKind
 import br.app.stagebook.ui.share.CloudUi
 import br.app.stagebook.ui.share.codeMessage
+import br.app.stagebook.ui.share.inviteMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -65,6 +66,8 @@ class ShareLinkTest {
         val songs = codeMessage(context.getString(R.string.share_message), context.getString(R.string.share_message_songs),
             CloudUi.Sent("47-violao-lua", "", 3, 0, from = "Ana"), "en")
         assertTrue(songs, songs.startsWith("Músicas") && songs.contains("https://stagebook.app.br/r#47-violao-lua&t=m&n=Ana&l=en") && songs.contains("digite 47-violao-lua"))
+        val invite = inviteMessage(context.getString(R.string.band_invite_message), "Ana", "47-violao-lua", "pt-BR")
+        assertTrue(invite, invite.startsWith("Ana te chamou para a banda") && invite.contains("https://stagebook.app.br/r#47-violao-lua&t=i&n=Ana&l=pt-BR") && invite.contains("12 horas"))
     }
 
     @Test fun `the link's language is the one the app shows`() {

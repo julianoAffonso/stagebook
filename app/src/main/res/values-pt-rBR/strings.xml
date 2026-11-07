@@ -794,7 +794,7 @@
     <string name="settings_band_none">Ninguém da banda ainda</string>
     <string name="band_this_device">Este aparelho</string>
     <string name="band_rename">Mudar o nome</string>
-    <string name="band_help">É o nome que a banda vê. Para alguém entrar, os dois ficam no mesmo Wi-Fi e abrem Ajustes → Banda e transmissão. Um toca em Pedir para entrar e o outro em Autorizar. Fica guardado até alguém remover.</string>
+    <string name="band_help">É o nome que a banda vê. Para alguém entrar, os dois ficam no mesmo Wi-Fi e abrem Ajustes → Banda e transmissão. Um toca em Pedir para entrar e o outro em Autorizar. Está longe? Toque em Convidar pela internet. Fica guardado até alguém remover.</string>
     <string name="band_nearby">Na rede agora</string>
     <string name="band_no_wifi">Sem Wi-Fi. Para achar a banda, conecte os aparelhos na mesma rede (pode ser o ponto de acesso de um celular).</string>
     <string name="band_searching">Procurando… Abra Ajustes → Banda e transmissão no outro aparelho também.</string>
@@ -809,6 +809,10 @@
     <string name="band_members">Banda</string>
     <string name="band_offline">Fora deste Wi-Fi</string>
     <string name="band_members_none">Ninguém ainda. Quem for autorizado aparece aqui.</string>
+    <string name="band_invite">Convidar pela internet</string>
+    <string name="band_invite_detail">Manda um link. Quem abrir entra na banda. Vale por 12 horas.</string>
+    <string name="band_invite_failed">Não deu para criar o convite. Confira a internet e tente de novo.</string>
+    <string name="band_invite_message">%1$s te chamou para a banda no Stagebook. Toque em %2$s para entrar. Ou vá em Importar → Digitar as 3 palavras e digite %3$s. Vale por 12 horas.</string>
     <string name="band_remove">Remover %1$s da banda</string>
     <string name="band_remove_short">Remover</string>
     <string name="band_remove_confirm">Remover \"%1$s\" da banda? Para voltar, é preciso pedir para entrar de novo.</string>

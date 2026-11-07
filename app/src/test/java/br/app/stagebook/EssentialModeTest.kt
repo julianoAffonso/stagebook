@@ -143,6 +143,7 @@ class EssentialModeTest {
         val cloud = br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context))
         assertEquals(br.app.stagebook.data.SetlistCloud.Received.Offline, cloud.receive(br.app.stagebook.domain.ShareCode.generate()))
         assertTrue(cloud.acks(br.app.stagebook.domain.ShareCode.generate()).isEmpty())
+        assertEquals(null, cloud.sendInvite())   // and no band invite (user, 07/11)
     }
 
     @Test fun `internet off - share keeps the QR and no no-internet notice`() {

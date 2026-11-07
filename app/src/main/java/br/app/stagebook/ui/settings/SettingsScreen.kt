@@ -240,6 +240,7 @@ fun SettingsRoute(
     val bandVm: BandViewModel = hiltViewModel()
     val band by bandVm.ui.collectAsStateWithLifecycle()
     val bandActions = remember(bandVm) { bandVm.actions() }
+    br.app.stagebook.ui.band.BandInviteShare(bandVm.inviteResults, band.name)
     val webVm: WebEditorViewModel = hiltViewModel()
     val web by webVm.ui.collectAsStateWithLifecycle()
     val advancedVm: AdvancedViewModel = hiltViewModel()
@@ -652,7 +653,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
                 if (uiState.look.playerMode) PlayerDetail(uiState.look, actions)
             }
             SettingsSection.BAND -> {
-                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
+                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
                 AnnounceCard(uiState.look, actions)
             }
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)

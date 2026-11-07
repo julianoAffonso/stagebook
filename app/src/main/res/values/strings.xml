@@ -767,7 +767,7 @@
     <string name="settings_band_none">No one in the band yet</string>
     <string name="band_this_device">This device</string>
     <string name="band_rename">Change name</string>
-    <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and broadcast. One taps Ask to join, the other taps Allow. It stays saved until someone removes it.</string>
+    <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and broadcast. One taps Ask to join, the other taps Allow. Far away? Tap Invite over the internet. It stays saved until someone removes it.</string>
     <string name="band_nearby">On the network now</string>
     <string name="band_no_wifi">No Wi-Fi. To find the band, connect the devices to the same network (a phone\'s hotspot works too).</string>
     <string name="band_searching">Searching… Open Settings → Band and broadcast on the other device too.</string>
@@ -782,6 +782,10 @@
     <string name="band_members">Band</string>
     <string name="band_offline">Not on this Wi-Fi</string>
     <string name="band_members_none">No one yet. Whoever you allow shows up here.</string>
+    <string name="band_invite">Invite over the internet</string>
+    <string name="band_invite_detail">Sends a link. Whoever opens it joins the band. Good for 12 hours.</string>
+    <string name="band_invite_failed">Couldn\'t create the invite. Check your internet and try again.</string>
+    <string name="band_invite_message">%1$s invited you to the band on Stagebook. Tap %2$s to join. Or go to Import → Type the 3 words and type %3$s. Good for 12 hours.</string>
     <string name="band_remove">Remove %1$s from the band</string>
     <string name="band_remove_short">Remove</string>
     <string name="band_remove_confirm">Remove \"%1$s\" from the band? To come back, they\'ll need to ask to join again.</string>
