@@ -647,9 +647,9 @@ class ScreenshotTest {
 
     // the strip in context: below a follower's stage, with the current song missing for the bass player. T28: bigger
     // section titles, with a light background, and the size adjustable in Settings → Lyrics sections
-    @Test fun settingsSectionsTablet() = shoot("tablet_5_ajustes_secoes") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LYRICS) }
-    }
+    // the tablet opens Lyrics by default, so without scrolling this was the same picture as tablet_5_ajustes: scroll the
+    // Section titles card into view, down to its last switch
+    @Test fun settingsSectionsTablet() = shootLyricsAt("tablet_5_ajustes_secoes", settings, str(R.string.settings_translate_sections), extraUp = 50f)
 
     @Test fun conductOnStage() = shoot("tablet_6_palco_acompanhando") {
         androidx.compose.foundation.layout.Column {
@@ -870,10 +870,25 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_7_palco_zoom.png")
     }
 
-    @Test fun settingsLyricsScrollTablet() = shoot("tablet_5_ajustes_rolar") {
-        HomeScaffold(HomeTab.SETTINGS, {}) {
-            SettingsScreen(settings.copy(look = settings.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), SettingsActions(), it, section = SettingsSection.LYRICS)
+    // the Page card in Scroll mode, scrolled to its speed slider (the top of Lyrics looks the same in both modes)
+    @Test fun settingsLyricsScrollTablet() {
+        val look = settings.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)
+        shootLyricsAt("tablet_5_ajustes_rolar", settings.copy(look = look), str(R.string.settings_auto_scroll, look.autoScroll), extraUp = 200f)
+    }
+
+    /** Settings → Lyrics with [text] scrolled into view (and [extraUp] px more), so the capture shows that card. */
+    private fun shootLyricsAt(name: String, state: SettingsUiState, text: String, extraUp: Float = 0f) {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(state, SettingsActions(), it, section = SettingsSection.LYRICS) }
+                }
+            }
         }
+        compose.onNodeWithText(text).performScrollTo()
+        if (extraUp > 0f) compose.onRoot().performTouchInput { swipeUp(startY = centerY, endY = centerY - extraUp) }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // T22: tablature on stage (monospace, fitting the column)
