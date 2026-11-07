@@ -296,7 +296,7 @@ static int submit(struct usbdevfs_urb *u) {
     if (errno != ENOENT && errno != EINVAL) return -1;
     struct usbdevfs_setinterface si = { .interface = g_intf, .altsetting = g_alt };
     if (ioctl(g_fd, USBDEVFS_SETINTERFACE, &si) < 0) return -1;
-    LOGI("alt setting restaurada (if%d alt%d)", g_intf, g_alt);
+    LOGI("alt setting restored (if%d alt%d)", g_intf, g_alt);
     return ioctl(g_fd, USBDEVFS_SUBMITURB, u);
 }
 static char g_status[256] = "parado";
@@ -404,7 +404,7 @@ static float g_dec_out[4096 * LANES_MAX];   // used only by the decoder thread
 static void *dec_main(void *arg) {
     float buf[1024 * 8];
     // Android audio priority (-16): ahead of the screen, camera and import, below USB (-19)
-    if (setpriority(PRIO_PROCESS, gettid(), -16) < 0) LOGI("decoder: prioridade negada (%s)", strerror(errno));
+    if (setpriority(PRIO_PROCESS, gettid(), -16) < 0) LOGI("decoder: priority denied (%s)", strerror(errno));
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
         pthread_mutex_lock(&g_mx);
@@ -550,7 +550,7 @@ static void *usb_main(void *arg) {
 
     // audio priority (the same as AudioTrack): without it, with the CPU busy or hot, the thread can lose its turn and
     // the 8 ms URB queue can run dry; if the system refuses, it carries on
-    if (setpriority(PRIO_PROCESS, gettid(), -19) < 0) LOGI("usb: prioridade negada (%s)", strerror(errno));
+    if (setpriority(PRIO_PROCESS, gettid(), -19) < 0) LOGI("usb: priority denied (%s)", strerror(errno));
 
     for (int u = 0; u < nurbs; u++) {
         urbs[u] = calloc(1, urb_sz);
@@ -613,7 +613,7 @@ static void *usb_main(void *arg) {
             for (int k = 0; k < PKTS_PER_URB; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
             n_in = u + 1;
             if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) {
-                LOGI("feedback desligado: entrada não aceitou URB (%s)", strerror(errno));
+                LOGI("feedback off: the input refused a URB (%s)", strerror(errno));
                 g_in_ep = -1; break;
             }
             inflight++;
@@ -622,12 +622,12 @@ static void *usb_main(void *arg) {
     for (int u = 0; u < nurbs; u++) {
         FILL(urbs[u]);
         if (submit(urbs[u]) < 0) {
-            set_status("erro USB ao iniciar: %s", strerror(errno));
+            set_status("USB error on start: %s", strerror(errno));
             goto out;
         }
         inflight++;
     }
-    set_status("USB ativo");
+    set_status("USB active");
     g_stalled = 0; g_last_reap = now_s(); g_watching = 1;
     { struct sigaction sa = {0}; sa.sa_handler = wake_usb; sigaction(SIGUSR2, &sa, NULL); }   // no SA_RESTART: REAPURB returns
     pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
@@ -639,12 +639,12 @@ static void *usb_main(void *arg) {
             if (errno == EINTR && g_stalled) {
                 // some devices stop returning URBs for good with a long queue, with no error: half of it, connecting again
                 if (g_queue_ms > QUEUE_MS_MIN) g_queue_ms /= 2;
-                LOGI("usb: fila parou, tentando %d ms", g_queue_ms);
-                set_status("USB caiu: fila parou");
+                LOGI("usb: queue stalled, trying %d ms", g_queue_ms);
+                set_status("USB dropped: queue stalled");
                 goto out;
             }
             if (errno == EINTR) continue;
-            set_status("USB caiu: %s", strerror(errno));
+            set_status("USB dropped: %s", strerror(errno));
             goto out;
         }
         inflight--;
@@ -657,7 +657,7 @@ static void *usb_main(void *arg) {
                     char b[160]; int o = 0;
                     for (int k = 0; k < done->number_of_packets && o < 140; k++)
                         o += snprintf(b + o, sizeof b - o, "%u/%d ", done->iso_frame_desc[k].actual_length, done->iso_frame_desc[k].status);
-                    LOGD("entrada: status=%d actual=%d err=%d pacotes(len/status)=%s", done->status, done->actual_length, done->error_count, b);
+                    LOGD("input: status=%d actual=%d err=%d packets(len/status)=%s", done->status, done->actual_length, done->error_count, b);
                 }
             }
             for (int k = 0; k < done->number_of_packets; k++) {
@@ -674,7 +674,7 @@ static void *usb_main(void *arg) {
                     double hz = g_fb_win_in / (t - g_fb_win);
                     if (fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF) {
                         g_fb_bad = 1; g_fb_mode = 0;
-                        LOGI("usb: relogio da entrada fora (%.0f Hz), seguindo o ritmo proprio", hz);
+                        LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
                     }
                     g_fb_win = t; g_fb_win_in = 0;
                 }
@@ -684,7 +684,7 @@ static void *usb_main(void *arg) {
             int npk = done->number_of_packets;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
-            if (ioctl(g_fd, USBDEVFS_SUBMITURB, done) < 0) { LOGI("feedback caiu: %s", strerror(errno)); g_in_ep = -1; }
+            if (ioctl(g_fd, USBDEVFS_SUBMITURB, done) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; }
             else inflight++;
             continue;
         }
@@ -701,10 +701,10 @@ static void *usb_main(void *arg) {
                 pthread_mutex_lock(&g_mx);
                 int ring = g_ring_n, rmin = st_ring_min;
                 pthread_mutex_unlock(&g_mx);
-                LOGD("stats: tocando=%d urbs=%ld urb_err=%ld pkt_err=%ld underrun=%ld ring=%dms ring_min=%dms gap_max=%.1fms "
-                     "fb=%s ajustes=%ld dif=%ld mesa=%.2fHz saida=%.2fHz",
+                LOGD("stats: playing=%d urbs=%ld urb_err=%ld pkt_err=%ld underrun=%ld ring=%dms ring_min=%dms gap_max=%.1fms "
+                     "fb=%s adjusts=%ld diff=%ld desk=%.2fHz out=%.2fHz",
                      g_playing, reaped, st_urb_err, st_pkt_err, st_underrun, ring * 1000 / OUT_RATE,
-                     rmin * 1000 / OUT_RATE, st_gap_max * 1000, g_in_ep >= 0 ? (g_fb_locked ? "travado" : "esperando") : "desligado",
+                     rmin * 1000 / OUT_RATE, st_gap_max * 1000, g_in_ep >= 0 ? (g_fb_locked ? "locked" : "waiting") : "off",
                      st_fb_adj, st_fb_d, st_in_frames / (t - win), st_out_frames / (t - win));
                 st_underrun = st_pkt_err = st_urb_err = 0; st_ring_min = RING_FRAMES; st_gap_max = 0; win = t;
                 st_fb_adj = st_in_frames = st_out_frames = 0;
@@ -714,12 +714,12 @@ static void *usb_main(void *arg) {
         if (tail_urbs >= tail_max) continue;   // drains what is still in the queue
         FILL(done);
         if (submit(done) < 0) {
-            set_status("USB caiu: %s", strerror(errno));
+            set_status("USB dropped: %s", strerror(errno));
             goto out;
         }
         inflight++;
     }
-    set_status("parado (urbs=%ld erros=%d)", reaped, errors);
+    set_status("stopped (urbs=%ld errors=%d)", reaped, errors);
 
 out:
     if (g_watching) { g_watching = 0; pthread_join(g_watch_thr, NULL); }
@@ -740,7 +740,7 @@ out:
         for (int u = 0; u < nurbs; u++) park_urb(urbs[u]);
         for (int u = 0; u < n_in; u++) park_urb(in_urbs[u]);
     }
-    pthread_mutex_lock(&g_stmx); LOGI("usb fim: %s", g_status); pthread_mutex_unlock(&g_stmx);
+    pthread_mutex_lock(&g_stmx); LOGI("usb end: %s", g_status); pthread_mutex_unlock(&g_stmx);
     g_usb_running = 0;
     return NULL;
 }
@@ -791,7 +791,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
 // headphones unplugged, Bluetooth dropped...: the stream dies; the app's watchdog sees isRunning() false and opens
 // again
 static void dev_error(AAudioStream *st, void *ud, aaudio_result_t err) {
-    set_status("saída do aparelho caiu: %s", AAudio_convertResultToText(err));
+    set_status("device output dropped: %s", AAudio_convertResultToText(err));
     g_dev_running = 0;
 }
 
@@ -854,7 +854,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, j
     aaudio_result_t r = AAudioStreamBuilder_openStream(b, &g_dev);
     AAudioStreamBuilder_delete(b);
     if (r != AAUDIO_OK || AAudioStream_getSampleRate(g_dev) != OUT_RATE) {
-        set_status("saída do aparelho não abriu: %s", AAudio_convertResultToText(r));
+        set_status("device output didn't open: %s", AAudio_convertResultToText(r));
         if (g_dev) { AAudioStream_close(g_dev); g_dev = NULL; }
         return JNI_FALSE;
     }
@@ -862,7 +862,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, j
     pthread_create(&g_dec_thr, NULL, dec_main, NULL);
     if (AAudioStream_requestStart(g_dev) != AAUDIO_OK) { dev_close(); return JNI_FALSE; }
     g_dev_running = 1;
-    set_status("saída do aparelho ativa");
+    set_status("device output active");
     return JNI_TRUE;
 #else
     return JNI_FALSE;
@@ -892,7 +892,7 @@ JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
         dur_ms = g_src_len * 1000L / g_src_rate;
         LOGI("load %s: %d Hz, %d ch, %ld ms", path, g_src_rate, g_src_ch, dur_ms);
     } else {
-        LOGI("load falhou %s: err=%d", path, err);
+        LOGI("load failed %s: err=%d", path, err);
     }
     pthread_mutex_unlock(&g_vmx);
     (*e)->ReleaseStringUTFChars(e, jpath, path);
