@@ -446,7 +446,8 @@ private fun InvitePanel(ui: ScanUi.Invite, onAccept: () -> Unit, onBack: () -> U
             br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_joined, ui.name), br.app.stagebook.ui.components.StatusTone.OK)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { ActionButton(stringResource(R.string.action_ok), onBack) }
         } else {
-            Text(stringResource(R.string.invite_text, ui.name), style = MaterialTheme.typography.bodyLarge)
+            // the color said outright: this screen has no Surface under it, and the default came out dark on dark (S26, 07/11)
+            Text(stringResource(R.string.invite_text, ui.name), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 ActionButton(stringResource(R.string.invite_decline), onBack, icon = AppIcons.Close, tone = ButtonTone.Quiet)
                 ActionButton(stringResource(R.string.invite_accept), onAccept, icon = AppIcons.Group)
