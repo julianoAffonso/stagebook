@@ -18,6 +18,10 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
@@ -216,6 +220,40 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun editorPhone() = shoot("celular_4_editor") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.IMPORTED_NEW, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {})
+    }
+
+    // the song's MIDI (user, 07/11): a preset on entering, back on leaving
+    // the window's content on its own: inside a Dialog the capture never got idle (the window is fine on the device)
+    @Test
+    fun editorMidiTablet() {
+        val midi = br.app.stagebook.domain.SongMidi(
+            enter = listOf(br.app.stagebook.domain.MidiMessage(br.app.stagebook.domain.MidiKind.CONTROL, channel = 2, number = 7, value = 100)),
+        )
+        shoot("tablet_4_editor_midi") {
+            Box(Modifier.fillMaxSize().padding(Spacing.xl), contentAlignment = Alignment.Center) {
+                Box(Modifier.width(560.dp)) { br.app.stagebook.ui.editor.MidiPanel(midi, {}, {}) }
+            }
+        }
+    }
+
+    // Settings → Pedal: where the songs' MIDI goes
+    @Test @Config(qualifiers = PHONE)
+    fun settingsMidiOutPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) {
+                        SettingsScreen(
+                            settings.copy(look = settings.look.copy(midiOut = "2:WIDI Master", midiOutName = "WIDI Master"), midi = br.app.stagebook.data.MidiState(supported = true)),
+                            SettingsActions(midiOutputs = listOf(br.app.stagebook.data.MidiOutput("2:WIDI Master", "WIDI Master", true))),
+                            it, section = SettingsSection.PEDAL,
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("WIDI Master").performScrollTo()   // the whole card, down to the chosen device
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_5_ajustes_midi_saida.png")
     }
 
     /** Editing the lyrics: the section shortcut strip shows at the top. */

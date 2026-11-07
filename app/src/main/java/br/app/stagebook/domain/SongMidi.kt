@@ -60,6 +60,17 @@ object MidiBytes {
         }
     }
 
+    /** The messages with every value inside MIDI's ranges (what came from outside the app's own fields). */
+    fun held(midi: SongMidi): SongMidi {
+        fun h(m: MidiMessage) = m.copy(
+            channel = m.channel.coerceIn(1, CHANNELS),
+            number = if (m.kind == MidiKind.PROGRAM || m.kind == MidiKind.BANK_PROGRAM) m.number.coerceIn(1, PROGRAMS) else m.number.coerceIn(0, MAX_DATA),
+            value = if (m.kind == MidiKind.NOTE) m.value.coerceIn(1, MAX_DATA) else m.value.coerceIn(0, MAX_DATA),
+            bank = m.bank.coerceIn(0, MAX_BANK),
+        )
+        return SongMidi(midi.enter.map(::h), midi.exit.map(::h))
+    }
+
     /** A note's release (note off); nothing for the others. */
     fun release(m: MidiMessage): ByteArray? =
         if (m.kind == MidiKind.NOTE) byteArrayOf(status(0x80, m.channel), data(m.number), 0) else null

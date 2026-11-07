@@ -5,10 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,26 +44,35 @@ import br.app.stagebook.ui.theme.StagebookTheme
  */
 @Composable
 fun MidiDialog(midi: SongMidi, onDone: (SongMidi) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) { MidiPanel(midi, onDone, onDismiss) }
+}
+
+/** The window's content, apart from the window (the screenshots draw it on its own). */
+@Composable
+fun MidiPanel(midi: SongMidi, onDone: (SongMidi) -> Unit, onDismiss: () -> Unit) {
     var draft by remember { mutableStateOf(midi) }
     var leaving by remember { mutableStateOf(false) }
     val list = if (leaving) draft.exit else draft.enter
     fun set(l: List<MidiMessage>) { draft = if (leaving) draft.copy(exit = l) else draft.copy(enter = l) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.song_midi_title)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+    run {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                Text(stringResource(R.string.song_midi_title), style = MaterialTheme.typography.headlineSmall)
                 SegmentedChoice(listOf(Choice(false, R.string.song_midi_enter), Choice(true, R.string.song_midi_exit)), leaving, { leaving = it })
-                if (list.isEmpty()) Text(stringResource(R.string.song_midi_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                list.forEachIndexed { i, m ->
-                    MidiMessageCard(m, { set(list.toMutableList().also { l -> l[i] = it }) }, { set(list.filterIndexed { j, _ -> j != i }) })
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    if (list.isEmpty()) item { Text(stringResource(R.string.song_midi_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    items(list.size) { i ->
+                        MidiMessageCard(list[i], { set(list.toMutableList().also { l -> l[i] = it }) }, { set(list.filterIndexed { j, _ -> j != i }) })
+                    }
+                    item { ActionButton(stringResource(R.string.song_midi_add), { set(list + MidiMessage()) }, icon = AppIcons.Add, tone = ButtonTone.Tonal) }
                 }
-                ActionButton(stringResource(R.string.song_midi_add), { set(list + MidiMessage()) }, icon = AppIcons.Add, tone = ButtonTone.Tonal)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                    TextButton(onClick = { onDone(draft) }) { Text(stringResource(R.string.action_ok)) }
+                }
             }
-        },
-        confirmButton = { TextButton(onClick = { onDone(draft) }) { Text(stringResource(R.string.action_ok)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
+        }
+    }
 }
 
 @Composable
@@ -123,8 +129,8 @@ private fun NumberField(label: Int, value: Int, min: Int, max: Int, modifier: Mo
             text = digits
             digits.toIntOrNull()?.let { onValue(it.coerceIn(min, max)); if (it > max) text = max.toString() }
         },
-        label = { Text(stringResource(label)) },
-        supportingText = { Text(stringResource(R.string.song_midi_range, min, max)) },
+        // the range in the label: a supporting line under each field looped the dialog's layout on a phone
+        label = { Text(stringResource(R.string.song_midi_range, stringResource(label), min, max), maxLines = 1) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = MaterialTheme.shapes.small,
@@ -132,9 +138,7 @@ private fun NumberField(label: Int, value: Int, min: Int, max: Int, modifier: Mo
     )
 }
 
-private val sample = SongMidi(
-    enter = listOf(MidiMessage(MidiKind.PROGRAM, channel = 1, number = 12), MidiMessage(MidiKind.CONTROL, channel = 2, number = 7, value = 100)),
-)
+private val sample = SongMidi(enter = listOf(MidiMessage(MidiKind.CONTROL, channel = 2, number = 7, value = 100)))
 
 @LightPreview
 @Composable

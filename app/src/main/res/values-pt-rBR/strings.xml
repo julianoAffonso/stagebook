@@ -218,7 +218,7 @@
     <string name="essential_player">Player de faixas</string>
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
     <string name="essential_extras">Metrônomo e extras dos acordes</string>
-    <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo e Now Playing</string>
+    <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing e MIDI das músicas</string>
     <string name="essential_on_short">Ligado</string>
     <string name="essential_off_short">Desligado</string>
     <string name="essential_banner">Modo essencial ligado</string>
@@ -515,7 +515,7 @@
     <string name="song_midi_note">Nota</string>
     <string name="song_midi_velocity">Velocidade</string>
     <string name="song_midi_bank">Banco</string>
-    <string name="song_midi_range">%1$d a %2$d</string>
+    <string name="song_midi_range">%1$s, %2$d–%3$d</string>
     <string name="settings_midi_out">Saída MIDI</string>
     <string name="settings_midi_out_help">As músicas podem enviar MIDI quando aparecem no palco e quando você sai delas, para trocar um preset ou uma cena. Escolha aqui para onde vai. Um aparelho Bluetooth aparece na lista depois de conectado, como um pedal MIDI. Mesa ou placa de som na USB não aparece, porque abrir o MIDI dela tiraria a interface de áudio do player.</string>
     <string name="settings_midi_out_device">Enviar para</string>

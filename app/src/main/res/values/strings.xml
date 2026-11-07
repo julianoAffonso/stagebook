@@ -212,7 +212,7 @@
     <string name="essential_player">Track player</string>
     <string name="essential_player_detail">Backing tracks, USB audio interface and mixer</string>
     <string name="essential_extras">Metronome and chord extras</string>
-    <string name="essential_extras_detail">Chord sound and details, metronome and Now Playing</string>
+    <string name="essential_extras_detail">Chord sound and details, metronome, Now Playing and song MIDI</string>
     <string name="essential_on_short">On</string>
     <string name="essential_off_short">Off</string>
     <string name="essential_banner">Essential mode on</string>
@@ -506,7 +506,7 @@
     <string name="song_midi_note">Note</string>
     <string name="song_midi_velocity">Velocity</string>
     <string name="song_midi_bank">Bank</string>
-    <string name="song_midi_range">%1$d to %2$d</string>
+    <string name="song_midi_range">%1$s, %2$d–%3$d</string>
     <string name="settings_midi_out">MIDI out</string>
     <string name="settings_midi_out_help">Songs can send MIDI when they show on stage and when you leave them, to change a preset or a scene. Pick here where it goes. A Bluetooth device shows up in the list once it\'s connected, like a MIDI pedal. A mixer or sound card on USB doesn\'t show up, because opening its MIDI would take the audio interface from the player.</string>
     <string name="settings_midi_out_device">Send to</string>

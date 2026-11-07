@@ -63,6 +63,9 @@
   .drop.over { border-color: var(--accent); }
   .question { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .track { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .midi { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+  .midi-row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+  .midi-row input { width: 6em; }
   ol.items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
   ol.items li { display: flex; align-items: center; gap: 8px; background: var(--raised); border-radius: 14px; padding: 4px 4px 4px 14px; }
   ol.items li .n { color: var(--accent); width: 24px; font-variant-numeric: tabular-nums; }
@@ -110,6 +113,11 @@
           </div>
           <!-- tags, as in the app's editor: the ones the library already has come as suggestions -->
           <div><label for="f-tags" data-t="tags"></label><input id="f-tags"><div class="chips" id="tag-suggest"></div></div>
+          <!-- the song's MIDI on entering and leaving the stage, as in the app's editor (user, 07/11) -->
+          <details id="midi-box"><summary data-t="midi"></summary>
+            <div class="midi"><b data-t="midiEnter"></b><div id="midi-enter"></div><button class="outline" type="button" id="midi-add-enter"></button></div>
+            <div class="midi"><b data-t="midiExit"></b><div id="midi-exit"></div><button class="outline" type="button" id="midi-add-exit"></button></div>
+          </details>
           <!-- backing track: only for a saved song (the file is named after it) -->
           <div class="track" id="track-row" hidden>
             <span data-t="track"></span><span id="track-name" class="muted"></span>
@@ -290,6 +298,8 @@ async function connected(session) {
   $("sets-order").setAttribute("aria-label", t.setsOrder);
   $("sets-order").replaceChildren(...[["false", t.setsNewest], ["true", t.setsAbc]].map(([value, name]) => Object.assign(document.createElement("option"), { value, textContent: `${t.setsOrder}: ${name}` })));
   $("f-tags").placeholder = t.tagsHint;
+  $("midi-add-enter").textContent = t.midiAdd;
+  $("midi-add-exit").textContent = t.midiAdd;
   $("pick").textContent = t.pick;
   $("set-pick").textContent = t.pick;
   ["save", "set-save"].forEach((id) => ($(id).textContent = t.save));
@@ -395,6 +405,8 @@ function fillForm(song) {
   $("f-tags").value = (song.tags || []).join(", ");
   current.key = song.key || "";
   current.capo = song.capo || 0;
+  current.midi = song.midi || { enter: [], exit: [] };
+  drawMidi();
   drawTagSuggest();
   $("delete").hidden = !song.id;
   $("form").hidden = false;
@@ -420,6 +432,52 @@ function drawTrack() {
   $("track-remove").hidden = !has;
 }
 
+// the song's MIDI: the same types, channels and ranges as the app's editor; the tablet holds the values again on save
+const MIDI_KINDS = { program: "midiProgramChange", control: "midiControlChange", note: "midiNoteKind", bank_program: "midiBankKind" };
+function midiFields(m) {
+  return {
+    program: [["number", "midiProgram", 1, 128]],
+    control: [["number", "midiController", 0, 127], ["value", "midiValue", 0, 127]],
+    note: [["number", "midiNote", 0, 127], ["value", "midiVelocity", 1, 127]],
+    bank_program: [["bank", "midiBank", 0, 16383], ["number", "midiProgram", 1, 128]],
+  }[m.kind];
+}
+function drawMidi() {
+  const midi = (current && current.midi) || { enter: [], exit: [] };
+  $("midi-box").open = midi.enter.length + midi.exit.length > 0;
+  for (const side of ["enter", "exit"]) {
+    const box = $("midi-" + side);
+    box.replaceChildren();
+    if (!midi[side].length) { const p = document.createElement("span"); p.className = "muted"; p.textContent = t.midiNone; box.append(p); }
+    midi[side].forEach((m, i) => {
+      const row = document.createElement("div"); row.className = "midi-row";
+      const kind = document.createElement("select");
+      Object.entries(MIDI_KINDS).forEach(([k, label]) => kind.append(new Option(t[label], k)));
+      kind.value = m.kind; kind.onchange = () => { m.kind = kind.value; dirty = true; drawMidi(); };
+      const ch = document.createElement("select");
+      for (let c = 1; c <= 16; c++) ch.append(new Option(t.midiChannel + " " + c, c));
+      ch.value = m.channel; ch.onchange = () => { m.channel = +ch.value; dirty = true; };
+      row.append(kind, ch);
+      for (const [field, label, min, max] of midiFields(m)) {
+        const wrap = document.createElement("label"); wrap.textContent = t[label] + " ";
+        const n = document.createElement("input"); n.type = "number"; n.min = min; n.max = max;
+        n.value = Math.min(max, Math.max(min, m[field] ?? min));
+        n.oninput = () => { const v = Math.min(max, Math.max(min, parseInt(n.value || min, 10))); m[field] = v; dirty = true; };
+        n.onchange = () => { n.value = m[field]; };
+        wrap.append(n); row.append(wrap);
+      }
+      const del = document.createElement("button"); del.type = "button"; del.className = "text"; del.textContent = t.midiRemove;
+      del.onclick = () => { midi[side].splice(i, 1); dirty = true; drawMidi(); };
+      row.append(del); box.append(row);
+    });
+  }
+}
+["enter", "exit"].forEach((side) => ($("midi-add-" + side).onclick = () => {
+  current.midi = current.midi || { enter: [], exit: [] };
+  current.midi[side].push({ kind: "program", channel: 1, number: 1, value: 0, bank: 0 });
+  dirty = true; drawMidi();
+}));
+
 // key and capo live in the song's details, apart from the lyrics, as in the app (the tablet puts them back in the text)
 function drawKeyCapo() {
   $("key").textContent = (current && current.key) || "–";
@@ -442,7 +500,7 @@ async function changeText(path, body) {
 async function save() {
   const body = {
     title: $("f-title").value, author: $("f-author").value, year: $("f-year").value, tempo: $("f-tempo").value, text: $("f-text").value,
-    key: current.key || "", capo: current.capo || 0, tags: tagsTyped(),
+    key: current.key || "", capo: current.capo || 0, tags: tagsTyped(), midi: current.midi || { enter: [], exit: [] },
   };
   const id = current && current.id;
   const r = await api(id ? `/api/songs/${encodeURIComponent(id)}` : "/api/songs", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);

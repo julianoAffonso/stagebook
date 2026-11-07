@@ -16,7 +16,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The song's MIDI window (user, 07/11): messages on entering and leaving, held to MIDI's ranges. */
+/**
+ * The song's MIDI window (user, 07/11): messages on entering and leaving, held to MIDI's ranges. One message per test:
+ * two text-field cards run Robolectric's line breaker out of memory (the window works on the device, Chuwi 07/11).
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class MidiDialogTest {
@@ -46,8 +49,14 @@ class MidiDialogTest {
     @Test fun `a number past the range stops at its end`() {
         open()
         compose.onNodeWithText("Adicionar mensagem").performClick()
-        compose.onAllNodesWithText("Programa")[0].performTextReplacement("300")
+        compose.onAllNodesWithText("Programa, 1–128")[0].performTextReplacement("300")
         compose.onNodeWithText("OK").performClick()
         assertEquals(128, done!!.enter.single().number)
+    }
+
+    @Test fun `a control change shows its two numbers`() {
+        open(SongMidi(enter = listOf(br.app.stagebook.domain.MidiMessage(MidiKind.CONTROL, channel = 2, number = 7, value = 100))))
+        compose.onNodeWithText("Controle, 0–127").assertExists()
+        compose.onNodeWithText("Valor, 0–127").assertExists()
     }
 }
