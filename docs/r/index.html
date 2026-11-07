@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Landing page of the links the app shares over the internet (https://stagebook.app.br/r#<code>). The code lives in
+     the fragment, which browsers never send to any server; this page makes no network call (the CSP below forbids it). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex">
+<title>Stagebook</title><link rel="icon" href="../logo.png"><style>
+:root { --bg:#121212; --surface:#1E1E1E; --raised:#262626; --fg:#ECECEC; --muted:#A0A7A4; --accent:#4AF6CD; --on-accent:#00382C;
+        --line:#2E2E2E; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 480px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
+header { display:flex; gap:16px; align-items:center; margin-bottom: 24px; }
+header img { width:64px; height:64px; border-radius:16px; }
+h1 { margin:0; font-size: 30px; }
+.card { background:var(--surface); border-radius:16px; padding:24px 16px; }
+.card + .card { margin-top: 16px; }
+.card > :last-child { margin-bottom: 0; }
+p { margin: 0 0 16px; }
+.muted { color:var(--muted); font-size:14px; }
+.code { margin: 0 0 8px; text-align:center; font-size: clamp(28px, 9vw, 40px); font-weight: 700; line-height:1.2; color:var(--accent);
+        letter-spacing:.02em; overflow-wrap:anywhere; }
+.where { text-align:center; margin:0; }
+.btn { display:block; width:100%; border:0; border-radius:16px; padding:16px; margin: 0 0 8px; font: 600 17px system-ui, sans-serif;
+       text-align:center; text-decoration:none; cursor:pointer; transition: transform .1s; }
+.btn:active { transform: scale(.97); }
+.primary { background:var(--accent); color:var(--on-accent); }
+.secondary { background:var(--raised); color:var(--fg); }
+.note { margin: 8px 0 24px; }
+.status { min-height: 1.6em; margin: 0 0 8px; color:var(--accent); font-size:14px; text-align:center; }
+[hidden] { display:none !important; }
+</style></head>
+<body>
+<main>
+  <header><img src="../logo.png" alt=""><h1>Stagebook</h1></header>
+
+  <div id="missing" class="card" hidden><p data-t="missing"></p></div>
+
+  <div id="found" hidden>
+    <div class="card">
+      <p data-t="intro"></p>
+      <p id="notAndroid" class="muted" data-t="android" hidden></p>
+      <a id="open" class="btn primary" href="#" data-t="open"></a>
+    </div>
+
+    <div class="card">
+      <p data-t="noApp"></p>
+      <button id="download" class="btn primary" type="button" data-t="download"></button>
+      <p id="status" class="status" role="status"></p>
+      <p class="muted note" data-t="after"></p>
+      <a id="installed" class="btn secondary" href="#" data-t="installed"></a>
+    </div>
+
+    <div class="card">
+      <p class="code" id="code"></p>
+      <p class="muted where" data-t="type"></p>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var DOWNLOAD = "https://github.com/julianoAffonso/stagebook/releases/latest/download/stagebook.apk";
+  var TEXT = {
+    pt: {
+      missing: "Este link está incompleto: falta o código no final. Peça para enviarem de novo.",
+      intro: "Alguém te mandou algo pelo Stagebook: um setlist, músicas ou um convite para a banda. Vale por 12 horas.",
+      android: "O Stagebook é um app para Android: abra este link no celular ou tablet.",
+      open: "Abrir no Stagebook",
+      noApp: "Ainda não tem o Stagebook?",
+      download: "Baixar o Stagebook",
+      after: "Depois de instalar, abra o Stagebook: ele encontra o link e pergunta se você aceita. Se não aparecer, volte aqui e toque em “Já instalei”.",
+      installed: "Já instalei: abrir",
+      type: "Ou digite no app: Importar → Digitar as 3 palavras",
+      copied: "Link copiado. Baixando…",
+      notCopied: "Baixando…"
+    },
+    en: {
+      missing: "This link is incomplete: the code at the end is missing. Ask them to send it again.",
+      intro: "Someone sent you something on Stagebook: a setlist, songs or an invite to the band. Valid for 12 hours.",
+      android: "Stagebook is an Android app: open this link on your phone or tablet.",
+      open: "Open in Stagebook",
+      noApp: "Don't have Stagebook yet?",
+      download: "Download Stagebook",
+      after: "After installing, open Stagebook: it finds the link and asks you to accept. If it doesn't, come back here and tap “I installed it”.",
+      installed: "I installed it: open",
+      type: "Or type it in the app: Import → Type the 3 words",
+      copied: "Link copied. Downloading…",
+      notCopied: "Downloading…"
+    }
+  };
+  var lang = /^pt/i.test(navigator.language || "") ? "pt" : "en";
+  var t = TEXT[lang];
+  // a different code typed in the address bar only changes the hash: read it again
+  window.addEventListener("hashchange", function () { location.reload(); });
+  document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
+  Array.prototype.forEach.call(document.querySelectorAll("[data-t]"), function (el) { el.textContent = t[el.getAttribute("data-t")]; });
+
+  // The code as the app reads it: lowercase, no accents, three parts of letters/digits joined by "-".
+  function normalize(raw) {
+    var s;
+    try { s = decodeURIComponent(raw); } catch (e) { s = raw; }
+    s = s.normalize ? s.normalize("NFD").replace(/[̀-ͯ]/g, "") : s;
+    var parts = s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    return parts.length === 3 && parts.every(function (p) { return p.length <= 24; }) ? parts.join("-") : null;
+  }
+
+  var code = normalize(location.hash.replace(/^#/, ""));
+  if (!code) { document.getElementById("missing").hidden = false; return; }
+  document.getElementById("found").hidden = false;
+  document.getElementById("code").textContent = code.split("-").join(" · ");
+  if (!/android/i.test(navigator.userAgent)) document.getElementById("notAndroid").hidden = false;
+
+  var link = "https://stagebook.app.br/r#" + code;
+  // Android intent: URI (parsed by Intent.parseUri). The data is everything before the LAST "#", so the link's own
+  // fragment stays as it is ("#<code>", only [a-z0-9-]) and nothing after "#Intent;" may contain a "#": the fallback
+  // URL is percent-encoded. Not installed: the browser goes to the fallback (the download).
+  var intent = "intent://stagebook.app.br/r#" + encodeURIComponent(code) +
+    "#Intent;scheme=https;package=br.app.stagebook;S.browser_fallback_url=" + encodeURIComponent(DOWNLOAD) + ";end";
+  document.getElementById("open").href = intent;
+  document.getElementById("installed").href = intent;
+
+  function copyFallback() {
+    var area = document.createElement("textarea");
+    area.value = link;
+    area.setAttribute("readonly", "");
+    area.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0, link.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(area);
+    return ok;
+  }
+
+  // Copies the link (so the app finds it after installing), resolving true/false; never waits more than a moment.
+  function copyLink() {
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish(ok) { if (!done) { done = true; resolve(ok); } }
+      setTimeout(function () { if (!done) finish(copyFallback()); }, 1500);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(function () { finish(true); }, function () { finish(copyFallback()); });
+      } else {
+        finish(copyFallback());
+      }
+    });
+  }
+
+  document.getElementById("download").addEventListener("click", function () {
+    copyLink().then(function (ok) {
+      document.getElementById("status").textContent = ok ? t.copied : t.notCopied;
+      location.href = DOWNLOAD;
+    });
+  });
+})();
+</script>
+</body>
+</html>
