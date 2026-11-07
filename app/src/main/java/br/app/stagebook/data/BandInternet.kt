@@ -21,6 +21,7 @@ import javax.inject.Singleton
  * it arrives**:
  * - whoever accepts a send through the 3 words joins the band and sends back an "ok"; the sender keeps the "ok" and
  *   starts trusting them too (the same trust as the local network) and answers "welcome", so the other stops repeating;
+ *   a band invite lets in only the first one (see [admit]);
  * - between band devices, each pair has its own inbox; the receiver sends back a receipt; with no receipt, the sender
  *   resends once the service has deleted it (12 h);
  * - when they meet on the same Wi-Fi (rehearsal, show), whatever is pending goes through right away.
@@ -44,13 +45,17 @@ class BandInternet @Inject constructor(
     @Serializable
     private data class Out(val id: String, val to: String, val list: String, val songs: List<SetlistCloud.SharedSong>, val at: Long, val sentAt: Long, val tries: Int = 1)
 
-    /** One of my sends through the 3 words (to collect the "ok" of whoever accepts). */
+    /** One of my sends through the 3 words (to collect the "ok" of whoever accepts); [invite]: a band invite. */
     @Serializable
-    private data class MyCode(val code: String, val until: Long)
+    private data class MyCode(val code: String, val until: Long, val invite: Boolean = false)
 
     /** A send through the words that I accepted: my "ok" keeps repeating until the sender says welcome. */
     @Serializable
     private data class Accepted(val code: String, val from: String, val until: Long)
+
+    /** One of my invites someone already took ([id]): nobody else joins with it. */
+    @Serializable
+    private data class UsedInvite(val code: String, val id: String, val until: Long)
 
     private val prefs = context.getSharedPreferences("band_net", Context.MODE_PRIVATE)
     // the queue carries every song sent, once per member: a file of its own instead of the prefs (audit 01/11)
@@ -58,12 +63,18 @@ class BandInternet @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
     private val lock = Mutex()
+    private val usedLock = Any()   // the used invites: claimed from the sync and from the Wi-Fi
 
     init {
         // the words' "ok" arriving over the local network: checked against my saved sends
         link.codeAckHandler = { hello, body ->
-            val h = cloud.checkAckBody(body, myCodes().map { it.code })
-            if (h != null && h.id == hello.id) { trust.add(h.id, h.name, h.key); true } else false
+            val found = myCodes().firstNotNullOfOrNull { c -> cloud.checkAckBody(body, listOf(c.code))?.let { c.code to it } }
+            val h = found?.second
+            when {
+                found == null || h == null || h.id != hello.id -> false
+                trust.isMember(h.id) -> { trust.add(h.id, h.name, h.key); true }
+                else -> admit(found.first, listOf(h)).isNotEmpty()   // an invite someone else took says no
+            }
         }
         // a band member showed up on the Wi-Fi: deliver whatever is pending for them (without waiting for the service)
         scope.launch { link.onlineMembers.collect { peers -> if (peers.isNotEmpty()) settleOnLan(peers) } }
@@ -95,36 +106,62 @@ class BandInternet @Inject constructor(
      * One of my sends through the 3 words: kept for 30 days to collect the "ok"s of whoever accepts (also on the local
      * network). Its link never opens this device's own receive screen (the person may copy their own message).
      */
-    fun remember(code: String) {
+    fun remember(code: String, invite: Boolean = false) {
         links.markSeen(code)
         // under the same lock as the sync: the sync writes its lists back at the end and would drop this (audit 30/10)
-        scope.launch { lock.withLock { save(KEY_CODES, MyCode.serializer(), myCodes() + MyCode(code, now() + KEEP_MS)) } }
+        scope.launch { lock.withLock { save(KEY_CODES, MyCode.serializer(), myCodes() + MyCode(code, now() + KEEP_MS, invite)) } }
     }
 
     /**
      * I accepted a send through the words: the sender joins the band; my "ok" goes now and repeats until they confirm.
+     * An [invite]'s "ok" only repeats while the invite can be taken (it counts for nothing after that).
      */
-    fun accepted(code: String, from: BandProtocol.Hello?) {
+    fun accepted(code: String, from: BandProtocol.Hello?, invite: Boolean = false) {
         from ?: return
         trust.add(from.id, from.name, from.key)
+        val until = now() + if (invite) ACK_WINDOW_MS else KEEP_MS
         // the "ok" waits for a running sync instead of being overwritten by its end (lost when the first ack failed)
         scope.launch {
-            lock.withLock { save(KEY_ACCEPTED, Accepted.serializer(), accepted().filterNot { it.code == code } + Accepted(code, from.id, now() + KEEP_MS)) }
+            lock.withLock { save(KEY_ACCEPTED, Accepted.serializer(), accepted().filterNot { it.code == code } + Accepted(code, from.id, until)) }
             cloud.ack(code)
         }
     }
 
     /**
+     * Who of [acks] (the "ok"s for my send [code], oldest first) joins the band now, already added to it. A setlist
+     * send lets in everyone who accepts; an invite only the first one this device sees, while it lasts (user, 07/11):
+     * later "ok"s for it are ignored, even after a restart. Someone already in the band doesn't use it up.
+     */
+    internal fun admit(code: String, acks: List<BandProtocol.Hello>): List<BandProtocol.Hello> {
+        val mine = myCodes().firstOrNull { it.code == code }
+        val fresh = acks.filterNot { trust.isMember(it.id) }.distinctBy { it.id }
+        val joining = when {
+            mine == null || !mine.invite -> fresh
+            now() - (mine.until - KEEP_MS) >= ACK_WINDOW_MS -> emptyList()   // the invite is over
+            else -> fresh.take(1).filter { claim(code, it.id, mine.until) }
+        }
+        joining.forEach { trust.add(it.id, it.name, it.key) }
+        return joining
+    }
+
+    // marks the invite as taken by [id]; false if someone already took it (the sync and the Wi-Fi may race)
+    private fun claim(code: String, id: String, until: Long): Boolean = synchronized(usedLock) {
+        val used = load(KEY_USED, UsedInvite.serializer()).filter { it.until > now() }
+        if (used.any { it.code == code }) return false
+        save(KEY_USED, UsedInvite.serializer(), used + UsedInvite(code, id, until))
+        true
+    }
+
+    /**
      * The codes worth asking the internet about: the send stays on the server 12 h (nobody accepts after that) and an
      * "ok" another 12 h, so older codes only cost one request each, every sync, holding the lock (audit 01/11). The
-     * "ok" on the local network still counts for the whole 30 days.
+     * "ok" on the local network still counts for the whole 30 days (an invite's, only while the invite lasts).
      */
     internal fun recentCodes(codes: List<Pair<String, Long>>, now: Long): List<String> =
         codes.filter { (_, until) -> now - (until - KEEP_MS) < ACK_WINDOW_MS }.map { it.first }
 
     /** The "ok"s for one of my sends: whoever accepted joins the band (and gets a welcome). Returns the new names. */
-    suspend fun checkAcks(code: String): List<String> = cloud.acks(code).filterNot { trust.isMember(it.id) }.map { h ->
-        trust.add(h.id, h.name, h.key)
+    suspend fun checkAcks(code: String): List<String> = admit(code, cloud.acks(code)).map { h ->
         trust.member(h.id)?.let(::pairKey)?.let { cloud.welcome(it, h.id) }
         h.name
     }
@@ -250,6 +287,7 @@ class BandInternet @Inject constructor(
         const val OUT_FILE = "band_outbox.json"
         const val KEY_CODES = "codes"
         const val KEY_ACCEPTED = "accepted"
+        const val KEY_USED = "used_invites"
         const val KEY_SINCE = "since_"
         const val KEY_SEEN = "seen"
         const val KEEP_MS = 30L * 24 * 60 * 60 * 1000      // gives up after 30 days

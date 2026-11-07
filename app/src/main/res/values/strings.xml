@@ -618,6 +618,7 @@
     <string name="invite_accept">Join the band</string>
     <string name="invite_decline">Not now</string>
     <string name="invite_joined">You\'re in the band with %1$s.</string>
+    <string name="invite_used">Someone else already used this invite. Ask %1$s for a new one.</string>
     <string name="scan_link_title">Receiving from a link</string>
     <string name="scan_link_loading">Getting what they sent…</string>
     <string name="scan_link_not_found">This link no longer works. Links last 12 hours. Ask them to send it again.</string>
@@ -786,7 +787,7 @@
     <string name="band_offline">Not on this Wi-Fi</string>
     <string name="band_members_none">No one yet. Whoever you allow shows up here.</string>
     <string name="band_invite">Invite over the internet</string>
-    <string name="band_invite_detail">Sends a link. Whoever opens it joins the band. Good for 12 hours.</string>
+    <string name="band_invite_detail">Sends a link for one person to join the band. Good for 12 hours.</string>
     <string name="band_invite_failed">Couldn\'t create the invite. Check your internet and try again.</string>
     <string name="band_invite_message">%1$s invited you to the band on Stagebook. Tap %2$s to join. Or go to Import → Type the 3 words and type %3$s. Good for 12 hours.</string>
     <string name="band_remove">Remove %1$s from the band</string>

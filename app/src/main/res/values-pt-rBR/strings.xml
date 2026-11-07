@@ -629,6 +629,7 @@
     <string name="invite_accept">Entrar na banda</string>
     <string name="invite_decline">Agora não</string>
     <string name="invite_joined">Você está na banda com %1$s.</string>
+    <string name="invite_used">Outra pessoa já usou este convite. Peça um novo para %1$s.</string>
     <string name="scan_link_title">Recebendo pelo link</string>
     <string name="scan_link_loading">Buscando o que enviaram…</string>
     <string name="scan_link_not_found">Esse link não vale mais. Os links duram 12 horas. Peça para enviarem novamente.</string>
@@ -813,7 +814,7 @@
     <string name="band_offline">Fora deste Wi-Fi</string>
     <string name="band_members_none">Ninguém ainda. Quem for autorizado aparece aqui.</string>
     <string name="band_invite">Convidar pela internet</string>
-    <string name="band_invite_detail">Manda um link. Quem abrir entra na banda. Vale por 12 horas.</string>
+    <string name="band_invite_detail">Manda um link para uma pessoa entrar na banda. Vale por 12 horas.</string>
     <string name="band_invite_failed">Não deu para criar o convite. Confira a internet e tente de novo.</string>
     <string name="band_invite_message">%1$s te chamou para a banda no Stagebook. Toque em %2$s para entrar. Ou vá em Importar → Digitar as 3 palavras e digite %3$s. Vale por 12 horas.</string>
     <string name="band_remove">Remover %1$s da banda</string>

@@ -438,12 +438,16 @@ private fun SongsReview(
     }
 }
 
-/** An invite to the band (user, 07/11): who invites, accept or not; then that it's done. */
+/**
+ * An invite to the band (user, 07/11): who invites, accept or not; then that it's done. Someone else already took it
+ * (single use): only that, and a new one has to be asked for.
+ */
 @Composable
 private fun InvitePanel(ui: ScanUi.Invite, onAccept: () -> Unit, onBack: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        if (ui.joined) {
-            br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_joined, ui.name), br.app.stagebook.ui.components.StatusTone.OK)
+        if (ui.joined || ui.used) {
+            if (ui.joined) br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_joined, ui.name), br.app.stagebook.ui.components.StatusTone.OK)
+            else br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_used, ui.name), br.app.stagebook.ui.components.StatusTone.PROBLEM)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { ActionButton(stringResource(R.string.action_ok), onBack) }
         } else {
             // the color said outright: this screen has no Surface under it, and the default came out dark on dark (S26, 07/11)

@@ -92,13 +92,13 @@ class BandViewModel @Inject constructor(
 
     /**
      * An invite over the internet (user, 07/11): any band member can send it. Its code is remembered like any send
-     * through the 3 words, so whoever accepts joins the band on the next sync.
+     * through the 3 words, so the first one who accepts joins the band on the next sync (single use).
      */
     fun invite() {
         if (!inviting.compareAndSet(expect = false, update = true)) return
         viewModelScope.launch {
             val code = runCatching { cloud.sendInvite() }.getOrNull()
-            code?.let(bandInternet::remember)
+            code?.let { bandInternet.remember(it, invite = true) }
             inviting.value = false
             invites.send(code)
         }

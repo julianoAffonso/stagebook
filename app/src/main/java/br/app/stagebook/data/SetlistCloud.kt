@@ -48,8 +48,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         data object Offline : Received
         /** Came from a newer Stagebook (a format this app doesn't know yet): update to receive. */
         data class Newer(val app: String) : Received
-        /** An invite to the band (user, 07/11): only who invites, to accept. */
-        data class Invite(val from: BandProtocol.Hello) : Received
+        /**
+         * An invite to the band (user, 07/11): only who invites, to accept. [used]: someone else's "ok" is already on
+         * the channel, and an invite lets in only the first one.
+         */
+        data class Invite(val from: BandProtocol.Hello, val used: Boolean = false) : Received
     }
 
     /**
@@ -173,7 +176,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val invite = plain.any { unpack(INVITE_MARK, it) != null }
         return when {
             from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)
-            text == null && invite && from != null -> Received.Invite(from)
+            text == null && invite && from != null -> Received.Invite(
+                from,
+                // mine doesn't count: opening the same link again after accepting
+                used = plain.mapNotNull { unpack(ACK_MARK, it) }.mapNotNull(::hello).any { it.id != identity.id && it.id != from.id },
+            )
             text == null -> Received.NotFound
             else -> Received.Ok(text, songs, from, lists.drop(1))
         }
@@ -190,8 +197,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     suspend fun ack(input: String): Boolean = withContext(Dispatchers.IO) {
         val code = ShareCode.normalize(input) ?: return@withContext false
         val keys = ShareCode.keys(code)
-        post(keys.topic, ShareCode.encrypt(keys.key, pack(ACK_MARK, json.encodeToString(identity.hello()))))
+        post(keys.topic, ShareCode.encrypt(keys.key, ackMessage(identity.hello())))
     }
+
+    /** An "ok" before encrypting: who accepted. */
+    internal fun ackMessage(from: BandProtocol.Hello): ByteArray = pack(ACK_MARK, json.encodeToString(from))
 
     /** The "ok"s that arrived for one of my sends (who accepted); empty with no internet. */
     suspend fun acks(code: String): List<BandProtocol.Hello> = withContext(Dispatchers.IO) {
@@ -286,7 +296,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** The words' "ok", encrypted (to also deliver over the local network, when the two meet). */
     fun ackBody(input: String): String? {
         val code = ShareCode.normalize(input) ?: return null
-        return ShareCode.encrypt(ShareCode.keys(code).key, pack(ACK_MARK, json.encodeToString(identity.hello())))
+        return ShareCode.encrypt(ShareCode.keys(code).key, ackMessage(identity.hello()))
     }
 
     /**

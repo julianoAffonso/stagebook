@@ -65,8 +65,11 @@ sealed interface ScanUi {
     /** Camera open; [problem] = the last QR scanned didn't work. */
     data class Scanning(val problem: ScanProblem? = null) : ScanUi
 
-    /** The code was an invite to the band (user, 07/11): who invites, to accept or not. */
-    data class Invite(val name: String, val joined: Boolean = false) : ScanUi
+    /**
+     * The code was an invite to the band (user, 07/11): who invites, to accept or not. [used]: someone else already took
+     * it (an invite lets in one person), nothing to accept.
+     */
+    data class Invite(val name: String, val joined: Boolean = false, val used: Boolean = false) : ScanUi
 
     /** Fetching by the internet code, or what went wrong. */
     data class Fetching(val problem: CodeProblem? = null) : ScanUi
@@ -105,7 +108,7 @@ class ScanSetlistViewModel @Inject constructor(
     /** Accepting the invite: who invited joins the band here, and my "ok" brings me into theirs. */
     fun acceptInvite() {
         val from = invite ?: return
-        bandInternet.accepted(code, from)
+        bandInternet.accepted(code, from, invite = true)
         _ui.value = ScanUi.Invite(from.name, joined = true)
     }
 
@@ -252,7 +255,7 @@ class ScanSetlistViewModel @Inject constructor(
                 SetlistCloud.Received.NotFound -> _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND)
                 SetlistCloud.Received.Offline -> _ui.value = ScanUi.Fetching(CodeProblem.OFFLINE)
                 is SetlistCloud.Received.Newer -> _ui.value = ScanUi.Fetching(CodeProblem.NEWER)
-                is SetlistCloud.Received.Invite -> { invite = r.from; _ui.value = ScanUi.Invite(r.from.name) }
+                is SetlistCloud.Received.Invite -> { invite = r.from; _ui.value = ScanUi.Invite(r.from.name, used = r.used) }
             }
         }
     }
