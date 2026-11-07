@@ -155,6 +155,7 @@ class MainActivity : ComponentActivity() {
         webEditor.setForeground(true)   // editor on the computer: only with the app open (T37)
         midi.setForeground(true)   // the saved Bluetooth pedal is looked for only with the app in front
         bandInternet.onAppOpen()   // band over the internet: checks the inbox once, on open
+        br.app.stagebook.player.PlayerService.setAppVisible(true)   // out of sight and idle, the player turns off
     }
 
     override fun onResume() {
@@ -167,6 +168,7 @@ class MainActivity : ComponentActivity() {
         band.setForeground(false)
         webEditor.setForeground(false)
         midi.setForeground(false)
+        br.app.stagebook.player.PlayerService.setAppVisible(false)
         super.onStop()
     }
 

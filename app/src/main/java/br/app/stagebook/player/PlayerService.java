@@ -42,6 +42,11 @@ public class PlayerService extends Service {
     static final String TAG = "stagebook";
     static final String ACTION_STOP = "br.app.stagebook.player.STOP";
     static final String ACTION_USB_PERM = "br.app.stagebook.player.USB_PERM";
+    // the notification swiped away (Android 14+ lets that happen even to a foreground service's)
+    static final String ACTION_DISMISSED = "br.app.stagebook.player.DISMISSED";
+    // with nothing playing, the app out of sight or the USB interface gone this long turns the player off: it stayed on
+    // for 16 h on the S26 with no notification left to turn it off (user, 07/11)
+    static final long IDLE_OFF_MS = 10 * 60 * 1000L;
     static final long WAKE_TIMEOUT_MS = 30 * 60 * 1000L;
     static final long WATCHDOG_MS = 5000;
     // time for the interface clock to lock after connecting: when the connection is good it arrives in ~2 ms; with 3 s
@@ -64,6 +69,8 @@ public class PlayerService extends Service {
     // playing on the device's output (no USB interface). If USB was connected and dropped, it doesn't fall back to the
     // device mid-show: it waits for USB to come back (the click would go to the speaker).
     boolean deviceOut, hadUsb;
+    boolean isPlaying, idleArmed;
+    static volatile boolean appVisible = true;
     // the USB interface opened through Android's audio (Settings, off by default): where talking to USB directly gets no
     // packets back (S26, B-33) but Android plays on it (other apps do). Set by StagePlayer from Settings.
     static volatile boolean viaAndroid;
@@ -83,6 +90,13 @@ public class PlayerService extends Service {
             shutdown();
             return START_NOT_STICKY;
         }
+        if (intent != null && ACTION_DISMISSED.equals(intent.getAction())) {
+            // swiping it away with nothing playing says "turn it off"; while playing it can't go: it comes back
+            if (!running) stopSelf();
+            else if (isPlaying) getSystemService(NotificationManager.class).notify(1, buildNotification(status));
+            else shutdown();
+            return running ? START_STICKY : START_NOT_STICKY;
+        }
         ServiceCompat.startForeground(this, 1, buildNotification(getString(R.string.player_starting)),
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0);
         if (running) {
@@ -98,6 +112,7 @@ public class PlayerService extends Service {
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "stagebook:play");
         connectUsb();
         main.postDelayed(watchdog, WATCHDOG_MS);
+        checkIdle();
         return START_STICKY;
     }
 
@@ -198,6 +213,7 @@ public class PlayerService extends Service {
         if (d == null) {
             if (hadUsb) setStatus(getString(R.string.player_usb_lost));
             else useDevice();
+            checkIdle();
             return;
         }
         if (viaAndroid) { useAndroidUsb(d); return; }
@@ -298,6 +314,7 @@ public class PlayerService extends Service {
         outputName = n != null && !n.trim().isEmpty() ? n.trim() : "USB";
         outputCount = count;
         connected = true;
+        checkIdle();
         Log.i(TAG, "USB through Android: " + outputName + ", " + count + " channels");
         setStatus(getString(R.string.player_usb_ready, outputName));
     }
@@ -332,6 +349,7 @@ public class PlayerService extends Service {
         connectedAt = SystemClock.elapsedRealtime();
         main.removeCallbacks(fbCheck);
         main.postDelayed(fbCheck, FB_WAIT_MS);
+        checkIdle();
         Log.i(TAG, link.describe());
         setStatus(getString(R.string.player_usb_ready, link.name()));
     }
@@ -355,6 +373,7 @@ public class PlayerService extends Service {
                     fbRetries = 0;   // new cable: new attempts to get the clock
                     holdWake(false);
                     setStatus(getString(R.string.player_usb_lost));
+                    checkIdle();
                 }
             }
         }
@@ -378,8 +397,45 @@ public class PlayerService extends Service {
     /** Playing or stopped (StagePlayer): the wake lock follows. */
     static void playing(boolean on) {
         PlayerService s = instance;
-        if (s != null) s.main.post(() -> { s.holdWake(on); if (on && s.muted()) s.setStatus(s.getString(R.string.player_usb_muted)); });
+        if (s != null) s.main.post(() -> {
+            s.isPlaying = on;
+            s.holdWake(on);
+            if (on && s.muted()) s.setStatus(s.getString(R.string.player_usb_muted));
+            s.checkIdle();
+        });
     }
+
+    /** The app came to the front or left it (MainActivity). */
+    public static void setAppVisible(boolean on) {
+        appVisible = on;
+        PlayerService s = instance;
+        if (s != null) s.main.post(s::checkIdle);
+    }
+
+    // the USB interface dropped and hasn't come back: the stage keeps waiting for it instead of the speaker
+    boolean usbLost() {
+        return hadUsb && link == null && androidUsb == null && !connecting;
+    }
+
+    boolean idle() {
+        return running && !isPlaying && (!appVisible || usbLost());
+    }
+
+    // counts from the moment it went idle: a later check while still idle doesn't restart the clock
+    void checkIdle() {
+        boolean now = idle();
+        if (now && !idleArmed) main.postDelayed(idleOff, IDLE_OFF_MS);
+        else if (!now && idleArmed) main.removeCallbacks(idleOff);
+        idleArmed = now;
+    }
+
+    final Runnable idleOff = () -> {
+        idleArmed = false;
+        if (idle()) {
+            Log.i(TAG, "idle for " + IDLE_OFF_MS / 60000 + " min: turning the player off");
+            shutdown();
+        }
+    };
 
     /** Through Android the media volume counts, and it's kept per output: at zero the song plays and nothing comes out. */
     boolean muted() {
@@ -399,6 +455,8 @@ public class PlayerService extends Service {
                 .setContentText(text)
                 .setContentIntent(open)
                 .setOngoing(true)
+                .setDeleteIntent(PendingIntent.getService(this, 2,
+                        new Intent(this, PlayerService.class).setAction(ACTION_DISMISSED), PendingIntent.FLAG_IMMUTABLE))
                 .addAction(new Notification.Action.Builder(null, getString(R.string.player_turn_off), stop).build())
                 .build();
     }
@@ -406,6 +464,8 @@ public class PlayerService extends Service {
     void shutdown() {
         main.removeCallbacks(watchdog);
         main.removeCallbacks(fbCheck);
+        main.removeCallbacks(idleOff);
+        idleArmed = false;
         releaseUsb();
         if (running) {
             try { unregisterReceiver(usbReceiver); } catch (IllegalArgumentException ignored) {}
