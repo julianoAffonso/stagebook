@@ -583,9 +583,14 @@ fun StageScreen(
     // the beat is read here and in the draw phase only: reading it in composition recomposed the whole stage on every
     // beat, for the whole show (audit 30/10). Keyed by the song: the beat counter is a new one for each song, and this
     // kept watching the first song's, so after changing songs the metronome stopped blinking (device test, 02/11)
+    val countOn by rememberUpdatedState(look.metroCount)
     LaunchedEffect(index) {
         androidx.compose.runtime.snapshotFlow { metroBeat }.collectLatest { beat ->
             if (beat < 0) { metroPulse.snapTo(0f); return@collectLatest }
+            // the count-in's pauses don't blink either, like the sound (user, 07/11)
+            if (countOn && br.app.stagebook.domain.MetronomeClick.silent(beat.toLong(), br.app.stagebook.domain.MetronomeClick.COUNT_IN_SKIP)) {
+                metroPulse.snapTo(0f); return@collectLatest
+            }
             metroPulse.snapTo(if (beat % 4 == 0) 1f else 0.6f)
             // at full speed whatever Android's animation scale: at 0 (animations off, seen on a Chuwi tablet) the
             // blink ended before being drawn and the glow never showed
@@ -594,7 +599,12 @@ fun StageScreen(
     }
     // "1 . 2 . 1 2 3 4": nothing on the pauses (user, 07/11)
     val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat >= 0) br.app.stagebook.domain.MetronomeClick.countLabel(metroBeat) else 0 } }
-    val metroColor = Color(look.metroGlowColor)
+    // during the count-in the blink, the glow and the big number take another color: it reads as "counting", not the song
+    val counting by remember(index) {
+        androidx.compose.runtime.derivedStateOf { look.metroCount && metroBeat in 0 until br.app.stagebook.domain.MetronomeClick.COUNT_IN_BEATS }
+    }
+    val countColor = MaterialTheme.colorScheme.tertiary
+    val metroColor = if (counting) countColor else Color(look.metroGlowColor)
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -1156,7 +1166,7 @@ fun StageScreen(
                     countIn.toString(),
                     // big enough for the band to see from across the stage
                     style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 200.sp, lineHeight = 200.sp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = countColor,
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
@@ -1276,7 +1286,7 @@ fun StageScreen(
                         if (metroOn) Icon(
                             AppIcons.Stop, stringResource(R.string.metro_stop),
                             Modifier.graphicsLayer { alpha = 0.35f + 0.65f * metroPulse.value },
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (counting) countColor else MaterialTheme.colorScheme.primary,
                         )
                         else Icon(AppIcons.Metronome, stringResource(R.string.metro_title), tint = fg.copy(alpha = 0.7f))
                     }
