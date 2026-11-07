@@ -40,7 +40,8 @@ class DeviceTweaksTest {
     @Test fun `a switch turned off stays off on the next start`() {
         DeviceTweaks.set(app, DeviceTweak.ANIMATIONS, false)
         DeviceTweaks.ensure(app)
-        assertEquals("1.0", Settings.Global.getString(cr, Settings.Global.WINDOW_ANIMATION_SCALE))
+        assertFalse(DeviceTweaks.shownOn(app, DeviceTweak.ANIMATIONS))
+        assertNull(Settings.Global.getString(cr, Settings.Global.WINDOW_ANIMATION_SCALE))   // never written: still the device's
     }
 
     @Test fun `debugging is never touched on start, only by the switch`() {
@@ -92,10 +93,41 @@ class DeviceTweaksTest {
         assertEquals("300000", timeout)
     }
 
-    @Test fun `already on with nothing kept, off is the usual value`() {
+    @Test fun `a device that already had the value keeps it, and the switch shows off`() {
         Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "600000")
+        DeviceTweaks.ensure(app)
+        assertTrue(DeviceTweaks.shownOn(app, DeviceTweak.SCREEN_TIMEOUT))
         DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
-        assertEquals("1800000", timeout)
+        assertEquals("600000", timeout)
+        assertFalse(DeviceTweaks.shownOn(app, DeviceTweak.SCREEN_TIMEOUT))
+        DeviceTweaks.ensure(app)
+        assertEquals("600000", timeout)
+    }
+
+    @Test fun `after turning off the setting is left alone on start`() {
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "120000")
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, true)
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "600000")
+        DeviceTweaks.ensure(app)
+        assertEquals("600000", timeout)
+    }
+
+    @Test fun `a setting with no value goes back to none`() {
+        Settings.Global.putString(cr, "wifi_scan_always_enabled", null)
+        Settings.Global.putString(cr, "ble_scan_always_enabled", "1")
+        DeviceTweaks.set(app, DeviceTweak.NO_BACKGROUND_SCANS, true)
+        assertEquals("0", Settings.Global.getString(cr, "wifi_scan_always_enabled"))
+        DeviceTweaks.set(app, DeviceTweak.NO_BACKGROUND_SCANS, false)
+        assertNull(Settings.Global.getString(cr, "wifi_scan_always_enabled"))
+        assertEquals("1", Settings.Global.getString(cr, "ble_scan_always_enabled"))
+    }
+
+    @Test fun `debugging off is always off`() {
+        Settings.Global.putString(cr, "adb_wifi_enabled", "1")
+        Settings.Global.putString(cr, "development_settings_enabled", "1")
+        DeviceTweaks.set(app, DeviceTweak.DEBUGGING, false)
+        assertEquals("0", Settings.Global.getString(cr, "adb_wifi_enabled"))
     }
 
     @Test fun `the Android route always gets the value it needs`() {

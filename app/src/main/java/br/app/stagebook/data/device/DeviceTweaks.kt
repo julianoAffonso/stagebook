@@ -24,7 +24,7 @@ enum class DeviceTweak(
     val group: Group,
     internal val onlyIfPresent: Boolean = false,   // a setting some makers have and others don't
     val shown: Boolean = true,   // in Settings; USB_ROUTING follows the Android route switch instead
-    internal val restores: Boolean = true,   // off gives back what the device had; USB_ROUTING's off is a value the route needs
+    internal val restores: Boolean = true,   // off gives back what the device had; otherwise off is a value that has to hold
 ) {
     // TCL: with smart long charge or sleep charge on, its charge manager made the USB audio interface drop for a
     // moment every 3 to 30 s (23/10). Cost: charges up to 100%.
@@ -51,7 +51,7 @@ enum class DeviceTweak(
     NO_MOBILE_DATA_ALWAYS_ON(listOf(Table.GLOBAL to "mobile_data_always_on"), on = "0", off = "1", group = Group.BATTERY),
     // developer options + Wi-Fi debugging, for the computer to come in by adb without opening Android's settings.
     // Starts off and is never written again by itself. Order matters: the mode goes on first and off last (see write)
-    DEBUGGING(listOf(Table.GLOBAL to "development_settings_enabled", Table.GLOBAL to "adb_wifi_enabled"), on = "1", off = "0", default = false, reapply = false, group = Group.COMPUTER);
+    DEBUGGING(listOf(Table.GLOBAL to "development_settings_enabled", Table.GLOBAL to "adb_wifi_enabled"), on = "1", off = "0", default = false, reapply = false, restores = false, group = Group.COMPUTER);
 
     enum class Table { SYSTEM, SECURE, GLOBAL }
     enum class Group { PLAY, BATTERY, COMPUTER }
@@ -66,6 +66,9 @@ object DeviceTweaks {
     /** What Android has now (the truth is the device, not the app). */
     fun isOn(c: Context, t: DeviceTweak) = t.settings.filter { !t.onlyIfPresent || read(c, it) != null }.all { same(read(c, it), t.on) }
 
+    /** What the switch shows: turned off here stays off, even when the device's own value is the same as the on one. */
+    fun shownOn(c: Context, t: DeviceTweak) = isOn(c, t) && prefs(c).getBoolean(t.name, true)
+
     /** Writes the choice and keeps it, so it's written again on the next start. */
     fun set(c: Context, t: DeviceTweak, on: Boolean) {
         if (!canWrite(c)) return
@@ -78,6 +81,7 @@ object DeviceTweaks {
         if (!canWrite(c)) return
         DeviceTweak.entries.filter { it.reapply && available(c, it) }.forEach { t ->
             val on = prefs(c).getBoolean(t.name, t.default)
+            if (!on && t.restores) return@forEach   // turned off: the setting is the person's again
             if (isOn(c, t) != on) {
                 Log.w(TAG, "${t.name} had changed: written again")
                 write(c, t, on)
@@ -91,8 +95,12 @@ object DeviceTweaks {
     private fun write(c: Context, t: DeviceTweak, on: Boolean) {
         for (s in if (on) t.settings else t.settings.reversed()) {
             if (t.onlyIfPresent && read(c, s) == null) continue
-            if (on && t.restores) keepOriginal(c, t, s)
-            val value = if (on) t.on else takeOriginal(c, t, s)
+            val value = when {
+                on -> { if (t.restores) keepOriginal(c, t, s); t.on }
+                !t.restores -> t.off
+                ORIGINAL + s.second !in prefs(c) -> continue   // it already had this value: nothing to give back
+                else -> takeOriginal(c, s)
+            }
             // a device that hides a setting must not close the app on start
             try {
                 val cr = c.contentResolver
@@ -109,17 +117,16 @@ object DeviceTweaks {
         }
     }
 
-    // what the device had before the first write, for turning off to give it back. Nothing kept (the setting had no value,
-    // or the app wrote it before it kept anything): t.off
+    // what the device had before the first write, for turning off to give it back
     private fun keepOriginal(c: Context, t: DeviceTweak, s: Pair<DeviceTweak.Table, String>) {
-        val now = read(c, s) ?: return
-        if (ORIGINAL + s.second !in prefs(c) && !same(now, t.on)) prefs(c).edit { putString(ORIGINAL + s.second, now) }
+        val now = read(c, s)
+        if (ORIGINAL + s.second !in prefs(c) && !same(now, t.on)) prefs(c).edit { putString(ORIGINAL + s.second, now ?: NO_VALUE) }
     }
 
-    private fun takeOriginal(c: Context, t: DeviceTweak, s: Pair<DeviceTweak.Table, String>): String {
-        val kept = prefs(c).getString(ORIGINAL + s.second, null) ?: return t.off
+    private fun takeOriginal(c: Context, s: Pair<DeviceTweak.Table, String>): String? {
+        val kept = prefs(c).getString(ORIGINAL + s.second, null)
         prefs(c).edit { remove(ORIGINAL + s.second) }
-        return kept
+        return kept.takeUnless { it == NO_VALUE }
     }
 
     private fun read(c: Context, s: Pair<DeviceTweak.Table, String>): String? = runCatching {
@@ -142,4 +149,5 @@ object DeviceTweaks {
     const val GRANT = "adb shell pm grant br.app.stagebook android.permission.WRITE_SECURE_SETTINGS"
     private const val TAG = "stagebook"
     private const val ORIGINAL = "original:"
+    private const val NO_VALUE = "<none>"   // the setting had no value at all
 }

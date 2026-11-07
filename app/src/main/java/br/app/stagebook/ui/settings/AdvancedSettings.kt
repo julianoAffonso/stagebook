@@ -74,7 +74,7 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
 
     private fun read() = AdvancedUi(
         canWrite = DeviceTweaks.canWrite(context),
-        on = DeviceTweak.entries.filter { DeviceTweaks.available(context, it) }.associateWith { DeviceTweaks.isOn(context, it) },
+        on = DeviceTweak.entries.filter { DeviceTweaks.available(context, it) }.associateWith { DeviceTweaks.shownOn(context, it) },
         batteryFree = DeviceTweaks.batteryFree(context),
         autoBlocker = br.app.stagebook.data.device.AutoBlocker.available(context),
     )
