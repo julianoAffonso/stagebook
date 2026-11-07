@@ -437,13 +437,20 @@ object Chords {
     /** The lyrics without chords: removes the `[C]`s, chords-only lines and directives. Section titles stay. */
     fun stripChords(text: String): String = text.split('\n').mapNotNull { line ->
         if (isDirective(line)) return@mapNotNull null
-        val hadChord = bracket.findAll(line).any { isChord(it.groupValues[1]) }
-        val clean = bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "" else b.value }
+        // annotations ([*2x]) belong to the chord row: lyrics only drops them too
+        val hadChord = bracket.findAll(line).any { isChord(it.groupValues[1]) || isAnnotation(it.groupValues[1]) }
+        val clean = bracket.replace(line) { b -> if (isChord(b.groupValues[1]) || isAnnotation(b.groupValues[1])) "" else b.value }
         if (hadChord && clean.isBlank()) null else clean.replace(DOUBLE_SPACES, " ").trimEnd()
     }.joinToString("\n")
 
     /** Does the song have any chord? */
     fun hasChords(text: String): Boolean = bracket.findAll(text).any { isChord(it.groupValues[1]) }
+
+    /** Chords or annotations: what goes on the chord row above a stage line. */
+    fun hasChordRow(line: String): Boolean = bracket.findAll(line).any { isChord(it.groupValues[1]) || isAnnotation(it.groupValues[1]) }
+
+    /** A ChordPro annotation inside brackets, `[*2x]`: text above the lyrics, not a chord (no diagram, no transposing). */
+    fun isAnnotation(inner: String) = inner.length > 1 && inner.startsWith('*')
 }
 
 /** A song's key, capo and BPM ([Chords.meta]); [tempoText] is the directive as written (the field shows it). */

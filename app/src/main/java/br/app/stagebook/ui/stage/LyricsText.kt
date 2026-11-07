@@ -153,7 +153,7 @@ fun stageLines(
         when {
             h != null -> header(names.label(h), i)
             raw.isBlank() -> blank(i)
-            !Chords.hasChords(raw) -> out += StageLine(highlighted(AnnotatedString(raw.trimEnd()), highlight), i)
+            !Chords.hasChordRow(raw) -> out += StageLine(highlighted(AnnotatedString(raw.trimEnd()), highlight), i)
             !chords.show -> Chords.stripChords(raw).takeIf { it.isNotBlank() }?.let { out += StageLine(highlighted(AnnotatedString(it), highlight), i) }
             else -> out += StageLine(highlighted(chordLine(raw, chords), highlight), i)
         }
@@ -172,8 +172,7 @@ internal fun tabLine(raw: String, em: Float = TAB_EM): AnnotatedString = buildAn
 
 private val bracket = Regex("""\[([^\[\]]*)]""")
 
-/** A ChordPro annotation inside brackets, `[*2x]`: text above the lyrics, not a chord (no diagram, no transposing). */
-internal fun isAnnotation(inner: String) = inner.length > 1 && inner.startsWith('*')
+internal fun isAnnotation(inner: String) = Chords.isAnnotation(inner)
 
 private val annotationInWord = Regex("""(\p{L})(\[\*[^\[\]]+])(\p{L}+)""")
 
