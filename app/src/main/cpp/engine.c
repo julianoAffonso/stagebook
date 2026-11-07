@@ -447,7 +447,7 @@ static void *dec_main(void *arg) {
         int active = src_ok(&g_src) && g_playing && !g_eof;
         int work = active && ring_space_locked() > 2048;
         pthread_mutex_unlock(&g_mx);
-        // while playing, the ring (250 ms) only drains 2048 frames in ~43 ms: 5 ms of slack is plenty; stopped, 20 ms
+        // while playing, the ring (1 s) only drains 2048 frames in ~43 ms: 5 ms of slack is plenty; stopped, 20 ms
         // is enough (play only waits for the first block) and the CPU wakes far less
         if (!work) { pthread_mutex_unlock(&g_vmx); usleep(active ? 5000 : 20000); continue; }
 
@@ -779,7 +779,7 @@ static void *usb_main(void *arg) {
             if (done->iso_frame_desc[k].actual_length < done->iso_frame_desc[k].length) {
                 st_out_short++; st_out_short_bytes += done->iso_frame_desc[k].length - done->iso_frame_desc[k].actual_length;
             }
-        if (DIAG) {   // stats every 5 s: with DIAG 0 it doesn't even read the clock
+        if (DIAG) {   // stats every 5 s (the pace block above already read the clock)
             static double last = 0, win = 0;
             double t = now_s();
             if (last > 0 && t - last > st_gap_max) st_gap_max = t - last;
