@@ -1,5 +1,11 @@
 package br.app.stagebook.ui.band
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import br.app.stagebook.ui.components.QuestionDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -74,12 +80,22 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
                 // the check sits on the name's line, not the middle of the row: with a warning under the name it looked like
                 // it marked the warning (user, 02/11)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Icon(AppIcons.Check, null, Modifier.padding(top = 2.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                    // who is on this Wi-Fi now, at a glance (user, 07/11): a lit dot, or an empty ring for who isn't
+                    val here = if (lan) online[m.id] else null
+                    val label = stringResource(if (here != null) R.string.band_online else R.string.band_offline)
+                    Box(
+                        Modifier.padding(top = 6.dp).size(12.dp)
+                            .then(
+                                if (here != null) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
+                                else Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                            )
+                            .semantics { contentDescription = label },
+                    )
                     Column(Modifier.weight(1f).padding(start = Spacing.s)) {
                         Text(m.name, style = MaterialTheme.typography.bodyLarge)
-                        val here = online[m.id]
                         when {
-                            !lan || here == null -> Unit
+                            !lan -> Unit
+                            here == null -> Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             // another app version: nothing works between the two until both update to the same one
                             here.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, here.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM, fill = false)
                             else -> Text(stringResource(R.string.band_online), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)

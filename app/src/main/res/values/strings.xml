@@ -779,7 +779,8 @@
     <string name="band_version_join">You\'re on different app versions. Update both and try again.</string>
     <string name="band_busy">They\'re on stage right now. Ask again after the show.</string>
     <string name="band_failed">Couldn\'t connect. Check that both are on the same Wi-Fi and try again.</string>
-    <string name="band_members">In the band</string>
+    <string name="band_members">Band</string>
+    <string name="band_offline">Not on this Wi-Fi</string>
     <string name="band_members_none">No one yet. Whoever you allow shows up here.</string>
     <string name="band_remove">Remove %1$s from the band</string>
     <string name="band_remove_short">Remove</string>

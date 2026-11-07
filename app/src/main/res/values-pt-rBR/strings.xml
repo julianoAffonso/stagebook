@@ -806,7 +806,8 @@
     <string name="band_version_join">Vocês estão em versões diferentes do app. Atualizem os dois e tentem de novo.</string>
     <string name="band_busy">Está no palco agora. Peça de novo depois do show.</string>
     <string name="band_failed">Não deu para conectar. Confira se os dois estão no mesmo Wi-Fi e tente de novo.</string>
-    <string name="band_members">Da banda</string>
+    <string name="band_members">Banda</string>
+    <string name="band_offline">Fora deste Wi-Fi</string>
     <string name="band_members_none">Ninguém ainda. Quem for autorizado aparece aqui.</string>
     <string name="band_remove">Remover %1$s da banda</string>
     <string name="band_remove_short">Remover</string>
