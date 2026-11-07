@@ -29,6 +29,8 @@ class IdleOffTest {
         PlayerService.running = true
         PlayerService.appVisible = true
         service   // created first: playing() and setAppVisible() reach it through its instance
+        // a stage player left by another test in this JVM would call the native engine on shutdown
+        StagePlayer::class.java.getDeclaredField("instance").apply { isAccessible = true }.set(null, null)
     }
 
     @After fun reset() {

@@ -151,6 +151,7 @@ data class Look(
     val showSections: Boolean = true,
     val sectionScale: Float = DEFAULT_SECTION_SCALE,   // section title size relative to the lyrics (adjustable, 29/10)
     val keepScreenOn: Boolean = true,   // screen doesn't dim with the app open (show); the stage always stays lit
+    val stageDnd: Boolean = true,   // Do not disturb while the stage is in front (user, 07/11)
     val trackStops: Boolean = true,   // the stage's track button stops and goes back to the start; off = pauses (user, 31/10)
     val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,

@@ -250,6 +250,13 @@ fun SettingsRoute(
         if (section == SettingsSection.ADVANCED || section == SettingsSection.ABOUT) advancedVm.refresh()
         onPauseOrDispose { }
     }
+    // Do not disturb on stage: Android's permission, read again when coming back from its screen
+    var dndGranted by remember { mutableStateOf(br.app.stagebook.data.device.StageQuiet.granted(context)) }
+    LifecycleResumeEffect(Unit) {
+        dndGranted = br.app.stagebook.data.device.StageQuiet.granted(context)
+        onPauseOrDispose { }
+    }
+    fun openDndAccess() { runCatching { context.startActivity(br.app.stagebook.data.device.StageQuiet.accessScreen()) } }
     // without the local network permission (where Android has it) the system hides this device from the band (the S26
     // wasn't found, 31/10); asked again when Settings → Band opens, and the search restarts once it's given
     val localNetwork = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
@@ -315,6 +322,12 @@ fun SettingsRoute(
                     }
                 },
                 onKeepScreenOn = viewModel::setKeepScreenOn,
+                dndGranted = dndGranted,
+                onStageDnd = { on ->
+                    viewModel.setStageDnd(on)
+                    if (on && !dndGranted) openDndAccess()
+                },
+                onDndAllow = ::openDndAccess,
                 onTrackStops = viewModel::setTrackStops,
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
@@ -406,6 +419,9 @@ data class SettingsActions(
     val onBatteryFree: () -> Unit = {},
     val onAutoBlocker: () -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
+    val dndGranted: Boolean = true,
+    val onStageDnd: (Boolean) -> Unit = {},
+    val onDndAllow: () -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (br.app.stagebook.data.model.StageMode) -> Unit = {},
@@ -722,8 +738,17 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
     }
     ChordShapesCard(look, actions)
     // the screen stays on with the app open (it was in its own Screen item)
-    SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
+    SettingsCard(
+        stringResource(R.string.settings_screen),
+        help = stringResource(R.string.settings_keep_screen_on_help) + "\n\n" + stringResource(R.string.settings_stage_dnd_help),
+    ) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
+        val missing = look.stageDnd && !actions.dndGranted
+        SwitchRow(
+            stringResource(R.string.settings_stage_dnd), look.stageDnd, actions.onStageDnd,
+            detail = stringResource(if (missing) R.string.settings_stage_dnd_missing else R.string.settings_stage_dnd_detail),
+        )
+        if (missing) ActionButton(stringResource(R.string.stage_dnd_allow), actions.onDndAllow, icon = AppIcons.VolumeOff, tone = ButtonTone.Tonal)
     }
 }
 

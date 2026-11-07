@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import br.app.stagebook.domain.forSong
 import br.app.stagebook.domain.isStageGap
 import br.app.stagebook.ui.components.QuestionDialog
+import br.app.stagebook.data.device.StageQuiet
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
 import androidx.core.net.toUri
@@ -188,6 +189,24 @@ fun StageRoute(
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
     KeepScreenOn()
+    StageDoNotDisturb(uiState.look.stageDnd && !uiState.loading)
+    // the first time on stage without Android's permission: asks once (Settings can turn it on later)
+    var askQuiet by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiState.look.stageDnd, uiState.loading) {
+        if (!uiState.loading && uiState.look.stageDnd && StageQuiet.shouldAsk(context)) askQuiet = true
+    }
+    if (askQuiet) {
+        fun answer(allow: Boolean) {
+            askQuiet = false
+            StageQuiet.asked(context)
+            if (allow) runCatching { context.startActivity(StageQuiet.accessScreen()) }
+        }
+        QuestionDialog(
+            stringResource(R.string.settings_stage_dnd), stringResource(R.string.stage_dnd_ask),
+            stringResource(R.string.stage_dnd_allow), { answer(true) },
+            stringResource(R.string.stage_dnd_later), { answer(false) },
+        )
+    }
     // the song on screen tells the player which backing track to play; the output notice shows once
     val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
     LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
@@ -1945,6 +1964,28 @@ internal fun KeepScreenOn() {
     DisposableEffect(view) {
         ScreenOnCount.add(view)
         onDispose { ScreenOnCount.remove(view) }
+    }
+}
+
+/** Do not disturb while the stage is in front: off when the app leaves the screen or the stage closes. */
+@Composable
+internal fun StageDoNotDisturb(on: Boolean) {
+    val context = LocalContext.current.applicationContext
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(on, owner) {
+        if (!on) return@DisposableEffect onDispose {}
+        val watch = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> StageQuiet.set(context, true)
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> StageQuiet.set(context, false)
+                else -> Unit
+            }
+        }
+        owner.lifecycle.addObserver(watch)   // already started: ON_START arrives right away
+        onDispose {
+            owner.lifecycle.removeObserver(watch)
+            StageQuiet.set(context, false)
+        }
     }
 }
 

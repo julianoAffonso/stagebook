@@ -443,6 +443,13 @@
     <string name="settings_screen">Tela</string>
     <string name="settings_keep_screen_on">Manter a tela ligada com o app aberto</string>
     <string name="settings_keep_screen_on_help">Para o show. O tablet não apaga enquanto o Stagebook estiver na frente. Fora do app, apaga normalmente. O palco fica sempre aceso.</string>
+    <string name="settings_stage_dnd">Não perturbe no palco</string>
+    <string name="settings_stage_dnd_detail">Contatos favoritos ainda podem ligar</string>
+    <string name="settings_stage_dnd_missing">O Android ainda não autorizou</string>
+    <string name="settings_stage_dnd_help">Com o palco aberto, as notificações não aparecem e o telefone não toca. Contatos favoritos e quem ligar duas vezes seguidas ainda passam. Ao sair do palco, tudo volta como estava. O Android pede autorização uma vez.</string>
+    <string name="stage_dnd_ask">Para nenhuma notificação atrapalhar a música, o Stagebook pode ligar o Não perturbe com o palco aberto. O Android vai abrir uma lista. Ligue o Stagebook nela.</string>
+    <string name="stage_dnd_allow">Autorizar</string>
+    <string name="stage_dnd_later">Agora não</string>
     <string name="settings_pedal">Pedal</string>
     <string name="settings_pedal_none_short">Nenhum pedal reconhecido ainda</string>
     <string name="settings_pedal_connected_short">conectado</string>
