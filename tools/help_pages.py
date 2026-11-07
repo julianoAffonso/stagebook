@@ -868,9 +868,11 @@ SECTIONS = [
 
 UI = {
     "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",
-              "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR"},
+              "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR",
+              "home": "Stagebook — página inicial"},
     "en": {"title": "Stagebook help", "lead": "How to use each part of the app.", "contents": "On this page",
-           "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "../ajuda/", "lang": "en"},
+           "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "../ajuda/", "lang": "en",
+           "home": "Stagebook — home page"},
 }
 
 CSS = """
@@ -879,7 +881,8 @@ CSS = """
 * { box-sizing: border-box; }
 body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 header { padding: 32px max(16px, env(safe-area-inset-left, 0px)) 8px; max-width: 1180px; margin: 0 auto; display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
-header img { width:72px; height:72px; border-radius:18px; }
+header img { width:72px; height:72px; border-radius:18px; display:block; }
+header a.home { border-radius:18px; } header a.home:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 h1 { margin:0; font-size: 30px; } .lead { margin:4px 0 0; color:var(--muted); }
 .lang { margin-left:auto; color:var(--accent); }
 .wrap { max-width:1180px; margin:0 auto; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
@@ -1014,7 +1017,7 @@ def build(lang):
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{ui['title']}</title><link rel="icon" href="../logo.png"><style>{CSS}</style></head>
 <body>
-<header><img src="../logo.png" alt="Stagebook"><div><h1>{ui['title']}</h1><p class="lead">{ui['lead']}</p></div>
+<header><a class="home" href="../" aria-label="{ui['home']}"><img src="../logo.png" alt=""></a><div><h1>{ui['title']}</h1><p class="lead">{ui['lead']}</p></div>
 <a class="lang" href="{ui['other_href']}">{ui['other']}</a></header>
 <div class="wrap"><nav class="toc"><b>{ui['contents']}</b>{''.join(toc)}</nav><main>{''.join(body)}</main></div>
 <script>{JS}</script>
