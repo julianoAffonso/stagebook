@@ -36,6 +36,8 @@ data class Song(
     val mix: br.app.stagebook.domain.SongMix? = null,
     // free tags (Nacional, Internacional, Rock…), to filter the lists and the setlist picker (vocalist, 01/11)
     val tags: List<String> = emptyList(),
+    // MIDI sent when the song shows on stage and when it leaves (user, 07/11); goes in the backup, not to the band
+    val midi: br.app.stagebook.domain.SongMidi? = null,
 )
 
 @Immutable

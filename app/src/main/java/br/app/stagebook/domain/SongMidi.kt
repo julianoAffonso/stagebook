@@ -1,0 +1,66 @@
+package br.app.stagebook.domain
+
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+/** The MIDI messages a song can send (user, 07/11): the standard ones a stage rig listens to. */
+@Serializable
+enum class MidiKind {
+    @SerialName("program") PROGRAM,             // a preset: program 1–128
+    @SerialName("control") CONTROL,             // controller 0–127 to a value 0–127
+    @SerialName("note") NOTE,                   // note 0–127 at a velocity 1–127, pressed and released
+    @SerialName("bank_program") BANK_PROGRAM,   // bank 0–16383 (CC0/CC32) and then the program
+}
+
+/**
+ * One MIDI message as the person writes it: channel 1–16, program 1–128 (as gear shows them), the rest 0–127. Out of
+ * range values are clamped when sending, never sent as written.
+ */
+@Immutable
+@Serializable
+data class MidiMessage(
+    val kind: MidiKind = MidiKind.PROGRAM,
+    val channel: Int = 1,
+    val number: Int = 1,   // program, controller or note
+    val value: Int = 0,    // controller value or note velocity
+    val bank: Int = 0,
+)
+
+/** What a song sends when it shows on stage and when the stage leaves it. Saved with the song (backup, editor). */
+@Immutable
+@Serializable
+data class SongMidi(val enter: List<MidiMessage> = emptyList(), val exit: List<MidiMessage> = emptyList()) {
+    fun isEmpty() = enter.isEmpty() && exit.isEmpty()
+}
+
+/** The bytes on the wire. */
+object MidiBytes {
+    const val CHANNELS = 16
+    const val PROGRAMS = 128
+    const val MAX_DATA = 127
+    const val MAX_BANK = 16383
+    const val NOTE_MS = 100L   // how long a note stays pressed before its release
+
+    private fun status(kind: Int, channel: Int) = (kind or (channel.coerceIn(1, CHANNELS) - 1)).toByte()
+    private fun data(v: Int) = v.coerceIn(0, MAX_DATA).toByte()
+
+    /** What goes out at once; a note's release comes after [NOTE_MS] ([release]). */
+    fun bytes(m: MidiMessage): ByteArray = when (m.kind) {
+        MidiKind.PROGRAM -> byteArrayOf(status(0xC0, m.channel), data(m.number.coerceIn(1, PROGRAMS) - 1))
+        MidiKind.CONTROL -> byteArrayOf(status(0xB0, m.channel), data(m.number), data(m.value))
+        MidiKind.NOTE -> byteArrayOf(status(0x90, m.channel), data(m.number), data(m.value.coerceIn(1, MAX_DATA)))
+        MidiKind.BANK_PROGRAM -> {
+            val bank = m.bank.coerceIn(0, MAX_BANK)
+            byteArrayOf(
+                status(0xB0, m.channel), 0, data(bank shr 7),
+                status(0xB0, m.channel), 32, data(bank and MAX_DATA),
+                status(0xC0, m.channel), data(m.number.coerceIn(1, PROGRAMS) - 1),
+            )
+        }
+    }
+
+    /** A note's release (note off); nothing for the others. */
+    fun release(m: MidiMessage): ByteArray? =
+        if (m.kind == MidiKind.NOTE) byteArrayOf(status(0x80, m.channel), data(m.number), 0) else null
+}
