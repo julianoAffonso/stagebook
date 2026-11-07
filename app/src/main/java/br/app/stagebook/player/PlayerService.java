@@ -378,7 +378,12 @@ public class PlayerService extends Service {
     /** Playing or stopped (StagePlayer): the wake lock follows. */
     static void playing(boolean on) {
         PlayerService s = instance;
-        if (s != null) s.main.post(() -> s.holdWake(on));
+        if (s != null) s.main.post(() -> { s.holdWake(on); if (on && s.muted()) s.setStatus(s.getString(R.string.player_usb_muted)); });
+    }
+
+    /** Through Android the media volume counts, and it's kept per output: at zero the song plays and nothing comes out. */
+    boolean muted() {
+        return androidUsb != null && getSystemService(AudioManager.class).getStreamVolume(AudioManager.STREAM_MUSIC) == 0;
     }
 
     Notification buildNotification(String text) {

@@ -507,6 +507,7 @@
     <string name="player_usb_connecting">Connecting to the USB output…</string>
     <string name="player_usb_ready">USB output: %1$s</string>
     <string name="player_usb_failed">The USB output didn\'t respond. Unplug the cable and plug it back in.</string>
+    <string name="player_usb_muted">USB output volume is at zero</string>
     <string name="player_usb_no_android">%1$s doesn\'t show up as an audio output here. Turn off Play on the interface through Android, or use another interface.</string>
     <string name="player_usb_denied">USB output permission denied</string>
     <string name="player_usb_lost">USB output disconnected. Waiting for it to come back.</string>
