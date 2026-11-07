@@ -296,6 +296,9 @@ static int g_fb_locked = 0, g_fb_mode = 0;
 #define FB_PROBE_S 60.0               // with the input marked off, how often it is read again to see if it's back
 static int g_fb_bad = 0, g_fb_good = 0, g_fb_probing = 0;
 static double g_fb_probe_t = 0;
+#define FB_STALL_S 0.3                // a locked input that returns nothing for this long has stopped: it isn't a clock
+#define FB_MAX_D 4800                 // or the count and what was sent drifted 100 ms apart: no honest clock gets there
+static double g_in_last = 0;          // when the last input URB came back
 static double g_fb_win = 0;
 static long g_fb_win_in = 0;
 #define FB_HI 64
@@ -305,6 +308,7 @@ static long g_fb_win_in = 0;
 // the interface, consuming at its own crystal, runs its small queue dry every few seconds. A PI loop on the frames sent
 // ahead of real time holds the rate at the nominal 48 000/s. Only there: an adaptive output follows our pace anyway, and
 // an input that keeps time still has the last word.
+static long g_pace_sent0 = 0;       // frames sent when the loop's clock was anchored: its error counts from there
 static double g_pace_t0 = 0, g_pace_err = 0, g_pace_off = 0, g_pace_ratio = 0, g_pace_int = 0, g_pace_last = 0;
 static int g_pace_locked = 0;
 #define PACE_EMA 0.002               // error smoothing at ~1000 output URBs/s: a time constant of ~0.5 s
@@ -318,6 +322,10 @@ static double g_pace_lock_t = 0;
 static int g_pace_slow = 0;
 #define PACE_MAX 0.01                // never more than 1% off nominal: beyond that something else is wrong
 static double g_pace_rate = 0;       // DIAG: the rate the pace loop aims at (debug.stagebook.rate), else g_out_rate
+static void pace_reset(void) {       // start over from where the output is now (the loop's error was about another regime)
+    g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0;
+    g_pace_locked = 0; g_pace_slow = 0;
+}
 #define PACE_RATE (g_pace_rate > 0 ? g_pace_rate : g_out_rate)
 static long st_fb_adj = 0, st_in_frames = 0, st_out_frames = 0, st_fb_d = 0, st_in_lost = 0;
 static pthread_t g_usb_thr, g_dec_thr;
@@ -697,6 +705,7 @@ static void *usb_main(void *arg) {
                     LOGD("input: status=%d actual=%d err=%d packets(len/status)=%s", done->status, done->actual_length, done->error_count, b);
                 }
             }
+            g_in_last = now_s();
             for (int k = 0; k < done->number_of_packets; k++) {
                 int n = done->iso_frame_desc[k].status ? 0 : (int)done->iso_frame_desc[k].actual_length / g_in_fb;
                 // a packet lost on the way still went by on the desk's clock: it counts for what it would have brought
@@ -735,6 +744,14 @@ static void *usb_main(void *arg) {
         reaped++;
         {   // frames sent ahead of the monotonic clock, smoothed, and the PI loop on it (see g_pace_ratio)
             double t = now_s();
+            if (!g_fb_bad && g_fb_locked && g_in_ep >= 0 && !tail && g_in_last > 0 &&
+                (t - g_in_last > FB_STALL_S || labs((g_tot_out - g_tot_in) - g_fb_off) > FB_MAX_D)) {
+                // seen on a phone: the input answered for the first second and then went quiet for good; following
+                // its frozen count made the output crawl at 5 frames per packet (-17%, slow and distorted)
+                g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t;
+                pace_reset();
+                LOGI("usb: input stopped answering, keeping our own pace");
+            }
             if (g_fb_bad && !g_fb_probing && !tail && g_in_ep >= 0 && in_idle == n_in && t - g_fb_probe_t >= FB_PROBE_S) {
                 // probe: read the input again until a second's count is off (stop) or FB_BACK_S are good (follow it)
                 g_fb_probing = 1; g_fb_good = 0; g_fb_win = 0; in_idle = 0;
@@ -749,8 +766,8 @@ static void *usb_main(void *arg) {
             pthread_mutex_lock(&g_mx);
             long sent = g_tot_out;
             pthread_mutex_unlock(&g_mx);
-            if (g_pace_t0 == 0) { g_pace_t0 = t; g_pace_last = t; }
-            double err = sent - (t - g_pace_t0) * PACE_RATE;
+            if (g_pace_t0 == 0) { g_pace_t0 = t; g_pace_last = t; g_pace_sent0 = sent; }
+            double err = (sent - g_pace_sent0) - (t - g_pace_t0) * PACE_RATE;
             // the host's clock offset is a constant: the loop hunts it fast for PACE_FAST_S after locking, then goes
             // nearly rigid (an interface's queue may hold only ~2 ms: every step of the ratio is a step it must absorb)
             int slow = g_pace_locked && t - g_pace_lock_t > PACE_FAST_S;
@@ -927,7 +944,7 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
-    g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0;
+    g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0; g_in_last = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
     g_usb_stop = 0; g_dec_stop = 0; g_usb_running = 1;

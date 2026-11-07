@@ -99,6 +99,7 @@ static qent q[QMAX];
 static int nq = 0;
 static double out_due = 0, in_due = 0, in_acc = 0;
 static int disconnected = 0, fail_next_reap = 0;
+static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
 static double clock_ratio = 1.0002;    // desk clock slightly fast (the feedback corrects it)
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
@@ -201,7 +202,7 @@ int fake_ioctl(int fd, unsigned long req, ...) {
             }
             if (*line < t) *line = t;
             *line += u->number_of_packets / 8000.0;   // a URB takes its own packets' worth of microframes (the input's are longer)
-            q[nq++] = (qent){u, *line, 0};
+            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line, 0};
             pthread_cond_broadcast(&dev_cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
@@ -226,7 +227,7 @@ static void sim_unplug(void) {   // cable unplugged: the kernel returns everythi
 static int sim_kernel_urbs(void) { pthread_mutex_lock(&dev_mx); int n = nq; pthread_mutex_unlock(&dev_mx); return n; }
 static void sim_close_conn(void) {   // UsbLink.close(): closing the fd returns what's left
     pthread_mutex_lock(&dev_mx);
-    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0;
+    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0;
     pthread_mutex_unlock(&dev_mx);
 }
 
@@ -544,6 +545,23 @@ int main(int argc, char **argv) {
     sleep_s(0.3);
     snprintf(buf, sizeof buf, "isRunning=%d, %d blocks leaked, %d freed while the kernel was using them", FN(isRunning)(env, NULL), nlive, freed_while_queued);
     check(!FN(isRunning)(env, NULL) && nlive == 0 && freed_while_queued == 0, "drop noticed and memory returned", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+
+    // 6b) the input answers for a second and then goes quiet for good (seen on a phone: the engine followed its frozen
+    // count and crawled at -17%); the output must keep the real-time pace on its own
+    // the validated reference (23/10) never had this defense: its result is printed, not counted
+    printf("[6b] input answers for 1 s and then never again\n");
+    int fails_before_6b = fails;
+    pthread_mutex_lock(&dev_mx); in_dead_from = now() + 1.0; pthread_mutex_unlock(&dev_mx);
+    E_START();
+    FN(seek)(env, NULL, 30000);
+    FN(play)(env, NULL);
+    sleep_s(5.0);
+    long p6 = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "position %ld ms after 5 s of play (expected ~35000)", p6);
+    check(FN(isRunning)(env, NULL) && p6 > 34500 && p6 < 35150, "keeps real-time pace without the input", buf);
+    if (!strcmp(ENGINE_NAME, "validated")) { fails = fails_before_6b; printf("  (reference engine: not counted)\n"); }
     FN(stop)(env, NULL);
     sim_close_conn();
 
