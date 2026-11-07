@@ -1249,21 +1249,20 @@ static float gated_lufs(const double *segs, size_t nseg) {
     return lufs;
 }
 
-// Loudness of a set of channels (bits in mask): {lufs, peak}. The same measurement as the backing above (K-weighting,
-// 400 ms blocks, -70 and -10 gates), but on the chosen channels: each mixer channel or pair.
-JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath, jint mask) {
-    const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
+// Walks the file once (K-weighting, 400 ms blocks, -70 and -10 gates: ITU-R BS.1770): the integrated loudness and the
+// peak of the channels in mask, and, when asked, the peak of channels 3/4 (the click pair). Shared by analyze (the
+// backing, channels 1/2) and analyzeMask (each mixer channel or pair). 0 if the file didn't open.
+static int measure(const char *path, int mask, float *lufs, float *peak, float *peak_click) {
     int err = 0, ch = 0, fs = 0;
     long len = 0;
-    src_t v = src_open(path, &err, &fs, &ch, &len);
-    (*e)->ReleaseStringUTFChars(e, jpath, path);
-    if (!src_ok(&v)) return NULL;
+    src_t v = src_open(path, &err, &fs, &ch, &len);   // refuses more than 8 channels (buf below holds up to 8)
+    if (!src_ok(&v)) return 0;
     biquad sh[LANES_MAX], hp[LANES_MAX];
     for (int i = 0; i < LANES_MAX; i++) kweight_init(&sh[i], &hp[i], fs);
-    int seg = fs / 10;
+    int seg = fs / 10;                         // 100 ms segments
     size_t cap = 4096, nseg = 0;
     double *segs = malloc(cap * sizeof(double));
-    double acc = 0, peak = 0;
+    double acc = 0, pk = 0, pkc = 0;
     int inseg = 0;
     float buf[4096 * 8];
     int got;
@@ -1273,10 +1272,11 @@ JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath
             for (int k = 0; k < ch && k < LANES_MAX; k++) {
                 if (!(mask & (1 << k))) continue;
                 double x = fr[k];
-                if (fabs(x) > peak) peak = fabs(x);
+                if (fabs(x) > pk) pk = fabs(x);
                 double y = bq(&hp[k], bq(&sh[k], x));
                 acc += y * y;
             }
+            if (peak_click) for (int k = 2; k < ch && k < 4; k++) if (fabs(fr[k]) > pkc) pkc = fabs(fr[k]);
             if (++inseg == seg) {
                 if (nseg == cap) { cap *= 2; segs = realloc(segs, cap * sizeof(double)); }
                 segs[nseg++] = acc / seg;
@@ -1285,54 +1285,32 @@ JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath
         }
     }
     src_close(&v);
-    float lufs = gated_lufs(segs, nseg);
+    *lufs = gated_lufs(segs, nseg);
     free(segs);
-    float out[2] = {lufs, (float)peak};
+    *peak = (float)pk;
+    if (peak_click) *peak_click = (float)pkc;
+    return 1;
+}
+
+// Loudness of a set of channels (bits in mask): {lufs, peak}, or null.
+JNIEXPORT jfloatArray JNICALL FN(analyzeMask)(JNIEnv *e, jclass c, jstring jpath, jint mask) {
+    const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
+    float out[2];
+    int ok = measure(path, (int)mask, &out[0], &out[1], NULL);
+    (*e)->ReleaseStringUTFChars(e, jpath, path);
+    if (!ok) return NULL;
     jfloatArray arr = (*e)->NewFloatArray(e, 2);
     (*e)->SetFloatArrayRegion(e, arr, 0, 2, out);
     return arr;
 }
 
+// The backing (channels 1/2) and the click pair (3/4): {lufsBacking, peakBacking, peakClick}, or null.
 JNIEXPORT jfloatArray JNICALL FN(analyze)(JNIEnv *e, jclass c, jstring jpath) {
     const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
-    int err = 0, ch = 0, fs = 0;
-    long len = 0;
-    src_t v = src_open(path, &err, &fs, &ch, &len);   // refuses more than 8 channels (buf below holds up to 8)
+    float out[3];
+    int ok = measure(path, 0x3, &out[0], &out[1], &out[2]);
     (*e)->ReleaseStringUTFChars(e, jpath, path);
-    if (!src_ok(&v)) return NULL;
-    int nb = ch >= 2 ? 2 : 1;                 // backing channels
-    biquad sh[2], hp[2];
-    for (int i = 0; i < 2; i++) kweight_init(&sh[i], &hp[i], fs);
-
-    int seg = fs / 10;                         // 100 ms segments
-    size_t cap = 4096, nseg = 0;
-    double *segs = malloc(cap * sizeof(double));
-    double acc = 0, peakB = 0, peakC = 0;
-    int inseg = 0;
-    float buf[4096 * 8];
-    int got;
-    while ((got = src_read(&v, ch, buf, 4096)) > 0) {
-        for (int i = 0; i < got; i++) {
-            float *fr = &buf[i * ch];
-            for (int k = 0; k < nb; k++) {
-                double x = fr[k];
-                if (fabs(x) > peakB) peakB = fabs(x);
-                double y = bq(&hp[k], bq(&sh[k], x));
-                acc += y * y;
-            }
-            for (int k = 2; k < ch && k < 4; k++) if (fabs(fr[k]) > peakC) peakC = fabs(fr[k]);
-            if (++inseg == seg) {
-                if (nseg == cap) { cap *= 2; segs = realloc(segs, cap * sizeof(double)); }
-                segs[nseg++] = acc / seg;
-                acc = 0; inseg = 0;
-            }
-        }
-    }
-    src_close(&v);
-
-    float lufs = gated_lufs(segs, nseg);
-    free(segs);
-    float out[3] = {lufs, (float)peakB, (float)peakC};
+    if (!ok) return NULL;
     jfloatArray arr = (*e)->NewFloatArray(e, 3);
     (*e)->SetFloatArrayRegion(e, arr, 0, 3, out);
     return arr;
