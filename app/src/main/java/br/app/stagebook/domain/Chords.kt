@@ -186,8 +186,16 @@ object Chords {
         val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
         // the "all" first: a lyric line stops at its first word that isn't a chord (it ran on every line of the stage
         // and the editor preview, and "any" parsed every word first; audit 03/11)
-        return body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)
+        if (body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)) return true
+        // a note after a dash: "Am G6 Am G6 - INTRO RIFF x 2" (user, 07/11). Two chords at least before it, or "E - eu
+        // que pensei" would be one
+        val dash = body.indexOfFirst { NOTE_DASH.matches(it) }
+        if (dash < 2 || dash == body.lastIndex) return false
+        val head = body.subList(0, dash)
+        return head.all { isChord(it) || chordLineExtras.matches(it) } && head.count(::isChord) >= 2
     }
+
+    private val NOTE_DASH = Regex("[-–—]+")
 
     /** A label in front of chords on a chords-only line: `Intro:` or `[Solo]`. */
     fun isChordLineLabel(t: String) = isLabel(t)

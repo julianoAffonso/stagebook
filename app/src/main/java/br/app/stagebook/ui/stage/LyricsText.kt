@@ -198,7 +198,9 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     // the chords in their color and the marks between them, in order, on one line
     // a label in front ("Intro: G D") counts too: it took the lyrics path, with the chords floating above (audit 03/11)
     val words = lyric.trim().split(SPACES)
-    if (lyric.isBlank() || words.withIndex().all { (i, w) -> Chords.isChordLineMark(w) || (i == 0 && Chords.isChordLineLabel(w)) }) {
+    // and a note after a dash ("Am G6 - INTRO RIFF", user 07/11): the same test the bare line passes
+    val plain = segs.joinToString(" ") { (it.chord ?: "") + " " + it.text }
+    if (lyric.isBlank() || words.withIndex().all { (i, w) -> Chords.isChordLineMark(w) || (i == 0 && Chords.isChordLineLabel(w)) } || Chords.isChordLine(plain)) {
         return buildAnnotatedString {
             segs.forEach { s ->
                 if (s.chord != null) {

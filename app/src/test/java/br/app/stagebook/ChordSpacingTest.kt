@@ -128,4 +128,12 @@ class ChordSpacingTest {
         assertTrue(line.text, line.text == "Intro:   G   D")
         assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
     }
+
+    // user, 07/11: Waiting For a Girl Like You showed its intro as lyrics, because of the note after the dash
+    @Test fun `chords with a note after a dash are a chord line`() {
+        val raw = br.app.stagebook.domain.Chords.bracketChordLine("Am G6 Am G6 - INTRO RIFF x 2")
+        val line = chordLine(raw, ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text == "Am   G6   Am   G6   -   INTRO   RIFF   x   2")
+        assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
+    }
 }
