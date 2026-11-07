@@ -10,7 +10,7 @@ object ShowTimer {
     const val STEP_MINUTES = 30
     const val MIN_MINUTES = 30
     const val MAX_MINUTES = 6 * 60
-    const val DEFAULT_MINUTES = 2 * 60
+    const val DEFAULT_MINUTES = 60   // starts at an hour (user, 07/11)
     const val WARN_MINUTES = 10   // the last minutes change color
     // a start older than this is yesterday's show: switching to the counter starts a new one
     private const val STALE_MS = 12 * 60 * 60 * 1000L

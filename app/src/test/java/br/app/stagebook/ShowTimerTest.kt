@@ -41,7 +41,7 @@ class ShowTimerTest {
         assertEquals(ShowTimer.MAX_MINUTES, ShowTimer.step(ShowTimer.MAX_MINUTES, up = true))
         assertEquals("2h", ShowTimer.lengthText(120))
         assertEquals("2h30", ShowTimer.lengthText(150))
-        assertEquals(120, Look().showMinutes)
+        assertEquals(60, Look().showMinutes)
     }
 
     @Test fun `the show running keeps its start, yesterday's starts again`() {
