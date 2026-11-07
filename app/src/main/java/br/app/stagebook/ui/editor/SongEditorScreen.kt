@@ -111,6 +111,8 @@ fun SongEditorRoute(
         }
     }
     val look = viewModel.look.collectAsStateWithLifecycle().value
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasMidi = remember(context) { context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_MIDI) }
     val message = LocalAppMessage.current
     val trackBad = stringResource(R.string.stage_track_bad)
     val scope = rememberCoroutineScope()
@@ -138,6 +140,8 @@ fun SongEditorRoute(
         onRemoveTrack = viewModel::removeTrack,
         allTags = remember { viewModel.allTags() },
         onTags = viewModel::onTags,
+        midiOn = look.extrasOn && hasMidi,
+        onMidi = viewModel::onMidi,
     )
 }
 
@@ -163,7 +167,11 @@ fun SongEditorScreen(
     trackName: String = "",   // the track's own name ("" = unknown)
     allTags: List<String> = emptyList(),
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
+    midiOn: Boolean = false,   // the song's MIDI: a stage extra (essential mode hides it, T19) on a device with MIDI
+    onMidi: (br.app.stagebook.domain.SongMidi) -> Unit = {},
 ) {
+    var midiOpen by rememberSaveable { mutableStateOf(false) }
+    if (midiOpen) MidiDialog(uiState.midi, { onMidi(it); midiOpen = false }) { midiOpen = false }
     var deleting by rememberSaveable { mutableStateOf(false) }
     var tagging by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
@@ -233,6 +241,13 @@ fun SongEditorScreen(
                                 if (previewing) AppIcons.Edit else AppIcons.Slideshow,
                                 stringResource(if (previewing) R.string.editor_back_to_text else R.string.editor_preview),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        // the song's MIDI on entering and leaving the stage (user, 07/11): lit when it sends something
+                        if (midiOn) IconButton(onClick = { midiOpen = true }) {
+                            Icon(
+                                AppIcons.Piano, stringResource(R.string.song_midi_title),
+                                tint = if (uiState.midi.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                             )
                         }
                         // save and delete in view (delete only for a saved song)

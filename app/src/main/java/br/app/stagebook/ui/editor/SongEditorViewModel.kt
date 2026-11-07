@@ -42,6 +42,7 @@ data class SongEditorUiState(
     val error: EditorError? = null,
     val unsaved: Boolean = false,   // something typed or imported not saved yet
     val tags: List<String> = emptyList(),   // saved with the song on Save, like the rest (user, 01/11: tags in the editor)
+    val midi: br.app.stagebook.domain.SongMidi = br.app.stagebook.domain.SongMidi(),   // saved on Save too (user, 07/11)
 ) {
     val canDelete get() = mode == EditorMode.EDIT || mode == EditorMode.IMPORTED_UPDATE
 
@@ -147,21 +148,24 @@ class SongEditorViewModel @Inject constructor(
                 text = br.app.stagebook.domain.InternalMarks.split(draft?.text?.let(Chords::withDetectedKey) ?: song?.text.orEmpty()).first,
                 unsaved = imported,
                 tags = song?.tags.orEmpty(),
+                midi = song?.midi ?: br.app.stagebook.domain.SongMidi(),
             )
             original = loaded
             // Android closed the app with the edit open (low memory on the Fire): what was typed comes back
             val kept = savedStateHandle.get<Array<String>>(KEY_FIELDS)
             if (kept == null && draft != null) savedStateHandle[KEY_FIELDS] = arrayOf(loaded.title, loaded.author, loaded.year, loaded.text)
             val keptTags = savedStateHandle.get<ArrayList<String>>(KEY_TAGS) ?: loaded.tags
-            uiState = if (kept != null && kept.size == 4) loaded.edited(kept[0], kept[1], kept[2], kept[3], keptTags) else loaded.edited(loaded.title, loaded.author, loaded.year, loaded.text, keptTags)
+            val keptMidi = savedStateHandle.get<String>(KEY_MIDI)?.let { runCatching { midiJson.decodeFromString(br.app.stagebook.domain.SongMidi.serializer(), it) }.getOrNull() } ?: loaded.midi
+            uiState = if (kept != null && kept.size == 4) loaded.edited(kept[0], kept[1], kept[2], kept[3], keptTags, keptMidi) else loaded.edited(loaded.title, loaded.author, loaded.year, loaded.text, keptTags, keptMidi)
         }
     }
 
     private var original = SongEditorUiState()
 
-    private fun SongEditorUiState.edited(title: String, author: String, year: String, text: String, tags: List<String> = this.tags): SongEditorUiState {
-        val next = copy(title = title, author = author, year = year, text = text, tags = tags)
-        val changed = title != original.title || author != original.author || year != original.year || text != original.text || tags != original.tags
+    private fun SongEditorUiState.edited(title: String, author: String, year: String, text: String, tags: List<String> = this.tags, midi: br.app.stagebook.domain.SongMidi = this.midi): SongEditorUiState {
+        val next = copy(title = title, author = author, year = year, text = text, tags = tags, midi = midi)
+        val changed = title != original.title || author != original.author || year != original.year || text != original.text || tags != original.tags ||
+            midi != original.midi
         return next.copy(unsaved = changed || original.unsaved)
     }
 
@@ -183,6 +187,14 @@ class SongEditorViewModel @Inject constructor(
         uiState = uiState.edited(uiState.title, uiState.author, uiState.year, uiState.text, t)
         savedStateHandle[KEY_TAGS] = ArrayList(t)
     }
+
+    /** The song's MIDI on entering and leaving the stage, from its window; kept across a closed app like the fields. */
+    fun onMidi(m: br.app.stagebook.domain.SongMidi) {
+        uiState = uiState.edited(uiState.title, uiState.author, uiState.year, uiState.text, midi = m)
+        savedStateHandle[KEY_MIDI] = midiJson.encodeToString(br.app.stagebook.domain.SongMidi.serializer(), m)
+    }
+
+    private val midiJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     /** Stage look (editor preview). */
     val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
@@ -210,7 +222,7 @@ class SongEditorViewModel @Inject constructor(
         if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
+        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, midi = s.midi.takeUnless { it.isEmpty() }, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         finished = true
         // batch importing into a setlist: the song takes its place and the queue moves on
@@ -233,6 +245,7 @@ class SongEditorViewModel @Inject constructor(
     private companion object {
         const val KEY_FIELDS = "editor_fields"
         const val KEY_TAGS = "editor_tags"
+        const val KEY_MIDI = "editor_midi"
         const val KEY_IMPORTED = "editor_imported"
         const val KEY_NEW_ID = "editor_new_id"
         const val KEY_TRACK = "editor_track"
