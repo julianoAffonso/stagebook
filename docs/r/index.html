@@ -1,8 +1,10 @@
 <!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Landing page of the links the app shares over the internet (https://stagebook.app.br/r#<code>). The code lives in
-     the fragment, which browsers never send to any server; this page makes no network call (the CSP below forbids it). -->
+<!-- Landing page of the links the app shares over the internet:
+     https://stagebook.app.br/r#<code>&t=<i invite | l setlist | m songs>&n=<sender>&s=<setlist>&l=<sender's language>
+     Everything lives in the fragment, which browsers never send to any server; this page makes no network call (the CSP
+     below forbids it). It speaks the sender's language when there's a translation, English otherwise. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer"><meta name="robots" content="noindex">
 <title>Stagebook</title><link rel="icon" href="../logo.png"><style>
@@ -16,6 +18,7 @@ header img { width:64px; height:64px; border-radius:16px; }
 h1 { margin:0; font-size: 30px; }
 .card { background:var(--surface); border-radius:16px; padding:24px 16px; }
 .card + .card { margin-top: 16px; }
+h2 { margin: 0 0 8px; font-size: 22px; line-height: 1.3; }
 .card > :last-child { margin-bottom: 0; }
 p { margin: 0 0 16px; }
 .muted { color:var(--muted); font-size:14px; }
@@ -39,7 +42,8 @@ p { margin: 0 0 16px; }
 
   <div id="found" hidden>
     <div class="card">
-      <p data-t="intro"></p>
+      <h2 id="what"></h2>
+      <p class="muted" data-t="valid"></p>
       <p id="notAndroid" class="muted" data-t="android" hidden></p>
       <a id="open" class="btn primary" href="#" data-t="open"></a>
     </div>
@@ -64,8 +68,16 @@ p { margin: 0 0 16px; }
   var DOWNLOAD = "https://github.com/julianoAffonso/stagebook/releases/latest/download/stagebook.apk";
   var TEXT = {
     pt: {
-      missing: "Este link está incompleto: falta o código no final. Peça para enviarem de novo.",
-      intro: "Alguém te mandou algo pelo Stagebook: um setlist, músicas ou um convite para a banda. Vale por 12 horas.",
+      missing: "Este link está incompleto. Peça para mandarem de novo.",
+      invite: "{n} convidou você para a banda no Stagebook.",
+      inviteNoName: "Você recebeu um convite para uma banda no Stagebook.",
+      setlist: "{n} mandou o setlist “{s}” para você.",
+      setlistNoName: "Você recebeu o setlist “{s}” no Stagebook.",
+      setlistNoTitle: "{n} mandou um setlist para você.",
+      songs: "{n} mandou músicas para você.",
+      songsNoName: "Você recebeu músicas no Stagebook.",
+      other: "Você recebeu um link do Stagebook.",
+      valid: "O link vale por 12 horas.",
       android: "O Stagebook é um app para Android: abra este link no celular ou tablet.",
       open: "Abrir no Stagebook",
       noApp: "Ainda não tem o Stagebook?",
@@ -77,8 +89,16 @@ p { margin: 0 0 16px; }
       notCopied: "Baixando…"
     },
     en: {
-      missing: "This link is incomplete: the code at the end is missing. Ask them to send it again.",
-      intro: "Someone sent you something on Stagebook: a setlist, songs or an invite to the band. Valid for 12 hours.",
+      missing: "This link is incomplete. Ask them to send it again.",
+      invite: "{n} invited you to their band on Stagebook.",
+      inviteNoName: "You got an invite to a band on Stagebook.",
+      setlist: "{n} sent you the setlist “{s}”.",
+      setlistNoName: "You got the setlist “{s}” on Stagebook.",
+      setlistNoTitle: "{n} sent you a setlist.",
+      songs: "{n} sent you songs.",
+      songsNoName: "You got songs on Stagebook.",
+      other: "You got a Stagebook link.",
+      valid: "The link is valid for 12 hours.",
       android: "Stagebook is an Android app: open this link on your phone or tablet.",
       open: "Open in Stagebook",
       noApp: "Don't have Stagebook yet?",
@@ -90,7 +110,20 @@ p { margin: 0 0 16px; }
       notCopied: "Downloading…"
     }
   };
-  var lang = /^pt/i.test(navigator.language || "") ? "pt" : "en";
+
+  // "#<code>&t=..&n=..&s=..&l=..": the code first, then the details the app adds
+  var hash = location.hash.replace(/^#/, "");
+  var parts = hash.split("&");
+  var params = {};
+  parts.slice(1).forEach(function (kv) {
+    var at = kv.indexOf("=");
+    if (at <= 0) return;
+    var v;
+    try { v = decodeURIComponent(kv.slice(at + 1).replace(/\+/g, " ")); } catch (e) { v = ""; }
+    params[kv.slice(0, at)] = v.slice(0, 80);
+  });
+  // the sender's language when this page has it, English otherwise (also with no language in the link)
+  var lang = /^pt/i.test(params.l || "") ? "pt" : "en";
   var t = TEXT[lang];
   // a different code typed in the address bar only changes the hash: read it again
   window.addEventListener("hashchange", function () { location.reload(); });
@@ -106,17 +139,29 @@ p { margin: 0 0 16px; }
     return parts.length === 3 && parts.every(function (p) { return p.length <= 24; }) ? parts.join("-") : null;
   }
 
-  var code = normalize(location.hash.replace(/^#/, ""));
+  var code = normalize(parts[0]);
   if (!code) { document.getElementById("missing").hidden = false; return; }
   document.getElementById("found").hidden = false;
   document.getElementById("code").textContent = code.split("-").join(" · ");
+  // what came and from whom, as text only (never as HTML)
+  var n = params.n || "", title = params.s || "", kind = params.t || "";
+  function fill(x) { return x.replace("{n}", n).replace("{s}", title); }
+  var what = kind === "i" ? (n ? t.invite : t.inviteNoName)
+    : kind === "l" ? (n && title ? t.setlist : title ? t.setlistNoName : n ? t.setlistNoTitle : t.other)
+    : kind === "m" ? (n ? t.songs : t.songsNoName)
+    : t.other;
+  document.getElementById("what").textContent = fill(what);
   if (!/android/i.test(navigator.userAgent)) document.getElementById("notAndroid").hidden = false;
 
-  var link = "https://stagebook.app.br/r#" + code;
+  var extra = ["t", "n", "s", "l"].filter(function (k) { return params[k]; })
+    .map(function (k) { return "&" + k + "=" + encodeURIComponent(params[k]); }).join("");
+  var fragment = code + extra;
+  var link = "https://stagebook.app.br/r#" + fragment;
   // Android intent: URI (parsed by Intent.parseUri). The data is everything before the LAST "#", so the link's own
-  // fragment stays as it is ("#<code>", only [a-z0-9-]) and nothing after "#Intent;" may contain a "#": the fallback
+  // fragment stays as it is (the code and the details, percent-encoded: no "#" inside) and nothing after "#Intent;"
+  // may contain a "#" either: the fallback
   // URL is percent-encoded. Not installed: the browser goes to the fallback (the download).
-  var intent = "intent://stagebook.app.br/r#" + encodeURIComponent(code) +
+  var intent = "intent://stagebook.app.br/r#" + fragment +
     "#Intent;scheme=https;package=br.app.stagebook;S.browser_fallback_url=" + encodeURIComponent(DOWNLOAD) + ";end";
   document.getElementById("open").href = intent;
   document.getElementById("installed").href = intent;
