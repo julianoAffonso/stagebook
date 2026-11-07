@@ -71,7 +71,7 @@ fun StagebookNavHost(
     val nav = rememberNavController()
     // a receive link: the receive screen with its code, in place of another receive screen already open
     LaunchedEffect(receiveCodes) {
-        receiveCodes.collect { code -> nav.navigate(ScanSetlist(code)) { popUpTo<ScanSetlist> { inclusive = true } } }
+        receiveCodes.collect { code -> nav.navigate(ScanSetlist(code, fromLink = true)) { popUpTo<ScanSetlist> { inclusive = true } } }
     }
     // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
     // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip

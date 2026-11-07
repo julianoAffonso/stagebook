@@ -629,6 +629,9 @@
     <string name="invite_accept">Entrar na banda</string>
     <string name="invite_decline">Agora não</string>
     <string name="invite_joined">Você está na banda com %1$s.</string>
+    <string name="scan_link_title">Recebendo pelo link</string>
+    <string name="scan_link_loading">Buscando o que enviaram…</string>
+    <string name="scan_link_not_found">Esse link não vale mais. Os links duram 12 horas. Peça para enviarem novamente.</string>
     <string name="scan_code_title">Recebendo as 3 palavras</string>
     <string name="scan_code_loading">Buscando o setlist…</string>
     <string name="scan_code_not_found">Nada chegou com essas palavras. Confira. Elas valem por 12 horas depois do envio.</string>

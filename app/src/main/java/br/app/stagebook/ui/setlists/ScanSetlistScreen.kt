@@ -126,6 +126,7 @@ fun ScanSetlistRoute(
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier, onNoCamera = { message.show(resources.getString(R.string.scan_no_camera), long = true) }) },
         byCode = viewModel.code.isNotEmpty(),
+        fromLink = viewModel.fromLink,
         canScanAgain = viewModel.code.isNotEmpty() || viewModel.readsQr,
         fromName = viewModel.fromName,
         band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
@@ -175,6 +176,7 @@ fun ScanSetlistScreen(
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
     onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
     onAcceptInvite: () -> Unit = {},
+    fromLink: Boolean = false,   // came from a link: no word about the 3 words (user, 07/11)
 ) {
     var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // row with "See what changes" open
     CenteredContent(Modifier.fillMaxSize()) {
@@ -186,6 +188,7 @@ fun ScanSetlistScreen(
                         // reviewing: "Review setlist", however it arrived (the camera and the code are done by now)
                         ui is ScanUi.Review -> R.string.scan_review_title
                         ui is ScanUi.Invite -> R.string.invite_title
+                        byCode && fromLink -> R.string.scan_link_title
                         byCode -> R.string.scan_code_title
                         else -> R.string.scan_title
                     },
@@ -194,7 +197,7 @@ fun ScanSetlistScreen(
             )
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
-                is ScanUi.Fetching -> Fetching(ui, onRetry)
+                is ScanUi.Fetching -> Fetching(ui, onRetry, fromLink)
                 is ScanUi.Invite -> InvitePanel(ui, onAcceptInvite, onBack)
                 is ScanUi.Review -> {
                     // missing songs: searches for the band while the review is open (to ask them before the sites)
@@ -453,12 +456,12 @@ private fun InvitePanel(ui: ScanUi.Invite, onAccept: () -> Unit, onBack: () -> U
 }
 
 @Composable
-private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
+private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit, fromLink: Boolean = false) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally) {
         when (ui.problem) {
             null -> {
                 CircularProgressIndicator()
-                Text(stringResource(R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(if (fromLink) R.string.scan_link_loading else R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
             }
             else -> {
                 if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
@@ -469,7 +472,7 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
                 } else br.app.stagebook.ui.components.StatusNote(
                     stringResource(
                         when (ui.problem) {
-                            CodeProblem.NOT_FOUND -> R.string.scan_code_not_found
+                            CodeProblem.NOT_FOUND -> if (fromLink) R.string.scan_link_not_found else R.string.scan_code_not_found
                             CodeProblem.NEWER -> R.string.scan_newer
                             CodeProblem.OFFLINE -> R.string.scan_code_offline
                         },

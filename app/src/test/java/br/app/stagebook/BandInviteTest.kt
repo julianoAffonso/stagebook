@@ -56,4 +56,19 @@ class BandInviteTest {
         ui = br.app.stagebook.ui.setlists.ScanUi.Invite("Ana", joined = true)
         compose.onNodeWithText("Você está na banda com Ana.").assertExists()
     }
+
+    // whoever tapped a link never saw the 3 words (user, 07/11): the screen talks about the link
+    @Test fun `from a link, the receive screen talks about the link`() {
+        compose.setContent {
+            br.app.stagebook.ui.theme.StagebookTheme {
+                br.app.stagebook.ui.setlists.ScanSetlistScreen(
+                    br.app.stagebook.ui.setlists.ScanUi.Fetching(br.app.stagebook.ui.setlists.CodeProblem.NOT_FOUND),
+                    false, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true, fromLink = true,
+                )
+            }
+        }
+        compose.onNodeWithText("Recebendo pelo link").assertExists()
+        compose.onNodeWithText("Esse link não vale mais", substring = true).assertExists()
+        compose.onNodeWithText("palavras", substring = true).assertDoesNotExist()
+    }
 }

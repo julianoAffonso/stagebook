@@ -171,6 +171,8 @@ class ScanSetlistViewModel @Inject constructor(
         }
     }
     private val route = savedStateHandle.toRoute<ScanSetlist>()
+    /** The code came in a link: the screen talks about the link, never about the 3 words. */
+    val fromLink: Boolean = route.fromLink
     var code: String = route.code
         private set
 

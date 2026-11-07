@@ -618,6 +618,9 @@
     <string name="invite_accept">Join the band</string>
     <string name="invite_decline">Not now</string>
     <string name="invite_joined">You\'re in the band with %1$s.</string>
+    <string name="scan_link_title">Receiving from a link</string>
+    <string name="scan_link_loading">Getting what they sent…</string>
+    <string name="scan_link_not_found">This link no longer works. Links last 12 hours. Ask them to send it again.</string>
     <string name="scan_code_title">Receiving the 3 words</string>
     <string name="scan_code_loading">Fetching the setlist…</string>
     <string name="scan_code_not_found">Nothing came with these words. Check them. They last 12 hours after sending.</string>
