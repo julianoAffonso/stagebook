@@ -104,6 +104,14 @@ class MidiOut @Inject constructor(
         return p
     }
 
+    private val stage = br.app.stagebook.domain.StageMidi(::send)
+
+    /** A song showed on stage ([id] null: none): the one before sends its exit, then this one its entry. */
+    fun songOnStage(id: String?, midi: br.app.stagebook.domain.SongMidi?) = stage.show(id, midi)
+
+    /** The stage closed: the last song sends its exit. */
+    fun leftStage() = stage.leave()
+
     private fun closeOpen() {
         runCatching { port?.close() }
         runCatching { device?.close() }

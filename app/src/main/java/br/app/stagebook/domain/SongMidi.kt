@@ -64,3 +64,26 @@ object MidiBytes {
     fun release(m: MidiMessage): ByteArray? =
         if (m.kind == MidiKind.NOTE) byteArrayOf(status(0x80, m.channel), data(m.number), 0) else null
 }
+
+/**
+ * The song on stage and what it sends when it leaves. Kept outside the stage: following the leader, the next song's
+ * stage comes in before the old one leaves, and the old song's exit has to go before the new song's entry.
+ */
+class StageMidi(private val send: (List<MidiMessage>) -> Unit) {
+    private var song: String? = null
+    private var exit: List<MidiMessage> = emptyList()
+
+    fun show(id: String?, midi: SongMidi?) {
+        if (id == song) return
+        send(exit)
+        send(midi?.enter.orEmpty())
+        song = id
+        exit = midi?.exit.orEmpty()
+    }
+
+    fun leave() {
+        send(exit)
+        song = null
+        exit = emptyList()
+    }
+}

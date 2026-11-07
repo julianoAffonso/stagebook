@@ -46,4 +46,16 @@ class SongMidiTest {
         val (merged, _) = lib.mergeSongs(listOf(Song(title = "Flores", author = "Titãs", text = "nova")), { "y" })
         assertEquals(midi, merged.songs[0].midi)
     }
+
+    @Test fun `on stage, the song before leaves before the next one enters`() {
+        val sent = mutableListOf<Int>()
+        val stage = br.app.stagebook.domain.StageMidi { list -> list.forEach { sent += it.number } }
+        fun midi(enter: Int, exit: Int) = SongMidi(listOf(MidiMessage(number = enter)), listOf(MidiMessage(number = exit)))
+        stage.show("a", midi(1, 2))
+        stage.show("a", midi(1, 2))   // the same song again (a recomposition) sends nothing
+        stage.show("b", midi(3, 4))
+        stage.show("c", null)
+        stage.leave()
+        assertEquals(listOf(1, 2, 3, 4), sent)
+    }
 }

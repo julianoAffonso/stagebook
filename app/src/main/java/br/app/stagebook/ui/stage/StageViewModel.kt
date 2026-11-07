@@ -62,7 +62,17 @@ class StageViewModel @Inject constructor(
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val chordPlayer: br.app.stagebook.data.ChordPlayer,
     private val announcer: br.app.stagebook.data.StageAnnouncer,
+    private val midiOut: br.app.stagebook.data.MidiOut,
 ) : ViewModel() {
+    /** The song's MIDI on entering, and the one before's on leaving (user, 07/11); a stage extra (T19). */
+    private fun sendMidi(index: Int) {
+        val lib = repository.library.value
+        if (!lib.look.extrasOn) return
+        val ids = route.setId?.let(lib::setlist)?.items ?: listOfNotNull(route.songId)
+        val song = ids.getOrNull(index)?.let(lib::song)
+        midiOut.songOnStage(song?.id, song?.midi)
+    }
+
     /** Now Playing: the current song for OBS and others (if on in Settings → Screen). */
     fun announce(index: Int) {
         val lib = repository.library.value
@@ -109,6 +119,7 @@ class StageViewModel @Inject constructor(
     fun songShown(index: Int) {
         route.setId?.let { conduct.open(it, index) }
         announce(index)
+        sendMidi(index)
     }
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
@@ -154,7 +165,7 @@ class StageViewModel @Inject constructor(
         // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
         // another (the new one enters first), and the track playing goes on, as when changing songs (audit 02/11)
         // back to the start: the same song on another stage (a setlist) went on from where it was left
-        if (!stageGate.onStage.value) player.stop()
+        if (!stageGate.onStage.value) { player.stop(); midiOut.leftStage() }
         metronome.stop()
         chordPlayer.stop()
         announcer.stop()
