@@ -192,6 +192,9 @@ data class Look(
     // MIDI pedal over USB: when off, the app opens nothing on USB (it stays free for the USB audio interface). Off by
     // default (user, 02/11): it's turned on by whoever has a USB pedal; saved libraries keep their value
     val midiUsb: Boolean = false,
+    // where the songs' MIDI goes (user, 07/11): the device's key (MidiOut) and its name, shown while it's away
+    val midiOut: String = "",
+    val midiOutName: String = "",
     // chords (step 3): "lyrics and chords" profile (false = lyrics only), chord size relative to the lyrics and color
     val chords: Boolean = true,
     val chordScale: Float = 0.8f,

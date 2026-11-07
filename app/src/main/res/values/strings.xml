@@ -488,6 +488,11 @@
     <string name="midi_program">MIDI program %1$d (channel %2$d)</string>
     <string name="settings_midi_unsupported">This device doesn\'t support MIDI.</string>
     <string name="settings_midi_usb_switch">MIDI pedal over USB</string>
+    <string name="settings_midi_out">MIDI out</string>
+    <string name="settings_midi_out_help">Songs can send MIDI when they show on stage and when you leave them, to change a preset or a scene. Pick here where it goes. A Bluetooth device shows up in the list once it\'s connected, like a MIDI pedal. A mixer or sound card on USB doesn\'t show up, because opening its MIDI would take the audio interface from the player.</string>
+    <string name="settings_midi_out_device">Send to</string>
+    <string name="settings_midi_out_none">Nowhere</string>
+    <string name="settings_midi_out_away">%1$s, not connected</string>
     <string name="settings_midi_usb_help">When off, Stagebook leaves USB alone, so it\'s free for a USB audio interface.</string>
     <string name="settings_midi_scanning">Searching…</string>
     <string name="settings_midi_choose">Tap to use this pedal</string>

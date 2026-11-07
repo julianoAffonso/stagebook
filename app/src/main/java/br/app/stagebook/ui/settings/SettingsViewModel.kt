@@ -99,7 +99,17 @@ class SettingsViewModel @Inject constructor(
     private val midi: MidiPedal,
     private val backup: br.app.stagebook.data.Backup,
     private val metronome: br.app.stagebook.data.MetronomeSound,
+    private val midiOut: br.app.stagebook.data.MidiOut,
 ) : ViewModel() {
+    private val _midiOutputs = MutableStateFlow<List<br.app.stagebook.data.MidiOutput>>(emptyList())
+    /** The MIDI outputs there are right now (read when the list opens). */
+    val midiOutputs: StateFlow<List<br.app.stagebook.data.MidiOutput>> = _midiOutputs.asStateFlow()
+
+    fun refreshMidiOutputs() { _midiOutputs.value = midiOut.outputs() }
+
+    /** null = no MIDI output. */
+    fun setMidiOut(o: br.app.stagebook.data.MidiOutput?) = repository.updateLook { it.copy(midiOut = o?.key.orEmpty(), midiOutName = o?.name.orEmpty()) }
+
     val clickApart = metronome.keepsApart
 
     /** Backup read and waiting for the choice of parts to restore. */

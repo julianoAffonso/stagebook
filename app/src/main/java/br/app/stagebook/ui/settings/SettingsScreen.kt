@@ -244,6 +244,7 @@ fun SettingsRoute(
     val web by webVm.ui.collectAsStateWithLifecycle()
     val advancedVm: AdvancedViewModel = hiltViewModel()
     val advanced by advancedVm.ui.collectAsStateWithLifecycle()
+    val midiOutputs by viewModel.midiOutputs.collectAsStateWithLifecycle()
     // read again every time the section opens and when coming back from Android's settings (battery request)
     LifecycleResumeEffect(section == SettingsSection.ADVANCED) {
         // About too: its update card asks whether this is a Samsung with Auto Blocker
@@ -304,6 +305,9 @@ fun SettingsRoute(
                 onMidiChoose = viewModel::chooseMidi,
                 onMidiForget = viewModel::forgetMidi,
                 onMidiUsb = viewModel::setMidiUsb,
+                midiOutputs = midiOutputs,
+                onMidiOutputsOpen = viewModel::refreshMidiOutputs,
+                onMidiOut = viewModel::setMidiOut,
                 onSites = viewModel::setSites,
                 onPlayerMode = viewModel::setPlayerMode,
                 band = band,
@@ -403,6 +407,9 @@ data class SettingsActions(
     val onMidiChoose: (MidiFound) -> Unit = {},
     val onMidiForget: () -> Unit = {},
     val onMidiUsb: (Boolean) -> Unit = {},
+    val midiOutputs: List<br.app.stagebook.data.MidiOutput> = emptyList(),
+    val onMidiOutputsOpen: () -> Unit = {},
+    val onMidiOut: (br.app.stagebook.data.MidiOutput?) -> Unit = {},
     val onLanguage: (AppLanguage) -> Unit = {},
     val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onPlayerMode: (Boolean) -> Unit = {},
@@ -958,6 +965,26 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
 private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
     PedalConnectCard(uiState, actions)
     PedalButtonsCard(uiState, actions)
+    if (uiState.midi.supported) MidiOutCard(uiState.look, actions)
+}
+
+/** Where the songs' MIDI goes (user, 07/11): one output for the whole app, USB or Bluetooth. */
+@Composable
+private fun MidiOutCard(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_midi_out), help = stringResource(R.string.settings_midi_out_help)) {
+        // the saved one stays in the list while it's away, so the choice doesn't look lost
+        val saved = look.midiOut.takeIf { it.isNotEmpty() }?.let { br.app.stagebook.data.MidiOutput(it, look.midiOutName, false) }
+        val options = listOf<br.app.stagebook.data.MidiOutput?>(null) + (actions.midiOutputs + listOfNotNull(saved)).distinctBy { it.key }
+        val away = saved != null && actions.midiOutputs.none { it.key == saved.key }
+        val awayName = stringResource(R.string.settings_midi_out_away, look.midiOutName)
+        val none = stringResource(R.string.settings_midi_out_none)
+        OptionDropdown(
+            stringResource(R.string.settings_midi_out_device), options, options.firstOrNull { it?.key == look.midiOut }, actions.onMidiOut,
+            { o -> when { o == null -> none; away && o.key == saved?.key -> awayName; else -> o.name } },
+            Modifier.fillMaxWidth(),
+            onOpen = actions.onMidiOutputsOpen,
+        )
+    }
 }
 
 @Composable
