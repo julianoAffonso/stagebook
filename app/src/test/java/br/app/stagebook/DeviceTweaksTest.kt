@@ -64,6 +64,51 @@ class DeviceTweaksTest {
         assertTrue(DeviceTweaks.isOn(app, DeviceTweak.CHARGE_MODES))
     }
 
+    private val timeout get() = Settings.System.getString(cr, Settings.System.SCREEN_OFF_TIMEOUT)
+
+    @Test fun `turning off gives back what the device had`() {
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "120000")
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, true)
+        assertEquals("600000", timeout)
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
+        assertEquals("120000", timeout)
+    }
+
+    @Test fun `what the first start wrote over comes back too`() {
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "120000")
+        DeviceTweaks.ensure(app)
+        assertEquals("600000", timeout)
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
+        assertEquals("120000", timeout)
+    }
+
+    @Test fun `the value changed between two uses is the one kept`() {
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "120000")
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, true)
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "300000")
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, true)
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
+        assertEquals("300000", timeout)
+    }
+
+    @Test fun `already on with nothing kept, off is the usual value`() {
+        Settings.System.putString(cr, Settings.System.SCREEN_OFF_TIMEOUT, "600000")
+        DeviceTweaks.set(app, DeviceTweak.SCREEN_TIMEOUT, false)
+        assertEquals("1800000", timeout)
+    }
+
+    @Test fun `the Android route always gets the value it needs`() {
+        val routing = "usb_audio_automatic_routing_disabled"
+        Settings.Secure.putString(cr, routing, "0")
+        DeviceTweaks.set(app, DeviceTweak.USB_ROUTING, true)
+        DeviceTweaks.set(app, DeviceTweak.USB_ROUTING, false)
+        assertEquals("0", Settings.Secure.getString(cr, routing))
+        Settings.Secure.putString(cr, routing, "1")
+        DeviceTweaks.set(app, DeviceTweak.USB_ROUTING, false)
+        assertEquals("0", Settings.Secure.getString(cr, routing))
+    }
+
     @Test fun `without the permission nothing is written`() {
         shadowOf(app).denyPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
         DeviceTweaks.ensure(app)

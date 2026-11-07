@@ -24,6 +24,7 @@ enum class DeviceTweak(
     val group: Group,
     internal val onlyIfPresent: Boolean = false,   // a setting some makers have and others don't
     val shown: Boolean = true,   // in Settings; USB_ROUTING follows the Android route switch instead
+    internal val restores: Boolean = true,   // off gives back what the device had; USB_ROUTING's off is a value the route needs
 ) {
     // TCL: with smart long charge or sleep charge on, its charge manager made the USB audio interface drop for a
     // moment every 3 to 30 s (23/10). Cost: charges up to 100%.
@@ -32,7 +33,7 @@ enum class DeviceTweak(
         on = "0", off = "1", group = Group.PLAY, onlyIfPresent = true,
     ),
     // Android's own audio stays off the USB interface the player drives (with 0 it opens the same interface)
-    USB_ROUTING(listOf(Table.SECURE to "usb_audio_automatic_routing_disabled"), on = "1", off = "0", group = Group.PLAY, shown = false),
+    USB_ROUTING(listOf(Table.SECURE to "usb_audio_automatic_routing_disabled"), on = "1", off = "0", group = Group.PLAY, shown = false, restores = false),
     // Android's battery manager suggests restricting apps that use battery, and the player uses it on purpose
     BATTERY_MANAGER(listOf(Table.GLOBAL to "app_auto_restriction_enabled"), on = "0", off = "1", group = Group.PLAY),
     ANIMATIONS(
@@ -88,9 +89,10 @@ object DeviceTweaks {
     fun batteryFree(c: Context) = c.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(c.packageName)
 
     private fun write(c: Context, t: DeviceTweak, on: Boolean) {
-        val value = if (on) t.on else t.off
         for (s in if (on) t.settings else t.settings.reversed()) {
             if (t.onlyIfPresent && read(c, s) == null) continue
+            if (on && t.restores) keepOriginal(c, t, s)
+            val value = if (on) t.on else takeOriginal(c, t, s)
             // a device that hides a setting must not close the app on start
             try {
                 val cr = c.contentResolver
@@ -105,6 +107,19 @@ object DeviceTweaks {
                 Log.w(TAG, "couldn't write ${s.second}", e)
             }
         }
+    }
+
+    // what the device had before the first write, for turning off to give it back. Nothing kept (the setting had no value,
+    // or the app wrote it before it kept anything): t.off
+    private fun keepOriginal(c: Context, t: DeviceTweak, s: Pair<DeviceTweak.Table, String>) {
+        val now = read(c, s) ?: return
+        if (ORIGINAL + s.second !in prefs(c) && !same(now, t.on)) prefs(c).edit { putString(ORIGINAL + s.second, now) }
+    }
+
+    private fun takeOriginal(c: Context, t: DeviceTweak, s: Pair<DeviceTweak.Table, String>): String {
+        val kept = prefs(c).getString(ORIGINAL + s.second, null) ?: return t.off
+        prefs(c).edit { remove(ORIGINAL + s.second) }
+        return kept
     }
 
     private fun read(c: Context, s: Pair<DeviceTweak.Table, String>): String? = runCatching {
@@ -126,4 +141,5 @@ object DeviceTweaks {
 
     const val GRANT = "adb shell pm grant br.app.stagebook android.permission.WRITE_SECURE_SETTINGS"
     private const val TAG = "stagebook"
+    private const val ORIGINAL = "original:"
 }
