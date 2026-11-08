@@ -84,4 +84,30 @@ class UsbNoticeOnceTest {
         service(lost)    // …and dropped again: the notice shows again
         compose.waitUntil(5_000) { shown() == lost }
     }
+
+    // audit 07/11: the note's own timer is cancelled when the notice changes; nothing then took the note off the footer
+    @Test fun `a short note leaves when the notice goes away, not ten seconds later`() {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val player = StagePlayer(context, repo)
+        val host = SnackbarHostState()
+        var note = ""
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            CompositionLocalProvider(LocalAppMessage provides remember { AppMessage(host, scope) }) {
+                val ui by player.ui.collectAsState()
+                note = rememberPlayerNote(ui.message, player::firstShow)
+            }
+        }
+        fun service(status: String) = compose.runOnIdle {
+            PlayerService.running = true
+            PlayerService.status = status
+            StagePlayer.onServiceChanged()
+        }
+        val ready = context.getString(R.string.player_usb_ready, "Interface")
+        service(ready)
+        compose.waitUntil(5_000) { note == ready }
+        service("")   // the notice is gone a moment later: the footer must not keep the old one
+        compose.waitUntil(5_000) { note == "" }
+    }
 }

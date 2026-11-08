@@ -1495,7 +1495,10 @@ internal fun rememberPlayerNote(notice: String, fresh: (String) -> Boolean): Str
             note = notice
             kotlinx.coroutines.delay(NOTE_MS)
             note = ""
-        } else if (notice.isNotEmpty()) message.show(notice, long = true)
+        } else {
+            note = ""   // another notice or none: the one on the footer is over (its own timer died with this effect's last run)
+            if (notice.isNotEmpty()) message.show(notice, long = true)
+        }
     }
     return note
 }
