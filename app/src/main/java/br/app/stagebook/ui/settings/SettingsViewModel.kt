@@ -249,11 +249,8 @@ class SettingsViewModel @Inject constructor(
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setMetronomeShown(on: Boolean) = repository.updateLook { it.copy(metroShown = on) }
     fun setMetronomeVolume(v: Int) = repository.updateLook { it.copy(metroVolume = v.coerceIn(0, br.app.stagebook.domain.MetronomeClick.FULL_VOLUME)) }
-    fun setUsbViaAndroid(on: Boolean) {
-        // the player may not be running yet, and Android reads this when the interface connects
-        br.app.stagebook.data.device.DeviceTweaks.set(context, br.app.stagebook.data.device.DeviceTweak.USB_ROUTING, !on)
-        repository.updateLook { it.copy(usbViaAndroid = on) }
-    }
+    // the Android setting follows this in StagePlayer (one writer, only while the player runs)
+    fun setUsbViaAndroid(on: Boolean) = repository.updateLook { it.copy(usbViaAndroid = on) }
     fun probeClickRoute() {
         if (repository.library.value.look.usbViaAndroid) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { metronome.probeApart() }
     }

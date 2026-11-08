@@ -24,7 +24,9 @@ import br.app.stagebook.domain.MixerLevels
 import br.app.stagebook.domain.Spectrum
 import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
+import br.app.stagebook.data.device.DeviceTweaks
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,11 +84,15 @@ class StagePlayer @Inject constructor(
         // USB through Android's audio (Settings): the service reads it on connecting; a change connects again
         scope.launch {
             repository.library.map { it.look.usbViaAndroid }.distinctUntilChanged().collect { via ->
-                // the two go together: with Android's USB routing off, it doesn't offer the interface as an output
-                br.app.stagebook.data.device.DeviceTweaks.set(context, br.app.stagebook.data.device.DeviceTweak.USB_ROUTING, !via)
                 val changed = PlayerService.viaAndroid != via
                 PlayerService.viaAndroid = via
-                if (changed) PlayerService.reconnect()
+                if (changed && PlayerService.running) {
+                    // the two go together: Android's USB routing is written (or given back) before connecting again
+                    routeScope.launch {
+                        DeviceTweaks.routeUsb(context, !via)
+                        withContext(Dispatchers.Main) { PlayerService.reconnect() }
+                    }
+                } else if (changed) PlayerService.reconnect()
             }
         }
         // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
@@ -293,6 +299,26 @@ class StagePlayer @Inject constructor(
         const val END_MARGIN_MS = 300L   // the real end comes when the last packet goes out; before that, it's already the end
 
         @Volatile private var instance: StagePlayer? = null
+
+        // the only place that writes Android's USB routing: one thread, so a start and a stop can't cross
+        private val routeScope = br.app.stagebook.data.backgroundScope(Dispatchers.IO.limitedParallelism(1))
+
+        /** The service starts: on the engine route Android's own USB audio is switched off, then [then] runs on the main thread. */
+        @JvmStatic
+        fun routeUsbThen(context: Context, engineRoute: Boolean, then: Runnable) {
+            val app = context.applicationContext
+            routeScope.launch {
+                DeviceTweaks.routeUsb(app, engineRoute)
+                withContext(Dispatchers.Main) { then.run() }
+            }
+        }
+
+        /** The service stopped: the device's own value comes back. */
+        @JvmStatic
+        fun releaseUsbRoute(context: Context) {
+            val app = context.applicationContext
+            routeScope.launch { DeviceTweaks.routeUsb(app, false) }
+        }
 
         /** Player mode turned off in Settings: if the player had started, turn everything off. */
         fun turnOff() { instance?.shutdown() }

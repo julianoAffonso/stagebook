@@ -110,7 +110,9 @@ public class PlayerService extends Service {
         ContextCompat.registerReceiver(this, usbReceiver, usbFilter(), ContextCompat.RECEIVER_NOT_EXPORTED);
         wake = ((PowerManager) getSystemService(POWER_SERVICE))
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "stagebook:play");
-        connectUsb();
+        // Android reads its USB routing when the interface connects: written first (off the main thread), only now
+        // that the player really runs, and given back in shutdown()
+        StagePlayer.routeUsbThen(this, !viaAndroid, () -> { if (running && link == null && !connecting) connectUsb(); });
         main.postDelayed(watchdog, WATCHDOG_MS);
         checkIdle();
         return START_STICKY;
@@ -473,6 +475,7 @@ public class PlayerService extends Service {
         holdWake(false);
         running = false;
         status = "";
+        StagePlayer.releaseUsbRoute(this);
         StagePlayer.onServiceChanged();
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
         stopSelf();
