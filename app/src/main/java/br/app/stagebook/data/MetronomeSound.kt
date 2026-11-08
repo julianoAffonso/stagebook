@@ -117,7 +117,8 @@ class MetronomeSound @Inject constructor(@ApplicationContext private val context
     private fun routedAway(track: AudioTrack): Boolean {
         track.play()
         track.write(ShortArray(CHUNK * 2), 0, CHUNK * 2)
-        runCatching { Thread.sleep(ROUTE_WAIT_MS) }
+        // stop() only interrupts: swallowing it here would leave the click playing for good (audit 07/11)
+        try { Thread.sleep(ROUTE_WAIT_MS) } catch (e: InterruptedException) { Thread.currentThread().interrupt() }
         val at = track.routedDevice?.type
         android.util.Log.i("stagebook", "click routed to $at")
         return at !in USB_OUTPUTS
