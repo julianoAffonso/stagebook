@@ -2,6 +2,8 @@ package br.app.stagebook.data
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -36,7 +38,7 @@ data class PublishedVersion(val versionCode: Long, val versionName: String, val 
 
 /**
  * App update from the latest GitHub release: reads the published version, downloads the APK and opens the Android
- * installer (it always asks for the "Install" tap).
+ * installer: through an installer session on Android 12+ (no tap when the system allows it), the system screen otherwise.
  */
 @Singleton
 class AppUpdater @Inject constructor(@ApplicationContext private val context: Context) {
@@ -103,6 +105,34 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     fun installIntent(apk: File): Intent = Intent(Intent.ACTION_VIEW)
         .setDataAndType(FileProvider.getUriForFile(context, "${context.packageName}.updates", apk), APK_MIME)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    /**
+     * Installs through an installer session: on Android 12+ the system applies an update without asking again when this
+     * app installed the previous version (the first time it still asks). False if the session couldn't start; the caller
+     * then falls back to [installIntent]. The result comes later through [InstallResultReceiver].
+     */
+    fun installWithSession(apk: File): Boolean {
+        val installer = context.packageManager.packageInstaller
+        var id = -1
+        return try {
+            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(context.packageName)
+                if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            }
+            id = installer.createSession(params)
+            installer.openSession(id).use { session ->
+                apk.inputStream().use { input ->
+                    session.openWrite("stagebook.apk", 0, apk.length()).use { out -> input.copyTo(out); session.fsync(out) }
+                }
+                session.commit(InstallResultReceiver.pending(context, id).intentSender)
+            }
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "couldn't start the install session", e)
+            if (id >= 0) runCatching { installer.abandonSession(id) }
+            false
+        }
+    }
 
     /** Whether Android lets this app install the APK, or it still needs to allow "install apps from this source". */
     fun canInstall(): Boolean = context.packageManager.canRequestPackageInstalls()

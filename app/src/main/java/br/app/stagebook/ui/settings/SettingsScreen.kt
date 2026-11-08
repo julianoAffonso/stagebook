@@ -228,7 +228,7 @@ fun SettingsRoute(
     }
 
     // install: the first time, Android must allow "install apps from this source" for Stagebook
-    val install: () -> Unit = { context.installApk(viewModel.canInstall(), viewModel.installIntent()) }
+    val install: () -> Unit = { viewModel.install(context) }
     LaunchedEffect(viewModel) { viewModel.install.collect { install() } }
 
     // Bluetooth MIDI pedal: searching asks for the Bluetooth permission (or location, on Android 9 to 11)

@@ -69,6 +69,7 @@ fun StagebookNavHost(
     followingSong: kotlinx.coroutines.flow.StateFlow<String?> = kotlinx.coroutines.flow.MutableStateFlow(null),
     receiveCodes: Flow<String> = emptyFlow(),
     onStage: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false),
+    installNotices: Flow<br.app.stagebook.domain.InstallNotice> = emptyFlow(),
 ) {
     val nav = rememberNavController()
     // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
@@ -80,6 +81,14 @@ fun StagebookNavHost(
         ?.toRoute<ScanSetlist>()?.code?.takeIf { it.isNotEmpty() }
     fun openReceive(code: String) = nav.navigate(ScanSetlist(code, fromLink = true)) { popUpTo<ScanSetlist> { inclusive = true } }
     val message = rememberAppMessage()
+    // the update going in: the system takes over, so the person is told what is happening, and only what is true
+    val installStartedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_installing))
+    val installFailedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_install_failed))
+    LaunchedEffect(installNotices) {
+        installNotices.collect { n ->
+            message.show(if (n == br.app.stagebook.domain.InstallNotice.STARTED) installStartedText.value else installFailedText.value, long = true)
+        }
+    }
     LaunchedEffect(receiveCodes) {
         receiveCodes.collect { code ->
             when (pendingLink.arrive(code, onStage.value, openCode())) {
