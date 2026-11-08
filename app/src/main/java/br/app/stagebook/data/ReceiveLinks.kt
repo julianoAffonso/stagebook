@@ -40,10 +40,13 @@ class ReceiveLinks @Inject constructor(@ApplicationContext private val context: 
         val stamp = desc.timestamp
         if (stamp != 0L && stamp == prefs.getLong(KEY_STAMP, 0L)) return null
         prefs.edit { putLong(KEY_STAMP, stamp) }
-        if (surelyNotLink(desc)) return null
+        if (surelyNotLink(desc) || sensitive(desc)) return null
         val text = runCatching { clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString() }.getOrNull()
         return newCode(text, seen())?.also(::markSeen)
     }
+
+    // a clip the source marks as sensitive (a password manager's) is left alone (the constant is API 33; the key is the same before)
+    private fun sensitive(desc: ClipDescription): Boolean = runCatching { desc.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true }.getOrDefault(false)
 
     // Android 12+ already classified the clip and found no link in it: no need to read it (and show the notice)
     private fun surelyNotLink(desc: ClipDescription): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching {

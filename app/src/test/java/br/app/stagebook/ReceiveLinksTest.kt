@@ -33,6 +33,14 @@ class ReceiveLinksTest {
         assertNull(links.fromClipboard())
     }
 
+    // audit 07/11: a clip the source marks as sensitive (a password manager) is never read, even if it looks like a link
+    @Test fun `a clip marked sensitive is not read`() {
+        val clip = ClipData.newPlainText("", "https://stagebook.app.br/r#47-violao-lua")
+        clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+        assertNull(links.fromClipboard())
+    }
+
     @Test fun `other text in the clipboard opens nothing`() {
         copy("Ensaio sábado às 15h")
         assertNull(links.fromClipboard())
