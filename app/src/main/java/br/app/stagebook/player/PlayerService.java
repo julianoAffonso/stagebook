@@ -223,7 +223,7 @@ public class PlayerService extends Service {
             Intent it = new Intent(ACTION_USB_PERM).setPackage(getPackageName());
             int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
             um.requestPermission(d, PendingIntent.getBroadcast(this, 0, it, mutable));
-            setStatus(getString(R.string.player_usb_permission));
+            setStatus(getString(R.string.player_usb_permission_note));   // short, so the stage shows it as a note
             return;
         }
         if (deviceOut) releaseUsb();   // the USB interface arrived: leave the device and go to it
