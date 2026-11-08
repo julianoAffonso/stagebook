@@ -1024,4 +1024,5 @@
     <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md</string>
     <string name="auto_blocker_open">Open Auto Blocker</string>
     <string name="auto_blocker_hint">If the install is blocked, turn off Samsung\'s Auto Blocker and come back.</string>
+    <string name="stage_link_kept">Link saved. It opens when you leave the stage.</string>
 </resources>

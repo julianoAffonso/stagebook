@@ -130,7 +130,7 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
