@@ -200,7 +200,8 @@ p { margin: 0 0 16px; }
   document.getElementById("code").textContent = code.split("-").join(" · ");
   // what came and from whom, as text only (never as HTML)
   var n = params.n || "", title = params.s || "", kind = params.t || "";
-  function fill(x) { return x.replace("{n}", n).replace("{s}", title); }
+  // split/join, not replace: a name with $& or {s} in it would be expanded as a replacement pattern
+  function fill(x) { return x.split("{n}").join(n).split("{s}").join(title); }
   var what = kind === "i" ? (n ? t.invite : t.inviteNoName)
     : kind === "l" ? (n && title ? t.setlist : title ? t.setlistNoName : n ? t.setlistNoTitle : t.other)
     : kind === "m" ? (n ? t.songs : t.songsNoName)
