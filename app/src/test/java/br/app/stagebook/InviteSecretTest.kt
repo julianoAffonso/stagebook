@@ -129,7 +129,7 @@ class InviteSecretTest {
                 )
             }
         }
-        compose.onNodeWithText("Este convite só abre pelo link. Peça o link de novo a quem convidou.", substring = true).assertExists()
+        compose.onNodeWithText("Se for um convite para a banda, ele só abre pelo link. Peça o link de novo a quem convidou.", substring = true).assertExists()
     }
 
     @Test fun `the invite message names no 3 words to type`() {

@@ -560,7 +560,7 @@
     <string name="player_usb_muted">Volume da saída USB em zero</string>
     <string name="player_usb_no_android">%1$s não aparece como saída de som neste aparelho. Desligue Tocar pela interface através do Android ou use outra interface.</string>
     <string name="player_usb_denied">Permissão da saída USB negada</string>
-    <string name="player_usb_lost">Saída USB desconectada. Esperando ela voltar.</string>
+    <string name="player_usb_lost">Saída USB desconectada. A reprodução continua quando a interface for reconectada.</string>
     <string name="player_device_out">Saída USB não encontrada. Tocando na saída do aparelho.</string>
     <string name="player_device_failed">A saída do aparelho não abriu</string>
     <string name="player_battery_title">Tocar com a tela apagada</string>
@@ -817,7 +817,7 @@
     <string name="band_invite_detail">Manda um link para uma pessoa entrar na banda. Vale por 12 horas.</string>
     <string name="band_invite_failed">Não deu para criar o convite. Confira a internet e tente de novo.</string>
     <string name="band_invite_message">%1$s te chamou para a banda no Stagebook. Toque em %2$s para entrar. O convite só abre por esse link. Vale por 12 horas.</string>
-    <string name="invite_needs_link">Este convite só abre pelo link. Peça o link de novo a quem convidou.</string>
+    <string name="invite_needs_link">Se for um convite para a banda, ele só abre pelo link. Peça o link de novo a quem convidou.</string>
     <string name="band_remove">Remover %1$s da banda</string>
     <string name="band_remove_short">Remover</string>
     <string name="band_remove_confirm">Remover \"%1$s\" da banda? Para voltar, é preciso pedir para entrar de novo.</string>

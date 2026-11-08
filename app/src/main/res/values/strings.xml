@@ -550,7 +550,7 @@
     <string name="player_usb_muted">USB output volume is at zero</string>
     <string name="player_usb_no_android">%1$s doesn\'t show up as an audio output here. Turn off Play on the interface through Android, or use another interface.</string>
     <string name="player_usb_denied">USB output permission denied</string>
-    <string name="player_usb_lost">USB output disconnected. Waiting for it to come back.</string>
+    <string name="player_usb_lost">USB output disconnected. Playback continues when the interface is reconnected.</string>
     <string name="player_device_out">No USB output found. Playing on the device\'s output.</string>
     <string name="player_device_failed">The device\'s output didn\'t open</string>
     <string name="player_battery_title">Play with the screen off</string>
@@ -790,7 +790,7 @@
     <string name="band_invite_detail">Sends a link for one person to join the band. Good for 12 hours.</string>
     <string name="band_invite_failed">Couldn\'t create the invite. Check your internet and try again.</string>
     <string name="band_invite_message">%1$s invited you to the band on Stagebook. Tap %2$s to join. The invite only opens from this link. Good for 12 hours.</string>
-    <string name="invite_needs_link">This invite only opens from its link. Ask the person who invited you for the link again.</string>
+    <string name="invite_needs_link">If it\'s a band invite, it only opens from its link. Ask the person who invited you for the link again.</string>
     <string name="band_remove">Remove %1$s from the band</string>
     <string name="band_remove_short">Remove</string>
     <string name="band_remove_confirm">Remove \"%1$s\" from the band? To come back, they\'ll need to ask to join again.</string>
