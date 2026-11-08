@@ -36,8 +36,34 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 - Que aceite **44,1 ou 48 kHz**.
 - Celular ou tablet com **USB OTG** e o cabo ou adaptador certo.
 
-Sem interface, o player toca no fone, no
-Bluetooth ou no alto-falante do aparelho.
+Interfaces USB Audio 2.0 e USB Audio 1.0 funcionam. Sem interface, o player toca no fone, no Bluetooth ou no
+alto-falante do aparelho.
+
+Dois caminhos até a interface:
+- **Pelo motor do Stagebook (padrão):** fala direto com a interface.
+- **Pelo Android:** Ajustes > Metrônomo e player > Tocar pela interface através do Android. Use só se a interface
+  conecta e o som não sai ou sai picotado.
+
+Na primeira vez pelo motor, o Android pede permissão para usar a interface USB: toque em OK.
+
+### Testado
+Tudo passou na versão 0.1.900 do app. Passar quer dizer: uma música inteira ouvida limpa, pausar e retomar, e tirar e
+pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo aviso.
+
+| Aparelho | Mixer USB Audio 2.0 (4 saídas) | Placa USB Audio 1.0 (44,1 kHz) |
+|---|---|---|
+| TCL NXTPAPER 11 Plus (tablet, 8 núcleos, Android 14) | Passou | Passou |
+| Chuwi Hi10 XPro (tablet simples, Android 13) | Passou, com nota (1) | Passou |
+| Samsung Galaxy S26 Ultra (celular, Android 17) | Passou, com nota (2) | Passou |
+| OnePlus 10 Pro (celular, Android 16) | Passou pelos dois caminhos (3) | Passou |
+
+1. O USB desse tablet perde leituras na entrada da interface, então o motor marca o ritmo da saída pelo relógio do
+   sistema. O som sai limpo, com um soluço curto e raro a cada 15 a 60 s. É o limite do USB do tablet; acontece também
+   pelo áudio do próprio Android.
+2. A entrada da interface para de responder depois de cerca de um segundo. O motor percebe e marca o ritmo sozinho.
+3. Pelo áudio do Android e pelo motor. O motor pede a janela de permissão USB do Android na primeira vez.
+
+Não testado: outras interfaces e um fone USB simples (suportados, mas fora desta tabela).
 
 ## Quanto o app pesa
 Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** núcleo; os quatro têm 8 núcleos):
@@ -50,7 +76,8 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 | Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB | — |
 | Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | 0,8% · 186 MB (acompanhando) | 2,4% · 124 MB (acompanhando) | — |
 | Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — | — |
-| Backing track tocando numa interface USB | 15% · 202 MB | — | — | — |
+| Backing track numa interface USB (mixer USB Audio 2.0) | 15% · 202 MB (medida antiga) | não medido | não medido | não medido |
+| Backing track numa interface USB (placa USB Audio 1.0) | não medido | não medido | 16,9% · 76 MB | não medido |
 | Backing track tocando pela saída do aparelho | 17,1% · 147 MB | 3,9% · 140 MB | 13,9% · 71 MB | 18,9% · 44 MB |
 | Ajustes da banda, parado | 0,2% · 175 MB | 0,2% · 145 MB | 0,3% · 75 MB | 0,6% · 41 MB |
 
@@ -93,6 +120,13 @@ O app sai em inglês e português do Brasil. Fala outro idioma e toca? O passo a
 Kotlin, Jetpack Compose e um motor de áudio em C. `./gradlew assembleDebug` compila e
 `./gradlew testDebugUnitTest` roda os testes (Java 21). As versões são publicadas pelo GitHub Actions. Todo mundo aqui segue o
 [Código de Conduta](CODE_OF_CONDUCT.pt-BR.md).
+
+### Ritmo do motor USB
+- **Plano A:** seguir o relógio da entrada da interface (feedback implícito), para saída e interface nunca se afastarem.
+- **Plano B:** marcar o ritmo da saída pelo relógio monotônico quando a entrada falta ou não é confiável. Ele troca
+  quando o relógio da entrada erra mais de 0,3% por 1 s, ou quando a entrada fica 0,3 s sem responder.
+- No plano B, o motor testa a entrada de novo a cada 60 s e volta ao plano A se ela estiver saudável.
+- Os URBs de saída levam 8 pacotes (1 ms), com 32 na fila. Os URBs de entrada levam 128 pacotes.
 
 ## Licença
 Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Pode usar à vontade, até em show pago,
