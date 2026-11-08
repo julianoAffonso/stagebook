@@ -170,9 +170,9 @@ internal fun codeMessage(setlist: String, songs: String, sent: CloudUi.Sent, lan
     return if (sent.name.isEmpty()) songs.format(link, sent.code) else setlist.format(sent.name, link, sent.code)
 }
 
-/** The band invite's message ([template] = band_invite_message): who invites, the link and the 3 words. */
+/** The band invite's message ([template] = band_invite_message): who invites and the link (the invite opens only from it). */
 internal fun inviteMessage(template: String, from: String, code: String, lang: String): String =
-    template.format(from, ShareCode.link(code, ShareCode.LinkKind.INVITE, from, lang = lang), code)
+    template.format(from, ShareCode.link(code, ShareCode.LinkKind.INVITE, from, lang = lang))
 
 /** Opens Android's share sheet with [text] (WhatsApp, email, SMS…). */
 fun shareText(context: android.content.Context, text: String) {

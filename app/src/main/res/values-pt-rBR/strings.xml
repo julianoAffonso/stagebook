@@ -816,7 +816,8 @@
     <string name="band_invite">Convidar pela internet</string>
     <string name="band_invite_detail">Manda um link para uma pessoa entrar na banda. Vale por 12 horas.</string>
     <string name="band_invite_failed">Não deu para criar o convite. Confira a internet e tente de novo.</string>
-    <string name="band_invite_message">%1$s te chamou para a banda no Stagebook. Toque em %2$s para entrar. Ou vá em Importar → Digitar as 3 palavras e digite %3$s. Vale por 12 horas.</string>
+    <string name="band_invite_message">%1$s te chamou para a banda no Stagebook. Toque em %2$s para entrar. O convite só abre por esse link. Vale por 12 horas.</string>
+    <string name="invite_needs_link">Este convite só abre pelo link. Peça o link de novo a quem convidou.</string>
     <string name="band_remove">Remover %1$s da banda</string>
     <string name="band_remove_short">Remover</string>
     <string name="band_remove_confirm">Remover \"%1$s\" da banda? Para voltar, é preciso pedir para entrar de novo.</string>
