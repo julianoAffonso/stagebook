@@ -591,7 +591,7 @@ fun StageScreen(
     // "1 . 2 . 1 2 3 4": nothing on the pauses (user, 07/11)
     val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat >= 0) br.app.stagebook.domain.MetronomeClick.countLabel(metroBeat) else 0 } }
     // during the count-in the blink, the glow and the big number take another color: it reads as "counting", not the song
-    val counting by remember(index) {
+    val counting by remember(index, look.metroCount) {   // the setting is a plain value here: it keys the state
         androidx.compose.runtime.derivedStateOf { look.metroCount && metroBeat in 0 until br.app.stagebook.domain.MetronomeClick.COUNT_IN_BEATS }
     }
     val countColor = MaterialTheme.colorScheme.tertiary
