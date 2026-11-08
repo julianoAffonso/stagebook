@@ -24,10 +24,34 @@ final class UsbLink {
     final java.util.List<UsbInterface> others = new java.util.ArrayList<>();
 
     static UsbDevice find(UsbManager um) {
+        UsbDevice best = null;
+        long bestRank = -1;
         for (UsbDevice d : um.getDeviceList().values()) {
-            if (isAudioOut(d)) return d;
+            if (!isAudioOut(d)) continue;
+            long r = rank(d);
+            if (r > bestRank) { best = d; bestRank = r; }
         }
-        return null;
+        return best;
+    }
+
+    /** A mixer or sound card (it records too, and has the larger packets of more channels) over a headset or dongle
+     *  plugged in with it; a headset alone is still the one picked (audit 07/11). */
+    static long rank(boolean hasInput, int maxOutPacket) { return (hasInput ? 1_000_000L : 0L) + maxOutPacket; }
+
+    private static long rank(UsbDevice d) {
+        boolean in = false;
+        int maxOut = 0;
+        for (int i = 0; i < d.getInterfaceCount(); i++) {
+            UsbInterface x = d.getInterface(i);
+            if (x.getInterfaceClass() != 1 || x.getInterfaceSubclass() != 2) continue;
+            for (int e = 0; e < x.getEndpointCount(); e++) {
+                android.hardware.usb.UsbEndpoint ep = x.getEndpoint(e);
+                if (ep.getType() != android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_ISOC) continue;
+                if (ep.getDirection() == android.hardware.usb.UsbConstants.USB_DIR_IN) in = true;
+                else maxOut = Math.max(maxOut, ep.getMaxPacketSize());
+            }
+        }
+        return rank(in, maxOut);
     }
 
     // USB audio interface, class 1 or 2, with an isochronous output endpoint: the formats the engine speaks.
@@ -87,6 +111,16 @@ final class UsbLink {
         if (classOne) {
             byte[] hz = {(byte) rate, (byte) (rate >> 8), (byte) (rate >> 16)};   // on the endpoint; a single rate may refuse
             conn.controlTransfer(0x22, 0x01, 0x0100, ep, hz, 3, 1000);
+            // a card that refused the change runs at its own rate: the engine follows what the card says (GET_CUR), or
+            // the music would come out at the wrong pitch with no error (audit 07/11). A card with no answer stays as is
+            byte[] cur = new byte[3];
+            if (conn.controlTransfer(0xA2, 0x81, 0x0100, ep, cur, 3, 1000) == 3) {
+                int now = (cur[0] & 0xff) | ((cur[1] & 0xff) << 8) | ((cur[2] & 0xff) << 16);
+                if (now >= 8000 && now <= 192000 && now != rate) {
+                    android.util.Log.i("stagebook", "usb: the card runs at " + now + " Hz, not " + rate + ": following it");
+                    rate = now;
+                }
+            }
         } else if (clockId >= 0) {
             byte[] hz = {(byte) 0x80, (byte) 0xBB, 0, 0}; // 48000 Hz; fixed-rate interfaces may refuse
             conn.controlTransfer(0x21, 0x01, 0x0100, clockId << 8, hz, 4, 1000);
