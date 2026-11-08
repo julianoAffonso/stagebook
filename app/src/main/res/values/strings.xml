@@ -509,9 +509,10 @@
     <string name="song_midi_bank">Bank</string>
     <string name="song_midi_range">%1$s, %2$d–%3$d</string>
     <string name="settings_midi_out">MIDI out</string>
-    <string name="settings_midi_out_help">Songs can send MIDI when they show on stage and when you leave them, to change a preset or a scene. Pick here where it goes. A Bluetooth device shows up in the list once it\'s connected, like a MIDI pedal. A mixer or sound card on USB doesn\'t show up, because opening its MIDI would take the audio interface from the player.</string>
+    <string name="settings_midi_out_help">Songs can send MIDI when they show on stage and when you leave them, to change a preset or a scene. Pick here where it goes. A Bluetooth device shows up in the list once it\'s connected in Connect a pedal or MIDI device. A mixer or sound card on USB doesn\'t show up, because opening its MIDI would take the audio interface from the player.</string>
     <string name="settings_midi_out_device">Send to</string>
     <string name="settings_midi_out_none">Nowhere</string>
+    <string name="settings_midi_out_find_bt">Can\'t find your Bluetooth device? Connect it in Connect a pedal or MIDI device.</string>
     <string name="settings_midi_out_away">%1$s, not connected</string>
     <string name="settings_midi_usb_help">When off, Stagebook leaves USB alone, so it\'s free for a USB audio interface.</string>
     <string name="settings_midi_scanning">Searching…</string>
@@ -937,13 +938,13 @@
         <item quantity="one">%d tag</item>
         <item quantity="other">%d tags</item>
     </plurals>
-    <string name="settings_pedal_connect">Connect the pedal</string>
+    <string name="settings_pedal_connect">Connect a pedal or MIDI device</string>
     <string name="settings_pedal_buttons">Buttons</string>
-    <string name="settings_pedal_nothing">No pedal yet. Pick your pedal type below.</string>
+    <string name="settings_pedal_nothing">No pedal or MIDI device yet. Pick its type below.</string>
     <string name="settings_pedal_add_common">Regular Bluetooth pedal</string>
-    <string name="settings_pedal_add_midi">Bluetooth MIDI pedal</string>
+    <string name="settings_pedal_add_midi">Bluetooth MIDI device</string>
     <string name="settings_pedal_kinds_label">Which one is mine?</string>
-    <string name="settings_pedal_kinds_help">Regular pedal: turns the page like a keyboard\'s arrows (most page turners). It\'s paired in Android\'s Bluetooth settings. MIDI pedal: sends MIDI messages, like the Hotone Control and other controllers. It\'s searched for here in the app.</string>
+    <string name="settings_pedal_kinds_help">Regular pedal: turns the page like a keyboard\'s arrows (most page turners). It\'s paired in Android\'s Bluetooth settings. Bluetooth MIDI device: a pedal or controller that sends MIDI messages, like the Hotone Control, or a device that receives the songs\' MIDI, like a rack or a keyboard. It\'s searched for here in the app, and then it shows up in MIDI out.</string>
     <string name="settings_pedal_kind_bt">Bluetooth</string>
     <string name="settings_pedal_kind_midi_bt">Bluetooth MIDI</string>
     <string name="settings_pedal_kind_midi_usb">USB MIDI</string>

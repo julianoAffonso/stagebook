@@ -48,6 +48,20 @@ class MidiOutSettingsTest {
         assertEquals("2:WIDI", chosen.single()?.key)
     }
 
+    // 08/11: to send MIDI over Bluetooth the person had to "look for a pedal"; the card is now for pedals and MIDI devices,
+    // and the output says where to connect one when none is listed
+    @Test fun `with no Bluetooth device listed the output says where to connect one`() {
+        show(Look(), listOf(MidiOutput("1:Keystation", "Keystation", false)))
+        compose.onNodeWithText("Não achou o seu aparelho Bluetooth? Conecte-o em Conectar pedal ou aparelho MIDI.", substring = true).performScrollTo()
+        compose.onNodeWithText("Conectar pedal ou aparelho MIDI").assertExists()
+    }
+
+    @Test fun `with a Bluetooth device listed the hint is gone`() {
+        show(Look(), listOf(MidiOutput("2:WIDI", "WIDI", true)))
+        compose.onNodeWithText("Nenhum lugar").performScrollTo()
+        compose.onNodeWithText("Não achou o seu aparelho Bluetooth?", substring = true).assertDoesNotExist()
+    }
+
     @Test fun `the chosen device away still shows, as not connected`() {
         show(Look(midiOut = "1:Keystation", midiOutName = "Keystation"), emptyList())
         compose.onNodeWithText("Keystation, desconectado").performScrollTo()
@@ -57,7 +71,7 @@ class MidiOutSettingsTest {
     @Test fun `the ways to add a pedal sit one right under the other`() {
         show(Look(), emptyList())
         val common = compose.onNodeWithText("Pedal Bluetooth comum").getBoundsInRoot()
-        val midi = compose.onNodeWithText("Pedal MIDI Bluetooth").getBoundsInRoot()
+        val midi = compose.onNodeWithText("Aparelho MIDI Bluetooth").getBoundsInRoot()
         assertEquals(common.bottom.value, midi.top.value, 0.5f)
         assertTrue(common.bottom - common.top <= br.app.stagebook.ui.theme.Sizes.touch)
     }

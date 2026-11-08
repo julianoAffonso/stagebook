@@ -994,6 +994,10 @@ private fun MidiOutCard(look: Look, actions: SettingsActions) {
             Modifier.fillMaxWidth(),
             onOpen = actions.onMidiOutputsOpen,
         )
+        // a Bluetooth device only shows up once connected, in the card above: say where, when none is listed
+        if (actions.midiOutputs.none { it.bluetooth }) {
+            Text(stringResource(R.string.settings_midi_out_find_bt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
