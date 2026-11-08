@@ -76,13 +76,15 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 | Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB | — |
 | Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | 0,8% · 186 MB (acompanhando) | 2,4% · 124 MB (acompanhando) | — |
 | Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — | — |
-| Backing track numa interface USB (mixer USB Audio 2.0) | 15% · 202 MB (medida antiga) | não medido | não medido | não medido |
-| Backing track numa interface USB (placa USB Audio 1.0) | não medido | não medido | 16,9% · 76 MB | não medido |
+| Backing track numa interface USB (mixer USB Audio 2.0) | ≈14%¹ · 151 MB | 6,7% · 140 MB | 29,3% · 80 MB | 31,3% · 42 MB |
+| Backing track numa interface USB (placa USB Audio 1.0) | 15,5%¹ · 128 MB | 3,7% · 86 MB | 16,9% · 83 MB | 22,2% · 41 MB |
 | Backing track tocando pela saída do aparelho | 17,1% · 147 MB | 3,9% · 140 MB | 13,9% · 71 MB | 18,9% · 44 MB |
 | Ajustes da banda, parado | 0,2% · 175 MB | 0,2% · 145 MB | 0,3% · 75 MB | 0,6% · 41 MB |
 
-Mesmo tocando uma faixa, o Stagebook usa menos de 3% do processador inteiro. O modo essencial quase não muda esses
+Mesmo tocando uma faixa, o Stagebook usa menos de 4% do processador inteiro (o pior caso medido, 31,3% de um núcleo, é 3,9% de oito). O modo essencial quase não muda esses
 números: o ganho dele é a tela mais simples.
+
+¹ O TCL estava com 12% de bateria na medição: o Android prende seis dos seus oito núcleos em 500 MHz e o uso bruto sobe (48,0% e 21,0%). Estes dois números são ponderados pela frequência de cada núcleo, como um núcleo na velocidade máxima; o do mixer é estimado pela mesma proporção. Com o player ligado e uma interface conectada, mas nada tocando, o motor mantém o fluxo USB vivo com silêncio e gasta cerca de 19% de um núcleo no OnePlus.
 
 ## Usar com assistentes de IA (MCP)
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o

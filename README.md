@@ -76,13 +76,15 @@ Measured on real devices for one minute per screen (CPU as a share of **one** co
 | Stage, following the band | — | 0.2% · 253 MB | 8.8% · 114 MB | — |
 | Leading the band for 5 minutes (9 songs, a page every 2 s) | 5.0% · 194 MB | 0.8% · 186 MB (following) | 2.4% · 124 MB (following) | — |
 | Sending a setlist to the band | 2.6% · 198 MB | 0.0% · 160 MB (receiving) | — | — |
-| Backing track on a USB interface (USB Audio 2.0 mixer) | 15% · 202 MB (older measurement) | not measured | not measured | not measured |
-| Backing track on a USB interface (USB Audio 1.0 card) | not measured | not measured | 16.9% · 76 MB | not measured |
+| Backing track on a USB interface (USB Audio 2.0 mixer) | ≈14%¹ · 151 MB | 6.7% · 140 MB | 29.3% · 80 MB | 31.3% · 42 MB |
+| Backing track on a USB interface (USB Audio 1.0 card) | 15.5%¹ · 128 MB | 3.7% · 86 MB | 16.9% · 83 MB | 22.2% · 41 MB |
 | Backing track playing on the device output | 17.1% · 147 MB | 3.9% · 140 MB | 13.9% · 71 MB | 18.9% · 44 MB |
 | Band settings, idle | 0.2% · 175 MB | 0.2% · 145 MB | 0.3% · 75 MB | 0.6% · 41 MB |
 
-Even playing a track, Stagebook uses less than 3% of the whole processor. Essential mode barely changes these numbers:
+Even playing a track, Stagebook uses less than 4% of the whole processor (the worst case measured, 31.3% of one core, is 3.9% of eight). Essential mode barely changes these numbers:
 its gain is a simpler screen.
+
+¹ The TCL was at 12% battery when measured: Android parks six of its eight cores at 500 MHz and the raw reading climbs (48.0% and 21.0%). These two numbers are weighted by each core's frequency, as one core at full speed; the mixer one is estimated from the same ratio. With the player on and an interface plugged in but nothing playing, the engine keeps the USB stream alive with silence and uses about 19% of one core on the OnePlus.
 
 ## Use with AI assistants (MCP)
 Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex
