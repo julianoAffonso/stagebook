@@ -81,12 +81,13 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
 }
 
 @Composable
-fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit) {
+fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit, playerMode: Boolean = true) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (!ui.canWrite) PermissionCard()
         // these change the whole device and come back on every start: said before anyone wonders why
         StatusNote(stringResource(R.string.advanced_rewrite), StatusTone.INFO)
-        SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
+        // keeping the player alive on the device is the player's: off in essential mode, the card leaves
+        if (playerMode) SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
             // freeing the app from battery saving only Android does, with the user's tap: a button, not a switch
             StatusNote(
                 stringResource(if (ui.batteryFree) R.string.advanced_battery_free else R.string.advanced_battery_restricted),
