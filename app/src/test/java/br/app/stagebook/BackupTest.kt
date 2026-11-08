@@ -34,6 +34,31 @@ class BackupTest {
         Triple(repo, tracks, Backup(context, repo, tracks))
     }
 
+    // audit 07/11: a backup from a newer version (an enum value this one doesn't know) restores instead of failing whole
+    @Test fun `a backup with an unknown setting value still restores`() = runBlocking {
+        val (repo, _, backup) = setup()
+        repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "linha"))
+        val out = ByteArrayOutputStream()
+        backup.write(out, Part.entries.toSet())
+        // the settings file with a clock face this version has never heard of
+        val changed = ByteArrayOutputStream()
+        java.util.zip.ZipInputStream(ByteArrayInputStream(out.toByteArray())).use { zin ->
+            java.util.zip.ZipOutputStream(changed).use { zout ->
+                generateSequence { zin.nextEntry }.forEach { e ->
+                    val bytes = zin.readBytes()
+                    val text = bytes.decodeToString()
+                    val edited = if (e.name == "ajustes.json") text.replace("\"clockMode\":\"clock\"", "\"clockMode\":\"FACE_FROM_THE_FUTURE\"") else text
+                    if (e.name == "ajustes.json") assertTrue("the test needs the field in the file", edited != text)
+                    zout.putNextEntry(java.util.zip.ZipEntry(e.name)); zout.write(if (e.name == "ajustes.json") edited.toByteArray() else bytes); zout.closeEntry()
+                }
+            }
+        }
+        repo.restore(emptyList(), emptyList())
+        assertTrue(backup.restore(ByteArrayInputStream(changed.toByteArray()), Part.entries.toSet()))
+        assertEquals(br.app.stagebook.data.model.StageClockMode.CLOCK, repo.library.value.look.clockMode)   // the unknown value fell to the default
+        assertEquals(1, repo.library.value.songs.size)
+    }
+
     @Test fun `everything checked - songs with zoom, setlist, track and settings come back the same`() = runBlocking {
         val (repo, tracks, backup) = setup()
         tracks.file("faixa.ogg").writeBytes(OGG)
