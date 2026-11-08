@@ -11,6 +11,18 @@ import org.junit.Test
 
 /** Internet sharing code: easy to type, the key and channel come from it, and only it opens the package. */
 class ShareCodeTest {
+    // audit 07/11: 60 thousand iterations per call, and the LAN "ok" handler asked once per saved code on every message
+    @Test fun `the keys of a code are derived once and the cache stays small`() {
+        val first = ShareCode.keys("11-agua-lua")
+        assertTrue(first === ShareCode.keys("11-agua-lua"))
+        assertNotEquals(first.topic, ShareCode.keys("12-agua-lua").topic)
+        (13..40).forEach { ShareCode.keys("$it-agua-lua") }   // more than it keeps
+        val again = ShareCode.keys("11-agua-lua")
+        assertTrue(first !== again)                            // the oldest was let go...
+        assertEquals(first.topic, again.topic)                  // ...and derives to the same thing
+        assertArrayEquals(first.key, again.key)
+    }
+
     @Test fun `new code has a number and two words and typed any way is the same`() {
         val code = ShareCode.generate()
         assertTrue(code.matches(Regex("[1-9][0-9]-[a-z]+-[a-z]+")))

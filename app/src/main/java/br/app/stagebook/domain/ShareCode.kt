@@ -148,7 +148,15 @@ object ShareCode {
     /** AES key (32 bytes) and channel (text) of the already normalized code. */
     class Keys(val key: ByteArray, val topic: String)
 
-    fun keys(code: String): Keys {
+    // the latest codes' keys: 60 thousand PBKDF2 rounds each, and one call per saved code on every "ok" over Wi-Fi
+    private const val KEYS_KEPT = 16
+    private val derived = object : LinkedHashMap<String, Keys>(KEYS_KEPT, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Keys>) = size > KEYS_KEPT
+    }
+
+    fun keys(code: String): Keys = synchronized(derived) { derived[code] } ?: derive(code).also { synchronized(derived) { derived[code] = it } }
+
+    private fun derive(code: String): Keys {
         val spec = PBEKeySpec(code.toCharArray(), SALT.toByteArray(), ITERATIONS, 48 * 8)
         val raw = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
         val topic = "sb" + raw.copyOfRange(32, 48).joinToString("") { "%02x".format(it) }
