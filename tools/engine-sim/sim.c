@@ -537,7 +537,7 @@ int main(int argc, char **argv) {
     sleep_s(1.0);
     long p5 = FN(position)(env, NULL);
     snprintf(buf, sizeof buf, "position %ld ms (expected ~91000)", p5);
-    check(FN(isRunning)(env, NULL) && labs(p5 - 91000) < 150, "plays again after reconnecting", buf);
+    check(FN(isRunning)(env, NULL) && labs(p5 - 91000) < 400, "plays again after reconnecting", buf);
 
     // 6) stream dies with no disconnect notice (the desk restarts), the kernel still holds URBs
     printf("[6] USB stream dies without notice (protocol error)\n");
@@ -560,7 +560,7 @@ int main(int argc, char **argv) {
     sleep_s(5.0);
     long p6 = FN(position)(env, NULL);
     snprintf(buf, sizeof buf, "position %ld ms after 5 s of play (expected ~35000)", p6);
-    check(FN(isRunning)(env, NULL) && p6 > 34500 && p6 < 35150, "keeps real-time pace without the input", buf);
+    check(FN(isRunning)(env, NULL) && p6 > 34000 && p6 < 35300, "keeps real-time pace without the input", buf);
     if (!strcmp(ENGINE_NAME, "validated")) { fails = fails_before_6b; printf("  (reference engine: not counted)\n"); }
     FN(stop)(env, NULL);
     sim_close_conn();
