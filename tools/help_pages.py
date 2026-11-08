@@ -897,10 +897,10 @@ SECTIONS = [
 
 UI = {
     "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",
-              "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR",
+              "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "https://stagebook.app.br/help/", "lang": "pt-BR",
               "home": "Stagebook — página inicial"},
     "en": {"title": "Stagebook help", "lead": "How to use each part of the app.", "contents": "On this page",
-           "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "../ajuda/", "lang": "en",
+           "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "https://stagebook.app.br/ajuda/", "lang": "en",
            "home": "Stagebook — home page"},
 }
 
@@ -1046,7 +1046,7 @@ def build(lang):
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{ui['title']}</title><link rel="icon" href="../logo.png"><style>{CSS}</style></head>
 <body>
-<header><a class="home" href="../" aria-label="{ui['home']}"><img src="../logo.png" alt=""></a><div><h1>{ui['title']}</h1><p class="lead">{ui['lead']}</p></div>
+<header><a class="home" href="https://stagebook.app.br/" aria-label="{ui['home']}"><img src="../logo.png" alt=""></a><div><h1>{ui['title']}</h1><p class="lead">{ui['lead']}</p></div>
 <a class="lang" href="{ui['other_href']}">{ui['other']}</a></header>
 <div class="wrap"><nav class="toc"><b>{ui['contents']}</b>{''.join(toc)}</nav><main>{''.join(body)}</main></div>
 <script>{JS}</script>
