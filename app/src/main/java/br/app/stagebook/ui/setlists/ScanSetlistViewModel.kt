@@ -108,8 +108,14 @@ class ScanSetlistViewModel @Inject constructor(
     /** Accepting the invite: who invited joins the band here, and my "ok" brings me into theirs. */
     fun acceptInvite() {
         val from = invite ?: return
-        bandInternet.accepted(code, from, invite = true)
-        _ui.value = ScanUi.Invite(from.name, joined = true)
+        viewModelScope.launch {
+            // an invite lets in one person, and someone else may have taken it since this screen opened (audit 07/11:
+            // both saw "joined" and only the first was ever let in); offline, the "ok" goes and the inviter decides
+            val now = cloud.receive(code)
+            if (now is SetlistCloud.Received.Invite && now.used) { _ui.value = ScanUi.Invite(from.name, used = true); return@launch }
+            bandInternet.accepted(code, from, invite = true)
+            _ui.value = ScanUi.Invite(from.name, joined = true)
+        }
     }
 
     /** The sender, if they're in the band (the online request goes to their inbox). */
