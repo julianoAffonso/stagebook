@@ -553,7 +553,7 @@
     <string name="settings_player_requirements_text">• Interface de áudio USB \"class compliant\" (USB Audio Class 1.0 ou 2.0, que funciona no computador sem driver).\n• Que aceite 44,1 ou 48 kHz.\n• Celular ou tablet com USB OTG e o cabo ou adaptador certo.\n\n</string>
     <string name="player_starting">Iniciando o player…</string>
     <string name="player_turn_off">Desligar</string>
-    <string name="player_usb_permission">Aguardando a permissão para a saída USB…</string>
+    <string name="player_usb_permission_note">Autorize o USB na janela do Android</string>
     <string name="player_usb_connecting">Conectando à saída USB…</string>
     <string name="player_usb_ready">Saída USB: %1$s</string>
     <string name="player_usb_failed">A saída USB não respondeu. Tire e ponha o cabo de novo.</string>

@@ -50,8 +50,11 @@ public class PlayerService extends Service {
     static final long WAKE_TIMEOUT_MS = 30 * 60 * 1000L;
     static final long WATCHDOG_MS = 5000;
     // time for the interface clock to lock after connecting: when the connection is good it arrives in ~2 ms; with 3 s
-    // + the watchdog's 5 s pass, the reconnection landed on the user's play (19/10/2026)
-    static final long FB_WAIT_MS = 1000;
+    // + the watchdog's 5 s pass, the reconnection landed on the user's play (19/10/2026). The first try waits only
+    // 400 ms: after a replug the silent first connection was a 1 s gap of silence, heard. A slow device is safe anyway:
+    // each retry waits one step longer (400, 800, 1200 ms, see fbWait), so one whose first input packet legitimately
+    // takes longer gets the time on the next try instead of looping, and FB_RETRIES still ends it
+    static final long FB_WAIT_MS = 400;
     static final int FB_RETRIES = 3;
     static final int ANDROID_MISSES = 6;   // Android takes a while to list an interface just plugged in
     static final long ATTACH_GRANT_WAIT_MS = 1500;   // waits for Android's automatic permission
@@ -110,7 +113,9 @@ public class PlayerService extends Service {
         ContextCompat.registerReceiver(this, usbReceiver, usbFilter(), ContextCompat.RECEIVER_NOT_EXPORTED);
         wake = ((PowerManager) getSystemService(POWER_SERVICE))
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "stagebook:play");
-        connectUsb();
+        // Android reads its USB routing when the interface connects: written first (off the main thread), only now
+        // that the player really runs, and given back in shutdown()
+        StagePlayer.routeUsbThen(this, !viaAndroid, () -> { if (running && link == null && !connecting) connectUsb(); });
         main.postDelayed(watchdog, WATCHDOG_MS);
         checkIdle();
         return START_STICKY;
@@ -159,8 +164,10 @@ public class PlayerService extends Service {
 
     boolean fbRetryDue() {
         // no input on purpose (an adaptive output follows us): there's no clock to wait for
-        return link != null && link.inEp >= 0 && fbRetries < FB_RETRIES && SystemClock.elapsedRealtime() - connectedAt >= FB_WAIT_MS;
+        return link != null && link.inEp >= 0 && fbRetries < FB_RETRIES && SystemClock.elapsedRealtime() - connectedAt >= fbWait();
     }
+
+    long fbWait() { return FB_WAIT_MS * (1 + fbRetries); }
 
     void fbRetry() {
         fbRetries++;
@@ -221,7 +228,7 @@ public class PlayerService extends Service {
             Intent it = new Intent(ACTION_USB_PERM).setPackage(getPackageName());
             int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
             um.requestPermission(d, PendingIntent.getBroadcast(this, 0, it, mutable));
-            setStatus(getString(R.string.player_usb_permission));
+            setStatus(getString(R.string.player_usb_permission_note));   // short, so the stage shows it as a note
             return;
         }
         if (deviceOut) releaseUsb();   // the USB interface arrived: leave the device and go to it
@@ -348,7 +355,7 @@ public class PlayerService extends Service {
         connected = true;
         connectedAt = SystemClock.elapsedRealtime();
         main.removeCallbacks(fbCheck);
-        main.postDelayed(fbCheck, FB_WAIT_MS);
+        main.postDelayed(fbCheck, fbWait());
         checkIdle();
         Log.i(TAG, link.describe());
         setStatus(getString(R.string.player_usb_ready, link.name()));
@@ -473,6 +480,7 @@ public class PlayerService extends Service {
         holdWake(false);
         running = false;
         status = "";
+        StagePlayer.releaseUsbRoute(this);
         StagePlayer.onServiceChanged();
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
         stopSelf();

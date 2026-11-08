@@ -110,4 +110,28 @@ class UsbNoticeOnceTest {
         service("")   // the notice is gone a moment later: the footer must not keep the old one
         compose.waitUntil(5_000) { note == "" }
     }
+
+    // the permission wait used to reach only the notification: now the stage says it as a short note, never a snackbar
+    @Test fun `waiting for the USB permission shows a short note on the stage`() {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val player = StagePlayer(context, repo)
+        val host = SnackbarHostState()
+        var note = ""
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            CompositionLocalProvider(LocalAppMessage provides remember { AppMessage(host, scope) }) {
+                val ui by player.ui.collectAsState()
+                note = rememberPlayerNote(ui.message, player::firstShow)
+            }
+        }
+        val wait = context.getString(R.string.player_usb_permission_note)
+        compose.runOnIdle {
+            PlayerService.running = true
+            PlayerService.status = wait
+            StagePlayer.onServiceChanged()
+        }
+        compose.waitUntil(5_000) { note == wait }
+        assertNull(host.currentSnackbarData)
+    }
 }

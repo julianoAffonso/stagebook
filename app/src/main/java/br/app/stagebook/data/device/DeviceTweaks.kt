@@ -24,6 +24,7 @@ enum class DeviceTweak(
     val group: Group,
     internal val onlyIfPresent: Boolean = false,   // a setting some makers have and others don't
     val shown: Boolean = true,   // in Settings; USB_ROUTING follows the Android route switch instead
+    internal val onUse: Boolean = false,   // written only when the feature runs (never on start) and given back when it stops
     internal val restores: Boolean = true,   // off gives back what the device had; otherwise off is a value that has to hold
 ) {
     // TCL: with smart long charge or sleep charge on, its charge manager made the USB audio interface drop for a
@@ -32,8 +33,12 @@ enum class DeviceTweak(
         listOf(Table.GLOBAL to "tct_smart_longcharge_mode", Table.SECURE to "tct_sleep_charge_mode_enable"),
         on = "0", off = "1", group = Group.PLAY, onlyIfPresent = true,
     ),
-    // Android's own audio stays off the USB interface the player drives (with 0 it opens the same interface)
-    USB_ROUTING(listOf(Table.SECURE to "usb_audio_automatic_routing_disabled"), on = "1", off = "0", group = Group.PLAY, shown = false, restores = false),
+    // Android's own audio stays off the USB interface the player drives (with 0 it opens the same interface). Written
+    // by the player only while it runs on the engine route, and the device's own value is put back when it stops
+    USB_ROUTING(
+        listOf(Table.SECURE to "usb_audio_automatic_routing_disabled"),
+        on = "1", off = "0", reapply = false, onUse = true, group = Group.PLAY, shown = false,
+    ),
     // Android's battery manager suggests restricting apps that use battery, and the player uses it on purpose
     BATTERY_MANAGER(listOf(Table.GLOBAL to "app_auto_restriction_enabled"), on = "0", off = "1", group = Group.PLAY),
     ANIMATIONS(
@@ -76,6 +81,9 @@ object DeviceTweaks {
         write(c, t, on)
     }
 
+    /** The one writer of [DeviceTweak.USB_ROUTING]: on while the player runs on the engine route, given back otherwise. */
+    fun routeUsb(c: Context, engineRoute: Boolean) = set(c, DeviceTweak.USB_ROUTING, engineRoute)
+
     /** On app start: what Android put back by itself is written again (no choice saved = the default). */
     fun ensure(c: Context) {
         if (!canWrite(c)) return
@@ -99,7 +107,7 @@ object DeviceTweaks {
                 on -> { if (t.restores) keepOriginal(c, s); t.on }
                 !t.restores -> t.off
                 ORIGINAL + s.second in prefs(c) -> takeOriginal(c, s)
-                t.reapply -> continue   // never written by this app: it's the person's
+                t.reapply || t.onUse -> continue   // never written by this app: it's the person's
                 else -> t.off   // on by other hands, and the switch says off
             }
             // a device that hides a setting must not close the app on start

@@ -30,7 +30,7 @@ class DeviceTweaksTest {
         Settings.Global.putString(cr, "development_settings_enabled", "0")
         Settings.Global.putString(cr, Settings.Global.WINDOW_ANIMATION_SCALE, "1.0")
         DeviceTweaks.ensure(app)
-        assertEquals("1", Settings.Secure.getString(cr, "usb_audio_automatic_routing_disabled"))
+        assertNull(Settings.Secure.getString(cr, "usb_audio_automatic_routing_disabled"))   // only when the player runs
         assertEquals("0", Settings.Global.getString(cr, "app_auto_restriction_enabled"))
         assertTrue(DeviceTweaks.isOn(app, DeviceTweak.ANIMATIONS))
         assertTrue(DeviceTweaks.isOn(app, DeviceTweak.SCREEN_TIMEOUT))
@@ -140,15 +140,34 @@ class DeviceTweaksTest {
         assertEquals("0", Settings.Global.getString(cr, "adb_wifi_enabled"))
     }
 
-    @Test fun `the Android route always gets the value it needs`() {
-        val routing = "usb_audio_automatic_routing_disabled"
+    private val routing = "usb_audio_automatic_routing_disabled"
+
+    @Test fun `the USB routing is written when the player runs on the engine route and given back when it stops`() {
         Settings.Secure.putString(cr, routing, "0")
-        DeviceTweaks.set(app, DeviceTweak.USB_ROUTING, true)
-        DeviceTweaks.set(app, DeviceTweak.USB_ROUTING, false)
+        DeviceTweaks.ensure(app)
+        assertEquals("0", Settings.Secure.getString(cr, routing))   // app start writes nothing
+        DeviceTweaks.routeUsb(app, true)
+        assertEquals("1", Settings.Secure.getString(cr, routing))
+        DeviceTweaks.routeUsb(app, true)   // a second start keeps the first original
+        DeviceTweaks.routeUsb(app, false)
         assertEquals("0", Settings.Secure.getString(cr, routing))
+    }
+
+    @Test fun `the device's own USB routing value comes back, even when it was on or absent`() {
         Settings.Secure.putString(cr, routing, "1")
-        DeviceTweaks.set(app, DeviceTweak.USB_ROUTING, false)
-        assertEquals("0", Settings.Secure.getString(cr, routing))
+        DeviceTweaks.routeUsb(app, true)
+        DeviceTweaks.routeUsb(app, false)
+        assertEquals("1", Settings.Secure.getString(cr, routing))
+        Settings.Secure.putString(cr, routing, null)
+        DeviceTweaks.routeUsb(app, true)
+        DeviceTweaks.routeUsb(app, false)
+        assertNull(Settings.Secure.getString(cr, routing))
+    }
+
+    @Test fun `giving back the USB routing never written touches nothing`() {
+        Settings.Secure.putString(cr, routing, "1")   // someone else's choice
+        DeviceTweaks.routeUsb(app, false)
+        assertEquals("1", Settings.Secure.getString(cr, routing))
     }
 
     @Test fun `without the permission nothing is written`() {
