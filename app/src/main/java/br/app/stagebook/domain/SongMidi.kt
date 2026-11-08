@@ -85,7 +85,9 @@ class StageMidi(private val send: (List<MidiMessage>) -> Unit) {
     private var exit: List<MidiMessage> = emptyList()
 
     fun show(id: String?, midi: SongMidi?) {
-        if (id == song) return
+        // the same song again (a recomposition, or the stage reopened after the messages were edited): the entry isn't
+        // sent twice, but the exit is read again: it was kept from before the edit (found on a phone, 07/11)
+        if (id == song) { exit = midi?.exit.orEmpty(); return }
         send(exit)
         send(midi?.enter.orEmpty())
         song = id

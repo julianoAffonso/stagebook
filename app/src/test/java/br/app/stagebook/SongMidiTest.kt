@@ -58,4 +58,21 @@ class SongMidiTest {
         stage.leave()
         assertEquals(listOf(1, 2, 3, 4), sent)
     }
+
+    // found on a real phone (07/11): editing a song's MIDI and saving reopened the stage on the same song, which kept the
+    // exit it had read before, so leaving sent the OLD exit
+    @Test fun `an edited exit replaces the one read before, without sending the entry again`() {
+        val sent = mutableListOf<Int>()
+        val stage = br.app.stagebook.domain.StageMidi { list -> list.forEach { sent += it.number } }
+        fun midi(enter: Int, exit: Int) = SongMidi(listOf(MidiMessage(number = enter)), listOf(MidiMessage(number = exit)))
+        stage.show("a", midi(1, 2))
+        stage.show("a", midi(1, 7))   // the same song after an edit: the new exit counts, the entry isn't sent again
+        stage.leave()
+        assertEquals(listOf(1, 7), sent)
+        sent.clear()
+        stage.show("b", midi(3, 4))
+        stage.show("b", null)         // the messages were removed in the editor: nothing is sent on leaving
+        stage.leave()
+        assertEquals(listOf(3), sent)
+    }
 }
