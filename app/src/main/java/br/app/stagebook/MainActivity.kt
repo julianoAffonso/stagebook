@@ -125,12 +125,12 @@ class MainActivity : ComponentActivity() {
                         onUpdate = { updateOffer.accept() },
                         onLater = updateOffer::decline,
                         onInstall = {
-                            (updateOffer.offer.value as? UpdateOffer.Ready)?.let { installApk(updater.canInstall(), updater.installIntent(it.apk)) }
+                            (updateOffer.offer.value as? UpdateOffer.Ready)?.let { installApk(updater, it.apk) }
                         },
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),

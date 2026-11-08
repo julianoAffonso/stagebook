@@ -97,7 +97,7 @@ class AppUpdaterTest {
         vm.downloadUpdate()
         assertEquals(UpdateState.DownloadFailed, vm.waitUpdate { it == UpdateState.DownloadFailed })
         assertFalse(File(context.cacheDir, "atualizacao/stagebook.apk").exists())
-        assertEquals(null, vm.installIntent())
+        assertEquals(null, vm.downloadedApk)
     }
 
 }

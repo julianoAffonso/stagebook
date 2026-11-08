@@ -103,7 +103,8 @@ Stagebook isn't on the Play Store; it's only here, for free. Needs Android 9 or 
    the files app): allow it, go back and tap **Install**. If Play Protect says it doesn't know the app, choose to
    install anyway.
 3. That's it. From then on the app tells you when a new version is out and updates itself; on the first update
-   Android asks for the same permission, this time for Stagebook.
+   Android asks for the same permission, this time for Stagebook. On Android 12 or newer, the next ones go in
+   without asking again and the app restarts to finish. On Android 11 or older, Android asks to confirm every version.
 
 **Why not the Play Store?** The app imports lyrics and chords from websites, and the store's rules on copyrighted
 content leave this kind of app open to being pulled at any time. It also updates itself straight from these releases,

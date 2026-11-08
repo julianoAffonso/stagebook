@@ -103,7 +103,8 @@ O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa d
    app de arquivos): permita, volte e toque em **Instalar**. Se o Play Protect disser que não conhece o app, escolha
    instalar mesmo assim.
 3. Pronto. Daí em diante o app avisa quando sai versão nova e se atualiza; na primeira atualização o Android pede a
-   mesma permissão, agora para o Stagebook.
+   mesma permissão, agora para o Stagebook. No Android 12 ou mais novo, as seguintes entram sem pedir de novo e o app
+   reinicia para terminar. No Android 11 ou mais antigo, o Android pede a confirmação a cada versão.
 
 **Por que fora da Play Store?** O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com
 direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza
