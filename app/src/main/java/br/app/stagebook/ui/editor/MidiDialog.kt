@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -161,6 +162,7 @@ private fun NumberField(label: String, f: NumberSpec, modifier: Modifier = Modif
     val min = f.min
     val max = f.max
     var text by remember(f.value) { mutableStateOf(f.value.coerceIn(min, max).toString()) }
+    var focused by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = text,
         onValueChange = { typed ->
@@ -173,7 +175,8 @@ private fun NumberField(label: String, f: NumberSpec, modifier: Modifier = Modif
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = MaterialTheme.shapes.small,
-        modifier = modifier,
+        // leaving the field, it shows what is kept: "0" in a field that starts at 1 saved 1 but kept showing 0 (audit 07/11)
+        modifier = modifier.onFocusChanged { if (focused && !it.isFocused) text = f.value.coerceIn(min, max).toString(); focused = it.isFocused },
     )
 }
 
