@@ -18,9 +18,10 @@ enum class InstallPlan {
         /** First Android version where an installer session can skip the confirmation tap (S, API 31). */
         const val SESSION_SDK = 31
 
-        fun choose(sdk: Int, canInstall: Boolean): InstallPlan = when {
+        /** After a session failed, trying again goes straight to the system screen, which always works. */
+        fun choose(sdk: Int, canInstall: Boolean, sessionFailed: Boolean = false): InstallPlan = when {
             !canInstall -> NEEDS_SOURCE_PERMISSION
-            sdk >= SESSION_SDK -> SESSION
+            sdk >= SESSION_SDK && !sessionFailed -> SESSION
             else -> SCREEN
         }
     }

@@ -18,6 +18,12 @@ class InstallPlanTest {
         assertEquals(InstallPlan.SESSION, InstallPlan.choose(36, canInstall = true))
     }
 
+    @Test fun `after a failed session, trying again uses the system installer screen`() {
+        assertEquals(InstallPlan.SCREEN, InstallPlan.choose(34, canInstall = true, sessionFailed = true))
+        // the source permission still comes first
+        assertEquals(InstallPlan.NEEDS_SOURCE_PERMISSION, InstallPlan.choose(34, canInstall = false, sessionFailed = true))
+    }
+
     @Test fun `Android 11 and older keep the system installer screen`() {
         assertEquals(InstallPlan.SCREEN, InstallPlan.choose(28, canInstall = true))
         assertEquals(InstallPlan.SCREEN, InstallPlan.choose(30, canInstall = true))

@@ -18,7 +18,7 @@ import java.io.File
  */
 fun Context.installApk(updater: AppUpdater, apk: File?) {
     apk ?: return
-    when (InstallPlan.choose(Build.VERSION.SDK_INT, updater.canInstall())) {
+    when (InstallPlan.choose(Build.VERSION.SDK_INT, updater.canInstall(), InstallResults.sessionFailed)) {
         InstallPlan.NEEDS_SOURCE_PERMISSION ->
             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.fromParts("package", packageName, null)))
         InstallPlan.SESSION ->

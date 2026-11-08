@@ -18,7 +18,14 @@ object InstallResults {
     private val _notices = MutableSharedFlow<InstallNotice>(extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val notices: SharedFlow<InstallNotice> = _notices.asSharedFlow()
 
-    fun post(notice: InstallNotice) { _notices.tryEmit(notice) }
+    /** A session failed in this launch: the next try uses the system installer screen instead of another session. */
+    @Volatile var sessionFailed = false
+        private set
+
+    fun post(notice: InstallNotice) {
+        if (notice == InstallNotice.FAILED) sessionFailed = true
+        _notices.tryEmit(notice)
+    }
 
     const val ACTION = "br.app.stagebook.INSTALL_RESULT"
 }
