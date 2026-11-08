@@ -383,8 +383,8 @@ static long long g_clk_skip = 0;        // beats from the start left silent, bit
 static inline void click_add_locked(float *out) {
     if (g_clk_spb <= 0) return;
     long beat = g_clk_pos / g_clk_spb, at = g_clk_pos % g_clk_spb;
-    int k = beat % 4 == 0 && !(g_clk_skip && beat == 0) ? 1 : 0;   // the first beat of each bar sounds higher, but
-                                        // the count-in's first slow click sounds like its second
+    int k = beat % 4 == 0 || (g_clk_skip && beat == 2) ? 1 : 0;   // the first beat of each bar sounds higher, and so
+                                        // does the count-in's second slow click: the two sound the same
     g_clk_pos++;
     if (beat < 64 && ((g_clk_skip >> beat) & 1)) return;
     if (at >= g_clk_len[k]) return;

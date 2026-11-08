@@ -46,18 +46,20 @@ class MetronomeClickTest {
         assertEquals(listOf(0, 2, 4, 5, 6, 7, 8, 9, 10, 11), heard)
     }
 
-    // user, 07/11: the two slow clicks of the count-in sound the same; the accent is the "1" of the bar that follows
-    @Test fun `the count-in's two slow clicks have the same tone and the accent comes on the bar`() {
+    // user, 07/11: the two slow clicks of the count-in sound the same (the accent, like a bar start)
+    @Test fun `the count-in's two slow clicks have the same accent tone`() {
         val all = ShortArray(600)
         MetronomeClick.render(all, 0, 50, normal, accent, skip = MetronomeClick.COUNT_IN_SKIP)
         fun at(beat: Int) = all[beat * 50 + 3]
         assertEquals(at(0), at(2))
-        assertEquals(normal[3], at(0))
-        assertEquals(accent[3], at(4))
-        assertEquals(accent[3], at(8))
-        assertEquals(listOf(false, false, false, false, true, false, false, false, true),
+        assertEquals(accent[3], at(0))
+        assertEquals(accent[3], at(2))
+        assertEquals(accent[3], at(4))   // the bar that follows keeps its accent
+        assertEquals(normal[3], at(5))
+        assertEquals(listOf(true, false, true, false, true, false, false, false, true),
             (0L..8L).map { MetronomeClick.accented(it, 4, MetronomeClick.COUNT_IN_SKIP) })
-        assertEquals(true, MetronomeClick.accented(0, 4, 0))   // no count-in: the bar starts with the accent
+        assertEquals(false, MetronomeClick.accented(2, 4, 0))   // no count-in: only the bar's first beat
+        assertEquals(true, MetronomeClick.accented(0, 4, 0))
     }
 
     @Test fun `the stage shows 1, 2, then 1 2 3 4, and nothing on the pauses`() =

@@ -33,9 +33,9 @@ object MetronomeClick {
     /** Whether [beat] from the start is left silent ([skip] as [COUNT_IN_SKIP]). */
     fun silent(beat: Long, skip: Long): Boolean = beat < 64 && (skip shr beat.toInt()) and 1L == 1L
 
-    /** Whether [beat] carries the accent: the first of each bar, except the count-in's first slow click, which sounds
-     *  like the second one ([skip] as [COUNT_IN_SKIP], 0 = no count-in). */
-    fun accented(beat: Long, beatsPerBar: Int, skip: Long): Boolean = beat % beatsPerBar == 0L && !(skip != 0L && beat == 0L)
+    /** Whether [beat] carries the accent: the first of each bar, and the count-in's second slow click, so the two slow
+     *  clicks sound the same (user, 07/11: the accent, like a bar start). [skip] as [COUNT_IN_SKIP], 0 = no count-in. */
+    fun accented(beat: Long, beatsPerBar: Int, skip: Long): Boolean = beat % beatsPerBar == 0L || (skip != 0L && beat == 2L)
 
     /** A short click: a sine with a fast decay (sounds like a metronome's "tick"). */
     fun click(accent: Boolean, rate: Int = RATE, volume: Int = FULL_VOLUME): ShortArray {
