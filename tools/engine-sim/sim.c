@@ -582,6 +582,36 @@ int main(int argc, char **argv) {
     sim_close_conn();
     snprintf(buf, sizeof buf, "fast stop %.0f ms, normal stop %.0f ms", fast7, slow7);
     check(fast7 < 150 && slow7 > 300, "a fast stop skips the silent tail, the normal one keeps it", buf);
+
+    // 7c) the player closes the stream after 10 s of nothing sounding and opens it again on the next play: an open idle
+    // stream makes about a thousand submits a second, a closed one none, and playing from a closed stream starts clean
+    printf("[7c] closing the stream when idle, and playing from a closed one\n");
+    E_START(); sleep_s(0.3);   // open, nothing playing
+    pthread_mutex_lock(&dev_mx); long idle0 = out_urbs; pthread_mutex_unlock(&dev_mx);
+    sleep_s(1.0);
+    pthread_mutex_lock(&dev_mx); long idle_rate = out_urbs - idle0; pthread_mutex_unlock(&dev_mx);
+    FN(stopFast)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); long closed0 = out_urbs; pthread_mutex_unlock(&dev_mx);
+    sleep_s(1.0);
+    pthread_mutex_lock(&dev_mx); long closed_rate = out_urbs - closed0; pthread_mutex_unlock(&dev_mx);
+    snprintf(buf, sizeof buf, "open and idle: %ld submits in 1 s; closed: %ld in 1 s", idle_rate, closed_rate);
+    check(idle_rate > 500 && closed_rate == 0, "a closed stream makes no USB submits", buf);
+    // opens again and plays: the track starts from where it was asked, nothing lost, no gap on the desk
+    E_START();
+    reset_metrics();
+    FN(seek)(env, NULL, 60000);
+    cap_n = 0; capturing = 1;
+    FN(play)(env, NULL);
+    sleep_s(1.0);
+    capturing = 0;
+    long p7c = FN(position)(env, NULL);
+    meters m7c = meter(cap, cap_n);
+    snprintf(buf, sizeof buf, "position %ld ms after 1 s (expected ~61000), %ld gaps, peak %.3f", p7c, iso_gaps, m7c.peak[0]);
+    check(FN(isRunning)(env, NULL) && p7c > 60700 && p7c < 61300 && iso_gaps == 0 && m7c.peak[0] > 0,
+          "play from a closed stream starts the track, with sound and no gap", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
 #endif
 
     // 8) normalization

@@ -118,6 +118,8 @@ class SettingsViewModel @Inject constructor(
             val look = repository.library.value.look
             val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
             if (look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, look.metroVolume)) metronome.stop()
+            // the USB stream was closed for being idle: opens again and the test click starts when it's ready
+            else if (look.playerMode && br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, 0, look.metroVolume)) metronome.stop()
             else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, look.metroVolume) }
         },
         stop = { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
