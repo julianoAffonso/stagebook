@@ -1031,6 +1031,6 @@
     <string name="stage_link_kept">Link saved. It opens when you leave the stage.</string>
     <string name="settings_metronome_test">Test the metronome</string>
     <string name="settings_metronome_test_stop">Stop the test</string>
-    <string name="update_installing">Installing the update. The app restarts to finish.</string>
-    <string name="update_install_failed">Couldn\'t install the update. Try again.</string>
+    <string name="update_installing">Installing the update. The app restarts by itself when it finishes.</string>
+    <string name="update_install_failed">Error installing the update. Try again.</string>
 </resources>

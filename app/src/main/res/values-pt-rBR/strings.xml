@@ -1068,6 +1068,6 @@
     <string name="stage_link_kept">Link guardado. Abre quando você sair do palco.</string>
     <string name="settings_metronome_test">Testar o metrônomo</string>
     <string name="settings_metronome_test_stop">Parar o teste</string>
-    <string name="update_installing">Instalando a atualização. O app reinicia para terminar.</string>
-    <string name="update_install_failed">Não deu para instalar a atualização. Tente de novo.</string>
+    <string name="update_installing">Instalando a atualização. O app reinicia sozinho ao terminar.</string>
+    <string name="update_install_failed">Erro ao instalar a atualização. Tente novamente.</string>
 </resources>
