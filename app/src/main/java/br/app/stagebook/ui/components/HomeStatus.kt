@@ -20,6 +20,8 @@ import br.app.stagebook.R
 data class HomeStatus(
     val essential: Boolean, val received: Int, val onEssential: () -> Unit, val onReceived: () -> Unit,
     val webAddress: String = "", val onWebEditor: () -> Unit = {},   // the web editor while it's on (user, 01/11)
+    // some parts are off but not all: a quieter leaf that lists what's off (user, 08/11)
+    val partial: Boolean = false, val onPartial: () -> Unit = {},
 )
 
 /** Given by the Home screen to the tabs' headers; none elsewhere. */
@@ -37,6 +39,11 @@ fun HomeStatusIcons() {
     if (status.essential) {
         IconButton(onClick = status.onEssential) {
             Icon(AppIcons.Eco, stringResource(R.string.essential_banner), tint = MaterialTheme.colorScheme.primary)
+        }
+    }
+    if (!status.essential && status.partial) {
+        IconButton(onClick = status.onPartial) {
+            Icon(AppIcons.Eco, stringResource(R.string.essential_alert_some_title), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     if (status.received > 0) {

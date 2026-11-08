@@ -37,6 +37,14 @@ class HomeViewModel @Inject constructor(
     val essential: StateFlow<Boolean> = repository.library.map { it.look.essential }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.essential)
 
+    /** Some part is off but not all: the tabs show the quiet leaf that lists what's off (user, 08/11). */
+    val partial: StateFlow<Boolean> = repository.library.map { it.look.anyOff && !it.look.essential }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** The switches, for the list of what's off. */
+    val look: StateFlow<Look> = repository.library.map { it.look }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
+
     /**
      * Alert on open when some part is off (what's off comes in the Look; null = no alert): once per launch, until
      * "Don't show again".

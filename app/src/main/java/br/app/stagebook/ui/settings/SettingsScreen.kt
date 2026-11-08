@@ -642,7 +642,7 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
     SettingsSection.WEB_EDITOR -> stringResource(if (ui.look.webEditorOn) R.string.settings_web_editor_on_short else R.string.settings_web_editor_off_short)
     SettingsSection.IMPORT -> (if (ui.look.chords) ui.look.chordSites else ui.look.lyricSites).firstOrNull()?.name.orEmpty()
     SettingsSection.ABOUT -> stringResource(R.string.settings_update_installed, ui.version) +
-        if (ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
+        if (ui.look.internetOn && ui.update is UpdateState.Available) " · " + stringResource(R.string.settings_update_new_short) else ""
     SettingsSection.ADVANCED -> stringResource(R.string.settings_advanced_short)
     SettingsSection.LIBRARY -> br.app.stagebook.ui.components.songCountText(ui.songCount) + " · " +
         br.app.stagebook.ui.components.setCountText(ui.setCount)
@@ -666,7 +666,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             SettingsSection.IMPORT -> ImportSitesDetail(uiState.look, actions)
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
-            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree)
+            SettingsSection.ADVANCED -> AdvancedDetail(actions.advanced, actions.onTweak, actions.onBatteryFree, playerMode = uiState.look.playerMode)
             SettingsSection.ABOUT -> AboutDetail(uiState, actions)
         }
     }
@@ -975,7 +975,8 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
 private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
     PedalConnectCard(uiState, actions)
     PedalButtonsCard(uiState, actions)
-    if (uiState.midi.supported) MidiOutCard(uiState.look, actions)
+    // the songs' MIDI is one of the extras (essential mode, T19): off, the card leaves too
+    if (uiState.midi.supported && uiState.look.extrasOn) MidiOutCard(uiState.look, actions)
 }
 
 /** Where the songs' MIDI goes (user, 07/11): one output for the whole app, USB or Bluetooth. */
@@ -1094,7 +1095,7 @@ private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions)
                         color = MaterialTheme.colorScheme.primary,
                     )
                     // the button pressed can be set to another stage command
-                    PedalActionPicker(key.action, { actions.onPedalAction(key.keyCode, it) })
+                    PedalActionPicker(key.action, uiState.look.playerMode, { actions.onPedalAction(key.keyCode, it) })
                 }
             }
         }
@@ -1120,7 +1121,7 @@ private fun PedalButtonsCard(uiState: SettingsUiState, actions: SettingsActions)
                     midiCodes,
                 ),
             ).filter { it.codes.isNotEmpty() }.sortedByDescending { it.on }
-            groups.forEach { g -> PedalKeyGroup(g, keys, actions, showName = groups.size > 1 || !g.on) }
+            groups.forEach { g -> PedalKeyGroup(g, keys, actions, showName = groups.size > 1 || !g.on, playerMode = look.playerMode) }
         }
     }
 }
@@ -1129,7 +1130,7 @@ private data class PedalGroup(val name: String, val on: Boolean, val codes: List
 
 /** A pedal's buttons with what each does; a pedal that isn't connected shows faded, still editable. */
 @Composable
-private fun PedalKeyGroup(g: PedalGroup, keys: Map<Int, PedalAction>, actions: SettingsActions, showName: Boolean) {
+private fun PedalKeyGroup(g: PedalGroup, keys: Map<Int, PedalAction>, actions: SettingsActions, showName: Boolean, playerMode: Boolean) {
     Column(Modifier.fillMaxWidth().alpha(if (g.on) 1f else 0.6f), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         if (showName) {
             Text(
@@ -1144,6 +1145,7 @@ private fun PedalKeyGroup(g: PedalGroup, keys: Map<Int, PedalAction>, actions: S
                 pedalKeyName(code) + if (custom == null) " · " + stringResource(R.string.settings_pedal_default) else "",
                 custom ?: PedalAction.default(code),
                 { actions.onPedalAction(code, it) },
+                playerMode,
                 onRemove = if (custom != null) ({ actions.onPedalAction(code, PedalAction.default(code)) }) else null,
             )
         }
@@ -1205,19 +1207,23 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
 )
 
 @Composable
-private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, onRemove: (() -> Unit)?) {
+private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, playerMode: Boolean, onRemove: (() -> Unit)?) {
     // a choice field per button (like the button test above): the key or MIDI message is the label, the command is
     // the value, so it's visible that it can be changed; × resets that button to default
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        OptionDropdown(name, PedalAction.entries, action, onSelect, nameOf = { pedalActionLabel(it) }, modifier = Modifier.weight(1f))
+        OptionDropdown(name, pedalActions(playerMode, action), action, onSelect, nameOf = { pedalActionLabel(it) }, modifier = Modifier.weight(1f))
         if (onRemove != null) IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
     }
 }
 
 /** Picking the button's command (dropdown, fits on phones too). */
 @Composable
-private fun PedalActionPicker(selected: PedalAction, onSelect: (PedalAction) -> Unit) =
-    OptionDropdown(stringResource(R.string.settings_pedal_command), PedalAction.entries, selected, onSelect, nameOf = { pedalActionLabel(it) })
+private fun PedalActionPicker(selected: PedalAction, playerMode: Boolean, onSelect: (PedalAction) -> Unit) =
+    OptionDropdown(stringResource(R.string.settings_pedal_command), pedalActions(playerMode, selected), selected, onSelect, nameOf = { pedalActionLabel(it) })
+
+/** The commands a button can take: Play/Pause only with the player on (or when the button already has it, so it still shows). */
+internal fun pedalActions(playerMode: Boolean, current: PedalAction): List<PedalAction> =
+    PedalAction.entries.filter { it != PedalAction.PLAY_PAUSE || playerMode || it == current }
 
 /** Import sites: the first in each list is the default (where the importer opens); you can remove and add. */
 @Composable
@@ -1604,7 +1610,8 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         InfoText(stringResource(R.string.backup_open_merge))
         InfoText(stringResource(R.string.backup_open_replace))
         ActionButton(stringResource(R.string.backup_open), actions.onRestore, Modifier.fillMaxWidth(), icon = AppIcons.Folder, tone = ButtonTone.Tonal)
-        br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.backup_open_other_device), stringResource(R.string.settings_band), SettingsSection.BAND, style = MaterialTheme.typography.bodyMedium)
+        // the Band section only has band content with the band or the internet on (the extras alone leave Now Playing there)
+        if (uiState.look.bandOn || uiState.look.internetOn) br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.backup_open_other_device), stringResource(R.string.settings_band), SettingsSection.BAND, style = MaterialTheme.typography.bodyMedium)
     }
     // the other ways to send songs and setlists live on other screens: here only the map
     SettingsCard(stringResource(R.string.backup_share_card)) {
