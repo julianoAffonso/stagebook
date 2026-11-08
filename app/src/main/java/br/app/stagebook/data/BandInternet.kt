@@ -118,6 +118,7 @@ class BandInternet @Inject constructor(
      */
     fun accepted(code: String, from: BandProtocol.Hello?, invite: Boolean = false) {
         from ?: return
+        if (from.id == identity.id) return   // never my own device as a member of my band
         trust.add(from.id, from.name, from.key)
         val until = now() + if (invite) ACK_WINDOW_MS else KEEP_MS
         // the "ok" waits for a running sync instead of being overwritten by its end (lost when the first ack failed)

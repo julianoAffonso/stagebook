@@ -27,11 +27,21 @@ class BandInviteTest {
     private val identity = DeviceIdentity(context)
     private val cloud = SetlistCloud(LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)), identity)
 
-    @Test fun `an invite reads as an invite from who sent it`() {
-        val r = cloud.read(cloud.invite(identity.hello()))
-        assertTrue(r is SetlistCloud.Received.Invite)
-        assertEquals(identity.id, (r as SetlistCloud.Received.Invite).from.id)
+    private fun otherDevice(name: String): br.app.stagebook.domain.BandProtocol.Hello {
+        val key = br.app.stagebook.domain.BandCrypto.encode(br.app.stagebook.domain.BandCrypto.newKeyPair().public)
+        return br.app.stagebook.domain.BandProtocol.Hello(br.app.stagebook.domain.BandCrypto.idOf(key), name, key)
     }
+
+    @Test fun `an invite reads as an invite from who sent it`() {
+        val ana = otherDevice("Ana")
+        val r = cloud.read(cloud.invite(ana))
+        assertTrue(r is SetlistCloud.Received.Invite)
+        assertEquals(ana.id, (r as SetlistCloud.Received.Invite).from.id)
+    }
+
+    // audit 07/11: tapping your own link in a chat must not make you a member of your own band
+    @Test fun `my own invite is nothing to accept`() =
+        assertEquals(SetlistCloud.Received.NotFound, cloud.read(cloud.invite(identity.hello())))
 
     @Test fun `the mark alone, with nobody inviting, is nothing`() =
         assertEquals(SetlistCloud.Received.NotFound, cloud.read(cloud.invite(identity.hello()).drop(1)))

@@ -176,6 +176,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val invite = plain.any { unpack(INVITE_MARK, it) != null }
         return when {
             from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)
+            // my own invite (the link tapped in a chat by who sent it) has nobody to let in: it is nothing to accept
+            text == null && invite && from != null && from.id == identity.id -> Received.NotFound
             text == null && invite && from != null -> Received.Invite(
                 from,
                 // mine doesn't count: opening the same link again after accepting
