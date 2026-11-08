@@ -28,13 +28,13 @@ SECTIONS = [
     {
         "id": "instalar", "pt": "Instalar", "en": "Installing",
         "text_pt": [
-            "O Stagebook não está na Play Store: ele sai só pelo GitHub, de graça. No aparelho, abra [github.com/julianoAffonso/stagebook/releases](https://github.com/julianoAffonso/stagebook/releases/latest) e baixe o stagebook.apk da versão mais nova. Precisa de Android 9 ou mais novo.",
+            "O Stagebook não está na Play Store: ele sai só pelo GitHub, de graça. No aparelho, abra [stagebook.app.br](https://stagebook.app.br) e toque em Baixar para Android, que traz o stagebook.apk da versão mais nova. Precisa de Android 9 ou mais novo.",
             "Abra o arquivo baixado. Na primeira vez o Android pede para permitir instalar apps dessa fonte (o navegador ou o app de arquivos): permita, volte e toque em Instalar. Se o Play Protect disser que não conhece o app, escolha instalar mesmo assim.",
             "Depois disso não precisa voltar ao GitHub: o app avisa quando sai versão nova e se atualiza. Na primeira atualização o Android pede a mesma permissão, agora para o Stagebook.",
             "Por que fora da Play Store? O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza direto pelo GitHub, o que a loja não permite. Assim as versões saem sem esperar revisão, e o código fica aberto para quem quiser conferir.",
         ],
         "text_en": [
-            "Stagebook isn't on the Play Store: it's only on GitHub, for free. On the device, open [github.com/julianoAffonso/stagebook/releases](https://github.com/julianoAffonso/stagebook/releases/latest) and download stagebook.apk from the newest version. It needs Android 9 or newer.",
+            "Stagebook isn't on the Play Store: it's only on GitHub, for free. On the device, open [stagebook.app.br](https://stagebook.app.br) and tap Download for Android, which gets stagebook.apk from the newest version. It needs Android 9 or newer.",
             "Open the downloaded file. The first time, Android asks to allow installing apps from that source (the browser or the files app): allow it, go back and tap Install. If Play Protect says it doesn't know the app, choose to install anyway.",
             "After that there's no need to go back to GitHub: the app tells you when a new version is out and updates itself. On the first update Android asks for the same permission, this time for Stagebook.",
             "Why not the Play Store? The app imports lyrics and chords from websites, and the store's rules on copyrighted content leave this kind of app open to being pulled at any time. It also updates itself straight from GitHub, which the store doesn't allow. This way new versions come out without waiting for a review, and the code is open for anyone to check.",
