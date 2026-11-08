@@ -1412,6 +1412,17 @@ class ScreenshotTest {
     @Test @Config(qualifiers = TABLET_PORTRAIT)
     fun stageTabletPortrait() = shoot("tablet_em_pe_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
 
+    // a band link tapped on stage waits: the notice floats over the stage (user, 08/11)
+    @Test @Config(qualifiers = PHONE)
+    fun stageLinkKeptPhone() = shoot("celular_7_palco_link_guardado") {
+        Box(Modifier.fillMaxSize()) {
+            StageScreen(stage, 0, 1, { _, _ -> }, onBack = {})
+            androidx.compose.material3.Snackbar(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.stage_link_kept))
+            }
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun stagePhone() = shoot("celular_7_palco") { StageScreen(stage, 0, 1, { _, _ -> }, onBack = {}) }
 
