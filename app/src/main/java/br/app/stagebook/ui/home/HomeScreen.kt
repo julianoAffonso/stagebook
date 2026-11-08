@@ -151,7 +151,15 @@ fun HomeScreen(
                 { webOpen = false; homeVm.closeWebEditor() }, { webOpen = false }, destructive = false,
             )
         }
-        val status = HomeStatus(essential, inbox.size, openEssential, { listOpen = true }, webAddress) { webOpen = true }
+        val partial by homeVm.partial.collectAsStateWithLifecycle()
+        val lookNow by homeVm.look.collectAsStateWithLifecycle()
+        var reminderOpen by rememberSaveable { mutableStateOf(false) }
+        // the leaf's reminder: what's off and the way to Settings, with no "don't show again" (it's the user's call to look)
+        if (reminderOpen && partial) EssentialAlert(lookNow, onDismiss = { reminderOpen = false }, onNeverAgain = null, onOpen = { reminderOpen = false; openEssential() })
+        val status = HomeStatus(
+            essential, inbox.size, openEssential, { listOpen = true }, webAddress, { webOpen = true },
+            partial = partial, onPartial = { reminderOpen = true },
+        )
         val news = banner?.let { br.app.stagebook.ui.share.itemText(it) }
         val viewLabel = stringResource(R.string.inbox_snack_open)
         LaunchedEffect(banner?.id) {
@@ -315,7 +323,7 @@ private fun barColors() = ShortNavigationBarItemDefaults.colors(
 
 /** Alert on open: what is off, as a list, and the link that goes straight to Settings → Essential mode. */
 @Composable
-fun EssentialAlert(look: br.app.stagebook.data.model.Look, onDismiss: () -> Unit, onNeverAgain: (Boolean) -> Unit, onOpen: () -> Unit = {}) {
+fun EssentialAlert(look: br.app.stagebook.data.model.Look, onDismiss: () -> Unit, onNeverAgain: ((Boolean) -> Unit)?, onOpen: () -> Unit = {}) {
     val off = listOfNotNull(
         R.string.essential_band.takeIf { !look.bandOn },
         R.string.essential_internet.takeIf { !look.internetOn },

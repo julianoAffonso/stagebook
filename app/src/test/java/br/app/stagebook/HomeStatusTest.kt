@@ -25,13 +25,14 @@ import org.robolectric.annotation.Config
 class HomeStatusTest {
     @get:Rule val compose = createComposeRule()
     private val inUse = ApplicationProvider.getApplicationContext<android.app.Application>().getString(R.string.web_in_use)
+    private val some = ApplicationProvider.getApplicationContext<android.app.Application>().getString(R.string.essential_alert_some_title)
 
     @Test fun `the web editor icon shows only while it is on and opens the notice`() {
         var opened = 0
         var address = "http://192.168.0.10:8090"
         compose.setContent {
             StagebookTheme {
-                CompositionLocalProvider(LocalHomeStatus provides HomeStatus(false, 0, {}, {}, address) { opened++ }) {
+                CompositionLocalProvider(LocalHomeStatus provides HomeStatus(false, 0, {}, {}, address, onWebEditor = { opened++ })) {
                     ScreenHeader("Músicas") { HomeStatusIcons() }
                 }
             }
@@ -47,5 +48,37 @@ class HomeStatusTest {
             }
         }
         compose.onAllNodesWithContentDescription(inUse).assertCountEquals(0)
+    }
+
+    // some parts off but not all: the quiet leaf shows and opens the reminder; with nothing off, or all off, it doesn't
+    @Test fun `the partial leaf shows when only some parts are off and opens the list`() {
+        var opened = 0
+        compose.setContent {
+            StagebookTheme {
+                CompositionLocalProvider(LocalHomeStatus provides HomeStatus(false, 0, {}, {}, partial = true, onPartial = { opened++ })) {
+                    ScreenHeader("Músicas") { HomeStatusIcons() }
+                }
+            }
+        }
+        compose.onNodeWithContentDescription(some).performClick()
+        assertEquals(1, opened)
+    }
+
+    @Test fun `nothing off - no leaf at all`() {
+        compose.setContent {
+            StagebookTheme {
+                CompositionLocalProvider(LocalHomeStatus provides HomeStatus(false, 0, {}, {})) { ScreenHeader("Músicas") { HomeStatusIcons() } }
+            }
+        }
+        compose.onAllNodesWithContentDescription(some).assertCountEquals(0)
+    }
+
+    @Test fun `all off - the full leaf shows, not the partial one`() {
+        compose.setContent {
+            StagebookTheme {
+                CompositionLocalProvider(LocalHomeStatus provides HomeStatus(true, 0, {}, {}, partial = true)) { ScreenHeader("Músicas") { HomeStatusIcons() } }
+            }
+        }
+        compose.onAllNodesWithContentDescription(some).assertCountEquals(0)
     }
 }
