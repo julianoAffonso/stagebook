@@ -546,6 +546,8 @@
     <string name="player_turn_off">Turn off</string>
     <string name="player_usb_permission_note">Allow USB in Android\'s window</string>
     <string name="player_usb_connecting">Connecting to the USB output…</string>
+    <string name="player_usb_waking">Wait, preparing the audio interface…</string>
+    <string name="player_usb_asleep">Audio interface on standby. It turns on when you play.</string>
     <string name="player_usb_ready">USB output: %1$s</string>
     <string name="player_usb_failed">The USB output didn\'t respond. Unplug the cable and plug it back in.</string>
     <string name="player_usb_muted">USB output volume is at zero</string>
