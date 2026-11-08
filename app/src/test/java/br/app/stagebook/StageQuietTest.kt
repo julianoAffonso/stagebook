@@ -43,6 +43,18 @@ class StageQuietTest {
         assertEquals(NotificationManager.INTERRUPTION_FILTER_ALARMS, nm.currentInterruptionFilter)
     }
 
+    // audit 07/11: the startup clean-up runs on another thread; if the stage already asked for quiet, it must not undo it
+    @Config(sdk = [28])
+    @Test fun `the startup clean-up never undoes a stage that already asked for quiet`() {
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        StageQuiet.set(context, true)
+        StageQuiet.clearStale(context)
+        assertEquals(NotificationManager.INTERRUPTION_FILTER_PRIORITY, nm.currentInterruptionFilter)
+        StageQuiet.set(context, false)
+        StageQuiet.clearStale(context)   // and with nothing asked, it is the same as turning it off: nothing left on
+        assertEquals(NotificationManager.INTERRUPTION_FILTER_ALL, nm.currentInterruptionFilter)
+    }
+
     @Config(sdk = [35])
     @Test fun `a rule of its own, never the device's mode`() {
         shadowOf(nm).setNotificationPolicyAccessGranted(true)

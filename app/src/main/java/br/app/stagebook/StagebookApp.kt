@@ -26,7 +26,7 @@ class StagebookApp : Application() {
         // Settings → Advanced: what Android put back by itself is written again (only with the permission)
         backgroundScope(Dispatchers.IO).launch { DeviceTweaks.ensure(this@StagebookApp) }
         // the app was closed with the stage open (killed, crash): its Do not disturb doesn't stay on
-        backgroundScope(Dispatchers.IO).launch { br.app.stagebook.data.device.StageQuiet.set(this@StagebookApp, false) }
+        backgroundScope(Dispatchers.IO).launch { br.app.stagebook.data.device.StageQuiet.clearStale(this@StagebookApp) }
         // backing tracks no song points to any more (deleted songs) leave the disk
         backgroundScope(Dispatchers.IO).launch {
             repository.loaded.first { it }

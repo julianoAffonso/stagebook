@@ -41,8 +41,20 @@ object StageQuiet {
 
     fun accessScreen(): Intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
 
+    // what the stage last asked for in this process: the startup clean-up must not undo it (audit 07/11)
+    @Volatile private var asked = false
+
+    /**
+     * Startup: a rule left on by a process killed on stage is switched off. It runs on another thread, so if the stage
+     * already asked for quiet in this process, the stage wins.
+     */
+    @Synchronized fun clearStale(c: Context) {
+        if (!asked) set(c, false)
+    }
+
     /** On (stage in front) or off (stage closed or app out of sight). Without the permission it does nothing. */
-    fun set(c: Context, on: Boolean) {
+    @Synchronized fun set(c: Context, on: Boolean) {
+        asked = on
         val nm = nm(c) ?: return
         if (!nm.isNotificationPolicyAccessGranted) return
         runCatching {
