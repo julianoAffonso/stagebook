@@ -73,6 +73,21 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 // Order: g_vmx before g_mx. The USB thread only takes g_mx.
 static pthread_mutex_t g_vmx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_mx = PTHREAD_MUTEX_INITIALIZER;
+
+// Names the calling thread: top, ps and traces show it instead of the app's name.
+static void name_thread(const char *name) {
+#ifdef __APPLE__
+    pthread_setname_np(name);
+#else
+    pthread_setname_np(pthread_self(), name);
+#endif
+}
+
+// Names the calling thread and gives it its priority.
+static void thread_setup(const char *name, int nice) {
+    name_thread(name);
+    if (setpriority(PRIO_PROCESS, gettid(), nice) < 0) LOGI("%s: priority denied (%s)", name, strerror(errno));
+}
 static float g_ring[RING_FRAMES * LANES_MAX];
 static int g_ring_r = 0, g_ring_w = 0, g_ring_n = 0;
 
@@ -451,7 +466,7 @@ static float g_dec_out[4096 * LANES_MAX];   // used only by the decoder thread
 static void *dec_main(void *arg) {
     float buf[1024 * 8];
     // Android audio priority (-16): ahead of the screen, camera and import, below USB (-19)
-    if (setpriority(PRIO_PROCESS, gettid(), -16) < 0) LOGI("decoder: priority denied (%s)", strerror(errno));
+    thread_setup("sb-decoder", -16);
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
         pthread_mutex_lock(&g_mx);
@@ -558,6 +573,7 @@ static volatile int g_stalled = 0, g_watching = 0;
 static pthread_t g_watch_thr;
 static void wake_usb(int sig) {}
 static void *stall_watch(void *arg) {
+    name_thread("sb-watch");
     while (g_watching) {
         struct timespec t = {0, 50000000}; nanosleep(&t, NULL);
         if (g_watching && now_s() - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
@@ -599,7 +615,7 @@ static void *usb_main(void *arg) {
 
     // audio priority (the same as AudioTrack): without it, with the CPU busy or hot, the thread can lose its turn and
     // the 8 ms URB queue can run dry; if the system refuses, it carries on
-    if (setpriority(PRIO_PROCESS, gettid(), -19) < 0) LOGI("usb: priority denied (%s)", strerror(errno));
+    thread_setup("sb-usb", -19);
 
     for (int u = 0; u < nurbs; u++) {
         urbs[u] = calloc(1, urb_sz);
