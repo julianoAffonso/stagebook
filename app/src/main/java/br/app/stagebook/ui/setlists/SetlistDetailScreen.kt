@@ -146,7 +146,7 @@ fun SetlistDetailScreen(
     cloud: CloudUi? = null,
     onSendInternet: (withSongs: Boolean) -> Unit = {},
     onDismissCloud: () -> Unit = {},
-    onShareCode: (name: String, code: String) -> Unit = { _, _ -> },
+    onShareCode: (br.app.stagebook.ui.share.CloudUi.Sent) -> Unit = {},
     onCopyCode: (code: String) -> Unit = {},
     band: Int = 0,
     onSendBand: (withSongs: Boolean) -> Unit = {},

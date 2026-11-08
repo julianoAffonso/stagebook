@@ -38,10 +38,11 @@ const val TAB_TAG = "tab"
 // a section title line: pagination keeps it with the verse after it (device test B-13)
 const val SECTION_TAG = "section"   // item: the pill's color (ARGB)
 const val TAB_EM = 0.7f
+internal const val TAB_LINE_HEIGHT = 1.4f
 
-/** An empty line [heightEm] tall, reserved for the chord list (paginated like the others). */
-fun chordListLine(heightEm: Float): AnnotatedString = buildAnnotatedString {
-    withAnnotation(CHORD_LINE_TAG, heightEm.toString()) { withAnnotation(CHORD_LIST_TAG, "") { append(' ') } }
+/** An empty line [heightEm] tall, reserved for row [row] of the chord list (paginated like the others). */
+fun chordListLine(heightEm: Float, row: Int = 0): AnnotatedString = buildAnnotatedString {
+    withAnnotation(CHORD_LINE_TAG, heightEm.toString()) { withAnnotation(CHORD_LIST_TAG, row.toString()) { append(' ') } }
 }
 
 /** Lyrics line height, relative to the font (the same as the stage style). */
@@ -152,7 +153,7 @@ fun stageLines(
         when {
             h != null -> header(names.label(h), i)
             raw.isBlank() -> blank(i)
-            !Chords.hasChords(raw) -> out += StageLine(highlighted(AnnotatedString(raw.trimEnd()), highlight), i)
+            !Chords.hasChordRow(raw) -> out += StageLine(highlighted(AnnotatedString(raw.trimEnd()), highlight), i)
             !chords.show -> Chords.stripChords(raw).takeIf { it.isNotBlank() }?.let { out += StageLine(highlighted(AnnotatedString(it), highlight), i) }
             else -> out += StageLine(highlighted(chordLine(raw, chords), highlight), i)
         }
@@ -171,6 +172,13 @@ internal fun tabLine(raw: String, em: Float = TAB_EM): AnnotatedString = buildAn
 
 private val bracket = Regex("""\[([^\[\]]*)]""")
 
+internal fun isAnnotation(inner: String) = Chords.isAnnotation(inner)
+
+private val annotationInWord = Regex("""(\p{L})(\[\*[^\[\]]+])(\p{L}+)""")
+
+/** What the stage draws for a [CHORD_TAG] mark: the chord, or the annotation's text. */
+internal fun chordLabel(item: String) = if (isAnnotation(item)) item.drop(1) else item
+
 /**
  * Line with chords. Chords only (intro, solo): the chords themselves, in their color. With lyrics: the lyrics, with
  * space above each drawn line (taller line height) and a [CHORD_TAG] mark on the letter under each chord; the stage
@@ -178,13 +186,16 @@ private val bracket = Regex("""\[([^\[\]]*)]""")
  * The room is measured by width, not letters: "Csus4" in bold is wider than five letters of lyrics (user, 31/10: in A
  * Little Respect the chords landed on top of each other).
  */
-internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
+internal fun chordLine(written: String, look: ChordLook): AnnotatedString {
+    // an annotation isn't sung on a syllable: inside a word it goes to the word's end, or it would split the word
+    val raw = written.replace(annotationInWord, "$1$3$2")
     data class Seg(val chord: String?, var text: String)
     val segs = ArrayList<Seg>()
     var last = 0
     bracket.findAll(raw).forEach { m ->
         val inner = m.groupValues[1]
-        if (!Chords.isChord(inner)) return@forEach   // [Chorus] in the middle of a line: stays as text
+        // [Chorus] in the middle of a line stays as text; a ChordPro annotation ([*2x]) sits above like a chord
+        if (!Chords.isChord(inner) && !isAnnotation(inner)) return@forEach
         val before = raw.substring(last, m.range.first)
         if (segs.isEmpty()) segs += Seg(null, before) else segs.last().text += before
         segs += Seg(inner, "")
@@ -197,29 +208,39 @@ internal fun chordLine(raw: String, look: ChordLook): AnnotatedString {
     // the chords in their color and the marks between them, in order, on one line
     // a label in front ("Intro: G D") counts too: it took the lyrics path, with the chords floating above (audit 03/11)
     val words = lyric.trim().split(SPACES)
-    if (lyric.isBlank() || words.withIndex().all { (i, w) -> Chords.isChordLineMark(w) || (i == 0 && Chords.isChordLineLabel(w)) }) {
+    // and a note after a dash ("Am G6 - INTRO RIFF", user 07/11): the same test the bare line passes
+    val plain = segs.joinToString(" ") { (it.chord ?: "") + " " + it.text }
+    if (lyric.isBlank() || words.withIndex().all { (i, w) -> Chords.isChordLineMark(w) || (i == 0 && Chords.isChordLineLabel(w)) } || Chords.isChordLine(plain)) {
         return buildAnnotatedString {
             segs.forEach { s ->
                 if (s.chord != null) {
                     if (length > 0) append("   ")
-                    withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) { append(s.chord) }
+                    withStyle(SpanStyle(color = look.color, fontWeight = FontWeight.Bold, fontSize = look.scale.em)) { append(chordLabel(s.chord)) }
                 }
                 s.text.trim().split(SPACES).filter { it.isNotEmpty() }.forEach { if (length > 0) append("   "); append(it) }
             }
         }
     }
+    var padded = false
     segs.forEachIndexed { i, s ->
         val chord = s.chord ?: return@forEachIndexed
-        // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on)
-        val need = emWidth(chord) * look.scale * BOLD + if (i < segs.lastIndex) CHORD_GAP else 0f
+        val annotation = isAnnotation(chord)
+        // an annotation moved to a word's end sits on the space after it; when the chord before already opened room
+        // there, that space was one more on top of the room (devices, 07/11: "até   ficar")
+        if (annotation && padded && s.text.firstOrNull() == ' ' && s.text.isNotBlank()) s.text = s.text.drop(1)
+        // the last chord needs its own width too (a chord at the end of the line needs a letter to sit on). What is
+        // drawn counts ("2x", not "*2x"), and after an annotation a single space is enough
+        val gap = if (i == segs.lastIndex) 0f else if (annotation) emWidth(" ") else CHORD_GAP
+        val need = emWidth(chordLabel(chord)) * look.scale * BOLD + gap
         val letters = s.text.length
         while (emWidth(s.text) < need) s.text += " "
+        padded = s.text.length > letters
         // room opened in the middle of a word ("gu[A9]erra") gets a hyphen, as printed chord sheets do: the bare gap
-        // read as two words (user, 03/11)
+        // read as two words (user, 03/11). It goes right after the syllable, as on paper: in the middle of the room it
+        // floated away and still split the word ("fl -ores", devices 07/11)
         val next = segs.getOrNull(i + 1)?.text?.firstOrNull()
-        if (s.text.length > letters && s.text.getOrNull(letters - 1)?.isLetter() == true && next?.isLetter() == true) {
-            val mid = letters + (s.text.length - letters) / 2
-            s.text = s.text.substring(0, mid) + WORD_JOIN + s.text.substring(mid + 1)
+        if (padded && s.text.getOrNull(letters - 1)?.isLetter() == true && next?.isLetter() == true) {
+            s.text = s.text.substring(0, letters) + WORD_JOIN + s.text.substring(letters + 1)
         }
     }
     // the taller height comes in as a paragraph style only when joining the lines ([joinLines])
@@ -321,7 +342,7 @@ fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): Annotated
         starts?.set(i, start)
         if (l.isEmpty()) append(' ') else append(l)
         addStringAnnotation(LINE_TAG, i.toString(), start, length)
-        val height = l.chordLineHeight()
+        val height = l.ownLineHeight()
         if (height != null) {
             addStyle(
                 ParagraphStyle(lineHeight = height.em, lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)),
@@ -329,12 +350,18 @@ fun joinLines(lines: List<AnnotatedString>, starts: IntArray? = null): Annotated
                 length,
             )
         }
-        if (i < lines.lastIndex && height == null && lines[i + 1].chordLineHeight() == null) append('\n')
+        if (i < lines.lastIndex && height == null && lines[i + 1].ownLineHeight() == null) append('\n')
     }
 }
 
 /** Lyrics line with chords (with their space on top)? */
 fun AnnotatedString.isChordLine(): Boolean = chordLineHeight() != null
+
+private fun AnnotatedString.ownLineHeight(): Float? = chordLineHeight() ?: tabLineHeight()
+
+/** A tab's strings stand as close as their size: a tab shrunk to fit kept the height of a line of lyrics. */
+private fun AnnotatedString.tabLineHeight(): Float? =
+    if (hasStringAnnotations(TAB_TAG, 0, length)) spanStyles.firstOrNull { it.item.fontSize.isEm }?.let { it.item.fontSize.value * TAB_LINE_HEIGHT } else null
 
 private fun AnnotatedString.chordLineHeight(): Float? =
     getStringAnnotations(CHORD_LINE_TAG, 0, length).firstOrNull()?.item?.toFloat()

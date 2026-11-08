@@ -55,7 +55,8 @@ class Backup @Inject constructor(
     /** What a backup file has (to check on restore). [newer]: from a newer app version. */
     data class Contents(val parts: Set<Part>, val songs: Int, val newer: Boolean)
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    // coerceInputValues: a value from a newer version (a new enum entry) falls to the default instead of failing the whole restore
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; coerceInputValues = true }
 
     suspend fun write(out: OutputStream, parts: Set<Part>) = withContext(Dispatchers.IO) {
         val lib = repository.library.value

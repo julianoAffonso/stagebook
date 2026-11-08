@@ -19,6 +19,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -46,6 +50,7 @@ class EssentialModeTest {
             repo, context, AppUpdater(context),
             br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
             br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
+            br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
         )
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 
@@ -74,6 +79,21 @@ class EssentialModeTest {
         compose.onNodeWithContentDescription("Tocar").assertDoesNotExist()
         compose.onNodeWithText("Detalhes").assertDoesNotExist()
         compose.onNodeWithContentDescription("Próxima variação").assertExists()
+    }
+
+    // the song's MIDI is a stage extra (user, 07/11): without extras the editor hides it, and the stage sends nothing
+    @Test fun `without extras the editor has no MIDI`() {
+        var extras by androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent {
+            br.app.stagebook.ui.theme.StagebookTheme {
+                br.app.stagebook.ui.editor.SongEditorScreen(
+                    br.app.stagebook.ui.editor.SongEditorUiState(loading = false, title = "Flores"), {}, {}, {}, {}, {}, {}, {}, midiOn = extras,
+                )
+            }
+        }
+        compose.onAllNodesWithContentDescription("MIDI da música").assertCountEquals(0)
+        extras = true
+        compose.onAllNodesWithContentDescription("MIDI da música").assertCountEquals(1)
     }
 
     @Test fun `band on the network off ends Lead the band and does not come back`() = runBlocking {
@@ -123,6 +143,7 @@ class EssentialModeTest {
         val cloud = br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context))
         assertEquals(br.app.stagebook.data.SetlistCloud.Received.Offline, cloud.receive(br.app.stagebook.domain.ShareCode.generate()))
         assertTrue(cloud.acks(br.app.stagebook.domain.ShareCode.generate()).isEmpty())
+        assertEquals(null, cloud.sendInvite())   // and no band invite (user, 07/11)
     }
 
     @Test fun `internet off - share keeps the QR and no no-internet notice`() {
@@ -143,6 +164,7 @@ class EssentialModeTest {
             repo, context, AppUpdater(context),
             br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
             br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
+            br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
         )
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
         vm.setEssential(true)

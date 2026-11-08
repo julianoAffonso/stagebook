@@ -1,5 +1,11 @@
 package br.app.stagebook.ui.band
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import br.app.stagebook.ui.components.QuestionDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,6 +43,13 @@ import br.app.stagebook.ui.components.PreviewSurface
 import br.app.stagebook.ui.components.SettingsCard
 import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.Spacing
+import br.app.stagebook.ui.components.LocalAppMessage
+import br.app.stagebook.ui.share.inviteMessage
+import br.app.stagebook.ui.share.shareText
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Settings → Band: the name the band sees for this device, who is on the same network now (ask to join) and who is in
@@ -44,7 +57,12 @@ import br.app.stagebook.ui.theme.Spacing
  * member.
  */
 @Composable
-fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // lan: "Band on the network" on (T19)
+fun BandDetail(
+    band: BandUi,
+    actions: BandActions,
+    lan: Boolean = true,         // "Band on the network" on (T19)
+    internet: Boolean = false,   // "Internet" on (T19): invite over the internet
+) {
     var renaming by rememberSaveable { mutableStateOf(!band.nameConfirmed) }   // first time: asks for the name
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -74,12 +92,22 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
                 // the check sits on the name's line, not the middle of the row: with a warning under the name it looked like
                 // it marked the warning (user, 02/11)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Icon(AppIcons.Check, null, Modifier.padding(top = 2.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                    // who is on this Wi-Fi now, at a glance (user, 07/11): a lit dot, or an empty ring for who isn't
+                    val here = if (lan) online[m.id] else null
+                    val label = stringResource(if (here != null) R.string.band_online else R.string.band_offline)
+                    Box(
+                        Modifier.padding(top = 6.dp).size(12.dp)
+                            .then(
+                                if (here != null) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
+                                else Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                            )
+                            .semantics { contentDescription = label },
+                    )
                     Column(Modifier.weight(1f).padding(start = Spacing.s)) {
                         Text(m.name, style = MaterialTheme.typography.bodyLarge)
-                        val here = online[m.id]
                         when {
-                            !lan || here == null -> Unit
+                            !lan -> Unit
+                            here == null -> Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             // another app version: nothing works between the two until both update to the same one
                             here.otherVersion != null -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_other_version, here.otherVersion), br.app.stagebook.ui.components.StatusTone.PROBLEM, fill = false)
                             else -> Text(stringResource(R.string.band_online), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -87,6 +115,14 @@ fun BandDetail(band: BandUi, actions: BandActions, lan: Boolean = true) {   // l
                     }
                     IconButton(onClick = { removing = m.id }, Modifier.offset(y = (-12).dp)) { Icon(AppIcons.Delete, stringResource(R.string.band_remove, m.name)) }   // centred on the name, like the check
                 }
+            }
+            // whoever is far away joins with a link (user, 07/11); the message goes through Android's share sheet
+            if (internet) {
+                ActionButton(
+                    stringResource(if (band.inviting) R.string.share_sending else R.string.band_invite), actions.onInvite,
+                    icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = !band.inviting,
+                )
+                Text(stringResource(R.string.band_invite_detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -140,6 +176,24 @@ private fun NearbyRow(peer: NearbyUi, onJoin: (String) -> Unit) {
     }
 }
 
+/**
+ * What comes of an invite ([results]: its code, or null when it couldn't go): the message with the link goes to
+ * Android's share sheet, signed with this device's band name ([from]); a failure shows at the bottom.
+ */
+@Composable
+fun BandInviteShare(results: Flow<String?>, from: String) {
+    val context = LocalContext.current
+    val message = LocalAppMessage.current
+    val template = stringResource(R.string.band_invite_message)
+    val failed = stringResource(R.string.band_invite_failed)
+    val name by rememberUpdatedState(from)
+    LaunchedEffect(results) {
+        results.collect { code ->
+            if (code != null) shareText(context, inviteMessage(template, name, code, br.app.stagebook.data.Languages.shownTag(context))) else message.show(failed, long = true)
+        }
+    }
+}
+
 /** "Ana's tablet wants to join the band" → Allow / Don't allow (like Bluetooth), on any screen. */
 @Composable
 fun BandRequestDialog(name: String, onAnswer: (Boolean) -> Unit) {
@@ -159,8 +213,8 @@ private val sample = BandUi(
 
 @LightPreview
 @Composable
-private fun BandLightPreview() = PreviewSurface(dark = false) { BandDetail(sample, BandActions()) }
+private fun BandLightPreview() = PreviewSurface(dark = false) { BandDetail(sample, BandActions(), internet = true) }
 
 @DarkPreview
 @Composable
-private fun BandDarkPreview() = PreviewSurface(dark = true) { BandDetail(sample, BandActions()) }
+private fun BandDarkPreview() = PreviewSurface(dark = true) { BandDetail(sample, BandActions(), internet = true) }

@@ -23,10 +23,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import br.app.stagebook.data.model.claimOldZoom
+import br.app.stagebook.data.model.withZoom
 import javax.inject.Inject
 
 @Immutable
-data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "", val mix: br.app.stagebook.domain.SongMix? = null)
+data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "", val mix: br.app.stagebook.domain.SongMix? = null,
+    val zooms: Map<String, br.app.stagebook.data.model.ScreenZoom> = emptyMap(),
+    val fit: br.app.stagebook.data.model.ScreenZoom? = null,   // the calculated zoom saved for this screen
+) {
+    /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
+    fun onScreen(screen: String): StageSong {
+        val saved = zooms[screen] ?: return this
+        return if (saved.fit.isEmpty()) copy(zoom = saved.zoom) else copy(fit = saved)
+    }
+}
 
 @Immutable
 data class StageUiState(
@@ -51,7 +62,17 @@ class StageViewModel @Inject constructor(
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val chordPlayer: br.app.stagebook.data.ChordPlayer,
     private val announcer: br.app.stagebook.data.StageAnnouncer,
+    private val midiOut: br.app.stagebook.data.MidiOut,
 ) : ViewModel() {
+    /** The song's MIDI on entering, and the one before's on leaving (user, 07/11); a stage extra (T19). */
+    private fun sendMidi(index: Int) {
+        val lib = repository.library.value
+        if (!lib.look.extrasOn) return
+        val ids = route.setId?.let(lib::setlist)?.items ?: listOfNotNull(route.songId)
+        val song = ids.getOrNull(index)?.let(lib::song)
+        midiOut.songOnStage(song?.id, song?.midi)
+    }
+
     /** Now Playing: the current song for OBS and others (if on in Settings → Screen). */
     fun announce(index: Int) {
         val lib = repository.library.value
@@ -79,18 +100,20 @@ class StageViewModel @Inject constructor(
         clickFallback?.cancel()
         val look = repository.library.value.look
         val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
+        val skip = if (look.metroCount) br.app.stagebook.domain.MetronomeClick.COUNT_IN_SKIP else 0L
+        val volume = look.metroVolume
         when {
             bpm == null -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
-            look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb) -> metronome.stop()
+            look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, skip, volume) -> metronome.stop()
             // a USB output chosen and the interface plugged in: the metronome turns the player on, track or not, and
             // sounds there once it's connected ([usbReady] restarts it on the stage); meanwhile nothing on the device
             look.playerMode && !usb.device && player.connectForClick() -> {
                 metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff()
                 // the interface never got ready (USB permission refused, an error): the device after a while instead of
                 // silence (audit 02/11 #4); if it gets ready later the stage restarts the metronome there
-                clickFallback = viewModelScope.launch { kotlinx.coroutines.delay(USB_WAIT_MS); if (!player.usbReady.value) metronome.start(bpm) }
+                clickFallback = viewModelScope.launch { kotlinx.coroutines.delay(USB_WAIT_MS); if (!player.usbReady.value) metronome.start(bpm, skip, volume) }
             }
-            else -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm) }
+            else -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, skip, volume) }
         }
     }
 
@@ -98,10 +121,12 @@ class StageViewModel @Inject constructor(
     fun songShown(index: Int) {
         route.setId?.let { conduct.open(it, index) }
         announce(index)
+        sendMidi(index)
     }
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
+    fun playerNoticeFresh(notice: String) = player.firstShow(notice)
     private var clickFallback: kotlinx.coroutines.Job? = null
 
     // short drops ignored: the interface reconnecting for its clock restarted the metronome twice (audit 02/11 #3)
@@ -137,12 +162,19 @@ class StageViewModel @Inject constructor(
         tracks.remove(old)
     }
 
-    init { stageGate.enter() }   // holds the Drive sync while the stage is open
+    init {
+        stageGate.enter()   // holds the Drive sync while the stage is open
+        // yesterday's counter (saved with the settings, or from a restored backup) isn't shown as if it were running
+        val look = repository.library.value.look
+        val mode = br.app.stagebook.domain.ShowTimer.onOpening(look.clockMode, look.showStart, System.currentTimeMillis())
+        if (mode != look.clockMode) repository.updateLook { it.copy(clockMode = mode) }
+    }
     override fun onCleared() {
         stageGate.leave()
         // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
         // another (the new one enters first), and the track playing goes on, as when changing songs (audit 02/11)
-        if (!stageGate.onStage.value) player.pause()
+        // back to the start: the same song on another stage (a setlist) went on from where it was left
+        if (!stageGate.onStage.value) { player.stop(); midiOut.leftStage() }
         metronome.stop()
         chordPlayer.stop()
         announcer.stop()
@@ -167,7 +199,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix)
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, s?.zooms.orEmpty())
             },
             look = lib.look,
         )
@@ -188,6 +220,18 @@ class StageViewModel @Inject constructor(
     /** Pinch zoom, saved in the song (applies in any setlist). */
     /** Auto-scroll speed (−/+ on stage), saved in settings. */
     fun keyboardCapoHintSeen() = repository.updateLook { it.copy(keyboardCapoHintSeen = true) }
+
+    /** Tapping the clock: the next face; the show's counter starts the first time it shows up. */
+    fun nextClock() = repository.updateLook {
+        val mode = br.app.stagebook.domain.ShowTimer.next(it.clockMode)
+        val start = if (mode == br.app.stagebook.data.model.StageClockMode.CLOCK) it.showStart
+            else br.app.stagebook.domain.ShowTimer.startFor(it.showStart, System.currentTimeMillis())
+        it.copy(clockMode = mode, showStart = start)
+    }
+
+    fun stepShow(up: Boolean) = repository.updateLook { it.copy(showMinutes = br.app.stagebook.domain.ShowTimer.step(it.showMinutes, up)) }
+
+    fun restartShow() = repository.updateLook { it.copy(showStart = System.currentTimeMillis()) }
 
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL)) }
 
@@ -232,8 +276,13 @@ class StageViewModel @Inject constructor(
         }
     }
 
-    fun setZoom(songId: String, zoom: Float) {
-        if (songId.isNotEmpty()) repository.updateSong(songId) { it.copy(zoom = zoom) }
+    /** Saves the zoom of [screen]: a pinch, a calculated one, or null to go back to automatic. */
+    fun setZoom(songId: String, screen: String, zoom: br.app.stagebook.data.model.ScreenZoom?) {
+        if (songId.isNotEmpty()) repository.updateSong(songId) { it.withZoom(screen, zoom) }
+    }
+
+    fun claimOldZoom(songId: String, screen: String) {
+        if (repository.song(songId)?.let { it.zoom != 1f && screen !in it.zooms } == true) repository.updateSong(songId) { it.claimOldZoom(screen) }
     }
 }
 

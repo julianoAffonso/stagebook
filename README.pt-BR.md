@@ -32,29 +32,59 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   vai cifrado.
 
 ## Player pela USB
-- Interface de áudio USB **class compliant** (USB Audio Class 2.0, funciona no computador sem driver).
-- Que aceite **48 kHz**.
+- Interface de áudio USB **class compliant** (USB Audio Class 1.0 ou 2.0, funciona no computador sem driver).
+- Que aceite **44,1 ou 48 kHz**.
 - Celular ou tablet com **USB OTG** e o cabo ou adaptador certo.
 
-Interfaces só USB Audio 1.0, ou só de 44,1 kHz, ainda não funcionam. Sem interface, o player toca no fone, no
-Bluetooth ou no alto-falante do aparelho.
+Interfaces USB Audio 2.0 e USB Audio 1.0 funcionam. Sem interface, o player toca no fone, no Bluetooth ou no
+alto-falante do aparelho.
+
+Dois caminhos até a interface:
+- **Pelo motor do Stagebook (padrão):** fala direto com a interface.
+- **Pelo Android:** Ajustes > Metrônomo e player > Tocar pela interface através do Android. Use só se a interface
+  conecta e o som não sai ou sai picotado.
+
+Na primeira vez pelo motor, o Android pede permissão para usar a interface USB: toque em OK.
+
+### Testado
+Tudo passou na versão 0.1.900 do app. Passar quer dizer: uma música inteira ouvida limpa, pausar e retomar, e tirar e
+pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo aviso.
+
+| Aparelho | Mixer USB Audio 2.0 (4 saídas) | Placa USB Audio 1.0 (44,1 kHz) |
+|---|---|---|
+| TCL NXTPAPER 11 Plus (tablet, 8 núcleos, Android 14) | Passou | Passou |
+| Chuwi Hi10 XPro (tablet simples, Android 13) | Passou, com nota (1) | Passou |
+| Samsung Galaxy S26 Ultra (celular, Android 17) | Passou, com nota (2) | Passou |
+| OnePlus 10 Pro (celular, Android 16) | Passou pelos dois caminhos (3) | Passou |
+
+1. O USB desse tablet perde leituras na entrada da interface, então o motor marca o ritmo da saída pelo relógio do
+   sistema. O som sai limpo, com um soluço curto e raro a cada 15 a 60 s. É o limite do USB do tablet; acontece também
+   pelo áudio do próprio Android.
+2. A entrada da interface para de responder depois de cerca de um segundo. O motor percebe e marca o ritmo sozinho.
+3. Pelo áudio do Android e pelo motor. O motor pede a janela de permissão USB do Android na primeira vez.
+
+Não testado: outras interfaces e um fone USB simples (suportados, mas fora desta tabela).
 
 ## Quanto o app pesa
-Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** núcleo; os três têm 8 núcleos):
+Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** núcleo; os quatro têm 8 núcleos):
 
-| Tela | TCL NXTPAPER 11 Plus | Galaxy S26 Ultra | Chuwi Hi10 XPro |
-|---|---|---|---|
-| Lista de músicas, parada | 1,4% · 194 MB | 0,1% · 136 MB | 1,5% · 117 MB |
-| Palco, parado | 1,4% · 219 MB | 0,3% · 167 MB | 0,4% · 121 MB |
-| Palco, virando página a cada 3 s | 12,7% · 198 MB | 3,8% · 146 MB | 2,9% · 120 MB |
-| Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB |
-| Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | 0,8% · 186 MB (acompanhando) | 2,4% · 124 MB (acompanhando) |
-| Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — |
-| Backing track tocando numa interface USB | 15% · 202 MB | — | — |
-| Ajustes da banda, parado | 3,1% · 205 MB | 7,2% · 186 MB | 0,6% · 123 MB |
+| Tela | TCL NXTPAPER 11 Plus | Galaxy S26 Ultra | Chuwi Hi10 XPro | OnePlus 10 Pro |
+|---|---|---|---|---|
+| Lista de músicas, parada | 0,4% · 112 MB | 0,1% · 132 MB | 0,1% · 68 MB | 0,1% · 32 MB |
+| Palco, parado | 0,6% · 143 MB | 0,2% · 131 MB | 0,4% · 73 MB | 0,4% · 39 MB |
+| Palco, virando página a cada 3 s | 3,9% · 132 MB | 5,4% · 126 MB | 5,1% · 74 MB | 14,7% · 38 MB |
+| Palco, acompanhando a banda | — | 0,2% · 253 MB | 8,8% · 114 MB | — |
+| Conduzindo a banda por 5 minutos (9 músicas, uma página a cada 2 s) | 5,0% · 194 MB | 0,8% · 186 MB (acompanhando) | 2,4% · 124 MB (acompanhando) | — |
+| Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — | — |
+| Backing track numa interface USB (mixer USB Audio 2.0) | 5,1%¹ · 160 MB | 6,7% · 140 MB | 29,3% · 80 MB | 31,3% · 42 MB |
+| Backing track numa interface USB (placa USB Audio 1.0) | 3,0%¹ · 101 MB | 3,7% · 86 MB | 16,9% · 83 MB | 22,2% · 41 MB |
+| Backing track tocando pela saída do aparelho | 17,1% · 147 MB | 3,9% · 140 MB | 13,9% · 71 MB | 18,9% · 44 MB |
+| Ajustes da banda, parado | 0,2% · 175 MB | 0,2% · 145 MB | 0,3% · 75 MB | 0,6% · 41 MB |
 
-Mesmo tocando uma faixa, o Stagebook usa menos de 2% do processador inteiro. O modo essencial quase não muda esses
+Mesmo tocando uma faixa, o Stagebook usa menos de 4% do processador inteiro (o pior caso medido, 31,3% de um núcleo, é 3,9% de oito). O modo essencial quase não muda esses
 números: o ganho dele é a tela mais simples.
+
+¹ No TCL o Android mantém seis dos oito núcleos em frequência baixa mesmo com bateria boa (71% e 70% na medição), então o uso bruto fica inflado (19,5% e 10,0%). Estes dois números contam só os dois núcleos disponíveis, ponderados pela frequência, como um núcleo na velocidade máxima. Com o player ligado e uma interface conectada, mas nada tocando, o motor mantém o fluxo USB vivo com silêncio e gasta cerca de 19% de um núcleo no OnePlus.
 
 ## Usar com assistentes de IA (MCP)
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
@@ -92,6 +122,13 @@ O app sai em inglês e português do Brasil. Fala outro idioma e toca? O passo a
 Kotlin, Jetpack Compose e um motor de áudio em C. `./gradlew assembleDebug` compila e
 `./gradlew testDebugUnitTest` roda os testes (Java 21). As versões são publicadas pelo GitHub Actions. Todo mundo aqui segue o
 [Código de Conduta](CODE_OF_CONDUCT.pt-BR.md).
+
+### Ritmo do motor USB
+- **Plano A:** seguir o relógio da entrada da interface (feedback implícito), para saída e interface nunca se afastarem.
+- **Plano B:** marcar o ritmo da saída pelo relógio monotônico quando a entrada falta ou não é confiável. Ele troca
+  quando o relógio da entrada erra mais de 0,3% por 1 s, ou quando a entrada fica 0,3 s sem responder.
+- No plano B, o motor testa a entrada de novo a cada 60 s e volta ao plano A se ela estiver saudável.
+- Os URBs de saída levam 8 pacotes (1 ms), com 32 na fila. Os URBs de entrada levam 128 pacotes.
 
 ## Licença
 Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Pode usar à vontade, até em show pago,

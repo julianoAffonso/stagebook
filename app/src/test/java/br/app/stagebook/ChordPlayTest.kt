@@ -205,4 +205,17 @@ class ChordPlayTest {
         assertTrue(phone.height < br.app.stagebook.ui.stage.STRIP_CELL.height)
         assertEquals(br.app.stagebook.ui.stage.STRIP_CELL, br.app.stagebook.ui.stage.stripCell(500.dp))
     }
+
+    // the column of a tablet held upright: the × took 36 dp on every row and 118 dp cells left 4 chords and a gap
+    @Test
+    fun `a tablet held upright fits five chords a row`() {
+        assertTrue(br.app.stagebook.ui.stage.stripCell(553.dp).width * 5 <= 553.dp)
+    }
+
+    // a phone on its side has room for the full size in width, but only one row of it in height
+    @Test
+    fun `a low page keeps two rows of chords`() {
+        val cell = br.app.stagebook.ui.stage.stripCell(368.dp, 240.dp)
+        assertTrue(cell.height * 2 <= 240.dp)
+    }
 }

@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -42,13 +42,17 @@ import br.app.stagebook.ui.editor.usedChords
 data class StripCell(val width: Dp, val height: Dp, val draw: Float)
 
 /** The drawings 60% bigger than the small ones (user, 02/11: too small), drawn at that size so the lines stay thin. */
-val STRIP_CELL = StripCell(118.dp, 140.dp, 1.6f)
+val STRIP_CELL = StripCell(110.dp, 140.dp, 1.6f)
 private val STRIP_CELL_SMALL = StripCell(86.dp, 112.dp, 1.28f)
 
-/** Fewer than 3 chords a row at the full size (a phone held upright): smaller cells fit 3, in less height (user, 04/11). */
-fun stripCell(room: Dp): StripCell = if (room < STRIP_CELL.width * 3) STRIP_CELL_SMALL else STRIP_CELL
+/**
+ * Fewer than 3 chords a row at the full size (a phone held upright): smaller cells fit 3, in less height (user, 04/11).
+ * The same on a [page] with room for a single row of the full size (a phone on its side).
+ */
+fun stripCell(room: Dp, page: Dp = Dp.Infinity): StripCell =
+    if (room < STRIP_CELL.width * 3 || page < STRIP_CELL.height * 2) STRIP_CELL_SMALL else STRIP_CELL
 
-/** Room kept at the end of the chord list's first row for its ×. */
+/** The chord list's ×: it sits on the corner, half over the margin, and takes no room from the chords. */
 val STRIP_CLOSE_WIDTH: Dp = 36.dp
 
 /** The song's chords, in the order they appear, minus the ones the user hid from the list (all of them, no limit). */
@@ -71,6 +75,8 @@ fun ChordStrip(
     modifier: Modifier = Modifier,
     cell: StripCell = STRIP_CELL,
     scale: Float = 1f,   // the stage widens each cell so the list fills the width (user, 02/11: it took ~3/4 of the TCL)
+    from: Int = 0,   // the chords of this column: a long list runs on like the lyrics, at full size
+    until: Int = Int.MAX_VALUE,
     onHide: (String) -> Unit = {},
     onHideAll: () -> Unit = {},
     onRestore: () -> Unit = {},
@@ -87,8 +93,8 @@ fun ChordStrip(
         }
     }
     Box(modifier.fillMaxWidth()) {
-    FlowRow(Modifier.padding(end = STRIP_CLOSE_WIDTH), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-        items.forEach { (c, shape, keys) ->
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+        items.subList(minOf(from, items.size), minOf(until, items.size)).forEach { (c, shape, keys) ->
             // holding a chord takes it off this song's list (the stage asks to confirm); one × for the whole list below,
             // instead of one on every chord (user, 02/11)
             Box(
@@ -101,7 +107,7 @@ fun ChordStrip(
             }
         }
         // hidden chords: one tap brings all back (no confirmation, it removes nothing from the screen)
-        if (hiddenCount > 0) {
+        if (hiddenCount > 0 && until >= items.size) {
             Box(Modifier.size(cell.width, 40.dp).clip(CircleShape).clickable(onClick = onRestore), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(AppIcons.Undo, pluralStringResource(R.plurals.stage_chords_restore, hiddenCount, hiddenCount), Modifier.size(18.dp), tint = color.copy(alpha = 0.6f))
@@ -111,8 +117,8 @@ fun ChordStrip(
         }
     }
     // quiet × in the corner: hides the whole list in this song (the ↶ above brings it back)
-    if (items.isNotEmpty()) {
-        Box(Modifier.align(Alignment.TopEnd).size(STRIP_CLOSE_WIDTH).clip(CircleShape).clickable(onClick = onHideAll), contentAlignment = Alignment.Center) {
+    if (items.isNotEmpty() && from == 0) {
+        Box(Modifier.align(Alignment.TopEnd).offset(x = STRIP_CLOSE_WIDTH / 2).size(STRIP_CLOSE_WIDTH).clip(CircleShape).clickable(onClick = onHideAll), contentAlignment = Alignment.Center) {
             Icon(AppIcons.Close, stringResource(R.string.stage_chords_hide_all), Modifier.size(18.dp), tint = color.copy(alpha = 0.45f))
         }
     }

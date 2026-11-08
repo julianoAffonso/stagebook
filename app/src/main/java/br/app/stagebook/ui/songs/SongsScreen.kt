@@ -126,7 +126,7 @@ fun SongsScreen(
     cloud: CloudUi? = null,
     onShareSongs: (List<String>) -> Unit = {},
     onDismissCloud: () -> Unit = {},
-    codeActions: CodeActions = CodeActions({}, { _, _ -> }),
+    codeActions: CodeActions = CodeActions({}, {}),
     initialSelection: List<String> = emptyList(),   // screenshots and tests
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},

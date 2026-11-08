@@ -9,16 +9,14 @@ object StageFit {
     /** Minimum share of lines that must fit in half the width (without wrapping) to use 2 columns. */
     const val SHORT_LINES_SHARE = 0.9
 
-    /**
-     * 100% chosen on purpose. A song's zoom of exactly 1 means nobody chose one, the case of automatic zoom; a separate
-     * field would change the format that goes to backups and the band, and this still shows as 100%.
-     */
-    const val CHOSEN_DEFAULT_ZOOM = 1.001f
+    /** Goes up when the calculation changes: what songs have saved was found the old way. */
+    const val SIZES_VERSION = 13
 
     /** Largest automatic zoom over the size in Settings. */
     const val AUTO_MAX_ZOOM = 1.5f
     private const val AUTO_MIN_FONT = 22f
-    private const val AUTO_MIN_SHARE = 0.6f
+    private const val AUTO_FEWER_FONT = 20f   // only when it saves a page
+    private const val AUTO_WHOLE_FONT = 18f   // only to keep a section on one sheet
     private const val AUTO_STEPS = 5
 
     /**
@@ -45,10 +43,62 @@ object StageFit {
     }
 
     /** How a song lays out at some zoom. */
-    data class Sheets(val count: Int, val cutsVerse: Boolean)
+    data class Sheets(val count: Int, val cutsVerse: Boolean, val thinFirst: Boolean = false, val crossesSheet: Boolean = false)
 
-    /** Smallest automatic zoom for lyrics at [fontSp]: legible, and never far from the size chosen in Settings. */
-    fun autoMinZoom(fontSp: Float): Float = minOf(1f, maxOf(AUTO_MIN_FONT, fontSp * AUTO_MIN_SHARE) / fontSp)
+    /** Smallest automatic zoom for lyrics at [fontSp]: the page comes first, down to a size still legible on stage. */
+    fun autoMinZoom(fontSp: Float): Float = minOf(1f, AUTO_MIN_FONT / fontSp)
+
+    /** What the stage last laid out. */
+    data class Room(val screen: String, val width: Int, val height: Int)
+
+    /** The screen turned and the stage still has the old size: anything calculated now is for a place that's gone. */
+    fun midTurn(last: Room, now: Room): Boolean = last.screen != now.screen && last.width == now.width && last.height == now.height
+
+    /** [at] measuring each zoom only once: measuring the whole song is the expensive part. */
+    fun measuredOnce(at: (Float) -> Sheets): (Float) -> Sheets {
+        val done = HashMap<Float, Sheets>()
+        return { z -> done.getOrPut(z) { at(z) } }
+    }
+
+    /** Smallest zoom that may be used to keep a section whole. */
+    fun autoWholeZoom(fontSp: Float): Float = minOf(1f, AUTO_WHOLE_FONT / fontSp)
+
+    /** Smallest zoom that may be used to save a page. */
+    fun autoFewerZoom(fontSp: Float): Float = minOf(1f, AUTO_FEWER_FONT / fontSp)
+
+    /**
+     * [min], or lower down to [fewer] when that takes fewer pages with nothing else getting worse (user, 06/11): the
+     * largest such size, as a page turn less on stage is worth a smaller letter.
+     */
+    fun autoPageFloor(min: Float, fewer: Float, at: (Float) -> Sheets): Float {
+        if (fewer >= min) return min
+        val base = at(min)
+        fun saves(s: Sheets) = s.count < base.count && (base.cutsVerse || !s.cutsVerse) && (base.thinFirst || !s.thinFirst) &&
+            (base.crossesSheet || !s.crossesSheet)
+        if (!saves(at(fewer))) return min
+        var low = fewer
+        var high = min
+        repeat(AUTO_STEPS) {
+            val mid = (low + high) / 2
+            if (saves(at(mid))) low = mid else high = mid
+        }
+        return low
+    }
+
+    /**
+     * Where the automatic zoom starts: [min], or lower down to [whole] when a section would cross a page turn and there
+     * it doesn't. A section that crosses anyway keeps [min]: shrinking wouldn't save it.
+     */
+    fun autoFloor(min: Float, whole: Float, at: (Float) -> Sheets): Float {
+        if (whole >= min || !at(min).crossesSheet || at(whole).crossesSheet) return min
+        var low = whole
+        var high = min
+        repeat(AUTO_STEPS) {
+            val mid = (low + high) / 2
+            if (at(mid).crossesSheet) high = mid else low = mid
+        }
+        return low
+    }
 
     /**
      * Automatic zoom for a song nobody zoomed: the largest size with the fewest pages reachable, no verse cut. A song
@@ -58,7 +108,8 @@ object StageFit {
     fun autoZoom(min: Float, max: Float, at: (Float) -> Sheets): Float {
         if (max <= min) return max
         val floor = at(min)
-        fun fits(s: Sheets) = s.count <= floor.count && (floor.cutsVerse || !s.cutsVerse)
+        fun fits(s: Sheets) = s.count <= floor.count && (floor.cutsVerse || !s.cutsVerse) && (floor.thinFirst || !s.thinFirst) &&
+            (floor.crossesSheet || !s.crossesSheet)
         if (fits(at(max))) return max
         var low = min
         var high = max

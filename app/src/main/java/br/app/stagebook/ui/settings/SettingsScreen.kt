@@ -170,6 +170,8 @@ fun SettingsRoute(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val clickApart by viewModel.clickApart.collectAsStateWithLifecycle()
+    val clickTesting by viewModel.clickTesting.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
@@ -239,16 +241,25 @@ fun SettingsRoute(
     val bandVm: BandViewModel = hiltViewModel()
     val band by bandVm.ui.collectAsStateWithLifecycle()
     val bandActions = remember(bandVm) { bandVm.actions() }
+    br.app.stagebook.ui.band.BandInviteShare(bandVm.inviteResults, band.name)
     val webVm: WebEditorViewModel = hiltViewModel()
     val web by webVm.ui.collectAsStateWithLifecycle()
     val advancedVm: AdvancedViewModel = hiltViewModel()
     val advanced by advancedVm.ui.collectAsStateWithLifecycle()
+    val midiOutputs by viewModel.midiOutputs.collectAsStateWithLifecycle()
     // read again every time the section opens and when coming back from Android's settings (battery request)
     LifecycleResumeEffect(section == SettingsSection.ADVANCED) {
         // About too: its update card asks whether this is a Samsung with Auto Blocker
         if (section == SettingsSection.ADVANCED || section == SettingsSection.ABOUT) advancedVm.refresh()
         onPauseOrDispose { }
     }
+    // Do not disturb on stage: Android's permission, read again when coming back from its screen
+    var dndGranted by remember { mutableStateOf(br.app.stagebook.data.device.StageQuiet.granted(context)) }
+    LifecycleResumeEffect(Unit) {
+        dndGranted = br.app.stagebook.data.device.StageQuiet.granted(context)
+        onPauseOrDispose { }
+    }
+    fun openDndAccess() { runCatching { context.startActivity(br.app.stagebook.data.device.StageQuiet.accessScreen()) } }
     // without the local network permission (where Android has it) the system hides this device from the band (the S26
     // wasn't found, 31/10); asked again when Settings → Band opens, and the search restarts once it's given
     val localNetwork = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
@@ -296,6 +307,9 @@ fun SettingsRoute(
                 onMidiChoose = viewModel::chooseMidi,
                 onMidiForget = viewModel::forgetMidi,
                 onMidiUsb = viewModel::setMidiUsb,
+                midiOutputs = midiOutputs,
+                onMidiOutputsOpen = viewModel::refreshMidiOutputs,
+                onMidiOut = viewModel::setMidiOut,
                 onSites = viewModel::setSites,
                 onPlayerMode = viewModel::setPlayerMode,
                 band = band,
@@ -314,9 +328,14 @@ fun SettingsRoute(
                     }
                 },
                 onKeepScreenOn = viewModel::setKeepScreenOn,
+                dndGranted = dndGranted,
+                onStageDnd = { on ->
+                    viewModel.setStageDnd(on)
+                    if (on && !dndGranted) openDndAccess()
+                },
+                onDndAllow = ::openDndAccess,
                 onTrackStops = viewModel::setTrackStops,
                 onColumns = viewModel::setColumns,
-                onAutoZoom = viewModel::setAutoZoom,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
                 onChordPlay = viewModel::setChordPlay,
@@ -333,8 +352,14 @@ fun SettingsRoute(
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
+                onMetronomeVolume = viewModel::setMetronomeVolume,
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
+                onMetronomeMenu = viewModel::probeClickRoute,
+                clickApart = clickApart || !uiState.look.usbViaAndroid,
+                clickTesting = clickTesting,
+                onClickTest = viewModel::toggleClickTest,
+                onClickTestStop = viewModel::stopClickTest,
                 onUsbViaAndroid = viewModel::setUsbViaAndroid,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
@@ -388,6 +413,9 @@ data class SettingsActions(
     val onMidiChoose: (MidiFound) -> Unit = {},
     val onMidiForget: () -> Unit = {},
     val onMidiUsb: (Boolean) -> Unit = {},
+    val midiOutputs: List<br.app.stagebook.data.MidiOutput> = emptyList(),
+    val onMidiOutputsOpen: () -> Unit = {},
+    val onMidiOut: (br.app.stagebook.data.MidiOutput?) -> Unit = {},
     val onLanguage: (AppLanguage) -> Unit = {},
     val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onPlayerMode: (Boolean) -> Unit = {},
@@ -404,9 +432,11 @@ data class SettingsActions(
     val onBatteryFree: () -> Unit = {},
     val onAutoBlocker: () -> Unit = {},
     val onKeepScreenOn: (Boolean) -> Unit = {},
+    val dndGranted: Boolean = true,
+    val onStageDnd: (Boolean) -> Unit = {},
+    val onDndAllow: () -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
-    val onAutoZoom: (Boolean) -> Unit = {},
     val onStageMode: (br.app.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
     val onChordPlay: (br.app.stagebook.data.model.ChordPlayMode) -> Unit = {},
@@ -420,8 +450,14 @@ data class SettingsActions(
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
     val onMetronome: (count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) -> Unit = { _, _, _, _ -> },
+    val onMetronomeVolume: (Int) -> Unit = {},
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
+    val onMetronomeMenu: () -> Unit = {},
+    val clickApart: Boolean = true,
+    val clickTesting: Boolean = false,
+    val onClickTest: () -> Unit = {},
+    val onClickTestStop: () -> Unit = {},
     val onUsbViaAndroid: (Boolean) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
@@ -624,7 +660,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
                 if (uiState.look.playerMode) PlayerDetail(uiState.look, actions)
             }
             SettingsSection.BAND -> {
-                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn)
+                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
                 AnnounceCard(uiState.look, actions)
             }
             SettingsSection.WEB_EDITOR -> WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
@@ -715,13 +751,21 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         }
         if (look.stageMode == br.app.stagebook.data.model.StageMode.PAGES) {
             PageColumns(look, actions)
-            SwitchRow(stringResource(R.string.settings_auto_zoom), look.autoZoom, actions.onAutoZoom, detail = stringResource(R.string.settings_auto_zoom_detail))
         }
     }
     ChordShapesCard(look, actions)
     // the screen stays on with the app open (it was in its own Screen item)
-    SettingsCard(stringResource(R.string.settings_screen), help = stringResource(R.string.settings_keep_screen_on_help)) {
+    SettingsCard(
+        stringResource(R.string.settings_screen),
+        help = stringResource(R.string.settings_keep_screen_on_help) + "\n\n" + stringResource(R.string.settings_stage_dnd_help),
+    ) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn)
+        val missing = look.stageDnd && !actions.dndGranted
+        SwitchRow(
+            stringResource(R.string.settings_stage_dnd), look.stageDnd, actions.onStageDnd,
+            detail = stringResource(if (missing) R.string.settings_stage_dnd_missing else R.string.settings_stage_dnd_detail),
+        )
+        if (missing) ActionButton(stringResource(R.string.stage_dnd_allow), actions.onDndAllow, icon = AppIcons.VolumeOff, tone = ButtonTone.Tonal)
     }
 }
 
@@ -931,6 +975,30 @@ private fun SectionsDetail(look: Look, actions: SettingsActions, draft: StageDra
 private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
     PedalConnectCard(uiState, actions)
     PedalButtonsCard(uiState, actions)
+    if (uiState.midi.supported) MidiOutCard(uiState.look, actions)
+}
+
+/** Where the songs' MIDI goes (user, 07/11): one output for the whole app, USB or Bluetooth. */
+@Composable
+private fun MidiOutCard(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.settings_midi_out), help = stringResource(R.string.settings_midi_out_help)) {
+        // the saved one stays in the list while it's away, so the choice doesn't look lost
+        val saved = look.midiOut.takeIf { it.isNotEmpty() }?.let { br.app.stagebook.data.MidiOutput(it, look.midiOutName, false) }
+        val options = listOf<br.app.stagebook.data.MidiOutput?>(null) + (actions.midiOutputs + listOfNotNull(saved)).distinctBy { it.key }
+        val away = saved != null && actions.midiOutputs.none { it.key == saved.key }
+        val awayName = stringResource(R.string.settings_midi_out_away, look.midiOutName)
+        val none = stringResource(R.string.settings_midi_out_none)
+        OptionDropdown(
+            stringResource(R.string.settings_midi_out_device), options, options.firstOrNull { it?.key == look.midiOut }, actions.onMidiOut,
+            { o -> when { o == null -> none; away && o.key == saved?.key -> awayName; else -> o.name } },
+            Modifier.fillMaxWidth(),
+            onOpen = actions.onMidiOutputsOpen,
+        )
+        // a Bluetooth device only shows up once connected, in the card above: say where, when none is listed
+        if (actions.midiOutputs.none { it.bluetooth }) {
+            Text(stringResource(R.string.settings_midi_out_find_bt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable
@@ -949,16 +1017,26 @@ private fun PedalConnectCard(uiState: SettingsUiState, actions: SettingsActions)
             PedalStatusRow(look.midiBtName, stringResource(R.string.settings_pedal_kind_midi_bt), btMidiOn, onForget = actions.onMidiForget)
         }
         usb.forEach { d -> PedalStatusRow(d.name, stringResource(R.string.settings_pedal_kind_midi_usb), true) }
-        ActionButton(stringResource(R.string.settings_pedal_add_common), actions.onPairPedal, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal)
-        if (midi.supported) {
+        // the ways to add a pedal stacked as one list: two 56 dp buttons with no background, apart by the card's gap,
+        // left a blank band between them (S26 and Chuwi, 07/11)
+        Column {
             ActionButton(
-                stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_pedal_add_midi),
-                actions.onMidiScan,
-                Modifier.fillMaxWidth(),
-                icon = AppIcons.Pedal,
-                tone = ButtonTone.Tonal,
-                enabled = !midi.scanning,
+                stringResource(R.string.settings_pedal_add_common), actions.onPairPedal, Modifier.fillMaxWidth(),
+                icon = AppIcons.Bluetooth, tone = ButtonTone.Tonal, minHeight = Sizes.touch,
             )
+            if (midi.supported) {
+                ActionButton(
+                    stringResource(if (midi.scanning) R.string.settings_midi_scanning else R.string.settings_pedal_add_midi),
+                    actions.onMidiScan,
+                    Modifier.fillMaxWidth(),
+                    icon = AppIcons.Pedal,
+                    tone = ButtonTone.Tonal,
+                    enabled = !midi.scanning,
+                    minHeight = Sizes.touch,
+                )
+            }
+        }
+        if (midi.supported) {
             if (midi.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
             midi.found.forEach { f ->
                 SongListItem(title = f.name, subtitle = stringResource(R.string.settings_midi_choose), onClick = { actions.onMidiChoose(f) })
@@ -1220,7 +1298,7 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     // "USB output", not "Player" again under the screen's own title
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
-        // for devices where the direct way gets no sound (S26, B-33): through Android, as other music apps (user, 02/11)
+        // for devices where the direct way gets no sound: through Android, as other music apps (user, 02/11)
         SwitchRow(stringResource(R.string.usb_via_android), look.usbViaAndroid, actions.onUsbViaAndroid, detail = stringResource(R.string.usb_via_android_detail))
     }
     // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10)
@@ -1340,13 +1418,8 @@ internal fun MixerCard(
 @Composable
 internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: () -> MixerLevels, monitoring: Boolean) {
     SettingsCard(stringResource(R.string.eq_title), help = stringResource(R.string.eq_help)) {
-        // turning it on with no channel going through it would change nothing: a notice, and the switch stays off until
-        // a channel is sent to the EQ (user, 31/10)
-        var noChannel by remember { mutableStateOf(false) }
-        SwitchRow(stringResource(R.string.eq_on), mixer.eqOn, { on ->
-            if (on && mixer.strips.take(mixer.channels).none { it.eq }) noChannel = true else onMixer(mixer.copy(eqOn = on))
-        }, Modifier.lockedDim())
-        if (noChannel) InfoDialog(stringResource(R.string.eq_no_channel_title), stringResource(R.string.eq_no_channel), { noChannel = false })
+        // the curve stays editable with no channel on it: the hint says what makes it count
+        if (!mixer.eqOn) Text(stringResource(R.string.eq_no_channel), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val setBand = { i: Int, v: Float ->
             onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { k -> if (k == i) (v * 2).roundToInt() / 2f else mixer.eqDb.getOrElse(k) { 0f } }))
         }
@@ -1372,14 +1445,14 @@ internal fun EqCard(mixer: MixerConfig, onMixer: (MixerConfig) -> Unit, levels: 
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Text(stringResource(R.string.mixer_db, db), style = MaterialTheme.typography.labelLarge)
-                        VerticalFader(db, { setBand(i, it) }, valueRange = range, enabled = mixer.eqOn)
+                        VerticalFader(db, { setBand(i, it) }, valueRange = range)
                         Text(eqLabel(hz), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
         }
         ActionButton(stringResource(R.string.eq_reset), onClick = { onMixer(mixer.copy(eqDb = List(MixerConfig.EQ_BANDS) { 0f })) },
-            icon = AppIcons.Undo, tone = ButtonTone.Tonal, enabled = mixer.eqOn, modifier = Modifier.lockedDim())
+            icon = AppIcons.Undo, tone = ButtonTone.Tonal, modifier = Modifier.lockedDim())
     }
 }
 
@@ -1416,6 +1489,18 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
         if (!look.metroShown) return@SettingsCard
         SwitchRow(stringResource(R.string.metro_count), look.metroCount, { set(count = it) })
         SwitchRow(stringResource(R.string.metro_sound), look.metroSound, { set(sound = it) })
+        if (look.metroSound) {
+            // the click's volume, in steps of 10 (user, 07/11); saved when the finger lifts
+            var level by remember(look.metroVolume) { mutableFloatStateOf(look.metroVolume.toFloat()) }
+            Text(stringResource(R.string.metro_volume, level.roundToInt()), style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = level,
+                onValueChange = { level = it },
+                onValueChangeFinished = { actions.onMetronomeVolume(level.roundToInt()) },
+                valueRange = 0f..br.app.stagebook.domain.MetronomeClick.FULL_VOLUME.toFloat(),
+                steps = 9,
+            )
+        }
         // the drummer hears it through the desk: a USB output (user, 02/11); only with the player on
         if (look.metroSound && look.playerMode) {
             val outputs = look.mixer.output
@@ -1424,15 +1509,29 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             OptionDropdown(
                 stringResource(R.string.metro_out), options, chosen, { actions.onMetronomeOut(it) },
                 { o -> if (o.device) stringResource(R.string.metro_out_device) else outputs.label() + " · " + br.app.stagebook.ui.components.outputName(o.out, o.pair, outputs) },
+                enabledOf = { !it.device || actions.clickApart },
+                onOpen = actions.onMetronomeMenu,
             )
+            if (!actions.clickApart) Text(stringResource(R.string.metro_out_together), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (look.metroSound) MetronomeTestButton(actions.clickTesting, actions.onClickTest, actions.onClickTestStop)
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
         if (look.metroGlow) {
             Text(stringResource(R.string.metro_glow_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(br.app.stagebook.ui.theme.StagePalette.glow, look.metroGlowColor, { set(color = it) })
         }
     }
+}
+
+/** Hear the click with the chosen output and volume; it stops when this leaves the screen. */
+@Composable
+internal fun MetronomeTestButton(playing: Boolean, onToggle: () -> Unit, onStop: () -> Unit) {
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onStop() } }
+    ActionButton(
+        stringResource(if (playing) R.string.settings_metronome_test_stop else R.string.settings_metronome_test), onToggle,
+        Modifier.fillMaxWidth(), icon = if (playing) AppIcons.Stop else AppIcons.Play, tone = ButtonTone.Tonal,
+    )
 }
 
 /** Telling OBS and others what's playing (T23), a stage extra (T19); it moved from the Screen item to the band's (01/11). */

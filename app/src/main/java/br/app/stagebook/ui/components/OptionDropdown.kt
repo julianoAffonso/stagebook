@@ -19,7 +19,8 @@ import androidx.compose.ui.text.TextStyle
 
 /**
  * Single-choice dropdown: one line, instead of a list of radio buttons. [styleOf] gives each option (and the field,
- * with the chosen one) its own style, so a font shows written in itself.
+ * with the chosen one) its own style, so a font shows written in itself. [singleLine] false lets a long chosen option
+ * wrap to more lines.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,14 +32,18 @@ fun <T> OptionDropdown(
     nameOf: @Composable (T) -> String,
     modifier: Modifier = Modifier,
     styleOf: (@Composable (T) -> TextStyle)? = null,
+    enabledOf: (T) -> Boolean = { true },
+    onOpen: () -> Unit = {},
+    singleLine: Boolean = true,
 ) {
     var open by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it; if (it) onOpen() }, modifier = modifier) {
         TextField(
             value = nameOf(selected),
             onValueChange = {},
             readOnly = true,
-            singleLine = true,
+            // a long option on a narrow screen wraps instead of losing its end
+            singleLine = singleLine,
             label = { Text(label) },
             textStyle = styleOf?.invoke(selected) ?: MaterialTheme.typography.bodyLarge,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
@@ -51,6 +56,7 @@ fun <T> OptionDropdown(
                 DropdownMenuItem(
                     text = { Text(nameOf(o), style = styleOf?.invoke(o) ?: MaterialTheme.typography.bodyLarge) },
                     onClick = { onSelect(o); open = false },
+                    enabled = enabledOf(o),
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }

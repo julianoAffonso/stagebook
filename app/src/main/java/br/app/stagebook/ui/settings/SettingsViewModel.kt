@@ -98,7 +98,34 @@ class SettingsViewModel @Inject constructor(
     private val updater: AppUpdater,
     private val midi: MidiPedal,
     private val backup: br.app.stagebook.data.Backup,
+    private val metronome: br.app.stagebook.data.MetronomeSound,
+    private val midiOut: br.app.stagebook.data.MidiOut,
 ) : ViewModel() {
+    private val _midiOutputs = MutableStateFlow<List<br.app.stagebook.data.MidiOutput>>(emptyList())
+    /** The MIDI outputs there are right now (read when the list opens). */
+    val midiOutputs: StateFlow<List<br.app.stagebook.data.MidiOutput>> = _midiOutputs.asStateFlow()
+
+    fun refreshMidiOutputs() { _midiOutputs.value = midiOut.outputs() }
+
+    /** null = no MIDI output. */
+    fun setMidiOut(o: br.app.stagebook.data.MidiOutput?) = repository.updateLook { it.copy(midiOut = o?.key.orEmpty(), midiOutName = o?.name.orEmpty()) }
+
+    val clickApart = metronome.keepsApart
+
+    // the Settings test click: the stage's own path (USB output when the player is on, otherwise the device), no count-in
+    private val clickTest = br.app.stagebook.domain.MetronomeTest(
+        start = { bpm ->
+            val look = repository.library.value.look
+            val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
+            if (look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, look.metroVolume)) metronome.stop()
+            else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, look.metroVolume) }
+        },
+        stop = { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
+    )
+    val clickTesting: StateFlow<Boolean> = clickTest.playing
+    fun toggleClickTest() = clickTest.toggle()
+    fun stopClickTest() = clickTest.stop()
+
     /** Backup read and waiting for the choice of parts to restore. */
     data class PendingRestore(val uri: Uri, val contents: br.app.stagebook.data.Backup.Contents)
 
@@ -154,6 +181,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        clickTest.stop()
         inputManager?.unregisterInputDeviceListener(deviceListener)
         midi.stopScan()
     }
@@ -232,11 +260,15 @@ class SettingsViewModel @Inject constructor(
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }
     fun setHighlightColor(argb: Int) = repository.updateLook { it.copy(highlightColor = argb) }
     fun setColumns(c: StageColumns) = repository.updateLook { it.copy(columns = c) }
-    fun setAutoZoom(on: Boolean) = repository.updateLook { it.copy(autoZoom = on) }
     fun setMetronome(count: Boolean, sound: Boolean, glow: Boolean, glowColor: Int) =
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setMetronomeShown(on: Boolean) = repository.updateLook { it.copy(metroShown = on) }
+    fun setMetronomeVolume(v: Int) = repository.updateLook { it.copy(metroVolume = v.coerceIn(0, br.app.stagebook.domain.MetronomeClick.FULL_VOLUME)) }
+    // the Android setting follows this in StagePlayer (one writer, only while the player runs)
     fun setUsbViaAndroid(on: Boolean) = repository.updateLook { it.copy(usbViaAndroid = on) }
+    fun probeClickRoute() {
+        if (repository.library.value.look.usbViaAndroid) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { metronome.probeApart() }
+    }
     fun setMetronomeOut(o: br.app.stagebook.domain.MetronomeOut) = repository.updateLook { it.copy(metroUsbOut = o.out, metroUsbPair = o.pair) }
     fun autoTags(national: String, international: String, language: String, preview: Boolean) = repository.autoTags(national, international, language, preview)
     fun setAnnounce(on: Boolean) = repository.updateLook { it.copy(announce = on) }
@@ -244,6 +276,7 @@ class SettingsViewModel @Inject constructor(
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, Look.MAX_AUTO_SCROLL)) }
     fun setStageMode(m: br.app.stagebook.data.model.StageMode) = repository.updateLook { it.copy(stageMode = m) }
     fun setKeepScreenOn(on: Boolean) = repository.updateLook { it.copy(keepScreenOn = on) }
+    fun setStageDnd(on: Boolean) = repository.updateLook { it.copy(stageDnd = on) }
     fun setTrackStops(on: Boolean) = repository.updateLook { it.copy(trackStops = on) }
 
     fun checkUpdate() {

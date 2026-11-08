@@ -5,6 +5,7 @@ import br.app.stagebook.domain.MixerConfig
 import br.app.stagebook.domain.forSong
 import br.app.stagebook.domain.toSongMix
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,25 +14,36 @@ import org.junit.Test
  * independent: the song always plays with its own volume and EQ (user, 31/10).
  */
 class SongMixTest {
-    private val general = MixerConfig(channels = 2, eqOn = true, eqDb = listOf(0f, 0f, 0f, 0f, 0f))
+    private val general = MixerConfig(channels = 2, eqDb = listOf(0f, 0f, 0f, 0f, 0f)).withStrip(0) { it.copy(eq = true) }
 
     @Test fun `a song without its own mix plays with the general mixer`() = assertEquals(general, general.forSong(null))
 
     @Test fun `the first change starts from the general mixer`() {
-        val changed = general.copy(strips = general.strips.toMutableList().also { it[0] = MixChannel(gainDb = -6f) })
+        val changed = general.copy(strips = general.strips.toMutableList().also { it[0] = MixChannel(gainDb = -6f, eq = true) })
         val own = changed.toSongMix()
         assertEquals(-6f, general.forSong(own).strips[0].gainDb)
         assertEquals(general.eqOn, general.forSong(own).eqOn)
     }
 
     @Test fun `after that the song is independent of the general mixer`() {
-        val own = general.copy(strips = general.strips.toMutableList().also { it[0] = MixChannel(gainDb = -6f) }, eqDb = listOf(3f, 0f, 0f, 0f, 0f)).toSongMix()
+        val own = general.copy(strips = general.strips.toMutableList().also { it[0] = MixChannel(gainDb = -6f, eq = true) }, eqDb = listOf(3f, 0f, 0f, 0f, 0f)).toSongMix()
         // the general mixer changes later: volume, EQ on/off and bands
-        val generalLater = general.copy(strips = general.strips.toMutableList().also { it[0] = MixChannel(gainDb = 2f) }, eqOn = false, eqDb = listOf(-9f, 0f, 0f, 0f, 0f))
+        val generalLater = general.copy(strips = general.strips.toMutableList().also { it[0] = MixChannel(gainDb = 2f) }, eqDb = listOf(-9f, 0f, 0f, 0f, 0f))
         val played = generalLater.forSong(own)
         assertEquals(-6f, played.strips[0].gainDb)
         assertTrue(played.eqOn)
         assertEquals(3f, played.eqDb[0])
+    }
+
+    @Test fun `the EQ is on while a channel goes through it`() {
+        val first = MixerConfig(channels = 2).withStrip(0) { it.copy(eq = true) }
+        assertTrue(first.eqOn)
+        assertTrue(first.withStrip(1) { it.copy(eq = true) }.withStrip(0) { it.copy(eq = false) }.eqOn)
+        assertFalse(first.withStrip(0) { it.copy(eq = false) }.eqOn)
+    }
+
+    @Test fun `a channel beyond the file doesn't turn the EQ on`() {
+        assertFalse(MixerConfig(channels = 2).withStrip(3) { it.copy(eq = true) }.eqOn)
     }
 
     @Test fun `outputs and channel count stay the general ones`() {

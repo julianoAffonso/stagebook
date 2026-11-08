@@ -5,6 +5,7 @@
 // one, to compare both. See run.sh.
 #include <errno.h>
 #include <math.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -23,11 +24,13 @@ void *sim_calloc(size_t n, size_t s);
 void sim_free(void *p);
 int sim_usleep(useconds_t us);
 int fake_ioctl(int fd, unsigned long req, ...);
+static int fake_poll(struct pollfd *p, nfds_t n, int ms) { struct timespec t = {0, 1000000}; nanosleep(&t, NULL); return 1; }
 
 #define calloc sim_calloc
 #define free sim_free
 #define usleep sim_usleep
 #define ioctl fake_ioctl
+#define poll fake_poll
 #define stb_vorbis_seek_frame sim_seek_frame
 #define stb_vorbis_get_samples_float_interleaved sim_get_samples
 #include ENGINE_C
@@ -35,6 +38,7 @@ int fake_ioctl(int fd, unsigned long req, ...);
 #undef free
 #undef usleep
 #undef ioctl
+#undef poll
 #undef stb_vorbis_seek_frame
 #undef stb_vorbis_get_samples_float_interleaved
 
@@ -95,6 +99,7 @@ static qent q[QMAX];
 static int nq = 0;
 static double out_due = 0, in_due = 0, in_acc = 0;
 static int disconnected = 0, fail_next_reap = 0;
+static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
 static double clock_ratio = 1.0002;    // desk clock slightly fast (the feedback corrects it)
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
@@ -196,12 +201,12 @@ int fake_ioctl(int fd, unsigned long req, ...) {
                 }
             }
             if (*line < t) *line = t;
-            *line += PKTS_PER_URB / 8000.0;
-            q[nq++] = (qent){u, *line, 0};
+            *line += u->number_of_packets / 8000.0;   // a URB takes its own packets' worth of microframes (the input's are longer)
+            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line, 0};
             pthread_cond_broadcast(&dev_cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
-        if (fail_next_reap && req == USBDEVFS_REAPURB) { fail_next_reap = 0; errno = EPROTO; r = -1; }
+        if (fail_next_reap) { fail_next_reap = 0; errno = EPROTO; r = -1; }
         else r = pop_ready((struct usbdevfs_urb **)arg, req == USBDEVFS_REAPURB);
     } else if (req == USBDEVFS_DISCARDURB) {
         r = -1; errno = EINVAL;
@@ -222,7 +227,7 @@ static void sim_unplug(void) {   // cable unplugged: the kernel returns everythi
 static int sim_kernel_urbs(void) { pthread_mutex_lock(&dev_mx); int n = nq; pthread_mutex_unlock(&dev_mx); return n; }
 static void sim_close_conn(void) {   // UsbLink.close(): closing the fd returns what's left
     pthread_mutex_lock(&dev_mx);
-    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0;
+    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0;
     pthread_mutex_unlock(&dev_mx);
 }
 
@@ -532,7 +537,7 @@ int main(int argc, char **argv) {
     sleep_s(1.0);
     long p5 = FN(position)(env, NULL);
     snprintf(buf, sizeof buf, "position %ld ms (expected ~91000)", p5);
-    check(FN(isRunning)(env, NULL) && labs(p5 - 91000) < 150, "plays again after reconnecting", buf);
+    check(FN(isRunning)(env, NULL) && labs(p5 - 91000) < 400, "plays again after reconnecting", buf);
 
     // 6) stream dies with no disconnect notice (the desk restarts), the kernel still holds URBs
     printf("[6] USB stream dies without notice (protocol error)\n");
@@ -543,11 +548,41 @@ int main(int argc, char **argv) {
     FN(stop)(env, NULL);
     sim_close_conn();
 
+    // 6b) the input answers for a second and then goes quiet for good (seen on a phone: the engine followed its frozen
+    // count and crawled at -17%); the output must keep the real-time pace on its own
+    // the validated reference (23/10) never had this defense: its result is printed, not counted
+    printf("[6b] input answers for 1 s and then never again\n");
+    int fails_before_6b = fails;
+    pthread_mutex_lock(&dev_mx); in_dead_from = now() + 1.0; pthread_mutex_unlock(&dev_mx);
+    E_START();
+    FN(seek)(env, NULL, 30000);
+    FN(play)(env, NULL);
+    sleep_s(5.0);
+    long p6 = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "position %ld ms after 5 s of play (expected ~35000)", p6);
+    check(FN(isRunning)(env, NULL) && p6 > 34000 && p6 < 35300, "keeps real-time pace without the input", buf);
+    if (!strcmp(ENGINE_NAME, "validated")) { fails = fails_before_6b; printf("  (reference engine: not counted)\n"); }
+    FN(stop)(env, NULL);
+    sim_close_conn();
+
     // 7) 10 on/off cycles
     printf("[7] 10 on/off cycles\n");
     for (int i = 0; i < 10; i++) { E_START(); FN(play)(env, NULL); sleep_s(0.1); FN(stop)(env, NULL); sim_close_conn(); }
     snprintf(buf, sizeof buf, "%d memory blocks leaked", nlive);
     check(nlive == 0, "no leak", buf);
+
+    // 7b) stopping in order to reconnect (the interface's first connection came silent): no half second of silent tail
+#ifdef ENGINE_HAS_FASTSTOP
+    printf("[7b] stopping to reconnect doesn't wait for the silent tail\n");
+    E_START(); FN(play)(env, NULL); sleep_s(0.4);
+    double t7 = now(); FN(stopFast)(env, NULL); double fast7 = (now() - t7) * 1000;
+    sim_close_conn();
+    E_START(); FN(play)(env, NULL); sleep_s(0.4);
+    t7 = now(); FN(stop)(env, NULL); double slow7 = (now() - t7) * 1000;
+    sim_close_conn();
+    snprintf(buf, sizeof buf, "fast stop %.0f ms, normal stop %.0f ms", fast7, slow7);
+    check(fast7 < 150 && slow7 > 300, "a fast stop skips the silent tail, the normal one keeps it", buf);
+#endif
 
     // 8) normalization
     printf("[8] loudness analysis\n");

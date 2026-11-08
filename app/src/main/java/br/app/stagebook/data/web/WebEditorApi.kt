@@ -45,6 +45,8 @@ class WebEditorApi(
         val key: String = "",
         val capo: Int = 0,
         val tags: List<String> = emptyList(),
+        // the song's MIDI on entering and leaving the stage, as the app's editor sets it (user, 07/11)
+        val midi: br.app.stagebook.domain.SongMidi? = null,
     )
 
     @Serializable
@@ -164,7 +166,7 @@ class WebEditorApi(
     private fun data(s: Song): SongData {
         val meta = Chords.meta(s.text)
         // the app's own lines (hidden chords, picked shapes) stay out of the page, as in the app's editor
-        return SongData(s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName, meta.key, meta.capo, s.tags)
+        return SongData(s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi())
     }
 
     // the page's lyrics with the key and capo it keeps apart, in the app's way (the BPM goes in on its own)
@@ -184,7 +186,9 @@ class WebEditorApi(
         // the key the chords imply is saved, as in the app's editor (31/10: one app, the same rules on the computer)
         val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.restore(d.text, base.text), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3)))
         val tags = br.app.stagebook.domain.Tags.apply(emptyList(), d.tags.filter { it.isNotBlank() }, emptyList())
-        val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text, tags = tags))
+        val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text, tags = tags,
+            // a page from before MIDI sends none: the song keeps its own; the values are held to MIDI's ranges here too
+            midi = d.midi?.let(br.app.stagebook.domain.MidiBytes::held)?.takeUnless { it.isEmpty() } ?: base.midi.takeIf { d.midi == null }))
         afterSave(saved)
         return ok(json.encodeToString(Saved(saved)))
     }

@@ -23,7 +23,7 @@ jobs:
     outputs:
       app: ${{ steps.diff.outputs.app }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
         with:
           fetch-depth: 0
       - id: diff
@@ -46,23 +46,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
         with:
           fetch-depth: 0   # the version comes from the commit count
       # first, it takes a second: a change to the app says what's new for the update window
       - run: python3 -I tools/release_notes_test.py
       - if: github.event_name == 'pull_request'
         run: python3 -I tools/release_notes.py check "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad  # v6
         with:
           distribution: temurin
           java-version: 21
       # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c  # v6
       - run: ./gradlew --build-cache assembleDebug testDebugUnitTest lintDebug
       - if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: reports
           path: app/build/reports/

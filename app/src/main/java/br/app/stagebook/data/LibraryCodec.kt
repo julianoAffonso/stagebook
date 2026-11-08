@@ -71,7 +71,7 @@ data class ImportResult(val added: Int, val replaced: Int, val lyricsChanged: In
 
 /**
  * Importing a library without duplicating: the same song (title + artist, see SongMatch) is updated, the others come in
- * as new. The stage zoom the song already had is kept.
+ * as new. The stage zooms the song already had are kept, and it learns the ones of other screens.
  */
 fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library, ImportResult> {
     val songs = songs.toMutableList()
@@ -84,10 +84,10 @@ fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library,
         val i = index.find(song.title, song.author) ?: -1
         if (i >= 0) {
             if (songs[i].text != song.text) lyricsChanged++
-            songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year })
+            songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, zooms = song.zooms + songs[i].zooms, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year }, midi = song.midi ?: songs[i].midi)
             replaced++
         } else {
-            songs += song.copy(id = newId())
+            songs += song.copy(id = newId(), zoom = 1f)   // an old file's single zoom came from some other screen
             index.add(songs.lastIndex)
             added++
         }

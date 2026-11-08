@@ -101,7 +101,7 @@ fun ScanSetlistRoute(
             message.show(if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), long = true)
         }
     }
-    LaunchedEffect(Unit) { if (!camera && viewModel.code.isEmpty()) ask.launch(Manifest.permission.CAMERA) }
+    LaunchedEffect(Unit) { if (!camera && viewModel.readsQr) ask.launch(Manifest.permission.CAMERA) }
     // the other setlists of the same send went to Received
     val parked by viewModel.parked.collectAsStateWithLifecycle()
     LaunchedEffect(parked) {
@@ -126,6 +126,8 @@ fun ScanSetlistRoute(
         onBack = onBack,
         camera = { onText, modifier -> QrScanner(onText, modifier, onNoCamera = { message.show(resources.getString(R.string.scan_no_camera), long = true) }) },
         byCode = viewModel.code.isNotEmpty(),
+        fromLink = viewModel.fromLink,
+        canScanAgain = viewModel.code.isNotEmpty() || viewModel.readsQr,
         fromName = viewModel.fromName,
         band = viewModel.bandOnline.collectAsStateWithLifecycle().value,
         asking = viewModel.asking.collectAsStateWithLifecycle().value,
@@ -137,6 +139,7 @@ fun ScanSetlistRoute(
         onUseIncoming = viewModel::useIncoming,
         onWantChords = viewModel::searchWithChords,
         onRetry = viewModel::fetch,
+        onAcceptInvite = viewModel::acceptInvite,
     )
 }
 
@@ -159,6 +162,7 @@ fun ScanSetlistScreen(
     onCreateAndImport: (replaceId: String?) -> Unit = {},
     camera: @Composable (onText: (String) -> Unit, modifier: Modifier) -> Unit = { _, m -> Box(m) },
     byCode: Boolean = false,
+    canScanAgain: Boolean = true,   // what came from the band has nothing to read or fetch again
     onRetry: () -> Unit = {},
     onAddSongs: () -> Unit = {},
     fromName: String = "",   // came from the band: "Received from Ana"
@@ -171,6 +175,8 @@ fun ScanSetlistScreen(
     changes: (Int) -> List<SongMerge.Change> = { emptyList() },
     onUseIncoming: (Int, Boolean) -> Unit = { _, _ -> },
     onWantChords: (Int, Boolean) -> Unit = { _, _ -> },
+    onAcceptInvite: () -> Unit = {},
+    fromLink: Boolean = false,   // came from a link: no word about the 3 words (user, 07/11)
 ) {
     var comparing by rememberSaveable { mutableStateOf<Int?>(null) }   // row with "See what changes" open
     CenteredContent(Modifier.fillMaxSize()) {
@@ -181,6 +187,8 @@ fun ScanSetlistScreen(
                         (ui as? ScanUi.Review)?.songsOnly == true -> R.string.scan_songs_title
                         // reviewing: "Review setlist", however it arrived (the camera and the code are done by now)
                         ui is ScanUi.Review -> R.string.scan_review_title
+                        ui is ScanUi.Invite -> R.string.invite_title
+                        byCode && fromLink -> R.string.scan_link_title
                         byCode -> R.string.scan_code_title
                         else -> R.string.scan_title
                     },
@@ -189,7 +197,8 @@ fun ScanSetlistScreen(
             )
             when (ui) {
                 is ScanUi.Scanning -> Scanning(ui, cameraAllowed, onAskCamera, onText, camera)
-                is ScanUi.Fetching -> Fetching(ui, onRetry)
+                is ScanUi.Fetching -> Fetching(ui, onRetry, fromLink)
+                is ScanUi.Invite -> InvitePanel(ui, onAcceptInvite, onBack)
                 is ScanUi.Review -> {
                     // missing songs: searches for the band while the review is open (to ask them before the sites)
                     val missing = !ui.songsOnly && ui.rows.any { it.chosen == null && !it.carried && it.candidates.isEmpty() }
@@ -198,7 +207,7 @@ fun ScanSetlistScreen(
                         onDispose { if (missing) onBandSearch(false) }
                     }
                     if (ui.songsOnly) SongsReview(ui, onAddSongs, { comparing = it }, onWantChords, onUseIncoming)
-                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming, internetFrom, onAskInternet)
+                    else Review(ui, onName, onChoose, onScanAgain, existing, onCreate, onCreateAndImport, byCode, canScanAgain, band, asking, onAskBand, { comparing = it }, onWantChords, onUseIncoming, internetFrom, onAskInternet)
                     comparing?.let { i ->
                         // the diff of two lyrics, once per song compared (not on every recomposition)
                         val diff = androidx.compose.runtime.remember(i, ui.rows.getOrNull(i)) { changes(i) }
@@ -272,6 +281,7 @@ private fun Review(
     onCreate: (replaceId: String?) -> Unit,
     onCreateAndImport: (replaceId: String?) -> Unit,
     byCode: Boolean,
+    canScanAgain: Boolean,
     band: Int = 0,
     asking: Boolean = false,
     onAskBand: () -> Unit = {},
@@ -334,7 +344,7 @@ private fun Review(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(bottom = Spacing.m)) {
-            ActionButton(
+            if (canScanAgain) ActionButton(
                 stringResource(if (byCode) R.string.scan_fetch_again else R.string.scan_again), onScanAgain, Modifier.weight(1f),
                 icon = if (byCode) AppIcons.Public else AppIcons.QrCode, tone = ButtonTone.Tonal,
             )
@@ -348,7 +358,7 @@ private fun Review(
             title = { Text(pluralStringResource(R.plurals.scan_missing_title, ui.missing.size, ui.missing.size)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    Text(ui.missing.joinToString("\n") { "• " + it.title }, style = MaterialTheme.typography.bodyLarge)
+                    Text(ui.missing.joinToString("\n") { "• " + it.title }, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (toImport > 0) {
                         ActionButton(
                             pluralStringResource(R.plurals.scan_import_missing, toImport, toImport),
@@ -401,7 +411,7 @@ private fun SongsReview(
                         }
                         Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = tint)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text(row.title, style = MaterialTheme.typography.titleMedium)
+                            Text(row.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
                             if (row.differs) {
                                 TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(i, it) }
@@ -428,13 +438,39 @@ private fun SongsReview(
     }
 }
 
+/**
+ * An invite to the band (user, 07/11): who invites, accept or not; then that it's done. Someone else already took it
+ * (single use): only that, and a new one has to be asked for.
+ */
 @Composable
-private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
+private fun InvitePanel(ui: ScanUi.Invite, onAccept: () -> Unit, onBack: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        if (ui.joined || ui.used) {
+            if (ui.joined) br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_joined, ui.name), br.app.stagebook.ui.components.StatusTone.OK)
+            else br.app.stagebook.ui.components.StatusNote(stringResource(R.string.invite_used, ui.name), br.app.stagebook.ui.components.StatusTone.PROBLEM)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { ActionButton(stringResource(R.string.action_ok), onBack) }
+        } else {
+            // the color said outright: this screen has no Surface under it, and the default came out dark on dark (S26, 07/11)
+            Text(stringResource(R.string.invite_text, ui.name), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                ActionButton(stringResource(R.string.invite_decline), onBack, icon = AppIcons.Close, tone = ButtonTone.Quiet)
+                ActionButton(stringResource(R.string.invite_accept), onAccept, icon = AppIcons.Group)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit, fromLink: Boolean = false) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m), horizontalAlignment = Alignment.CenterHorizontally) {
         when (ui.problem) {
             null -> {
                 CircularProgressIndicator()
-                Text(stringResource(R.string.scan_code_loading), style = MaterialTheme.typography.bodyLarge)
+                // no Surface under this screen: without its own color the text came out dark on dark (S26, 07/11)
+                Text(
+                    stringResource(if (fromLink) R.string.scan_link_loading else R.string.scan_code_loading),
+                    style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface,
+                )
             }
             else -> {
                 if (ui.problem == CodeProblem.NEWER) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
@@ -445,11 +481,11 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit) {
                 } else br.app.stagebook.ui.components.StatusNote(
                     stringResource(
                         when (ui.problem) {
-                            CodeProblem.NOT_FOUND -> R.string.scan_code_not_found
+                            CodeProblem.NOT_FOUND -> if (fromLink) R.string.scan_link_not_found else R.string.scan_code_not_found
                             CodeProblem.NEWER -> R.string.scan_newer
                             CodeProblem.OFFLINE -> R.string.scan_code_offline
                         },
-                    ),
+                    ) + if (ui.problem == CodeProblem.NOT_FOUND && !fromLink) " " + stringResource(R.string.invite_needs_link) else "",   // typed words can't tell an invite from a wrong code
                     br.app.stagebook.ui.components.StatusTone.PROBLEM,
                 )
                 ActionButton(stringResource(R.string.scan_code_retry), onRetry, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
@@ -480,7 +516,7 @@ private fun RowItem(
                 }
                 Icon(icon, null, Modifier.size(20.dp), tint = tint)
                 Column(Modifier.weight(1f)) {
-                    Text(row.title, style = MaterialTheme.typography.titleMedium)
+                    Text(row.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     if (row.artist.isNotEmpty()) Text(row.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -533,7 +569,7 @@ private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean,
         title = { Text(stringResource(R.string.scan_changes_title)) },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                if (changes.isEmpty()) item { Text(stringResource(R.string.scan_changes_chords_only), style = MaterialTheme.typography.bodyMedium) }
+                if (changes.isEmpty()) item { Text(stringResource(R.string.scan_changes_chords_only), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 itemsIndexed(changes) { _, c ->
                     val added = c.kind == SongMerge.Kind.ADDED
                     Text(

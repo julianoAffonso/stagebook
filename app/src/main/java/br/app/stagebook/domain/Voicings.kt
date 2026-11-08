@@ -100,11 +100,14 @@ object Voicings {
     private fun score(f: IntArray, tuning: IntArray, notes: ChordTheory.Notes, six: Boolean): Double? {
         val n = f.size
         val sounding = f.indices.filter { f[it] >= 0 }
-        if (sounding.size < (if (six) 4 else n)) return null
+        // a power chord (root and fifth) rings a few strings together, usually the low ones
+        val power = six && notes.tones.size == 2
+        if (sounding.size < (if (power) 2 else if (six) 4 else n)) return null
         // muted strings only on the low side, in a row (nobody mutes a middle string)
         if (six) {
             val firstSounding = sounding.first()
-            if (sounding.size != n - firstSounding) return null
+            val lastString = if (power) sounding.last() + 1 else n
+            if (sounding.size != lastString - firstSounding) return null
         }
         val pcs = sounding.map { (tuning[it] + f[it]) % 12 }.toSet()
         if (!pcs.containsAll(notes.essential)) return null

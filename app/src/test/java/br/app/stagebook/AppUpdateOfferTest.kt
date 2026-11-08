@@ -47,9 +47,9 @@ class AppUpdateOfferTest {
 
     private val order by lazy { br.app.stagebook.data.UpdateOrder(context).apply { today = { day } } }
 
-    private fun offer(): AppUpdateOffer {
+    private fun offer(with: br.app.stagebook.data.UpdateOrder = order): AppUpdateOffer {
         val updater = AppUpdater(context).apply { versionUrl = "http://127.0.0.1:${server.address.port}/version" }
-        return AppUpdateOffer(updater, gate, order, scope, Dispatchers.IO)
+        return AppUpdateOffer(updater, gate, with, scope, Dispatchers.IO)
     }
 
     private fun Job?.await() = runBlocking { withTimeout(10_000) { this@await?.join() } }
@@ -103,13 +103,28 @@ class AppUpdateOfferTest {
         assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
     }
 
-    @Test fun `closing without answering - comes back on the next open`() {
+    @Test fun `closing without answering - stays away until the app opens again`() {
         version = """{"versionCode":999999,"versionName":"0.3.999"}"""
         val o = offer()
         o.onEnter().await()
         o.dismiss()
         assertNull(o.offer.value)
+        o.onEnter().await()   // back from another app or the lock screen: same launch
+        assertNull("mesma abertura: não insiste", o.offer.value)
+        val next = offer(br.app.stagebook.data.UpdateOrder(context).apply { today = { day } })   // a new launch
+        next.onEnter().await()
+        assertEquals(UpdateOffer.Available("0.3.999"), next.offer.value)
+    }
+
+    @Test fun `a newer version comes even after closing the last one`() {
+        version = """{"versionCode":999998,"versionName":"0.3.998"}"""
+        val o = offer()
         o.onEnter().await()
-        assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
+        o.dismiss()
+        version = """{"versionCode":999999,"versionName":"0.3.999"}"""
+        val updater = AppUpdater(context).apply { versionUrl = "http://127.0.0.1:${server.address.port}/version" }
+        val same = AppUpdateOffer(updater, gate, order, scope, Dispatchers.IO)
+        same.onEnter().await()
+        assertEquals(UpdateOffer.Available("0.3.999"), same.offer.value)
     }
 }

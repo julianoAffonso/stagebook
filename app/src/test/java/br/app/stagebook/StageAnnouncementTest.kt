@@ -20,4 +20,6 @@ class StageAnnouncementTest {
         assertNull(StageAnnouncement.decode("{\"app\":\"outro\",\"title\":\"x\"}"))
         assertNull(StageAnnouncement.decode("lixo"))
     }
+
+    @Test fun `it comes off`() = assertTrue(!br.app.stagebook.data.model.Look().announce)
 }

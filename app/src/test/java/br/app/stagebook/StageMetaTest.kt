@@ -73,5 +73,6 @@ class StageMetaTest {
                 StageGate(), br.app.stagebook.data.BandInbox(context), repo,
             ),
         ),
+        br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
     )
 }

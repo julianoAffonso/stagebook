@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -46,6 +47,19 @@ class ScanSetlistTest {
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
         Triple(repo, ScanSetlistViewModel(repo, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), br.app.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.Connectivity(context)), ids)
+    }
+
+    // opening what the band sent asked for the camera, with nothing to read
+    @Test fun `only reading a QR needs the camera`() {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        fun vm(code: String, inbox: String) = ScanSetlistViewModel(
+            repo, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to code, "inbox" to inbox)),
+            br.app.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo),
+            br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.Connectivity(context),
+        )
+        assertTrue(vm("", "").readsQr)
+        assertFalse(vm("", "abc").readsQr)
+        assertFalse(vm("92-fanfarra-fada", "").readsQr)
     }
 
     @Test fun `QR with every song creates the setlist in the QR order`() {

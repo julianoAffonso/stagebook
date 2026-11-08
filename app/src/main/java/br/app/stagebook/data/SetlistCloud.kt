@@ -37,8 +37,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         fun allowed() = br.app.stagebook.domain.BandContent.songOk(title, author, year, text)
     }
 
-    /** [skipped]: songs too big for one message (rare), which didn't go. */
-    data class Sent(val code: String, val songs: Int, val skipped: Int)
+    /** [skipped]: songs too big for one message (rare), which didn't go. [from]: the band name it went with (for the link). */
+    data class Sent(val code: String, val songs: Int, val skipped: Int, val from: String = "")
 
     sealed interface Received {
         /** [from]: the sender (their device), to join "the band" on accepting. */
@@ -48,6 +48,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         data object Offline : Received
         /** Came from a newer Stagebook (a format this app doesn't know yet): update to receive. */
         data class Newer(val app: String) : Received
+        /**
+         * An invite to the band (user, 07/11): only who invites, to accept. [used]: someone else's "ok" is already on
+         * the channel, and an invite lets in only the first one.
+         */
+        data class Invite(val from: BandProtocol.Hello, val used: Boolean = false) : Received
     }
 
     /**
@@ -114,7 +119,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             val body = ShareCode.encrypt(keys.key, packed)
             if (body.length > MAX_MESSAGE || !post(keys.topic, body)) return@withContext null
         }
-        Sent(code, sent, skipped)
+        Sent(code, sent, skipped, identity.name.value)
     }
 
     /** Essential mode (T19): "Internet" off, nothing leaves from here (sends, inbox, receipts, requests, 3 words). */
@@ -135,6 +140,24 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         }
     }.getOrDefault(false)
 
+    /**
+     * An invite to the band over the internet (user, 07/11), carrying only who invites (and the invite mark). Its code
+     * has a secret beyond the 3 words (see [ShareCode.generateInvite]): the channel is only found with the link.
+     * Whoever accepts joins the band and sends back the usual "ok". Lasts the service's 12 h.
+     */
+    suspend fun sendInvite(): String? = withContext(Dispatchers.IO) {
+        val code = ShareCode.generateInvite()
+        val keys = ShareCode.keys(code)
+        val sent = invite(identity.hello()).all { post(keys.topic, ShareCode.encrypt(keys.key, it)) }
+        code.takeIf { sent }
+    }
+
+    /** An invite's messages, before encrypting: who invites, then the mark. */
+    // the mark carries a word: an empty deflate reads back as nothing. "invite" is version 1 (3 words only), "invite:N" the
+    // later ones (2: the code has a secret)
+    internal fun invite(from: BandProtocol.Hello, version: Int = INVITE_VERSION): List<ByteArray> =
+        listOf(pack(ID_MARK, json.encodeToString(from)), pack(INVITE_MARK, if (version <= 1) "invite" else "invite:$version"))
+
     suspend fun receive(input: String): Received = withContext(Dispatchers.IO) {
         val code = ShareCode.normalize(input) ?: return@withContext Received.NotFound
         val keys = ShareCode.keys(code)
@@ -142,15 +165,30 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val lines = get("$SERVER/${keys.topic}/json?poll=1&since=all") ?: return@withContext Received.Offline
         // only what decrypts with this code (the channel is public: there may be junk from someone else); every setlist
         // in the order sent (several setlists can go in one send)
-        val plain = messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }
+        read(messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) })
+    }
+
+    /** What a send's decrypted messages are: a setlist with its songs, an invite, or nothing readable. */
+    internal fun read(plain: List<ByteArray>): Received {
         // only setlists and songs in plain text (BandContent): the rest is discarded
         val lists = plain.mapNotNull { QrPayload.unpack(it) }.filter(br.app.stagebook.domain.BandContent::listOk).distinct()
         val text = lists.firstOrNull()
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
             .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
         val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
-        when {
+        val inviteBodies = plain.mapNotNull { unpack(INVITE_MARK, it) }
+        val invite = inviteBodies.isNotEmpty()
+        val inviteVersion = inviteBodies.maxOfOrNull { it.substringAfter(':', "1").toIntOrNull() ?: 1 } ?: 1
+        return when {
             from != null && from.v > BandProtocol.VERSION -> Received.Newer(from.app)
+            invite && inviteVersion > INVITE_VERSION -> Received.Newer(from?.app.orEmpty())   // a format this app doesn't know
+            // my own invite (the link tapped in a chat by who sent it) has nobody to let in: it is nothing to accept
+            text == null && invite && from != null && from.id == identity.id -> Received.NotFound
+            text == null && invite && from != null -> Received.Invite(
+                from,
+                // mine doesn't count: opening the same link again after accepting
+                used = plain.mapNotNull { unpack(ACK_MARK, it) }.mapNotNull(::hello).any { it.id != identity.id && it.id != from.id },
+            )
             text == null -> Received.NotFound
             else -> Received.Ok(text, songs, from, lists.drop(1))
         }
@@ -167,8 +205,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     suspend fun ack(input: String): Boolean = withContext(Dispatchers.IO) {
         val code = ShareCode.normalize(input) ?: return@withContext false
         val keys = ShareCode.keys(code)
-        post(keys.topic, ShareCode.encrypt(keys.key, pack(ACK_MARK, json.encodeToString(identity.hello()))))
+        post(keys.topic, ShareCode.encrypt(keys.key, ackMessage(identity.hello())))
     }
+
+    /** An "ok" before encrypting: who accepted. */
+    internal fun ackMessage(from: BandProtocol.Hello): ByteArray = pack(ACK_MARK, json.encodeToString(from))
 
     /** The "ok"s that arrived for one of my sends (who accepted); empty with no internet. */
     suspend fun acks(code: String): List<BandProtocol.Hello> = withContext(Dispatchers.IO) {
@@ -263,7 +304,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** The words' "ok", encrypted (to also deliver over the local network, when the two meet). */
     fun ackBody(input: String): String? {
         val code = ShareCode.normalize(input) ?: return null
-        return ShareCode.encrypt(ShareCode.keys(code).key, pack(ACK_MARK, json.encodeToString(identity.hello())))
+        return ShareCode.encrypt(ShareCode.keys(code).key, ackMessage(identity.hello()))
     }
 
     /**
@@ -288,6 +329,9 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     companion object {
         private const val SERVER = "https://ntfy.sh"
+
+        /** The invite's format: 1 = the 3 words open it (still read), 2 = it also needs the secret from its link. */
+        const val INVITE_VERSION = 2
         private const val TIMEOUT_MS = 10_000
         private const val MAX_MESSAGE = 4_000          // ntfy.sh takes up to 4,096 bytes per message
         private const val USER_AGENT = "StagebookApp/0.2 (setlist da banda)"
@@ -297,6 +341,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         private val ID_MARK = byteArrayOf('I'.code.toByte(), '1'.code.toByte())     // sender (identity)
         private val ACK_MARK = byteArrayOf('A'.code.toByte(), '1'.code.toByte())    // "ok" from someone who accepted
         private val PAIR_MARK = byteArrayOf('P'.code.toByte(), '1'.code.toByte())   // package from a pair's inbox
+        private val INVITE_MARK = byteArrayOf('V'.code.toByte(), '1'.code.toByte())   // an invite to the band, nothing else
         private const val CHUNK = 2_000
         /** Marks, in the inbox, a send from a newer version (can't be read: the review asks to update). */
         const val NEWER = "\u0000newer"

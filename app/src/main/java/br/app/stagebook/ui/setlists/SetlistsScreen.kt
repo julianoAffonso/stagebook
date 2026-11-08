@@ -113,7 +113,7 @@ fun SetlistsScreen(
     cloud: br.app.stagebook.ui.share.CloudUi? = null,
     onShareInternet: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
     onDismissCloud: () -> Unit = {},
-    codeActions: br.app.stagebook.ui.share.CodeActions = br.app.stagebook.ui.share.CodeActions({}, { _, _ -> }),
+    codeActions: br.app.stagebook.ui.share.CodeActions = br.app.stagebook.ui.share.CodeActions({}, {}),
     band: Int = 0,
     onSendBand: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},

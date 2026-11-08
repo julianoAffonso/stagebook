@@ -154,6 +154,22 @@ class ChordsTest {
         assertEquals(null, br.app.stagebook.domain.ChordName.parse("Refrão"))
     }
 
+    // lyrics only drops ChordPro annotations with the chords (user, 07/11: Flores)
+    @Test fun `lyrics only drops annotations`() {
+        assertEquals("As flores que", Chords.stripChords("As [B5]flor[*2x]es que"))
+        assertTrue(Chords.hasChordRow("só [*2x] aqui"))
+        assertFalse(Chords.hasChords("só [*2x] aqui"))
+    }
+
+    // a note after a dash only follows two chords or more: "E - eu" is a lyric line
+    @Test fun `a note after a dash rides on a chord line`() {
+        assertTrue(Chords.isChordLine("Am G6 Am G6 - INTRO RIFF x 2"))
+        assertTrue(Chords.isChordLine("G D – solo de guitarra"))
+        assertFalse(Chords.isChordLine("E - eu que pensei"))
+        assertFalse(Chords.isChordLine("A - ha ha"))
+        assertEquals("[Am] [G6] - INTRO RIFF", Chords.fromChordsOverLyrics("Am G6 - INTRO RIFF"))
+    }
+
     @Test fun `a marked chord keeps its mark and plays as the chord`() {
         assertTrue(Chords.isChordLine("D  D  E*  F*"))
         assertEquals("F#*", Chords.transposeChord("E*", 2))

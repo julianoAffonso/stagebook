@@ -7,6 +7,18 @@ import kotlinx.serialization.Serializable
 
 // The library saved in stagebook.json.
 
+/** A song's stage zoom on one screen, over the size in Settings. [fit] empty = a pinch, the person's choice. */
+@Immutable
+@Serializable
+data class ScreenZoom(
+    val zoom: Float,
+    val columns: Int = 0,
+    val fit: String = "",   // calculated: what it was calculated for; lyrics or look changed, it's calculated again
+)
+
+/** A screen, as zooms are kept: its size says the position too, upright and on its side are two screens. */
+fun screenKey(widthDp: Int, heightDp: Int) = "${widthDp}x$heightDp"
+
 @Immutable
 @Serializable
 data class Song(
@@ -15,7 +27,8 @@ data class Song(
     val author: String = "",
     val year: String = "",
     val text: String = "",
-    val zoom: Float = 1f,   // this song's stage zoom (pinch), over the default size from settings
+    val zoom: Float = 1f,   // only old libraries: a pinch from when a song had one zoom for every screen
+    val zooms: Map<String, ScreenZoom> = emptyMap(),   // stage zoom by screen size and position, see screenKey
     // backing track file copied into the app (name in filesDir/tracks); this device only: left out of export/QR
     val track: String = "",
     val trackName: String = "",   // the track file's own name when it was attached ("" = unknown), shown in the editor
@@ -23,6 +36,8 @@ data class Song(
     val mix: br.app.stagebook.domain.SongMix? = null,
     // free tags (Nacional, Internacional, Rock…), to filter the lists and the setlist picker (vocalist, 01/11)
     val tags: List<String> = emptyList(),
+    // MIDI sent when the song shows on stage and when it leaves (user, 07/11); goes in the backup, not to the band
+    val midi: br.app.stagebook.domain.SongMidi? = null,
 )
 
 @Immutable
@@ -103,6 +118,13 @@ enum class StageMode {
     @SerialName("scroll") SCROLL,
 }
 
+/** What the stage clock shows; a tap moves to the next (user, 07/11). */
+enum class StageClockMode {
+    @SerialName("clock") CLOCK,
+    @SerialName("elapsed") ELAPSED,   // how long the show has run
+    @SerialName("left") LEFT,         // how much of the show is left
+}
+
 enum class StageColumns {
     @SerialName("auto") AUTO,   // 2 columns on a tablet in landscape, 1 elsewhere
     @SerialName("one") ONE,
@@ -117,6 +139,14 @@ val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !ex
 /** Some part is off (band, internet, player, extras): the alert on open lists which. */
 val Look.anyOff: Boolean get() = !bandOn || !internetOn || !playerMode || !extrasOn
 
+/** The song with [zoom] on [screen], or back to automatic with null. The old single zoom goes: it isn't known where it came from. */
+fun Song.withZoom(screen: String, zoom: ScreenZoom?): Song =
+    copy(zoom = 1f, zooms = if (zoom == null) zooms - screen else zooms + (screen to zoom))
+
+/** The old single zoom belongs to the first screen that opens the song: it's the person's choice, and the others go automatic. */
+fun Song.claimOldZoom(screen: String): Song =
+    if (zoom == 1f || screen in zooms) this else withZoom(screen, ScreenZoom(zoom))
+
 /** Stage look: applies to every song. Colors in ARGB. */
 @Immutable
 @Serializable
@@ -130,19 +160,24 @@ data class Look(
     val showSections: Boolean = true,
     val sectionScale: Float = DEFAULT_SECTION_SCALE,   // section title size relative to the lyrics (adjustable, 29/10)
     val keepScreenOn: Boolean = true,   // screen doesn't dim with the app open (show); the stage always stays lit
+    val stageDnd: Boolean = true,   // Do not disturb while the stage is in front (user, 07/11)
+    val clockMode: StageClockMode = StageClockMode.CLOCK,
+    val showMinutes: Int = br.app.stagebook.domain.ShowTimer.DEFAULT_MINUTES,   // the show's length, in half hours
+    val showStart: Long = 0L,   // when the show's counter started (epoch ms); 0 = not started
     val trackStops: Boolean = true,   // the stage's track button stops and goes back to the start; off = pauses (user, 31/10)
     val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,
-    val autoZoom: Boolean = true,   // a song nobody zoomed is sized to the page of this device (never saved in the song)
     val stageMode: StageMode = StageMode.PAGES,
     val autoScroll: Int = DEFAULT_AUTO_SCROLL,   // auto-scroll speed (1 to 10), in scroll mode
     // stage metronome: 1-2-3-4 count-in before starting and sound (off = blink only)
     val metroShown: Boolean = true,   // metronome icon on the stage; off hides it (user, 31/10)
     val metroCount: Boolean = true,
     val metroSound: Boolean = true,
+    val metroVolume: Int = br.app.stagebook.domain.MetronomeClick.FULL_VOLUME,   // the click's volume, 0–100 (user, 07/11)
     val chordPlay: ChordPlayMode = ChordPlayMode.BOTH,   // playing the chord on stage (T20)
     val keyboardCapoHintSeen: Boolean = false,   // the "chords in the sounding key" note already showed for keyboard
-    val announce: Boolean = true,   // Now Playing: announce the current song on the local network (OBS, Resolume)
+    // Now Playing: announce the current song on the local network (OBS, Resolume); off by default (user, 07/11)
+    val announce: Boolean = false,
     val metroGlow: Boolean = true,   // glow on the stage edge on the beat
     val metroGlowColor: Int = 0xFF4AF6CD.toInt(),   // glow color
     // where the metronome sounds (user, 02/11): -1 = the device (headphones, speaker); otherwise the USB interface's
@@ -159,6 +194,9 @@ data class Look(
     // MIDI pedal over USB: when off, the app opens nothing on USB (it stays free for the USB audio interface). Off by
     // default (user, 02/11): it's turned on by whoever has a USB pedal; saved libraries keep their value
     val midiUsb: Boolean = false,
+    // where the songs' MIDI goes (user, 07/11): the device's key (MidiOut) and its name, shown while it's away
+    val midiOut: String = "",
+    val midiOutName: String = "",
     // chords (step 3): "lyrics and chords" profile (false = lyrics only), chord size relative to the lyrics and color
     val chords: Boolean = true,
     val chordScale: Float = 0.8f,

@@ -45,14 +45,14 @@ class AppUpdateOffer @Inject constructor(
     private var code = 0L   // offered version
 
 
-    /** The app opened (or came back to the front): checks once per launch, if it isn't already checking or offering. */
+    /** The app opened or came back to the front: checks, if it isn't already checking or offering. */
     @Synchronized
     fun onEnter(): Job? {
         if (job?.isActive == true || _offer.value != null) return job
         job = scope.launch {
             val p = updater.published(background) ?: return@launch   // no internet: next launch
             if (p.versionCode <= updater.installedCode) return@launch
-            if (order.declinedToday(p.versionCode)) return@launch
+            if (order.declinedToday(p.versionCode) || order.closedNow(p.versionCode)) return@launch
             stage.onStage.first { !it }   // on stage: wait until leaving
             code = p.versionCode
             _offer.value = UpdateOffer.Available(p.versionName, p.notesSince(updater.installedCode))

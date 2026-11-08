@@ -5,6 +5,12 @@ import androidx.compose.foundation.clickable
 import br.app.stagebook.domain.forSong
 import br.app.stagebook.domain.isStageGap
 import br.app.stagebook.ui.components.QuestionDialog
+import br.app.stagebook.ui.components.ButtonTone
+import br.app.stagebook.ui.components.ActionButton
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.mutableLongStateOf
+import br.app.stagebook.domain.ShowTimer
+import br.app.stagebook.data.device.StageQuiet
 import br.app.stagebook.ui.components.LocalAppMessage
 import androidx.compose.material3.AlertDialog
 import androidx.core.net.toUri
@@ -188,6 +194,24 @@ fun StageRoute(
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
     KeepScreenOn()
+    StageDoNotDisturb(uiState.look.stageDnd && !uiState.loading)
+    // the first time on stage without Android's permission: asks once (Settings can turn it on later)
+    var askQuiet by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiState.look.stageDnd, uiState.loading) {
+        if (!uiState.loading && uiState.look.stageDnd && StageQuiet.shouldAsk(context)) askQuiet = true
+    }
+    if (askQuiet) {
+        fun answer(allow: Boolean) {
+            askQuiet = false
+            StageQuiet.asked(context)
+            if (allow) runCatching { context.startActivity(StageQuiet.accessScreen()) }
+        }
+        QuestionDialog(
+            stringResource(R.string.settings_stage_dnd), stringResource(R.string.stage_dnd_ask),
+            stringResource(R.string.stage_dnd_allow), { answer(true) },
+            stringResource(R.string.stage_dnd_later), { answer(false) },
+        )
+    }
     // the song on screen tells the player which backing track to play; the output notice shows once
     val shownTrack = uiState.songs.getOrNull(index.coerceIn(0, (uiState.songs.size - 1).coerceAtLeast(0)))?.track
     LaunchedEffect(shownTrack, uiState.loading) { if (!uiState.loading) viewModel.showSong(shownTrack.orEmpty()) }
@@ -223,21 +247,28 @@ fun StageRoute(
             stringResource(R.string.player_battery_later), { answer(false) },
         )
     }
-    LaunchedEffect(playerUi.message) {
-        if (playerUi.message.isNotEmpty()) message.show(playerUi.message, long = true)
-    }
+    val playerNote = rememberPlayerNote(playerUi.message, viewModel::playerNoticeFresh)
     val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
+        val config = androidx.compose.ui.platform.LocalConfiguration.current
+        val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp)
+        val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
+        val open = index.coerceIn(0, uiState.songs.lastIndex)
+        LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
         StageScreen(
-            uiState = uiState,
-            index = index.coerceIn(0, uiState.songs.lastIndex),
+            uiState = shown,
+            index = open,
             page = page,
             onPosition = { i, p -> index = i; page = p },
-            onZoom = viewModel::setZoom,
+            screen = screen,
+            // 1 is no zoom: this screen goes back to automatic
+            onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
+            onFit = { id, z -> viewModel.setZoom(id, screen, z) },
             onEdit = onEditSong,
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             onSaveShape = viewModel::saveShape,
+            note = playerNote,
             playing = playerUi.playing || playerUi.waiting,
             onTogglePlay = ::onPlay,
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
@@ -246,6 +277,9 @@ fun StageRoute(
             onTranspose = viewModel::transpose,
             onCapo = viewModel::setCapo,
             onAutoScroll = viewModel::setAutoScroll,
+            onNextClock = viewModel::nextClock,
+            onStepShow = viewModel::stepShow,
+            onRestartShow = viewModel::restartShow,
             onMetronomeSound = viewModel::metronomeSound,
             onTempo = viewModel::setTempo,
             metroUsbReady = usbReady,
@@ -294,9 +328,12 @@ fun StageScreen(
     page: Int,
     onPosition: (song: Int, page: Int) -> Unit,
     modifier: Modifier = Modifier,
+    screen: String = "",   // size and position: a pinch belongs to the one it was made on
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
+    onFit: (songId: String, zoom: br.app.stagebook.data.model.ScreenZoom) -> Unit = { _, _ -> },
     onEdit: (songId: String, cursor: Int) -> Unit = { _, _ -> },
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
+    note: String = "",
     onBack: (() -> Unit)? = null,
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -307,6 +344,9 @@ fun StageScreen(
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
+    onNextClock: () -> Unit = {},
+    onStepShow: (up: Boolean) -> Unit = {},
+    onRestartShow: () -> Unit = {},
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onTempo: (songId: String, bpm: Int) -> Unit = { _, _ -> },
     metroUsbReady: Boolean = false,   // the player reached the USB interface: the metronome restarts there, in step
@@ -385,31 +425,36 @@ fun StageScreen(
     var zoom by zoomState
     val unsavedZoom = remember(index) { mutableStateOf(false) }   // pinch on this song not saved yet
     var zoomTouched by remember(index) { mutableStateOf(false) }
-    // automatic zoom: only where nobody zoomed and the page exists; it follows the screen and is never saved in the song
-    val autoWanted = look.autoZoom && look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
+    // automatic zoom: only where nobody zoomed and the page exists; what it finds is saved for this screen
+    val autoWanted = look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
     var autoZoomNow by remember(index) { mutableFloatStateOf(1f) }
-    LaunchedEffect(song.zoom, autoWanted, autoZoomNow, zoomTouched) {
+    LaunchedEffect(screen, song.zoom, autoWanted, autoZoomNow, zoomTouched) {
         if (!zoomTouched) zoom = (if (autoWanted) autoZoomNow else song.zoom).coerceIn(minZoom, maxZoom)
     }
     // the live zoom is only read inside effects, the layer and the badge: reading it in composition recomposed the
     // whole stage on every pinch frame
     val songNow by rememberUpdatedState(song)
+    val saveZoom by rememberUpdatedState(onZoom)   // always the current position: the loop below outlives a turn
+    LaunchedEffect(screen) { zoomTouched = false }   // a pinch ends on turning: the new position shows its own zoom
     LaunchedEffect(index, zoomTouched) {
         if (!zoomTouched) return@LaunchedEffect
         snapshotFlow { zoomState.floatValue }.collectLatest { z ->
             unsavedZoom.value = z != songNow.zoom
             delay(700)
-            if (z != songNow.zoom) onZoom(songNow.id, z)
+            if (unsavedZoom.value) saveZoom(songNow.id, z)   // a turn may have saved it already, on its own position
             unsavedZoom.value = false
             delay(2_500)
             zoomTouched = false
         }
     }
-    // the pedal changed songs before the pinch was saved: save on leaving it (with this song's state, kept on entry: on
-    // exit the screen is already building the next one)
-    DisposableEffect(index) {
+    // the pedal changed songs or the screen turned before the pinch was saved: save on leaving it (with this song's state
+    // and screen, kept on entry: on exit the stage is already building the next one)
+    DisposableEffect(index, screen) {
         val id = song.id
-        onDispose { if (unsavedZoom.value) onZoom(id, zoomState.floatValue) }
+        onDispose {
+            if (unsavedZoom.value) onZoom(id, zoomState.floatValue)
+            unsavedZoom.value = false
+        }
     }
     // measuring and paginating text is expensive on the Fire: during the pinch the text only scales, and the pages are
     // rebuilt when the fingers stop
@@ -504,7 +549,7 @@ fun StageScreen(
     // the USB interface becoming ready restarts it only when the metronome sounds there: with the device output, play on
     // the track (the player reaching the interface) restarted the click from beat 1 mid-song (audit 02/11)
     val usbRestart = metroUsbReady && look.playerMode && look.metroUsbOut >= 0
-    LaunchedEffect(metroOn, metroBpm, look.metroSound, usbRestart) {
+    LaunchedEffect(metroOn, metroBpm, look.metroSound, look.metroCount, look.metroVolume, usbRestart) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
@@ -529,17 +574,28 @@ fun StageScreen(
     // the beat is read here and in the draw phase only: reading it in composition recomposed the whole stage on every
     // beat, for the whole show (audit 30/10). Keyed by the song: the beat counter is a new one for each song, and this
     // kept watching the first song's, so after changing songs the metronome stopped blinking (device test, 02/11)
+    val countOn by rememberUpdatedState(look.metroCount)
     LaunchedEffect(index) {
         androidx.compose.runtime.snapshotFlow { metroBeat }.collectLatest { beat ->
             if (beat < 0) { metroPulse.snapTo(0f); return@collectLatest }
+            // the count-in's pauses don't blink either, like the sound (user, 07/11)
+            if (countOn && br.app.stagebook.domain.MetronomeClick.silent(beat.toLong(), br.app.stagebook.domain.MetronomeClick.COUNT_IN_SKIP)) {
+                metroPulse.snapTo(0f); return@collectLatest
+            }
             metroPulse.snapTo(if (beat % 4 == 0) 1f else 0.6f)
             // at full speed whatever Android's animation scale: at 0 (animations off, seen on a Chuwi tablet) the
             // blink ended before being drawn and the glow never showed
             kotlinx.coroutines.withContext(FullSpeedMotion) { metroPulse.animateTo(0f, tween(METRO_FLASH_MS)) }
         }
     }
-    val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat in 0 until METRO_COUNT) metroBeat + 1 else 0 } }
-    val metroColor = Color(look.metroGlowColor)
+    // "1 . 2 . 1 2 3 4": nothing on the pauses (user, 07/11)
+    val countIn by remember(index) { androidx.compose.runtime.derivedStateOf { if (metroBeat >= 0) br.app.stagebook.domain.MetronomeClick.countLabel(metroBeat) else 0 } }
+    // during the count-in the blink, the glow and the big number take another color: it reads as "counting", not the song
+    val counting by remember(index, look.metroCount) {   // the setting is a plain value here: it keys the state
+        androidx.compose.runtime.derivedStateOf { look.metroCount && metroBeat in 0 until br.app.stagebook.domain.MetronomeClick.COUNT_IN_BEATS }
+    }
+    val countColor = MaterialTheme.colorScheme.tertiary
+    val metroColor = if (counting) countColor else Color(look.metroGlowColor)
     fun go(forward: Boolean) {
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
@@ -637,12 +693,13 @@ fun StageScreen(
         val wide = wideLists()
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        Row(Modifier.fillMaxWidth().padding(top = Spacing.m, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(top = Spacing.s, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
         BoxWithConstraints(Modifier.weight(1f)) {
         val titleMax = maxWidth
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        // the title where the other screens have it: their margin is smaller than the lyrics', and so is the gap after the arrow
+        Row(Modifier.fillMaxWidth().offset(x = Spacing.m - Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
             if (onBack != null) {
@@ -806,7 +863,9 @@ fun StageScreen(
             val gutter = with(LocalDensity.current) { Spacing.xxl.roundToPx() }
             // never break a word in the middle: the lyrics don't go over the size at which the longest word fits
             val widest = remember(lines, look.fontSp, look.bold, look.font) {
+                // a tab isn't a word: it shrinks on its own (fitTabs), and it held whole songs at 10 sp with no room to pinch
                 val words = lines.asSequence()
+                    .filterNot { it.hasStringAnnotations(TAB_TAG, 0, it.length) }
                     .flatMap { it.text.split(SPACES).asSequence() }
                     .filter { it.isNotEmpty() }
                     .distinct()
@@ -824,10 +883,12 @@ fun StageScreen(
             val stripPlace = if (look.chords && (stripChordCount > 0 || stripHidden > 0)) look.chordList else ChordListPlace.NONE
             // the diagrams fill the width: as many rows as needed, the chords spread evenly over them, each cell widened to
             // the row's width (up to STRIP_MAX_SCALE: a few chords don't end up far apart)
-            // the corner × keeps its own room, so it never sits on a chord
             fun stripSize(columnWidth: Int) = with(density) {
-                val room = columnWidth - STRIP_CLOSE_WIDTH.toPx()
-                val cell = stripCell(room.toDp())
+                val room = columnWidth.toFloat()
+                // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
+                // audit 02/11)
+                val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
+                val cell = stripCell(room.toDp(), height.toDp())
                 val item = cell.width.toPx()
                 val perRowMax = maxOf(1, (room / item).toInt())
                 val fewestRows = maxOf(1, (stripChordCount + perRowMax - 1) / perRowMax)
@@ -836,42 +897,73 @@ fun StageScreen(
                 val scale = (((room / perRowEven).toInt() - 1) / item).coerceIn(1f, STRIP_MAX_SCALE)
                 val perRow = maxOf(1, (room / (item * scale)).toInt())
                 val rows = (stripChordCount + perRow - 1) / perRow
-                // with some chord hidden, the ↶ that brings them back takes a row of its own (it overlapped the lyrics;
-                // audit 02/11)
-                val restore = if (stripHidden > 0) STRIP_RESTORE_HEIGHT.toPx() else 0f
-                val tall = if (stripChordCount == 0) restore else rows * cell.height.toPx() + restore
-                scale to tall + Spacing.m.toPx()
+                // a row per line of the page, so a list taller than a column runs on to the next at full size: shrunk it
+                // couldn't be read, and cut its last rows were lost (a phone on its side, user 06/11)
+                val heights = List(maxOf(rows, 1)) { if (stripChordCount == 0) 0f else cell.height.toPx() }.toMutableList()
+                heights[heights.lastIndex] += restore + Spacing.m.toPx()
+                StripLayout(scale, heights.map { it.toInt() }, cell, perRow)
             }
+            // what the size depends on, in values that hold on another launch and another device. A hash, not the lyrics
+            val language = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].toLanguageTag()
+            val fitKey = listOf(
+                StageFit.SIZES_VERSION, shownText.hashCode(), width, height, density.density, density.fontScale, language, look.fontSp, look.bold, look.font,
+                look.columns, look.chords, look.chordScale, look.showSections, look.translateSections, look.sectionScale, look.sectionFont, stripPlace,
+            ).joinToString("|").hashCode().toString(36)
+            fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
+                // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
+                val zoomed = styleFor(z)
+                val shown = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, zoomed, w), zoomed, w, height, with(density) { zoomed.fontSize.toPx() })
+                val text = lineHeights(measurer, shown.map { it.text }, zoomed, w)
+                // the chord list is a line of the song, on one page only
+                val strip = stripSize(w).rows.map { Pagination.Line(it, false, chordList = true) }
+                val measured = when (stripPlace) {
+                    ChordListPlace.TOP -> strip + text
+                    ChordListPlace.BOTTOM -> text + strip
+                    ChordListPlace.NONE -> text
+                }
+                val sheets = Pagination.sheets(measured, height, cols)
+                return StageFit.Sheets(sheets.size, Pagination.cutsVerse(measured, height), Pagination.thinFirstPage(measured, sheets.flatten(), height), Pagination.crossesSheet(measured, sheets))
+            }
+            val room = StageFit.Room(screen, width, height)
+            var laidOut by remember { mutableStateOf(room) }
+            var lastFit by remember(index) { mutableStateOf<br.app.stagebook.data.model.ScreenZoom?>(null) }   // held for the frame of a turn
+            val midTurn = StageFit.midTurn(laidOut, room)
+            SideEffect { laidOut = room }
             // the page at the automatic zoom: found once per song and screen, not on every recomposition
-            val autoFit = remember(autoWanted, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
-                if (!autoWanted || lines.isEmpty()) null else {
-                    fun sheets(z: Float, w: Int, cols: Int, room: Int): StageFit.Sheets {
-                        val measured = measureLines(styleFor(z), w)
-                        return StageFit.Sheets(Pagination.sheets(measured, room, cols).size, Pagination.cutsVerse(measured, room))
-                    }
+            val autoFit = remember(autoWanted, song.fit, fitKey, midTurn, sourced, lines, width, height, fitOne, fitTwo, look.fontSp, look.bold, look.font, look.columns, stripPlace, stripChordCount, stripHidden) {
+                if (!autoWanted || lines.isEmpty()) null else if (midTurn) song.fit ?: lastFit else song.fit?.takeIf { it.fit == fitKey } ?: run {
                     val min = StageFit.autoMinZoom(look.fontSp)
-                    fun room(w: Int) = if (stripPlace == ChordListPlace.NONE) height else height - stripSize(w).second.toInt()
+                    val oneColumn by lazy { sheets(minOf(min, fitOne), width, 1).count }
                     val cols = when {
                         look.columns != StageColumns.AUTO -> StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
-                        sheets(minOf(min, fitOne), width, 1, room(width)).count <= 1 -> 1
+                        oneColumn <= 1 -> 1
+                        // on its side one column leaves half the screen empty: two win whenever they take fewer pages
+                        width > height && min <= fitTwo && sheets(min, halfWidth, 2).count < oneColumn -> 2
                         else -> StageFit.columns(
                             StageColumns.AUTO,
                             fitsOnePageInOneColumn = false,
-                            lineWidthsPx = widths(measurer, lines.filter { it.isNotEmpty() && it.spanStyles.isEmpty() }, styleFor(1f)),
+                            // judged at the smallest size it may use: at the size in Settings large lyrics never fit half the screen
+                            lineWidthsPx = widths(measurer, lines.filter { it.isNotEmpty() && it.spanStyles.isEmpty() }, styleFor(min)),
                             columnWidthPx = halfWidth,
-                            zoomFitsTwoColumns = 1f <= fitTwo,
+                            zoomFitsTwoColumns = min <= fitTwo,
                         )
                     }
                     val w = if (cols == 2) halfWidth else width
                     val limit = if (cols == 2) fitTwo else fitOne
                     val top = minOf(StageFit.AUTO_MAX_ZOOM, Look.MAX_STAGE_FONT / look.fontSp, limit)
-                    StageFit.autoZoom(minOf(min, limit), top) { sheets(it, w, cols, room(w)) } to cols
+                    val at = StageFit.measuredOnce { sheets(it, w, cols) }
+                    val saving = StageFit.autoPageFloor(minOf(min, limit), minOf(StageFit.autoFewerZoom(look.fontSp), limit), at)
+                    val floor = StageFit.autoFloor(saving, minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
+                    br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }
-            SideEffect { autoZoomNow = autoFit?.first ?: 1f }
+            SideEffect { autoZoomNow = autoFit?.zoom ?: 1f; lastFit = autoFit }
+            // calculated here for the first time: it stays in the song, for this screen
+            LaunchedEffect(autoFit, song.fit, midTurn) { if (autoFit != null && autoFit != song.fit && !midTurn) onFit(song.id, autoFit) }
             // during a pinch the fingers rule, until it's saved in the song
             val auto = autoFit.takeIf { !zoomTouched }
-            val shownZoom = auto?.first ?: layoutZoom
+            // layoutZoom trails the fingers: without a pinch the saved size is drawn at once, or turning draws the old one first
+            val shownZoom = auto?.zoom ?: if (zoomTouched) layoutZoom else song.zoom.coerceIn(minZoom, maxZoom)
             // automatic: decides by this song's lines at the size it shows (1 column)
             val styleOne = styleFor(minOf(shownZoom, fitOne))
             // heights in 1 column: automatic needs them to decide and, when it picks 1 column, they're the same as the
@@ -879,10 +971,12 @@ fun StageScreen(
             val oneLines = remember(lines, styleOne, width) { lazy { measureLines(styleOne, width) } }
             // scroll (T13): always one column
             val scrollMode = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
-            val columns = remember(lines, styleOne, width, height, look.columns, shownZoom, fitTwo, scrollMode, auto) {
+            val columns = remember(lines, sourced, styleOne, width, height, look.columns, shownZoom, fitOne, fitTwo, scrollMode, auto, stripPlace, stripChordCount, stripHidden) {
                 if (scrollMode) 1
-                else if (auto != null) auto.second
+                else if (auto != null) auto.columns
                 else if (look.columns != StageColumns.AUTO) StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
+                // a pinch keeps what the automatic size chose on its side: long lyrics in one column took three times the pages
+                else if (width > height && shownZoom <= fitTwo && sheets(shownZoom, halfWidth, 2).count < sheets(minOf(shownZoom, fitOne), width, 1).count) 2
                 else StageFit.columns(
                     StageColumns.AUTO,
                     fitsOnePageInOneColumn = Pagination.paginate(oneLines.value, height).size <= 1,
@@ -900,14 +994,12 @@ fun StageScreen(
             // keep the space above (otherwise the 2nd part got a gap with no chord at all). The song's chord list at
             // the top or end (only in the lyrics and chords profile): a space reserved in the text, as tall as the rows
             // of diagrams at this width, so the pagination counts it.
-            val (stripScale, stripTall) = stripSize(columnWidth)
-            val cell = with(density) { stripCell((columnWidth - STRIP_CLOSE_WIDTH.toPx()).toDp()) }
-            val stripEm = with(density) { stripTall / style.fontSize.toPx() }
-            val fitted = remember(sourced, style, columnWidth, stripPlace, stripEm) {
-                val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth)
-                val strip = StageLine(chordListLine(stripEm), -1)
+            val stripLayout = stripSize(columnWidth)
+            val fitted = remember(sourced, style, columnWidth, height, stripPlace, stripLayout) {
+                val split = fitTabs(measurer, splitWrappedChordLines(measurer, sourced, style, columnWidth), style, columnWidth, height, with(density) { style.fontSize.toPx() })
+                val strip = stripLayout.rows.mapIndexed { row, tall -> StageLine(chordListLine(with(density) { tall / style.fontSize.toPx() }, row), -1) }
                 when (stripPlace) {
-                    ChordListPlace.TOP -> listOf(strip) + split
+                    ChordListPlace.TOP -> strip + split
                     ChordListPlace.BOTTOM -> split + strip
                     ChordListPlace.NONE -> split
                 }
@@ -998,7 +1090,7 @@ fun StageScreen(
             AnimatedContent(
                 modifier = Modifier.graphicsLayer {
                     // while the pinch hasn't stopped, the current page only scales (from the top corner)
-                    val pinchScale = minOf(zoomState.floatValue, fit) / minOf(layoutZoom, fit)
+                    val pinchScale = if (zoomTouched) minOf(zoomState.floatValue, fit) / minOf(layoutZoom, fit) else 1f
                     scaleX = pinchScale
                     scaleY = pinchScale
                     transformOrigin = TransformOrigin(0f, 0f)
@@ -1019,7 +1111,7 @@ fun StageScreen(
             ) { content ->
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(with(LocalDensity.current) { gutter.toDp() })) {
                     content.columns.forEachIndexed { column, text ->
-                        val strip = remember(text) { text.getStringAnnotations(CHORD_LIST_TAG, 0, text.length).firstOrNull() }
+                        val strip = remember(text) { text.getStringAnnotations(CHORD_LIST_TAG, 0, text.length) }
                         var laid by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
                         Box(Modifier.weight(1f).fillMaxHeight().then(if (scrollMode) Modifier.clipToBounds() else Modifier)) {
                             ChordText(
@@ -1035,8 +1127,8 @@ fun StageScreen(
                             )
                             // the chord list, over the space reserved for it
                             val l = laid
-                            if (strip != null && l != null && strip.start < l.layoutInput.text.length) {
-                                val top = l.getLineTop(l.getLineForOffset(strip.start)).roundToInt()
+                            if (strip.isNotEmpty() && l != null && strip.first().start < l.layoutInput.text.length) {
+                                val top = l.getLineTop(l.getLineForOffset(strip.first().start)).roundToInt()
                                 ChordStrip(
                                     shownText,
                                     look.instrument,
@@ -1044,8 +1136,10 @@ fun StageScreen(
                                     Color(look.chordColor),
                                     // in scroll mode the list moves with the lyrics (it sits outside the text's moved layer)
                                     Modifier.offset { IntOffset(0, top - if (scrollMode) scrollY.value.roundToInt() else 0) },
-                                    cell = cell,
-                                    scale = stripScale,
+                                    cell = stripLayout.cell,
+                                    scale = stripLayout.scale,
+                                    from = strip.first().item.toInt() * stripLayout.perRow,
+                                    until = (strip.last().item.toInt() + 1) * stripLayout.perRow,
                                     onHide = { hidingChord = it },
                                     onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
@@ -1063,7 +1157,7 @@ fun StageScreen(
                     countIn.toString(),
                     // big enough for the band to see from across the stage
                     style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 200.sp, lineHeight = 200.sp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = countColor,
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
@@ -1111,16 +1205,29 @@ fun StageScreen(
                 onDismiss = { mixerOpen = false },
             )
             if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter))
+            // the look and time of the app's messages, centred above the footer: the metronome and the pages stay free
+            if (note.isNotEmpty()) {
+                Text(
+                    note,
+                    Modifier.align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
+                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
-                onReset = { zoom = StageFit.CHOSEN_DEFAULT_ZOOM.coerceIn(minZoom, maxZoom); zoomTouched = true },
-                // back to automatic: what's saved goes, and the page decides the size again
-                onAuto = if (look.autoZoom && !scrollMode) ({
+                // what's saved for this screen goes, and the page or Settings decide the size again
+                onReset = {
                     unsavedZoom.value = false
                     zoomTouched = false
                     onZoom(song.id, 1f)
-                }) else null,
+                },
+                auto = !scrollMode,
                 // the list's drawings keep their size: without them there's nothing to tell apart
                 scoped = look.chords && look.chordList != ChordListPlace.NONE,
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -1158,7 +1265,7 @@ fun StageScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            StageClock(fg.copy(alpha = 0.7f))
+            StageClock(look.clockMode, look.showStart, look.showMinutes, fg.copy(alpha = 0.7f), onNextClock, onStepShow, onRestartShow)
             // scroll: auto-scroll ▶/⏸ and speed (−/+), on the clock line (outside the lyrics). A single icon (lit while
             // scrolling); the small window has play and speed (user's request, 29/10). Metronome: while playing, the
             // icon becomes stop and blinks on the beat (stronger on 1); when stopped, it opens the small window
@@ -1170,7 +1277,7 @@ fun StageScreen(
                         if (metroOn) Icon(
                             AppIcons.Stop, stringResource(R.string.metro_stop),
                             Modifier.graphicsLayer { alpha = 0.35f + 0.65f * metroPulse.value },
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (counting) countColor else MaterialTheme.colorScheme.primary,
                         )
                         else Icon(AppIcons.Metronome, stringResource(R.string.metro_title), tint = fg.copy(alpha = 0.7f))
                     }
@@ -1235,7 +1342,8 @@ fun StageScreen(
                 if (a <= 0f || !look.metroGlow) return@drawBehind
                 val c = metroColor.copy(alpha = a * METRO_GLOW_ALPHA)
                 val clear = metroColor.copy(alpha = 0f)
-                val accent = metroBeat >= 0 && metroBeat % 4 == 0   // beat 1 of the bar: wider glow
+                val accent = metroBeat >= 0 && br.app.stagebook.domain.MetronomeClick.accented(
+                    metroBeat.toLong(), 4, if (look.metroCount) br.app.stagebook.domain.MetronomeClick.COUNT_IN_SKIP else 0L)   // beat 1 of the bar: wider glow
                 val g = (if (accent) METRO_GLOW_ACCENT else METRO_GLOW).toPx().coerceAtMost(size.minDimension / 2)
                 drawRect(Brush.verticalGradient(listOf(c, clear), 0f, g), size = androidx.compose.ui.geometry.Size(size.width, g))
                 drawRect(Brush.verticalGradient(listOf(clear, c), size.height - g, size.height), topLeft = Offset(0f, size.height - g), size = androidx.compose.ui.geometry.Size(size.width, g))
@@ -1248,7 +1356,7 @@ fun StageScreen(
 
 /** "Zoom at 120%" while adjusting, with a shortcut back to the default size; [scoped]: says what it changes. */
 @Composable
-private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, onAuto: (() -> Unit)?, scoped: Boolean, modifier: Modifier = Modifier) {
+private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit, auto: Boolean, scoped: Boolean, modifier: Modifier = Modifier) {
     AnimatedVisibility(visible, modifier, enter = fadeIn(), exit = fadeOut()) {
         // read in here: during the pinch only the badge recomposes
         val percent = percent()
@@ -1267,14 +1375,13 @@ private fun ZoomBadge(visible: Boolean, percent: () -> Int, onReset: () -> Unit,
                     }
                     if (scoped) Text(stringResource(R.string.stage_zoom_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (onAuto != null) TextButton(onClick = onAuto) { Text(stringResource(R.string.stage_zoom_auto), maxLines = 1) }
-                // at 100% it only hides: leaving would pull the rest of the notice to the side
-                val atDefault = percent == 100
+                // nothing to go back to at 100% with no automatic: it only hides, leaving would pull the notice to the side
+                val idle = !auto && percent == 100
                 TextButton(
                     onClick = onReset,
-                    enabled = !atDefault,
-                    modifier = if (atDefault) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier,
-                ) { Text(stringResource(R.string.stage_zoom_reset), maxLines = 1) }
+                    enabled = !idle,
+                    modifier = if (idle) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier,
+                ) { Text(stringResource(if (auto) R.string.stage_zoom_auto else R.string.stage_zoom_reset), maxLines = 1) }
             }
         }
     }
@@ -1299,7 +1406,7 @@ internal fun lineHeights(measurer: TextMeasurer, lines: List<AnnotatedString>, s
         val end = starts[i] + maxOf(l.length, 1) - 1
         val first = r.getLineForOffset(starts[i])
         val last = r.getLineForOffset(end)
-        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length))
+        Pagination.Line(ceil(r.getLineBottom(last) - r.getLineTop(first)).toInt(), l.isEmpty(), l.hasStringAnnotations(SECTION_TAG, 0, l.length), l.hasStringAnnotations(TAB_TAG, 0, l.length), l.hasStringAnnotations(CHORD_LIST_TAG, 0, l.length))
     }
 }
 
@@ -1330,15 +1437,21 @@ internal fun splitWrappedChordLines(measurer: TextMeasurer, lines: List<StageLin
     return lines.flatMapIndexed { i, l -> pieces[i]?.map { StageLine(it, l.source) } ?: listOf(l) }
 }
 
-/** Tablature too wide for the column: the monospace shrinks until it fits (never wraps, or the columns get lost). */
-internal fun fitTabs(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int): List<StageLine> {
-    if (lines.none { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }) return lines
+/**
+ * Tablature bigger than the view: the monospace shrinks until it fits the column's width and the page's height, in one
+ * column or two. It never wraps or splits, or the strings stop lining up.
+ */
+internal fun fitTabs(measurer: TextMeasurer, lines: List<StageLine>, style: TextStyle, width: Int, height: Int, fontPx: Float): List<StageLine> {
+    fun StageLine.isTab() = text.hasStringAnnotations(TAB_TAG, 0, text.length)
+    if (lines.none { it.isTab() }) return lines
     // the whole block stays the same size (that of the widest line), so the strings stay aligned with each other
-    val widest = lines.filter { it.text.hasStringAnnotations(TAB_TAG, 0, it.text.length) }
-        .maxOf { measurer.measure(it.text, style, softWrap = false).size.width }
-    if (widest <= width) return lines
-    val em = TAB_EM * width / widest * 0.98f
-    return lines.map { l -> if (l.text.hasStringAnnotations(TAB_TAG, 0, l.text.length)) StageLine(tabLine(l.text.text, em), l.source) else l }
+    val widest = lines.filter { it.isTab() }.maxOf { measurer.measure(it.text, style, softWrap = false).size.width }
+    var run = 0
+    var strings = 0
+    lines.forEach { run = if (it.isTab()) run + 1 else 0; strings = maxOf(strings, run) }
+    val em = minOf(TAB_EM, TAB_EM * width / widest * 0.98f, height / (strings * TAB_LINE_HEIGHT * fontPx) * 0.98f)
+    if (em >= TAB_EM) return lines
+    return lines.map { l -> if (l.isTab()) StageLine(tabLine(l.text.text, em), l.source) else l }
 }
 
 internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style: TextStyle): List<Int> {
@@ -1349,6 +1462,9 @@ internal fun widths(measurer: TextMeasurer, texts: List<AnnotatedString>, style:
     val r = measurer.measure(all, style, softWrap = false)
     return List(r.lineCount) { ceil(r.getLineRight(it) - r.getLineLeft(it)).toInt() }
 }
+
+/** The chord list on a page: each of its [rows] is a line of the song, [perRow] chords of [cell] widened by [scale]. */
+private data class StripLayout(val scale: Float, val rows: List<Int>, val cell: StripCell, val perRow: Int)
 
 /** What the gesture detector must always read up to date (it doesn't restart on every page). */
 private class GestureTargets(
@@ -1363,12 +1479,38 @@ private class GestureTargets(
     val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )
 
+/**
+ * The player's notice: a short word sits on the footer (the note returned), clear of the metronome; what needs reading
+ * stays a message. [fresh] says whether it's new: the stage is made again for each song and setlist, and the same
+ * "USB output disconnected" came back on every one while the interface was away (user, 07/11).
+ */
+@Composable
+internal fun rememberPlayerNote(notice: String, fresh: (String) -> Boolean): String {
+    val message = LocalAppMessage.current
+    var note by remember { mutableStateOf("") }
+    LaunchedEffect(notice) {
+        if (!fresh(notice)) return@LaunchedEffect
+        if (notice.length in 1..NOTE_MAX_CHARS) {
+            message.host.currentSnackbarData?.dismiss()   // a warning from before the interface came back is over
+            note = notice
+            kotlinx.coroutines.delay(NOTE_MS)
+            note = ""
+        } else {
+            note = ""   // another notice or none: the one on the footer is over (its own timer died with this effect's last run)
+            if (notice.isNotEmpty()) message.show(notice, long = true)
+        }
+    }
+    return note
+}
+
 /** `starts`: index in `lines` of the first line of each column (-1 = empty column). */
 // also carries the sheet's style and columns: the page leaving in the animation isn't rebuilt (or resized) with the new
 // song's
 private const val FLASH_MS = 1500L
 private const val METRO_FLASH_MS = 180
 private const val STRIP_MAX_SCALE = 2.5f
+private const val NOTE_MAX_CHARS = 40
+private const val NOTE_MS = 10_000L   // as long as the app's long messages
 private val STRIP_RESTORE_HEIGHT = 40.dp   // the chord list with every chord hidden: just the ↶
 
 /** Animation speed that ignores Android's animation scale (the metronome blink is information, not decoration). */
@@ -1377,7 +1519,6 @@ private const val KEYBOARD_HINT_MS = 6_000L
 private val METRO_GLOW = 20.dp          // edge glow, fading inward (it doesn't reach the lyrics)
 private val METRO_GLOW_ACCENT = 26.dp   // a bit wider on beat 1 of the bar
 private const val METRO_GLOW_ALPHA = 0.8f
-private const val METRO_COUNT = 4   // the count-in is one bar of 4
 private const val FLASH_ALPHA = 0.22f
 
 private data class PageContent(
@@ -1448,7 +1589,8 @@ private class PageHit {
             val tolerance = chordPx * 0.3f
             text.getStringAnnotations(CHORD_TAG, layout.getLineStart(line), layout.getLineEnd(line)).forEach { a ->
                 val x0 = layout.getHorizontalPosition(a.start, true)
-                if (x >= x0 - tolerance && x <= x0 + a.item.length * chordPx * 0.7f + tolerance) return a.item
+                // an annotation ([*2x]) is only text: a tap there turns the page
+                if (!isAnnotation(a.item) && x >= x0 - tolerance && x <= x0 + a.item.length * chordPx * 0.7f + tolerance) return a.item
             }
         }
         // chords-only line: the word under the finger
@@ -1834,19 +1976,97 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
     }
 }
 
-/** Current time in the device's format, updated at the turn of each minute. */
+/**
+ * The time in the device's format, or the show's counter (user, 07/11): a tap goes clock → show time → time left, a long
+ * press opens the show's length (in half hours) and restarts it. Updated at the turn of each minute.
+ */
 @Composable
-private fun StageClock(color: Color, modifier: Modifier = Modifier) {
+private fun StageClock(
+    mode: br.app.stagebook.data.model.StageClockMode,
+    start: Long,
+    length: Int,
+    color: Color,
+    onNext: () -> Unit,
+    onStep: (up: Boolean) -> Unit,
+    onRestart: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val format = remember(context) { DateFormat.getTimeFormat(context) }
-    var now by remember { mutableStateOf(Date()) }
-    LaunchedEffect(Unit) {
+    val clock = mode == br.app.stagebook.data.model.StageClockMode.CLOCK
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(clock, start) {
         while (true) {
-            delay(60_000 - System.currentTimeMillis() % 60_000)
-            now = Date()
+            val t = System.currentTimeMillis()
+            delay(if (clock) 60_000 - t % 60_000 else ShowTimer.untilNextMinute(start, t))
+            now = System.currentTimeMillis()
         }
     }
-    Text(format.format(now), style = MaterialTheme.typography.titleLarge, color = color, maxLines = 1, modifier = modifier)
+    var window by remember { mutableStateOf(false) }
+    val left = mode == br.app.stagebook.data.model.StageClockMode.LEFT
+    val text = when (mode) {
+        br.app.stagebook.data.model.StageClockMode.CLOCK -> format.format(Date(now))
+        br.app.stagebook.data.model.StageClockMode.ELAPSED -> ShowTimer.format(ShowTimer.elapsedMinutes(start, now))
+        br.app.stagebook.data.model.StageClockMode.LEFT -> ShowTimer.format(ShowTimer.leftMinutes(start, now, length))
+    }
+    val tint = if (left && ShowTimer.warn(start, now, length)) MaterialTheme.colorScheme.error else color
+    val label = stringResource(
+        when (mode) {
+            br.app.stagebook.data.model.StageClockMode.CLOCK -> R.string.stage_clock_time
+            br.app.stagebook.data.model.StageClockMode.ELAPSED -> R.string.stage_clock_elapsed
+            br.app.stagebook.data.model.StageClockMode.LEFT -> R.string.stage_clock_left
+        },
+    )
+    Box(modifier) {
+        Row(
+            Modifier
+                .clip(MaterialTheme.shapes.small)
+                .combinedClickable(onClickLabel = stringResource(R.string.stage_clock_next), onLongClick = { window = true }, onClick = onNext)
+                .semantics(mergeDescendants = true) { contentDescription = "$label $text" },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            // the counter carries its icon: "1:05" alone reads as the time of day
+            if (!clock) Icon(if (left) AppIcons.Hourglass else AppIcons.Timer, null, Modifier.size(Sizes.icon), tint = tint)
+            Text(text, style = MaterialTheme.typography.titleLarge, color = tint, maxLines = 1)
+        }
+        if (window) ShowLengthWindow(length, onStep, { onRestart(); window = false }) { window = false }
+    }
+}
+
+/** The show's length, half an hour at a time, and a restart of its counter: a small window over the clock. */
+@Composable
+internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
+    val density = LocalDensity.current
+    val gap = with(density) { Spacing.s.roundToPx() }
+    // the length gets the room of its widest value, so − and + stay put as "1h" turns into "1h30" (S26, 07/11)
+    val lengthStyle = MaterialTheme.typography.headlineSmall
+    val measurer = rememberTextMeasurer()
+    val lengthWidth = remember(measurer, lengthStyle, density) {
+        val widest = (ShowTimer.MIN_MINUTES..ShowTimer.MAX_MINUTES step ShowTimer.STEP_MINUTES)
+            .maxOf { measurer.measure(ShowTimer.lengthText(it), lengthStyle, maxLines = 1).size.width }
+        with(density) { widest.toDp() }
+    }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = AboveAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(stringResource(R.string.stage_show_title), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
+                    Text(ShowTimer.lengthText(length), Modifier.widthIn(min = lengthWidth), style = lengthStyle, textAlign = TextAlign.Center, maxLines = 1)
+                    IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
+                }
+                ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
+            }
+        }
+    }
 }
 
 /**
@@ -1860,6 +2080,28 @@ internal fun KeepScreenOn() {
     DisposableEffect(view) {
         ScreenOnCount.add(view)
         onDispose { ScreenOnCount.remove(view) }
+    }
+}
+
+/** Do not disturb while the stage is in front: off when the app leaves the screen or the stage closes. */
+@Composable
+internal fun StageDoNotDisturb(on: Boolean) {
+    val context = LocalContext.current.applicationContext
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(on, owner) {
+        if (!on) return@DisposableEffect onDispose {}
+        val watch = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> StageQuiet.set(context, true)
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> StageQuiet.set(context, false)
+                else -> Unit
+            }
+        }
+        owner.lifecycle.addObserver(watch)   // already started: ON_START arrives right away
+        onDispose {
+            owner.lifecycle.removeObserver(watch)
+            StageQuiet.set(context, false)
+        }
     }
 }
 

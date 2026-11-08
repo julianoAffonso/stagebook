@@ -6,6 +6,8 @@ import br.app.stagebook.ui.band.BandRequestDialog
 import br.app.stagebook.data.BandLink
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import kotlinx.coroutines.flow.receiveAsFlow
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -56,7 +58,13 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var webEditor: br.app.stagebook.data.web.WebEditorServer
     @Inject lateinit var conduct: br.app.stagebook.data.BandConduct   // created here so a follower answers right away
     @Inject lateinit var trust: br.app.stagebook.data.BandTrust
+    @Inject lateinit var receiveLinks: br.app.stagebook.data.ReceiveLinks
     private val pedal = PedalInput()
+
+    // receive links (user, 07/11): tapped in a message or left in the clipboard by the site; the screens open the
+    // receive screen with the code. Buffered: a link that opened the app arrives before the screens are drawn.
+    private val receiveCodes = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.BUFFERED)
+    private var clipboardPending = false
 
     // already in a band: the band is used as soon as the app opens, so the local network permission is asked on open
     // (otherwise Android shows its device chooser instead); without a band it's asked in Settings → Band (user, 31/10)
@@ -106,6 +114,8 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) { midi.presses.collect { pedal.dispatch(it) } }
         }
         if (repository.library.value.look.bandOn && trust.members.value.isNotEmpty() && needsLocalNetwork(this)) localNetwork.launch(LOCAL_NETWORK)
+        if (savedInstanceState == null) openLink(intent)   // recreated: the link was already opened
+        val codes = receiveCodes.receiveAsFlow()
         // pedal keys go through a root that sees them before Android drops the first one after a touch (PedalKeyRoot)
         setContentView(PedalKeyRoot(this, pedal).apply { addView(ComposeView(context).apply { setContent {
             StagebookTheme {
@@ -120,7 +130,7 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -155,6 +165,8 @@ class MainActivity : ComponentActivity() {
         webEditor.setForeground(true)   // editor on the computer: only with the app open (T37)
         midi.setForeground(true)   // the saved Bluetooth pedal is looked for only with the app in front
         bandInternet.onAppOpen()   // band over the internet: checks the inbox once, on open
+        clipboardPending = true   // a link the site copied: looked at once, when the window gets focus
+        br.app.stagebook.player.PlayerService.setAppVisible(true)   // out of sight and idle, the player turns off
     }
 
     override fun onResume() {
@@ -167,6 +179,7 @@ class MainActivity : ComponentActivity() {
         band.setForeground(false)
         webEditor.setForeground(false)
         midi.setForeground(false)
+        br.app.stagebook.player.PlayerService.setAppVisible(false)
         super.onStop()
     }
 
@@ -175,6 +188,24 @@ class MainActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemBars()
+        if (hasFocus && clipboardPending) { clipboardPending = false; checkClipboard() }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openLink(intent)   // singleTask: a link tapped with the app already open comes here
+    }
+
+    private fun openLink(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        receiveLinks.fromIntent(intent.dataString)?.let { receiveCodes.trySend(it) }
+    }
+
+    // the site couldn't open the app (not installed yet) and copied the link: opened once per code. Not with the
+    // internet off (essential mode, T19: receiving by code is off) nor on stage (the show is never interrupted)
+    private fun checkClipboard() {
+        if (!repository.library.value.look.internetOn || stageGate.onStage.value) return
+        receiveLinks.fromClipboard()?.let { receiveCodes.trySend(it) }
     }
 
     private fun hideSystemBars() {

@@ -44,6 +44,15 @@ class ChordSpacingTest {
         assertTrue(line.text, !line.text.substringAfter("erra").contains(WORD_JOIN))
     }
 
+    // printed chord sheets keep the hyphen on the syllable ("fl-   ores"); in the middle of the room it read as two
+    // words, "fl -ores" (devices, 07/11)
+    @Test fun `the hyphen stays with its syllable`() {
+        listOf("[Fmaj7]fl[G]ores" to ("fl" to "ores"), "[Csus4]Olh[G]ei" to ("Olh" to "ei")).forEach { (raw, parts) ->
+            val text = chordLine(raw, ChordLook(true, 1f, Color.Yellow)).text
+            assertTrue(text, Regex("""${parts.first}$WORD_JOIN +${parts.second}""").matches(text))
+        }
+    }
+
     @Test fun `room between words stays blank`() {
         val line = chordLine("[Csus4]oi [A9]erra", ChordLook(true, 1f, Color.Yellow))
         assertTrue(line.text, !line.text.contains(WORD_JOIN))
@@ -127,5 +136,50 @@ class ChordSpacingTest {
         val line = chordLine(br.app.stagebook.domain.Chords.bracketChordLine("Intro: G D"), ChordLook(true, 1f, Color.Yellow))
         assertTrue(line.text, line.text == "Intro:   G   D")
         assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
+    }
+
+    // user, 07/11: Waiting For a Girl Like You showed its intro as lyrics, because of the note after the dash
+    @Test fun `chords with a note after a dash are a chord line`() {
+        val raw = br.app.stagebook.domain.Chords.bracketChordLine("Am G6 Am G6 - INTRO RIFF x 2")
+        val line = chordLine(raw, ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text == "Am   G6   Am   G6   -   INTRO   RIFF   x   2")
+        assertTrue(line.getStringAnnotations(CHORD_TAG, 0, line.length).isEmpty())
+    }
+
+    // ChordPro annotation (user, 07/11: Flores came with "at[*2x]é" and showed the bracket inside the word): the text
+    // sits above the lyrics like a chord, and it isn't one
+    @Test fun `an annotation sits above the lyrics`() {
+        val line = chordLine("[D5]Olhei at[*2x]é ficar", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, !line.text.contains('['))
+        val marks = line.getStringAnnotations(CHORD_TAG, 0, line.length).map { it.item }
+        assertTrue(marks.toString(), marks == listOf("D5", "*2x"))
+        assertTrue(br.app.stagebook.ui.stage.chordLabel("*2x") == "2x")
+        assertTrue(!br.app.stagebook.domain.Chords.isChord("*2x"))
+    }
+
+    // an annotation isn't sung on a syllable: inside a word it goes to the word's end, with no hyphen (user, 07/11)
+    @Test fun `an annotation inside a word moves to its end`() {
+        val line = chordLine("As flor[*2x]es que", ChordLook(true, 1f, Color.Yellow))
+        assertTrue(line.text, line.text.startsWith("As flores"))
+        assertTrue(line.text, !line.text.contains(br.app.stagebook.domain.WORD_JOIN))
+    }
+
+    // the room after an annotation fits what is drawn ("2x", without the asterisk) and a single space: "até" and
+    // "ficar" stood too far apart (devices, 07/11)
+    @Test fun `an annotation before a chord takes only the room it needs`() {
+        val line = chordLine("[D5]Olhei at[*2x]é [A]ficar", ChordLook(true, 1f, Color.Yellow))
+        val marks = line.getStringAnnotations(CHORD_TAG, 0, line.length).associate { it.item to it.start }
+        val room = line.text.substring(marks.getValue("*2x"), marks.getValue("A"))
+        val label = emWidth("2x") * 1.1f
+        assertTrue(line.text, emWidth(room) >= label)
+        assertTrue(line.text, emWidth(room.dropLast(1)) < label + emWidth(" "))
+    }
+
+    // the room opened for the chord before already parts the words: the annotation doesn't add its own space on top
+    @Test fun `an annotation after a padded chord adds no extra space`() {
+        val line = chordLine("Olhei [Csus4]at[*2x]é ficar", ChordLook(true, 1f, Color.Yellow))
+        val marks = line.getStringAnnotations(CHORD_TAG, 0, line.length).associate { it.item to it.start }
+        assertTrue(line.text, marks.getValue("*2x") == line.text.indexOf("ficar"))
+        room("Olhei [Csus4]at[*2x]é ficar", 1f)
     }
 }

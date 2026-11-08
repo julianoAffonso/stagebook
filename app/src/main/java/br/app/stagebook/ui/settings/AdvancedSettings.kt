@@ -74,7 +74,7 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
 
     private fun read() = AdvancedUi(
         canWrite = DeviceTweaks.canWrite(context),
-        on = DeviceTweak.entries.filter { DeviceTweaks.available(context, it) }.associateWith { DeviceTweaks.isOn(context, it) },
+        on = DeviceTweak.entries.filter { DeviceTweaks.available(context, it) }.associateWith { DeviceTweaks.shownOn(context, it) },
         batteryFree = DeviceTweaks.batteryFree(context),
         autoBlocker = br.app.stagebook.data.device.AutoBlocker.available(context),
     )
@@ -84,6 +84,8 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
 fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (!ui.canWrite) PermissionCard()
+        // these change the whole device and come back on every start: said before anyone wonders why
+        StatusNote(stringResource(R.string.advanced_rewrite), StatusTone.INFO)
         SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
             // freeing the app from battery saving only Android does, with the user's tap: a button, not a switch
             StatusNote(
@@ -101,7 +103,7 @@ fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBa
 
 @Composable
 private fun Tweaks(ui: AdvancedUi, group: DeviceTweak.Group, onTweak: (DeviceTweak, Boolean) -> Unit) {
-    DeviceTweak.entries.filter { it.group == group && it in ui.on }.forEach { t ->
+    DeviceTweak.entries.filter { it.shown && it.group == group && it in ui.on }.forEach { t ->
         SwitchRow(
             stringResource(t.label),
             ui.on[t] == true,

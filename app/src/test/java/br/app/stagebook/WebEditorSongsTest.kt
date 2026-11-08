@@ -53,6 +53,20 @@ class WebEditorSongsTest {
         assertTrue("clear() waited $ms ms", ms < 1_000)
     }
 
+    // the song's MIDI (user, 07/11): edited on the computer like in the app, held to MIDI's ranges, kept by an old page
+    @Test fun `MIDI is saved held to its ranges, and a page that sends none keeps it`() {
+        val r = call("POST", "/api/songs", """{"title":"Flores","text":"linha","midi":{"enter":[{"kind":"program","channel":40,"number":300}],"exit":[]}}""")
+        val id = idOf(r.text())
+        val m = repo.song(id)!!.midi!!.enter.single()
+        assertEquals(16, m.channel)
+        assertEquals(128, m.number)
+        call("PUT", "/api/songs/$id", """{"title":"Flores","text":"outra"}""")
+        assertEquals(128, repo.song(id)!!.midi!!.enter.single().number)
+        assertTrue(call("GET", "/api/songs/$id").text().contains("\"midi\""))
+        call("PUT", "/api/songs/$id", """{"title":"Flores","text":"outra","midi":{"enter":[],"exit":[]}}""")
+        assertNull(repo.song(id)!!.midi)
+    }
+
     @Test fun `creates a song - chords above the lyrics become ChordPro and the BPM goes to tempo`() {
         val r = call("POST", "/api/songs", """{"title":" Nova ","author":"Banda","tempo":"92","text":"G       D\nlinha de exemplo"}""")
         assertEquals(200, r.status)

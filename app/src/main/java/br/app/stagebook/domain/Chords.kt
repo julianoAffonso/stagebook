@@ -186,8 +186,16 @@ object Chords {
         val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
         // the "all" first: a lyric line stops at its first word that isn't a chord (it ran on every line of the stage
         // and the editor preview, and "any" parsed every word first; audit 03/11)
-        return body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)
+        if (body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)) return true
+        // a note after a dash: "Am G6 Am G6 - INTRO RIFF x 2" (user, 07/11). Two chords at least before it, or "E - eu
+        // que pensei" would be one
+        val dash = body.indexOfFirst { NOTE_DASH.matches(it) }
+        if (dash < 2 || dash == body.lastIndex) return false
+        val head = body.subList(0, dash)
+        return head.all { isChord(it) || chordLineExtras.matches(it) } && head.count(::isChord) >= 2
     }
+
+    private val NOTE_DASH = Regex("[-–—]+")
 
     /** A label in front of chords on a chords-only line: `Intro:` or `[Solo]`. */
     fun isChordLineLabel(t: String) = isLabel(t)
@@ -429,13 +437,20 @@ object Chords {
     /** The lyrics without chords: removes the `[C]`s, chords-only lines and directives. Section titles stay. */
     fun stripChords(text: String): String = text.split('\n').mapNotNull { line ->
         if (isDirective(line)) return@mapNotNull null
-        val hadChord = bracket.findAll(line).any { isChord(it.groupValues[1]) }
-        val clean = bracket.replace(line) { b -> if (isChord(b.groupValues[1])) "" else b.value }
+        // annotations ([*2x]) belong to the chord row: lyrics only drops them too
+        val hadChord = bracket.findAll(line).any { isChord(it.groupValues[1]) || isAnnotation(it.groupValues[1]) }
+        val clean = bracket.replace(line) { b -> if (isChord(b.groupValues[1]) || isAnnotation(b.groupValues[1])) "" else b.value }
         if (hadChord && clean.isBlank()) null else clean.replace(DOUBLE_SPACES, " ").trimEnd()
     }.joinToString("\n")
 
     /** Does the song have any chord? */
     fun hasChords(text: String): Boolean = bracket.findAll(text).any { isChord(it.groupValues[1]) }
+
+    /** Chords or annotations: what goes on the chord row above a stage line. */
+    fun hasChordRow(line: String): Boolean = bracket.findAll(line).any { isChord(it.groupValues[1]) || isAnnotation(it.groupValues[1]) }
+
+    /** A ChordPro annotation inside brackets, `[*2x]`: text above the lyrics, not a chord (no diagram, no transposing). */
+    fun isAnnotation(inner: String) = inner.length > 1 && inner.startsWith('*')
 }
 
 /** A song's key, capo and BPM ([Chords.meta]); [tempoText] is the directive as written (the field shows it). */

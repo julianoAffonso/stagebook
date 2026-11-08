@@ -1,0 +1,39 @@
+# The audio engine against the version validated on the desk, with a fake USB interface and noise for tracks (real ones
+# never go to git). Only when the engine changes. On macOS, where the simulator is written and run. Not a required check:
+# its timing tests can lose to a busy runner, and the desk still has the last word.
+name: Engine simulator
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - app/src/main/cpp/**
+      - tools/engine-sim/**
+      - .github/workflows/engine-sim.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-sim-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sim:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad  # v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: python3 -m pip install --break-system-packages numpy soundfile
+      - run: mkdir tracks && python3 tools/engine-sim/synthetic.py tracks
+      # the real-time checks (packet gaps, pacing) jitter on a shared runner; a real regression fails every attempt
+      - run: |
+          for attempt in 1 2 3; do
+            tools/engine-sim/run.sh tracks/t44100.ogg tracks/t48000.ogg && exit 0
+            echo "attempt $attempt failed"
+          done
+          exit 1

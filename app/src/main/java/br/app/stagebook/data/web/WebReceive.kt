@@ -50,6 +50,8 @@ class WebReceive(
         SetlistCloud.Received.NotFound -> Fetched.Problem("not_found")
         SetlistCloud.Received.Offline -> Fetched.Problem("offline")
         is SetlistCloud.Received.Newer -> Fetched.Problem("newer")
+        // an invite to the band is accepted on the device, not in the editor on the computer
+        is SetlistCloud.Received.Invite -> Fetched.Problem("not_found")
     }
 
     /** Received from the band (Import → Received from the band): the same review; once done it leaves the inbox. */

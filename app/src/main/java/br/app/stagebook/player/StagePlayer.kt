@@ -24,7 +24,9 @@ import br.app.stagebook.domain.MixerLevels
 import br.app.stagebook.domain.Spectrum
 import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
+import br.app.stagebook.data.device.DeviceTweaks
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,7 +86,13 @@ class StagePlayer @Inject constructor(
             repository.library.map { it.look.usbViaAndroid }.distinctUntilChanged().collect { via ->
                 val changed = PlayerService.viaAndroid != via
                 PlayerService.viaAndroid = via
-                if (changed) PlayerService.reconnect()
+                if (changed && PlayerService.running) {
+                    // the two go together: Android's USB routing is written (or given back) before connecting again
+                    routeScope.launch {
+                        DeviceTweaks.routeUsb(context, !via)
+                        withContext(Dispatchers.Main) { PlayerService.reconnect() }
+                    }
+                } else if (changed) PlayerService.reconnect()
             }
         }
         // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
@@ -200,7 +208,7 @@ class StagePlayer @Inject constructor(
         val p = Mixer.plan(cfg, lanes, measures)
         Engine.setMix(p.gains, p.norms, p.eqMask, p.route)
         // always the engine's 5 bands: a shorter list (an old or hand-edited file) made the native call throw (audit 01/11)
-        Engine.setEq(cfg.eqOn, cfg.eqGains())
+        Engine.setEq(p.eqMask != 0, cfg.eqGains())
     }
 
     // the loaded backing track's song: each track file belongs to one song
@@ -252,6 +260,18 @@ class StagePlayer @Inject constructor(
         }
     }
 
+    // The notice a stage last showed. The notice is the service's state ("USB output disconnected" stays while the
+    // interface is away) and the stage is made again for each song and setlist: each new one showed it again, the
+    // whole time (user, 07/11). Main thread only. An empty notice (player off) clears it.
+    private var noticeShown = ""
+
+    /** A stage is about to show the player's [notice]: false when a stage already showed this same one. */
+    fun firstShow(notice: String): Boolean {
+        if (notice == noticeShown) return false
+        noticeShown = notice
+        return true
+    }
+
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
         _usbReady.value = PlayerService.running && PlayerService.connected && PlayerService.outputKey.startsWith("usb:")
@@ -280,6 +300,26 @@ class StagePlayer @Inject constructor(
 
         @Volatile private var instance: StagePlayer? = null
 
+        // the only place that writes Android's USB routing: one thread, so a start and a stop can't cross
+        private val routeScope = br.app.stagebook.data.backgroundScope(Dispatchers.IO.limitedParallelism(1))
+
+        /** The service starts: on the engine route Android's own USB audio is switched off, then [then] runs on the main thread. */
+        @JvmStatic
+        fun routeUsbThen(context: Context, engineRoute: Boolean, then: Runnable) {
+            val app = context.applicationContext
+            routeScope.launch {
+                DeviceTweaks.routeUsb(app, engineRoute)
+                withContext(Dispatchers.Main) { then.run() }
+            }
+        }
+
+        /** The service stopped: the device's own value comes back. */
+        @JvmStatic
+        fun releaseUsbRoute(context: Context) {
+            val app = context.applicationContext
+            routeScope.launch { DeviceTweaks.routeUsb(app, false) }
+        }
+
         /** Player mode turned off in Settings: if the player had started, turn everything off. */
         fun turnOff() { instance?.shutdown() }
 
@@ -287,12 +327,15 @@ class StagePlayer @Inject constructor(
          * Metronome click into the USB interface (user, 02/11): mixed by the engine on the interface's clock. False when
          * the player isn't on a USB interface with that output: then the click stays on the device.
          */
-        fun usbClick(bpm: Int, out: br.app.stagebook.domain.MetronomeOut): Boolean {
+        fun usbClick(bpm: Int, out: br.app.stagebook.domain.MetronomeOut, skip: Long = 0, volume: Int = br.app.stagebook.domain.MetronomeClick.FULL_VOLUME): Boolean {
             if (out.device || !PlayerService.running || !PlayerService.connected) return false
             if (!PlayerService.outputKey.startsWith("usb:") || out.out + (if (out.pair) 1 else 0) >= PlayerService.outputCount) return false
             fun floats(s: ShortArray) = FloatArray(s.size) { s[it] / 32768f }
             val click = br.app.stagebook.domain.MetronomeClick
-            Engine.setClick(floats(click.click(false)), floats(click.click(true)), click.samplesPerBeat(bpm), out.out, if (out.pair) out.out + 1 else -1)
+            Engine.setClick(
+                floats(click.click(false, volume = volume)), floats(click.click(true, volume = volume)), click.samplesPerBeat(bpm),
+                out.out, if (out.pair) out.out + 1 else -1, skip,
+            )
             return true
         }
 
@@ -300,7 +343,10 @@ class StagePlayer @Inject constructor(
         fun interfaceName(): String = if (PlayerService.outputKey.startsWith("usb:")) PlayerService.outputName.orEmpty() else ""
 
         /** No click on USB (also when the player is off: the engine keeps the setting for its next start). */
-        fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1)
+        /** The song plays through Android: as media too, the click would follow it to the interface. */
+        fun viaAndroid() = PlayerService.viaAndroid
+
+        fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1, 0)
 
         private const val METER_MS = 66L          // ~15 reads per second
         private const val METER_IDLE_MS = 500L    // player off: only check whether it turned on

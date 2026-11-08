@@ -65,6 +65,12 @@ sealed interface ScanUi {
     /** Camera open; [problem] = the last QR scanned didn't work. */
     data class Scanning(val problem: ScanProblem? = null) : ScanUi
 
+    /**
+     * The code was an invite to the band (user, 07/11): who invites, to accept or not. [used]: someone else already took
+     * it (an invite lets in one person), nothing to accept.
+     */
+    data class Invite(val name: String, val joined: Boolean = false, val used: Boolean = false) : ScanUi
+
     /** Fetching by the internet code, or what went wrong. */
     data class Fetching(val problem: CodeProblem? = null) : ScanUi
 
@@ -93,13 +99,33 @@ class ScanSetlistViewModel @Inject constructor(
     private val trust: br.app.stagebook.data.BandTrust,
     private val connectivity: br.app.stagebook.data.Connectivity,
 ) : ViewModel() {
+    // who sent through the 3 words: on accepting, they join the band (and get my "ok")
+    private val senderNow = MutableStateFlow<br.app.stagebook.domain.BandProtocol.Hello?>(null)
+    private var sender by senderNow::value
+    // an invite read by the code: who invites (user, 07/11)
+    private var invite: br.app.stagebook.domain.BandProtocol.Hello? = null
+
+    /** Accepting the invite: who invited joins the band here, and my "ok" brings me into theirs. */
+    fun acceptInvite() {
+        val from = invite ?: return
+        viewModelScope.launch {
+            // an invite lets in one person, and someone else may have taken it since this screen opened (audit 07/11:
+            // both saw "joined" and only the first was ever let in); offline, the "ok" goes and the inviter decides
+            val now = cloud.receive(code)
+            if (now is SetlistCloud.Received.Invite && now.used) { _ui.value = ScanUi.Invite(from.name, used = true); return@launch }
+            bandInternet.accepted(code, from, invite = true)
+            _ui.value = ScanUi.Invite(from.name, joined = true)
+        }
+    }
+
     /** The sender, if they're in the band (the online request goes to their inbox). */
     private fun senderId(): String? = (inbox.get(route.inbox)?.fromId ?: sender?.id)?.takeIf(trust::isMember)
 
     /**
      * Sender's name, when the missing ones can be asked for online (in the band and there's internet); otherwise null.
      */
-    val internetFrom: StateFlow<String?> = combine(connectivity.online, repository.library.map { it.look.internetOn }) { a, b -> a && b }.map { on ->
+    // the sender arrives with the 3 words, after the screen is open: without them here the button never showed (test QR-11)
+    val internetFrom: StateFlow<String?> = combine(connectivity.online, repository.library.map { it.look.internetOn }, senderNow) { a, b, _ -> a && b }.map { on ->
         if (!on) null else senderId()?.let { id -> trust.member(id)?.name ?: fromName.ifBlank { null } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -116,8 +142,6 @@ class ScanSetlistViewModel @Inject constructor(
         viewModelScope.launch { internetAsked.send(bandInternet.requestSongs(id, missing)) }
     }
 
-    // who sent through the 3 words: on accepting, they join the band (and get my "ok")
-    private var sender: br.app.stagebook.domain.BandProtocol.Hello? = null
     /** How many band members are on the network now ("Ask the band" only shows with someone and with missing songs). */
     val bandOnline: StateFlow<Int> = bandLink.onlineMembers.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
@@ -156,6 +180,8 @@ class ScanSetlistViewModel @Inject constructor(
         }
     }
     private val route = savedStateHandle.toRoute<ScanSetlist>()
+    /** The code came in a link: the screen talks about the link, never about the 3 words. */
+    val fromLink: Boolean = route.fromLink
     var code: String = route.code
         private set
 
@@ -166,7 +192,9 @@ class ScanSetlistViewModel @Inject constructor(
         if (code.isNotEmpty()) bandInternet.accepted(code, sender)
     }
 
-    private val _ui = MutableStateFlow<ScanUi>(if (code.isEmpty() && route.inbox.isEmpty()) ScanUi.Scanning() else ScanUi.Fetching())
+    /** The camera reads a QR here: 3 words and what the band sent need none. */
+    val readsQr: Boolean = code.isEmpty() && route.inbox.isEmpty()
+    private val _ui = MutableStateFlow<ScanUi>(if (readsQr) ScanUi.Scanning() else ScanUi.Fetching())
     val ui: StateFlow<ScanUi> = _ui
 
     // songs carried along, per review row
@@ -233,6 +261,7 @@ class ScanSetlistViewModel @Inject constructor(
                 SetlistCloud.Received.NotFound -> _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND)
                 SetlistCloud.Received.Offline -> _ui.value = ScanUi.Fetching(CodeProblem.OFFLINE)
                 is SetlistCloud.Received.Newer -> _ui.value = ScanUi.Fetching(CodeProblem.NEWER)
+                is SetlistCloud.Received.Invite -> { invite = r.from; _ui.value = ScanUi.Invite(r.from.name, used = r.used) }
             }
         }
     }

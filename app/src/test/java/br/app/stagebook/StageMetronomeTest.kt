@@ -49,6 +49,31 @@ class StageMetronomeTest {
         compose.onNodeWithContentDescription("Metrônomo").assertExists()
     }
 
+    // count-in "1 . 2 . 1 2 3 4" (user, 07/11): nothing on the pauses, at 100 BPM a beat is 600 ms
+    @Test fun `the count-in shows 1, a pause, 2, a pause, then 1 2 3 4`() {
+        compose.setContent { StagebookTheme { StageScreen(state("linha"), 0, 0, { _, _ -> }) } }
+        compose.mainClock.autoAdvance = false
+        fun frames(n: Int) = repeat(n) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+        fun beat() { compose.mainClock.advanceTimeBy(600); compose.waitForIdle() }
+        compose.onNodeWithContentDescription("Metrônomo").performClick()
+        frames(3)
+        compose.onNodeWithContentDescription("Começar o metrônomo").performClick()
+        frames(3)
+        compose.onNodeWithText("1").assertExists()
+        compose.mainClock.advanceTimeBy(300); compose.waitForIdle()   // to the middle of each beat from here
+        beat()
+        compose.onNodeWithText("1").assertDoesNotExist()
+        compose.onNodeWithText("2").assertDoesNotExist()
+        beat()
+        compose.onNodeWithText("2").assertExists()
+        beat(); beat()
+        compose.onNodeWithText("1").assertExists()
+        beat(); beat(); beat()
+        compose.onNodeWithText("4").assertExists()
+        beat()
+        compose.onNodeWithText("4").assertDoesNotExist()
+    }
+
     // after changing songs in a setlist (or the band leader moving on) the blink and the count-in followed the first
     // song's beat counter, which no longer moved: the metronome stayed on without blinking (device test, 02/11)
     @Test fun `after changing songs the metronome still counts`() {

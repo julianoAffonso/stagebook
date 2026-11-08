@@ -12,7 +12,7 @@ OGG=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 OGG48=$(cd "$(dirname "$2")" && pwd)/$(basename "$2")
 WORK=$(mktemp -d)
 trap '[ -n "${KEEP:-}" ] && echo "files in $WORK" || rm -rf "$WORK"' EXIT
-JDK=$(/usr/libexec/java_home)
+JDK=${JAVA_HOME:-$(/usr/libexec/java_home)}
 
 mkdir -p "$WORK/validated" "$WORK/current"
 cp "$HERE/reference/engine.c" "$WORK/validated/engine.c"   # the engine validated on the desk (23/10/2026)
@@ -38,6 +38,10 @@ for v in validated current meter; do
     fi
     echo
 done
+clang -O2 -w -I"$HERE/shim" -I"$STB" -I"$JDK/include" -I"$JDK/include/darwin" \
+    -DENGINE_C="\"$WORK/current/engine.c\"" -o "$WORK/sim-usb1" "$HERE/sim_usb1.c" "$STB/stb_vorbis.c" -lm -lpthread
+"$WORK/sim-usb1" "$WORK" || status=1
+echo
 echo "generated sound comparison (validated x current and x current with meters)"
 python3 "$HERE/compare.py" "$WORK" || status=1
 exit $status

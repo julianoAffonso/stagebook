@@ -58,7 +58,7 @@ class SetlistsViewModel @Inject constructor(
     /** One code with all the chosen setlists (and their songs, if [withSongs]). */
     fun shareInternet(ids: List<String>, withSongs: Boolean) {
         val names = ids.mapNotNull { repository.library.value.setlist(it)?.name }
-        share.sendCode(names.joinToString(", ")) { setlistCloud.sendMany(ids, withSongs) }
+        share.sendCode(names.joinToString(", "), names.firstOrNull().orEmpty()) { setlistCloud.sendMany(ids, withSongs) }
     }
 
     /** All the chosen setlists to everyone in the band on the network, one tap. */

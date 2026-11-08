@@ -26,16 +26,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
         with:
           fetch-depth: 0   # the version comes from the commit count
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad  # v6
         with:
           distribution: temurin
           java-version: 21
       # GitHub's Ubuntu already has the Android SDK (ANDROID_HOME); only the engine's NDK version is missing
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c  # v6
       - name: Signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.STAGEBOOK_KEYSTORE_BASE64 }}
@@ -72,7 +72,7 @@ jobs:
           python3 -I tools/release_notes.py build "${last:+$last..}HEAD" --code "$code" --name "$name" --previous previous.json --out out/stagebook-version.json
           echo "tag=v${name%% *}" >> "$GITHUB_OUTPUT"
       - if: ${{ !inputs.publish }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: stagebook-dry-run
           path: out/
@@ -88,7 +88,15 @@ jobs:
           # notes: the commit titles since the previous release, without the merge commits ("Merge pull request #9…")
           last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
           notes=$(git log --no-merges --format='- %s' ${last:+$last..}HEAD)
-          gh release create "$TAG" out/stagebook.apk out/stagebook-version.json \
-            --target "$GITHUB_SHA" --title "Stagebook ${TAG#v}" --notes "$notes" --latest
+          # GitHub sometimes answers 500 with everything built (05/11, three times in a row): only this step tries again
+          for wait in 60 120 240 0; do
+            gh release create "$TAG" out/stagebook.apk out/stagebook-version.json \
+              --target "$GITHUB_SHA" --title "Stagebook ${TAG#v}" --notes "$notes" --latest && exit 0
+            state=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || true)
+            if [ "$state" = false ]; then exit 0; fi   # it went through and only the answer failed
+            if [ "$state" = true ]; then gh release delete "$TAG" --yes || true; fi   # half done: the next try starts clean
+            sleep "$wait"
+          done
+          exit 1
       - if: always()
         run: rm -f ~/.android/stagebook-release.jks ~/.android/stagebook-release.properties

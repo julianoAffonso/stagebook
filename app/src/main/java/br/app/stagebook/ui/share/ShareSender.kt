@@ -60,8 +60,11 @@ class ShareSender(
 
     private var joinsJob: Job? = null
 
-    /** Sends over the internet; the code (and its QR, to photograph or scan) shows in a dialog titled [name]. */
-    fun sendCode(name: String, send: suspend () -> SetlistCloud.Sent?) {
+    /**
+     * Sends over the internet; the code (and its QR, to photograph or scan) shows in a dialog titled [name]. [setlist]: the
+     * name the link carries (the first one, for several setlists); empty = loose songs.
+     */
+    fun sendCode(name: String, setlist: String = name, send: suspend () -> SetlistCloud.Sent?) {
         if (_cloud.value == CloudUi.Sending) return
         _cloud.value = CloudUi.Sending
         scope.launch {
@@ -70,7 +73,7 @@ class ShareSender(
                 withContext(Dispatchers.Default) { runCatching { QrEncoder.encode(ShareCode.qrText(s.code).toByteArray(), 600).asImageBitmap() }.getOrNull() }
             }
             sent?.let { bandInternet.remember(it.code); watchJoins(it.code) }
-            _cloud.value = sent?.let { CloudUi.Sent(it.code, name, it.songs, it.skipped, qr) } ?: CloudUi.Failed
+            _cloud.value = sent?.let { CloudUi.Sent(it.code, name, it.songs, it.skipped, qr, from = it.from, setlist = setlist) } ?: CloudUi.Failed
         }
     }
 

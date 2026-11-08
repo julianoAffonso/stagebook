@@ -46,7 +46,6 @@ data class OutputInfo(val key: String = DEVICE, val name: String = "", val count
 data class MixerConfig(
     val channels: Int = 2,
     val strips: List<MixChannel> = List(MAX) { MixChannel() },
-    val eqOn: Boolean = false,
     val eqDb: List<Float> = List(EQ_BANDS) { 0f },
     // the output in use (or the last used): the one Settings shows and edits
     val output: OutputInfo = OutputInfo(),
@@ -54,6 +53,9 @@ data class MixerConfig(
     val routes: Map<String, List<Int>> = emptyMap(),
 ) {
     fun strip(i: Int): MixChannel = strips.getOrElse(i) { MixChannel() }
+
+    /** The EQ has no switch of its own: it's on while a channel goes through it (user, 06/11). */
+    val eqOn: Boolean get() = groups().any { strip(it.first).eq }
 
     /**
      * The EQ gains as the engine reads them: exactly [EQ_BANDS] values, missing ones flat (a shorter list, from an old
@@ -175,10 +177,10 @@ object Mixer {
  * general mixer (Settings → Player) the first time it's touched; outputs, routing and the channel count stay general.
  */
 @Serializable
-data class SongMix(val strips: List<MixChannel> = emptyList(), val eqOn: Boolean = false, val eqDb: List<Float> = emptyList())
+data class SongMix(val strips: List<MixChannel> = emptyList(), val eqDb: List<Float> = emptyList())
 
 /** The mixer a song plays with: its own mix over the general one, or the general one. */
 fun MixerConfig.forSong(mix: SongMix?): MixerConfig =
-    if (mix == null) this else copy(strips = mix.strips.ifEmpty { strips }, eqOn = mix.eqOn, eqDb = mix.eqDb.ifEmpty { eqDb })
+    if (mix == null) this else copy(strips = mix.strips.ifEmpty { strips }, eqDb = mix.eqDb.ifEmpty { eqDb })
 
-fun MixerConfig.toSongMix() = SongMix(strips, eqOn, eqDb)
+fun MixerConfig.toSongMix() = SongMix(strips, eqDb)

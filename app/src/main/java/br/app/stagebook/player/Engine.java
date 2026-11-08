@@ -7,9 +7,16 @@ final class Engine {
     static native boolean start(int fd, int ep, int maxPacket, int channels, int subslot, int intf, int alt,
                                 int inEp, int inMaxPacket, int inFrameBytes);
     static native void stop();
+    // for a reconnection: the same stop without the half second of silence at the end
+    static native void stopFast();
     // no USB interface: plays on the device's output (AAudio, 48 kHz stereo); false if Android didn't open it
     // deviceId 0 = the device's own output (stereo); a USB interface's Android id with its channels (B-33)
     static native boolean startDevice(int deviceId, int channels);
+    // the output's rate, before start or startDevice: a USB Audio 1.0 card may only have 44.1 kHz
+    static native void setRate(int rate);
+    // the USB queue this interface took before here, and what the engine ended with: a stalled queue halves it
+    static native void setQueue(int ms);
+    static native int queueMs();
     static native long load(String path);
     static native void play();
     static native void pause();
@@ -25,7 +32,7 @@ final class Engine {
     // source channels of the loaded track (up to 8)
     static native int lanes();
     // metronome click into USB outputs: normal/accent 48 kHz, samples per beat (0 = off), up to two outputs (-1 = none)
-    static native void setClick(float[] normal, float[] accent, long samplesPerBeat, int out1, int out2);
+    static native void setClick(float[] normal, float[] accent, long samplesPerBeat, int out1, int out2, long skip);
     // {lufs, peak} of the channels in mask (each mixer channel or pair)
     static native float[] analyzeMask(String path, int mask);
     static native boolean isRunning();

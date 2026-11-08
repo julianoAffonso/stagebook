@@ -139,7 +139,7 @@ fun BandResultMessage(results: kotlinx.coroutines.flow.Flow<Int>) {
 }
 
 /** What to do with the ready code: copy it or send it through a messaging app on the device (WhatsApp, email, SMS…). */
-class CodeActions(val copy: (code: String) -> Unit, val share: (name: String, code: String) -> Unit)
+class CodeActions(val copy: (code: String) -> Unit, val share: (sent: CloudUi.Sent) -> Unit)
 
 @Composable
 fun rememberCodeActions(): CodeActions {
@@ -154,21 +154,44 @@ fun rememberCodeActions(): CodeActions {
                 context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", code))
                 message.show(copied)
             },
-            share = { name, code ->
-                val msg = if (name.isEmpty()) textSongs.format(code) else text.format(name, code)
-                val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg)
-                runCatching { context.startActivity(Intent.createChooser(send, null)) }
-            },
+            share = { sent -> shareText(context, codeMessage(text, textSongs, sent, br.app.stagebook.data.Languages.shownTag(context))) },
         )
     }
+}
+
+/**
+ * The message that goes with a code: the link to tap (user, 07/11) and the 3 words to type. [Sent.name] empty = loose
+ * songs ([songs] template), else the setlists' names ([setlist] template). The link also says, in [lang], what was sent
+ * and by whom, for the site.
+ */
+internal fun codeMessage(setlist: String, songs: String, sent: CloudUi.Sent, lang: String): String {
+    val kind = if (sent.setlist.isEmpty()) ShareCode.LinkKind.SONGS else ShareCode.LinkKind.SETLIST
+    val link = ShareCode.link(sent.code, kind, sent.from, sent.setlist, lang)
+    return if (sent.name.isEmpty()) songs.format(link, sent.code) else setlist.format(sent.name, link, sent.code)
+}
+
+/** The band invite's message ([template] = band_invite_message): who invites and the link (the invite opens only from it). */
+internal fun inviteMessage(template: String, from: String, code: String, lang: String): String =
+    template.format(from, ShareCode.link(code, ShareCode.LinkKind.INVITE, from, lang = lang))
+
+/** Opens Android's share sheet with [text] (WhatsApp, email, SMS…). */
+fun shareText(context: android.content.Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+    runCatching { context.startActivity(Intent.createChooser(send, null)) }
 }
 
 /** Sending over the internet: sending, sent (with the code) or failed. */
 @Immutable
 sealed interface CloudUi {
     data object Sending : CloudUi
-    /** [joined]: who already accepted and joined the band (shows in the dialog while it's open). */
-    data class Sent(val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null, val joined: List<String> = emptyList()) : CloudUi
+    /**
+     * [joined]: who already accepted and joined the band (shows in the dialog while it's open). [from] and [setlist]
+     * (the first setlist's name; empty = loose songs) go in the link.
+     */
+    data class Sent(
+        val code: String, val name: String, val songs: Int, val skipped: Int, val qr: ImageBitmap? = null, val joined: List<String> = emptyList(),
+        val from: String = "", val setlist: String = name,
+    ) : CloudUi
     data object Failed : CloudUi
 }
 
@@ -280,7 +303,7 @@ private fun ShareOption(icon: ImageVector, title: String, hint: String, enabled:
 
 // sending, the ready code (with "Send in a message") or the error
 @Composable
-fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, String) -> Unit, onCopyCode: (String) -> Unit) {
+fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (CloudUi.Sent) -> Unit, onCopyCode: (String) -> Unit) {
     AlertDialog(
         onDismissRequest = { if (cloud != CloudUi.Sending) onDismiss() },
         title = {
@@ -302,7 +325,7 @@ fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (String, Str
             }
         },
         confirmButton = {
-            if (cloud is CloudUi.Sent) TextButton(onClick = { onShareCode(cloud.name, ShareCode.display(cloud.code)) }) { Text(stringResource(R.string.share_send_code)) }
+            if (cloud is CloudUi.Sent) TextButton(onClick = { onShareCode(cloud) }) { Text(stringResource(R.string.share_send_code)) }
             else if (cloud == CloudUi.Failed) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
         },
         dismissButton = { if (cloud is CloudUi.Sent) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
