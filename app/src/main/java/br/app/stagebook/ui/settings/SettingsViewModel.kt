@@ -112,6 +112,20 @@ class SettingsViewModel @Inject constructor(
 
     val clickApart = metronome.keepsApart
 
+    // the Settings test click: the stage's own path (USB output when the player is on, otherwise the device), no count-in
+    private val clickTest = br.app.stagebook.domain.MetronomeTest(
+        start = { bpm ->
+            val look = repository.library.value.look
+            val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
+            if (look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, look.metroVolume)) metronome.stop()
+            else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, look.metroVolume) }
+        },
+        stop = { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
+    )
+    val clickTesting: StateFlow<Boolean> = clickTest.playing
+    fun toggleClickTest() = clickTest.toggle()
+    fun stopClickTest() = clickTest.stop()
+
     /** Backup read and waiting for the choice of parts to restore. */
     data class PendingRestore(val uri: Uri, val contents: br.app.stagebook.data.Backup.Contents)
 
@@ -167,6 +181,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        clickTest.stop()
         inputManager?.unregisterInputDeviceListener(deviceListener)
         midi.stopScan()
     }

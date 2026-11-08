@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.toRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -67,11 +68,29 @@ fun StagebookNavHost(
     followSongs: Flow<String> = emptyFlow(),
     followingSong: kotlinx.coroutines.flow.StateFlow<String?> = kotlinx.coroutines.flow.MutableStateFlow(null),
     receiveCodes: Flow<String> = emptyFlow(),
+    onStage: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false),
 ) {
     val nav = rememberNavController()
-    // a receive link: the receive screen with its code, in place of another receive screen already open
+    // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
+    // it waits and opens on leaving; a code already open there is left alone (it would discard the review)
+    val pendingLink = remember { br.app.stagebook.domain.PendingLink() }
+    val linkKept = androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.stage_link_kept)
+    val linkMessage = androidx.compose.runtime.rememberUpdatedState(linkKept)
+    fun openCode(): String? = nav.currentBackStackEntry?.takeIf { it.destination.hasRoute<ScanSetlist>() }
+        ?.toRoute<ScanSetlist>()?.code?.takeIf { it.isNotEmpty() }
+    fun openReceive(code: String) = nav.navigate(ScanSetlist(code, fromLink = true)) { popUpTo<ScanSetlist> { inclusive = true } }
+    val message = rememberAppMessage()
     LaunchedEffect(receiveCodes) {
-        receiveCodes.collect { code -> nav.navigate(ScanSetlist(code, fromLink = true)) { popUpTo<ScanSetlist> { inclusive = true } } }
+        receiveCodes.collect { code ->
+            when (pendingLink.arrive(code, onStage.value, openCode())) {
+                br.app.stagebook.domain.PendingLink.Arrival.OPEN -> openReceive(code)
+                br.app.stagebook.domain.PendingLink.Arrival.HELD -> message.show(linkMessage.value)
+                br.app.stagebook.domain.PendingLink.Arrival.IGNORED -> Unit
+            }
+        }
+    }
+    LaunchedEffect(onStage) {
+        onStage.collect { on -> if (!on) pendingLink.release(openCode())?.let(::openReceive) }
     }
     // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
     // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip
@@ -122,7 +141,6 @@ fun StagebookNavHost(
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose, autoBlocker)
     // the "Lead the band" strip sits below any screen (the stage included) while the mode is on. Short messages
     // (snackbar) from any screen, at the bottom, above the "Lead the band" strip
-    val message = rememberAppMessage()
     // a link to a Settings section from any screen: back to Home, which opens Settings on that section (user, 01/11)
     val openSettings: (br.app.stagebook.ui.settings.SettingsSection) -> Unit = remember(nav) {
         { section ->

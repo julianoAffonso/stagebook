@@ -171,6 +171,7 @@ fun SettingsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val clickApart by viewModel.clickApart.collectAsStateWithLifecycle()
+    val clickTesting by viewModel.clickTesting.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
     val snackbar = remember { SnackbarHostState() }
@@ -356,6 +357,9 @@ fun SettingsRoute(
                 onMetronomeOut = viewModel::setMetronomeOut,
                 onMetronomeMenu = viewModel::probeClickRoute,
                 clickApart = clickApart || !uiState.look.usbViaAndroid,
+                clickTesting = clickTesting,
+                onClickTest = viewModel::toggleClickTest,
+                onClickTestStop = viewModel::stopClickTest,
                 onUsbViaAndroid = viewModel::setUsbViaAndroid,
                 onCheckUpdate = viewModel::checkUpdate,
                 onOpenLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
@@ -451,6 +455,9 @@ data class SettingsActions(
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
     val onMetronomeMenu: () -> Unit = {},
     val clickApart: Boolean = true,
+    val clickTesting: Boolean = false,
+    val onClickTest: () -> Unit = {},
+    val onClickTestStop: () -> Unit = {},
     val onUsbViaAndroid: (Boolean) -> Unit = {},
     val onCheckUpdate: () -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
@@ -1504,12 +1511,23 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             if (!actions.clickApart) Text(stringResource(R.string.metro_out_together), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (look.metroSound) MetronomeTestButton(actions.clickTesting, actions.onClickTest, actions.onClickTestStop)
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
         if (look.metroGlow) {
             Text(stringResource(R.string.metro_glow_color), style = MaterialTheme.typography.bodyLarge)
             ColorSwatchRow(br.app.stagebook.ui.theme.StagePalette.glow, look.metroGlowColor, { set(color = it) })
         }
     }
+}
+
+/** Hear the click with the chosen output and volume; it stops when this leaves the screen. */
+@Composable
+internal fun MetronomeTestButton(playing: Boolean, onToggle: () -> Unit, onStop: () -> Unit) {
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onStop() } }
+    ActionButton(
+        stringResource(if (playing) R.string.settings_metronome_test_stop else R.string.settings_metronome_test), onToggle,
+        Modifier.fillMaxWidth(), icon = if (playing) AppIcons.Stop else AppIcons.Play, tone = ButtonTone.Tonal,
+    )
 }
 
 /** Telling OBS and others what's playing (T23), a stage extra (T19); it moved from the Screen item to the band's (01/11). */
