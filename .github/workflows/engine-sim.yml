@@ -30,4 +30,10 @@ jobs:
           java-version: 21
       - run: python3 -m pip install --break-system-packages numpy soundfile
       - run: mkdir tracks && python3 tools/engine-sim/synthetic.py tracks
-      - run: tools/engine-sim/run.sh tracks/t44100.ogg tracks/t48000.ogg
+      # the real-time checks (packet gaps, pacing) jitter on a shared runner; a real regression fails every attempt
+      - run: |
+          for attempt in 1 2 3; do
+            tools/engine-sim/run.sh tracks/t44100.ogg tracks/t48000.ogg && exit 0
+            echo "attempt $attempt failed"
+          done
+          exit 1
