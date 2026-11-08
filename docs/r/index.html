@@ -3,7 +3,9 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Landing page of the links the app shares over the internet:
      https://stagebook.app.br/r#<code>.<details>, where <details> is base64url (no padding) of the UTF-8 compact JSON
-     {"t": i invite | l setlist | m songs, "n": sender, "s": setlist, "l": sender's language}, empty keys left out. The
+     {"t": i invite | l setlist | m songs, "n": sender, "s": setlist, "l": sender's language, "k": an invite's secret, 22
+     characters of [A-Za-z0-9_-] (128 random bits)}, empty keys left out. The secret is never shown, only carried to the
+     app unchanged (the invite opens only from the link, not from the 3 words). The
      older https://stagebook.app.br/r#<code>&t=..&n=..&s=..&l=.. still works.
      Everything lives in the fragment, which browsers never send to any server; this page makes no network call (the CSP
      below forbids it). It speaks the sender's language when there's a translation, English otherwise. -->
@@ -59,7 +61,7 @@ p { margin: 0 0 16px; }
       <a id="installed" class="btn secondary" href="#" data-t="installed"></a>
     </div>
 
-    <div class="card">
+    <div class="card" id="typed">
       <p class="code" id="code"></p>
       <p class="muted where" data-t="type"></p>
     </div>
@@ -117,6 +119,7 @@ p { margin: 0 0 16px; }
   };
 
   var KEYS = ["t", "n", "s", "l"];
+  var SECRET = /^[A-Za-z0-9_-]{22}$/;   // "k": exactly this, or it is dropped
   // "#<code>.<details>" (or the older "#<code>&t=..&n=.."): the code up to the first "." or "&", then the details
   var hash = location.hash.replace(/^#/, "");
   var cut = hash.search(/[.&]/);
@@ -145,6 +148,7 @@ p { margin: 0 0 16px; }
         if (!obj || typeof obj !== "object" || Array.isArray(obj)) continue;
         var out = {};
         KEYS.forEach(function (k) { if (typeof obj[k] === "string") out[k] = obj[k].slice(0, 80); });
+        if (typeof obj.k === "string" && SECRET.test(obj.k)) out.k = obj.k;
         return out;
       } catch (e) { /* not this length: try one character less */ }
     }
@@ -155,6 +159,7 @@ p { margin: 0 0 16px; }
   function writeDetails(p) {
     var obj = {};
     KEYS.forEach(function (k) { if (p[k]) obj[k] = p[k]; });
+    if (p.k && SECRET.test(p.k)) obj.k = p.k;
     if (!Object.keys(obj).length) return "";
     try {
       var utf8 = window.TextEncoder ? new TextEncoder().encode(JSON.stringify(obj)) : null;
@@ -173,7 +178,7 @@ p { margin: 0 0 16px; }
       if (at <= 0) return;
       var v;
       try { v = decodeURIComponent(kv.slice(at + 1).replace(/\+/g, " ")); } catch (e) { v = ""; }
-      params[kv.slice(0, at)] = v.slice(0, 80);
+      if (kv.slice(0, at) !== "k") params[kv.slice(0, at)] = v.slice(0, 80);
     });
   }
   // the sender's language when this page has it, English otherwise (also with no language in the link)
@@ -198,6 +203,8 @@ p { margin: 0 0 16px; }
   if (!code) { document.getElementById("missing").hidden = false; return; }
   document.getElementById("found").hidden = false;
   document.getElementById("code").textContent = code.split("-").join(" · ");
+  // an invite with a secret opens only from the link: the 3 words alone would show nothing, so they aren't offered
+  if (params.k) document.getElementById("typed").hidden = true;
   // what came and from whom, as text only (never as HTML)
   var n = params.n || "", title = params.s || "", kind = params.t || "";
   // split/join, not replace: a name with $& or {s} in it would be expanded as a replacement pattern

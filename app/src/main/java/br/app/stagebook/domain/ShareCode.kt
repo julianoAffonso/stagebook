@@ -21,6 +21,7 @@ import javax.crypto.spec.SecretKeySpec
 object ShareCode {
     private const val ITERATIONS = 60_000       // slows down anyone trying to guess; ~0.3 s on a weak tablet
     private const val SALT = "stagebook-setlist-v1"
+    private const val INVITE_SALT = "stagebook-invite-v2"
     private const val IV_BYTES = 12
     private const val TAG_BITS = 128
 
@@ -47,7 +48,7 @@ object ShareCode {
      * How the code shows to the person: the 3 words with dashes ("47-violao-lua"; a space vanishes or doubles when
      * typing).
      */
-    fun display(code: String) = code
+    fun display(code: String) = wordsOf(code)
 
     /** The code inside a QR (for someone next to you to photograph or scan with "Scan QR"). */
     const val QR_PREFIX = "stagebook:"
@@ -77,15 +78,18 @@ object ShareCode {
      * left out; [setlist] only goes with a setlist.
      */
     fun link(code: String, kind: LinkKind? = null, from: String = "", setlist: String = "", lang: String = ""): String {
+        val secret = secretOf(code)
         val details = buildJsonObject {
             kind?.let { put("t", it.tag) }
             from.takeIf { it.isNotBlank() }?.let { put("n", it) }
             setlist.takeIf { it.isNotBlank() && kind == LinkKind.SETLIST }?.let { put("s", it) }
             lang.takeIf { it.isNotBlank() }?.let { put("l", it) }
+            secret?.let { put("k", it) }
         }
-        if (details.isEmpty()) return LINK_PREFIX + code
+        val words = wordsOf(code)
+        if (details.isEmpty()) return LINK_PREFIX + words
         val payload = Base64.getUrlEncoder().withoutPadding().encodeToString(details.toString().toByteArray(Charsets.UTF_8))
-        return "$LINK_PREFIX$code.$payload"
+        return "$LINK_PREFIX$words.$payload"
     }
 
     // anywhere in a text (a whole message pasted, a link with or without https), but not inside another host's name; the
@@ -98,14 +102,16 @@ object ShareCode {
     )
 
     /** The code of the first receive link in [text], or null if there is none. */
-    fun fromLink(text: String?): String? = text?.let { LINK.find(it) }?.groupValues?.get(1)?.let(::normalizeWords)
+    fun fromLink(text: String?): String? = linkInfo(text)?.code
 
     /** The first receive link in [text] with what it says, in either format; null if there is none. */
     fun linkInfo(text: String?): LinkInfo? {
         val match = text?.let { LINK.find(it) } ?: return null
-        val code = normalizeWords(match.groupValues[1]) ?: return null
+        val words = normalizeWords(match.groupValues[1]) ?: return null
         val fields = match.groupValues[2].takeIf { it.isNotEmpty() }?.let(::readDetails)
             ?: match.groupValues[3].takeIf { it.isNotEmpty() }?.let(::readParams).orEmpty()
+        // an invite's secret rides in the details as "k"; one that isn't a well-formed secret is dropped (words only)
+        val code = fields["k"]?.takeIf { match.groupValues[2].isNotEmpty() && validSecret(it) }?.let { "$words$SECRET_SEP$it" } ?: words
         return LinkInfo(code, LinkKind.entries.firstOrNull { it.tag == fields["t"] }, fields["n"].orEmpty(), fields["s"].orEmpty(), fields["l"].orEmpty())
     }
 
@@ -128,16 +134,44 @@ object ShareCode {
         kv.substringBefore('=').lowercase() to value.take(MAX_DETAIL)
     }
 
-    private const val MAX_DETAIL = 80   // what the site shows of each part
+    private const val MAX_DETAIL = 80   // what the site shows of each part (the secret, 22 characters, fits)
 
     /** A new code: a number from 10 to 99 and two words (~22 bits; valid 12 h on the server). */
     fun generate(): String = "${10 + random.nextInt(90)}-${WORDS[random.nextInt(WORDS.size)]}-${WORDS[random.nextInt(WORDS.size)]}"
 
     /**
-     * The code as the app understands it: no accents, lowercase, parts separated by "-". Null if it doesn't look like a
-     * code.
+     * A new band invite's code: the 3 words plus 128 random bits ([SECRET_SEP] and 22 base64url characters). The secret
+     * only travels in the link's fragment: the channel and the key derive from words AND secret, so the words alone
+     * (22 bits) can't find or answer the invite (audit 07/11).
      */
-    fun normalize(input: String): String? = fromLink(input) ?: normalizeWords(input)   // a pasted link also counts
+    fun generateInvite(): String =
+        generate() + SECRET_SEP + Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(SECRET_BYTES).also(random::nextBytes))
+
+    /** Separates the words from an invite's secret in the code the app keeps (never typed, never on the wire). */
+    const val SECRET_SEP = '~'
+    private const val SECRET_BYTES = 16
+    private val SECRET = Regex("[A-Za-z0-9_-]{22}")
+
+    private fun validSecret(s: String) = SECRET.matches(s) && runCatching { Base64.getUrlDecoder().decode(s).size == SECRET_BYTES }.getOrDefault(false)
+
+    /** The 3 words of a [code], with or without a secret. */
+    fun wordsOf(code: String) = code.substringBefore(SECRET_SEP)
+
+    /** The secret of an invite's [code], or null for a plain 3 words code. */
+    fun secretOf(code: String): String? = code.substringAfter(SECRET_SEP, "").takeIf { it.isNotEmpty() }
+
+    /**
+     * The code as the app understands it: no accents, lowercase, parts separated by "-" (and, from an invite's link, the
+     * secret). Null if it doesn't look like a code.
+     */
+    fun normalize(input: String): String? = fromLink(input) ?: normalizeKept(input)   // a pasted link also counts
+
+    // the code as this app keeps it ("words~secret" for an invite) or plain words typed by a person
+    private fun normalizeKept(input: String): String? {
+        if (SECRET_SEP !in input) return normalizeWords(input)
+        val secret = input.substringAfter(SECRET_SEP).takeIf(::validSecret) ?: return null
+        return normalizeWords(input.substringBefore(SECRET_SEP))?.let { "$it$SECRET_SEP$secret" }
+    }
 
     private fun normalizeWords(input: String): String? {
         val parts = TextKey.of(input).split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
@@ -157,7 +191,10 @@ object ShareCode {
     fun keys(code: String): Keys = synchronized(derived) { derived[code] } ?: derive(code).also { synchronized(derived) { derived[code] = it } }
 
     private fun derive(code: String): Keys {
-        val spec = PBEKeySpec(code.toCharArray(), SALT.toByteArray(), ITERATIONS, 48 * 8)
+        // with a secret: its own salt (domain separation) and the secret in the password; without: exactly as before
+        val secret = secretOf(code)
+        val spec = if (secret == null) PBEKeySpec(code.toCharArray(), SALT.toByteArray(), ITERATIONS, 48 * 8)
+        else PBEKeySpec("${wordsOf(code)}|$secret".toCharArray(), INVITE_SALT.toByteArray(), ITERATIONS, 48 * 8)
         val raw = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
         val topic = "sb" + raw.copyOfRange(32, 48).joinToString("") { "%02x".format(it) }
         return Keys(raw.copyOf(32), topic)

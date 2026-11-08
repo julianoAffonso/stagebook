@@ -485,7 +485,7 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit, fromLink: Boolean
                             CodeProblem.NEWER -> R.string.scan_newer
                             CodeProblem.OFFLINE -> R.string.scan_code_offline
                         },
-                    ),
+                    ) + if (ui.problem == CodeProblem.NOT_FOUND && !fromLink) " " + stringResource(R.string.invite_needs_link) else "",   // typed words can't tell an invite from a wrong code
                     br.app.stagebook.ui.components.StatusTone.PROBLEM,
                 )
                 ActionButton(stringResource(R.string.scan_code_retry), onRetry, icon = AppIcons.Undo, tone = ButtonTone.Tonal)

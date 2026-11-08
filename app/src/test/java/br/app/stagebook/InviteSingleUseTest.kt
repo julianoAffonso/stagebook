@@ -129,6 +129,23 @@ class InviteSingleUseTest {
         assertTrue(handler(a, ShareCode.encrypt(key, cloud.ackMessage(a))))   // the first one again: still welcome
     }
 
+    @Test fun `an invite with a secret is single use too, over the Wi-Fi and the sync`() {
+        val (net, link) = band()
+        val code = "18-agua-lua~AAAAAAAAAAAAAAAAAAAAAA"
+        net.rememberNow(code, invite = true)
+        val key = ShareCode.keys(code).key
+        val (a, _) = hello("Ana")
+        val (b, _) = hello("Bia")
+        val handler = link.codeAckHandler!!
+        // an "ok" made with the words alone is not from this invite
+        assertFalse(handler(a, ShareCode.encrypt(ShareCode.keys("18-agua-lua").key, cloud.ackMessage(a))))
+        assertTrue(handler(a, ShareCode.encrypt(key, cloud.ackMessage(a))))
+        assertFalse(handler(b, ShareCode.encrypt(key, cloud.ackMessage(b))))
+        assertEquals(emptyList<Hello>(), net.admit(code, listOf(b)))
+        assertTrue(trust.isMember(a.id))
+        assertFalse(trust.isMember(b.id))
+    }
+
     @Test fun `whoever opens an invite someone else took is told so`() {
         val (other, _) = hello("Bia")
         val (inviter, _) = hello("Ana")
