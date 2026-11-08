@@ -592,6 +592,7 @@ static void *usb_main(void *arg) {
     size_t in_urb_sz = sizeof(struct usbdevfs_urb) + IN_PKTS_PER_URB * sizeof(struct usbdevfs_iso_packet_desc);
     struct usbdevfs_urb *urbs[NURBS];
     double acc = 0, lost_acc = 0;
+    int quiet_was = 0;   // the last packet was written as silence without the mixer
     int tail = 0, tail_urbs = 0, errors = 0;
     long reaped = 0;
     int inflight = 0, n_in = 0, in_idle = 0;   // URBs held by the kernel (memory is only freed at zero); input URBs parked
@@ -626,6 +627,14 @@ static void *usb_main(void *arg) {
             /* the packet's ceiling first: a frame cut here isn't counted as sent (audio audit A2) */ \
             if (nf * frame_bytes > g_maxpkt) nf = g_maxpkt / frame_bytes; \
             g_tot_out += nf; st_out_frames += nf; \
+            /* Nothing playing, faded out and no click: the output is exactly zero, so the mixer, the EQ and the click, */ \
+            /* which only produce those zeros, are skipped (the idle player cost ~19% of a core, audit 07/11). The EQ's */ \
+            /* state and the limiter are reset once, as the silence would have let them decay. */ \
+            int quiet = !(g_playing && !tail) && g_fade <= 0.0f && g_clk_spb <= 0; \
+            if (quiet) { \
+                if (!quiet_was) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; quiet_was = 1; } \
+                memset(b + off, 0, (size_t)nf * frame_bytes); off += nf * frame_bytes; \
+            } else { quiet_was = 0; \
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail; \
@@ -643,6 +652,7 @@ static void *usb_main(void *arg) {
                     put_sample(b + off + c * g_subslot, s); \
                 } \
                 off += frame_bytes; \
+            } \
             } \
             (urb)->iso_frame_desc[k].length = nf * frame_bytes; \
         } \
