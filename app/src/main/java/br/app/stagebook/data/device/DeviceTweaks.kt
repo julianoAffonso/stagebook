@@ -85,9 +85,10 @@ object DeviceTweaks {
     fun routeUsb(c: Context, engineRoute: Boolean) = set(c, DeviceTweak.USB_ROUTING, engineRoute)
 
     /** On app start: what Android put back by itself is written again (no choice saved = the default). */
-    fun ensure(c: Context) {
+    fun ensure(c: Context, playerMode: Boolean = true) {
         if (!canWrite(c)) return
-        DeviceTweak.entries.filter { it.reapply && available(c, it) }.forEach { t ->
+        // the player's ones are the player's: with it off nothing of them is touched (it only spends when it's on)
+        DeviceTweak.entries.filter { it.reapply && available(c, it) && (playerMode || it.group != DeviceTweak.Group.PLAY) }.forEach { t ->
             val on = prefs(c).getBoolean(t.name, t.default)
             if (!on && t.restores) return@forEach   // turned off: the setting is the person's again
             if (isOn(c, t) != on) {
