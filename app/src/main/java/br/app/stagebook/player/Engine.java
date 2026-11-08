@@ -7,6 +7,8 @@ final class Engine {
     static native boolean start(int fd, int ep, int maxPacket, int channels, int subslot, int intf, int alt,
                                 int inEp, int inMaxPacket, int inFrameBytes);
     static native void stop();
+    // for a reconnection: the same stop without the half second of silence at the end
+    static native void stopFast();
     // no USB interface: plays on the device's output (AAudio, 48 kHz stereo); false if Android didn't open it
     // deviceId 0 = the device's own output (stereo); a USB interface's Android id with its channels (B-33)
     static native boolean startDevice(int deviceId, int channels);

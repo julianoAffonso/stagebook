@@ -278,6 +278,8 @@ static double g_frac = 0.0;
 static int g_hist_fill = 0;
 
 static volatile int g_usb_stop = 0, g_usb_running = 0, g_dec_stop = 0;
+static volatile int g_fast_stop = 0;   // stopping to reconnect: no silent tail (the stream is about to start again)
+#define ENGINE_HAS_FASTSTOP 1
 // stutter diagnostics: reset every log window
 static long st_underrun = 0, st_pkt_err = 0, st_urb_err = 0;
 static long st_out_short = 0, st_out_short_bytes = 0;   // DIAG: output packets the host sent short or not at all
@@ -679,7 +681,7 @@ static void *usb_main(void *arg) {
     pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
 
     while (tail_urbs < tail_max + nurbs - 1) {
-        if (!tail && g_usb_stop) tail = 1;
+        if (!tail && g_usb_stop) { tail = 1; if (g_fast_stop) tail_max = 0; }   // fast: only what is already queued drains
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
             if (errno == EINTR && g_stalled) {
@@ -948,7 +950,7 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0; g_in_last = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
-    g_usb_stop = 0; g_dec_stop = 0; g_usb_running = 1;
+    g_usb_stop = 0; g_dec_stop = 0; g_fast_stop = 0; g_usb_running = 1;
     pthread_create(&g_dec_thr, NULL, dec_main, NULL);
     pthread_create(&g_usb_thr, NULL, usb_main, NULL);
     return JNI_TRUE;
@@ -966,6 +968,10 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
     pthread_join(g_dec_thr, NULL);
     g_fd = -1;
 }
+
+// Stop for a reconnection: the silent tail (0.5 s, so the interface doesn't repeat the last chunk) is skipped, because
+// the stream starts again right away.
+JNIEXPORT void JNICALL FN(stopFast)(JNIEnv *e, jclass c) { g_fast_stop = 1; FN(stop)(e, c); }
 
 // Opens an output through Android (48 kHz, float): the device's own (deviceId 0, stereo) or a USB interface by its
 // Android id with its channels, for devices where talking to USB directly gets no packets back (S26, B-33: the

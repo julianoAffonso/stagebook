@@ -571,6 +571,19 @@ int main(int argc, char **argv) {
     snprintf(buf, sizeof buf, "%d memory blocks leaked", nlive);
     check(nlive == 0, "no leak", buf);
 
+    // 7b) stopping in order to reconnect (the interface's first connection came silent): no half second of silent tail
+#ifdef ENGINE_HAS_FASTSTOP
+    printf("[7b] stopping to reconnect doesn't wait for the silent tail\n");
+    E_START(); FN(play)(env, NULL); sleep_s(0.4);
+    double t7 = now(); FN(stopFast)(env, NULL); double fast7 = (now() - t7) * 1000;
+    sim_close_conn();
+    E_START(); FN(play)(env, NULL); sleep_s(0.4);
+    t7 = now(); FN(stop)(env, NULL); double slow7 = (now() - t7) * 1000;
+    sim_close_conn();
+    snprintf(buf, sizeof buf, "fast stop %.0f ms, normal stop %.0f ms", fast7, slow7);
+    check(fast7 < 150 && slow7 > 300, "a fast stop skips the silent tail, the normal one keeps it", buf);
+#endif
+
     // 8) normalization
     printf("[8] loudness analysis\n");
     jfloatArray m = FN(analyze)(env, NULL, (jstring)ogg);

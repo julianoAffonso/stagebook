@@ -172,7 +172,7 @@ public class PlayerService extends Service {
     void fbRetry() {
         fbRetries++;
         Log.w(TAG, "interface clock didn't arrive: reconnecting (" + fbRetries + "/" + FB_RETRIES + ")");
-        releaseUsb();
+        releaseUsb(true);   // the stream starts again at once: no silent tail
         connectUsb();
     }
 
@@ -201,7 +201,9 @@ public class PlayerService extends Service {
     boolean connecting;
 
     // closes the current output (USB or device)
-    void releaseUsb() {
+    void releaseUsb() { releaseUsb(false); }
+
+    void releaseUsb(boolean fast) {
         link = null;
         deviceOut = false;
         androidUsb = null;
@@ -209,7 +211,7 @@ public class PlayerService extends Service {
         connecting = false;
         usbGen++;
         usbOps.execute(() -> {
-            Engine.stop();
+            if (fast) Engine.stopFast(); else Engine.stop();
             if (usbOpen != null) { usbOpen.close(); usbOpen = null; }
         });
     }
