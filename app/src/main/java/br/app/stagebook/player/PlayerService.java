@@ -249,7 +249,7 @@ public class PlayerService extends Service {
         if (deviceOut) releaseUsb();   // the USB interface arrived: leave the device and go to it
         connecting = true;
         int gen = usbGen;
-        setStatus(getString(waking ? R.string.player_usb_waking : R.string.player_usb_connecting));
+        noteConnecting(gen, waking ? R.string.player_usb_waking : R.string.player_usb_connecting);
         usbOps.execute(() -> {
             UsbLink l = new UsbLink();
             String err;
@@ -356,6 +356,17 @@ public class PlayerService extends Service {
         outputCount = 2;
         connected = true;
         setStatus(getString(R.string.player_device_out));
+    }
+
+    // "Connecting…" is said only when it takes a while: an interface that opens in a few ms goes straight to "ready", and
+    // a note that flashes for that long can't be read.
+    static final long CONNECT_NOTE_MS = 500;
+    Runnable connectNote;
+
+    void noteConnecting(int gen, int text) {
+        if (connectNote != null) main.removeCallbacks(connectNote);
+        connectNote = () -> { if (connecting && gen == usbGen) setStatus(getString(text)); };
+        main.postDelayed(connectNote, CONNECT_NOTE_MS);
     }
 
     // Back on the UI thread, with the connection open (or its error).
