@@ -481,7 +481,9 @@ public class PlayerService extends Service {
         main.removeCallbacks(fbCheck);
         fbRetries = 0;
         releaseUsb(true);   // nothing was sounding: no silent tail to wait for
-        // the notification says it; the stage doesn't need a notice for something nobody asked for
+        // the notification says it; the stage doesn't need a notice for something nobody asked for. The stage's notice
+        // is cleared, so "USB output: …" shows again when the stream opens on play (the same words as before aren't repeated)
+        status = "";
         getSystemService(NotificationManager.class).notify(1, buildNotification(getString(R.string.player_usb_asleep)));
         StagePlayer.onServiceChanged();
     };
