@@ -13,11 +13,13 @@ import androidx.compose.runtime.Immutable
 import br.app.stagebook.di.ApplicationScope
 import br.app.stagebook.domain.MidiBytes
 import br.app.stagebook.domain.MidiMessage
+import br.app.stagebook.domain.SerialQueue
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -72,19 +74,28 @@ class MidiOut @Inject constructor(
         if (messages.isEmpty() || manager == null) return
         val key = repository.library.value.look.midiOut
         if (key.isEmpty()) return
-        scope.launch(Dispatchers.IO) {
-            lock.withLock {
-                val p = portFor(key) ?: return@withLock
-                runCatching {
-                    messages.forEach { p.send(MidiBytes.bytes(it), 0, MidiBytes.bytes(it).size) }
-                    val releases = messages.mapNotNull(MidiBytes::release)
-                    if (releases.isNotEmpty()) {
-                        delay(MidiBytes.NOTE_MS)
-                        releases.forEach { p.send(it, 0, it.size) }
-                    }
-                }.onFailure { Log.w(TAG, "MIDI send failed: $it"); closeOpen() }
+        queue.offer(key to messages)
+    }
+
+    // one consumer: the exit of the song that left goes before the entry of the next, whatever the thread pool does;
+    // after a quiet minute the port is let go (a Bluetooth link costs battery), and it opens again on the next message
+    private val queue = SerialQueue<Pair<String, List<MidiMessage>>>(scope + Dispatchers.IO, IDLE_MS, { (key, messages) -> deliver(key, messages) }, { letGo() })
+
+    private suspend fun deliver(key: String, messages: List<MidiMessage>) = lock.withLock {
+        val p = portFor(key) ?: return@withLock
+        runCatching {
+            messages.forEach { p.send(MidiBytes.bytes(it), 0, MidiBytes.bytes(it).size) }
+            val releases = messages.mapNotNull(MidiBytes::release)
+            if (releases.isNotEmpty()) {
+                delay(MidiBytes.NOTE_MS)
+                releases.forEach { p.send(it, 0, it.size) }
             }
-        }
+        }.onFailure { Log.w(TAG, "MIDI send failed: $it"); closeOpen() }
+    }
+
+    private suspend fun letGo() = lock.withLock {
+        closeOpen()
+        if (watching) { manager?.unregisterDeviceCallback(removed); watching = false }
     }
 
     private suspend fun portFor(key: String): MidiInputPort? {
@@ -95,7 +106,8 @@ class MidiOut @Inject constructor(
         val info = m.devices.firstOrNull { usable(it) && keyOf(it) == key } ?: return null
         if (!watching) { m.registerDeviceCallback(removed, main); watching = true }
         val opened = withTimeoutOrNull(OPEN_TIMEOUT_MS) {
-            suspendCancellableCoroutine<MidiDevice?> { c -> m.openDevice(info, { c.resume(it) }, main) }
+            // answered after the wait gave up: nobody would close it (audit 07/11)
+            suspendCancellableCoroutine<MidiDevice?> { c -> m.openDevice(info, { dev -> if (c.isActive) c.resume(dev) else dev?.close() }, main) }
         } ?: return null
         val number = info.ports.firstOrNull { it.type == MidiDeviceInfo.PortInfo.TYPE_INPUT }?.portNumber
         val p = number?.let { opened.openInputPort(it) }
@@ -140,5 +152,6 @@ class MidiOut @Inject constructor(
     private companion object {
         const val TAG = "stagebook"
         const val OPEN_TIMEOUT_MS = 3000L
+        const val IDLE_MS = 60_000L
     }
 }
