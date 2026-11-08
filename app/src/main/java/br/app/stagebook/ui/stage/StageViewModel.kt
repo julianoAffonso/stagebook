@@ -105,6 +105,18 @@ class StageViewModel @Inject constructor(
         when {
             bpm == null -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
             look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, skip, volume) -> metronome.stop()
+            // the USB stream was closed for being idle: opens again, and the click starts by itself (count-in included) as
+            // soon as it's ready, with the player's "preparing the interface" notice; the device after a while if it never is
+            look.playerMode && br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, skip, volume) -> {
+                metronome.stop()
+                clickFallback = viewModelScope.launch {
+                    kotlinx.coroutines.delay(USB_WAIT_MS)
+                    if (!br.app.stagebook.player.StagePlayer.outputConnected()) {
+                        br.app.stagebook.player.StagePlayer.usbClickOff()
+                        metronome.start(bpm, skip, volume)
+                    }
+                }
+            }
             // a USB output chosen and the interface plugged in: the metronome turns the player on, track or not, and
             // sounds there once it's connected ([usbReady] restarts it on the stage); meanwhile nothing on the device
             look.playerMode && !usb.device && player.connectForClick() -> {

@@ -133,11 +133,15 @@ class StagePlayer @Inject constructor(
         if (wanted == null) return
         if (!PlayerService.running) {
             ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
+        } else {
+            PlayerService.wake()   // the stream was closed for being idle: opens again, and this play waits for it
         }
+        PlayerService.playWanted(true)
         _ui.update { it.copy(waiting = true) }
         queue.started()
         scope.launch {
             if (!load()) {
+                PlayerService.playWanted(false)
                 _ui.value = PlayerUi(message = context.getString(R.string.player_no_track))
                 // nothing plays: a song changed while loading gets its own track (it stayed queued; audit 02/11)
                 if (queue.stopped() && PlayerService.running) load()
@@ -149,6 +153,7 @@ class StagePlayer @Inject constructor(
 
     fun pause() {
         endWatch?.cancel()
+        PlayerService.playWanted(false)
         _ui.update { it.copy(playing = false, waiting = false) }
         if (PlayerService.running) {
             Engine.pause()
@@ -166,6 +171,7 @@ class StagePlayer @Inject constructor(
         val usb = context.getSystemService(android.hardware.usb.UsbManager::class.java) ?: return false
         if (usb.deviceList.values.none { br.app.stagebook.data.isUsbAudio(it.interfaceKinds()) }) return false
         if (!PlayerService.running) ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
+        else PlayerService.wake()
         return true
     }
 
@@ -241,6 +247,7 @@ class StagePlayer @Inject constructor(
                 if (!(ui.waiting || ui.playing) || !PlayerService.connected || ready == null || ready != wanted) return@withLock
                 Engine.play()
                 PlayerService.playing(true)
+                PlayerService.playWanted(false)
                 _ui.update { it.copy(playing = true, waiting = false) }
                 endWatch?.cancel()
                 endWatch = scope.launch {
@@ -285,6 +292,8 @@ class StagePlayer @Inject constructor(
             repository.updateLook { it.copy(mixer = it.mixer.copy(output = out)) }
         }
         if (PlayerService.connected) {
+            // a click asked while the stream was closed starts now, with its count-in, as if it had just been asked
+            pendingClick?.let { pendingClick = null; usbClick(it.bpm, it.out, it.skip, it.volume) }
             startIfConnected()
         } else if (_ui.value.playing) {
             // the output dropped while playing: the engine holds the position and the service reconnects by itself
@@ -336,8 +345,30 @@ class StagePlayer @Inject constructor(
                 floats(click.click(false, volume = volume)), floats(click.click(true, volume = volume)), click.samplesPerBeat(bpm),
                 out.out, if (out.pair) out.out + 1 else -1, skip,
             )
+            PlayerService.clickChanged(true)
             return true
         }
+
+        private class PendingClick(val bpm: Int, val out: br.app.stagebook.domain.MetronomeOut, val skip: Long, val volume: Int)
+        @Volatile private var pendingClick: PendingClick? = null
+
+        /**
+         * The stream was closed for being idle and a click on USB is asked: opens it again and starts the click, count-in
+         * included, as soon as it's ready. False when the stream isn't closed (then [usbClick] or the usual path applies).
+         */
+        fun clickWhenReady(bpm: Int, out: br.app.stagebook.domain.MetronomeOut, skip: Long, volume: Int): Boolean {
+            if (out.device || !PlayerService.running || !PlayerService.sleeping) return false
+            pendingClick = PendingClick(bpm, out, skip, volume)
+            PlayerService.clickChanged(true)   // keeps the stream from closing again while it opens
+            PlayerService.wake()
+            return true
+        }
+
+        /** Whether the player's output is connected right now. */
+        fun outputConnected(): Boolean = PlayerService.connected
+
+        /** The click asked while the stream opened is given up (the output never came, or the click was stopped). */
+        fun dropPendingClick() { pendingClick = null }
 
         /** The USB interface the player is on (empty: none); the device metronome keeps away from it. */
         fun interfaceName(): String = if (PlayerService.outputKey.startsWith("usb:")) PlayerService.outputName.orEmpty() else ""
@@ -346,7 +377,11 @@ class StagePlayer @Inject constructor(
         /** The song plays through Android: as media too, the click would follow it to the interface. */
         fun viaAndroid() = PlayerService.viaAndroid
 
-        fun usbClickOff() = Engine.setClick(null, null, 0, -1, -1, 0)
+        fun usbClickOff() {
+            pendingClick = null
+            Engine.setClick(null, null, 0, -1, -1, 0)
+            PlayerService.clickChanged(false)
+        }
 
         private const val METER_MS = 66L          // ~15 reads per second
         private const val METER_IDLE_MS = 500L    // player off: only check whether it turned on

@@ -1,11 +1,11 @@
 package br.app.stagebook.ui.settings
 
+import br.app.stagebook.ui.installApk
 import br.app.stagebook.data.model.ImportSite
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.data.model.ChordListPlace
 import br.app.stagebook.data.model.StageFont
 import android.content.Context
-import android.content.Intent
 import android.hardware.input.InputManager
 import android.net.Uri
 import android.os.Build
@@ -118,6 +118,8 @@ class SettingsViewModel @Inject constructor(
             val look = repository.library.value.look
             val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
             if (look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, look.metroVolume)) metronome.stop()
+            // the USB stream was closed for being idle: opens again and the test click starts when it's ready
+            else if (look.playerMode && br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, 0, look.metroVolume)) metronome.stop()
             else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, look.metroVolume) }
         },
         stop = { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
@@ -307,10 +309,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** The Android installer with the downloaded APK, or null if not downloaded yet. */
-    fun installIntent(): Intent? = downloaded?.let(updater::installIntent)
+    /** Installs the downloaded APK (session on Android 12+, the system screen otherwise); nothing if not downloaded yet. */
+    fun install(context: android.content.Context) = context.installApk(updater, downloaded)
 
-    fun canInstall() = updater.canInstall()
+    /** The downloaded APK that passed the checks, or null. */
+    val downloadedApk: java.io.File? get() = downloaded
 
     fun normalizeSections() {
         viewModelScope.launch {

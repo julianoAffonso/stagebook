@@ -47,6 +47,10 @@ public class PlayerService extends Service {
     // with nothing playing, the app out of sight or the USB interface gone this long turns the player off: it stayed on
     // for 16 h on the S26 with no notification left to turn it off (user, 07/11)
     static final long IDLE_OFF_MS = 10 * 60 * 1000L;
+    // with the USB stream open and nothing sounding (no track, no click) this long, the stream is closed: it moves a
+    // thousand packets a second for nothing, and most songs have no backing track. The next play or click opens it
+    // again, with a notice (user, 08/11)
+    static final long STREAM_IDLE_MS = br.app.stagebook.domain.StreamSleep.IDLE_MS;
     static final long WAKE_TIMEOUT_MS = 30 * 60 * 1000L;
     static final long WATCHDOG_MS = 5000;
     // time for the interface clock to lock after connecting: when the connection is good it arrives in ~2 ms; with 3 s
@@ -72,7 +76,15 @@ public class PlayerService extends Service {
     // playing on the device's output (no USB interface). If USB was connected and dropped, it doesn't fall back to the
     // device mid-show: it waits for USB to come back (the click would go to the speaker).
     boolean deviceOut, hadUsb;
-    boolean isPlaying, idleArmed;
+    boolean isPlaying, idleArmed, sleepArmed;
+    // the USB stream was closed because nothing sounded for STREAM_IDLE_MS: the service stays up (notification, USB
+    // route, loaded track) but doesn't reconnect by itself, and not being connected isn't a lost interface
+    static volatile boolean sleeping;
+    // the metronome click is going through the engine (set by StagePlayer): a stream with a click on isn't idle
+    static volatile boolean clickOn;
+    // a play was asked and hasn't started yet (loading the track, opening the stream): not idle either
+    static volatile boolean playWanted;
+    boolean waking;   // the stream is opening because of a play or a click: its notice says so
     static volatile boolean appVisible = true;
     // the USB interface opened through Android's audio (Settings, off by default): where talking to USB directly gets no
     // packets back (S26, B-33) but Android plays on it (other apps do). Set by StagePlayer from Settings.
@@ -103,10 +115,11 @@ public class PlayerService extends Service {
         ServiceCompat.startForeground(this, 1, buildNotification(getString(R.string.player_starting)),
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0);
         if (running) {
-            if (link == null) connectUsb();
+            if (link == null && !sleeping) connectUsb();
             return START_STICKY;
         }
         running = true;
+        sleeping = false;
         um = (UsbManager) getSystemService(USB_SERVICE);
         // only the app's own permission answer (its PendingIntent) and Android's attach/detach notices, which reach a
         // not-exported receiver too: another app can't fake a "permission denied" (audio audit P3)
@@ -141,7 +154,7 @@ public class PlayerService extends Service {
                 fbRetries = 0;
             } else if (fbRetryDue()) {
                 fbRetry();
-            } else if (link == null && androidUsb == null) {
+            } else if (link == null && androidUsb == null && !sleeping) {
                 // permission granted through Android's window, without our request's notice; through Android no
                 // permission is needed, only Android listing the interface (it may take a moment after plugging in)
                 UsbDevice d = UsbLink.find(um);
@@ -217,7 +230,7 @@ public class PlayerService extends Service {
     }
 
     void connectUsb() {
-        if (link != null || connecting) return;
+        if (link != null || connecting || sleeping) return;
         UsbDevice d = UsbLink.find(um);
         if (d == null) {
             if (hadUsb) setStatus(getString(R.string.player_usb_lost));
@@ -236,7 +249,7 @@ public class PlayerService extends Service {
         if (deviceOut) releaseUsb();   // the USB interface arrived: leave the device and go to it
         connecting = true;
         int gen = usbGen;
-        setStatus(getString(R.string.player_usb_connecting));
+        setStatus(getString(waking ? R.string.player_usb_waking : R.string.player_usb_connecting));
         usbOps.execute(() -> {
             UsbLink l = new UsbLink();
             String err;
@@ -348,6 +361,7 @@ public class PlayerService extends Service {
     // Back on the UI thread, with the connection open (or its error).
     void usbReady(UsbLink l, String err) {
         connecting = false;
+        waking = false;
         if (err != null) { Log.w(TAG, err); setStatus(getString(R.string.player_usb_failed)); return; }
         link = l;
         hadUsb = true;
@@ -371,9 +385,9 @@ public class PlayerService extends Service {
                 else { setStatus(getString(R.string.player_usb_denied)); if (!hadUsb) useDevice(); }
             } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(i.getAction())) {
                 UsbDevice d = IntentCompat.getParcelableExtra(i, UsbManager.EXTRA_DEVICE, UsbDevice.class);
-                if (d != null && UsbLink.isAudioOut(d) && link == null && androidUsb == null) {
+                if (d != null && UsbLink.isAudioOut(d) && link == null && androidUsb == null && !sleeping) {
                     if (!viaAndroid && um.hasPermission(d)) connectUsb();
-                    else main.postDelayed(() -> { if (running && link == null) connectUsb(); }, ATTACH_GRANT_WAIT_MS);
+                    else main.postDelayed(() -> { if (running && link == null && !sleeping) connectUsb(); }, ATTACH_GRANT_WAIT_MS);
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(i.getAction())) {
                 UsbDevice d = IntentCompat.getParcelableExtra(i, UsbManager.EXTRA_DEVICE, UsbDevice.class);
@@ -423,7 +437,13 @@ public class PlayerService extends Service {
 
     // the USB interface dropped and hasn't come back: the stage keeps waiting for it instead of the speaker
     boolean usbLost() {
-        return hadUsb && link == null && androidUsb == null && !connecting;
+        return br.app.stagebook.domain.StreamSleep.interfaceLost(hadUsb, link != null, androidUsb != null, connecting, sleeping);
+    }
+
+    // The direct USB stream is open and nothing uses it. Only this path: through Android and on the device's own output
+    // the system owns the stream and it costs nothing here.
+    boolean streamIdle() {
+        return br.app.stagebook.domain.StreamSleep.idle(running, link != null, isPlaying, clickOn, playWanted, connecting, sleeping);
     }
 
     boolean idle() {
@@ -436,6 +456,50 @@ public class PlayerService extends Service {
         if (now && !idleArmed) main.postDelayed(idleOff, IDLE_OFF_MS);
         else if (!now && idleArmed) main.removeCallbacks(idleOff);
         idleArmed = now;
+        boolean sleepNow = streamIdle();
+        if (sleepNow && !sleepArmed) main.postDelayed(sleepRun, STREAM_IDLE_MS);
+        else if (!sleepNow && sleepArmed) main.removeCallbacks(sleepRun);
+        sleepArmed = sleepNow;
+    }
+
+    final Runnable sleepRun = () -> {
+        sleepArmed = false;
+        if (!streamIdle()) return;
+        Log.i(TAG, "nothing sounded for " + STREAM_IDLE_MS / 1000 + " s: closing the USB stream");
+        sleeping = true;
+        main.removeCallbacks(fbCheck);
+        fbRetries = 0;
+        releaseUsb(true);   // nothing was sounding: no silent tail to wait for
+        // the notification says it; the stage doesn't need a notice for something nobody asked for
+        getSystemService(NotificationManager.class).notify(1, buildNotification(getString(R.string.player_usb_asleep)));
+        StagePlayer.onServiceChanged();
+    };
+
+    /** A play or a click needs the stream (StagePlayer): opens it again if it was closed for being idle. */
+    static void wake() {
+        PlayerService s = instance;
+        if (s != null && sleeping) s.main.post(s::wakeNow);
+    }
+
+    void wakeNow() {
+        if (!running || !sleeping) return;
+        sleeping = false;
+        waking = true;
+        connectUsb();
+    }
+
+    /** A play is waiting to start, or no longer is (StagePlayer). */
+    static void playWanted(boolean on) {
+        playWanted = on;
+        PlayerService s = instance;
+        if (s != null) s.main.post(s::checkIdle);
+    }
+
+    /** The metronome click started or stopped in the engine (StagePlayer): a stream with a click on isn't idle. */
+    static void clickChanged(boolean on) {
+        clickOn = on;
+        PlayerService s = instance;
+        if (s != null) s.main.post(s::checkIdle);
     }
 
     final Runnable idleOff = () -> {
@@ -474,7 +538,11 @@ public class PlayerService extends Service {
         main.removeCallbacks(watchdog);
         main.removeCallbacks(fbCheck);
         main.removeCallbacks(idleOff);
+        main.removeCallbacks(sleepRun);
         idleArmed = false;
+        sleepArmed = false;
+        sleeping = false;
+        waking = false;
         releaseUsb();
         if (running) {
             try { unregisterReceiver(usbReceiver); } catch (IllegalArgumentException ignored) {}

@@ -89,6 +89,8 @@
             android:name=".player.PlayerService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+        <!-- the system's answer to the update's installer session; not exported: only the session's own PendingIntent reaches it -->
+        <receiver android:name=".data.InstallResultReceiver" android:exported="false" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.updates"
