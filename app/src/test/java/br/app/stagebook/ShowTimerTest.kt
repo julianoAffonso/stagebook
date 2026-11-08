@@ -20,6 +20,19 @@ class ShowTimerTest {
         assertEquals(StageClockMode.CLOCK, Look().clockMode)
     }
 
+    // audit 07/11: the stage opens on the clock when the show it was counting is yesterday's (or the clock was set back)
+    @Test fun `a counter left from another day is not shown when the stage opens`() {
+        val now = t0 + 20 * 60 * minute
+        assertTrue(ShowTimer.isStale(t0, now))             // 20 h ago
+        assertTrue(ShowTimer.isStale(0L, now))             // never started
+        assertTrue(ShowTimer.isStale(now + minute, now))   // starts in the future: the clock was set back
+        assertFalse(ShowTimer.isStale(now - 3 * 60 * minute, now))
+        assertEquals(StageClockMode.CLOCK, ShowTimer.onOpening(StageClockMode.ELAPSED, t0, now))
+        assertEquals(StageClockMode.CLOCK, ShowTimer.onOpening(StageClockMode.LEFT, 0L, now))
+        assertEquals(StageClockMode.LEFT, ShowTimer.onOpening(StageClockMode.LEFT, now - minute, now))
+        assertEquals(StageClockMode.CLOCK, ShowTimer.onOpening(StageClockMode.CLOCK, t0, now))
+    }
+
     @Test fun `hours and minutes`() {
         assertEquals("0:00", ShowTimer.format(0))
         assertEquals("1:05", ShowTimer.format(65))

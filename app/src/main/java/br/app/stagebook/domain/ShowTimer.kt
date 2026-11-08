@@ -18,8 +18,15 @@ object ShowTimer {
     /** Tapping the clock: clock → show time → time left → clock. */
     fun next(mode: StageClockMode): StageClockMode = StageClockMode.entries[(mode.ordinal + 1) % StageClockMode.entries.size]
 
+    /** A start that isn't a show running now: never started, in the future (the clock was set back) or yesterday's. */
+    fun isStale(start: Long, now: Long): Boolean = start <= 0L || start > now || now - start > STALE_MS
+
     /** The show's start when the counter shows up: the one running, or now for a new show. */
-    fun startFor(start: Long, now: Long): Long = if (start <= 0L || start > now || now - start > STALE_MS) now else start
+    fun startFor(start: Long, now: Long): Long = if (isStale(start, now)) now else start
+
+    /** The face the stage opens on: the counter only if the show it counts is still running (it is saved in Settings). */
+    fun onOpening(mode: StageClockMode, start: Long, now: Long): StageClockMode =
+        if (mode != StageClockMode.CLOCK && isStale(start, now)) StageClockMode.CLOCK else mode
 
     /** The show's length one step up or down, within its limits. */
     fun step(minutes: Int, up: Boolean): Int = (minutes + if (up) STEP_MINUTES else -STEP_MINUTES).coerceIn(MIN_MINUTES, MAX_MINUTES)

@@ -162,7 +162,13 @@ class StageViewModel @Inject constructor(
         tracks.remove(old)
     }
 
-    init { stageGate.enter() }   // holds the Drive sync while the stage is open
+    init {
+        stageGate.enter()   // holds the Drive sync while the stage is open
+        // yesterday's counter (saved with the settings, or from a restored backup) isn't shown as if it were running
+        val look = repository.library.value.look
+        val mode = br.app.stagebook.domain.ShowTimer.onOpening(look.clockMode, look.showStart, System.currentTimeMillis())
+        if (mode != look.clockMode) repository.updateLook { it.copy(clockMode = mode) }
+    }
     override fun onCleared() {
         stageGate.leave()
         // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
