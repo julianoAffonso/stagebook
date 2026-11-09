@@ -62,12 +62,12 @@ não deixa, eles nunca aparecem.
 Tudo passou na versão 0.1.900 do app. Passar quer dizer: uma música inteira ouvida limpa, pausar e retomar, e tirar e
 pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo aviso.
 
-| Aparelho | Mixer USB Audio 2.0 (4 saídas) | Placa USB Audio 1.0 (44,1 kHz) |
-|---|---|---|
-| TCL NXTPAPER 11 Plus (tablet, 8 núcleos, Android 14) | Passou | Passou |
-| Chuwi Hi10 XPro (tablet simples, Android 13) | Passou, com nota (1) | Passou |
-| Samsung Galaxy S26 Ultra (celular, Android 17) | Passou, com nota (2) | Passou |
-| OnePlus 10 Pro (celular, Android 16) | Passou pelos dois caminhos (3) | Passou |
+| Aparelho | Mixer Behringer FLOW 8 (USB Audio 2.0, 4 saídas) | Placa Nanocore (USB Audio 1.0, 44,1 kHz) | Behringer UMC404HD (USB Audio 2.0, 4 saídas) |
+|---|---|---|---|
+| TCL NXTPAPER 11 Plus (tablet, 8 núcleos, Android 14) | Passou | Passou | Passou (4) |
+| Chuwi Hi10 XPro (tablet simples, Android 13) | Passou, com nota (1) | Passou | Não testado |
+| Samsung Galaxy S26 Ultra (celular, Android 17) | Passou, com nota (2) | Passou | Não testado |
+| OnePlus 10 Pro (celular, Android 16) | Passou pelos dois caminhos (3) | Passou | Não testado |
 
 1. O USB desse tablet perde leituras na entrada da interface, então o motor marca o ritmo da saída pelo relógio do
    sistema. O som sai limpo, com um soluço curto e raro a cada 15 a 60 s. É o limite do USB do tablet; acontece também
@@ -75,8 +75,10 @@ pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo
 2. A entrada da interface parava de responder depois de cerca de um segundo, e o motor marcava o ritmo sozinho. As
    versões mais novas começam com transferências curtas na entrada, e nesse celular ela continua respondendo.
 3. Pelo áudio do Android e pelo motor. O motor pede a janela de permissão USB do Android na primeira vez.
+4. Na versão 0.1.1011, ligada direto e alimentada pelo tablet: uma música inteira ouvida limpa pelo motor, no relógio da
+   própria interface; parar e o cabo voltaram sozinhos.
 
-Não testado: outras interfaces e um fone USB simples (suportados, mas fora desta tabela).
+Não testado: as células acima que dizem isso, outras interfaces e um fone USB simples (suportados, mas fora desta tabela).
 
 ## Quanto o app pesa
 Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** núcleo; os quatro têm 8 núcleos):

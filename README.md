@@ -62,12 +62,12 @@ where it can't, they never show.
 All passed on app version 0.1.900. A pass means: a whole song heard clean, pause and resume, and unplugging and
 plugging the cable with the music playing came back on its own. Through Stagebook's engine unless noted.
 
-| Device | USB Audio 2.0 mixer (4 outputs) | USB Audio 1.0 card (44.1 kHz) |
-|---|---|---|
-| TCL NXTPAPER 11 Plus (tablet, 8 cores, Android 14) | Pass | Pass |
-| Chuwi Hi10 XPro (budget tablet, Android 13) | Pass, with a note (1) | Pass |
-| Samsung Galaxy S26 Ultra (phone, Android 17) | Pass, with a note (2) | Pass |
-| OnePlus 10 Pro (phone, Android 16) | Pass on both routes (3) | Pass |
+| Device | Behringer FLOW 8 mixer (USB Audio 2.0, 4 outputs) | Nanocore card (USB Audio 1.0, 44.1 kHz) | Behringer UMC404HD (USB Audio 2.0, 4 outputs) |
+|---|---|---|---|
+| TCL NXTPAPER 11 Plus (tablet, 8 cores, Android 14) | Pass | Pass | Pass (4) |
+| Chuwi Hi10 XPro (budget tablet, Android 13) | Pass, with a note (1) | Pass | Not tested |
+| Samsung Galaxy S26 Ultra (phone, Android 17) | Pass, with a note (2) | Pass | Not tested |
+| OnePlus 10 Pro (phone, Android 16) | Pass on both routes (3) | Pass | Not tested |
 
 1. This tablet's USB host loses reads on the interface's input, so the engine paces the output from the system clock.
    The sound is clean, with a rare short hiccup every 15 to 60 s. That is the tablet's USB limit; it also happens
@@ -75,8 +75,10 @@ plugging the cable with the music playing came back on its own. Through Stageboo
 2. The interface's input stopped answering after about a second, and the engine paced itself. Newer versions start
    with short input transfers, and on this phone the input keeps answering.
 3. Through Android's audio and through the engine. The engine asks for Android's USB permission window the first time.
+4. On version 0.1.1011, plugged in directly and powered by the tablet: a whole song heard clean on the engine, with the
+   interface's own clock; stop and the cable came back on their own.
 
-Not tested: other interfaces, and a plain USB headset (supported, but not in this matrix).
+Not tested: the cells above that say so, other interfaces, and a plain USB headset (supported, but not in this matrix).
 
 ## How light it is
 Measured on real devices for one minute per screen (CPU as a share of **one** core; all four have 8 cores):
