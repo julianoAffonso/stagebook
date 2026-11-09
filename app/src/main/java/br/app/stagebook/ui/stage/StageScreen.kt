@@ -976,7 +976,11 @@ fun StageScreen(
                     val at = StageFit.measuredOnce { sheets(it, w, cols) }
                     val saving = StageFit.autoPageFloor(minOf(min, limit), minOf(StageFit.autoFewerZoom(look.fontSp), limit), at)
                     val floor = StageFit.autoFloor(saving, minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
-                    br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top, at), cols, fitKey)
+                    // Scroll has no pages to save: the biggest size whose longest line still fits the width, up to the usual
+                    // cap (user, 09/11: on its side the lyrics stayed small with half the screen empty, because every bigger
+                    // size meant more scroll steps)
+                    val scrolling = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
+                    br.app.stagebook.data.model.ScreenZoom(if (scrolling) maxOf(top, min) else StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }
             SideEffect { autoZoomNow = autoFit?.zoom ?: 1f; lastFit = autoFit }

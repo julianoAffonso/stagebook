@@ -377,6 +377,18 @@ class StageAutoZoomTest {
         assertEquals(small, place(), 0.5f)
     }
 
+    // user, 09/11: on its side, scrolling, the automatic size stayed small with half the screen empty, because every
+    // bigger size meant more scroll steps. Scroll has no pages: the biggest size that fits the width, up to the cap
+    @Test @Config(qualifiers = "pt-rBR-w891dp-h411dp-land-xxhdpi")
+    fun `scrolling, the automatic zoom uses the width, not the number of steps`() {
+        val fits = ArrayList<Float>()
+        val look = Look(fontSp = 30f, stageMode = br.app.stagebook.data.model.StageMode.SCROLL)
+        val state = StageUiState(false, listOf(StageSong("Longa", "", verses, false, id = "a")), look = look)
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onFit = { _, z -> fits += z.zoom }) } }
+        compose.waitForIdle()
+        assertEquals("short lines on a wide screen: the cap", br.app.stagebook.domain.StageFit.AUTO_MAX_ZOOM, fits.last(), 0.001f)
+    }
+
     // user, 09/11: the automatic zoom works while scrolling too (it had no button there and only 100% was offered)
     @Test fun `scrolling, the badge offers automatic and goes back to it`() {
         show(look = Look(fontSp = 30f, stageMode = br.app.stagebook.data.model.StageMode.SCROLL))
