@@ -9,12 +9,20 @@ object PageSlots {
     /** [current] and the result are 0-based indexes; [capacity] = how many dots (or "…") fit. */
     fun of(current: Int, count: Int, capacity: Int): List<Int?> {
         if (count <= capacity) return (0 until count).toList()
-        // room for first, "…", neighbors, "…", last: with less than that, the dots around the current one (not only it: a lone
-        // number said nothing of where it stood among the rest)
+        // room for first, "…", neighbors, "…", last takes 5: with less, still the shape that tells how many are left, with
+        // the last one always there (user, 09/11: in scroll there are more steps than a song has pages)
         if (capacity < 5) {
-            val n = capacity.coerceAtLeast(1)
-            val start = (current - (n - 1) / 2).coerceIn(0, count - n)
-            return (start until start + n).toList()
+            val last = count - 1
+            return when (capacity) {
+                1 -> listOf(current)
+                2 -> if (current == last) listOf(0, last) else listOf(current, last)
+                3 -> if (current == 0 || current == last) listOf(0, null, last) else listOf(current, null, last)
+                else -> when {
+                    current <= 1 -> listOf(0, 1, null, last)
+                    current >= count - 2 -> listOf(0, null, count - 2, last)
+                    else -> listOf(0, current, null, last)
+                }
+            }
         }
         val window = capacity - 4
         return when {

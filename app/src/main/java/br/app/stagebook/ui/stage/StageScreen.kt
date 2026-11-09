@@ -1975,18 +1975,6 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
     // cut (device test B-18)
     BoxWithConstraints(modifier, contentAlignment = Alignment.CenterEnd) {
         val fits = ((maxWidth + Spacing.xs) / (Sizes.pageDot + Spacing.xs)).toInt().coerceIn(1, PAGE_SLOTS)
-        // too many for numbered dots (scroll mode has more steps than a song has pages, and the footer shares the row with the
-        // metronome and auto-scroll buttons): small plain dots, all of them, the current one lit (user, 09/11)
-        val tiny = Spacing.s + Spacing.xs
-        val tinyFits = ((maxWidth + Spacing.xs) / (tiny + Spacing.xs)).toInt()
-        if (count > fits && count <= tinyFits) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                repeat(count) { i ->
-                    Box(Modifier.size(tiny).background(color.copy(alpha = if (i == current) 0.95f else 0.2f), CircleShape))
-                }
-            }
-            return@BoxWithConstraints
-        }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
             PageSlots.of(current, count, fits).forEach { i ->
                 val on = i == current
