@@ -161,7 +161,7 @@ de plano B rodam em qualquer lugar. Ele não substitui o teste na mesa.
 
 ### Avisos no Telegram
 Quem mantém o projeto pode receber uma mensagem no Telegram quando uma versão ou o servidor MCP é publicado ou falha,
-quando a `main` falha nas verificações, quando o site da ajuda cai, num alerta de segurança e quando outra pessoa abre
+quando uma verificação falha num pull request ou na `main`, quando o site da ajuda cai, num alerta de segurança e quando outra pessoa abre
 ou comenta uma issue, um pull request ou uma discussão (mais um resumo diário, só quando há novidade). O GitHub não
 dispara workflows por alerta de segurança, então eles e o site da ajuda são conferidos pelas rodadas agendadas, três
 vezes por dia, e não na hora em que acontecem. Para ligar num fork:

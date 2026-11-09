@@ -160,8 +160,8 @@ the runner is marked as too noisy and the four plan A tests show as skipped; the
 replace the test on a real mixer.
 
 ### Notices on Telegram
-The maintainer can get a Telegram message when a release or the MCP server is published or fails, when `main` fails
-its checks, when the help site is down, on a security alert, and when someone else opens or comments on an issue, pull
+The maintainer can get a Telegram message when a release or the MCP server is published or fails, when a check
+fails on a pull request or on `main`, when the help site is down, on a security alert, and when someone else opens or comments on an issue, pull
 request or discussion (plus a daily summary, only when there is news). GitHub doesn't start workflows on security
 alerts, so those and the help site are checked by the scheduled runs, three times a day, not the moment they happen.
 To set it up on a fork:

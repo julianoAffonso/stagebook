@@ -1,12 +1,12 @@
-# Notices on the maintainer's Telegram: a release or the MCP server published or failed, the main branch failing, the
-# help site down, a security alert, and anything another person opens or comments. A daily summary goes out only when
+# Notices on the maintainer's Telegram: a release or the MCP server published or failed, a check failing on a pull
+# request or on main, the help site down, a security alert, and anything another person opens or comments. A daily summary goes out only when
 # there is news. Needs the secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (README, "Notices on Telegram"); without
 # them every step just skips. Security alerts are not workflow triggers on GitHub, so the scheduled runs check them. Nothing here checks out or runs code from a pull request: titles and texts are data,
 # passed through env and never interpolated into a shell, and sent as plain text.
 name: Telegram notices
 on:
   workflow_run:
-    workflows: [Release, MCP publish, Check]
+    workflows: [Release, MCP publish, Check, Help, Privacy, Engine simulator, MCP check]
     types: [completed]
   issues:
     types: [opened]
@@ -56,10 +56,13 @@ jobs:
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           STARTED: ${{ github.event.workflow_run.run_started_at }}
           URL: ${{ github.event.workflow_run.html_url }}
+          PRS: ${{ join(github.event.workflow_run.pull_requests.*.number, ' ') }}
         run: |
           msg=
           case "$NAME:$RESULT" in
-            "Check:failure") [ "$BRANCH" = main ] && msg="Check failed on main" ;;
+            # a check failing on a pull request (Check only runs on PRs into main) or on main itself
+            "Check:failure"|"Help:failure"|"Privacy:failure"|"Engine simulator:failure"|"MCP check:failure")
+              if [ -n "$PRS" ]; then msg="$NAME failed on PR #${PRS// /, #} ($BRANCH)"; else msg="$NAME failed on $BRANCH"; fi ;;
             "Release:failure"|"MCP publish:failure") msg="$NAME failed" ;;
             "Release:success")
               # a dry run also succeeds: only a release created after the run started counts as published
