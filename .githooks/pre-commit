@@ -5,6 +5,7 @@ files=$(git diff --cached --name-only)
 touches() { grep -qE "$1" <<<"$files"; }
 if touches '^(app/|gradle/|build\.gradle|settings\.gradle|gradle\.properties)'; then
   tools/validate.sh || { echo "Commit refused: validation failed"; exit 1; }
+  tools/validated.sh add "$(tools/validated.sh key "$(git write-tree)")"   # pre-push trusts this tree from now on
 fi
 if touches '^mcp/'; then
   (cd mcp && npm test) || { echo "Commit refused: MCP tests failed"; exit 1; }

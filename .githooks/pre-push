@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Nothing goes up whose app tree never passed tools/validate.sh (observation 0029, 09/11): pre-commit validates what it
+# commits, but a clean cherry-pick, a rebase or a merge makes commits without it. Each pushed commit's app tree must be
+# one pre-commit (or this hook) validated; if the one being pushed is the checked-out commit and the tree is clean, it
+# is validated here instead of refused.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+zero=0000000000000000000000000000000000000000
+while read -r _ local_sha _ _; do
+  [ "$local_sha" = "$zero" ] && continue   # deleting a branch
+  key=$(tools/validated.sh key "$local_sha")
+  tools/validated.sh has "$key" && continue
+  if [ "$(git rev-parse HEAD)" = "$local_sha" ] && [ -z "$(git status --porcelain --untracked-files=no)" ]; then
+    echo "pre-push: $(git log -1 --format=%h "$local_sha") was never validated as a whole: running tools/validate.sh"
+    tools/validate.sh || { echo "Push refused: validation failed"; exit 1; }
+    tools/validated.sh add "$key"
+  else
+    echo "Push refused: $(git log -1 --format=%h "$local_sha") was never validated as a whole (a cherry-pick, rebase or"
+    echo "merge skips pre-commit). Check it out with a clean tree and push again, or run tools/validate.sh on it."
+    exit 1
+  fi
+done
+exit 0
