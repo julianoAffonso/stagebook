@@ -618,7 +618,9 @@ int main(int argc, char **argv) {
     t7 = now(); FN(stop)(env, NULL); double slow7 = (now() - t7) * 1000;
     sim_close_conn();
     snprintf(buf, sizeof buf, "fast stop %.0f ms, normal stop %.0f ms", fast7, slow7);
-    check(fast7 < 150 && slow7 > 300, "a fast stop skips the silent tail, the normal one keeps it", buf);
+    // relative, not absolute: on a shared CI runner both stops pay the same scheduling delay (fast 190-325 ms, normal
+    // 630-780 ms seen on GitHub), but only the normal one waits out the ~500 ms silent tail
+    check(slow7 - fast7 > 300, "a fast stop skips the silent tail, the normal one keeps it", buf);
 
     // 7c) the player closes the stream after 10 s of nothing sounding and opens it again on the next play: an open idle
     // stream makes about a thousand submits a second, a closed one none, and playing from a closed stream starts clean
