@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.widthIn
 import br.app.stagebook.ui.components.MixerStrip
 import br.app.stagebook.ui.components.HelpTip
+import br.app.stagebook.ui.components.StatusNote
+import br.app.stagebook.ui.components.StatusTone
 import br.app.stagebook.ui.components.MixerChannelEditor
 import br.app.stagebook.ui.components.label
 import br.app.stagebook.domain.MixerConfig
@@ -247,6 +249,26 @@ fun SettingsRoute(
     val advancedVm: AdvancedViewModel = hiltViewModel()
     val advanced by advancedVm.ui.collectAsStateWithLifecycle()
     val midiOutputs by viewModel.midiOutputs.collectAsStateWithLifecycle()
+    // the plugged USB interface (its way, the power warning): read only while the player's card shows, and again when
+    // the battery or the USB changes or the player switches the way by itself
+    val usb by viewModel.usb.collectAsStateWithLifecycle()
+    val usbChanges by br.app.stagebook.player.UsbRoutes.changes.collectAsStateWithLifecycle()
+    val playerShown = section == SettingsSection.METRONOME && uiState.look.playerMode
+    DisposableEffect(playerShown) {
+        if (!playerShown) return@DisposableEffect onDispose { }
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: android.content.Context, i: Intent) = viewModel.refreshUsb()
+        }
+        val filter = android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED).apply {
+            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
+        // the battery's state comes back at once (sticky): that is the first read
+        androidx.core.content.ContextCompat.registerReceiver(context, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        viewModel.refreshUsb()
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    LaunchedEffect(usbChanges) { if (playerShown) viewModel.refreshUsb() }
     // read again every time the section opens and when coming back from Android's settings (battery request)
     LifecycleResumeEffect(section == SettingsSection.ADVANCED) {
         // About too: its update card asks whether this is a Samsung with Auto Blocker
@@ -318,6 +340,7 @@ fun SettingsRoute(
                 onWebEditorOn = viewModel::setWebEditorOn,
                 onWebRemove = webVm::remove,
                 advanced = advanced,
+                usb = usb,
                 onTweak = advancedVm::set,
                 onBatteryFree = { runCatching { context.startActivity(advancedVm.batteryRequest()) } },
                 onAutoBlocker = { br.app.stagebook.data.device.AutoBlocker.open(context) },
@@ -356,7 +379,7 @@ fun SettingsRoute(
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
                 onMetronomeMenu = viewModel::probeClickRoute,
-                clickApart = clickApart || !uiState.look.usbViaAndroid,
+                clickApart = clickApart || !usb.androidOr(uiState.look.usbViaAndroid),
                 clickTesting = clickTesting,
                 onClickTest = viewModel::toggleClickTest,
                 onClickTestStop = viewModel::stopClickTest,
@@ -428,6 +451,8 @@ data class SettingsActions(
     val onWebRemove: (String) -> Unit = {},
     // Settings → Advanced (31/10)
     val advanced: AdvancedUi = AdvancedUi(),
+    // Settings → USB output: the plugged interface's way and power (09/11)
+    val usb: br.app.stagebook.player.UsbOutputUi = br.app.stagebook.player.UsbOutputUi(),
     val onTweak: (br.app.stagebook.data.device.DeviceTweak, Boolean) -> Unit = { _, _ -> },
     val onBatteryFree: () -> Unit = {},
     val onAutoBlocker: () -> Unit = {},
@@ -1304,8 +1329,17 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
     // "USB output", not "Player" again under the screen's own title
     SettingsCard(stringResource(R.string.settings_usb_card), help = stringResource(R.string.settings_player_mode_help)) {
         UsbRequirements()
-        // for devices where the direct way gets no sound: through Android, as other music apps (user, 02/11)
-        SwitchRow(stringResource(R.string.usb_via_android), look.usbViaAndroid, actions.onUsbViaAndroid, detail = stringResource(R.string.usb_via_android_detail))
+        // for devices where the direct way gets no sound: through Android, as other music apps (user, 02/11). With an
+        // interface plugged in, the switch is that interface's way on this device (user, 09/11)
+        val usb = actions.usb
+        SwitchRow(stringResource(R.string.usb_via_android), usb.androidOr(look.usbViaAndroid), actions.onUsbViaAndroid, detail = stringResource(R.string.usb_via_android_detail))
+        when {
+            usb.name.isEmpty() -> Unit
+            usb.auto -> StatusNote(stringResource(R.string.usb_route_auto, usb.name), StatusTone.INFO)
+            usb.remembered -> StatusNote(stringResource(R.string.usb_route_saved, usb.name), StatusTone.INFO)
+        }
+        // the interface charges the device: some behave worse on the engine that way (user, 06/11)
+        if (usb.powered) StatusNote(stringResource(R.string.usb_power_warning), StatusTone.PROBLEM)
     }
     // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10)
     SettingsCard(stringResource(R.string.settings_track_button)) {

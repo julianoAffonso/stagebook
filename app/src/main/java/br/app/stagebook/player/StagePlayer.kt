@@ -81,18 +81,16 @@ class StagePlayer @Inject constructor(
 
     init {
         instance = this
-        // USB through Android's audio (Settings): the service reads it on connecting; a change connects again
+        // USB through Android's audio (Settings): the default for interfaces with nothing remembered (UsbRoutes). The
+        // service reads the way on connecting; a change connects again, and the service writes Android's USB routing
+        // for the new way before it opens
         scope.launch {
             repository.library.map { it.look.usbViaAndroid }.distinctUntilChanged().collect { via ->
-                val changed = PlayerService.viaAndroid != via
-                PlayerService.viaAndroid = via
-                if (changed && PlayerService.running) {
-                    // the two go together: Android's USB routing is written (or given back) before connecting again
-                    routeScope.launch {
-                        DeviceTweaks.routeUsb(context, !via)
-                        withContext(Dispatchers.Main) { PlayerService.reconnect() }
-                    }
-                } else if (changed) PlayerService.reconnect()
+                val changed = PlayerService.androidDefault != via
+                PlayerService.androidDefault = via
+                // the player off: what the metronome reads until the service sets the interface's own way
+                if (!PlayerService.running) PlayerService.viaAndroid = via
+                else if (changed) PlayerService.reconnect()
             }
         }
         // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
@@ -337,6 +335,9 @@ class StagePlayer @Inject constructor(
             val app = context.applicationContext
             routeScope.launch { DeviceTweaks.routeUsb(app, false) }
         }
+
+        /** The way of an interface was chosen in Settings: with the player on, it connects again that way. */
+        fun routeChanged() = PlayerService.reconnect()
 
         /** Player mode turned off in Settings: if the player had started, turn everything off. */
         fun turnOff() { instance?.shutdown() }

@@ -87,9 +87,16 @@ public class PlayerService extends Service {
     static volatile boolean playWanted;
     boolean waking;   // the stream is opening because of a play or a click: its notice says so
     static volatile boolean appVisible = true;
-    // the USB interface opened through Android's audio (Settings, off by default): where talking to USB directly gets no
-    // packets back (S26, B-33) but Android plays on it (other apps do). Set by StagePlayer from Settings.
+    // the USB interface opened through Android's audio: where talking to USB directly fails but Android plays on it
+    // (other apps do). The way of the current interface (UsbRoutes: remembered per interface on this device, else
+    // [androidDefault]); set on each connection.
     static volatile boolean viaAndroid;
+    // the Settings switch for an interface with nothing remembered (StagePlayer, from the library)
+    static volatile boolean androidDefault;
+    // failures of the way in use for the plugged interface: enough of them switch it to the other way, remembered
+    final br.app.stagebook.domain.UsbRoute.Trouble trouble = new br.app.stagebook.domain.UsbRoute.Trouble();
+    boolean routing;        // Android's USB routing is being written for a change of way: connecting waits for it
+    String switchedNote;    // the notice for a way just switched by itself, shown instead of "ready"
     UsbDevice androidUsb;   // the interface open that way (deviceOut is true then)
 
     final Handler main = new Handler(Looper.getMainLooper());
@@ -129,6 +136,8 @@ public class PlayerService extends Service {
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "stagebook:play");
         // Android reads its USB routing when the interface connects: written first (off the main thread), only now
         // that the player really runs, and given back in shutdown()
+        UsbDevice plugged = UsbLink.find(um);
+        viaAndroid = plugged != null ? UsbRoutes.android(this, plugged, androidDefault) : androidDefault;
         StagePlayer.routeUsbThen(this, !viaAndroid, () -> { if (running && link == null && !connecting) connectUsb(); });
         main.postDelayed(watchdog, WATCHDOG_MS);
         checkIdle();
@@ -144,12 +153,16 @@ public class PlayerService extends Service {
             if (!running) return;
             if (deviceOut && !Engine.isRunning()) {
                 Log.w(TAG, "device output dropped (" + Engine.status() + "): reopening");
+                UsbDevice d = androidUsb;
                 releaseUsb();
+                if (d != null && trouble.dropped(SystemClock.elapsedRealtime())) wayFailed(d, true);
                 connectUsb();
             } else if (link != null && !Engine.isRunning()) {
                 Log.w(TAG, "USB stream dropped (" + Engine.status() + "): reconnecting");
                 usbQueues().edit().putInt(usbKey(link.dev), Engine.queueMs()).apply();   // it may have halved its queue
+                UsbDevice d = link.dev;
                 releaseUsb();
+                if (trouble.dropped(SystemClock.elapsedRealtime())) wayFailed(d, false);
                 connectUsb();
             } else if (link != null && Engine.feedback() == 1) {
                 fbRetries = 0;
@@ -159,7 +172,7 @@ public class PlayerService extends Service {
                 // permission granted through Android's window, without our request's notice; through Android no
                 // permission is needed, only Android listing the interface (it may take a moment after plugging in)
                 UsbDevice d = UsbLink.find(um);
-                if (d != null && (viaAndroid || um.hasPermission(d))) connectUsb();
+                if (d != null && (UsbRoutes.android(PlayerService.this, d, androidDefault) || um.hasPermission(d))) connectUsb();
             }
             checkCable();
             main.postDelayed(this, WATCHDOG_MS);
@@ -254,7 +267,7 @@ public class PlayerService extends Service {
     }
 
     void connectUsb() {
-        if (link != null || connecting || sleeping) return;
+        if (link != null || connecting || sleeping || routing) return;
         UsbDevice d = UsbLink.find(um);
         if (d == null) {
             if (hadUsb) setStatus(getString(R.string.player_usb_lost));
@@ -262,6 +275,8 @@ public class PlayerService extends Service {
             checkIdle();
             return;
         }
+        boolean android = UsbRoutes.android(this, d, androidDefault);
+        if (android != viaAndroid) { changeWay(android); return; }
         if (viaAndroid) { useAndroidUsb(d); return; }
         if (!um.hasPermission(d)) {
             Intent it = new Intent(ACTION_USB_PERM).setPackage(getPackageName());
@@ -295,8 +310,44 @@ public class PlayerService extends Service {
             }
             String result = err;
             // turned off or dropped midway: releaseUsb (queued after this one) already closes this connection
-            main.post(() -> { if (gen == usbGen) usbReady(l, result); });
+            main.post(() -> { if (gen == usbGen) usbReady(l, d, result); });
         });
+    }
+
+    // This interface opens the other way: Android's USB routing is written for it first (off the main thread), then it
+    // connects. Android reads that routing when the interface connects, so a way switched mid-session may need a replug.
+    void changeWay(boolean android) {
+        Log.i(TAG, "USB way: " + (android ? "through Android" : "engine"));
+        if (deviceOut) releaseUsb();   // was on the device's own output: the interface is here
+        viaAndroid = android;
+        routing = true;
+        trouble.reset();
+        StagePlayer.routeUsbThen(this, !android, () -> {
+            routing = false;
+            if (running && link == null && androidUsb == null && !connecting) connectUsb();
+        });
+    }
+
+    // The way in use keeps failing for [d]: the other way is saved for it when nothing was remembered (UsbRoute). True
+    // when it switched: connecting again opens the other way.
+    boolean wayFailed(UsbDevice d, boolean failedAndroid) {
+        trouble.reset();
+        String way = failedAndroid ? "through Android" : "engine";
+        if (!UsbRoutes.fallback(this, d, failedAndroid)) {
+            Log.w(TAG, way + " keeps failing: the way was chosen in Settings or the other one failed too, staying");
+            return false;
+        }
+        Log.w(TAG, way + " keeps failing: switching ways for this interface, remembered");
+        String name = d.getProductName() != null && !d.getProductName().trim().isEmpty() ? d.getProductName().trim() : "USB";
+        switchedNote = getString(failedAndroid ? R.string.player_usb_route_engine : R.string.player_usb_route_android, name);
+        return true;
+    }
+
+    // "ready", or the notice of a way just switched by itself (said once, when the new way is ready)
+    void setReady(String name) {
+        String note = switchedNote;
+        switchedNote = null;
+        setStatus(note != null ? note : getString(R.string.player_usb_ready, name));
     }
 
     // No USB interface: opens the device's output, also off the UI thread.
@@ -330,8 +381,9 @@ public class PlayerService extends Service {
         }
         // Android hasn't listed it yet (just plugged in): the watchdog tries again
         if (out == null) {
-            // after a while it's no longer a matter of waiting: say so instead of "connecting" for ever
-            setStatus(getString(++androidMisses < ANDROID_MISSES ? R.string.player_usb_connecting : R.string.player_usb_no_android, d.getProductName()));
+            // after a while it's no longer a matter of waiting: the other way, or say so instead of "connecting" for ever
+            if (++androidMisses == ANDROID_MISSES && wayFailed(d, true)) { androidMisses = 0; connectUsb(); return; }
+            setStatus(getString(androidMisses < ANDROID_MISSES ? R.string.player_usb_connecting : R.string.player_usb_no_android, d.getProductName()));
             return;
         }
         androidMisses = 0;
@@ -351,7 +403,12 @@ public class PlayerService extends Service {
 
     void androidUsbReady(boolean ok, UsbDevice d, int count) {
         connecting = false;
-        if (!ok) { setStatus(getString(R.string.player_usb_failed)); return; }
+        if (!ok) {
+            if (trouble.openFailed() && wayFailed(d, true)) connectUsb();
+            else setStatus(getString(R.string.player_usb_failed));
+            return;
+        }
+        trouble.opened();
         deviceOut = true;
         androidUsb = d;
         hadUsb = true;
@@ -362,7 +419,7 @@ public class PlayerService extends Service {
         connected = true;
         checkIdle();
         Log.i(TAG, "USB through Android: " + outputName + ", " + count + " channels");
-        setStatus(getString(R.string.player_usb_ready, outputName));
+        setReady(outputName);
     }
 
     /** The Settings choice changed (StagePlayer): connect again the new way. */
@@ -398,7 +455,7 @@ public class PlayerService extends Service {
     void watchProbe(int gen, long since) {
         main.postDelayed(() -> {
             if (gen != usbGen || link == null) return;   // closed meanwhile
-            if (Engine.probing() == 0) { setStatus(getString(R.string.player_usb_ready, link.name())); return; }
+            if (Engine.probing() == 0) { setReady(link.name()); return; }
             String wait = getString(R.string.player_usb_waking);
             if (SystemClock.elapsedRealtime() - since >= CONNECT_NOTE_MS && !wait.equals(status)) setStatus(wait);
             watchProbe(gen, since);
@@ -406,10 +463,16 @@ public class PlayerService extends Service {
     }
 
     // Back on the UI thread, with the connection open (or its error).
-    void usbReady(UsbLink l, String err) {
+    void usbReady(UsbLink l, UsbDevice d, String err) {
         connecting = false;
         waking = false;
-        if (err != null) { Log.w(TAG, err); setStatus(getString(R.string.player_usb_failed)); return; }
+        if (err != null) {
+            Log.w(TAG, err);
+            if (trouble.openFailed() && wayFailed(d, false)) connectUsb();
+            else setStatus(getString(R.string.player_usb_failed));
+            return;
+        }
+        trouble.opened();
         link = l;
         hadUsb = true;
         outputKey = String.format(java.util.Locale.ROOT, "usb:%04x:%04x", l.dev.getVendorId(), l.dev.getProductId());
@@ -424,7 +487,7 @@ public class PlayerService extends Service {
         // the engine judges the interface's clock for about 2 s after opening, silent: the ready note waits for it, and the
         // stage is told to wait if it takes more than half a second
         if (Engine.probing() != 0) watchProbe(usbGen, SystemClock.elapsedRealtime());
-        else setStatus(getString(R.string.player_usb_ready, link.name()));
+        else setReady(link.name());
     }
 
     final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
@@ -444,6 +507,8 @@ public class PlayerService extends Service {
                 if (d != null && (link != null && d.equals(link.dev) || d.equals(androidUsb))) {
                     releaseUsb();
                     fbRetries = 0;   // new cable: new attempts to get the clock
+                    trouble.reset();   // and a clean count of failures for the way
+                    androidMisses = 0;
                     holdWake(false);
                     setStatus(getString(R.string.player_usb_lost));
                     checkIdle();
@@ -595,6 +660,9 @@ public class PlayerService extends Service {
         sleepArmed = false;
         sleeping = false;
         waking = false;
+        routing = false;
+        switchedNote = null;
+        trouble.reset();
         releaseUsb();
         if (running) {
             try { unregisterReceiver(usbReceiver); } catch (IllegalArgumentException ignored) {}
