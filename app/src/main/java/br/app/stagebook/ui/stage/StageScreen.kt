@@ -1717,9 +1717,9 @@ private fun TrackButton(
             Modifier
                 .size(Sizes.touch + Spacing.m)
                 .clip(CircleShape)
-                // the stage's own background, nearly opaque, under the old light tint: the button sits on top of the
-                // lyrics instead of letting a line show through it (user, 09/11: "Frase 5" looked like it was over it)
-                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.92f)) else Modifier)
+                // the stage's own background at 60%, under the old light tint: the button reads as on top of the lyrics
+                // and what's behind still shows faintly (user, 09/11: at 12% "Frase 5" looked over it, at 92% it hid it)
+                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.6f)) else Modifier)
                 .background(fg.copy(alpha = 0.12f))
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,
