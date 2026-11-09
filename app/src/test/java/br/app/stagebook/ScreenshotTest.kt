@@ -328,13 +328,19 @@ class ScreenshotTest {
 
     // T15: the scroll icon on the clock line opens the small window with play and speed
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    @Test fun autoScrollDialog() {
+    @Test fun autoScrollDialog() = autoScrollDialogShot("tablet_6_palco_rolagem_auto")
+
+    @Test @Config(qualifiers = PHONE)
+    fun autoScrollDialogPhone() = autoScrollDialogShot("celular_7_palco_rolagem_auto")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun autoScrollDialogShot(name: String) {
         compose.setContent {
             StagebookTheme { StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 0, { _, _ -> }, onBack = {}) }
         }
         compose.onNodeWithContentDescription(str(R.string.stage_auto_title)).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_rolagem_auto.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // scrolling: the icon next to the clock becomes pause
@@ -373,33 +379,50 @@ class ScreenshotTest {
 
     // T33c: the metronome next to the clock and its small window
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    @Test fun metronomeDialog() {
+    @Test fun metronomeDialog() = metronomeDialogShot("tablet_6_palco_metronomo")
+
+    @Test @Config(qualifiers = PHONE)
+    fun metronomeDialogPhone() = metronomeDialogShot("celular_7_palco_metronomo")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun metronomeDialogShot(name: String) {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_metronomo.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // the clock's show counter (user, 07/11): time left near the end, and the show's length window
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    @Test fun showCounter() {
+    @Test fun showCounter() = showCounterShot("tablet_6_palco_tempo_show")
+
+    @Test @Config(qualifiers = PHONE)
+    fun showCounterPhone() = showCounterShot("celular_7_palco_tempo_show")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun showCounterShot(name: String) {
         val start = System.currentTimeMillis() - (60 - 7) * 60_000L
         val counting = stage.copy(look = stage.look.copy(clockMode = br.app.stagebook.data.model.StageClockMode.LEFT, showStart = start))
         compose.setContent { StagebookTheme { StageScreen(counting, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.onNode(androidx.compose.ui.test.hasContentDescription(str(R.string.stage_clock_left), substring = true))
             .performTouchInput { longClick() }
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_palco_tempo_show.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
-    @Test fun metronomeCount() {
+    @Test fun metronomeCount() = metronomeCountShot("tablet_6_palco_metronomo_contagem")
+
+    @Test @Config(qualifiers = PHONE)
+    fun metronomeCountPhone() = metronomeCountShot("celular_7_palco_metronomo_contagem")
+
+    private fun metronomeCountShot(name: String) {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.mainClock.autoAdvance = false
         compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
         repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
         compose.onNodeWithContentDescription(str(R.string.metro_play)).performClick()
         repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
-        compose.onRoot().captureRoboImage("$SHOTS_DIR/tablet_6_palco_metronomo_contagem.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // the metronome is at the end of Stage look: a tall capture so it shows (it used to be its own section)
@@ -443,9 +466,14 @@ class ScreenshotTest {
     }
 
     // keyboard with a capo chart: chords in the sounding key, the notice at the top and the first-time message
-    @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") {
+    @Test fun stageKeyboardCapo() = shoot("tablet_6_palco_teclado_capo") { StageKeyboardCapo() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageKeyboardCapoPhone() = shoot("celular_7_palco_teclado_capo") { StageKeyboardCapo() }
+
+    @Composable
+    private fun StageKeyboardCapo() =
         StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false)), look = stage.look.copy(instrument = br.app.stagebook.data.model.Instrument.KEYBOARD)), 0, 0, { _, _ -> }, onBack = {})
-    }
 
     // T21: the chord's second screen (harmonic field)
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
@@ -463,7 +491,13 @@ class ScreenshotTest {
 
     // with a capo the diagram shows it: the bar, its fret, and the shape played from there
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    @Test fun chordCapo() {
+    @Test fun chordCapo() = chordCapoShot("tablet_6_acorde_capo")
+
+    @Test @Config(qualifiers = PHONE)
+    fun chordCapoPhone() = chordCapoShot("celular_6_acorde_capo")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun chordCapoShot(name: String) {
         val capoSong = s("{key: Em}\n{capo: 2}\n[Em7]Linha de [G]teste")
         compose.setContent {
             StagebookTheme {
@@ -472,7 +506,7 @@ class ScreenshotTest {
             }
         }
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_6_acorde_capo.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // on a phone, with a capo: the field shows what sounds (F#m7 in F#m) and long chords wrap to a second row
@@ -568,6 +602,8 @@ class ScreenshotTest {
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR)
+    @Test @Config(qualifiers = PHONE)
+    fun chordPopupGuitarPhone() = chordPopup("celular_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR)
     // essential mode: no sound and no Details, the diagram and its shapes stay (user, 01/11)
     @Test fun chordPopupEssential() = chordPopup("tablet_6_acorde_essencial", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR, extras = false)
     @Test fun chordPopupUkulele() = chordPopup("tablet_6_acorde_ukulele", "G", br.app.stagebook.data.model.Instrument.UKULELE)
@@ -662,7 +698,13 @@ class ScreenshotTest {
     // Section titles card into view, down to its last switch
     @Test fun settingsSectionsTablet() = shootLyricsAt("tablet_5_ajustes_secoes", settings, str(R.string.settings_translate_sections), extraUp = 50f)
 
-    @Test fun conductOnStage() = shoot("tablet_6_palco_acompanhando") {
+    @Test fun conductOnStage() = shoot("tablet_6_palco_acompanhando") { ConductOnStage() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun conductOnStagePhone() = shoot("celular_7_palco_acompanhando") { ConductOnStage() }
+
+    @Composable
+    private fun ConductOnStage() {
         androidx.compose.foundation.layout.Column {
             androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
             br.app.stagebook.ui.band.ConductBar(
@@ -674,6 +716,9 @@ class ScreenshotTest {
     }
 
     @Test fun conductBar() = shoot("banda_conduzir_faixas") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun conductBarPhone() = shoot("banda_conduzir_faixas_celular") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }
 
     @Test fun settingsUpdateTablet() = shoot("tablet_5_ajustes_atualizar") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
@@ -834,6 +879,11 @@ class ScreenshotTest {
         StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 1, { _, _ -> }, onBack = {})
     }
 
+    @Test @Config(qualifiers = PHONE)
+    fun stageScrollPhone() = shoot("celular_7_palco_rolar") {
+        StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 1, { _, _ -> }, onBack = {})
+    }
+
     // Page card down to the Automatic zoom switch, whole: it sits at the end of the section
     private fun shootPageCard(name: String) {
         compose.setContent {
@@ -872,13 +922,17 @@ class ScreenshotTest {
 
     // the pinch's notice: the percent, Automatic and Default
     @Test @Config(qualifiers = PHONE)
-    fun stageZoomBadgePhone() {
+    fun stageZoomBadgePhone() = stageZoomBadgeShot("celular_7_palco_zoom")
+
+    @Test fun stageZoomBadgeTablet() = stageZoomBadgeShot("tablet_6_palco_zoom")
+
+    private fun stageZoomBadgeShot(name: String) {
         compose.setContent { StagebookTheme { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.onRoot().performTouchInput {
             pinch(center - Offset(100f, 0f), center - Offset(125f, 0f), center + Offset(100f, 0f), center + Offset(125f, 0f), durationMillis = 400)
         }
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_7_palco_zoom.png")
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // the Page card in Scroll mode, scrolled to its speed slider (the top of Lyrics looks the same in both modes)
@@ -973,11 +1027,16 @@ class ScreenshotTest {
     // a tap on "Key G" opens − and + for key and capo, without leaving the stage
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test @Config(qualifiers = PHONE)
-    fun stageKeyCapoPhone() {
+    fun stageKeyCapoPhone() = stageKeyCapoShot("celular_7_palco_tom_capo")
+
+    @Test fun stageKeyCapoTablet() = stageKeyCapoShot("tablet_6_palco_tom_capo")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun stageKeyCapoShot(name: String) {
         compose.setContent { StagebookTheme { StageScreen(stageBadges, 0, 0, { _, _ -> }, onBack = {}) } }
         compose.onNodeWithContentDescription(str(R.string.stage_key_desc, "G"), useUnmergedTree = true).performClick()
         compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_7_palco_tom_capo.png")
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -1360,7 +1419,13 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = TABLET_TALL)
-    fun songMixerContentTablet() = shoot("jornada_eq_musica_2_inteiro") {
+    fun songMixerContentTablet() = shoot("jornada_eq_musica_2_inteiro") { SongMixerContent() }
+
+    @Test @Config(qualifiers = PHONE_TALL)
+    fun songMixerContentPhone() = shoot("jornada_eq_musica_2_inteiro_celular") { SongMixerContent() }
+
+    @Composable
+    private fun SongMixerContent() {
         androidx.compose.foundation.layout.Column(
             androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.m),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
@@ -1414,7 +1479,12 @@ class ScreenshotTest {
 
     // a band link tapped on stage waits: the notice floats over the stage (user, 08/11)
     @Test @Config(qualifiers = PHONE)
-    fun stageLinkKeptPhone() = shoot("celular_7_palco_link_guardado") {
+    fun stageLinkKeptPhone() = shoot("celular_7_palco_link_guardado") { StageLinkKept() }
+
+    @Test fun stageLinkKeptTablet() = shoot("tablet_6_palco_link_guardado") { StageLinkKept() }
+
+    @Composable
+    private fun StageLinkKept() {
         Box(Modifier.fillMaxSize()) {
             StageScreen(stage, 0, 1, { _, _ -> }, onBack = {})
             androidx.compose.material3.Snackbar(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
