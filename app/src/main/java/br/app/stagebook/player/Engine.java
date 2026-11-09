@@ -39,6 +39,8 @@ final class Engine {
     static native String status();
     // interface clock through the input: 1 locked, 0 waiting, -1 no input
     static native int feedback();
+    /** 1 while the engine judges the interface's clock after opening (the output is silent), else 0. */
+    static native int probing();
     // live meters (they only read the signal): when off, the engine does the same as before
     static native void setMeter(boolean on);
     // linear peaks since the previous read: {channel 1, 2, 3, 4, backing bands 80, 250, 1k, 3.5k, 10k}

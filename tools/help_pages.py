@@ -632,7 +632,7 @@ SECTIONS = [
                  Fig(("tablet_1_aviso_essencial", None, "O aviso do modo essencial", "The essential mode notice"))]),
             sub("ajustes-avancado", "Avançado", "Advanced",
                 ["São ajustes do próprio Android. Para mudá-los, o Stagebook precisa de uma permissão dada uma vez por um computador com o adb: a tela mostra o comando e Copiar o comando. Sem ela, os ajustes aparecem mas não mudam. Alguns só existem em certos aparelhos e só aparecem neles.",
-                 "Eles valem para o aparelho inteiro, não só para o Stagebook. O app grava de novo sempre que abre, porque o Android às vezes volta atrás sozinho. Por isso, mude por estas chaves: o que você mudar nos ajustes do Android volta na próxima abertura. Desligar uma chave volta o valor que o aparelho tinha antes do Stagebook mudar. Desligada, a chave para de gravar. A depuração é a exceção: nunca é gravada de novo.",
+                 "Eles valem para o aparelho inteiro, não só para o Stagebook. O app grava de novo sempre que abre, porque o Android às vezes volta atrás sozinho. Por isso, mude por estas chaves: o que você mudar nos ajustes do Android volta na próxima abertura. Desligar uma chave volta o valor que o aparelho tinha antes do Stagebook mudar. Desligada, a chave para de gravar. Os de “Para tocar sem falhas” só são gravados com o player ligado; com ele desligado, o Stagebook não mexe neles. A depuração é a exceção: nunca é gravada de novo.",
                  "### Para tocar sem falhas",
                  "Eles já derrubaram a interface de áudio ou pararam o app no palco. Vêm ligados; desligue um só se souber por quê.",
                  "- **Liberar da economia de bateria:** o Android não para o Stagebook com a tela apagada. Este vale sem o adb: é um toque em Permitir.",
@@ -646,7 +646,7 @@ SECTIONS = [
                  "### Computador",
                  "- **Modo desenvolvedor e depuração por Wi-Fi:** para testar pelo computador com o adb. Vem desligado."],
                 ["These are Android's own settings. To change them, Stagebook needs a permission given once from a computer with adb: the screen shows the command and Copy the command. Without it the settings show but don't change. Some only exist on certain devices and only show there.",
-                 "They apply to the whole device, not just Stagebook. The app writes them again every time it opens, because Android sometimes goes back by itself. So change them with these switches: what you change in Android's settings comes back the next time it opens. Turning a switch off brings back the value the device had before Stagebook changed it. Once off, the switch stops writing. Debugging is the exception: it's never written again.",
+                 "They apply to the whole device, not just Stagebook. The app writes them again every time it opens, because Android sometimes goes back by itself. So change them with these switches: what you change in Android's settings comes back the next time it opens. Turning a switch off brings back the value the device had before Stagebook changed it. Once off, the switch stops writing. The ones under “For playing without failures” are only written with the player on; with it off, Stagebook leaves them alone. Debugging is the exception: it's never written again.",
                  "### For playing without failures",
                  "These have dropped the audio interface or stopped the app on stage. They come on; turn one off only if you know why.",
                  "- **Free from battery saving:** Android won't stop Stagebook with the screen off. This one works without adb: it's one tap on Allow.",
@@ -823,12 +823,12 @@ SECTIONS = [
         "text_pt": [
             "O Stagebook foi medido em quatro aparelhos: um tablet TCL NXTPAPER 11 Plus, um Galaxy S26 Ultra, um OnePlus 10 Pro e um tablet Chuwi Hi10 XPro, mais simples. Parado na lista ou no palco, ele usa menos de 1% de um núcleo do processador; virando página, até 15%; tocando um backing track, de 4% a 19%. Os quatro aparelhos têm 8 núcleos, então mesmo tocando ele usa menos de 3% do processador inteiro.",
             "A memória fica entre 30 e 255 MB, conforme o aparelho e a tela. O modo essencial quase não muda esses números: o ganho dele é deixar na tela só o que você usa.",
-            "Tocando uma faixa pela interface USB, o app usou de 3,7% a 31,3% de um núcleo, conforme o aparelho e a mesa: no S26, 6,7% com o mixer USB Audio 2.0 e 3,7% com a placa USB Audio 1.0; no Chuwi, 29,3% e 16,9%; no OnePlus, 31,3% e 22,2%; no TCL, 5,1% e 3,0%. O TCL foi medido com 70% de bateria e o Android mantém seis dos oito núcleos em baixa frequência, então os números dele contam só os dois núcleos disponíveis, ponderados pela frequência. Sem ponderar, são 19,5% e 10,0%. Com o player ligado e a interface conectada, mas nada tocando, o app fecha o fluxo USB depois de 10 segundos, para não gastar bateria à toa. Ao tocar uma faixa ou ligar o metrônomo na interface, o fluxo abre de novo, com o aviso para aguardar, e o som começa sozinho quando ela está pronta. Antes de fechar, o fluxo parado usava cerca de 19% de um núcleo no OnePlus.",
+            "Tocando uma faixa pela interface USB, o app usou de 3,7% a 31,3% de um núcleo, conforme o aparelho e a mesa: no S26, 6,7% com o mixer USB Audio 2.0 e 3,7% com a placa USB Audio 1.0; no Chuwi, 29,3% e 16,9%; no OnePlus, 31,3% e 22,2%; no TCL, 5,1% e 3,0%. O TCL foi medido com 70% de bateria e o Android mantém seis dos oito núcleos em baixa frequência, então os números dele contam só os dois núcleos disponíveis, ponderados pela frequência. Sem ponderar, são 19,5% e 10,0%. Com o player ligado e a interface conectada, mas nada tocando, o app fecha o fluxo USB depois de 10 segundos, para não gastar bateria à toa. Ao tocar uma faixa ou ligar o metrônomo na interface, o fluxo abre de novo em uma fração de segundo. Toda vez que o fluxo abre, o app confere por cerca de 2 segundos se o relógio da interface está certo, e o som só começa depois disso; o aviso para aguardar aparece se passar de meio segundo. Essa conferência é feita uma vez, antes da música, para o som não mudar no meio dela. Antes de fechar, o fluxo parado usava cerca de 19% de um núcleo no OnePlus; com ele fechado, o app usa 0,4% no OnePlus, 0,4% no TCL, 0,1% no S26 e 0,1% no Chuwi.",
         ],
         "text_en": [
             "Stagebook was measured on four devices: a TCL NXTPAPER 11 Plus tablet, a Galaxy S26 Ultra, a OnePlus 10 Pro and a simpler Chuwi Hi10 XPro tablet. Idle on the list or the stage it uses less than 1% of one processor core; turning pages, up to 15%; playing a backing track, 4% to 19%. All four devices have 8 cores, so even playing it uses less than 3% of the whole processor.",
             "Memory stays between 30 and 255 MB, depending on the device and the screen. Essential mode barely changes these numbers: its gain is keeping on screen only what you use.",
-            "Playing a track over the USB interface, the app used between 3.7% and 31.3% of one core, depending on the device and the interface: on the S26, 6.7% with the USB Audio 2.0 mixer and 3.7% with the USB Audio 1.0 card; on the Chuwi, 29.3% and 16.9%; on the OnePlus, 31.3% and 22.2%; on the TCL, 5.1% and 3.0%. The TCL was measured at 70% battery with Android keeping six of its eight cores at low frequency, so its numbers count only the two available cores, weighted by frequency. Unweighted they are 19.5% and 10.0%. With the player on and the interface plugged in but nothing playing, the app closes the USB stream after 10 seconds, so it doesn't use battery for nothing. Playing a track or turning on the metronome on the interface opens it again, with a notice to wait, and the sound starts by itself once it's ready. Before it closed, the idle stream used about 19% of one core on the OnePlus.",
+            "Playing a track over the USB interface, the app used between 3.7% and 31.3% of one core, depending on the device and the interface: on the S26, 6.7% with the USB Audio 2.0 mixer and 3.7% with the USB Audio 1.0 card; on the Chuwi, 29.3% and 16.9%; on the OnePlus, 31.3% and 22.2%; on the TCL, 5.1% and 3.0%. The TCL was measured at 70% battery with Android keeping six of its eight cores at low frequency, so its numbers count only the two available cores, weighted by frequency. Unweighted they are 19.5% and 10.0%. With the player on and the interface plugged in but nothing playing, the app closes the USB stream after 10 seconds, so it doesn't use battery for nothing. Playing a track or turning on the metronome on the interface opens it again in a fraction of a second. Every time it opens, the app checks for about 2 seconds that the interface's clock is right, and the sound only starts after that; the notice to wait shows if it takes longer than half a second. The check happens once, before the music, so the sound doesn't change in the middle of it. Before it closed, the idle stream used about 19% of one core on the OnePlus; with it closed, the app uses 0.4% on the OnePlus, 0.4% on the TCL, 0.1% on the S26 and 0.1% on the Chuwi.",
         ],
         "figs": [],
     },
@@ -906,10 +906,10 @@ SECTIONS = [
 UI = {
     "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",
               "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR",
-              "home": "Stagebook — página inicial"},
+              "home": "Stagebook — página inicial", "repo": "Código do Stagebook no GitHub"},
     "en": {"title": "Stagebook help", "lead": "How to use each part of the app.", "contents": "On this page",
            "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "../ajuda/", "lang": "en",
-           "home": "Stagebook — home page"},
+           "home": "Stagebook — home page", "repo": "Stagebook source code on GitHub"},
 }
 
 CSS = """
@@ -921,6 +921,7 @@ header { padding: 32px max(16px, env(safe-area-inset-left, 0px)) 8px; max-width:
 header img { width:72px; height:72px; border-radius:18px; display:block; }
 header a.home { border-radius:18px; } header a.home:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 h1 { margin:0; font-size: 30px; } .lead { margin:4px 0 0; color:var(--muted); }
+.repo { margin-left:auto; color:var(--accent); } .repo + .lang { margin-left:0; }
 .lang { margin-left:auto; color:var(--accent); }
 .wrap { max-width:1180px; margin:0 auto; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
         display:grid; grid-template-columns: 220px 1fr; gap: 32px; }
@@ -1055,7 +1056,7 @@ def build(lang):
 <title>{ui['title']}</title><link rel="icon" href="../logo.png"><style>{CSS}</style></head>
 <body>
 <header><a class="home" href="../" aria-label="{ui['home']}"><img src="../logo.png" alt=""></a><div><h1>{ui['title']}</h1><p class="lead">{ui['lead']}</p></div>
-<a class="lang" href="{ui['other_href']}">{ui['other']}</a></header>
+<a class="repo" href="https://github.com/julianoAffonso/stagebook" aria-label="{ui['repo']}">GitHub</a><a class="lang" href="{ui['other_href']}">{ui['other']}</a></header>
 <div class="wrap"><nav class="toc"><b>{ui['contents']}</b>{''.join(toc)}</nav><main>{''.join(body)}</main></div>
 <script>{JS}</script>
 </body></html>

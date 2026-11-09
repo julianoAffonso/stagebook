@@ -81,6 +81,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -283,6 +284,7 @@ fun StageRoute(
             onMetronomeSound = viewModel::metronomeSound,
             onTempo = viewModel::setTempo,
             metroUsbReady = usbReady,
+            metroUsbPlugged = viewModel::usbPlugged,
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
             onSongMix = viewModel::setSongMix,
@@ -350,6 +352,7 @@ fun StageScreen(
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onTempo: (songId: String, bpm: Int) -> Unit = { _, _ -> },
     metroUsbReady: Boolean = false,   // the player reached the USB interface: the metronome restarts there, in step
+    metroUsbPlugged: () -> Boolean = { false },   // a USB audio interface is plugged in: a metronome on USB waits for it
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
     onSongMix: (songId: String, mixer: br.app.stagebook.domain.MixerConfig?) -> Unit = { _, _ -> },
@@ -549,9 +552,18 @@ fun StageScreen(
     // the USB interface becoming ready restarts it only when the metronome sounds there: with the device output, play on
     // the track (the player reaching the interface) restarted the click from beat 1 mid-song (audit 02/11)
     val usbRestart = metroUsbReady && look.playerMode && look.metroUsbOut >= 0
+    // on the USB output the click can't sound until the interface is ready (the stream opens, then the engine judges its
+    // clock for about 2 s, silent): the count and the blinks wait for it from the tap, so there's no blink before the
+    // "wait" notice and no count that restarts; when it's ready (usbRestart) both start together. The device's click after
+    // a while if it never is, in step with the ViewModel's fallback
+    val usbReadyNow by rememberUpdatedState(metroUsbReady)
     LaunchedEffect(metroOn, metroBpm, look.metroSound, look.metroCount, look.metroVolume, usbRestart) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
         if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
+        if (look.metroSound && look.playerMode && look.metroUsbOut >= 0 && !usbReadyNow && metroUsbPlugged()) {
+            metroBeat = -1
+            kotlinx.coroutines.withTimeoutOrNull(METRO_USB_WAIT_MS) { androidx.compose.runtime.snapshotFlow { usbReadyNow }.first { it } }
+        }
         val periodNanos = 60_000_000_000L / metroBpm
         // the time of the next frame, but never waiting for it longer than a beat: once on the TCL the beats stopped
         // (icon dim, no glow) while the metronome stayed on, as if no frame came; without a frame the time comes from
@@ -1507,6 +1519,7 @@ internal fun rememberPlayerNote(notice: String, fresh: (String) -> Boolean): Str
 // also carries the sheet's style and columns: the page leaving in the animation isn't rebuilt (or resized) with the new
 // song's
 private const val FLASH_MS = 1500L
+private const val METRO_USB_WAIT_MS = 6_000L   // as long as the ViewModel waits for the interface before the device's click
 private const val METRO_FLASH_MS = 180
 private const val STRIP_MAX_SCALE = 2.5f
 private const val NOTE_MAX_CHARS = 40

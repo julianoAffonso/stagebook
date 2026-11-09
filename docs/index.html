@@ -34,6 +34,7 @@ img { max-width:100%; height:auto; display:block; }
 .brand img { width:32px; height:32px; border-radius:8px; }
 .bar nav { margin-left:auto; display:flex; align-items:center; gap:16px; }
 .bar nav a.help { color:var(--fg); text-decoration:none; font-size:15px; }
+.bar nav a.gh { color:var(--fg); text-decoration:none; font-size:15px; }
 .switch { display:flex; background:var(--raised); border-radius:999px; padding:3px; }
 .switch button { border:0; background:none; color:var(--fg); font: 700 13px system-ui, sans-serif; padding:6px 12px; border-radius:999px; cursor:pointer; min-width:44px; }
 .switch button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
@@ -119,6 +120,7 @@ footer .copy { margin-left:auto; }
   <a class="brand" href="./"><img src="logo.png" alt="" width="32" height="32">Stagebook</a>
   <nav>
     <a class="help pt" href="ajuda/">Ajuda</a><a class="help en" href="help/">Help</a>
+    <a class="gh" href="https://github.com/julianoAffonso/stagebook" aria-label="Stagebook no GitHub">GitHub</a>
     <div class="switch" role="group" aria-label="Idioma / Language">
       <button type="button" data-set="pt" aria-pressed="false" lang="pt-BR">PT</button>
       <button type="button" data-set="en" aria-pressed="true" lang="en">EN</button>
@@ -139,6 +141,7 @@ footer .copy { margin-left:auto; }
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 4h2v9.17l3.59-3.58L18 11l-6 6-6-6 1.41-1.41L11 13.17zM5 19h14v2H5z"/></svg>
       <span class="pt">Baixar para Android</span><span class="en">Download for Android</span></a>
     <a class="btn ghost pt" href="ajuda/">Ajuda</a><a class="btn ghost en" href="help/">Help</a>
+    <a class="btn ghost" href="https://github.com/julianoAffonso/stagebook"><span class="pt">Código no GitHub</span><span class="en">Source on GitHub</span></a>
   </div>
   <p class="fine"><span class="pt">Grátis · Android 9+ · celular e tablet · sem cadastro</span><span class="en">Free · Android 9+ · phone and tablet · no account</span></p>
   <div class="shot">

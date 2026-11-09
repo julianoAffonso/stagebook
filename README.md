@@ -78,6 +78,7 @@ Measured on real devices for one minute per screen (CPU as a share of **one** co
 | Sending a setlist to the band | 2.6% · 198 MB | 0.0% · 160 MB (receiving) | — | — |
 | Backing track on a USB interface (USB Audio 2.0 mixer) | 5.1%¹ · 160 MB | 6.7% · 140 MB | 29.3% · 80 MB | 31.3% · 42 MB |
 | Backing track on a USB interface (USB Audio 1.0 card) | 3.0%¹ · 101 MB | 3.7% · 86 MB | 16.9% · 83 MB | 22.2% · 41 MB |
+| Player on, nothing playing (the USB stream closes after 10 s) | 0.4% · 142 MB | 0.1% · 112 MB | 0.1% · 96 MB | 0.4% · 46 MB |
 | Backing track playing on the device output | 17.1% · 147 MB | 3.9% · 140 MB | 13.9% · 71 MB | 18.9% · 44 MB |
 | Band settings, idle | 0.2% · 175 MB | 0.2% · 145 MB | 0.3% · 75 MB | 0.6% · 41 MB |
 

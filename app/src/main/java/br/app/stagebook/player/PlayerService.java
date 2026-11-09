@@ -249,7 +249,7 @@ public class PlayerService extends Service {
         if (deviceOut) releaseUsb();   // the USB interface arrived: leave the device and go to it
         connecting = true;
         int gen = usbGen;
-        setStatus(getString(waking ? R.string.player_usb_waking : R.string.player_usb_connecting));
+        noteConnecting(gen, waking ? R.string.player_usb_waking : R.string.player_usb_connecting);
         usbOps.execute(() -> {
             UsbLink l = new UsbLink();
             String err;
@@ -358,6 +358,27 @@ public class PlayerService extends Service {
         setStatus(getString(R.string.player_device_out));
     }
 
+    // "Connecting…" is said only when it takes a while: an interface that opens in a few ms goes straight to "ready", and
+    // a note that flashes for that long can't be read.
+    static final long CONNECT_NOTE_MS = 500;
+    Runnable connectNote;
+
+    void noteConnecting(int gen, int text) {
+        if (connectNote != null) main.removeCallbacks(connectNote);
+        connectNote = () -> { if (connecting && gen == usbGen) setStatus(getString(text)); };
+        main.postDelayed(connectNote, CONNECT_NOTE_MS);
+    }
+
+    void watchProbe(int gen, long since) {
+        main.postDelayed(() -> {
+            if (gen != usbGen || link == null) return;   // closed meanwhile
+            if (Engine.probing() == 0) { setStatus(getString(R.string.player_usb_ready, link.name())); return; }
+            String wait = getString(R.string.player_usb_waking);
+            if (SystemClock.elapsedRealtime() - since >= CONNECT_NOTE_MS && !wait.equals(status)) setStatus(wait);
+            watchProbe(gen, since);
+        }, 100);
+    }
+
     // Back on the UI thread, with the connection open (or its error).
     void usbReady(UsbLink l, String err) {
         connecting = false;
@@ -374,7 +395,10 @@ public class PlayerService extends Service {
         main.postDelayed(fbCheck, fbWait());
         checkIdle();
         Log.i(TAG, link.describe());
-        setStatus(getString(R.string.player_usb_ready, link.name()));
+        // the engine judges the interface's clock for about 2 s after opening, silent: the ready note waits for it, and the
+        // stage is told to wait if it takes more than half a second
+        if (Engine.probing() != 0) watchProbe(usbGen, SystemClock.elapsedRealtime());
+        else setStatus(getString(R.string.player_usb_ready, link.name()));
     }
 
     final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
@@ -470,7 +494,9 @@ public class PlayerService extends Service {
         main.removeCallbacks(fbCheck);
         fbRetries = 0;
         releaseUsb(true);   // nothing was sounding: no silent tail to wait for
-        // the notification says it; the stage doesn't need a notice for something nobody asked for
+        // the notification says it; the stage doesn't need a notice for something nobody asked for. The stage's notice
+        // is cleared, so "USB output: …" shows again when the stream opens on play (the same words as before aren't repeated)
+        status = "";
         getSystemService(NotificationManager.class).notify(1, buildNotification(getString(R.string.player_usb_asleep)));
         StagePlayer.onServiceChanged();
     };

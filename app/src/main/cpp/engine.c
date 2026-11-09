@@ -56,10 +56,17 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 // halved that cost; but on one tablet's host controller 16-packet URBs reached the interface with hiss under the
 // music and thumps, and 8 came out clean (07/11/2026). The queue stays 32 ms.
 #define PKTS_PER_URB 8
-// Input URBs are long: on some host controllers every URB boundary on the input loses a poll or two (the frames of
-// those microframes are gone: 8 packets lost 40% of them, 16 lost 9%, 64 lost 2%), so the fewer boundaries the better;
-// the input is only a clock, so its latency doesn't matter.
-#define IN_PKTS_PER_URB 128
+// The size of the input URBs is chosen when the stream opens (user, 08/11). On some host controllers every URB boundary
+// on the input loses a poll or two (the frames of those microframes are gone: 8 packets lost 40% of them, 16 lost 9%,
+// 64 lost 2%, 128 about 0.5%), so there the fewer boundaries the better, and the input is only a clock, so its latency
+// doesn't matter: that is the budget tablet. On the S26 long ones are the problem: with 128 packets its input went
+// quiet about 4 s after opening, with 16 it never did. So it opens with short ones, and the clock probe, which counts
+// the packets lost, goes to the long ones (and probes again) when more than FB_LOSS_MAX of them are lost.
+#define IN_PKTS_SHORT 16
+#define IN_PKTS_LONG 128
+#define IN_PKTS_PER_URB IN_PKTS_LONG   // what the buffers are made for
+#define FB_LOSS_MAX 0.03
+static int g_in_pkts = IN_PKTS_SHORT;   // what is submitted now
 #define IN_NURBS 8
 #define TAIL_MS 500                   // silence before releasing the endpoint
 #define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
@@ -73,6 +80,21 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 // Order: g_vmx before g_mx. The USB thread only takes g_mx.
 static pthread_mutex_t g_vmx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_mx = PTHREAD_MUTEX_INITIALIZER;
+
+// Names the calling thread: top, ps and traces show it instead of the app's name.
+static void name_thread(const char *name) {
+#ifdef __APPLE__
+    pthread_setname_np(name);
+#else
+    pthread_setname_np(pthread_self(), name);
+#endif
+}
+
+// Names the calling thread and gives it its priority.
+static void thread_setup(const char *name, int nice) {
+    name_thread(name);
+    if (setpriority(PRIO_PROCESS, gettid(), nice) < 0) LOGI("%s: priority denied (%s)", name, strerror(errno));
+}
 static float g_ring[RING_FRAMES * LANES_MAX];
 static int g_ring_r = 0, g_ring_w = 0, g_ring_n = 0;
 
@@ -305,6 +327,23 @@ static double g_fb_win = 0;
 static long g_fb_win_in = 0;
 #define FB_HI 64
 #define FB_LO 16
+// The clock is judged once, when the stream opens, before any sound (user, 08/11): the input is read for FB_PROBE_SUBS
+// quarter-seconds with the output silent, and the stream goes to plan A (follow the input) or plan B (own pace) for as
+// long as it stays open. A host whose timing is merely noisy (the reading of a one-second window moves by a few tenths
+// of a percent while the clock is fine) keeps plan A with a tolerance that fits its noise; a clock that is really off
+// goes to plan B before the first note. Once decided, plan A is left only for a real failure (FB_LEAVE_N windows more
+// than FB_LEAVE_OFF away), never for noise in the middle of a song.
+#define ENGINE_HAS_PROBE 1
+#define FB_PROBE_SUB_S 0.25
+#define FB_PROBE_SUBS 8
+#define FB_PROBE_MAX_S 3.0            // the output is held at most this long waiting for the input
+#define FB_LEAVE_OFF 0.01
+#define FB_LEAVE_N 3
+#define FB_NOISE_MAX 0.006            // a host whose one-second reading can be off by more than this isn't a clock to follow
+static volatile int g_probing = 0;    // the clock is being judged: the output is silent
+static int g_fb_decided = 0, g_fb_open_bad = 0, g_fb_off_n = 0, g_pr_n = 0;
+static double g_fb_tol_hz = 0, g_pr_hz[FB_PROBE_SUBS], g_pr_time = 0, g_probe_start = 0;
+static long g_pr_frames = 0, g_pr_lost = 0, g_pr_pkts = 0;   // frames, and packets lost and seen, in this probe
 // With an input clock that exists but can't be followed (g_fb_bad), the output is paced against the system's monotonic
 // clock instead of the bus: on some hosts the microframe clock runs off nominal (~900 ppm slow seen on one tablet) and
 // the interface, consuming at its own crystal, runs its small queue dry every few seconds. A PI loop on the frames sent
@@ -451,7 +490,7 @@ static float g_dec_out[4096 * LANES_MAX];   // used only by the decoder thread
 static void *dec_main(void *arg) {
     float buf[1024 * 8];
     // Android audio priority (-16): ahead of the screen, camera and import, below USB (-19)
-    if (setpriority(PRIO_PROCESS, gettid(), -16) < 0) LOGI("decoder: priority denied (%s)", strerror(errno));
+    thread_setup("sb-decoder", -16);
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
         pthread_mutex_lock(&g_mx);
@@ -558,6 +597,7 @@ static volatile int g_stalled = 0, g_watching = 0;
 static pthread_t g_watch_thr;
 static void wake_usb(int sig) {}
 static void *stall_watch(void *arg) {
+    name_thread("sb-watch");
     while (g_watching) {
         struct timespec t = {0, 50000000}; nanosleep(&t, NULL);
         if (g_watching && now_s() - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
@@ -579,6 +619,47 @@ static int reap_wait(struct usbdevfs_urb **out) {
 }
 
 // ---- thread USB ----
+// An input URB came back during the probe. Readings of FB_PROBE_SUB_S; after FB_PROBE_SUBS the clock is judged. Returns
+// 1 when it is off (plan B for this stream). The timing noise of a reading is the same in absolute terms whatever its
+// length, so its effect on the rate shrinks with the window: the spread of a one-second window is the spread of a
+// reading times SUB.
+static int fb_probe(double t, int rate) {
+    if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; return 0; }
+    double dt = t - g_fb_win;
+    if (dt < FB_PROBE_SUB_S) return 0;
+    g_pr_hz[g_pr_n++] = g_fb_win_in / dt; g_pr_frames += g_fb_win_in; g_pr_time += dt;
+    g_fb_win = t; g_fb_win_in = 0;
+    if (g_pr_n < FB_PROBE_SUBS) return 0;
+    double mean = g_pr_frames / g_pr_time, m = 0, v = 0;
+    for (int i = 0; i < g_pr_n; i++) m += g_pr_hz[i];
+    m /= g_pr_n;
+    for (int i = 0; i < g_pr_n; i++) v += (g_pr_hz[i] - m) * (g_pr_hz[i] - m);
+    double sd = sqrt(v / (g_pr_n - 1));
+    double sd_win = sd * FB_PROBE_SUB_S;
+    double loss = g_pr_pkts > 0 ? (double)g_pr_lost / g_pr_pkts : 0;
+    if (g_in_pkts == IN_PKTS_SHORT && loss > FB_LOSS_MAX) {
+        // this host loses a poll at every URB boundary: the long ones, and the probe starts over (still silent)
+        g_in_pkts = IN_PKTS_LONG;
+        LOGI("usb: input loses %.1f%% of its packets with short transfers: long ones", 100 * loss);
+        g_pr_n = 0; g_pr_frames = 0; g_pr_time = 0; g_pr_lost = 0; g_pr_pkts = 0; g_fb_win = 0; g_fb_win_in = 0;
+        g_probe_start = t;
+        return 0;
+    }
+    double nominal = rate * FB_MAX_OFF;
+    double noise = 4 * sd_win;   // what a one-second reading can be off by on this host
+    g_fb_decided = 1; g_probing = 0;
+    // off: the mean is away from the nominal rate (the noise gives no room: a clock that is off AND noisy is the worst case,
+    // seen on the tablet whose mean was -0.6% with readings 5 times noisier than the others), or the readings are too
+    // noisy to be followed at all
+    if (fabs(mean - rate) > nominal || noise > rate * FB_NOISE_MAX) {
+        LOGI("usb: input clock off at open (%.0f Hz, noise %.2f%%), keeping our own pace", mean, 100 * noise / rate);
+        return 1;
+    }
+    g_fb_tol_hz = fmax(nominal, noise);
+    LOGI("usb: input clock on at open (%.0f Hz, noise %.2f%%)", mean, 100 * noise / rate);
+    return 0;
+}
+
 static void *usb_main(void *arg) {
     int speed = ioctl(g_fd, USBDEVFS_GET_SPEED);
     int pkts_per_sec = (speed >= USB_SPEED_HIGH) ? 8000 : 1000;
@@ -599,7 +680,7 @@ static void *usb_main(void *arg) {
 
     // audio priority (the same as AudioTrack): without it, with the CPU busy or hot, the thread can lose its turn and
     // the 8 ms URB queue can run dry; if the system refuses, it carries on
-    if (setpriority(PRIO_PROCESS, gettid(), -19) < 0) LOGI("usb: priority denied (%s)", strerror(errno));
+    thread_setup("sb-usb", -19);
 
     for (int u = 0; u < nurbs; u++) {
         urbs[u] = calloc(1, urb_sz);
@@ -614,6 +695,7 @@ static void *usb_main(void *arg) {
         (urb)->flags = USBDEVFS_URB_ISO_ASAP; (urb)->number_of_packets = PKTS_PER_URB; \
         pthread_mutex_lock(&g_mx); \
         int mon = g_meter_on; \
+        int hold = g_probing;   /* judging the input clock: silent until it's decided */ \
         for (int k = 0; k < PKTS_PER_URB; k++) { \
             acc += (double)OUT_RATE / pkts_per_sec * (g_fb_bad ? 1.0 + g_pace_ratio : 1.0); int nf = (int)acc; acc -= nf; \
             if (g_in_ep >= 0 && g_fb_locked && !g_fb_bad) { \
@@ -630,14 +712,14 @@ static void *usb_main(void *arg) {
             /* Nothing playing, faded out and no click: the output is exactly zero, so the mixer, the EQ and the click, */ \
             /* which only produce those zeros, are skipped (the idle player cost ~19% of a core, audit 07/11). The EQ's */ \
             /* state and the limiter are reset once, as the silence would have let them decay. */ \
-            int quiet = !(g_playing && !tail) && g_fade <= 0.0f && g_clk_spb <= 0; \
+            int quiet = (!(g_playing && !tail) || hold) && g_fade <= 0.0f && (g_clk_spb <= 0 || hold); \
             if (quiet) { \
                 if (!quiet_was) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; quiet_was = 1; } \
                 memset(b + off, 0, (size_t)nf * frame_bytes); off += nf * frame_bytes; \
             } else { quiet_was = 0; \
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
-                int want_play = g_playing && !tail; \
+                int want_play = g_playing && !tail && !hold; \
                 if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
                 if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
@@ -667,8 +749,8 @@ static void *usb_main(void *arg) {
             in_urbs[u]->buffer = calloc(1, g_in_maxpkt * IN_PKTS_PER_URB);
             struct usbdevfs_urb *iu = in_urbs[u];
             iu->type = USBDEVFS_URB_TYPE_ISO; iu->endpoint = g_in_ep; iu->flags = USBDEVFS_URB_ISO_ASAP;
-            iu->number_of_packets = IN_PKTS_PER_URB; iu->buffer_length = g_in_maxpkt * IN_PKTS_PER_URB;
-            for (int k = 0; k < IN_PKTS_PER_URB; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
+            iu->number_of_packets = g_in_pkts; iu->buffer_length = g_in_maxpkt * g_in_pkts;
+            for (int k = 0; k < g_in_pkts; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
             n_in = u + 1;
             if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) {
                 LOGI("feedback off: the input refused a URB (%s)", strerror(errno));
@@ -721,6 +803,7 @@ static void *usb_main(void *arg) {
             g_in_last = now_s();
             for (int k = 0; k < done->number_of_packets; k++) {
                 int n = done->iso_frame_desc[k].status ? 0 : (int)done->iso_frame_desc[k].actual_length / g_in_fb;
+                if (!g_fb_decided) { g_pr_pkts++; if (n == 0) g_pr_lost++; }
                 // a packet lost on the way still went by on the desk's clock: it counts for what it would have brought
                 if (n == 0) { lost_acc += (double)g_out_rate / pkts_per_sec; n = (int)lost_acc; lost_acc -= n; st_in_lost++; }
                 g_tot_in += n; st_in_frames += n; g_fb_win_in += n;
@@ -728,26 +811,39 @@ static void *usb_main(void *arg) {
             if (!g_fb_locked && g_tot_in > 0) { g_fb_off = g_tot_out - g_tot_in; g_fb_locked = 1; g_fb_win = 0; }
             if (g_fb_locked) {
                 double t = now_s();
-                if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; }
+                if (!g_fb_decided) {
+                    if (fb_probe(t, g_out_rate)) {
+                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; g_fb_open_bad = 1;
+                        pace_reset();
+                    }
+                } else if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; }
                 else if (t - g_fb_win >= 1.0) {
                     double hz = g_fb_win_in / (t - g_fb_win);
-                    int off = fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF;
-                    if (!g_fb_bad && off) {
-                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t;
-                        LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
-                    } else if (g_fb_bad && !off && ++g_fb_good >= FB_BACK_S) {
-                        // a passing hiccup of the host (busy for a second) must not cost the whole show: once the
-                        // count keeps time again for FB_BACK_S seconds, the input is the clock again, from where we are
-                        g_fb_bad = 0; g_fb_mode = 0; g_fb_off = g_tot_out - g_tot_in;
-                        LOGI("usb: input clock back (%.0f Hz), following it again", hz);
-                    } else if (g_fb_bad && off) { g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; }
+                    double dev = fabs(hz - g_out_rate);
+                    if (!g_fb_bad) {
+                        // plan A: only a real failure takes it off (not the noise of one window)
+                        if (dev <= g_out_rate * FB_LEAVE_OFF) g_fb_off_n = 0;
+                        else if (++g_fb_off_n >= FB_LEAVE_N) {
+                            g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t;
+                            LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
+                        }
+                    } else if (!g_fb_open_bad) {
+                        // it left plan A during the stream: once the count keeps time again for FB_BACK_S seconds, the
+                        // input is the clock again, from where we are (a stream judged off at open stays on plan B)
+                        if (dev > g_fb_tol_hz) { g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; }
+                        else if (++g_fb_good >= FB_BACK_S) {
+                            g_fb_bad = 0; g_fb_mode = 0; g_fb_off = g_tot_out - g_tot_in; g_fb_off_n = 0;
+                            LOGI("usb: input clock back (%.0f Hz), following it again", hz);
+                        }
+                    }
                     g_fb_win = t; g_fb_win_in = 0;
                 }
             }
             // An input that can't be followed is only read again to probe it (FB_PROBE_S): on the host that loses its
             // packets, reading it at all costs the output (hiss and thumps heard with the input running, 07/11/2026)
             if (tail || g_in_ep < 0 || (g_fb_bad && !g_fb_probing && !DIAG)) { in_idle++; continue; }
-            int npk = done->number_of_packets;
+            int npk = g_in_pkts;   // the size in force now: a switch takes effect as the URBs come back
+            done->number_of_packets = npk; done->buffer_length = g_in_maxpkt * npk;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
             if (ioctl(g_fd, USBDEVFS_SUBMITURB, done) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; }
@@ -757,6 +853,10 @@ static void *usb_main(void *arg) {
         reaped++;
         {   // frames sent ahead of the monotonic clock, smoothed, and the PI loop on it (see g_pace_ratio)
             double t = now_s();
+            if (g_probing && t - g_probe_start > FB_PROBE_MAX_S) {
+                g_probing = 0; g_fb_decided = 1; g_fb_tol_hz = g_out_rate * FB_MAX_OFF;   // the input didn't come: no longer held
+                LOGI("usb: input clock not heard at open, going on");
+            }
             if (!g_fb_bad && g_fb_locked && g_in_ep >= 0 && !tail && g_in_last > 0 &&
                 (t - g_in_last > FB_STALL_S || labs((g_tot_out - g_tot_in) - g_fb_off) > FB_MAX_D)) {
                 // seen on a phone: the input answered for the first second and then went quiet for good; following
@@ -765,13 +865,14 @@ static void *usb_main(void *arg) {
                 pace_reset();
                 LOGI("usb: input stopped answering, keeping our own pace");
             }
-            if (g_fb_bad && !g_fb_probing && !tail && g_in_ep >= 0 && in_idle == n_in && t - g_fb_probe_t >= FB_PROBE_S) {
+            if (g_fb_bad && !g_fb_open_bad && !g_fb_probing && !tail && g_in_ep >= 0 && in_idle == n_in && t - g_fb_probe_t >= FB_PROBE_S) {
                 // probe: read the input again until a second's count is off (stop) or FB_BACK_S are good (follow it)
                 g_fb_probing = 1; g_fb_good = 0; g_fb_win = 0; in_idle = 0;
                 for (int u = 0; u < n_in; u++) {
                     struct usbdevfs_urb *iu = in_urbs[u];
                     iu->status = 0; iu->actual_length = 0; iu->start_frame = 0; iu->error_count = 0;
-                    for (int k = 0; k < IN_PKTS_PER_URB; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
+                    iu->number_of_packets = g_in_pkts; iu->buffer_length = g_in_maxpkt * g_in_pkts;
+                    for (int k = 0; k < g_in_pkts; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
                     if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; break; }
                     inflight++;
                 }
@@ -876,6 +977,7 @@ out:
         for (int u = 0; u < n_in; u++) park_urb(in_urbs[u]);
     }
     pthread_mutex_lock(&g_stmx); LOGI("usb end: %s", g_status); pthread_mutex_unlock(&g_stmx);
+    g_probing = 0;   // no stream, nothing is being judged: a later output through Android doesn't inherit the hold
     g_usb_running = 0;
     return NULL;
 }
@@ -957,6 +1059,9 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
+    g_fb_decided = g_in_ep < 0; g_fb_open_bad = 0; g_fb_off_n = 0; g_pr_n = 0; g_pr_frames = 0; g_pr_time = 0; g_fb_win = 0; g_fb_win_in = 0;
+    g_in_pkts = IN_PKTS_SHORT; g_pr_lost = g_pr_pkts = 0;
+    g_fb_tol_hz = OUT_RATE * FB_MAX_OFF; g_probe_start = now_s(); g_probing = g_in_ep >= 0;
     g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0; g_in_last = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
@@ -989,6 +1094,7 @@ JNIEXPORT void JNICALL FN(stopFast)(JNIEnv *e, jclass c) { g_fast_stop = 1; FN(s
 JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
+    g_probing = 0;   // the device path has no input to judge: never held
     AAudioStreamBuilder *b = NULL;
     if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
     AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
@@ -1235,6 +1341,8 @@ JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
 
 // interface clock (feedback through the input): 1 locked, 0 waiting, -1 no input. Read only.
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
+// 1 while the interface's clock is being judged at open (the output is silent), else 0.
+JNIEXPORT jint JNICALL FN(probing)(JNIEnv *e, jclass c) { return g_probing; }
 
 // ---- normalization ----
 // Measures the integrated loudness (LUFS, ITU-R BS.1770: K filter + gating) of channels 1/2 and the peak of channels

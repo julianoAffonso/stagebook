@@ -35,6 +35,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
+import br.app.stagebook.data.device.DeviceTweaks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -235,6 +236,7 @@ class SettingsViewModel @Inject constructor(
     fun setPlayerMode(on: Boolean) {
         repository.updateLook { it.copy(playerMode = on).copy(essentialAlertOff = false) }
         if (!on) br.app.stagebook.player.StagePlayer.turnOff()   // when off, nothing from the player keeps running
+        else viewModelScope.launch(Dispatchers.IO) { DeviceTweaks.ensure(context) }   // the player's tweaks were left alone while it was off
     }
     fun setBandOn(on: Boolean) = repository.updateLook { it.copy(bandOn = on).copy(essentialAlertOff = false) }
     fun setInternetOn(on: Boolean) = repository.updateLook { it.copy(internetOn = on).copy(essentialAlertOff = false) }
@@ -252,6 +254,7 @@ class SettingsViewModel @Inject constructor(
                 .copy(essentialAlertOff = false, webEditorOn = if (on) false else it.webEditorOn)
         }
         if (on) br.app.stagebook.player.StagePlayer.turnOff()
+        else viewModelScope.launch(Dispatchers.IO) { DeviceTweaks.ensure(context) }   // the player is back: so are its tweaks
     }
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
     fun setWebEditorOn(on: Boolean) = repository.updateLook { it.copy(webEditorOn = on) }

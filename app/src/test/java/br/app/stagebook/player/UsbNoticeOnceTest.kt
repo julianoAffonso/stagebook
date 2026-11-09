@@ -111,6 +111,35 @@ class UsbNoticeOnceTest {
         compose.waitUntil(5_000) { note == "" }
     }
 
+    // user, 08/11: the stream closes after 10 s idle and the service clears the notice; on play the same "USB output" note
+    // must show again, not be taken for the one already shown
+    @Test fun `the ready note shows again when the stream opens after sleeping`() {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val player = StagePlayer(context, repo)
+        val host = SnackbarHostState()
+        var note = ""
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            CompositionLocalProvider(LocalAppMessage provides remember { AppMessage(host, scope) }) {
+                val ui by player.ui.collectAsState()
+                note = rememberPlayerNote(ui.message, player::firstShow)
+            }
+        }
+        fun service(status: String) = compose.runOnIdle {
+            PlayerService.running = true
+            PlayerService.status = status
+            StagePlayer.onServiceChanged()
+        }
+        val ready = context.getString(R.string.player_usb_ready, "Interface")
+        service(ready)
+        compose.waitUntil(5_000) { note == ready }
+        service("")      // the stream went to sleep
+        compose.waitUntil(5_000) { note == "" }
+        service(ready)   // and opened again on play
+        compose.waitUntil(5_000) { note == ready }
+    }
+
     // the permission wait used to reach only the notification: now the stage says it as a short note, never a snackbar
     @Test fun `waiting for the USB permission shows a short note on the stage`() {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))

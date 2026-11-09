@@ -37,6 +37,15 @@ class DeviceTweaksTest {
         assertFalse(DeviceTweaks.isOn(app, DeviceTweak.DEBUGGING))
     }
 
+    // only spends when it's on (user rule): with the player off, nothing of its tweaks is written on start
+    @Test fun `with the player off, its tweaks are left alone on start`() {
+        DeviceTweaks.ensure(app, playerMode = false)
+        assertNull(Settings.Global.getString(cr, "app_auto_restriction_enabled"))   // the player's: not written
+        assertTrue(DeviceTweaks.isOn(app, DeviceTweak.ANIMATIONS))                  // the others still are
+        DeviceTweaks.ensure(app, playerMode = true)                                 // the player came back
+        assertEquals("0", Settings.Global.getString(cr, "app_auto_restriction_enabled"))
+    }
+
     @Test fun `a switch turned off stays off on the next start`() {
         DeviceTweaks.set(app, DeviceTweak.ANIMATIONS, false)
         DeviceTweaks.ensure(app)
