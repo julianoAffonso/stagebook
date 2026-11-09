@@ -185,7 +185,8 @@ data class Look(
     val metroUsbOut: Int = -1,
     val metroUsbPair: Boolean = true,
     // play on the USB interface through Android's audio instead of talking to USB directly (user, 02/11, B-33): for
-    // devices where the direct way gets no packets back, like the S26, while Android plays there. Off by default
+    // devices where the direct way gets no packets back, like the S26, while Android plays there. Off by default, and
+    // only the default for an interface with nothing remembered: each one keeps its own way per device (UsbRoutes, 09/11)
     val usbViaAndroid: Boolean = false,
     val pedalKeys: Map<Int, PedalAction> = emptyMap(),   // buttons set to another command in settings (key → command)
     val pedalSeen: List<Int> = emptyList(),   // the pedal's buttons pressed in settings: listed with what each does (user, 01/11)

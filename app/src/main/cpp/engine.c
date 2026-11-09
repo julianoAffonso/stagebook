@@ -1,7 +1,7 @@
 // Stagebook's engine: decodes OGG (stb_vorbis), MP3/WAV (dr_mp3/dr_wav), resamples to 48 kHz and sends the track's
-// channels straight to the USB Audio Class 2 interface through usbfs (bypassing Android's mixer). The USB stream always
-// stays active (silence when paused): the interface repeats the last chunk it got when the stream stops, which becomes
-// a continuous whine.
+// channels straight to the USB Audio Class 2 interface through usbfs (bypassing Android's mixer). While open, the USB
+// stream stays active (silence when paused): the interface repeats the last chunk it got when the stream stops, which
+// becomes a continuous whine. So a stop (the player closing an idle stream too) ends with TAIL_MS of silence.
 #include <jni.h>
 #include <errno.h>
 #include <math.h>
