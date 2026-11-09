@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Tests of release_notes.py: python3 -I tools/release_notes_test.py"""
+import contextlib
 import importlib.util
+import io
 import pathlib
 import types
 import unittest
@@ -45,11 +47,18 @@ class Parse(unittest.TestCase):
         self.assertEqual([], notes.parse("Title · Título\n\nRelease-Note: none\n"))
 
 
+def fake_git(*messages):
+    """git for the range: each message a commit (hashes aaaaaaa1…, oldest first), the app changed."""
+    def git(*args):
+        if any(a.startswith("--format=%H") for a in args):
+            return "".join(f"{'aaaaaaa' + str(i + 1)}\x01{m}\0" for i, m in enumerate(messages))
+        return "app/src/main/Tela.kt\n"
+    return git
+
+
 class Check(unittest.TestCase):
-    def run_check(self, message):
-        def git(*args):
-            return f"{message}\0" if "--format=%B%x00" in args else "app/src/main/Tela.kt\n"
-        with mock.patch.object(notes, "git", git):
+    def run_check(self, *messages):
+        with mock.patch.object(notes, "git", fake_git(*messages)):
             notes.check(types.SimpleNamespace(commits="a..b"))
 
     def test_the_app_changed_without_a_note_fails(self):
@@ -61,6 +70,37 @@ class Check(unittest.TestCase):
 
     def test_the_app_changed_marked_internal_passes(self):
         self.run_check("Title · Título\n\nRelease-Note: none\n")
+
+
+class Replaces(unittest.TestCase):
+    def notes_of(self, *messages, strict=False):
+        with mock.patch.object(notes, "git", fake_git(*messages)):
+            return notes.notes_in("a..b", strict)
+
+    def test_a_later_commit_replaces_an_earlier_note(self):
+        first = "A · A\n\nRelease-Note: After 10 s it stops · Depois de 10 s para\n"
+        later = "B · B\n\nRelease-Note: Within a minute it carries on · Em até 1 minuto continua\nRelease-Note-Replaces: aaaaaaa1\n"
+        self.assertEqual([("Within a minute it carries on", "Em até 1 minuto continua")], self.notes_of(first, later))
+
+    def test_without_the_line_both_notes_stay(self):
+        first = "A · A\n\nRelease-Note: One · Um\n"
+        later = "B · B\n\nRelease-Note: Two · Dois\n"
+        self.assertEqual([("One", "Um"), ("Two", "Dois")], self.notes_of(first, later))
+
+    def test_a_replaces_line_for_a_commit_outside_the_range_fails_the_check(self):
+        with self.assertRaises(ValueError):
+            self.notes_of("B · B\n\nRelease-Note: Two · Dois\nRelease-Note-Replaces: bbbbbbb9\n", strict=True)
+
+    def test_the_replaces_line_is_not_read_as_a_note(self):
+        self.assertEqual([], notes.parse("B · B\n\nRelease-Note-Replaces: aaaaaaa1\n"))
+
+
+class Listing(unittest.TestCase):
+    def test_the_check_prints_every_note(self):
+        out = io.StringIO()
+        with mock.patch.object(notes, "git", fake_git("A · A\n\nRelease-Note: One · Um\n")), contextlib.redirect_stdout(out):
+            notes.check(types.SimpleNamespace(commits="a..b"))
+        self.assertIn("One · Um", out.getvalue())
 
 
 class History(unittest.TestCase):
