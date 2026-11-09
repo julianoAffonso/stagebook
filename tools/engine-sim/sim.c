@@ -101,6 +101,7 @@ static double out_due = 0, in_due = 0, in_acc = 0;
 static int disconnected = 0, fail_next_reap = 0;
 static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
 static double clock_ratio = 1.0002;    // desk clock slightly fast (the feedback corrects it)
+static double in_jitter = 0;               // each input URB comes back up to this many seconds early or late: a host whose timing is noisy
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
 static long out_urbs = 0;
@@ -202,7 +203,7 @@ int fake_ioctl(int fd, unsigned long req, ...) {
             }
             if (*line < t) *line = t;
             *line += u->number_of_packets / 8000.0;   // a URB takes its own packets' worth of microframes (the input's are longer)
-            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line, 0};
+            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line + ((u->endpoint & 0x80) && in_jitter > 0 ? (drand48() * 2 - 1) * in_jitter : 0), 0};
             pthread_cond_broadcast(&dev_cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
@@ -246,9 +247,16 @@ static JNIEnv *env = (JNIEnv *)&envp;
 // SIM_METER ("medidor" binary): the current engine with live meters on all the time; the sound has to come out
 // identical to the validated one all the same
 #ifdef SIM_METER
-#define E_START() (FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, 0x81, 7 * IN_FB, IN_FB), FN(setMeter)(env, NULL, 1))
+#define E_START_FAST() (FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, 0x81, 7 * IN_FB, IN_FB), FN(setMeter)(env, NULL, 1))
 #else
-#define E_START() FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, 0x81, 7 * IN_FB, IN_FB)
+#define E_START_FAST() FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, 0x81, 7 * IN_FB, IN_FB)
+#endif
+#ifdef ENGINE_HAS_PROBE
+// the engine holds its output until it has judged the input clock (about 2 s): the tests that need sound wait for it
+static void wait_probe(void) { double t0 = now(); while (FN(probing)(env, NULL) && now() - t0 < 5.0) usleep(10000); }
+#define E_START() (E_START_FAST(), wait_probe())
+#else
+#define E_START() E_START_FAST()
 #endif
 
 // Fader and normalization for the backing (1/2) and the metronome (3/4). On the validated engine, through the two old
@@ -567,17 +575,17 @@ int main(int argc, char **argv) {
 
     // 7) 10 on/off cycles
     printf("[7] 10 on/off cycles\n");
-    for (int i = 0; i < 10; i++) { E_START(); FN(play)(env, NULL); sleep_s(0.1); FN(stop)(env, NULL); sim_close_conn(); }
+    for (int i = 0; i < 10; i++) { E_START_FAST(); FN(play)(env, NULL); sleep_s(0.1); FN(stop)(env, NULL); sim_close_conn(); }
     snprintf(buf, sizeof buf, "%d memory blocks leaked", nlive);
     check(nlive == 0, "no leak", buf);
 
     // 7b) stopping in order to reconnect (the interface's first connection came silent): no half second of silent tail
 #ifdef ENGINE_HAS_FASTSTOP
     printf("[7b] stopping to reconnect doesn't wait for the silent tail\n");
-    E_START(); FN(play)(env, NULL); sleep_s(0.4);
+    E_START_FAST(); FN(play)(env, NULL); sleep_s(0.4);
     double t7 = now(); FN(stopFast)(env, NULL); double fast7 = (now() - t7) * 1000;
     sim_close_conn();
-    E_START(); FN(play)(env, NULL); sleep_s(0.4);
+    E_START_FAST(); FN(play)(env, NULL); sleep_s(0.4);
     t7 = now(); FN(stop)(env, NULL); double slow7 = (now() - t7) * 1000;
     sim_close_conn();
     snprintf(buf, sizeof buf, "fast stop %.0f ms, normal stop %.0f ms", fast7, slow7);
@@ -610,6 +618,61 @@ int main(int argc, char **argv) {
     snprintf(buf, sizeof buf, "position %ld ms after 1 s (expected ~61000), %ld gaps, peak %.3f", p7c, iso_gaps, m7c.peak[0]);
     check(FN(isRunning)(env, NULL) && p7c > 60700 && p7c < 61300 && iso_gaps == 0 && m7c.peak[0] > 0,
           "play from a closed stream starts the track, with sound and no gap", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+#endif
+
+#ifdef ENGINE_HAS_PROBE
+    // 7d) the input clock is judged once, at open, before any sound (user, 08/11): a play right after the open waits for
+    // the verdict; a host whose timing is only noisy keeps plan A for the whole song; a clock really off goes to plan B
+    // before the first note, and the plan never changes in the middle of a song
+    printf("[7d] the input clock is judged at open, before any sound\n");
+    pthread_mutex_lock(&dev_mx); in_jitter = 0.006; pthread_mutex_unlock(&dev_mx);   // noise of +-6 ms on every URB, clock fine
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.8);
+    long held = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "position %ld ms 0.8 s after play, still judging=%d (expected 60000, silent)", held, (int)FN(probing)(env, NULL));
+    check(FN(probing)(env, NULL) && held < 60100, "the output is held while the clock is judged", buf);
+    wait_probe();
+    int noisy_plan_a = !g_fb_bad;
+    double tol_pct = 100 * g_fb_tol_hz / g_out_rate;
+    sleep_s(30.0);
+    long p_noisy = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "plan A at open=%d, plan A after 30 s=%d, tolerance %.2f%%, position %ld ms", noisy_plan_a, !g_fb_bad, tol_pct, p_noisy);
+    check(noisy_plan_a && !g_fb_bad && tol_pct > 0.3 && p_noisy > 89000, "noise alone keeps plan A for the whole song, with a tolerance that fits it", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); in_jitter = 0; pthread_mutex_unlock(&dev_mx);
+
+    pthread_mutex_lock(&dev_mx); clock_ratio = 1.012; pthread_mutex_unlock(&dev_mx);   // a clock 1.2% fast
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    wait_probe();
+    int off_at_open = g_fb_bad && g_fb_open_bad;
+    sleep_s(3.0);
+    long p_off = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "off at open=%d, position %ld ms (expected ~63000 at real-time pace)", off_at_open, p_off);
+    check(off_at_open && p_off > 62500 && p_off < 63500, "a clock really off goes to plan B before the first note and holds the pace", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); clock_ratio = 1.0002; pthread_mutex_unlock(&dev_mx);
+
+    // a clean host: nothing in the way, plan A, and a pause and a resume with the stream open are instant
+    E_START();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(1.0);
+    FN(pause)(env, NULL);
+    sleep_s(0.3);
+    long before = FN(position)(env, NULL);
+    FN(play)(env, NULL);
+    sleep_s(0.4);
+    long after = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "plan A=%d, resumed %ld ms in 0.4 s", !g_fb_bad, after - before);
+    check(!g_fb_bad && after - before > 250, "a clean clock is plan A and a resume doesn't wait again", buf);
     FN(stop)(env, NULL);
     sim_close_conn();
 #endif

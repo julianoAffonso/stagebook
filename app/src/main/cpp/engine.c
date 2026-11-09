@@ -320,6 +320,23 @@ static double g_fb_win = 0;
 static long g_fb_win_in = 0;
 #define FB_HI 64
 #define FB_LO 16
+// The clock is judged once, when the stream opens, before any sound (user, 08/11): the input is read for FB_PROBE_SUBS
+// quarter-seconds with the output silent, and the stream goes to plan A (follow the input) or plan B (own pace) for as
+// long as it stays open. A host whose timing is merely noisy (the reading of a one-second window moves by a few tenths
+// of a percent while the clock is fine) keeps plan A with a tolerance that fits its noise; a clock that is really off
+// goes to plan B before the first note. Once decided, plan A is left only for a real failure (FB_LEAVE_N windows more
+// than FB_LEAVE_OFF away), never for noise in the middle of a song.
+#define ENGINE_HAS_PROBE 1
+#define FB_PROBE_SUB_S 0.25
+#define FB_PROBE_SUBS 8
+#define FB_PROBE_MAX_S 3.0            // the output is held at most this long waiting for the input
+#define FB_LEAVE_OFF 0.01
+#define FB_LEAVE_N 3
+#define FB_TOL_MAX 0.01
+static volatile int g_probing = 0;    // the clock is being judged: the output is silent
+static int g_fb_decided = 0, g_fb_open_bad = 0, g_fb_off_n = 0, g_pr_n = 0;
+static double g_fb_tol_hz = 0, g_pr_hz[FB_PROBE_SUBS], g_pr_time = 0, g_probe_start = 0;
+static long g_pr_frames = 0;
 // With an input clock that exists but can't be followed (g_fb_bad), the output is paced against the system's monotonic
 // clock instead of the bus: on some hosts the microframe clock runs off nominal (~900 ppm slow seen on one tablet) and
 // the interface, consuming at its own crystal, runs its small queue dry every few seconds. A PI loop on the frames sent
@@ -595,6 +612,34 @@ static int reap_wait(struct usbdevfs_urb **out) {
 }
 
 // ---- thread USB ----
+// An input URB came back during the probe. Readings of FB_PROBE_SUB_S; after FB_PROBE_SUBS the clock is judged. Returns
+// 1 when it is off (plan B for this stream). The timing noise of a reading is the same in absolute terms whatever its
+// length, so its effect on the rate shrinks with the window: the spread of the whole probe's mean is the spread of a
+// reading times SUB/total, and of a one-second window, times SUB.
+static int fb_probe(double t, int rate) {
+    if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; return 0; }
+    double dt = t - g_fb_win;
+    if (dt < FB_PROBE_SUB_S) return 0;
+    g_pr_hz[g_pr_n++] = g_fb_win_in / dt; g_pr_frames += g_fb_win_in; g_pr_time += dt;
+    g_fb_win = t; g_fb_win_in = 0;
+    if (g_pr_n < FB_PROBE_SUBS) return 0;
+    double mean = g_pr_frames / g_pr_time, m = 0, v = 0;
+    for (int i = 0; i < g_pr_n; i++) m += g_pr_hz[i];
+    m /= g_pr_n;
+    for (int i = 0; i < g_pr_n; i++) v += (g_pr_hz[i] - m) * (g_pr_hz[i] - m);
+    double sd = sqrt(v / (g_pr_n - 1));
+    double sd_mean = sd * FB_PROBE_SUB_S / g_pr_time, sd_win = sd * FB_PROBE_SUB_S;
+    double nominal = rate * FB_MAX_OFF;
+    g_fb_decided = 1; g_probing = 0;
+    if (fabs(mean - rate) > fmax(nominal, 3 * sd_mean)) {
+        LOGI("usb: input clock off at open (%.0f Hz), keeping our own pace", mean);
+        return 1;
+    }
+    g_fb_tol_hz = fmin(fmax(nominal, 4 * sd_win), rate * FB_TOL_MAX);
+    LOGI("usb: input clock on at open (%.0f Hz, tolerance %.2f%%)", mean, 100 * g_fb_tol_hz / rate);
+    return 0;
+}
+
 static void *usb_main(void *arg) {
     int speed = ioctl(g_fd, USBDEVFS_GET_SPEED);
     int pkts_per_sec = (speed >= USB_SPEED_HIGH) ? 8000 : 1000;
@@ -630,6 +675,7 @@ static void *usb_main(void *arg) {
         (urb)->flags = USBDEVFS_URB_ISO_ASAP; (urb)->number_of_packets = PKTS_PER_URB; \
         pthread_mutex_lock(&g_mx); \
         int mon = g_meter_on; \
+        int hold = g_probing;   /* judging the input clock: silent until it's decided */ \
         for (int k = 0; k < PKTS_PER_URB; k++) { \
             acc += (double)OUT_RATE / pkts_per_sec * (g_fb_bad ? 1.0 + g_pace_ratio : 1.0); int nf = (int)acc; acc -= nf; \
             if (g_in_ep >= 0 && g_fb_locked && !g_fb_bad) { \
@@ -646,14 +692,14 @@ static void *usb_main(void *arg) {
             /* Nothing playing, faded out and no click: the output is exactly zero, so the mixer, the EQ and the click, */ \
             /* which only produce those zeros, are skipped (the idle player cost ~19% of a core, audit 07/11). The EQ's */ \
             /* state and the limiter are reset once, as the silence would have let them decay. */ \
-            int quiet = !(g_playing && !tail) && g_fade <= 0.0f && g_clk_spb <= 0; \
+            int quiet = (!(g_playing && !tail) || hold) && g_fade <= 0.0f && (g_clk_spb <= 0 || hold); \
             if (quiet) { \
                 if (!quiet_was) { memset(g_eq_z, 0, sizeof g_eq_z); g_lim = 1.0f; quiet_was = 1; } \
                 memset(b + off, 0, (size_t)nf * frame_bytes); off += nf * frame_bytes; \
             } else { quiet_was = 0; \
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
-                int want_play = g_playing && !tail; \
+                int want_play = g_playing && !tail && !hold; \
                 if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
                 if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
@@ -744,19 +790,31 @@ static void *usb_main(void *arg) {
             if (!g_fb_locked && g_tot_in > 0) { g_fb_off = g_tot_out - g_tot_in; g_fb_locked = 1; g_fb_win = 0; }
             if (g_fb_locked) {
                 double t = now_s();
-                if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; }
+                if (!g_fb_decided) {
+                    if (fb_probe(t, g_out_rate)) {
+                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; g_fb_open_bad = 1;
+                        pace_reset();
+                    }
+                } else if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; }
                 else if (t - g_fb_win >= 1.0) {
                     double hz = g_fb_win_in / (t - g_fb_win);
-                    int off = fabs(hz - g_out_rate) > g_out_rate * FB_MAX_OFF;
-                    if (!g_fb_bad && off) {
-                        g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t;
-                        LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
-                    } else if (g_fb_bad && !off && ++g_fb_good >= FB_BACK_S) {
-                        // a passing hiccup of the host (busy for a second) must not cost the whole show: once the
-                        // count keeps time again for FB_BACK_S seconds, the input is the clock again, from where we are
-                        g_fb_bad = 0; g_fb_mode = 0; g_fb_off = g_tot_out - g_tot_in;
-                        LOGI("usb: input clock back (%.0f Hz), following it again", hz);
-                    } else if (g_fb_bad && off) { g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; }
+                    double dev = fabs(hz - g_out_rate);
+                    if (!g_fb_bad) {
+                        // plan A: only a real failure takes it off (not the noise of one window)
+                        if (dev <= g_out_rate * FB_LEAVE_OFF) g_fb_off_n = 0;
+                        else if (++g_fb_off_n >= FB_LEAVE_N) {
+                            g_fb_bad = 1; g_fb_mode = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t;
+                            LOGI("usb: input clock off (%.0f Hz), keeping our own pace", hz);
+                        }
+                    } else if (!g_fb_open_bad) {
+                        // it left plan A during the stream: once the count keeps time again for FB_BACK_S seconds, the
+                        // input is the clock again, from where we are (a stream judged off at open stays on plan B)
+                        if (dev > g_fb_tol_hz) { g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = t; }
+                        else if (++g_fb_good >= FB_BACK_S) {
+                            g_fb_bad = 0; g_fb_mode = 0; g_fb_off = g_tot_out - g_tot_in; g_fb_off_n = 0;
+                            LOGI("usb: input clock back (%.0f Hz), following it again", hz);
+                        }
+                    }
                     g_fb_win = t; g_fb_win_in = 0;
                 }
             }
@@ -773,6 +831,10 @@ static void *usb_main(void *arg) {
         reaped++;
         {   // frames sent ahead of the monotonic clock, smoothed, and the PI loop on it (see g_pace_ratio)
             double t = now_s();
+            if (g_probing && t - g_probe_start > FB_PROBE_MAX_S) {
+                g_probing = 0; g_fb_decided = 1; g_fb_tol_hz = g_out_rate * FB_MAX_OFF;   // the input didn't come: no longer held
+                LOGI("usb: input clock not heard at open, going on");
+            }
             if (!g_fb_bad && g_fb_locked && g_in_ep >= 0 && !tail && g_in_last > 0 &&
                 (t - g_in_last > FB_STALL_S || labs((g_tot_out - g_tot_in) - g_fb_off) > FB_MAX_D)) {
                 // seen on a phone: the input answered for the first second and then went quiet for good; following
@@ -781,7 +843,7 @@ static void *usb_main(void *arg) {
                 pace_reset();
                 LOGI("usb: input stopped answering, keeping our own pace");
             }
-            if (g_fb_bad && !g_fb_probing && !tail && g_in_ep >= 0 && in_idle == n_in && t - g_fb_probe_t >= FB_PROBE_S) {
+            if (g_fb_bad && !g_fb_open_bad && !g_fb_probing && !tail && g_in_ep >= 0 && in_idle == n_in && t - g_fb_probe_t >= FB_PROBE_S) {
                 // probe: read the input again until a second's count is off (stop) or FB_BACK_S are good (follow it)
                 g_fb_probing = 1; g_fb_good = 0; g_fb_win = 0; in_idle = 0;
                 for (int u = 0; u < n_in; u++) {
@@ -973,6 +1035,8 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
+    g_fb_decided = g_in_ep < 0; g_fb_open_bad = 0; g_fb_off_n = 0; g_pr_n = 0; g_pr_frames = 0; g_pr_time = 0; g_fb_win = 0; g_fb_win_in = 0;
+    g_fb_tol_hz = OUT_RATE * FB_MAX_OFF; g_probe_start = now_s(); g_probing = g_in_ep >= 0;
     g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0; g_in_last = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
     g_intf = intf; g_alt = alt;
@@ -1251,6 +1315,8 @@ JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
 
 // interface clock (feedback through the input): 1 locked, 0 waiting, -1 no input. Read only.
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
+// 1 while the interface's clock is being judged at open (the output is silent), else 0.
+JNIEXPORT jint JNICALL FN(probing)(JNIEnv *e, jclass c) { return g_probing; }
 
 // ---- normalization ----
 // Measures the integrated loudness (LUFS, ITU-R BS.1770: K filter + gating) of channels 1/2 and the peak of channels

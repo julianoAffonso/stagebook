@@ -369,6 +369,16 @@ public class PlayerService extends Service {
         main.postDelayed(connectNote, CONNECT_NOTE_MS);
     }
 
+    void watchProbe(int gen, long since) {
+        main.postDelayed(() -> {
+            if (gen != usbGen || link == null) return;   // closed meanwhile
+            if (Engine.probing() == 0) { setStatus(getString(R.string.player_usb_ready, link.name())); return; }
+            String wait = getString(R.string.player_usb_waking);
+            if (SystemClock.elapsedRealtime() - since >= CONNECT_NOTE_MS && !wait.equals(status)) setStatus(wait);
+            watchProbe(gen, since);
+        }, 100);
+    }
+
     // Back on the UI thread, with the connection open (or its error).
     void usbReady(UsbLink l, String err) {
         connecting = false;
@@ -385,7 +395,10 @@ public class PlayerService extends Service {
         main.postDelayed(fbCheck, fbWait());
         checkIdle();
         Log.i(TAG, link.describe());
-        setStatus(getString(R.string.player_usb_ready, link.name()));
+        // the engine judges the interface's clock for about 2 s after opening, silent: the ready note waits for it, and the
+        // stage is told to wait if it takes more than half a second
+        if (Engine.probing() != 0) watchProbe(usbGen, SystemClock.elapsedRealtime());
+        else setStatus(getString(R.string.player_usb_ready, link.name()));
     }
 
     final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
