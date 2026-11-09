@@ -21,6 +21,16 @@ class OutputWaitTest {
         org.junit.Assert.assertEquals(StreamSleep.IDLE_MS, OutputWait.GIVE_UP_MS)
     }
 
+    @Test fun `a cable plugged back in time keeps the wait while it connects`() {
+        assertTrue(OutputWait.keepWaiting(waitedMs = 11_000, connected = false, plugged = true))
+        assertFalse(OutputWait.givesUp(waitedMs = 11_000, connected = false, plugged = true))
+    }
+
+    @Test fun `plugged in but never connected, the wait still ends`() {
+        assertTrue(OutputWait.givesUp(waitedMs = OutputWait.PLUGGED_MAX_MS, connected = false, plugged = true))
+        assertFalse(OutputWait.keepWaiting(waitedMs = OutputWait.PLUGGED_MAX_MS, connected = false, plugged = true))
+    }
+
     @Test fun `an output that came back is never given up`() {
         assertFalse(OutputWait.givesUp(waitedMs = 60_000, connected = true))
     }

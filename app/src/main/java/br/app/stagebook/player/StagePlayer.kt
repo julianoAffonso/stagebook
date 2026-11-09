@@ -317,8 +317,18 @@ class StagePlayer @Inject constructor(
             _ui.update { it.copy(playing = false, waiting = true, away = true) }
             dropWait?.cancel()
             dropWait = scope.launch {
-                delay(br.app.stagebook.domain.OutputWait.GIVE_UP_MS)
-                if (_ui.value.waiting && br.app.stagebook.domain.OutputWait.givesUp(br.app.stagebook.domain.OutputWait.GIVE_UP_MS, PlayerService.connected)) pause()
+                val wait = br.app.stagebook.domain.OutputWait
+                val um = context.getSystemService(android.hardware.usb.UsbManager::class.java)
+                val t0 = android.os.SystemClock.elapsedRealtime()
+                delay(wait.GIVE_UP_MS)
+                // plugged back in time: the connection may still be on its way, so it waits for it (checked twice a second)
+                while (_ui.value.waiting) {
+                    val waited = android.os.SystemClock.elapsedRealtime() - t0
+                    val plugged = um != null && UsbLink.find(um) != null
+                    if (wait.givesUp(waited, PlayerService.connected, plugged)) { pause(); break }
+                    if (!wait.keepWaiting(waited, PlayerService.connected, plugged)) break
+                    delay(500)
+                }
             }
         }
     }
