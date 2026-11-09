@@ -17,6 +17,10 @@ class OutputWaitTest {
         assertFalse(OutputWait.keepWaiting(waitedMs = 10_000, connected = false))
     }
 
+    @Test fun `the wait is the same as the idle stream's`() {
+        org.junit.Assert.assertEquals(StreamSleep.IDLE_MS, OutputWait.GIVE_UP_MS)
+    }
+
     @Test fun `an output that came back is never given up`() {
         assertFalse(OutputWait.givesUp(waitedMs = 60_000, connected = true))
     }

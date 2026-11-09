@@ -6,7 +6,8 @@ package br.app.stagebook.domain
  * good with the interface gone): the button shows Play again and the position is kept for the next play.
  */
 object OutputWait {
-    const val GIVE_UP_MS = 10_000L
+    // the same 10 s as the idle stream (StreamSleep): one rule for "the interface is away", in sync if either changes
+    const val GIVE_UP_MS = StreamSleep.IDLE_MS
 
     /** Still waiting after [waitedMs] without the output? Never once it's [connected] again. */
     fun keepWaiting(waitedMs: Long, connected: Boolean): Boolean = !connected && waitedMs < GIVE_UP_MS
