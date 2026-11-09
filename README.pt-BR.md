@@ -125,6 +125,20 @@ Kotlin, Jetpack Compose e um motor de áudio em C. `./gradlew assembleDebug` com
 `./gradlew testDebugUnitTest` roda os testes (Java 21). As versões são publicadas pelo GitHub Actions. Todo mundo aqui segue o
 [Código de Conduta](CODE_OF_CONDUCT.pt-BR.md).
 
+### Avisos no Telegram
+Quem mantém o projeto pode receber uma mensagem no Telegram quando uma versão ou o servidor MCP é publicado ou falha,
+quando a `main` falha nas verificações, quando o site da ajuda cai, num alerta de segurança e quando outra pessoa abre
+ou comenta uma issue, um pull request ou uma discussão (mais um resumo diário, só quando há novidade). Para ligar num
+fork:
+1. No Telegram, fale com o `@BotFather`, mande `/newbot` e copie o token. Mande uma mensagem qualquer ao bot novo.
+2. Pegue o id do seu chat (por exemplo em `https://api.telegram.org/bot<token>/getUpdates`, em `message.chat.id`).
+3. No repositório, Settings → Secrets and variables → Actions, crie os segredos `TELEGRAM_BOT_TOKEN` e
+   `TELEGRAM_CHAT_ID`. Opcional: o segredo `SECURITY_ALERTS_TOKEN` (um token que lê os alertas do Dependabot) e a
+   variável `SITE_URL` (o site da ajuda a vigiar).
+
+Sem os segredos o workflow roda e não faz nada. Ele nunca baixa nem executa código de um pull request; títulos e
+textos são só dados, enviados como texto simples.
+
 ### Ritmo do motor USB
 - **Plano A:** seguir o relógio da entrada da interface (feedback implícito), para saída e interface nunca se afastarem.
 - **Plano B:** marcar o ritmo da saída pelo relógio monotônico quando a entrada falta ou não é confiável. Ele troca

@@ -125,6 +125,19 @@ Kotlin, Jetpack Compose and an audio engine in C. `./gradlew assembleDebug` buil
 runs the tests (Java 21). Releases are published by GitHub Actions. Everyone here follows the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
+### Notices on Telegram
+The maintainer can get a Telegram message when a release or the MCP server is published or fails, when `main` fails
+its checks, when the help site is down, on a security alert, and when someone else opens or comments on an issue, pull
+request or discussion (plus a daily summary, only when there is news). To set it up on a fork:
+1. In Telegram, talk to `@BotFather`, send `/newbot` and copy the token. Send any message to the new bot.
+2. Get your chat id (for example from `https://api.telegram.org/bot<token>/getUpdates`, in `message.chat.id`).
+3. In the repository, Settings → Secrets and variables → Actions, add the secrets `TELEGRAM_BOT_TOKEN` and
+   `TELEGRAM_CHAT_ID`. Optional: the secret `SECURITY_ALERTS_TOKEN` (a token that can read Dependabot alerts) and the
+   variable `SITE_URL` (the help site to watch).
+
+Without the secrets the workflow runs and skips. It never checks out or runs code from a pull request; titles and
+texts are only data, sent as plain text.
+
 ### USB engine pacing
 - **Plan A:** follow the interface's input clock (implicit feedback), so output and interface never drift apart.
 - **Plan B:** pace the output from the monotonic clock when the input is missing or can't be trusted. It switches
