@@ -133,6 +133,12 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun homeSongsFilteredTablet() = shoot("tablet_1_musicas_filtradas") {
+        HomeScaffold(HomeTab.SONGS, {}) {
+            SongsScreen(songs.copy(songs = songs.songs.take(2), chosenTags = setOf(s("Nacional")), tags = listOf(s("Internacional"), s("Nacional"))), "", {}, {}, {}, {}, it)
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun homeSongsPhone() = shoot("celular_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
@@ -273,6 +279,10 @@ class ScreenshotTest {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
+    @Test fun editorChordsTablet() = shoot("tablet_4_editor_cifra") {
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+    }
+
     // lyrics only profile: the editor shows no chords
     @Test @Config(qualifiers = PHONE)
     fun editorLyricsOnlyPhone() = shoot("celular_4_editor_so_letra") {
@@ -282,6 +292,19 @@ class ScreenshotTest {
     // T18: with a capo, the editor states the shape and the sounding key
     @Test fun editorCapoTablet() = shoot("tablet_4_editor_capo") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+    }
+
+    // on a phone the summary cuts the capo off: the details open, with the key and capo − + and the note under them
+    @Test @Config(qualifiers = PHONE)
+    fun editorCapoPhone() {
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+            }
+        }
+        compose.onNodeWithText(s("Canção de teste"), substring = true).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_4_editor_capo.png")
     }
 
     // T27: song details open (new song)
@@ -311,6 +334,11 @@ class ScreenshotTest {
     fun editorTagsPhone() = editorOpen("celular_4_editor_tags") { compose.onNodeWithText(s("Canção de teste"), substring = true).performClick() }
 
     @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
+        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun editorSectionsPhone() = shoot("celular_4_editor_secoes") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
     }
 
@@ -599,6 +627,19 @@ class ScreenshotTest {
         )
         compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_2_recebidos_versoes.png")
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun inboxVersionsPhone() {
+        val now = System.currentTimeMillis()
+        val items = listOf(
+            br.app.stagebook.data.BandInbox.Item("1", "a", s("Celular da Ana"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 600_000),
+            br.app.stagebook.data.BandInbox.Item("2", "b", s("Tablet do Beto"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 60_000),
+            br.app.stagebook.data.BandInbox.Item("3", "c", s("Celular do Caio"), "STAGEBOOK1\n8\nEnsaio", at = now - 300_000, updated = true),
+        )
+        compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_2_recebidos_versoes.png")
     }
 
     @Test fun chordPopupGuitar() = chordPopup("tablet_6_acorde_violao", "F", br.app.stagebook.data.model.Instrument.ACOUSTIC_GUITAR)
@@ -1199,6 +1240,14 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun shareSheetTablet() = shoot("jornada_compartilhar_1_folha_tablet") {
+        androidx.compose.foundation.layout.Column(Modifier.width(640.dp)) {
+            br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {})
+            androidx.compose.material3.HorizontalDivider(androidx.compose.ui.Modifier.padding(vertical = br.app.stagebook.ui.theme.Spacing.l))
+            br.app.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {})
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun shareCodePhone() = shoot("jornada_compartilhar_2_codigo") {
         androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
@@ -1215,8 +1264,32 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun shareCodeTablet() = shoot("jornada_compartilhar_2_codigo_tablet") {
+        Box(Modifier.width(640.dp)) {
+            androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.l)) {
+                    androidx.compose.material3.Text(str(R.string.share_sent), style = MaterialTheme.typography.headlineSmall)
+                    br.app.stagebook.ui.share.CodeBox(
+                        br.app.stagebook.ui.share.CloudUi.Sent(
+                            s("47-violao-lua"), s("Show de sábado"), 12, 0,
+                            br.app.stagebook.domain.QrEncoder.encode(br.app.stagebook.domain.ShareCode.qrText(s("47-violao-lua")).toByteArray(), 600).asImageBitmap(),
+                            joined = listOf(s("Celular da Ana")),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun receiveCodeReviewPhone() = shoot("jornada_compartilhar_3_receber") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(
+            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
+        )
+    }
+
+    @Test fun receiveCodeReviewTablet() = shoot("jornada_compartilhar_3_receber_tablet") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
             scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
@@ -1226,6 +1299,12 @@ class ScreenshotTest {
     // ---- loose songs: selection on the Songs tab and the receiver ----
     @Test @Config(qualifiers = PHONE)
     fun songsSelectPhone() = shoot("jornada_musicas_1_selecao") {
+        HomeScaffold(HomeTab.SONGS, {}) {
+            br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
+        }
+    }
+
+    @Test fun songsSelectTablet() = shoot("jornada_musicas_1_selecao_tablet") {
         HomeScaffold(HomeTab.SONGS, {}) {
             br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
         }
@@ -1244,6 +1323,19 @@ class ScreenshotTest {
         compose.onAllNodesWithText(str(R.string.import_menu))[0].performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_importar_menu.png")
+    }
+
+    @Test fun importMenuTablet() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SONGS, {}) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
+                }
+            }
+        }
+        compose.onAllNodesWithText(str(R.string.import_menu))[0].performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_importar_menu_tablet.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -1288,6 +1380,12 @@ class ScreenshotTest {
         )
     }
 
+    @Test fun bandInviteTablet() = shoot("jornada_banda_6_convite_tablet") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(
+            br.app.stagebook.ui.setlists.ScanUi.Invite("Ana"), true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {},
+        )
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun bandListPhone() = shoot("jornada_banda_2_lista_ajustes") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it) }
@@ -1299,9 +1397,22 @@ class ScreenshotTest {
         br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {}, band = 2)
     }
 
+    // the sheet as wide as on a tablet (the bottom sheet stops at 640dp)
+    @Test fun shareBandTablet() = shoot("jornada_banda_3_compartilhar_tablet") {
+        Box(Modifier.width(640.dp)) { br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {}, band = 2) }
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun inboxBannerPhone() = shoot("jornada_banda_4_aviso") {
         // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
+        androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
+            HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+            }
+        }
+    }
+
+    @Test fun inboxBannerTablet() = shoot("jornada_banda_4_aviso_tablet") {
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
                 SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
@@ -1320,6 +1431,21 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun scanVersionsPhone() = shoot("jornada_conferencia_versoes") {
+        br.app.stagebook.ui.setlists.ScanSetlistScreen(
+            scanReview.copy(
+                name = "", songsOnly = true,
+                rows = listOf(
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, emptyList(), "1", differs = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "", true, emptyList(), "4", differs = true, useIncoming = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "", true, emptyList(), "2"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "", false, emptyList(), null, carried = true, fromBand = true),
+                ),
+            ),
+            true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
+        )
+    }
+
+    @Test fun scanVersionsTablet() = shoot("jornada_conferencia_versoes_tablet") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
             scanReview.copy(
                 name = "", songsOnly = true,
@@ -1360,6 +1486,19 @@ class ScreenshotTest {
         compose.onAllNodesWithText(str(R.string.scan_create))[0].performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_conferencia_criar_aviso.png")
+    }
+
+    @Test fun scanCreateWarningTablet() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    br.app.stagebook.ui.setlists.ScanSetlistScreen(scanReview, true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {})
+                }
+            }
+        }
+        compose.onAllNodesWithText(str(R.string.scan_create))[0].performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_conferencia_criar_aviso_tablet.png")
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -1519,6 +1658,9 @@ class ScreenshotTest {
     }
 
     @Test fun tagFilterOpenTablet() = tagFilterOpen("tablet_1_musicas_tags_abertas", 1f)
+
+    @Test @Config(qualifiers = PHONE)
+    fun tagFilterOpenPhone() = tagFilterOpen("celular_1_musicas_tags_abertas", 1f)
 
     @Test fun tagFilterOpenTabletBigText() = tagFilterOpen("tablet_1_musicas_tags_abertas_texto_grande", 1.6f)
 
