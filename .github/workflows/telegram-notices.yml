@@ -1,7 +1,7 @@
 # Notices on the maintainer's Telegram: a release or the MCP server published or failed, the main branch failing, the
 # help site down, a security alert, and anything another person opens or comments. A daily summary goes out only when
 # there is news. Needs the secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (README, "Notices on Telegram"); without
-# them every step just skips. Nothing here checks out or runs code from a pull request: titles and texts are data,
+# them every step just skips. Security alerts are not workflow triggers on GitHub, so the scheduled runs check them. Nothing here checks out or runs code from a pull request: titles and texts are data,
 # passed through env and never interpolated into a shell, and sent as plain text.
 name: Telegram notices
 on:
@@ -20,10 +20,6 @@ on:
     types: [created]
   discussion_comment:
     types: [created]
-  code_scanning_alert:
-    types: [created, reopened]
-  secret_scanning_alert:
-    types: [created, reopened]
   schedule:
     - cron: '0 11 * * *'     # daily: summary (if any news), help site, security alerts
     - cron: '0 5,17 * * *'   # twice more: help site and security alerts
@@ -80,8 +76,7 @@ jobs:
   others:
     if: >-
       github.event_name != 'workflow_run' && github.event_name != 'schedule' &&
-      github.event_name != 'workflow_dispatch' && github.event_name != 'code_scanning_alert' &&
-      github.event_name != 'secret_scanning_alert' &&
+      github.event_name != 'workflow_dispatch' &&
       github.actor != github.repository_owner && !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -153,16 +148,3 @@ jobs:
           prs=$(count is:pr)
           [ $((issues + prs)) -gt 0 ] || exit 0   # no news, no message
           tools/telegram-notify.sh "Last 24 h: $issues new issue(s), $prs new pull request(s) from others — https://github.com/$REPO"
-
-  # a security alert the moment it is raised
-  alert:
-    if: github.event_name == 'code_scanning_alert' || github.event_name == 'secret_scanning_alert'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - env:
-          KIND: ${{ github.event_name }}
-          URL: ${{ github.event.alert.html_url }}
-        run: |
-          tools/telegram-notify.sh "Security alert ($KIND): $URL"
