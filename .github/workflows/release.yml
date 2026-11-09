@@ -55,7 +55,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           APK=app/build/outputs/apk/release/app-release.apk
-          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          TOOLS=$(printf '%s\n' "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           # signed with Stagebook's key? (another key = devices refuse the update)
           CERT=a0af59f083c430bfcd0aa42ff825f01277f4afc3c3fb0f9aba80225842a1c4a5
           "$TOOLS/apksigner" verify --print-certs "$APK" | grep -q "SHA-256 digest: $CERT"

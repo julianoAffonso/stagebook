@@ -10,8 +10,6 @@ on:
     types: [completed]
   issues:
     types: [opened]
-  pull_request_target:   # runs from main with the secrets, so it never checks out the pull request
-    types: [opened]
   discussion:
     types: [created]
   issue_comment:
@@ -100,7 +98,6 @@ jobs:
         run: |
           case "$EVENT" in
             issues) what="Issue opened"; title=$ISSUE_TITLE; url=$ISSUE_URL ;;
-            pull_request_target) what="Pull request opened"; title=$PR_TITLE; url=$PR_URL ;;
             discussion) what="Discussion opened"; title=$DISC_TITLE; url=$DISC_URL ;;
             issue_comment) what="Comment"; title=$ISSUE_TITLE; url=$COMMENT_URL ;;
             pull_request_review_comment) what="Review comment"; title=$PR_TITLE; url=$COMMENT_URL ;;

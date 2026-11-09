@@ -1,6 +1,9 @@
 // A fake USB Audio 1.0 card for the engine: stereo, 16 bits, 44.1 kHz only, adaptive output, full speed (1 packet per ms).
 // Proves what sim.c can't: packets within the card's size, the pace of 44.1 kHz, no input stream, and the song and the
 // click keeping their pitch and tempo. sim.c goes on proving that a USB Audio 2.0 desk sounds the same. See run.sh.
+#ifndef __APPLE__
+#define _GNU_SOURCE   // Linux (CI): gettid and friends, as on Android
+#endif
 #include <errno.h>
 #include <math.h>
 #include <poll.h>
@@ -16,7 +19,9 @@
 #include <unistd.h>
 
 int sim_verbose = 0;
-#define gettid() 0
+#ifdef __APPLE__
+#define gettid() 0   // macOS has no gettid; on Linux the real one (glibc, _GNU_SOURCE above)
+#endif
 int fake_ioctl(int fd, unsigned long req, ...);
 static int fake_poll(struct pollfd *p, nfds_t n, int ms) { struct timespec t = {0, 1000000}; nanosleep(&t, NULL); return 1; }
 #define ioctl fake_ioctl

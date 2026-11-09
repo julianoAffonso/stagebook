@@ -3,6 +3,9 @@
 // A fake USB interface (8 outputs) answers usbfs ioctls at real pace (each URB = 8 packets of 125 µs) and returns input
 // on the desk's clock. The same program compiles with the validated engine.c (tag audio-validado) and with the current
 // one, to compare both. See run.sh.
+#ifndef __APPLE__
+#define _GNU_SOURCE   // Linux (CI): gettid and friends, as on Android
+#endif
 #include <errno.h>
 #include <math.h>
 #include <poll.h>
@@ -18,7 +21,9 @@
 #include <unistd.h>
 
 int sim_verbose = 0;
-#define gettid() 0
+#ifdef __APPLE__
+#define gettid() 0   // macOS has no gettid; on Linux the real one (glibc, _GNU_SOURCE above)
+#endif
 
 void *sim_calloc(size_t n, size_t s);
 void sim_free(void *p);

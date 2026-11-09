@@ -1,0 +1,30 @@
+# A pull request opened by someone else, on the maintainer's Telegram. Apart from telegram-notices.yml so a pull request
+# shows one check for it (that workflow's other jobs showed up as skipped on every pull request). Runs from main with
+# the secrets and never checks out the pull request: its title is data, passed through env and sent as plain text.
+name: Telegram PR notice
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  contents: read
+
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  pr:
+    if: github.actor != github.repository_owner && !endsWith(github.actor, '[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}   # only the script, never the pull request
+      - env:
+          ACTOR: ${{ github.actor }}
+          TITLE: ${{ github.event.pull_request.title }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          tools/telegram-notify.sh "Pull request opened by $ACTOR: $TITLE — $URL"

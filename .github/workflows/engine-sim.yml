@@ -1,5 +1,6 @@
 # The audio engine against the version validated on the desk, with a fake USB interface and noise for tracks (real ones
-# never go to git). Only when the engine changes. On macOS, where the simulator is written and run. Not a required check:
+# never go to git). Only when the engine changes. On Linux, like Android under the engine (and much quicker to start
+# than macOS); run.sh works on a Mac too. Not a required check:
 # its timing tests can lose to a busy runner, and the desk still has the last word.
 name: Engine simulator
 on:
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   sim:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
