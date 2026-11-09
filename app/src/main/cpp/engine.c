@@ -954,6 +954,7 @@ out:
         for (int u = 0; u < n_in; u++) park_urb(in_urbs[u]);
     }
     pthread_mutex_lock(&g_stmx); LOGI("usb end: %s", g_status); pthread_mutex_unlock(&g_stmx);
+    g_probing = 0;   // no stream, nothing is being judged: a later output through Android doesn't inherit the hold
     g_usb_running = 0;
     return NULL;
 }
@@ -1069,6 +1070,7 @@ JNIEXPORT void JNICALL FN(stopFast)(JNIEnv *e, jclass c) { g_fast_stop = 1; FN(s
 JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, jint channels) {
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
+    g_probing = 0;   // the device path has no input to judge: never held
     AAudioStreamBuilder *b = NULL;
     if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
     AAudioStreamBuilder_setSampleRate(b, OUT_RATE);

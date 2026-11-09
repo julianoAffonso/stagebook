@@ -178,6 +178,7 @@ fun StageRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerUi by viewModel.playerUi.collectAsStateWithLifecycle()
     val usbReady by viewModel.usbReady.collectAsStateWithLifecycle()
+    val usbProbing by viewModel.usbProbing.collectAsStateWithLifecycle()
     var index by rememberSaveable { mutableIntStateOf(viewModel.start) }
     // pick the song's track (OGG, MP3 or WAV): copied into the app when coming back from the Android picker
     val scope = rememberCoroutineScope()
@@ -283,6 +284,7 @@ fun StageRoute(
             onMetronomeSound = viewModel::metronomeSound,
             onTempo = viewModel::setTempo,
             metroUsbReady = usbReady,
+            metroUsbProbing = usbProbing,
             onPlayChord = viewModel::playChord,
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
             onSongMix = viewModel::setSongMix,
@@ -350,6 +352,7 @@ fun StageScreen(
     onMetronomeSound: (bpm: Int?) -> Unit = {},
     onTempo: (songId: String, bpm: Int) -> Unit = { _, _ -> },
     metroUsbReady: Boolean = false,   // the player reached the USB interface: the metronome restarts there, in step
+    metroUsbProbing: Boolean = false,   // the interface's clock is being judged: the click isn't sounding yet, so the blinks wait
     onPlayChord: (notes: List<Int>, keyboard: Boolean) -> Unit = { _, _ -> },
     onKeyboardHintSeen: () -> Unit = {},
     onSongMix: (songId: String, mixer: br.app.stagebook.domain.MixerConfig?) -> Unit = { _, _ -> },
@@ -549,9 +552,12 @@ fun StageScreen(
     // the USB interface becoming ready restarts it only when the metronome sounds there: with the device output, play on
     // the track (the player reaching the interface) restarted the click from beat 1 mid-song (audit 02/11)
     val usbRestart = metroUsbReady && look.playerMode && look.metroUsbOut >= 0
-    LaunchedEffect(metroOn, metroBpm, look.metroSound, look.metroCount, look.metroVolume, usbRestart) {
+    // on the USB output the sound starts when the engine ends the judging of the interface's clock (about 2 s after opening,
+    // silent), and the blinks wait for it: they restart together when the interface is ready (usbRestart)
+    val usbWaiting = metroUsbProbing && look.playerMode && look.metroUsbOut >= 0
+    LaunchedEffect(metroOn, metroBpm, look.metroSound, look.metroCount, look.metroVolume, usbRestart, usbWaiting) {
         onMetronomeSound(if (metroOn && look.metroSound) metroBpm else null)
-        if (!metroOn) { metroBeat = -1; return@LaunchedEffect }
+        if (!metroOn || usbWaiting) { metroBeat = -1; return@LaunchedEffect }
         val periodNanos = 60_000_000_000L / metroBpm
         // the time of the next frame, but never waiting for it longer than a beat: once on the TCL the beats stopped
         // (icon dim, no glow) while the metronome stayed on, as if no frame came; without a frame the time comes from

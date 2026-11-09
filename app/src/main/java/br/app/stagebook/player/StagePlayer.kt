@@ -65,6 +65,9 @@ class StagePlayer @Inject constructor(
     // the player is on a USB interface: the metronome can sound there (user, 02/11)
     private val _usbReady = MutableStateFlow(false)
     val usbReady: StateFlow<Boolean> = _usbReady
+    // connected, but the engine is still judging the interface's clock and the output is silent (about 2 s after opening)
+    private val _usbProbing = MutableStateFlow(false)
+    val usbProbing: StateFlow<Boolean> = _usbProbing
 
     // backing track the player holds: live, the one playing goes on when the song on screen changes (TrackQueue)
     private val queue = br.app.stagebook.domain.TrackQueue<File>()
@@ -281,7 +284,12 @@ class StagePlayer @Inject constructor(
 
     private fun serviceChanged() {
         _ui.update { it.copy(message = PlayerService.status) }
-        _usbReady.value = PlayerService.running && PlayerService.connected && PlayerService.outputKey.startsWith("usb:")
+        val onUsb = PlayerService.running && PlayerService.connected && PlayerService.outputKey.startsWith("usb:")
+        // only the engine's own USB path judges the interface's clock; through Android there's no input to judge
+        val probing = onUsb && !PlayerService.viaAndroid && Engine.probing() != 0
+        // ready for sound: the click and the blinks on screen start together, once the output isn't held any more
+        _usbReady.value = onUsb && !probing
+        _usbProbing.value = probing
         // the click belongs to the USB output: the player turned off or now on the device's own output, it goes (audit
         // 02/11 #5: it stayed in the engine and, on outputs 1-2, would sound on the speaker). A quick reconnect of the
         // same interface keeps it; the stage puts it back if the interface returns after a longer drop
@@ -293,7 +301,7 @@ class StagePlayer @Inject constructor(
         }
         if (PlayerService.connected) {
             // a click asked while the stream was closed starts now, with its count-in, as if it had just been asked
-            pendingClick?.let { pendingClick = null; usbClick(it.bpm, it.out, it.skip, it.volume) }
+            if (!probing) pendingClick?.let { pendingClick = null; usbClick(it.bpm, it.out, it.skip, it.volume) }
             startIfConnected()
         } else if (_ui.value.playing) {
             // the output dropped while playing: the engine holds the position and the service reconnects by itself
@@ -339,6 +347,13 @@ class StagePlayer @Inject constructor(
         fun usbClick(bpm: Int, out: br.app.stagebook.domain.MetronomeOut, skip: Long = 0, volume: Int = br.app.stagebook.domain.MetronomeClick.FULL_VOLUME): Boolean {
             if (out.device || !PlayerService.running || !PlayerService.connected) return false
             if (!PlayerService.outputKey.startsWith("usb:") || out.out + (if (out.pair) 1 else 0) >= PlayerService.outputCount) return false
+            // the engine holds its output while it judges the interface's clock: the click is set when that ends (the service
+            // tells), so the sound and the blinks on screen start together
+            if (!PlayerService.viaAndroid && Engine.probing() != 0) {
+                pendingClick = PendingClick(bpm, out, skip, volume)
+                PlayerService.clickChanged(true)
+                return true
+            }
             fun floats(s: ShortArray) = FloatArray(s.size) { s[it] / 32768f }
             val click = br.app.stagebook.domain.MetronomeClick
             Engine.setClick(
