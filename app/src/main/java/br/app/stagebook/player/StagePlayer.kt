@@ -127,8 +127,12 @@ class StagePlayer @Inject constructor(
         if (PlayerService.running) scope.launch { engine.withLock { Engine.seek(0) } }
     }
 
+    // the wait for an output that dropped mid-song (see serviceChanged)
+    private var dropWait: kotlinx.coroutines.Job? = null
+
     fun play() {
         if (wanted == null) return
+        dropWait?.cancel()
         if (!PlayerService.running) {
             ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
         } else {
@@ -151,6 +155,7 @@ class StagePlayer @Inject constructor(
 
     fun pause() {
         endWatch?.cancel()
+        dropWait?.cancel()
         PlayerService.playWanted(false)
         _ui.update { it.copy(playing = false, waiting = false) }
         if (PlayerService.running) {
@@ -304,8 +309,13 @@ class StagePlayer @Inject constructor(
             startIfConnected()
         } else if (_ui.value.playing) {
             // the output dropped while playing: the engine holds the position and the service reconnects by itself
-            // within 5 s
+            // within 5 s. A cable that doesn't come back ends the wait (OutputWait): the button shows Play again
             _ui.update { it.copy(playing = false, waiting = true) }
+            dropWait?.cancel()
+            dropWait = scope.launch {
+                delay(br.app.stagebook.domain.OutputWait.GIVE_UP_MS)
+                if (_ui.value.waiting && br.app.stagebook.domain.OutputWait.givesUp(br.app.stagebook.domain.OutputWait.GIVE_UP_MS, PlayerService.connected)) pause()
+            }
         }
     }
 
