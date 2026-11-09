@@ -16,8 +16,12 @@ data class ScreenZoom(
     val fit: String = "",   // calculated: what it was calculated for; lyrics or look changed, it's calculated again
 )
 
-/** A screen, as zooms are kept: its size says the position too, upright and on its side are two screens. */
-fun screenKey(widthDp: Int, heightDp: Int) = "${widthDp}x$heightDp"
+/**
+ * A screen, as zooms are kept: its size says the position too, upright and on its side are two screens. [scroll]: the
+ * Scroll stage mode keeps its own zoom per song (one column, laid out another way: user, 09/11); Pages keeps the key it
+ * always had, so the zooms already chosen there stay.
+ */
+fun screenKey(widthDp: Int, heightDp: Int, scroll: Boolean = false) = "${widthDp}x$heightDp" + if (scroll) "-scroll" else ""
 
 @Immutable
 @Serializable

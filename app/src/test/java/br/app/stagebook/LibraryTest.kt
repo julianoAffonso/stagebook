@@ -170,6 +170,17 @@ class LibraryTest {
         assertEquals("o celular abre no automático", 1f, stage.onScreen(phone).zoom, 0f)
     }
 
+    // Pages and Scroll lay the song out differently: each mode keeps its own zoom on the same screen (user, 09/11)
+    @Test fun `each stage mode keeps its own zoom`() {
+        val pages = br.app.stagebook.data.model.screenKey(411, 891)
+        val scroll = br.app.stagebook.data.model.screenKey(411, 891, scroll = true)
+        val song = Song("a", "Hazard").withZoom(pages, br.app.stagebook.data.model.ScreenZoom(1.4f)).withZoom(scroll, br.app.stagebook.data.model.ScreenZoom(0.8f))
+        val stage = br.app.stagebook.ui.stage.StageSong("Hazard", "", "", false, zooms = song.zooms)
+        assertEquals(1.4f, stage.onScreen(pages).zoom, 0f)
+        assertEquals(0.8f, stage.onScreen(scroll).zoom, 0f)
+        assertEquals("Pages keeps the key it always had", "411x891", pages)
+    }
+
     @Test fun `a calculated zoom isn't a choice`() {
         val fit = br.app.stagebook.data.model.ScreenZoom(0.8f, 1, "key")
         val stage = br.app.stagebook.ui.stage.StageSong("Hazard", "", "", false, zooms = mapOf(phone to fit)).onScreen(phone)
