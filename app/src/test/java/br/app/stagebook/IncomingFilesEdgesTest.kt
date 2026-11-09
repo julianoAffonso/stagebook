@@ -16,7 +16,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -44,9 +43,7 @@ class IncomingFilesEdgesTest {
         assertTrue(incoming().receive(sent("blank.json", ("\n\n  " + songs).toByteArray())) is IncomingFiles.Result.Accepted)
     }
 
-    // The first-bytes check skips a byte order mark on purpose (Windows editors save JSON with one), but the decoder
-    // then reads the whole text with the mark still in front and fails, so the file is rejected.
-    @Ignore("bug: a songs file saved with a UTF-8 byte order mark passes the first-bytes check, but LibraryCodec.decodeSongs fails on the BOM, so IncomingFiles rejects it")
+    // Windows editors save JSON with a byte order mark: the first-bytes check skips it, and so must the decoder
     @Test fun `a songs file saved with a byte order mark is still read`() = runBlocking {
         val bom = Char(0xFEFF).toString()
         assertTrue(incoming().receive(sent("bom.json", (bom + songs).toByteArray())) is IncomingFiles.Result.Accepted)
