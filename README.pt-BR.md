@@ -138,7 +138,7 @@ request aqui no GitHub.
 ## Para quem programa
 Kotlin, Jetpack Compose e um motor de áudio em C. `./gradlew assembleDebug` compila e
 `./gradlew testDebugUnitTest` roda os testes (Java 21 e o NDK do Android). As versões são publicadas pelo GitHub
-Actions. Todo mundo aqui segue o [Código de Conduta](CODE_OF_CONDUCT.pt-BR.md).
+Actions. Todo mundo aqui segue o [Código de Conduta](CODE_OF_CONDUCT.pt-BR.md). Achou uma falha de segurança? Veja a [política de segurança](SECURITY.pt-BR.md).
 
 ### Pull requests
 Os pull requests vão para a `main`. Eles passam por estas verificações:

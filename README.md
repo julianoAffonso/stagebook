@@ -138,7 +138,7 @@ here on GitHub.
 ## For developers
 Kotlin, Jetpack Compose and an audio engine in C. `./gradlew assembleDebug` builds and `./gradlew testDebugUnitTest`
 runs the tests (Java 21 and the Android NDK). Releases are published by GitHub Actions. Everyone here follows the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+[Code of Conduct](CODE_OF_CONDUCT.md). Found a security problem? See the [security policy](SECURITY.md).
 
 ### Pull requests
 Pull requests go to `main`. They pass these checks:
