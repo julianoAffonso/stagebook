@@ -65,9 +65,6 @@ class StagePlayer @Inject constructor(
     // the player is on a USB interface: the metronome can sound there (user, 02/11)
     private val _usbReady = MutableStateFlow(false)
     val usbReady: StateFlow<Boolean> = _usbReady
-    // connected, but the engine is still judging the interface's clock and the output is silent (about 2 s after opening)
-    private val _usbProbing = MutableStateFlow(false)
-    val usbProbing: StateFlow<Boolean> = _usbProbing
 
     // backing track the player holds: live, the one playing goes on when the song on screen changes (TrackQueue)
     private val queue = br.app.stagebook.domain.TrackQueue<File>()
@@ -170,9 +167,14 @@ class StagePlayer @Inject constructor(
      * The metronome chose a USB output (user, 02/11): with a USB audio interface plugged in, turns the player on as play
      * does, with or without a track; [usbReady] says when it's there. False when no interface is plugged in.
      */
-    fun connectForClick(): Boolean {
+    /** A USB audio interface is plugged in. */
+    fun interfacePresent(): Boolean {
         val usb = context.getSystemService(android.hardware.usb.UsbManager::class.java) ?: return false
-        if (usb.deviceList.values.none { br.app.stagebook.data.isUsbAudio(it.interfaceKinds()) }) return false
+        return usb.deviceList.values.any { br.app.stagebook.data.isUsbAudio(it.interfaceKinds()) }
+    }
+
+    fun connectForClick(): Boolean {
+        if (!interfacePresent()) return false
         if (!PlayerService.running) ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
         else PlayerService.wake()
         return true
@@ -289,7 +291,6 @@ class StagePlayer @Inject constructor(
         val probing = onUsb && !PlayerService.viaAndroid && Engine.probing() != 0
         // ready for sound: the click and the blinks on screen start together, once the output isn't held any more
         _usbReady.value = onUsb && !probing
-        _usbProbing.value = probing
         // the click belongs to the USB output: the player turned off or now on the device's own output, it goes (audit
         // 02/11 #5: it stayed in the engine and, on outputs 1-2, would sound on the speaker). A quick reconnect of the
         // same interface keeps it; the stage puts it back if the interface returns after a longer drop

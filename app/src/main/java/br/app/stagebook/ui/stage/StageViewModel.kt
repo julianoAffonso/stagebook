@@ -142,8 +142,8 @@ class StageViewModel @Inject constructor(
     private var clickFallback: kotlinx.coroutines.Job? = null
 
     // short drops ignored: the interface reconnecting for its clock restarted the metronome twice (audit 02/11 #3)
-    /** The interface is connected but its clock is still being judged: the click waits, and so do the blinks. */
-    val usbProbing: StateFlow<Boolean> = player.usbProbing
+    /** A USB audio interface is plugged in (the metronome on USB waits for it to be ready; the device's click otherwise). */
+    fun usbPlugged(): Boolean = player.interfacePresent()
     val usbReady: StateFlow<Boolean> = player.usbReady.ignoringShortDrops(USB_DROP_MS)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, player.usbReady.value)
 
