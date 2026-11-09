@@ -413,6 +413,11 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LIBRARY) }
     }
 
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h1800dp-port-xxhdpi")
+    fun settingsLibraryBackupPhone() = shoot("celular_5_ajustes_backup") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.LIBRARY) }
+    }
+
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun backupPartsDialog() {
         compose.setContent {
@@ -421,6 +426,17 @@ class ScreenshotTest {
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_5_backup_restaurar.png")
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun backupPartsDialogPhone() {
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.BackupPartsDialog(s("Abrir arquivo"), s("Abrir"), br.app.stagebook.data.Backup.Part.entries.toSet(), { _, _ -> }, {}, warning = s("Os ajustes do arquivo substituem os daqui."))
+            }
+        }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_5_backup_restaurar.png")
     }
 
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
@@ -480,6 +496,11 @@ class ScreenshotTest {
     // the metronome is at the end of Stage look: a tall capture so it shows (it used to be its own section)
     @Test @Config(qualifiers = TABLET_TALL)
     fun settingsMetronomeTablet() = shoot("tablet_5_ajustes_metronomo") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 30f)), SettingsActions(), it, section = SettingsSection.METRONOME) }
+    }
+
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h1150dp-port-xxhdpi")
+    fun settingsMetronomePhone() = shoot("celular_5_ajustes_metronomo") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(fontSp = 30f)), SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
@@ -597,6 +618,13 @@ class ScreenshotTest {
         }
     }
 
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h1150dp-port-xxhdpi")
+    fun settingsAdvancedPhone() = shoot("celular_5_ajustes_avancado") {
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(settings, SettingsActions(advanced = br.app.stagebook.ui.settings.sampleAdvanced), it, section = SettingsSection.ADVANCED)
+        }
+    }
+
     // without the permission: the card with the command to give it from the computer
     @Test @Config(qualifiers = PHONE)
     fun settingsAdvancedNoPermissionPhone() = shoot("celular_5_ajustes_avancado_permissao") {
@@ -616,6 +644,12 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
     }
 
+    @Test @Config(qualifiers = PHONE)
+    fun settingsEssentialPhone() = shoot("celular_5_ajustes_essencial") {
+        val look = settings.look.copy(bandOn = false, internetOn = false, extrasOn = false, playerMode = false)
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = look), SettingsActions(), it, section = SettingsSection.ESSENTIAL) }
+    }
+
     // T03: the app in English (the base), to check the translation
     @Test @Config(qualifiers = "en-w1280dp-h800dp-land-hdpi")
     fun englishSongsTablet() = shoot("ingles_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
@@ -626,6 +660,12 @@ class ScreenshotTest {
     }
 
     @Test fun essentialAlertTablet() = shoot("tablet_1_aviso_essencial") {
+        HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+        br.app.stagebook.ui.home.EssentialAlert(Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false), {}, {})
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun essentialAlertPhone() = shoot("celular_1_aviso_essencial") {
         HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
         br.app.stagebook.ui.home.EssentialAlert(Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false), {}, {})
     }
@@ -730,6 +770,18 @@ class ScreenshotTest {
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_bloqueador.png")
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun updateReadyAutoBlockerPhone() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Ready(java.io.File("update.apk")), {}, {}, {}, {}, onAutoBlocker = {})
+            }
+        }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_8_bloqueador.png")
     }
 
     @Test fun pickSongsTablet() = shoot("tablet_9_escolher_musicas") {
@@ -1084,6 +1136,12 @@ class ScreenshotTest {
         shootLyricsAt("tablet_5_ajustes_rolar", settings.copy(look = look), str(R.string.settings_auto_scroll, look.autoScroll), extraUp = 200f)
     }
 
+    @Test @Config(qualifiers = PHONE)
+    fun settingsLyricsScrollPhone() {
+        val look = settings.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)
+        shootLyricsAt("celular_5_ajustes_rolar", settings.copy(look = look), str(R.string.settings_auto_scroll, look.autoScroll), extraUp = 200f)
+    }
+
     /** Settings → Lyrics with [text] scrolled into view (and [extraUp] px more), so the capture shows that card. */
     private fun shootLyricsAt(name: String, state: SettingsUiState, text: String, extraUp: Float = 0f) {
         compose.setContent {
@@ -1232,6 +1290,11 @@ class ScreenshotTest {
     // ---- journey: linking a track to a song (phone) ----
     @Test @Config(qualifiers = PHONE)
     fun journeyTrack1Settings() = shoot("jornada_faixa_1_ajustes_player") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.METRONOME) }
+    }
+
+    @Test @Config(qualifiers = "pt-rBR-w1280dp-h960dp-land-hdpi")
+    fun journeyTrack1SettingsTablet() = shoot("jornada_faixa_1_ajustes_player_tablet") {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
@@ -1474,6 +1537,11 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it, section = SettingsSection.BAND) }
     }
 
+    @Test @Config(qualifiers = "pt-rBR-w1280dp-h900dp-land-hdpi")
+    fun bandTablet() = shoot("jornada_banda_1_ajustes_tablet") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(band = bandSample), it, section = SettingsSection.BAND) }
+    }
+
     // an invite over the internet opens the receive screen on it (user, 07/11)
     @Test @Config(qualifiers = PHONE)
     fun bandInvitePhone() = shoot("jornada_banda_6_convite") {
@@ -1634,6 +1702,27 @@ class ScreenshotTest {
         }
     }
 
+    // on a tablet the channel opens as a window over the mixer
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun mixerEditTablet() {
+        compose.setContent {
+            StagebookTheme {
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    androidx.compose.foundation.layout.Column(
+                        androidx.compose.ui.Modifier.padding(br.app.stagebook.ui.theme.Spacing.m),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.m),
+                    ) {
+                        br.app.stagebook.ui.settings.MixerCard(mixerLook.mixer, {}, { mixerLevels }, true, {})
+                        br.app.stagebook.ui.settings.EqCard(mixerLook.mixer, {}, { mixerLevels }, true)
+                    }
+                }
+                br.app.stagebook.ui.components.MixerChannelEditor(2, mixerLook.mixer.strip(2), pair = false, canPair = true, output = mixerLook.mixer.outputOf(2), outputs = mixerLook.mixer.output, onChange = {}, onOutput = {}, onDismiss = {})
+            }
+        }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/jornada_mixer_3_editar_canal_tablet.png")
+    }
+
     @Test @Config(qualifiers = TABLET_TALL)
     fun mixerTablet() = shoot("jornada_mixer_2_tablet") {
         androidx.compose.foundation.layout.Column(
@@ -1699,6 +1788,18 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription(str(R.string.stage_play)).performTouchInput { longClick() }
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/jornada_faixa_4_menu.png")
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun journeyTrack4MenuTablet() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {})
+            }
+        }
+        compose.onNodeWithContentDescription(str(R.string.stage_play)).performTouchInput { longClick() }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/jornada_faixa_4_menu_tablet.png")
     }
 
     @Test fun stageLyricsOnlyTablet() = shoot("tablet_6_palco_so_letra") {
