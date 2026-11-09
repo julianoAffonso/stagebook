@@ -185,6 +185,9 @@ fun SettingsRoute(
     }
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
+    // a file tapped outside the app takes the same path as one picked with Open file
+    val linkedFile by SettingsLinks.file.collectAsStateWithLifecycle()
+    LaunchedEffect(linkedFile) { linkedFile?.let { SettingsLinks.file.value = null; viewModel.inspectBackup(it) } }
     pendingRestore?.let { p ->
         BackupPartsDialog(
             title = stringResource(R.string.backup_open),
@@ -528,6 +531,8 @@ private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions
 /** A Settings section asked for by a link somewhere in the app (the Home screen opens it). */
 object SettingsLinks {
     val pending = kotlinx.coroutines.flow.MutableStateFlow<SettingsSection?>(null)
+    /** A `.stagebook` file tapped outside the app, already checked: Open file shows its parts. */
+    val file = kotlinx.coroutines.flow.MutableStateFlow<android.net.Uri?>(null)
 }
 
 /** The section's name: the import sites say which kind, by the profile (user, 01/11: a friendlier name). */

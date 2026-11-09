@@ -1036,6 +1036,7 @@
     <string name="auto_blocker_open">Open Auto Blocker</string>
     <string name="auto_blocker_hint">If the install is blocked, turn off Samsung\'s Auto Blocker and come back.</string>
     <string name="stage_link_kept">Link saved. It opens when you leave the stage.</string>
+    <string name="stage_file_kept">File saved. It opens when you leave the stage.</string>
     <string name="settings_metronome_test">Test the metronome</string>
     <string name="settings_metronome_test_stop">Stop the test</string>
     <string name="update_installing">Installing the update. The app restarts by itself when it finishes.</string>

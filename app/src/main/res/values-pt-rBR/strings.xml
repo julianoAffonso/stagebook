@@ -1073,6 +1073,7 @@
     <string name="auto_blocker_open">Abrir o Bloqueador automático</string>
     <string name="auto_blocker_hint">Se a instalação for bloqueada, desligue o Bloqueador automático da Samsung e volte.</string>
     <string name="stage_link_kept">Link guardado. Abre quando você sair do palco.</string>
+    <string name="stage_file_kept">Arquivo guardado. Abre quando você sair do palco.</string>
     <string name="settings_metronome_test">Testar o metrônomo</string>
     <string name="settings_metronome_test_stop">Parar o teste</string>
     <string name="update_installing">Instalando a atualização. O app reinicia sozinho ao terminar.</string>

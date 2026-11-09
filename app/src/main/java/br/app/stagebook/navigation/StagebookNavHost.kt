@@ -59,7 +59,8 @@ private fun androidx.navigation.NavDestination.pullsToStage() = hasRoute<Home>()
 
 /**
  * [updateOffer]: new app version; shows on top of any screen, never on stage. [receiveCodes]: codes of receive links
- * (tapped in a message or copied by the site) that open the receive screen.
+ * (tapped in a message or copied by the site) that open the receive screen. [openedFiles]: `.stagebook` files tapped
+ * outside the app, already checked, that open Settings → Library → Open file.
  */
 @Composable
 fun StagebookNavHost(
@@ -70,6 +71,7 @@ fun StagebookNavHost(
     receiveCodes: Flow<String> = emptyFlow(),
     onStage: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false),
     installNotices: Flow<br.app.stagebook.domain.InstallNotice> = emptyFlow(),
+    openedFiles: Flow<br.app.stagebook.data.IncomingFiles.Result> = emptyFlow(),
 ) {
     val nav = rememberNavController()
     // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
@@ -156,6 +158,28 @@ fun StagebookNavHost(
             br.app.stagebook.ui.settings.SettingsLinks.pending.value = section
             nav.popBackStack<Home>(inclusive = false)
         }
+    }
+    // a .stagebook file tapped outside the app: Open file with its parts, as if picked there. On the stage it waits
+    // and opens on leaving (the show is never interrupted); a file that isn't Stagebook's only gets the short message
+    val heldFile = remember { br.app.stagebook.domain.PendingFile<android.net.Uri>() }
+    val fileKept = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.stage_file_kept))
+    val notStagebook = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.backup_not_backup))
+    val openFile: (android.net.Uri) -> Unit = { uri ->
+        br.app.stagebook.ui.settings.SettingsLinks.file.value = uri
+        openSettings(br.app.stagebook.ui.settings.SettingsSection.LIBRARY)
+    }
+    LaunchedEffect(openedFiles) {
+        openedFiles.collect { r ->
+            val uri = (r as? br.app.stagebook.data.IncomingFiles.Result.Accepted)?.uri
+            when (heldFile.arrive(uri, onStage.value)) {
+                br.app.stagebook.domain.PendingFile.Arrival.OPEN -> uri?.let(openFile)
+                br.app.stagebook.domain.PendingFile.Arrival.HELD -> message.show(fileKept.value)
+                br.app.stagebook.domain.PendingFile.Arrival.REJECTED -> message.show(notStagebook.value)
+            }
+        }
+    }
+    LaunchedEffect(onStage) {
+        onStage.collect { on -> if (!on) heldFile.release()?.let(openFile) }
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold) {

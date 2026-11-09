@@ -59,12 +59,15 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var conduct: br.app.stagebook.data.BandConduct   // created here so a follower answers right away
     @Inject lateinit var trust: br.app.stagebook.data.BandTrust
     @Inject lateinit var receiveLinks: br.app.stagebook.data.ReceiveLinks
+    @Inject lateinit var incomingFiles: br.app.stagebook.data.IncomingFiles
     private val pedal = PedalInput()
 
     // receive links (user, 07/11): tapped in a message or left in the clipboard by the site; the screens open the
     // receive screen with the code. Buffered: a link that opened the app arrives before the screens are drawn.
     private val receiveCodes = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.BUFFERED)
     private var clipboardPending = false
+    // a .stagebook file tapped outside the app (file manager, download, chat): checked, then Open file in Settings
+    private val openedFiles = kotlinx.coroutines.channels.Channel<br.app.stagebook.data.IncomingFiles.Result>(kotlinx.coroutines.channels.Channel.BUFFERED)
 
     // already in a band: the band is used as soon as the app opens, so the local network permission is asked on open
     // (otherwise Android shows its device chooser instead); without a band it's asked in Settings → Band (user, 31/10)
@@ -116,6 +119,7 @@ class MainActivity : ComponentActivity() {
         if (repository.library.value.look.bandOn && trust.members.value.isNotEmpty() && needsLocalNetwork(this)) localNetwork.launch(LOCAL_NETWORK)
         if (savedInstanceState == null) openLink(intent)   // recreated: the link was already opened
         val codes = receiveCodes.receiveAsFlow()
+        val files = openedFiles.receiveAsFlow()
         // pedal keys go through a root that sees them before Android drops the first one after a touch (PedalKeyRoot)
         setContentView(PedalKeyRoot(this, pedal).apply { addView(ComposeView(context).apply { setContent {
             StagebookTheme {
@@ -130,7 +134,7 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -197,6 +201,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openLink(intent: Intent?) {
+        br.app.stagebook.data.IncomingFiles.fileUri(intent)?.let { uri ->
+            // read now, while the sender's permission lasts; copied and checked off the main thread
+            lifecycleScope.launch { openedFiles.send(incomingFiles.receive(uri)) }
+            return
+        }
         if (intent?.action != Intent.ACTION_VIEW) return
         receiveLinks.fromIntent(intent.dataString)?.let { receiveCodes.trySend(it) }
     }
