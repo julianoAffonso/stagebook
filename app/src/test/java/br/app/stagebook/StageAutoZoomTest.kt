@@ -377,17 +377,13 @@ class StageAutoZoomTest {
         assertEquals(small, place(), 0.5f)
     }
 
-    @Test fun `scrolling, the badge goes back to 100 percent`() {
-        show(zoom = 1.3f, look = Look(fontSp = 30f, stageMode = br.app.stagebook.data.model.StageMode.SCROLL))
-        pinch()
-        compose.onNodeWithText("100%").performClick()
-        compose.waitForIdle()
-        assertEquals("a" to 1f, saved.last())
-    }
-
-    @Test fun `scrolling, the badge has no automatic`() {
+    // user, 09/11: the automatic zoom works while scrolling too (it had no button there and only 100% was offered)
+    @Test fun `scrolling, the badge offers automatic and goes back to it`() {
         show(look = Look(fontSp = 30f, stageMode = br.app.stagebook.data.model.StageMode.SCROLL))
         pinch()
-        compose.onNodeWithText("Automático").assertDoesNotExist()
+        compose.onNodeWithText("Automático").assertExists()
+        compose.onNodeWithText("Automático").performClick()
+        compose.waitForIdle()
+        assertEquals("a" to 1f, saved.last())
     }
 }

@@ -9,8 +9,13 @@ object PageSlots {
     /** [current] and the result are 0-based indexes; [capacity] = how many dots (or "…") fit. */
     fun of(current: Int, count: Int, capacity: Int): List<Int?> {
         if (count <= capacity) return (0 until count).toList()
-        // room for first, "…", neighbors, "…", last: with less than that, only the current one
-        if (capacity < 5) return listOf(current)
+        // room for first, "…", neighbors, "…", last: with less than that, the dots around the current one (not only it: a lone
+        // number said nothing of where it stood among the rest)
+        if (capacity < 5) {
+            val n = capacity.coerceAtLeast(1)
+            val start = (current - (n - 1) / 2).coerceIn(0, count - n)
+            return (start until start + n).toList()
+        }
         val window = capacity - 4
         return when {
             // near the start: a solid block from the 1st, "…" and the last

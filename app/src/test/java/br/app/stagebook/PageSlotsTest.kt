@@ -31,6 +31,16 @@ class PageSlotsTest {
         assertEquals("1 … 8 9 10 11 12", shown(12, 12, 7))
     }
 
+    // user, 09/11: with room for fewer than 5 dots only the current one showed, a lone number that said nothing of where it
+    // stood: now the dots around it
+    @Test fun `with little room, the dots around the current one`() {
+        assertEquals("1 2 3", shown(1, 9, 3))
+        assertEquals("4 5 6", shown(5, 9, 3))
+        assertEquals("7 8 9", shown(9, 9, 3))
+        assertEquals("4 5 6 7", shown(5, 9, 4))
+        assertEquals("5", shown(5, 9, 1))
+    }
+
     @Test fun `never goes over what fits and always shows the current one`() {
         for (capacity in 1..12) for (count in 1..30) for (current in 0 until count) {
             val slots = PageSlots.of(current, count, capacity)
