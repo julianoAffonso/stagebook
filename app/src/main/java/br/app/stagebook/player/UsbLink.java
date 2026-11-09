@@ -20,6 +20,8 @@ final class UsbLink {
     int outIfNum, outAltNum;
     // the interface's input (recording): its pace is the interface clock (implicit feedback)
     int inEp = -1, inMaxPacket, inChannels, inSubslot, inIfNum = -1, inAltNum;
+    // set before open(): this interface's input stopped the output on this device, so it isn't opened (no clock from it)
+    boolean noInput;
     UsbInterface inStreaming, inIdle;
     final java.util.List<UsbInterface> others = new java.util.ArrayList<>();
 
@@ -171,6 +173,8 @@ final class UsbLink {
         }
         // an adaptive output follows our pace: its input would only cost a second stream
         if (classOne && adaptive) { inEp = -1; inIfNum = -1; }
+        // not even its streaming setting is selected: with the input's setting chosen the host may still reserve it
+        if (noInput) { inEp = -1; inIfNum = -1; }
     }
 
     // 48 kHz if the card has it, as the engine's sound was tuned there; otherwise its highest up to 96 kHz.

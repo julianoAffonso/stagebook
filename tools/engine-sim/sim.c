@@ -31,9 +31,14 @@ static int fake_poll(struct pollfd *p, nfds_t n, int ms) { struct timespec t = {
 #define usleep sim_usleep
 #define ioctl fake_ioctl
 #define poll fake_poll
+// the engine's stall watch wakes the USB thread with a signal, and on the device REAPURB returns EINTR: the fake reap
+// waits on a condition that ignores signals, so the wake-up goes through here (before, no stall path ever ran here)
+static int sim_pthread_kill(pthread_t thr, int sig);
+#define pthread_kill sim_pthread_kill
 #define stb_vorbis_seek_frame sim_seek_frame
 #define stb_vorbis_get_samples_float_interleaved sim_get_samples
 #include ENGINE_C
+#undef pthread_kill
 #undef calloc
 #undef free
 #undef usleep
@@ -99,6 +104,11 @@ static qent q[QMAX];
 static int nq = 0;
 static double out_due = 0, in_due = 0, in_acc = 0;
 static int disconnected = 0, fail_next_reap = 0;
+static int sim_intr = 0;   // a signal for the USB thread: the next blocking reap returns EINTR
+static int sim_pthread_kill(pthread_t thr, int sig) {
+    pthread_mutex_lock(&dev_mx); sim_intr = 1; pthread_cond_broadcast(&dev_cv); pthread_mutex_unlock(&dev_mx);
+    return 0;
+}
 static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
 static double clock_ratio = 1.0002;    // desk clock slightly fast (the feedback corrects it)
 static double in_jitter = 0;               // each input URB comes back up to this many seconds early or late: a host whose timing is noisy
@@ -106,6 +116,7 @@ static double in_spike = 0;                // and every in_spike_n-th input URB 
 static long in_spike_n = 0, in_urb_count = 0;
 static double runner_jitter = 0;           // SIM_RUNNER_JITTER=<seconds>: a shared CI runner's timing noise, on top of everything
 static int in_loss_boundary = 0;           // packets lost at the start of every input URB (a host controller that loses a poll or two per boundary)
+static double out_dies_with_in_s = 0;      // output URBs stop coming back this long after the first input URB, the input keeps going (the S26 with a high-speed interface)
 static double in_long_dies_s = 0, in_t0 = 0;   // input URBs longer than 16 packets stop coming back this long after the first input URB (the S26)
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
@@ -160,6 +171,7 @@ static void complete(struct usbdevfs_urb *u, int st) {
 
 static int pop_ready(struct usbdevfs_urb **out, int block) {
     for (;;) {
+        if (block && sim_intr) { sim_intr = 0; errno = EINTR; return -1; }
         int best = -1;
         for (int i = 0; i < nq; i++) if (best < 0 || q[i].due < q[best].due) best = i;
         if (best < 0) {
@@ -210,7 +222,8 @@ int fake_ioctl(int fd, unsigned long req, ...) {
             }
             if (*line < t) *line = t;
             *line += u->number_of_packets / 8000.0;   // a URB takes its own packets' worth of microframes (the input's are longer)
-            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line + ((u->endpoint & 0x80) && in_jitter + runner_jitter > 0 ? (drand48() * 2 - 1) * (in_jitter + runner_jitter) : 0) + ((u->endpoint & 0x80) && in_spike_n > 0 && ++in_urb_count % in_spike_n == 0 ? in_spike : 0), 0};
+            int out_dead = !(u->endpoint & 0x80) && out_dies_with_in_s > 0 && in_t0 > 0 && t > in_t0 + out_dies_with_in_s;
+            q[nq++] = (qent){u, out_dead || ((u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from) ? 1e18 : *line + ((u->endpoint & 0x80) && in_jitter + runner_jitter > 0 ? (drand48() * 2 - 1) * (in_jitter + runner_jitter) : 0) + ((u->endpoint & 0x80) && in_spike_n > 0 && ++in_urb_count % in_spike_n == 0 ? in_spike : 0), 0};
             pthread_cond_broadcast(&dev_cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
@@ -452,6 +465,7 @@ static void dump(const char *path) {
 
 int main(int argc, char **argv) {
     const char *ogg = argv[1], *ogg48 = argv[2], *outdir = argv[3], *wavdir = argc > 4 ? argv[4] : NULL;
+    setvbuf(stdout, NULL, _IOLBF, 0);   // line by line: a run cut short still shows how far it got
     sim_verbose = getenv("SIM_VERBOSE") != NULL;
     if (getenv("SIM_RUNNER_JITTER")) runner_jitter = atof(getenv("SIM_RUNNER_JITTER"));
     fns.GetStringUTFChars = j_get; fns.ReleaseStringUTFChars = j_rel; fns.NewFloatArray = j_newf;
@@ -473,6 +487,13 @@ int main(int argc, char **argv) {
         FN(stop)(env, NULL);
         return 0;
     }
+
+    // SIM_ONLY=starve: only that scenario, in seconds, while working on it (the full run is for commits and CI)
+    const char *only = getenv("SIM_ONLY");
+#ifdef ENGINE_HAS_PROBE
+    if (only && !strcmp(only, "starve")) { e_load(ogg); goto only_starve; }
+#endif
+    if (only) { printf("SIM_ONLY=%s: no such scenario here (starve needs an engine with the clock probe)\n", only); return 2; }
 
     // 1) play, seek and change songs: the output is recorded to compare both versions
     printf("[1] play the 44.1 kHz track (resampled), seek to 1:00 and switch to the 48 kHz track\n");
@@ -752,6 +773,32 @@ int main(int argc, char **argv) {
     FN(stop)(env, NULL);
     sim_close_conn();
     pthread_mutex_lock(&dev_mx); in_long_dies_s = 0; pthread_mutex_unlock(&dev_mx);
+
+only_starve:
+    // the S26 with a high-speed interface (09/11): reading the input stops the output after ~0.2 s, the input goes on.
+    // The stream has to end by itself and say why, so Java connects again without the input, and then it plays
+    pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0.2; pthread_mutex_unlock(&dev_mx);
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(1.5);
+    int starved_ended = !FN(isRunning)(env, NULL), starved_flag = FN(inputStarvedOutput)(env, NULL);
+    snprintf(buf, sizeof buf, "stream ended=%d, input starved the output=%d", starved_ended, starved_flag);
+    check(starved_ended && starved_flag, "an output stopped by the input ends the stream and asks for no input", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, -1, 0, 0);   // what PlayerService does next: no input
+    FN(play)(env, NULL);
+    sleep_s(0.3);
+    long p_noin0 = FN(position)(env, NULL);
+    sleep_s(2.0);
+    long p_noin1 = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "running=%d, %ld ms played in 2 s, starved flag now %d", FN(isRunning)(env, NULL), p_noin1 - p_noin0, FN(inputStarvedOutput)(env, NULL));
+    check(FN(isRunning)(env, NULL) && p_noin1 - p_noin0 > 1800 && !FN(inputStarvedOutput)(env, NULL), "without the input that output plays on", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0; pthread_mutex_unlock(&dev_mx);
+    if (only) { printf("%s: %d failure(s)\n", ENGINE_NAME, fails); return fails ? 1 : 0; }
 #endif
 
     // 8) normalization
