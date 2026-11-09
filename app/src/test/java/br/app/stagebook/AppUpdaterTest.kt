@@ -9,7 +9,10 @@ import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -18,6 +21,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,6 +29,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 import java.net.InetSocketAddress
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Settings → Update the app, with a local "Drive" in place of the real one. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,7 +61,20 @@ class AppUpdaterTest {
         Dispatchers.resetMain()
     }
 
+    /** A /flaky address that answers with each status of [statuses] in turn (the last one repeats); counts the hits. */
+    private fun flaky(vararg statuses: Int, body: String = """{"versionCode":999999,"versionName":"0.3.999 (abc1234)"}"""): AtomicInteger {
+        val hits = AtomicInteger()
+        server.createContext("/flaky") { ex ->
+            val status = statuses[minOf(hits.getAndIncrement(), statuses.size - 1)]
+            val b = if (status == 200) body.toByteArray() else ByteArray(0)
+            ex.sendResponseHeaders(status, if (b.isEmpty()) -1 else b.size.toLong())
+            ex.responseBody.use { it.write(b) }
+        }
+        return hits
+    }
+
     private fun updater() = AppUpdater(context).apply {
+        retryDelaysMs = longArrayOf(10, 10, 10)
         versionUrl = "http://127.0.0.1:${server.address.port}/version"
         apkUrl = "http://127.0.0.1:${server.address.port}/apk"
     }
@@ -68,6 +86,39 @@ class AppUpdaterTest {
     /** Waits for the update state to reach the screen (uiState only moves with someone watching). */
     private suspend fun SettingsViewModel.waitUpdate(done: (UpdateState) -> Boolean): UpdateState =
         withTimeout(10_000) { uiState.first { done(it.update) }.update }
+
+    @Test fun `a server error is tried again until it answers`() = runBlocking {
+        val hits = flaky(503, 500, 200)
+        val u = updater().apply { versionUrl = "http://127.0.0.1:${server.address.port}/flaky" }
+        assertEquals("0.3.999 (abc1234)", u.published(maxAgeMs = 0)?.versionName)
+        assertEquals(3, hits.get())
+    }
+
+    @Test fun `a client error is not tried again`() = runBlocking {
+        val hits = flaky(404)
+        val u = updater().apply { versionUrl = "http://127.0.0.1:${server.address.port}/flaky" }
+        assertNull(u.published(maxAgeMs = 0))
+        assertEquals(1, hits.get())
+    }
+
+    @Test fun `a server that never recovers gives up after the last try`() = runBlocking {
+        val hits = flaky(503)
+        val u = updater().apply { versionUrl = "http://127.0.0.1:${server.address.port}/flaky" }
+        assertNull(u.published(maxAgeMs = 0))
+        assertEquals(4, hits.get())
+    }
+
+    @Test fun `cancelling while waiting to try again stops at once`() = runBlocking {
+        val hits = flaky(503)
+        val u = updater().apply {
+            versionUrl = "http://127.0.0.1:${server.address.port}/flaky"
+            retryDelaysMs = longArrayOf(60_000)
+        }
+        val job = launch(Dispatchers.IO) { u.published(maxAgeMs = 0) }
+        withTimeout(5_000) { while (hits.get() < 1) delay(10) }
+        withTimeout(5_000) { job.cancelAndJoin() }
+        assertEquals(1, hits.get())
+    }
 
     @Test fun `newer published version shows up to download`() = runBlocking {
         version = """{"versionCode":999999,"versionName":"0.3.999 (abc1234)"}"""

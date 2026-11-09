@@ -10,6 +10,7 @@ import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -47,6 +48,9 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     // fixed file addresses (tests swap them for a local server)
     internal var apkUrl = APK_URL
     internal var versionUrl = VERSION_URL
+
+    // waits before each new try after a server error or a network failure (tests shorten them)
+    internal var retryDelaysMs = longArrayOf(1000, 3000, 6000)
 
     // the version doesn't change with the app open (updating restarts the process): ask the system only once
     val installedCode: Long by lazy {
@@ -142,13 +146,36 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
         File(context.cacheDir, "atualizacao").deleteRecursively()
     }
 
-    private fun <T> get(url: String, read: (InputStream, Long) -> T): T {
+    /**
+     * Reads [url], trying again after a server error (5xx) or a network failure, waiting longer each time
+     * ([retryDelaysMs]). A client error (4xx) is final, and a cancelled coroutine stops the wait at once.
+     */
+    private suspend fun <T> get(url: String, read: (InputStream, Long) -> T): T {
+        var attempt = 0
+        while (true) {
+            try {
+                return getOnce(url, read)
+            } catch (e: IOException) {
+                val wait = retryDelaysMs.getOrNull(attempt)
+                if (e is ClientError || wait == null) throw e
+                Log.w(TAG, "download of $url failed (${e.message}), trying again in $wait ms")
+                attempt++
+                delay(wait)
+            }
+        }
+    }
+
+    private class ClientError(code: Int) : IOException("HTTP $code")
+
+    private fun <T> getOnce(url: String, read: (InputStream, Long) -> T): T {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 8000
         c.readTimeout = 20000
         c.instanceFollowRedirects = true
         try {
-            if (c.responseCode != 200) throw IOException("HTTP ${c.responseCode}")
+            val code = c.responseCode
+            if (code in 400..499) throw ClientError(code)
+            if (code != 200) throw IOException("HTTP $code")
             return c.inputStream.use { read(it, c.contentLengthLong) }
         } finally {
             c.disconnect()
