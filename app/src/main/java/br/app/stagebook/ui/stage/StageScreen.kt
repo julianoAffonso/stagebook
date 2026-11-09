@@ -1213,6 +1213,7 @@ fun StageScreen(
                     awayColor = MaterialTheme.colorScheme.error,
                     stops = look.trackStops,
                     fg = fg,
+                    bg = Color(look.bg),
                     onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
                     onChange = { onPickTrack(song.id) },
                     onRemove = { onRemoveTrack(song.id) },
@@ -1683,7 +1684,7 @@ private class PageHit {
 }
 
 /**
- * Track play/pause: a translucent circle, so it doesn't hide the lyrics. Without a track, the tap picks the file; with
+ * Track play/pause: a circle in the stage's own color, on top of the lyrics (09/11). Without a track, the tap picks the file; with
  * a track, a long press opens the song's mixer, or changes or removes the track.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -1694,6 +1695,7 @@ private fun TrackButton(
     stops: Boolean,
     away: Boolean = false,
     awayColor: Color = Color.Unspecified,
+    bg: Color = Color.Unspecified,
     fg: Color,
     onClick: () -> Unit,
     onChange: () -> Unit,
@@ -1715,6 +1717,9 @@ private fun TrackButton(
             Modifier
                 .size(Sizes.touch + Spacing.m)
                 .clip(CircleShape)
+                // the stage's own background, nearly opaque, under the old light tint: the button sits on top of the
+                // lyrics instead of letting a line show through it (user, 09/11: "Frase 5" looked like it was over it)
+                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.92f)) else Modifier)
                 .background(fg.copy(alpha = 0.12f))
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,
