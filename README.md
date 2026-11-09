@@ -152,6 +152,19 @@ Each commit that changes something people notice ends with `Release-Note: Englis
 short and in the musician's words; one nobody notices ends with `Release-Note: none`. When the help or the screenshots
 don't need to change, say so on a line of its own: `Help: none` or `Screens: none`.
 
+### Hotfix
+A bug in a published version that people can't wait for (an update that doesn't install, a crash on stage) doesn't wait
+for the work on `dev`:
+1. Branch `hotfix/<name>` from `main` (the last release) with only the fix and its test. Its commit carries a
+   `Release-Note` that tells people what to do, if anything (it shows in the update window).
+2. Open a pull request into `main`. The required check is **Check** (about 7 minutes); the simulator isn't required.
+3. Merge it and run **Actions → Release** on `main` with "publish" ticked. The fix is out in about 10 minutes.
+4. Bring `main` back into `dev`, where the same fix is committed too.
+
+A published version with a bug that blocks people (for example, updating from the app) is deleted from Releases, tag
+included, so nobody new downloads it, and a pinned issue in both languages explains who is affected and how to get out
+of it. The next release counts its notes from the version before, so nobody misses a change.
+
 ### Engine simulator
 `tools/engine-sim/run.sh` runs the audio engine on a Mac with a fake USB interface and compares its sound with the
 version validated on a real mixer. It also tests drops, the clock plans and load. In Actions it runs on synthetic

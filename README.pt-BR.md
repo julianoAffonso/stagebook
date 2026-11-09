@@ -152,6 +152,20 @@ Cada commit que muda algo que a pessoa percebe termina com `Release-Note: Englis
 curta e com as palavras do músico; um que ninguém percebe termina com `Release-Note: none`. Quando a ajuda ou as
 capturas não precisam mudar, diga isso numa linha própria: `Help: none` ou `Screens: none`.
 
+### Hotfix
+Um bug numa versão publicada que não pode esperar (uma atualização que não instala, um travamento no palco) não espera
+o trabalho da `dev`:
+1. Crie a branch `hotfix/<nome>` a partir da `main` (a última versão) só com a correção e o teste dela. O commit leva
+   um `Release-Note` que diz à pessoa o que fazer, se precisar (ele aparece na janela de atualização).
+2. Abra um pull request para a `main`. A verificação obrigatória é o **Check** (uns 7 minutos); o simulador não é
+   obrigatório.
+3. Faça o merge e rode **Actions → Release** na `main` com "publish" marcado. A correção sai em uns 10 minutos.
+4. Traga a `main` de volta para a `dev`, onde a mesma correção também entra.
+
+Uma versão publicada com um bug que trava as pessoas (por exemplo, atualizar pelo app) sai das Releases, com a tag, para
+ninguém novo baixar, e uma issue fixada nas duas línguas explica quem foi afetado e como sair. A versão seguinte conta as
+novidades a partir da anterior, e ninguém perde nenhuma mudança.
+
 ### Simulador do motor
 O `tools/engine-sim/run.sh` roda o motor de áudio num Mac com uma interface USB falsa e compara o som com a versão
 validada numa mesa de verdade. Também testa quedas, os planos do relógio e carga. No Actions ele roda com faixas
