@@ -894,6 +894,12 @@ fun StageScreen(
             }
             val fitOne = StageFit.zoomToFit(widest, width)
             val fitTwo = StageFit.zoomToFit(widest, (width - gutter) / 2)
+            // Scroll's automatic size: the longest LINE whole on the width (fitOne is the longest word). Only measured there
+            val scrollStage = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
+            val fitLine = remember(scrollStage, lines, look.fontSp, look.bold, look.font, width) {
+                if (!scrollStage) fitOne
+                else StageFit.zoomToFit(widths(measurer, lines.filter { it.isNotEmpty() && !it.hasStringAnnotations(TAB_TAG, 0, it.length) }, styleFor(1f)).maxOrNull() ?: 0, width)
+            }
             val halfWidth = (width - gutter) / 2
             fun measureLines(style: TextStyle, w: Int) = lineHeights(measurer, lines, style, w)
             val density = LocalDensity.current
@@ -978,9 +984,8 @@ fun StageScreen(
                     val floor = StageFit.autoFloor(saving, minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
                     // Scroll has no pages to save: the biggest size whose longest line still fits the width, up to the usual
                     // cap (user, 09/11: on its side the lyrics stayed small with half the screen empty, because every bigger
-                    // size meant more scroll steps)
-                    val scrolling = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
-                    br.app.stagebook.data.model.ScreenZoom(if (scrolling) maxOf(top, min) else StageFit.autoZoom(floor, top, at), cols, fitKey)
+                    // size meant more scroll steps; and the longest word wasn't enough, upright the lines broke)
+                    br.app.stagebook.data.model.ScreenZoom(if (scrollStage) maxOf(min, minOf(top, fitLine)) else StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }
             SideEffect { autoZoomNow = autoFit?.zoom ?: 1f; lastFit = autoFit }
