@@ -1288,14 +1288,25 @@ class ScreenshotTest {
     }
 
     // the USB interface away mid-song (user, 09/11): the track button shows it instead of Stop
-    @Test fun stagePlayerUsbAwayTablet() = shoot("tablet_11_player_usb_fora") {
-        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true, usbAway = true)
+    // the icon blinks: the picture is taken at its strongest (700 ms into the pulse), not at its faintest first frame
+    private fun shootUsbAway(name: String) {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true, usbAway = true)
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
+    @Test fun stagePlayerUsbAwayTablet() = shootUsbAway("tablet_11_player_usb_fora")
+
     @Test @Config(qualifiers = PHONE)
-    fun stagePlayerUsbAwayPhone() = shoot("celular_11_player_usb_fora") {
-        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true, usbAway = true)
-    }
+    fun stagePlayerUsbAwayPhone() = shootUsbAway("celular_11_player_usb_fora")
 
     // ---- journey: linking a track to a song (phone) ----
     @Test @Config(qualifiers = PHONE)
