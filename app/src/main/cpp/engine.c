@@ -183,7 +183,9 @@ static int g_eq_on = 0;
 // lowered the EQ input by the size of the largest boost (+6 dB = backing 6 dB lower), which lowered it too
 // much. With the EQ off the sound is the validated one, bit for bit.
 #define LIM_CEIL 0.891f                    // -1 dBFS
-#define LIM_REL (1.0f / (0.15f * OUT_RATE))
+// the release step, worked out when the rate changes instead of a division per frame (same float, same sound)
+#define LIM_REL_AT(rate) (1.0f / (0.15f * (rate)))
+static float g_lim_rel = LIM_REL_AT(BASE_RATE);
 static float g_lim = 1.0f;
 
 static void eq_design(int i, double gain_db) {
@@ -448,7 +450,7 @@ static inline void mix_custom(const float *lane, float *out) {
     if (g_eq_on && g_ch_eq) {
         if (p * g_lim > LIM_CEIL) g_lim = LIM_CEIL / p;
         for (int c = 0; c < g_lanes; c++) if (g_ch_eq & (1 << c)) s[c] *= g_lim;
-        g_lim += (1.0f - g_lim) * LIM_REL;
+        g_lim += (1.0f - g_lim) * g_lim_rel;
     }
     if (g_meter_on) for (int c = 0; c < g_lanes; c++) if (fabsf(s[c]) > g_lpk[c]) g_lpk[c] = fabsf(s[c]);
     for (int o = 0; o < LANES_MAX; o++) {
@@ -1192,6 +1194,7 @@ JNIEXPORT void JNICALL FN(setRate)(JNIEnv *e, jclass c, jint rate) {
     pthread_mutex_lock(&g_mx);
     if (rate > 0 && rate != g_out_rate) {
         g_out_rate = rate;
+        g_lim_rel = LIM_REL_AT(rate);
         for (int i = 0; i < EQ_BANDS; i++) eq_design(i, g_eq_gain[i]);
     }
     pthread_mutex_unlock(&g_mx);
