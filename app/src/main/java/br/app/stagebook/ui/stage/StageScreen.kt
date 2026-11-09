@@ -1210,6 +1210,7 @@ fun StageScreen(
                     hasTrack = song.track.isNotEmpty() || playing,
                     playing = playing,
                     away = usbAway,
+                    awayColor = chordLook.color,
                     stops = look.trackStops,
                     fg = fg,
                     onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
@@ -1692,6 +1693,7 @@ private fun TrackButton(
     playing: Boolean,
     stops: Boolean,
     away: Boolean = false,
+    awayColor: Color = Color.Unspecified,
     fg: Color,
     onClick: () -> Unit,
     onChange: () -> Unit,
@@ -1727,7 +1729,13 @@ private fun TrackButton(
                 // playing: stop (back to the start, the default) or pause, as chosen in Settings → Player
                 when { !hasTrack -> AppIcons.QueueMusic; away -> AppIcons.UsbOff; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
                 stringResource(when { !hasTrack -> R.string.stage_track_pick; away && playing -> R.string.stage_track_usb_waiting; away -> R.string.stage_track_usb_away; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
-                tint = fg.copy(alpha = if (!hasTrack) 0.5f else if (away) pulse else 0.85f),
+                // waiting it blinks in the chords' yellow, translucent (user, 09/11); after the wait, the usual color
+                tint = when {
+                    !hasTrack -> fg.copy(alpha = 0.5f)
+                    away && playing && awayColor != Color.Unspecified -> awayColor.copy(alpha = pulse)
+                    away -> fg.copy(alpha = pulse)
+                    else -> fg.copy(alpha = 0.85f)
+                },
             )
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
