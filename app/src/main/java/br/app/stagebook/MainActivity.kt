@@ -125,7 +125,8 @@ class MainActivity : ComponentActivity() {
                         onUpdate = { updateOffer.accept() },
                         onLater = updateOffer::decline,
                         onInstall = {
-                            (updateOffer.offer.value as? UpdateOffer.Ready)?.let { installApk(updater, it.apk) }
+                            // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
+                            (updateOffer.offer.value as? UpdateOffer.Ready)?.let { if (installApk(updater, it.apk)) updateOffer.dismiss() }
                         },
                         onClose = updateOffer::dismiss,
                     )
