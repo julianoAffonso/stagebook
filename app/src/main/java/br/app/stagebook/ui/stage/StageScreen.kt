@@ -253,7 +253,7 @@ fun StageRoute(
     val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
         val config = androidx.compose.ui.platform.LocalConfiguration.current
-        val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp)
+        val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp, uiState.look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL)
         val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
         val open = index.coerceIn(0, uiState.songs.lastIndex)
         LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
@@ -1717,9 +1717,9 @@ private fun TrackButton(
             Modifier
                 .size(Sizes.touch + Spacing.m)
                 .clip(CircleShape)
-                // the stage's own background at 60%, under the old light tint: the button reads as on top of the lyrics
+                // the stage's own background at 50%, under the old light tint: the button reads as on top of the lyrics
                 // and what's behind still shows faintly (user, 09/11: at 12% "Frase 5" looked over it, at 92% it hid it)
-                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.6f)) else Modifier)
+                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.5f)) else Modifier)
                 .background(fg.copy(alpha = 0.12f))
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,
