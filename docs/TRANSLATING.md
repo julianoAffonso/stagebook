@@ -30,6 +30,10 @@ Think of a bandmate explaining at rehearsal, not a manual.
 - **Don't translate names:** Stagebook, Now Playing, OBS, ChordPro.
 - **Lyrics sections** (Chorus, Verse, Bridge…) use the word musicians in that language write on their charts.
 
+## Brazilian Portuguese
+The app's Portuguese is **pt-BR** (`values-pt-rBR`). No "ecrã", "telemóvel" or "utilizador". European Portuguese
+would be another translation, in `values-pt-rPT`.
+
 ## The editor on the computer
 The texts starting with `web_` are the web editor's page (Settings → Edit on the computer). They are in the same
 `strings.xml` and the page follows the app's language, so translating the file translates the editor too.
