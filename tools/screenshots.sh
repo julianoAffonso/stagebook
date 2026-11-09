@@ -17,4 +17,6 @@ done
 # the editor on the computer: its real page with sample data, photographed by Chrome (same two languages)
 python3 -I tools/screenshots_web.py "$WORK" > "$WORK/web.log" 2>&1 || { echo "capturas do editor web falharam: veja $WORK/web.log"; tail -20 "$WORK/web.log"; trap - EXIT; exit 1; }
 python3 -I tools/screenshots_journeys.py "$WORK" "$DEST"
+# screens the tests can't draw, photographed on a real device and kept in git (same folders and two languages)
+cp -R tools/device-shots/. "$DEST/"
 echo "capturas em: $DEST"

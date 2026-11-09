@@ -31,6 +31,18 @@ class PageSlotsTest {
         assertEquals("1 … 8 9 10 11 12", shown(12, 12, 7))
     }
 
+    // user, 09/11: with room for fewer than 5 the shape that says how many are left stays, with the last one always there
+    @Test fun `with little room, the current one and the last one`() {
+        assertEquals("1 … 9", shown(1, 9, 3))
+        assertEquals("5 … 9", shown(5, 9, 3))
+        assertEquals("1 … 9", shown(9, 9, 3))
+        assertEquals("1 2 … 9", shown(1, 9, 4))
+        assertEquals("1 5 … 9", shown(5, 9, 4))
+        assertEquals("1 … 8 9", shown(9, 9, 4))
+        assertEquals("5 9", shown(5, 9, 2))
+        assertEquals("5", shown(5, 9, 1))
+    }
+
     @Test fun `never goes over what fits and always shows the current one`() {
         for (capacity in 1..12) for (count in 1..30) for (current in 0 until count) {
             val slots = PageSlots.of(current, count, capacity)

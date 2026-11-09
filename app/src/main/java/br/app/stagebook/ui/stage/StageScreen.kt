@@ -429,7 +429,8 @@ fun StageScreen(
     val unsavedZoom = remember(index) { mutableStateOf(false) }   // pinch on this song not saved yet
     var zoomTouched by remember(index) { mutableStateOf(false) }
     // automatic zoom: only where nobody zoomed and the page exists; what it finds is saved for this screen
-    val autoWanted = look.stageMode == br.app.stagebook.data.model.StageMode.PAGES && song.zoom == 1f
+    // (in scroll mode it keeps sections from being cut by a step, the way it spares pages in page mode)
+    val autoWanted = song.zoom == 1f
     var autoZoomNow by remember(index) { mutableFloatStateOf(1f) }
     LaunchedEffect(screen, song.zoom, autoWanted, autoZoomNow, zoomTouched) {
         if (!zoomTouched) zoom = (if (autoWanted) autoZoomNow else song.zoom).coerceIn(minZoom, maxZoom)
@@ -658,6 +659,7 @@ fun StageScreen(
             dismiss = { (editOffer != null).also { editOffer = null } },
             chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
             marking = marking,
+            vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
             mark = { from, to ->
                 val start = hit.charAt(from)
                 val source = start?.let { sourceLine(it.first) }
@@ -844,19 +846,20 @@ fun StageScreen(
                                 // only horizontal movement moves the page; up to a third of the width, so it doesn't
                                 // leave the screen, minus the stretch before the drag counts, so the page doesn't jump
                                 // when it starts
-                                if (moved && abs(drag.x) > abs(drag.y)) {
+                                if (!latest.vertical && moved && abs(drag.x) > abs(drag.y)) {
                                     val follow = (abs(drag.x) - viewConfiguration.touchSlop).coerceAtLeast(0f) * sign(drag.x)
                                     dragX = follow.coerceIn(-size.width / 3f, size.width / 3f)
                                 }
                             }
                             if (event.changes.none { it.pressed }) break
                         }
-                        val swiped = !pinched && !held && !taken && moved && abs(drag.x) > swipeMin && abs(drag.x) > abs(drag.y)
+                        val swiped = !pinched && !held && !taken && moved &&
+                            (if (latest.vertical) abs(drag.y) > swipeMin && abs(drag.y) > abs(drag.x) else abs(drag.x) > swipeMin && abs(drag.x) > abs(drag.y))
                         if (swiped && !latest.dismiss()) {
                             // the new page comes in from the side the finger came from. The page doesn't snap back all
                             // at once (that was the stutter, 23/10): it returns along with the turn, continuing from
                             // where the finger let go
-                            if (drag.x < 0) latest.next() else latest.previous()
+                            if ((if (latest.vertical) drag.y else drag.x) < 0) latest.next() else latest.previous()
                             val from = dragX
                             settle = dragScope.launch { animate(from, 0f, animationSpec = tween(PAGE_IN_MS)) { v, _ -> dragX = v } }
                         } else if (dragX != 0f) {
@@ -865,7 +868,9 @@ fun StageScreen(
                         }
                         // with the edit button open, tapping outside only closes it (no page turn)
                         if (!pinched && !moved && !held && !taken && !latest.dismiss() && !latest.chord(down.position)) {
-                            if (down.position.x > size.width / 2f) latest.next() else latest.previous()
+                            // page mode: right half forward, left half back; scroll mode (the text moves up and down): lower half and upper
+                            val forward = if (latest.vertical) down.position.y > size.height / 2f else down.position.x > size.width / 2f
+                            if (forward) latest.next() else latest.previous()
                         }
                     }
                 },
@@ -920,6 +925,7 @@ fun StageScreen(
             val fitKey = listOf(
                 StageFit.SIZES_VERSION, shownText.hashCode(), width, height, density.density, density.fontScale, language, look.fontSp, look.bold, look.font,
                 look.columns, look.chords, look.chordScale, look.showSections, look.translateSections, look.sectionScale, look.sectionFont, stripPlace,
+                look.stageMode,
             ).joinToString("|").hashCode().toString(36)
             fun sheets(z: Float, w: Int, cols: Int): StageFit.Sheets {
                 // as the stage draws them: a wrapped line with chords gets a row of chords for each piece
@@ -947,6 +953,7 @@ fun StageScreen(
                     val min = StageFit.autoMinZoom(look.fontSp)
                     val oneColumn by lazy { sheets(minOf(min, fitOne), width, 1).count }
                     val cols = when {
+                        look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL -> 1   // the text scrolls: one column
                         look.columns != StageColumns.AUTO -> StageFit.columns(look.columns, false, emptyList(), halfWidth, true)
                         oneColumn <= 1 -> 1
                         // on its side one column leaves half the screen empty: two win whenever they take fewer pages
@@ -1153,6 +1160,9 @@ fun StageScreen(
                                     from = strip.first().item.toInt() * stripLayout.perRow,
                                     until = (strip.last().item.toInt() + 1) * stripLayout.perRow,
                                     onHide = { hidingChord = it },
+                                    // the same diagram as a chord in the lyrics, under the same setting (not while
+                                    // the highlighter is on: there a finger marks words)
+                                    onShow = if (look.chordTap && !marking) { c -> shownChord = c } else null,
                                     onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
                                 )
@@ -1239,7 +1249,7 @@ fun StageScreen(
                     zoomTouched = false
                     onZoom(song.id, 1f)
                 },
-                auto = !scrollMode,
+                auto = true,
                 // the list's drawings keep their size: without them there's nothing to tell apart
                 scoped = look.chords && look.chordList != ChordListPlace.NONE,
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -1488,6 +1498,7 @@ private class GestureTargets(
     val dismiss: () -> Boolean,   // closes the edit button; true if it was open
     val chord: (Offset) -> Boolean,   // tapped a chord: opens the diagram; true if it opened
     val marking: Boolean = false,      // highlighter on: one finger marks words, no page turn
+    val vertical: Boolean = false,     // scroll mode: the lower half and a drag up go forward, the upper half and a drag down go back
     val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )
 

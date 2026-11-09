@@ -10,6 +10,11 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.semantics.SemanticsActions
+import br.app.stagebook.data.model.ChordListPlace
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
@@ -162,5 +167,52 @@ class StageChordTapTest {
             StagebookTheme { StageScreen(StageUiState(loading = false, songs = songs, look = Look(fontSp = 34f, playerMode = true)), 0, 0, { _, _ -> }, playing = true) }
         }
         compose.onNodeWithContentDescription("Parar o backing track e voltar ao início").assertExists()
+    }
+
+    // the chord list at the top of the stage: a chord there is found by its "hide" long-press label
+    private fun stripChord(chord: String) =
+        compose.onAllNodes(SemanticsMatcher("chord list $chord") { it.config.getOrNull(SemanticsActions.OnLongClick)?.label == "Esconder $chord da lista" })[0]
+
+    private val listLook = Look(fontSp = 34f, chordList = ChordListPlace.TOP)
+
+    @Test fun `tapping a chord in the list opens its diagram and does not turn the page`() {
+        show(listLook)
+        stripChord("D").performTouchInput { click() }
+        compose.waitForIdle()
+        compose.onNodeWithText("Usar esta").performClick()
+        compose.waitForIdle()
+        assertTrue(saved.toString(), saved.single().startsWith("D|{define-guitar: D "))
+        assertEquals("não virou a página", -1 to -1, position)
+    }
+
+    @Test fun `with the chord list on, a tap on the lyrics side still turns the page`() {
+        show(listLook)
+        val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.width
+        val lyric = compose.onNodeWithText("Segunda linha", substring = true).fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput { click(Offset(width * 0.9f, lyric.bottom - 6f)) }
+        compose.waitForIdle()
+        assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
+        assertTrue("virou a página: $position", position != -1 to -1)
+    }
+
+    @Test fun `a swipe started on a chord of the list turns the page`() {
+        show(listLook)
+        stripChord("G").performTouchInput { swipeLeft(startX = right, endX = right - 300f) }
+        compose.waitForIdle()
+        assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
+        assertTrue("o arrasto na lista virou a página: $position", position != -1 to -1)
+    }
+
+    // the list sits on the left half, where a tap goes back: the song is the second one, so there is somewhere to go
+    @Test fun `with the diagram turned off, tapping a chord in the list turns the page`() {
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(StageUiState(loading = false, songs = listOf(songs[1], songs[0]), look = listLook.copy(chordTap = false)), 1, 0, { s, p -> position = s to p })
+            }
+        }
+        stripChord("D").performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals(0, compose.onAllNodesWithText("Usar esta").fetchSemanticsNodes().size)
+        assertTrue("virou a página: $position", position != -1 to -1)
     }
 }

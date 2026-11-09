@@ -15,10 +15,12 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 
 ## O que ele faz
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
-  ou com a rolagem automática. Cada botão do pedal pode fazer outra coisa.
+  ou com a rolagem automática. No modo Rolar, toque na metade de baixo ou arraste para cima para seguir, na de cima ou
+  arraste para baixo para voltar. Cada botão do pedal pode fazer outra coisa.
 - **Cifras:** acordes em cima da letra (ChordPro), transpor, capotraste, tablatura e o diagrama de cada acorde no
   violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom. Anotações na
   linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam ao transpor.
+  Toque num acorde, na letra ou na lista de acordes, para ver o diagrama dele.
 - **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Mande para
   quem está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi.
 - **Banda:** com o "Conduzir a banda", quem puxa o setlist troca de música e o palco de todo mundo acompanha. Antes de
@@ -26,8 +28,8 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
 - **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume
-  ([formato](docs/now-playing.pt-BR.md)), backup num arquivo `.stagebook` e um **modo essencial** que desliga o que você não
-  vai usar.
+  ([formato](docs/now-playing.pt-BR.md)), backup num arquivo `.stagebook` (toque num deles numa conversa, num download
+  ou no gerenciador de arquivos e ele abre no app) e um **modo essencial** que desliga o que você não vai usar.
 - Sem conta, sem propaganda, sem rastreio. Suas músicas ficam no aparelho. O que vai para a banda ou pelas 3 palavras
   vai cifrado.
 
@@ -39,12 +41,22 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 Interfaces USB Audio 2.0 e USB Audio 1.0 funcionam. Sem interface, o player toca no fone, no Bluetooth ou no
 alto-falante do aparelho.
 
-Dois caminhos até a interface:
+Dois jeitos de tocar na interface:
 - **Pelo motor do Stagebook (padrão):** fala direto com a interface.
 - **Pelo Android:** Ajustes > Metrônomo e player > Tocar pela interface através do Android. Use só se a interface
   conecta e o som não sai ou sai picotado.
 
-Na primeira vez pelo motor, o Android pede permissão para usar a interface USB: toque em OK.
+Cada interface guarda a sua escolha em cada aparelho: com a interface conectada, a chave vale só para ela. Se o som
+falha seguido no motor, o app liga a chave para aquela interface e avisa; se o som não sai pelo Android, ele desliga de
+novo. A sua escolha sempre vale mais.
+
+Na primeira vez pelo motor, o Android pede permissão para usar a interface USB: toque em OK. Antes da primeira nota o
+app confere o relógio da interface por cerca de 2 segundos (o palco pede para aguardar se demorar mais). Depois de 10
+segundos sem tocar, o fluxo USB fecha para poupar bateria e abre de novo no play.
+
+O player avisa quando a interface está carregando o aparelho (assim algumas interfaces falham no motor) e quando o cabo
+USB está ligado mas a interface não responde. Os dois avisos dependem de o Android deixar o app ler a porta USB; onde
+não deixa, eles nunca aparecem.
 
 ### Testado
 Tudo passou na versão 0.1.900 do app. Passar quer dizer: uma música inteira ouvida limpa, pausar e retomar, e tirar e
@@ -60,7 +72,8 @@ pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo
 1. O USB desse tablet perde leituras na entrada da interface, então o motor marca o ritmo da saída pelo relógio do
    sistema. O som sai limpo, com um soluço curto e raro a cada 15 a 60 s. É o limite do USB do tablet; acontece também
    pelo áudio do próprio Android.
-2. A entrada da interface para de responder depois de cerca de um segundo. O motor percebe e marca o ritmo sozinho.
+2. A entrada da interface parava de responder depois de cerca de um segundo, e o motor marcava o ritmo sozinho. As
+   versões mais novas começam com transferências curtas na entrada, e nesse celular ela continua respondendo.
 3. Pelo áudio do Android e pelo motor. O motor pede a janela de permissão USB do Android na primeira vez.
 
 Não testado: outras interfaces e um fone USB simples (suportados, mas fora desta tabela).
@@ -105,7 +118,8 @@ O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa d
    instalar mesmo assim.
 3. Pronto. Daí em diante o app avisa quando sai versão nova e se atualiza; na primeira atualização o Android pede a
    mesma permissão, agora para o Stagebook. No Android 12 ou mais novo, as seguintes entram sem pedir de novo e o app
-   reinicia para terminar. No Android 11 ou mais antigo, o Android pede a confirmação a cada versão.
+   reinicia para terminar. No Android 11 ou mais antigo, o Android pede a confirmação a cada versão. Se o servidor
+   falha por um instante, procurar e baixar tentam de novo sozinhos.
 
 **Por que fora da Play Store?** O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com
 direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza
@@ -118,19 +132,60 @@ O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows,
 
 ## Traduzir
 O app sai em inglês e português do Brasil. Fala outro idioma e toca? O passo a passo está em
-[docs/TRANSLATING.pt-BR.md](docs/TRANSLATING.pt-BR.md). Não precisa saber programar.
+[docs/TRANSLATING.pt-BR.md](docs/TRANSLATING.pt-BR.md). Não precisa saber programar. Outros idiomas vêm da comunidade, por pull
+request aqui no GitHub.
 
 ## Para quem programa
 Kotlin, Jetpack Compose e um motor de áudio em C. `./gradlew assembleDebug` compila e
-`./gradlew testDebugUnitTest` roda os testes (Java 21). As versões são publicadas pelo GitHub Actions. Todo mundo aqui segue o
-[Código de Conduta](CODE_OF_CONDUCT.pt-BR.md).
+`./gradlew testDebugUnitTest` roda os testes (Java 21 e o NDK do Android). As versões são publicadas pelo GitHub
+Actions. Todo mundo aqui segue o [Código de Conduta](CODE_OF_CONDUCT.pt-BR.md). Achou uma falha de segurança? Veja a [política de segurança](SECURITY.pt-BR.md).
+
+### Pull requests
+Os pull requests vão para a `main`. Eles passam por estas verificações:
+- **Check:** compilação, testes de unidade e lint, e as novidades da versão (`tools/release_notes.py`).
+- **Help:** uma mudança que a pessoa percebe vem com a ajuda nas duas línguas, uma tela que mudou com capturas novas
+  (`tools/help_check.py`).
+- **Privacy:** nada de link de sessão, credencial ou dado pessoal (`tools/privacy-check.sh`).
+- **Engine simulator** (só quando o motor de áudio muda) e **MCP check** (só quando `mcp/` muda).
+
+Cada commit que muda algo que a pessoa percebe termina com `Release-Note: English sentence · Frase em português`,
+curta e com as palavras do músico; um que ninguém percebe termina com `Release-Note: none`. Quando a ajuda ou as
+capturas não precisam mudar, diga isso numa linha própria: `Help: none` ou `Screens: none`.
+
+### Simulador do motor
+O `tools/engine-sim/run.sh` roda o motor de áudio num Mac com uma interface USB falsa e compara o som com a versão
+validada numa mesa de verdade. Também testa quedas, os planos do relógio e carga. No Actions ele roda com faixas
+sintéticas (as de verdade nunca vão para o repositório) e não é uma verificação obrigatória. Quando até a quarta
+abertura é julgada ruidosa, o runner é marcado como barulhento e os quatro testes de plano A aparecem como pulados; os
+de plano B rodam em qualquer lugar. Ele não substitui o teste na mesa.
+
+### Avisos no Telegram
+Quem mantém o projeto pode receber uma mensagem no Telegram quando uma versão ou o servidor MCP é publicado ou falha,
+quando uma verificação falha num pull request ou na `main`, quando o site da ajuda cai, num alerta de segurança e quando outra pessoa abre
+ou comenta uma issue, um pull request ou uma discussão (mais um resumo diário, só quando há novidade). O GitHub não
+dispara workflows por alerta de segurança, então eles e o site da ajuda são conferidos pelas rodadas agendadas, três
+vezes por dia, e não na hora em que acontecem. Para ligar num fork:
+1. No Telegram, fale com o `@BotFather`, mande `/newbot` e copie o token. Mande uma mensagem qualquer ao bot novo.
+2. Pegue o id do seu chat (por exemplo em `https://api.telegram.org/bot<token>/getUpdates`, em `message.chat.id`).
+3. No repositório, Settings → Secrets and variables → Actions, crie os segredos `TELEGRAM_BOT_TOKEN` e
+   `TELEGRAM_CHAT_ID`. Opcional: o segredo `SECURITY_ALERTS_TOKEN` (um token que lê os alertas do Dependabot) e a
+   variável `SITE_URL` (o site da ajuda a vigiar).
+
+Sem os segredos o workflow roda e não faz nada. Ele nunca baixa nem executa código de um pull request; títulos e
+textos são só dados, enviados como texto simples.
 
 ### Ritmo do motor USB
 - **Plano A:** seguir o relógio da entrada da interface (feedback implícito), para saída e interface nunca se afastarem.
-- **Plano B:** marcar o ritmo da saída pelo relógio monotônico quando a entrada falta ou não é confiável. Ele troca
-  quando o relógio da entrada erra mais de 0,3% por 1 s, ou quando a entrada fica 0,3 s sem responder.
-- No plano B, o motor testa a entrada de novo a cada 60 s e volta ao plano A se ela estiver saudável.
-- Os URBs de saída levam 8 pacotes (1 ms), com 32 na fila. Os URBs de entrada levam 128 pacotes.
+- **Plano B:** marcar o ritmo da saída pelo relógio monotônico quando a entrada falta ou não é confiável.
+- **A escolha é feita na abertura, antes de qualquer som:** a saída fica muda enquanto a entrada é lida em 8 janelas
+  de 0,25 s (no máximo 3 s). Relógio errando mais de 0,3% na média, ou leituras tão ruidosas que um segundo pode errar
+  mais de 0,6%, quer dizer plano B enquanto o fluxo ficar aberto. Relógio certo mas ruidoso fica no plano A, com uma
+  tolerância ajustada ao ruído do aparelho.
+- **O plano A só é deixado por falha de verdade:** 3 janelas de um segundo a mais de 1% do certo, a entrada 0,3 s sem
+  responder, ou a contagem da entrada e o que foi enviado a 100 ms de distância. Um fluxo que saiu do plano A assim lê
+  a entrada de novo a cada 60 s e volta depois de 5 s no tempo certo; um fluxo julgado fora na abertura fica no plano B.
+- Os URBs de saída levam 8 pacotes (1 ms), até 32 na fila. Os URBs de entrada começam com 16 pacotes; se a conferência
+  na abertura perde mais de 3% dos pacotes, passam para 128 e o relógio é conferido de novo.
 
 ## Licença
 Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Pode usar à vontade, até em show pago,

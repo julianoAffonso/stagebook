@@ -1,0 +1,153 @@
+# Notices on the maintainer's Telegram: a release or the MCP server published or failed, a check failing on a pull
+# request or on main, the help site down, a security alert, and anything another person opens or comments. A daily summary goes out only when
+# there is news. Needs the secrets TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (README, "Notices on Telegram"); without
+# them every step just skips. Security alerts are not workflow triggers on GitHub, so the scheduled runs check them. Nothing here checks out or runs code from a pull request: titles and texts are data,
+# passed through env and never interpolated into a shell, and sent as plain text.
+name: Telegram notices
+on:
+  workflow_run:
+    workflows: [Release, MCP publish, Check, Help, Privacy, Engine simulator, MCP check]
+    types: [completed]
+  issues:
+    types: [opened]
+  pull_request_target:   # runs from main with the secrets, so it never checks out the pull request
+    types: [opened]
+  discussion:
+    types: [created]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  discussion_comment:
+    types: [created]
+  schedule:
+    - cron: '0 11 * * *'     # daily: summary (if any news), help site, security alerts
+    - cron: '0 5,17 * * *'   # twice more: help site and security alerts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read          # the run that finished
+  issues: read           # the daily summary reads what others opened
+  pull-requests: read
+  security-events: read  # code scanning alerts
+
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  REPO: ${{ github.repository }}
+  OWNER: ${{ github.repository_owner }}
+  SITE: ${{ vars.SITE_URL || 'https://stagebook.app.br' }}
+
+jobs:
+  # a workflow that finished
+  run:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}   # only the script, from main
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ github.event.workflow_run.name }}
+          RESULT: ${{ github.event.workflow_run.conclusion }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          STARTED: ${{ github.event.workflow_run.run_started_at }}
+          URL: ${{ github.event.workflow_run.html_url }}
+          PRS: ${{ join(github.event.workflow_run.pull_requests.*.number, ' ') }}
+        run: |
+          msg=
+          case "$NAME:$RESULT" in
+            # a check failing on a pull request (Check only runs on PRs into main) or on main itself
+            "Check:failure"|"Help:failure"|"Privacy:failure"|"Engine simulator:failure"|"MCP check:failure")
+              if [ -n "$PRS" ]; then msg="$NAME failed on PR #${PRS// /, #} ($BRANCH)"; else msg="$NAME failed on $BRANCH"; fi ;;
+            "Release:failure"|"MCP publish:failure") msg="$NAME failed" ;;
+            "Release:success")
+              # a dry run also succeeds: only a release created after the run started counts as published
+              tag=$(gh api "repos/$REPO/releases/latest" --jq 'select(.published_at >= env.STARTED) | .tag_name') || tag=
+              [ -n "$tag" ] && msg="Release $tag published" ;;
+            "MCP publish:success")
+              tag=$(gh api "repos/$REPO/tags" --jq '.[0].name') || tag=
+              case "$tag" in mcp-v*) msg="MCP server published ($tag)" ;; esac ;;
+          esac
+          [ -n "$msg" ] || exit 0
+          tools/telegram-notify.sh "$msg — $URL"
+
+  # something another person opened or wrote (the owner's own activity is not news)
+  others:
+    if: >-
+      github.event_name != 'workflow_run' && github.event_name != 'schedule' &&
+      github.event_name != 'workflow_dispatch' &&
+      github.actor != github.repository_owner && !endsWith(github.actor, '[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}   # only the script, never the pull request
+      - env:
+          EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          DISC_TITLE: ${{ github.event.discussion.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          DISC_URL: ${{ github.event.discussion.html_url }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+        run: |
+          case "$EVENT" in
+            issues) what="Issue opened"; title=$ISSUE_TITLE; url=$ISSUE_URL ;;
+            pull_request_target) what="Pull request opened"; title=$PR_TITLE; url=$PR_URL ;;
+            discussion) what="Discussion opened"; title=$DISC_TITLE; url=$DISC_URL ;;
+            issue_comment) what="Comment"; title=$ISSUE_TITLE; url=$COMMENT_URL ;;
+            pull_request_review_comment) what="Review comment"; title=$PR_TITLE; url=$COMMENT_URL ;;
+            discussion_comment) what="Discussion comment"; title=$DISC_TITLE; url=$COMMENT_URL ;;
+            *) exit 0 ;;
+          esac
+          tools/telegram-notify.sh "$what by $ACTOR: $title — $url"
+
+  # the clock-driven checks: help site, security alerts and the summary
+  daily:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - name: Help site
+        run: |
+          down=
+          for path in help/ ajuda/; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -m 20 --retry 2 "$SITE/$path") || code=000
+            [ "$code" = 200 ] || down="$down $path($code)"
+          done
+          [ -z "$down" ] || tools/telegram-notify.sh "Help site is down:$down"
+      - name: Security alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SECURITY_ALERTS_TOKEN: ${{ secrets.SECURITY_ALERTS_TOKEN }}   # optional: Dependabot alerts need a token that can read them
+        run: |
+          open=$(gh api "repos/$REPO/code-scanning/alerts?state=open&per_page=100" --jq length 2>/dev/null) || open=0
+          dep=0
+          if [ -n "$SECURITY_ALERTS_TOKEN" ]; then
+            dep=$(GH_TOKEN=$SECURITY_ALERTS_TOKEN gh api "repos/$REPO/dependabot/alerts?state=open&per_page=100" --jq length 2>/dev/null) || dep=0
+          fi
+          # told once a day while any is open, so it isn't forgotten
+          [ $((open + dep)) -eq 0 ] || tools/telegram-notify.sh "$((open + dep)) open security alert(s): https://github.com/$REPO/security"
+      - name: Summary
+        if: github.event.schedule == '0 11 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          since=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          # opened in the last day by someone other than the owner or a bot
+          count() {
+            gh api "search/issues?q=$1+repo:$REPO+created:>$since+-author:$OWNER&per_page=100" \
+              --jq '[.items[] | select(.user.type != "Bot")] | length' 2>/dev/null || echo 0
+          }
+          issues=$(count is:issue)
+          prs=$(count is:pr)
+          [ $((issues + prs)) -gt 0 ] || exit 0   # no news, no message
+          tools/telegram-notify.sh "Last 24 h: $issues new issue(s), $prs new pull request(s) from others — https://github.com/$REPO"

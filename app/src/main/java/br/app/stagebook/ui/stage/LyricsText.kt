@@ -32,7 +32,7 @@ private const val CHORD_LINE_TAG = "chordline"
 /** Marks the space for the song's chord list (top or end); the stage draws the chords over it. */
 const val CHORD_LIST_TAG = "chordlist"
 
-/** Tablature line (T22): monospace, never wraps; the stage shrinks it to fit the column ([fitTab]). */
+/** Tablature line (T22): monospace, never wraps; the stage shrinks it to fit the column ([fitTabs]). */
 const val TAB_TAG = "tab"
 
 // a section title line: pagination keeps it with the verse after it (device test B-13)

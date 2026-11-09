@@ -21,6 +21,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavDestination.Companion.hasRoute
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.stateIn
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavBackStackEntry
@@ -59,7 +62,8 @@ private fun androidx.navigation.NavDestination.pullsToStage() = hasRoute<Home>()
 
 /**
  * [updateOffer]: new app version; shows on top of any screen, never on stage. [receiveCodes]: codes of receive links
- * (tapped in a message or copied by the site) that open the receive screen.
+ * (tapped in a message or copied by the site) that open the receive screen. [openedFiles]: `.stagebook` files tapped
+ * outside the app, already checked, that open Settings → Library → Open file.
  */
 @Composable
 fun StagebookNavHost(
@@ -70,13 +74,24 @@ fun StagebookNavHost(
     receiveCodes: Flow<String> = emptyFlow(),
     onStage: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false),
     installNotices: Flow<br.app.stagebook.domain.InstallNotice> = emptyFlow(),
+    openedFiles: Flow<br.app.stagebook.data.IncomingFiles.Result> = emptyFlow(),
 ) {
     val nav = rememberNavController()
     // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
     // it waits and opens on leaving; a code already open there is left alone (it would discard the review)
     val pendingLink = remember { br.app.stagebook.domain.PendingLink() }
-    val linkKept = androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.stage_link_kept)
-    val linkMessage = androidx.compose.runtime.rememberUpdatedState(linkKept)
+    val linkKept = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.stage_link_kept))
+    val linkKeptEditing = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.editor_link_kept))
+    // where a link or file waits instead of opening: the stage, or a song editor anywhere in the back stack (opening
+    // pops back to Home and would drop what was typed without the "discard?" question, user 09/11)
+    val holdScope = androidx.compose.runtime.rememberCoroutineScope()
+    val hold = remember(nav, onStage) {
+        // public API: on each screen change, is there a SongEditor entry anywhere in the back stack (throws when not)
+        val editing = nav.currentBackStackEntryFlow.map { runCatching { nav.getBackStackEntry<SongEditor>() }.isSuccess }
+        kotlinx.coroutines.flow.combine(onStage, editing) { stage, edit -> br.app.stagebook.domain.HoldPlace.of(stage, edit) }
+            .distinctUntilChanged()
+            .stateIn(holdScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, br.app.stagebook.domain.HoldPlace.of(onStage.value, false))
+    }
     fun openCode(): String? = nav.currentBackStackEntry?.takeIf { it.destination.hasRoute<ScanSetlist>() }
         ?.toRoute<ScanSetlist>()?.code?.takeIf { it.isNotEmpty() }
     fun openReceive(code: String) = nav.navigate(ScanSetlist(code, fromLink = true)) { popUpTo<ScanSetlist> { inclusive = true } }
@@ -91,15 +106,17 @@ fun StagebookNavHost(
     }
     LaunchedEffect(receiveCodes) {
         receiveCodes.collect { code ->
-            when (pendingLink.arrive(code, onStage.value, openCode())) {
+            val place = hold.value
+            when (pendingLink.arrive(code, place.holds, openCode())) {
                 br.app.stagebook.domain.PendingLink.Arrival.OPEN -> openReceive(code)
-                br.app.stagebook.domain.PendingLink.Arrival.HELD -> message.show(linkMessage.value)
+                br.app.stagebook.domain.PendingLink.Arrival.HELD ->
+                    message.show(if (place == br.app.stagebook.domain.HoldPlace.EDITOR) linkKeptEditing.value else linkKept.value)
                 br.app.stagebook.domain.PendingLink.Arrival.IGNORED -> Unit
             }
         }
     }
-    LaunchedEffect(onStage) {
-        onStage.collect { on -> if (!on) pendingLink.release(openCode())?.let(::openReceive) }
+    LaunchedEffect(hold) {
+        hold.collect { place -> if (!place.holds) pendingLink.release(openCode())?.let(::openReceive) }
     }
     // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
     // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip
@@ -156,6 +173,31 @@ fun StagebookNavHost(
             br.app.stagebook.ui.settings.SettingsLinks.pending.value = section
             nav.popBackStack<Home>(inclusive = false)
         }
+    }
+    // a .stagebook file tapped outside the app: Open file with its parts, as if picked there. On the stage it waits
+    // and opens on leaving (the show is never interrupted); a file that isn't Stagebook's only gets the short message
+    val heldFile = remember { br.app.stagebook.domain.PendingFile<android.net.Uri>() }
+    val fileKept = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.stage_file_kept))
+    val fileKeptEditing = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.editor_file_kept))
+    val notStagebook = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.backup_not_backup))
+    val openFile: (android.net.Uri) -> Unit = { uri ->
+        br.app.stagebook.ui.settings.SettingsLinks.file.value = uri
+        openSettings(br.app.stagebook.ui.settings.SettingsSection.LIBRARY)
+    }
+    LaunchedEffect(openedFiles) {
+        openedFiles.collect { r ->
+            val uri = (r as? br.app.stagebook.data.IncomingFiles.Result.Accepted)?.uri
+            val place = hold.value
+            when (heldFile.arrive(uri, place.holds)) {
+                br.app.stagebook.domain.PendingFile.Arrival.OPEN -> uri?.let(openFile)
+                br.app.stagebook.domain.PendingFile.Arrival.HELD ->
+                    message.show(if (place == br.app.stagebook.domain.HoldPlace.EDITOR) fileKeptEditing.value else fileKept.value)
+                br.app.stagebook.domain.PendingFile.Arrival.REJECTED -> message.show(notStagebook.value)
+            }
+        }
+    }
+    LaunchedEffect(hold) {
+        hold.collect { place -> if (!place.holds) heldFile.release()?.let(openFile) }
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold) {

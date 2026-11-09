@@ -269,10 +269,35 @@ class SettingsViewModel @Inject constructor(
         repository.updateLook { it.copy(metroCount = count, metroSound = sound, metroGlow = glow, metroGlowColor = glowColor) }
     fun setMetronomeShown(on: Boolean) = repository.updateLook { it.copy(metroShown = on) }
     fun setMetronomeVolume(v: Int) = repository.updateLook { it.copy(metroVolume = v.coerceIn(0, br.app.stagebook.domain.MetronomeClick.FULL_VOLUME)) }
-    // the Android setting follows this in StagePlayer (one writer, only while the player runs)
-    fun setUsbViaAndroid(on: Boolean) = repository.updateLook { it.copy(usbViaAndroid = on) }
+    private val _usb = MutableStateFlow(br.app.stagebook.player.UsbOutputUi())
+    /** The plugged USB interface: its way on this device and whether it charges the device (read by [refreshUsb]). */
+    val usb: StateFlow<br.app.stagebook.player.UsbOutputUi> = _usb.asStateFlow()
+
+    /** Reads the plugged interface again (Settings shows the player's card, the battery or the USB changed). */
+    fun refreshUsb() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _usb.value = br.app.stagebook.player.UsbRoutes.read(context, repository.library.value.look.usbViaAndroid)
+        }
+    }
+
+    // With an interface plugged in, the switch is that interface's way on this device, saved as the person's choice
+    // (it wins over the app's own switch); with none, it's the default for interfaces with nothing saved. The player
+    // connects again the new way, and writes Android's USB routing for it (one writer, only while the player runs).
+    fun setUsbViaAndroid(on: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val plugged = br.app.stagebook.player.UsbRoutes.plugged(context)
+            if (plugged != null) {
+                br.app.stagebook.player.UsbRoutes.choose(context, plugged, on)
+                br.app.stagebook.player.StagePlayer.routeChanged()
+            } else {
+                repository.updateLook { it.copy(usbViaAndroid = on) }
+            }
+            _usb.value = br.app.stagebook.player.UsbRoutes.read(context, if (plugged == null) on else repository.library.value.look.usbViaAndroid)
+        }
+    }
+
     fun probeClickRoute() {
-        if (repository.library.value.look.usbViaAndroid) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { metronome.probeApart() }
+        if (_usb.value.androidOr(repository.library.value.look.usbViaAndroid)) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { metronome.probeApart() }
     }
     fun setMetronomeOut(o: br.app.stagebook.domain.MetronomeOut) = repository.updateLook { it.copy(metroUsbOut = o.out, metroUsbPair = o.pair) }
     fun autoTags(national: String, international: String, language: String, preview: Boolean) = repository.autoTags(national, international, language, preview)

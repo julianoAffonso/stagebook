@@ -1,4 +1,4 @@
-// Simulador: só o que o engine.c usa do usbdevice_fs.h do Linux (mesmos campos e tipos).
+// Simulator: only what engine.c uses from Linux's usbdevice_fs.h (same fields and types).
 #pragma once
 struct usbdevfs_iso_packet_desc { unsigned int length, actual_length, status; };
 struct usbdevfs_urb {

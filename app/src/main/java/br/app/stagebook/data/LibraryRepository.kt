@@ -264,12 +264,17 @@ class LibraryRepository @Inject constructor(
     /** What the import would do, without changing anything (to ask before replacing lyrics). */
     suspend fun previewImport(json: String): ImportResult {
         ready.await()
-        return _library.value.mergeSongs(LibraryCodec.decodeSongs(json)) { "" }.second
+        return _library.value.mergeSongs(songTextOnly(json)) { "" }.second
     }
+
+    // the same filter as the backup and the band: a "song" that isn't song text stays out (a songs file can now come
+    // from outside the app, tapped in a chat or a file manager)
+    private fun songTextOnly(json: String): List<Song> =
+        LibraryCodec.decodeSongs(json).filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
 
     suspend fun importSongs(json: String): ImportResult {
         ready.await()
-        val incoming = LibraryCodec.decodeSongs(json)
+        val incoming = songTextOnly(json)
         var result = ImportResult(0, 0)
         mutate { lib -> lib.mergeSongs(incoming, ::newId).also { result = it.second }.first }
         return result

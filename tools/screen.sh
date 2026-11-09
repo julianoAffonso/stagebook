@@ -1,12 +1,12 @@
 #!/bin/bash
-# Lê e mexe na tela de um aparelho pelo adb, sem precisar olhar print (barato para a IA que testa).
-#   tools/screen.sh SERIAL textos              lista os textos e ícones visíveis, com a posição de cada um
-#                                            (texto longo ou com quebra de linha sai como [texto N caracteres]:
-#                                            é a letra da música, que nunca pode aparecer; "textos-inteiro" mostra tudo)
-#   tools/screen.sh SERIAL tocar "Ajustes"     toca no primeiro elemento cujo texto ou descrição contém isso
-#   tools/screen.sh SERIAL tem "Salvar"        sai 0 se o texto está na tela, 1 se não está
-#   tools/screen.sh SERIAL print NOME          salva a captura em ~/Desktop/stagebook-teste/NOME.png
-#   tools/screen.sh SERIAL abrir | fechar      abre ou fecha o Stagebook
+# Reads and drives a device's screen over adb, without looking at screenshots (cheap for the AI that tests).
+#   tools/screen.sh SERIAL textos              lists the visible texts and icons, with each one's position
+#                                            (long or multi-line text comes out as [text N chars]: it's the song's
+#                                            lyrics, which must never show up; "textos-inteiro" shows everything)
+#   tools/screen.sh SERIAL tocar "Settings"    taps the first element whose text or description contains it
+#   tools/screen.sh SERIAL tem "Save"          exits 0 if the text is on screen, 1 if not
+#   tools/screen.sh SERIAL print NAME          saves the screenshot to ~/Desktop/stagebook-teste/NAME.png
+#   tools/screen.sh SERIAL abrir | fechar      opens or closes Stagebook
 set -uo pipefail
 [ $# -ge 2 ] || { sed -n '2,7p' "$0"; exit 1; }
 S=$1; CMD=$2; ARG=${3:-}
@@ -15,16 +15,16 @@ PKG=br.app.stagebook
 PROVAS="$HOME/Desktop/stagebook-teste"
 
 dump() {
-    "$ADB" -s "$S" shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || { echo "não li a tela (aparelho desconectado?)" >&2; exit 2; }
+    "$ADB" -s "$S" shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || { echo "could not read the screen (device disconnected?)" >&2; exit 2; }
     "$ADB" -s "$S" exec-out cat /sdcard/ui.xml
 }
 
-# texto com quebra de linha ou mais de 60 caracteres é letra de música: sai só o tamanho
+# text with a line break or over 60 characters is song lyrics: only its length comes out
 MASK='
 import re as _re
 def mask(s, full):
     if full or ("\n" not in s and len(s) <= 60): return s
-    return f"[texto {len(s)} caracteres]"
+    return f"[text {len(s)} chars]"
 # the stage in Portuguese or English: its lyrics area runs from the top bar to the clock
 EDIT = ("Editar a letra nesta página", "Edit the lyrics on this page")
 TOP = EDIT + ("Tom:", "Key:", "Voltar", "Back")
@@ -41,9 +41,9 @@ def lyric(n, area, box):
     return y2 > area[0] and y1 < area[1] and not _re.fullmatch(r"[\d…]+", n.get("text", "").strip())
 '
 
-# cada linha: x y | texto | descrição | clicável (1/0)  (x y = centro do elemento)
-# no palco (tem "Editar a letra nesta página") a letra pode vir linha a linha, em textos curtos: todo texto abaixo da
-# barra do topo e acima do relógio sai escondido, menos números (páginas) e reticências
+# each line: x y | text | description | clickable (1/0)  (x y = the element's center)
+# on the stage (it has "Edit the lyrics on this page") the lyrics may come line by line, in short texts: every text
+# below the top bar and above the clock is hidden, except numbers (pages) and ellipses
 nodes() {
     dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
@@ -57,12 +57,12 @@ for n in all_:
     t, d = mask(t, full), mask(d, full)
     x1, y1, x2, y2 = box(n)
     if lyric(n, area, box):
-        t = f"[texto {len(raw)} caracteres]"
+        t = f"[text {len(raw)} chars]"
     c = "1" if n.get("clickable") == "true" else "0"
     print(f"{(x1+x2)//2} {(y1+y2)//2} | {t} | {d} | {c}")' "${1:-0}"
 }
 
-# toca no elemento cujo texto ou descrição é exatamente o pedido (de preferência clicável); se não houver, o que contém
+# taps the element whose text or description is exactly the one asked (clickable first); if none, one that contains it
 find_node() {
     dump | python3 -c "$MASK"'
 import re, sys, xml.etree.ElementTree as ET
@@ -92,14 +92,14 @@ case "$CMD" in
     textos-inteiro) nodes 1 ;;
     tem) nodes 1 | grep -qiF -- "$ARG" ;;
     tocar)
-        linha=$(find_node) || { echo "\"$ARG\" não está na tela"; exit 1; }
+        linha=$(find_node) || { echo "\"$ARG\" is not on screen"; exit 1; }
         set -- $linha
         "$ADB" -s "$S" shell input tap "$1" "$2"
-        echo "toquei em $1,$2: $linha" ;;
+        echo "tapped $1,$2: $linha" ;;
     print)
         mkdir -p "$PROVAS"
         "$ADB" -s "$S" exec-out screencap -p > "$PROVAS/${ARG:-tela}.png" && echo "$PROVAS/${ARG:-tela}.png" ;;
-    abrir) "$ADB" -s "$S" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 && echo aberto ;;
-    fechar) "$ADB" -s "$S" shell am force-stop "$PKG" && echo fechado ;;
+    abrir) "$ADB" -s "$S" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 && echo opened ;;
+    fechar) "$ADB" -s "$S" shell am force-stop "$PKG" && echo closed ;;
     *) sed -n '2,7p' "$0"; exit 1 ;;
 esac

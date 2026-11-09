@@ -84,6 +84,34 @@
                 <data android:path="/r" />
                 <data android:pathPrefix="/r/" />
             </intent-filter>
+            <!-- a .stagebook file tapped in a file manager, a download or a chat opens Open file. Android doesn't know
+                 the extension: senders call it application/octet-stream (what the app itself writes), and file
+                 managers that pass the name match the extension. The content is checked before anything opens
+                 (IncomingFiles): anything that isn't a Stagebook file only gets a short message -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.stagebook" />
+                <data android:pathPattern=".*\\..*\\.stagebook" />
+                <data android:pathPattern=".*\\..*\\..*\\.stagebook" />
+            </intent-filter>
+            <!-- shared to the app (a chat's or a file manager's Share) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
         </activity>
         <service
             android:name=".player.PlayerService"

@@ -541,7 +541,7 @@
     <string name="player_channel">Player</string>
     <string name="settings_usb_card">USB output</string>
     <string name="settings_player_requirements">What the USB output needs</string>
-    <string name="settings_player_requirements_text">• A class compliant USB audio interface (USB Audio Class 1.0 or 2.0, works on a computer without a driver).\n• 44.1 or 48 kHz support.\n• A phone or tablet with USB OTG and the right cable or adapter.\n\nInterfaces that are only USB Audio 1.0 or only 44.1 kHz don\'t work yet.</string>
+    <string name="settings_player_requirements_text">• A class compliant USB audio interface (USB Audio Class 1.0 or 2.0, works on a computer without a driver).\n• 44.1 or 48 kHz support.\n• A phone or tablet with USB OTG and the right cable or adapter.</string>
     <string name="player_starting">Starting the player…</string>
     <string name="player_turn_off">Turn off</string>
     <string name="player_usb_permission_note">Allow USB in Android\'s window</string>
@@ -552,7 +552,10 @@
     <string name="player_usb_failed">The USB output didn\'t respond. Unplug the cable and plug it back in.</string>
     <string name="player_usb_muted">USB output volume is at zero</string>
     <string name="player_usb_no_android">%1$s doesn\'t show up as an audio output here. Turn off Play on the interface through Android, or use another interface.</string>
+    <string name="player_usb_route_android">%1$s failed several times on Stagebook\'s engine. It now plays through Android on this device.</string>
+    <string name="player_usb_route_engine">%1$s didn\'t play through Android. It now plays on Stagebook\'s engine on this device.</string>
     <string name="player_usb_denied">USB output permission denied</string>
+    <string name="player_usb_no_answer">A USB cable is plugged in, but the interface doesn\'t answer. Turn the interface off and on, or reconnect the USB cable.</string>
     <string name="player_usb_lost">USB output disconnected. Playback continues when the interface is reconnected.</string>
     <string name="player_device_out">No USB output found. Playing on the device\'s output.</string>
     <string name="player_device_failed">The device\'s output didn\'t open</string>
@@ -917,6 +920,10 @@
     <string name="metro_out_hint">To pick a USB interface output, play a track with it connected.</string>
     <string name="usb_via_android">Play on the interface through Android</string>
     <string name="usb_via_android_detail">Use it only if the interface connects but there\'s no sound or it stutters. Sound goes through Android\'s audio, which can stutter too.</string>
+    <string name="usb_route_auto_android">The app turned this on for %1$s, because the sound failed several times on Stagebook\'s engine.</string>
+    <string name="usb_route_auto_engine">The app turned this off for %1$s, because no sound came out through Android.</string>
+    <string name="usb_route_saved">This switch applies only to %1$s on this device. Each interface keeps its own choice.</string>
+    <string name="usb_power_warning">The USB interface is charging this device. Some interfaces fail on Stagebook\'s engine this way. If the sound fails, turn on Play on the interface through Android.</string>
     <string name="metro_player_title">Metronome and player</string>
     <string name="mixer_listen_on_stage">The mixer and equalizer are on the stage, to adjust while listening: play a song, hold play and open the mixer.</string>
     <string name="stage_mix_hint">Changes here go to the global mixer, for every song. Turn it off to change this song only.</string>
@@ -1028,7 +1035,10 @@
     <string name="translate_url">https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md</string>
     <string name="auto_blocker_open">Open Auto Blocker</string>
     <string name="auto_blocker_hint">If the install is blocked, turn off Samsung\'s Auto Blocker and come back.</string>
+    <string name="editor_link_kept">Link saved. It opens when you leave the editor.</string>
+    <string name="editor_file_kept">File saved. It opens when you leave the editor.</string>
     <string name="stage_link_kept">Link saved. It opens when you leave the stage.</string>
+    <string name="stage_file_kept">File saved. It opens when you leave the stage.</string>
     <string name="settings_metronome_test">Test the metronome</string>
     <string name="settings_metronome_test_stop">Stop the test</string>
     <string name="update_installing">Installing the update. The app restarts by itself when it finishes.</string>

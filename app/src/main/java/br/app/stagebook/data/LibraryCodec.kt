@@ -58,7 +58,8 @@ object LibraryCodec {
 
     class NewerFileException : IllegalStateException("file from a newer Stagebook version")
 
-    fun decodeSongs(text: String): List<Song> = json.decodeFromString<SongsFile>(text).also {
+    // a file saved by a Windows editor starts with a byte order mark, which the JSON parser refuses
+    fun decodeSongs(text: String): List<Song> = json.decodeFromString<SongsFile>(text.removePrefix("\uFEFF")).also {
         if (it.version > SONGS_FILE_VERSION) throw NewerFileException()
     }.songs
 

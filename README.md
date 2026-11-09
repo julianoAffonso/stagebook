@@ -15,10 +15,12 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 
 ## What it does
 - **Stage:** full screen, always lit, in pages or scrolling. Turn with a Bluetooth or MIDI pedal (USB and Bluetooth),
-  a tap or auto-scroll. Each pedal button can do something else.
+  a tap or auto-scroll. In Scroll mode, tap the bottom half or drag up to go on, the top half or drag down to go
+  back. Each pedal button can do something else.
 - **Chords:** chords above the lyrics (ChordPro), transpose, capo, tablature and each chord's diagram on acoustic or
   electric guitar, ukulele, cavaquinho or keyboard, with sound. It also shows the key's harmonic field. Notes on the
-  chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you transpose.
+  chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you transpose. Tap a
+  chord, in the lyrics or in the chord list, to see its diagram.
 - **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Send it to whoever is next to
   you by QR, far away with 3 words over the internet, or to the whole band on the same Wi-Fi.
 - **Band:** with "Lead the band", whoever leads the setlist changes songs and everyone's stage follows. Before
@@ -26,8 +28,8 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
   With a mixer, per-output routing, EQ and normalization.
 - **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
-  ([format](docs/now-playing.md)), backup to a `.stagebook` file and an **essential mode** that turns off what you
-  won't use.
+  ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager
+  and it opens in the app) and an **essential mode** that turns off what you won't use.
 - No account, no ads, no tracking. Your songs stay on the device. What goes to the band or through the 3 words is
   encrypted.
 
@@ -39,12 +41,22 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 Both USB Audio 2.0 and USB Audio 1.0 interfaces work. Without an interface, the player uses the device's headphones,
 Bluetooth or speaker.
 
-Two routes to the interface:
+Two ways to play on the interface:
 - **Through Stagebook's engine (default):** talks to the interface directly.
 - **Through Android:** Settings > Metronome and player > Play on the interface through Android. Use it only if the
   interface connects and the sound doesn't come out or breaks up.
 
-The first time the engine route is used, Android asks for permission to use the USB interface: tap OK.
+Each interface keeps its own choice on each device: with the interface connected, the switch applies only to it. If
+the sound keeps failing on the engine, the app turns the switch on for that interface and tells you; if no sound comes
+out through Android, it turns it back off. Your own choice always wins.
+
+The first time the engine is used, Android asks for permission to use the USB interface: tap OK. Before the first note
+the app checks the interface's clock for about 2 seconds (the stage says to wait if it takes longer). After 10 seconds
+without playing, the USB stream closes to save battery and opens again on play.
+
+The player warns when the interface is charging the device (some interfaces fail on the engine that way) and when a
+USB cable is plugged in but the interface doesn't answer. Both warnings need Android to let the app read the USB port;
+where it can't, they never show.
 
 ### Tested
 All passed on app version 0.1.900. A pass means: a whole song heard clean, pause and resume, and unplugging and
@@ -60,7 +72,8 @@ plugging the cable with the music playing came back on its own. Through Stageboo
 1. This tablet's USB host loses reads on the interface's input, so the engine paces the output from the system clock.
    The sound is clean, with a rare short hiccup every 15 to 60 s. That is the tablet's USB limit; it also happens
    through Android's own audio.
-2. The interface's input stops answering after about a second. The engine detects it and paces itself.
+2. The interface's input stopped answering after about a second, and the engine paced itself. Newer versions start
+   with short input transfers, and on this phone the input keeps answering.
 3. Through Android's audio and through the engine. The engine asks for Android's USB permission window the first time.
 
 Not tested: other interfaces, and a plain USB headset (supported, but not in this matrix).
@@ -106,6 +119,7 @@ Stagebook isn't on the Play Store; it's only here, for free. Needs Android 9 or 
 3. That's it. From then on the app tells you when a new version is out and updates itself; on the first update
    Android asks for the same permission, this time for Stagebook. On Android 12 or newer, the next ones go in
    without asking again and the app restarts to finish. On Android 11 or older, Android asks to confirm every version.
+   If the server fails for a moment, checking and downloading try again by themselves.
 
 **Why not the Play Store?** The app imports lyrics and chords from websites, and the store's rules on copyrighted
 content leave this kind of app open to being pulled at any time. It also updates itself straight from these releases,
@@ -118,19 +132,60 @@ Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about b
 
 ## Translate
 The app ships in English and Brazilian Portuguese. Do you play and speak another language? The how-to is in
-[docs/TRANSLATING.md](docs/TRANSLATING.md). No coding needed.
+[docs/TRANSLATING.md](docs/TRANSLATING.md). No coding needed. Other languages come from the community, by pull request
+here on GitHub.
 
 ## For developers
 Kotlin, Jetpack Compose and an audio engine in C. `./gradlew assembleDebug` builds and `./gradlew testDebugUnitTest`
-runs the tests (Java 21). Releases are published by GitHub Actions. Everyone here follows the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+runs the tests (Java 21 and the Android NDK). Releases are published by GitHub Actions. Everyone here follows the
+[Code of Conduct](CODE_OF_CONDUCT.md). Found a security problem? See the [security policy](SECURITY.md).
+
+### Pull requests
+Pull requests go to `main`. They pass these checks:
+- **Check:** build, unit tests and lint, and the release notes (`tools/release_notes.py`).
+- **Help:** a change people notice comes with the help in both languages, a changed screen with new screenshots
+  (`tools/help_check.py`).
+- **Privacy:** no session links, credentials or personal data (`tools/privacy-check.sh`).
+- **Engine simulator** (only when the audio engine changes) and **MCP check** (only when `mcp/` changes).
+
+Each commit that changes something people notice ends with `Release-Note: English sentence · Frase em português`,
+short and in the musician's words; one nobody notices ends with `Release-Note: none`. When the help or the screenshots
+don't need to change, say so on a line of its own: `Help: none` or `Screens: none`.
+
+### Engine simulator
+`tools/engine-sim/run.sh` runs the audio engine on a Mac with a fake USB interface and compares its sound with the
+version validated on a real mixer. It also tests drops, the clock plans and load. In Actions it runs on synthetic
+tracks (real ones never go to the repository) and isn't a required check. When even the fourth open is judged noisy,
+the runner is marked as too noisy and the four plan A tests show as skipped; the plan B tests run anywhere. It doesn't
+replace the test on a real mixer.
+
+### Notices on Telegram
+The maintainer can get a Telegram message when a release or the MCP server is published or fails, when a check
+fails on a pull request or on `main`, when the help site is down, on a security alert, and when someone else opens or comments on an issue, pull
+request or discussion (plus a daily summary, only when there is news). GitHub doesn't start workflows on security
+alerts, so those and the help site are checked by the scheduled runs, three times a day, not the moment they happen.
+To set it up on a fork:
+1. In Telegram, talk to `@BotFather`, send `/newbot` and copy the token. Send any message to the new bot.
+2. Get your chat id (for example from `https://api.telegram.org/bot<token>/getUpdates`, in `message.chat.id`).
+3. In the repository, Settings → Secrets and variables → Actions, add the secrets `TELEGRAM_BOT_TOKEN` and
+   `TELEGRAM_CHAT_ID`. Optional: the secret `SECURITY_ALERTS_TOKEN` (a token that can read Dependabot alerts) and the
+   variable `SITE_URL` (the help site to watch).
+
+Without the secrets the workflow runs and skips. It never checks out or runs code from a pull request; titles and
+texts are only data, sent as plain text.
 
 ### USB engine pacing
 - **Plan A:** follow the interface's input clock (implicit feedback), so output and interface never drift apart.
-- **Plan B:** pace the output from the monotonic clock when the input is missing or can't be trusted. It switches
-  when the input clock is off by more than 0.3% for 1 s, or when the input gives no answer for 0.3 s.
-- While in plan B, the engine probes the input again every 60 s and goes back to plan A if it is healthy.
-- Output URBs carry 8 packets (1 ms), with 32 in the queue. Input URBs carry 128 packets.
+- **Plan B:** pace the output from the monotonic clock when the input is missing or can't be trusted.
+- **The choice is made at open, before any sound:** the output stays silent while the input is read for 8 windows of
+  0.25 s (at most 3 s). A clock off by more than 0.3% on average, or readings so noisy that one second can be off by
+  more than 0.6%, means plan B for as long as the stream stays open. A clock that is right but noisy keeps plan A,
+  with a tolerance fitted to the device's noise.
+- **Plan A is left only for a real failure:** 3 one-second windows more than 1% off, no answer from the input for
+  0.3 s, or the input count and what was sent 100 ms apart. A stream that left plan A this way reads the input again
+  every 60 s and goes back after 5 s of good time; a stream judged off at open stays on plan B.
+- Output URBs carry 8 packets (1 ms), up to 32 in the queue. Input URBs start with 16 packets; if the check at open
+  loses more than 3% of the packets, they go to 128 and the clock is checked again.
 
 ## License
 Source available under **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Use it as you like, paid gigs included,
