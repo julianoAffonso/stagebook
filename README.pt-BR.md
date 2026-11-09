@@ -78,7 +78,7 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 | Mandando um setlist para a banda | 2,6% · 198 MB | 0,0% · 160 MB (recebendo) | — | — |
 | Backing track numa interface USB (mixer USB Audio 2.0) | 5,1%¹ · 160 MB | 6,7% · 140 MB | 29,3% · 80 MB | 31,3% · 42 MB |
 | Backing track numa interface USB (placa USB Audio 1.0) | 3,0%¹ · 101 MB | 3,7% · 86 MB | 16,9% · 83 MB | 22,2% · 41 MB |
-| Player ligado, nada tocando (o fluxo USB fecha em 10 s) | 0,4% · 142 MB | — | 0,1% · 96 MB | 0,4% · 46 MB |
+| Player ligado, nada tocando (o fluxo USB fecha em 10 s) | 0,4% · 142 MB | 0,1% · 112 MB | 0,1% · 96 MB | 0,4% · 46 MB |
 | Backing track tocando pela saída do aparelho | 17,1% · 147 MB | 3,9% · 140 MB | 13,9% · 71 MB | 18,9% · 44 MB |
 | Ajustes da banda, parado | 0,2% · 175 MB | 0,2% · 145 MB | 0,3% · 75 MB | 0,6% · 41 MB |
 
