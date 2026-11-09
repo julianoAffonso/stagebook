@@ -41,12 +41,22 @@ def problems(messages, files):
     return found
 
 
+# Every capture has a tablet and a phone version (user's rule, 09/11): the help switches between them per figure. Only
+# screens that exist on one kind of device are exempt: the web editor runs in a computer's browser. tablet_5_apagar_tudo
+# waits for a phone capture taken on a device: its code field never settles under Robolectric's native graphics on a
+# phone width (the app draws it fine), so the screenshot test can't make it.
+ONE_DEVICE = re.compile(r"^(editor_web_|tablet_5_apagar_tudo\.)")
+
+
 def page_problems(page, images):
     """Broken links and images of one page, given its html and the files in its img folder."""
     ids = set(re.findall(r' id="([^"]+)"', page))
     used = set(re.findall(r'(?:src|data-tablet|data-phone)="img/([^"]+)"', page))
     found = [f"broken link: #{a}" for a in sorted(set(re.findall(r'href="#([^"]+)"', page)) - ids)]
     found += [f"missing image: {i}" for i in sorted(used - images)]
+    for tag, img in re.findall(r'(<figure[^>]*>)\s*<img src="img/([^"]+)"', page):
+        if "data-tablet=" not in tag and not ONE_DEVICE.match(img):
+            found.append(f"figure with one device only (add the tablet or phone capture): {img}")
     return found + [f"image left over: {i}" for i in sorted(images - used)]
 
 

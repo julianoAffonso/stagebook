@@ -62,6 +62,18 @@ class Pages(unittest.TestCase):
     def test_an_image_left_over_is_found(self):
         self.assertEqual(["image left over: z.jpg"], help_check.page_problems(self.PAGE, {"x.jpg", "y.jpg", "z.jpg"}))
 
+    def test_a_figure_with_one_device_is_found(self):
+        page = '<figure class="tall"><img src="img/celular_a.jpg" alt="">'
+        self.assertEqual(["figure with one device only (add the tablet or phone capture): celular_a.jpg"],
+                         help_check.page_problems(page, {"celular_a.jpg"}))
+
+    def test_a_figure_with_both_devices_passes(self):
+        page = '<figure data-tablet="img/tablet_a.jpg" data-phone="img/celular_a.jpg"><img src="img/tablet_a.jpg" alt="">'
+        self.assertEqual([], help_check.page_problems(page, {"tablet_a.jpg", "celular_a.jpg"}))
+
+    def test_the_web_editor_is_computer_only(self):
+        page = '<figure><img src="img/editor_web_1_pedido.jpg" alt="">'
+        self.assertEqual([], help_check.page_problems(page, {"editor_web_1_pedido.jpg"}))
 
 if __name__ == "__main__":
     unittest.main()
