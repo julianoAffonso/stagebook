@@ -1160,6 +1160,9 @@ fun StageScreen(
                                     from = strip.first().item.toInt() * stripLayout.perRow,
                                     until = (strip.last().item.toInt() + 1) * stripLayout.perRow,
                                     onHide = { hidingChord = it },
+                                    // the same diagram as a chord in the lyrics, under the same setting (not while
+                                    // the highlighter is on: there a finger marks words)
+                                    onShow = if (look.chordTap && !marking) { c -> shownChord = c } else null,
                                     onHideAll = { onHiddenChords(song.id, Chords.hiddenChords(song.text) + stripChords(song.text)) },
                                     onRestore = { onHiddenChords(song.id, emptySet()) },
                                 )

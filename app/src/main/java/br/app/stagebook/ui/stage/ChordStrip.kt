@@ -26,9 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.material3.ripple
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -78,6 +82,7 @@ fun ChordStrip(
     from: Int = 0,   // the chords of this column: a long list runs on like the lyrics, at full size
     until: Int = Int.MAX_VALUE,
     onHide: (String) -> Unit = {},
+    onShow: ((String) -> Unit)? = null,   // a tap on a chord opens its diagram (null: the tap turns the page)
     onHideAll: () -> Unit = {},
     onRestore: () -> Unit = {},
 ) {
@@ -95,12 +100,14 @@ fun ChordStrip(
     Box(modifier.fillMaxWidth()) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
         items.subList(minOf(from, items.size), minOf(until, items.size)).forEach { (c, shape, keys) ->
+            val pressed = remember { MutableInteractionSource() }   // the tapped chord's ripple
             // holding a chord takes it off this song's list (the stage asks to confirm); one × for the whole list below,
-            // instead of one on every chord (user, 02/11)
+            // instead of one on every chord (user, 02/11). A tap opens the same diagram as a chord in the lyrics.
             Box(
                 // the cell widens to fill the row; the drawing stays at its own size (scaled up, it looked blown up on
                 // the TCL; user, 02/11)
-                Modifier.size(cell.width * scale, cell.height).longPressOnly(stringResource(R.string.stage_chord_hide, c)) { onHide(c) },
+                Modifier.size(cell.width * scale, cell.height)
+                    .chordTouch(c, stringResource(R.string.stage_chord_hide, c), pressed, onShow, onHide),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 ChordDiagram(c, instrument, shape, keys, color, width = (if (instrument == Instrument.KEYBOARD) 46.dp else 56.dp) * cell.draw, compact = true, capo = capo, nameColor = nameColor)
@@ -126,21 +133,56 @@ fun ChordStrip(
 }
 
 /**
- * A long press only: a tap isn't taken, so it still turns the stage's page (a clickable here swallowed page turns over
- * the whole chord list; audit 02/11). The label reaches accessibility as the long-press action.
+ * A tap ([onTap], when given) and a long press, and nothing else: a drag or a second finger is left alone, so swipes and
+ * pinches started on the list still reach the stage (a clickable here swallowed page turns over the whole chord list;
+ * audit 02/11). Without [onTap] a tap isn't taken either, and turns the page. The tap is consumed only on the lift, which
+ * the stage reads as "a button on top used it". The label reaches accessibility as the long-press action.
  */
-private fun Modifier.longPressOnly(label: String, onLong: () -> Unit): Modifier = this
-    .semantics { onLongClick(label) { onLong(); true } }
-    .pointerInput(onLong) {
-        awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false)
-            // null only when the time ran out with the finger still down; a lift or a swipe (the page taking the
-            // drag) ends it without the long press
-            val ended = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() ?: Unit }
-            if (ended == null) {
-                onLong()
-                // the rest of this touch belongs to the long press
-                do { val e = awaitPointerEvent(); e.changes.forEach { it.consume() } } while (e.changes.any { it.pressed })
+private fun Modifier.chordTouch(
+    chord: String,
+    label: String,
+    interaction: MutableInteractionSource,
+    onTap: ((String) -> Unit)?,
+    onLong: (String) -> Unit,
+): Modifier {
+    // the ripple only where a tap does something
+    val pressed = interaction.takeIf { onTap != null }
+    return this
+        .then(if (pressed != null) Modifier.indication(pressed, ripple()) else Modifier)
+        .semantics {
+            onLongClick(label) { onLong(chord); true }
+            if (onTap != null) onClick { onTap(chord); true }
+        }
+        .pointerInput(chord, pressed, onTap, onLong) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val press = pressed?.let { PressInteraction.Press(down.position).also(it::tryEmit) }
+                // true: lifted in place (a tap); false: dragged, pinched or taken by someone else; null: the time ran
+                // out with the finger still down (a long press)
+                val tapped: Boolean? = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    var result: Boolean? = null
+                    while (result == null) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        result = when {
+                            change == null || change.isConsumed || event.changes.count { it.pressed } > 1 ||
+                                (change.position - down.position).getDistance() > viewConfiguration.touchSlop -> false
+                            !change.pressed -> { if (onTap != null) change.consume(); true }
+                            else -> null
+                        }
+                    }
+                    result
+                }
+                press?.let { pressed.tryEmit(if (tapped == true) PressInteraction.Release(it) else PressInteraction.Cancel(it)) }
+                when (tapped) {
+                    true -> onTap?.invoke(chord)
+                    false -> Unit
+                    null -> {
+                        onLong(chord)
+                        // the rest of this touch belongs to the long press
+                        do { val e = awaitPointerEvent(); e.changes.forEach { it.consume() } } while (e.changes.any { it.pressed })
+                    }
+                }
             }
         }
-    }
+}
