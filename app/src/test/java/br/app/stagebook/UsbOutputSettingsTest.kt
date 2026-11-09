@@ -48,7 +48,14 @@ class UsbOutputSettingsTest {
     @Test fun `the switch shows the plugged interface's way, not the default`() {
         show(UsbOutputUi(name = "Mixer", android = true, remembered = true, auto = true), Look(playerMode = true, usbViaAndroid = false))
         compose.onNodeWithText(res.getString(R.string.usb_via_android)).performScrollTo().assertIsOn()
-        compose.onNodeWithText(res.getString(R.string.usb_route_auto, "Mixer")).performScrollTo().assertExists()
+        compose.onNodeWithText(res.getString(R.string.usb_route_auto_android, "Mixer")).performScrollTo().assertExists()
+    }
+
+    @Test fun `the app turning the switch off says the sound didn't come out through Android`() {
+        show(UsbOutputUi(name = "Mixer", android = false, remembered = true, auto = true), Look(playerMode = true, usbViaAndroid = true))
+        compose.onNodeWithText(res.getString(R.string.usb_via_android)).performScrollTo().assertIsOff()
+        compose.onNodeWithText(res.getString(R.string.usb_route_auto_engine, "Mixer")).performScrollTo().assertExists()
+        assertEquals(0, count(res.getString(R.string.usb_route_auto_android, "Mixer")))
     }
 
     @Test fun `a way chosen by the person says it is saved`() {

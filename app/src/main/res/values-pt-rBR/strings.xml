@@ -950,8 +950,9 @@
     <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>
     <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que pode engasgar.</string>
-    <string name="usb_route_auto">Escolhido pelo app para %1$s, porque o outro caminho falhou.</string>
-    <string name="usb_route_saved">Vale só para %1$s neste aparelho.</string>
+    <string name="usb_route_auto_android">O app ligou esta chave para %1$s, porque o som falhou várias vezes no motor do Stagebook.</string>
+    <string name="usb_route_auto_engine">O app desligou esta chave para %1$s, porque o som não saiu pelo Android.</string>
+    <string name="usb_route_saved">Esta chave vale só para %1$s neste aparelho. Cada interface guarda a sua escolha.</string>
     <string name="usb_power_warning">A interface USB está carregando este aparelho. Assim, algumas interfaces falham no motor do Stagebook. Se o som falhar, ligue Tocar pela interface através do Android.</string>
     <string name="metro_player_title">Metrônomo e player</string>
     <string name="mixer_listen_on_stage">O mixer e o equalizador ficam no palco, para ajustar ouvindo: toque uma música, segure o play e abra o mixer.</string>

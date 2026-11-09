@@ -1335,7 +1335,7 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
         SwitchRow(stringResource(R.string.usb_via_android), usb.androidOr(look.usbViaAndroid), actions.onUsbViaAndroid, detail = stringResource(R.string.usb_via_android_detail))
         when {
             usb.name.isEmpty() -> Unit
-            usb.auto -> StatusNote(stringResource(R.string.usb_route_auto, usb.name), StatusTone.INFO)
+            usb.auto -> StatusNote(stringResource(if (usb.android) R.string.usb_route_auto_android else R.string.usb_route_auto_engine, usb.name), StatusTone.INFO)
             usb.remembered -> StatusNote(stringResource(R.string.usb_route_saved, usb.name), StatusTone.INFO)
         }
         // the interface charges the device: some behave worse on the engine that way (user, 06/11)
