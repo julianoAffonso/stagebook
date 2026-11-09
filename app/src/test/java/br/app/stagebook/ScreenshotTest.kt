@@ -1298,6 +1298,20 @@ class ScreenshotTest {
         HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(), it, section = SettingsSection.METRONOME) }
     }
 
+    // an interface plugged in that the app moved to Android's audio, and that is charging the device: the note under the
+    // switch and the power warning only show with real hardware, so the state is given here (user, 09/11)
+    private val usbInterfaceShown = br.app.stagebook.player.UsbOutputUi(name = "Mixer", android = true, remembered = true, auto = true, powered = true)
+
+    @Test @Config(qualifiers = "pt-rBR-w412dp-h1300dp-port-xxhdpi")   // the USB card whole, no empty tail
+    fun journeyTrack1bInterface() = shoot("jornada_faixa_1b_interface") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(usb = usbInterfaceShown), it, section = SettingsSection.METRONOME) }
+    }
+
+    @Test @Config(qualifiers = "pt-rBR-w1280dp-h960dp-land-hdpi")
+    fun journeyTrack1bInterfaceTablet() = shoot("jornada_faixa_1b_interface_tablet") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings.copy(look = settings.look.copy(playerMode = true)), SettingsActions(usb = usbInterfaceShown), it, section = SettingsSection.METRONOME) }
+    }
+
     // ---- mixer (over the stage): a 4-channel file, backing as a stereo pair and mono click on output 7 ----
     private val mixerLook = Look(
         playerMode = true,
