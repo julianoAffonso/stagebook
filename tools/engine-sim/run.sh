@@ -12,7 +12,8 @@ OGG=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 OGG48=$(cd "$(dirname "$2")" && pwd)/$(basename "$2")
 WORK=$(mktemp -d)
 trap '[ -n "${KEEP:-}" ] && echo "files in $WORK" || rm -rf "$WORK"' EXIT
-JDK=${JAVA_HOME:-$(/usr/libexec/java_home)}
+JDK=${JAVA_HOME:-$(/usr/libexec/java_home 2>/dev/null)}   # CI sets JAVA_HOME; on a Mac java_home finds it
+case "$(uname -s)" in Darwin) JNI_OS=darwin ;; *) JNI_OS=linux ;; esac   # jni_md.h lives under the OS's name
 
 mkdir -p "$WORK/validated" "$WORK/current"
 cp "$HERE/reference/engine.c" "$WORK/validated/engine.c"   # the engine validated on the desk (23/10/2026)
@@ -20,7 +21,7 @@ cp "$ROOT/app/src/main/cpp/engine.c" "$WORK/current/engine.c"
 STB="$ROOT/app/src/main/cpp/third_party"
 
 build() {   # <name> [engine.c folder] [options]
-    clang -O2 -w -I"$HERE/shim" -I"$STB" -I"$JDK/include" -I"$JDK/include/darwin" \
+    clang -O2 -w -I"$HERE/shim" -I"$STB" -I"$JDK/include" -I"$JDK/include/$JNI_OS" \
         -DENGINE_C="\"$WORK/${2:-$1}/engine.c\"" -DENGINE_NAME="\"$1\"" ${3:-} \
         -o "$WORK/sim-$1" "$HERE/sim.c" "$STB/stb_vorbis.c" -lm -lpthread
 }
@@ -38,7 +39,7 @@ for v in validated current meter; do
     fi
     echo
 done
-clang -O2 -w -I"$HERE/shim" -I"$STB" -I"$JDK/include" -I"$JDK/include/darwin" \
+clang -O2 -w -I"$HERE/shim" -I"$STB" -I"$JDK/include" -I"$JDK/include/$JNI_OS" \
     -DENGINE_C="\"$WORK/current/engine.c\"" -o "$WORK/sim-usb1" "$HERE/sim_usb1.c" "$STB/stb_vorbis.c" -lm -lpthread
 "$WORK/sim-usb1" "$WORK" || status=1
 echo
