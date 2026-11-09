@@ -595,6 +595,12 @@ static void free_parked(void) {
 // REAPURB never returns from a queue the device stopped serving. It stays the way to wait, the cheapest one (polling
 // took a tablet from 15% to 61% of a core): this watcher only looks at the clock and wakes it with a signal.
 static volatile double g_last_reap = 0;
+// The output alone stopped coming back while the input still does (S26 with a high-speed interface, 09/11/2026: the
+// first ~0.2 s of output URBs return, then none, while the input keeps its pace; with the input off the output flows).
+// The input kept the all-URBs watch quiet, so this one looks at the output only. Read by Java to connect again without
+// the input; cleared on each start.
+static volatile double g_last_out_reap = 0;
+static volatile int g_out_starved = 0, g_in_starved_out = 0;
 static volatile int g_stalled = 0, g_watching = 0;
 static pthread_t g_watch_thr;
 static void wake_usb(int sig) {}
@@ -602,7 +608,9 @@ static void *stall_watch(void *arg) {
     name_thread("sb-watch");
     while (g_watching) {
         struct timespec t = {0, 50000000}; nanosleep(&t, NULL);
-        if (g_watching && now_s() - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
+        double at = now_s();
+        if (g_watching && at - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
+        else if (g_watching && g_in_ep >= 0 && at - g_last_out_reap > STALL_S) { g_out_starved = 1; pthread_kill(g_usb_thr, SIGUSR2); }
     }
     return NULL;
 }
@@ -770,7 +778,7 @@ static void *usb_main(void *arg) {
         inflight++;
     }
     set_status("USB active");
-    g_stalled = 0; g_last_reap = now_s(); g_watching = 1;
+    g_stalled = 0; g_out_starved = 0; g_last_reap = g_last_out_reap = now_s(); g_watching = 1;
     { struct sigaction sa = {0}; sa.sa_handler = wake_usb; sigaction(SIGUSR2, &sa, NULL); }   // no SA_RESTART: REAPURB returns
     pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
 
@@ -778,6 +786,12 @@ static void *usb_main(void *arg) {
         if (!tail && g_usb_stop) { tail = 1; if (g_fast_stop) tail_max = 0; }   // fast: only what is already queued drains
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
+            if (errno == EINTR && g_out_starved && !g_stalled) {
+                LOGI("usb: the output stopped coming back while the input runs: connecting again without the input");
+                set_status("USB dropped: the input starved the output");
+                g_in_starved_out = 1;
+                goto out;
+            }
             if (errno == EINTR && g_stalled) {
                 // some devices stop returning URBs for good with a long queue, with no error: half of it, connecting again
                 if (g_queue_ms > QUEUE_MS_MIN) g_queue_ms /= 2;
@@ -791,6 +805,7 @@ static void *usb_main(void *arg) {
         }
         inflight--;
         g_last_reap = now_s();
+        if (!(done->endpoint & 0x80)) g_last_out_reap = g_last_reap;
         if (done->endpoint & 0x80) {
             if (DIAG) {   // diagnostics: the first input URBs
                 static int dbg = 0;
@@ -1059,6 +1074,7 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
         g_fd = -1;
     }
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
+    g_in_starved_out = 0;
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
     g_fb_decided = g_in_ep < 0; g_fb_open_bad = 0; g_fb_off_n = 0; g_pr_n = 0; g_pr_frames = 0; g_pr_time = 0; g_fb_win = 0; g_fb_win_in = 0;
@@ -1344,6 +1360,8 @@ JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
 
 // interface clock (feedback through the input): 1 locked, 0 waiting, -1 no input. Read only.
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
+// the last stream ended because reading the input stopped the output (see g_last_out_reap): connect again without it
+JNIEXPORT jboolean JNICALL FN(inputStarvedOutput)(JNIEnv *e, jclass c) { return g_in_starved_out ? JNI_TRUE : JNI_FALSE; }
 // 1 while the interface's clock is being judged at open (the output is silent), else 0.
 JNIEXPORT jint JNICALL FN(probing)(JNIEnv *e, jclass c) { return g_probing; }
 

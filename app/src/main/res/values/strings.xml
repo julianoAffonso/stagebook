@@ -189,6 +189,10 @@
     <string name="settings_update_help">Android always asks you to confirm. The first time, it asks you to allow \"install apps from this source\". Allow it and come back. Your songs, setlists and settings stay.</string>
     <string name="settings_sections_help">Lines like [Chorus], Verse 2:, Bridge, Intro, Solo, Outro… become highlighted titles on stage.</string>
     <string name="settings_section_color">Section title color</string>
+    <string name="stage_track_usb_waiting">Waiting for the interface</string>
+    <string name="update_channel">App updates</string>
+    <string name="update_done_title">Stagebook updated</string>
+    <string name="update_done_text">Tap to go back where you were.</string>
     <string name="stage_play">Play the backing track</string>
     <string name="stage_pause">Pause the backing track</string>
     <string name="stage_track_pick">Choose this song\'s backing track</string>

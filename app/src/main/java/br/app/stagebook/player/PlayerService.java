@@ -161,8 +161,12 @@ public class PlayerService extends Service {
                 Log.w(TAG, "USB stream dropped (" + Engine.status() + "): reconnecting");
                 usbQueues().edit().putInt(usbKey(link.dev), Engine.queueMs()).apply();   // it may have halved its queue
                 UsbDevice d = link.dev;
+                // reading the input stopped the output (S26 with a high-speed interface, 09/11): from now on this
+                // interface opens without it on this device, paced by the system clock. Handled, so not a failed way
+                boolean starved = Engine.inputStarvedOutput();
+                if (starved) usbNoInput().edit().putBoolean(usbKey(d), true).apply();
                 releaseUsb();
-                if (trouble.dropped(SystemClock.elapsedRealtime())) wayFailed(d, false);
+                if (!starved && trouble.dropped(SystemClock.elapsedRealtime())) wayFailed(d, false);
                 connectUsb();
             } else if (link != null && Engine.feedback() == 1) {
                 fbRetries = 0;
@@ -209,6 +213,8 @@ public class PlayerService extends Service {
     };
 
     private android.content.SharedPreferences usbQueues() { return getSharedPreferences("usb_queue", MODE_PRIVATE); }
+    // interfaces whose input stops the output on this device (prefs are per device, so the key is the interface's)
+    private android.content.SharedPreferences usbNoInput() { return getSharedPreferences("usb_no_input", MODE_PRIVATE); }
 
     private static String usbKey(UsbDevice d) { return String.format(java.util.Locale.ROOT, "%04x:%04x", d.getVendorId(), d.getProductId()); }
 
@@ -291,6 +297,8 @@ public class PlayerService extends Service {
         noteConnecting(gen, waking ? R.string.player_usb_waking : R.string.player_usb_connecting);
         usbOps.execute(() -> {
             UsbLink l = new UsbLink();
+            l.noInput = usbNoInput().getBoolean(usbKey(d), false);
+            if (l.noInput) Log.i(TAG, "usb: this interface's input stops the output here: opening without it");
             String err;
             try {
                 err = l.open(um, d);

@@ -38,4 +38,27 @@ class UsbLinkTest {
         assertEquals(48000, link.rate)
         assertEquals(4, link.subslot)
     }
+
+    // an output and an input, both USB Audio 2.0 (the shape of a 4-in/4-out interface)
+    private val withInput = bytes(
+        "0904010001010220" + "00" + "1024" + "01" + "0100" + "0100000000" + "04" + "00000000" + "00" +
+            "0624" + "02" + "01" + "04" + "18" + "07" + "05" + "01" + "05" + "9001" + "01" +
+            "0904020101010220" + "00" + "1024" + "01" + "0100" + "0100000000" + "04" + "00000000" + "00" +
+            "0624" + "02" + "01" + "04" + "18" + "07" + "05" + "82" + "05" + "9001" + "01",
+    )
+
+    @Test fun `an interface with an input opens it as the clock`() {
+        val link = UsbLink().apply { scan(withInput) }
+        assertEquals(0x01, link.ep)
+        assertEquals(0x82, link.inEp)
+        assertEquals(2, link.inIfNum)
+    }
+
+    // on a device where reading that input stopped the output, it isn't opened at all (S26, 09/11)
+    @Test fun `an input remembered as stopping the output is left closed`() {
+        val link = UsbLink().apply { noInput = true; scan(withInput) }
+        assertEquals(0x01, link.ep)
+        assertEquals(-1, link.inEp)
+        assertEquals(-1, link.inIfNum)
+    }
 }
