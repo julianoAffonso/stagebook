@@ -42,10 +42,9 @@ def problems(messages, files):
 
 
 # Every capture has a tablet and a phone version (user's rule, 09/11): the help switches between them per figure. Only
-# screens that exist on one kind of device are exempt: the web editor runs in a computer's browser. tablet_5_apagar_tudo
-# waits for a phone capture taken on a device: its code field never settles under Robolectric's native graphics on a
-# phone width (the app draws it fine), so the screenshot test can't make it.
-ONE_DEVICE = re.compile(r"^(editor_web_|tablet_5_apagar_tudo\.)")
+# screens that exist on one kind of device are exempt: the web editor runs in a computer's browser. Screens the tests
+# can't draw are photographed on a device and kept in tools/device-shots/.
+ONE_DEVICE = re.compile(r"^editor_web_")
 
 
 def page_problems(page, images):

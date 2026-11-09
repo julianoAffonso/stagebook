@@ -597,7 +597,7 @@ SECTIONS = [
             sub("ajustes-apagar", "Apagar tudo", "Erase everything",
                 ["Deixa o app como novo: apaga músicas, setlists, backing tracks, ajustes e a banda deste aparelho, sem volta. A janela oferece Fazer um backup antes e pede para digitar um código de confirmação."],
                 ["Leaves the app like new: it erases songs, setlists, backing tracks, settings and the band from this device, for good. The window offers Back up first and asks you to type a confirmation code."],
-                [Fig(("tablet_5_apagar_tudo", None, "Apagar tudo", "Erase everything"))], level=4),
+                [Fig(("tablet_5_apagar_tudo", "celular_5_apagar_tudo", "Apagar tudo", "Erase everything"))], level=4),
             sub("ajustes-banda", "Banda e transmissão", "Band and broadcast",
                 ["- **Este aparelho:** o nome que a banda vê. Mudar o nome troca.",
                  "- **Na rede agora:** quem está no mesmo Wi-Fi e ainda não é da banda. Pedir para entrar fica ao lado de cada um.",
