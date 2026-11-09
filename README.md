@@ -152,7 +152,10 @@ Pull requests go to `main`. They pass these checks:
 
 Each commit that changes something people notice ends with `Release-Note: English sentence · Frase em português`,
 short and in the musician's words; one nobody notices ends with `Release-Note: none`. When the help or the screenshots
-don't need to change, say so on a line of its own: `Help: none` or `Screens: none`.
+don't need to change, say so on a line of its own: `Help: none` or `Screens: none`. When a later commit changes again
+something an earlier one already described in the same pull request, it carries `Release-Note-Replaces: <commit>`, and
+only its own sentence goes into the version. The Check lists every sentence of the pull request, to read them against
+what it finally does.
 
 ### Hotfix
 A bug in a published version that people can't wait for (an update that doesn't install, a crash on stage) doesn't wait

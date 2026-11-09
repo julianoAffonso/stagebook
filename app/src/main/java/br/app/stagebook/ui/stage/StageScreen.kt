@@ -253,7 +253,7 @@ fun StageRoute(
     val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
         val config = androidx.compose.ui.platform.LocalConfiguration.current
-        val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp)
+        val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp, uiState.look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL)
         val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
         val open = index.coerceIn(0, uiState.songs.lastIndex)
         LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
@@ -894,6 +894,12 @@ fun StageScreen(
             }
             val fitOne = StageFit.zoomToFit(widest, width)
             val fitTwo = StageFit.zoomToFit(widest, (width - gutter) / 2)
+            // Scroll's automatic size: the longest LINE whole on the width (fitOne is the longest word). Only measured there
+            val scrollStage = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
+            val fitLine = remember(scrollStage, lines, look.fontSp, look.bold, look.font, width) {
+                if (!scrollStage) fitOne
+                else StageFit.zoomToFit(widths(measurer, lines.filter { it.isNotEmpty() && !it.hasStringAnnotations(TAB_TAG, 0, it.length) }, styleFor(1f)).maxOrNull() ?: 0, width)
+            }
             val halfWidth = (width - gutter) / 2
             fun measureLines(style: TextStyle, w: Int) = lineHeights(measurer, lines, style, w)
             val density = LocalDensity.current
@@ -976,7 +982,10 @@ fun StageScreen(
                     val at = StageFit.measuredOnce { sheets(it, w, cols) }
                     val saving = StageFit.autoPageFloor(minOf(min, limit), minOf(StageFit.autoFewerZoom(look.fontSp), limit), at)
                     val floor = StageFit.autoFloor(saving, minOf(StageFit.autoWholeZoom(look.fontSp), limit), at)
-                    br.app.stagebook.data.model.ScreenZoom(StageFit.autoZoom(floor, top, at), cols, fitKey)
+                    // Scroll has no pages to save: the biggest size whose longest line still fits the width, up to the usual
+                    // cap (user, 09/11: on its side the lyrics stayed small with half the screen empty, because every bigger
+                    // size meant more scroll steps; and the longest word wasn't enough, upright the lines broke)
+                    br.app.stagebook.data.model.ScreenZoom(if (scrollStage) maxOf(min, minOf(top, fitLine)) else StageFit.autoZoom(floor, top, at), cols, fitKey)
                 }
             }
             SideEffect { autoZoomNow = autoFit?.zoom ?: 1f; lastFit = autoFit }
@@ -1213,6 +1222,7 @@ fun StageScreen(
                     awayColor = MaterialTheme.colorScheme.error,
                     stops = look.trackStops,
                     fg = fg,
+                    bg = Color(look.bg),
                     onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
                     onChange = { onPickTrack(song.id) },
                     onRemove = { onRemoveTrack(song.id) },
@@ -1683,7 +1693,7 @@ private class PageHit {
 }
 
 /**
- * Track play/pause: a translucent circle, so it doesn't hide the lyrics. Without a track, the tap picks the file; with
+ * Track play/pause: a circle in the stage's own color, on top of the lyrics (09/11). Without a track, the tap picks the file; with
  * a track, a long press opens the song's mixer, or changes or removes the track.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -1694,6 +1704,7 @@ private fun TrackButton(
     stops: Boolean,
     away: Boolean = false,
     awayColor: Color = Color.Unspecified,
+    bg: Color = Color.Unspecified,
     fg: Color,
     onClick: () -> Unit,
     onChange: () -> Unit,
@@ -1715,6 +1726,9 @@ private fun TrackButton(
             Modifier
                 .size(Sizes.touch + Spacing.m)
                 .clip(CircleShape)
+                // the stage's own background at 50%, under the old light tint: the button reads as on top of the lyrics
+                // and what's behind still shows faintly (user, 09/11: at 12% "Frase 5" looked over it, at 92% it hid it)
+                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.5f)) else Modifier)
                 .background(fg.copy(alpha = 0.12f))
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,

@@ -152,7 +152,9 @@ Os pull requests vão para a `main`. Eles passam por estas verificações:
 
 Cada commit que muda algo que a pessoa percebe termina com `Release-Note: English sentence · Frase em português`,
 curta e com as palavras do músico; um que ninguém percebe termina com `Release-Note: none`. Quando a ajuda ou as
-capturas não precisam mudar, diga isso numa linha própria: `Help: none` ou `Screens: none`.
+capturas não precisam mudar, diga isso numa linha própria: `Help: none` ou `Screens: none`. Quando um commit mais novo
+muda de novo algo que um anterior já descreveu no mesmo pull request, ele leva `Release-Note-Replaces: <commit>`, e só
+a frase dele entra na versão. O Check lista todas as frases do pull request, para ler contra o que ele faz no fim.
 
 ### Hotfix
 Um bug numa versão publicada que não pode esperar (uma atualização que não instala, um travamento no palco) não espera

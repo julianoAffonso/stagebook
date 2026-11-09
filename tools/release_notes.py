@@ -5,7 +5,10 @@
 
 A change to the app that people won't notice says so with "Release-Note: none", which never reaches the file.
 
-  check RANGE   for pull requests: fails if the range changes the app and has no note, or if a note is malformed
+  check RANGE   for pull requests: fails if the range changes the app and has no note, or if a note is malformed,
+                and prints every note, so they can be read against what the range finally does
+A commit whose change makes an earlier note in the same range wrong (a feature changed again before it was released)
+says so with a line "Release-Note-Replaces: <commit>": that commit's notes leave the version, and this one's stay.
   build RANGE --code N --name X --previous FILE --out FILE
                 for the Release workflow: writes stagebook-version.json with this version's notes on top of the last
                 ones (someone who skipped versions sees what they missed). A version without notes isn't published.
@@ -19,6 +22,7 @@ import sys
 MAX_VERSIONS = 10   # the file the app reads on every launch stays small
 MAX_LENGTH = 120    # a sentence in a window on a phone
 LINE = re.compile(r"^Release-Note:[ \t]*(.*)$", re.MULTILINE)
+REPLACES = re.compile(r"^Release-Note-Replaces:[ \t]*([0-9a-f]{7,40})[ \t]*$", re.MULTILINE)
 HOW = "Add to a commit: Release-Note: English sentence · Frase em português (or Release-Note: none, if nobody will notice)"
 INTERNAL = "none"
 # Say what people will notice; a change they won't notice is INTERNAL, not one of these.
@@ -47,13 +51,38 @@ def git(*args):
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
 
 
+def commits_of(commits):
+    """(full hash, message) of each commit in the range, oldest first."""
+    out = []
+    for entry in git("log", "--no-merges", "--reverse", "--format=%H%x01%B%x00", commits).split("\0"):
+        entry = entry.lstrip("\n")
+        if "\x01" in entry:
+            sha, message = entry.split("\x01", 1)
+            out.append((sha.strip(), message))
+    return out
+
+
 def messages_of(commits):
-    return git("log", "--no-merges", "--reverse", "--format=%B%x00", commits).split("\0")
+    return [message for _, message in commits_of(commits)]
 
 
-def notes_in(commits):
-    """Notes of the range, oldest first, each sentence once."""
-    return list(dict.fromkeys(note for message in messages_of(commits) for note in parse(message)))
+def replaced_in(entries, strict=False):
+    """Commits whose notes a later commit replaced. [strict]: a prefix matching nothing in the range is an error."""
+    gone = set()
+    for _, message in entries:
+        for prefix in REPLACES.findall(message):
+            hit = [sha for sha, _ in entries if sha.startswith(prefix)]
+            if not hit and strict:
+                raise ValueError(f"Release-Note-Replaces: {prefix} is not a commit of this range")
+            gone.update(hit)
+    return gone
+
+
+def notes_in(commits, strict=False):
+    """Notes of the range, oldest first, each sentence once, without the ones a later commit replaced."""
+    entries = commits_of(commits)
+    gone = replaced_in(entries, strict)
+    return list(dict.fromkeys(note for sha, message in entries if sha not in gone for note in parse(message)))
 
 
 def marked_internal(commits):
@@ -77,10 +106,14 @@ def with_history(code, name, notes, previous):
 
 
 def check(args):
-    notes = notes_in(args.commits)
+    notes = notes_in(args.commits, strict=True)
     if not notes and app_changed(args.commits) and not marked_internal(args.commits):
         sys.exit(f"The app changed and no commit says what's new. {HOW}")
     print(f"{len(notes)} release notes")
+    # read them all against what the range finally does: two about the same thing, or one an later commit made wrong,
+    # means a Release-Note-Replaces line (v0.1.1030 shipped three about one button, one of them out of date)
+    for en, pt in notes:
+        print(f"  - {en} · {pt}")
 
 
 def build(args):
