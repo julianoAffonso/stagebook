@@ -75,6 +75,7 @@ fun StagebookNavHost(
     onStage: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false),
     installNotices: Flow<br.app.stagebook.domain.InstallNotice> = emptyFlow(),
     openedFiles: Flow<br.app.stagebook.data.IncomingFiles.Result> = emptyFlow(),
+    resume: String? = null,
 ) {
     val nav = rememberNavController()
     // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
@@ -198,6 +199,28 @@ fun StagebookNavHost(
     }
     LaunchedEffect(hold) {
         hold.collect { place -> if (!place.holds) heldFile.release()?.let(openFile) }
+    }
+    // the screen in use, as a route to come back to after an update installed from inside the app (user, 09/11)
+    androidx.compose.runtime.DisposableEffect(nav) {
+        val listener = NavController.OnDestinationChangedListener { _, dest, args ->
+            br.app.stagebook.data.ResumeAfterUpdate.currentRoute = dest.route?.let { pattern ->
+                val keys = Regex("\\{([^}]+)\\}").findAll(pattern).map { it.groupValues[1] }.toList()
+                @Suppress("DEPRECATION")
+                br.app.stagebook.domain.ResumePoint.fill(pattern, keys.associateWith { k -> args?.get(k)?.toString() }) { android.net.Uri.encode(it) }
+            }
+        }
+        nav.addOnDestinationChangedListener(listener)
+        onDispose { nav.removeOnDestinationChangedListener(listener) }
+    }
+    // just updated: back where it was (Settings → About, or the screen the update window was over)
+    LaunchedEffect(resume) {
+        val where = resume ?: return@LaunchedEffect
+        if (where.startsWith(br.app.stagebook.domain.ResumePoint.SETTINGS)) {
+            val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.valueOf(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
+            if (section != null) openSettings(section)
+        } else if (where != br.app.stagebook.data.ResumeAfterUpdate.HOME && !where.contains("Home")) {
+            runCatching { nav.navigate(where) }
+        }
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold) {

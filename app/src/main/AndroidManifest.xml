@@ -119,6 +119,12 @@
             android:foregroundServiceType="mediaPlayback" />
         <!-- the system's answer to the update's installer session; not exported: only the session's own PendingIntent reaches it -->
         <receiver android:name=".data.InstallResultReceiver" android:exported="false" />
+        <!-- the app was replaced by its own update: reopen where it was (user, 09/11) -->
+        <receiver android:name=".data.PackageReplacedReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.updates"

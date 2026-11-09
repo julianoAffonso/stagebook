@@ -94,6 +94,8 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        // just updated from inside the app: where it was (a fresh start only; a recreation keeps its own screen)
+        val resume = if (savedInstanceState == null) br.app.stagebook.data.ResumeAfterUpdate.take(this) else null
         hideSystemBars()
         // recreated (font size, language): the system's hide animation of the status bar stays stuck half way and the bar
         // stays drawn over the app even though it reports hidden; showing and hiding it again a moment later frees it
@@ -130,12 +132,16 @@ class MainActivity : ComponentActivity() {
                         onLater = updateOffer::decline,
                         onInstall = {
                             // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
-                            (updateOffer.offer.value as? UpdateOffer.Ready)?.let { if (installApk(updater, it.apk)) updateOffer.dismiss() }
+                            (updateOffer.offer.value as? UpdateOffer.Ready)?.let {
+                                // the screen it was on comes back after the update (user, 09/11)
+                                br.app.stagebook.data.ResumeAfterUpdate.save(this@MainActivity, br.app.stagebook.data.ResumeAfterUpdate.currentRoute ?: br.app.stagebook.data.ResumeAfterUpdate.HOME)
+                                if (installApk(updater, it.apk)) updateOffer.dismiss()
+                            }
                         },
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files) }
+                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -176,6 +182,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        br.app.stagebook.data.ResumeAfterUpdate.opened(this)
         checkUsbRecord()   // also when the app was opened by plugging in the interface
         window.decorView.post { hideSystemBars() }
     }
