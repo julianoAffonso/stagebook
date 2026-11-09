@@ -840,7 +840,7 @@ SECTIONS = [
         "subs": [
             sub("problemas-som", "Som e interface USB", "Sound and USB interface",
                 ["- **A saída USB não respondeu:** tire e ponha o cabo de novo.",
-                 "- **A interface não aparece no app, mesmo com o cabo ligado:** desligue e ligue a interface e depois tire e ponha o cabo, virando o conector. Algumas portas USB-C ficam ligadas sem trocar dados até a interface ser religada. O app não consegue perceber essa situação sozinho, porque o Android só mostra a interface depois que ela responde.",
+                 "- **A interface não aparece no app, mesmo com o cabo ligado:** desligue e ligue a interface e depois tire e ponha o cabo, virando o conector. Algumas portas USB-C ficam ligadas sem trocar dados até a interface ser religada. Em alguns aparelhos o app percebe isso e avisa na tela do palco, com a frase **O cabo USB está ligado, mas a interface não responde**. Nos outros, o Android só mostra a interface depois que ela responde, e o app não tem como saber.",
                  "- **Saída USB não encontrada:** o som foi para a saída do aparelho. Confira o cabo e o adaptador.",
                  "- **Saída USB desconectada:** o app espera a interface voltar. Confira o cabo.",
                  "- **Permissão da saída USB negada:** tire e ponha o cabo e autorize, como em [A primeira vez com a interface](#backing-primeira).",
@@ -850,7 +850,7 @@ SECTIONS = [
                  "- **Esse arquivo não serve:** use OGG, MP3 ou WAV.",
                  "- **O som cai de tempos em tempos:** confira [Para tocar sem falhas](#ajustes-avancado)."],
                 ["- **The USB output didn't respond:** unplug the cable and plug it back in.",
-                 "- **The interface doesn't show up in the app, even with the cable plugged in:** turn the interface off and on, then unplug the cable and plug it back in, flipping the connector. Some USB-C ports stay powered without exchanging data until the interface is reconnected. The app can't notice this by itself, because Android only lists the interface after it answers.",
+                 "- **The interface doesn't show up in the app, even with the cable plugged in:** turn the interface off and on, then unplug the cable and plug it back in, flipping the connector. Some USB-C ports stay powered without exchanging data until the interface is reconnected. On some devices the app notices it and says so on the stage, with **A USB cable is plugged in, but the interface doesn't answer**. On the others, Android only lists the interface after it answers, and the app has no way to know.",
                  "- **No USB output found:** the sound went to the device's output. Check the cable and adapter.",
                  "- **USB output disconnected:** the app waits for the interface to come back. Check the cable.",
                  "- **USB output permission denied:** unplug and plug the cable and allow it, as in [The first time with the interface](#backing-primeira).",

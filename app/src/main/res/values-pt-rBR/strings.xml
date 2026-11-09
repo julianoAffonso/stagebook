@@ -563,6 +563,7 @@
     <string name="player_usb_muted">Volume da saída USB em zero</string>
     <string name="player_usb_no_android">%1$s não aparece como saída de som neste aparelho. Desligue Tocar pela interface através do Android ou use outra interface.</string>
     <string name="player_usb_denied">Permissão da saída USB negada</string>
+    <string name="player_usb_no_answer">O cabo USB está ligado, mas a interface não responde. Desligue e ligue a interface, ou reconecte o cabo USB.</string>
     <string name="player_usb_lost">Saída USB desconectada. A reprodução continua quando a interface for reconectada.</string>
     <string name="player_device_out">Saída USB não encontrada. Tocando na saída do aparelho.</string>
     <string name="player_device_failed">A saída do aparelho não abriu</string>

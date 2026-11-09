@@ -28,6 +28,7 @@ import androidx.core.content.IntentCompat;
 
 import br.app.stagebook.MainActivity;
 import br.app.stagebook.R;
+import br.app.stagebook.domain.CableCheck;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -160,9 +161,32 @@ public class PlayerService extends Service {
                 UsbDevice d = UsbLink.find(um);
                 if (d != null && (viaAndroid || um.hasPermission(d))) connectUsb();
             }
+            checkCable();
             main.postDelayed(this, WATCHDOG_MS);
         }
     };
+
+    // A cable that is plugged in but whose interface never enumerates (TCL and Chuwi, 07/11): on the device's own output
+    // (no USB interface in use), the Type-C port says a host partner is attached and Android lists no USB device. Said
+    // once the watchdog agrees twice, and taken back when the partner goes away. Costs a few small file reads every 5 s,
+    // and only on the device's output with the player on.
+    int cableHits;
+    boolean cableWarned;
+
+    void checkCable() {
+        if (!deviceOut || androidUsb != null || sleeping) { cableHits = 0; cableWarned = false; return; }
+        CableCheck.Port port = CableCheck.port();
+        if (port == CableCheck.Port.UNKNOWN) return;
+        cableHits = CableCheck.hits(cableHits, port, um.getDeviceList().size());
+        boolean warn = CableCheck.warn(cableHits);
+        if (warn && !cableWarned) {
+            cableWarned = true;
+            setStatus(getString(R.string.player_usb_no_answer));
+        } else if (!warn && cableWarned) {
+            cableWarned = false;
+            setStatus(getString(R.string.player_device_out));
+        }
+    }
 
     // The 1st connection after plugging in or powering the desk back on sometimes comes with the input silent: without
     // its clock, a hiccup every ~70 s. Reconnecting fixes it (seen on 19/10/2026). Checked FB_WAIT_MS after each
@@ -351,6 +375,8 @@ public class PlayerService extends Service {
         connecting = false;
         if (!ok) { setStatus(getString(R.string.player_device_failed)); return; }
         deviceOut = true;
+        cableHits = 0;
+        cableWarned = false;
         outputKey = "device";
         outputName = "";
         outputCount = 2;
