@@ -117,6 +117,9 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
      */
     fun installWithSession(apk: File): Boolean {
         val installer = context.packageManager.packageInstaller
+        // sessions left waiting by an earlier try (or by a version whose answer never arrived) hold the APK: let go first
+        installer.mySessions.filter { it.appPackageName == context.packageName }
+            .forEach { runCatching { installer.abandonSession(it.sessionId) } }
         var id = -1
         return try {
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {

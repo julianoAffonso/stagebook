@@ -54,9 +54,13 @@ class InstallResultReceiver : BroadcastReceiver() {
     }
 
     internal companion object {
-        /** The PendingIntent the system fires with the result: mutable, because the installer adds its extras. */
+        /**
+         * The PendingIntent the system fires with the result: mutable, because the installer adds its extras. Addressed
+         * to this receiver by name: it has no intent filter, so an action alone reached nothing and Android's "install
+         * this update?" never got to the app (the session waited forever, 09/11).
+         */
         fun pending(context: Context, sessionId: Int): PendingIntent = PendingIntent.getBroadcast(
-            context, sessionId, Intent(InstallResults.ACTION).setPackage(context.packageName),
+            context, sessionId, Intent(context, InstallResultReceiver::class.java).setAction(InstallResults.ACTION),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
         )
     }
