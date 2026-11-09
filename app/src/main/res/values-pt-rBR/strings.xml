@@ -196,7 +196,6 @@
     <string name="settings_sections_help">Linhas como [Refrão], Verso 2, Ponte, Intro ou Solo viram títulos em destaque no palco.</string>
     <string name="settings_section_color">Cor do título da seção</string>
     <string name="stage_track_usb_waiting">Esperando a interface</string>
-    <string name="stage_track_usb_away">Interface fora. Toque para continuar de onde parou.</string>
     <string name="stage_play">Tocar o backing track</string>
     <string name="stage_pause">Pausar o backing track</string>
     <string name="stage_track_pick">Escolher o backing track desta música</string>

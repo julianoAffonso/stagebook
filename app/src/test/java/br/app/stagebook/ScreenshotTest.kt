@@ -1289,12 +1289,12 @@ class ScreenshotTest {
 
     // the USB interface away mid-song (user, 09/11): the track button shows it instead of Stop
     @Test fun stagePlayerUsbAwayTablet() = shoot("tablet_11_player_usb_fora") {
-        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, usbAway = true)
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true, usbAway = true)
     }
 
     @Test @Config(qualifiers = PHONE)
     fun stagePlayerUsbAwayPhone() = shoot("celular_11_player_usb_fora") {
-        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, usbAway = true)
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, playing = true, usbAway = true)
     }
 
     // ---- journey: linking a track to a song (phone) ----

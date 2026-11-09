@@ -1210,7 +1210,7 @@ fun StageScreen(
                     hasTrack = song.track.isNotEmpty() || playing,
                     playing = playing,
                     away = usbAway,
-                    awayColor = chordLook.color,
+                    awayColor = MaterialTheme.colorScheme.error,
                     stops = look.trackStops,
                     fg = fg,
                     onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
@@ -1719,20 +1719,20 @@ private fun TrackButton(
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,
         ) {
-            // the interface away mid-song (user, 09/11): one sign for both ways back. Waiting it pulses (it carries on by
-            // itself); after the wait it stands still (a tap carries on where it was). Only animates while waiting
-            val pulse = if (away && playing) {
+            // the interface away mid-song (user, 09/11): the USB unplugged icon blinks until it's back (the song carries on
+            // by itself) or the wait ends (the song stops). Only animates while it waits
+            val pulse = if (away) {
                 val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "usbAway")
                 t.animateFloat(0.35f, 0.85f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(700), androidx.compose.animation.core.RepeatMode.Reverse), label = "pulse").value
             } else 0.85f
             Icon(
                 // playing: stop (back to the start, the default) or pause, as chosen in Settings → Player
                 when { !hasTrack -> AppIcons.QueueMusic; away -> AppIcons.UsbOff; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
-                stringResource(when { !hasTrack -> R.string.stage_track_pick; away && playing -> R.string.stage_track_usb_waiting; away -> R.string.stage_track_usb_away; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
-                // waiting it blinks in the chords' yellow, translucent (user, 09/11); after the wait, the usual color
+                stringResource(when { !hasTrack -> R.string.stage_track_pick; away -> R.string.stage_track_usb_waiting; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
+                // waiting it blinks in a translucent red (user, 09/11: the chords' yellow looked like a chord)
                 tint = when {
                     !hasTrack -> fg.copy(alpha = 0.5f)
-                    away && playing && awayColor != Color.Unspecified -> awayColor.copy(alpha = pulse)
+                    away && awayColor != Color.Unspecified -> awayColor.copy(alpha = pulse)
                     away -> fg.copy(alpha = pulse)
                     else -> fg.copy(alpha = 0.85f)
                 },

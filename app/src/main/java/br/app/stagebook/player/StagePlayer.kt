@@ -313,7 +313,7 @@ class StagePlayer @Inject constructor(
             startIfConnected()
         } else if (_ui.value.playing) {
             // the output dropped while playing: the engine holds the position and the service reconnects by itself
-            // within 5 s. A cable that doesn't come back ends the wait (OutputWait): the button shows Play again
+            // within 5 s. A cable that doesn't come back within the minute stops the song (OutputWait): Play again
             _ui.update { it.copy(playing = false, waiting = true, away = true) }
             dropWait?.cancel()
             dropWait = scope.launch {
@@ -325,7 +325,7 @@ class StagePlayer @Inject constructor(
                 while (_ui.value.waiting) {
                     val waited = android.os.SystemClock.elapsedRealtime() - t0
                     val plugged = um != null && UsbLink.find(um) != null
-                    if (wait.givesUp(waited, PlayerService.connected, plugged)) { pause(); break }
+                    if (wait.givesUp(waited, PlayerService.connected, plugged)) { stop(); break }
                     if (!wait.keepWaiting(waited, PlayerService.connected, plugged)) break
                     delay(500)
                 }

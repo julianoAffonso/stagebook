@@ -37,11 +37,6 @@ class StageTrackUsbAwayTest {
         compose.onNodeWithContentDescription(res.getString(R.string.stage_stop)).assertDoesNotExist()
     }
 
-    @Test fun `after the wait the same sign says a tap carries on`() {
-        show(playing = false, away = true)
-        compose.onNodeWithContentDescription(res.getString(R.string.stage_track_usb_away)).assertExists()
-    }
-
     @Test fun `with the interface back the button is the usual one`() {
         show(playing = true, away = false)
         compose.onNodeWithContentDescription(res.getString(R.string.stage_stop)).assertExists()
