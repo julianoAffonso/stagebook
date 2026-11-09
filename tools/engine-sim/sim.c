@@ -104,6 +104,8 @@ static double clock_ratio = 1.0002;    // desk clock slightly fast (the feedback
 static double in_jitter = 0;               // each input URB comes back up to this many seconds early or late: a host whose timing is noisy
 static double in_spike = 0;                // and every in_spike_n-th input URB comes this late (a busy moment of the host)
 static long in_spike_n = 0, in_urb_count = 0;
+static int in_loss_boundary = 0;           // packets lost at the start of every input URB (a host controller that loses a poll or two per boundary)
+static double in_long_dies_s = 0, in_t0 = 0;   // input URBs longer than 16 packets stop coming back this long after the first input URB (the S26)
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
 static long out_urbs = 0;
@@ -145,11 +147,11 @@ static void complete(struct usbdevfs_urb *u, int st) {
         if (u->endpoint & 0x80) {
             in_acc += 48000.0 * clock_ratio / 8000;
             int nf = (int)in_acc; in_acc -= nf;
-            u->iso_frame_desc[k].actual_length = st ? 0 : nf * IN_FB;
+            u->iso_frame_desc[k].actual_length = st || k < in_loss_boundary ? 0 : nf * IN_FB;
         } else {
             u->iso_frame_desc[k].actual_length = u->iso_frame_desc[k].length;
         }
-        u->iso_frame_desc[k].status = st ? 1 : 0;
+        u->iso_frame_desc[k].status = st || ((u->endpoint & 0x80) && k < in_loss_boundary) ? 1 : 0;
         u->actual_length += u->iso_frame_desc[k].actual_length;
     }
     if (!(u->endpoint & 0x80) && !st) capture_out(u);
@@ -194,6 +196,8 @@ int fake_ioctl(int fd, unsigned long req, ...) {
         else if (nq == QMAX) { errno = ENOMEM; r = -1; }
         else {
             double t = now(), *line = (u->endpoint & 0x80) ? &in_due : &out_due;
+            if ((u->endpoint & 0x80) && in_t0 == 0) in_t0 = t;
+            if ((u->endpoint & 0x80) && in_long_dies_s > 0 && u->number_of_packets > 16 && t > in_t0 + in_long_dies_s) in_dead_from = 1e-9;
             if (!(u->endpoint & 0x80)) {
                 out_urbs++;
                 // the desk plays each URB at its scheduled time, reaped or not: if the last one already passed, it ran
@@ -230,7 +234,7 @@ static void sim_unplug(void) {   // cable unplugged: the kernel returns everythi
 static int sim_kernel_urbs(void) { pthread_mutex_lock(&dev_mx); int n = nq; pthread_mutex_unlock(&dev_mx); return n; }
 static void sim_close_conn(void) {   // UsbLink.close(): closing the fd returns what's left
     pthread_mutex_lock(&dev_mx);
-    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0;
+    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0; in_t0 = 0;
     pthread_mutex_unlock(&dev_mx);
 }
 
@@ -692,6 +696,44 @@ int main(int argc, char **argv) {
     check(!g_fb_bad && after - before > 250, "a clean clock is plan A and a resume doesn't wait again", buf);
     FN(stop)(env, NULL);
     sim_close_conn();
+#endif
+
+#ifdef ENGINE_HAS_PROBE
+    // 7e) the size of the input URBs is chosen at open, by measuring (user, 08/11): short ones where the host is good (the S26
+    // loses its input with long ones), long ones where the host loses a poll or two at every boundary (the budget tablet)
+    printf("[7e] the input URBs are short, and long only where the host loses packets\n");
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    wait_probe();
+    snprintf(buf, sizeof buf, "input packets per URB %d, plan A=%d", g_in_pkts, !g_fb_bad);
+    check(g_in_pkts == 16 && !g_fb_bad, "a clean host stays on short input URBs", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+
+    pthread_mutex_lock(&dev_mx); in_loss_boundary = 1; pthread_mutex_unlock(&dev_mx);   // one packet lost per URB boundary
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    wait_probe();
+    snprintf(buf, sizeof buf, "input packets per URB %d, decided=%d", g_in_pkts, g_fb_decided);
+    check(g_in_pkts == 128 && g_fb_decided, "a host that loses a packet per boundary goes to long input URBs and judges again", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); in_loss_boundary = 0; pthread_mutex_unlock(&dev_mx);
+
+    pthread_mutex_lock(&dev_mx); in_long_dies_s = 3.8; pthread_mutex_unlock(&dev_mx);   // like the S26: long input URBs stop coming back
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    wait_probe();
+    sleep_s(8.0);
+    long p_s26 = FN(position)(env, NULL);
+    snprintf(buf, sizeof buf, "input packets per URB %d, plan A after 8 s=%d, position %ld ms", g_in_pkts, !g_fb_bad, p_s26);
+    check(g_in_pkts == 16 && !g_fb_bad && p_s26 > 67000, "a host whose input dies with long URBs never gets them: plan A the whole time", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); in_long_dies_s = 0; pthread_mutex_unlock(&dev_mx);
 #endif
 
     // 8) normalization

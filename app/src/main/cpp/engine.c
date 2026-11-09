@@ -56,10 +56,17 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 // halved that cost; but on one tablet's host controller 16-packet URBs reached the interface with hiss under the
 // music and thumps, and 8 came out clean (07/11/2026). The queue stays 32 ms.
 #define PKTS_PER_URB 8
-// Input URBs are long: on some host controllers every URB boundary on the input loses a poll or two (the frames of
-// those microframes are gone: 8 packets lost 40% of them, 16 lost 9%, 64 lost 2%), so the fewer boundaries the better;
-// the input is only a clock, so its latency doesn't matter.
-#define IN_PKTS_PER_URB 128
+// The size of the input URBs is chosen when the stream opens (user, 08/11). On some host controllers every URB boundary
+// on the input loses a poll or two (the frames of those microframes are gone: 8 packets lost 40% of them, 16 lost 9%,
+// 64 lost 2%, 128 about 0.5%), so there the fewer boundaries the better, and the input is only a clock, so its latency
+// doesn't matter: that is the budget tablet. On the S26 long ones are the problem: with 128 packets its input went
+// quiet about 4 s after opening, with 16 it never did. So it opens with short ones, and the clock probe, which counts
+// the packets lost, goes to the long ones (and probes again) when more than FB_LOSS_MAX of them are lost.
+#define IN_PKTS_SHORT 16
+#define IN_PKTS_LONG 128
+#define IN_PKTS_PER_URB IN_PKTS_LONG   // what the buffers are made for
+#define FB_LOSS_MAX 0.03
+static int g_in_pkts = IN_PKTS_SHORT;   // what is submitted now
 #define IN_NURBS 8
 #define TAIL_MS 500                   // silence before releasing the endpoint
 #define RING_FRAMES BASE_RATE          // 1 s of slack between decoder and USB (it was 250 ms: with the QR camera,
@@ -336,7 +343,7 @@ static long g_fb_win_in = 0;
 static volatile int g_probing = 0;    // the clock is being judged: the output is silent
 static int g_fb_decided = 0, g_fb_open_bad = 0, g_fb_off_n = 0, g_pr_n = 0;
 static double g_fb_tol_hz = 0, g_pr_hz[FB_PROBE_SUBS], g_pr_time = 0, g_probe_start = 0;
-static long g_pr_frames = 0;
+static long g_pr_frames = 0, g_pr_lost = 0, g_pr_pkts = 0;   // frames, and packets lost and seen, in this probe
 // With an input clock that exists but can't be followed (g_fb_bad), the output is paced against the system's monotonic
 // clock instead of the bus: on some hosts the microframe clock runs off nominal (~900 ppm slow seen on one tablet) and
 // the interface, consuming at its own crystal, runs its small queue dry every few seconds. A PI loop on the frames sent
@@ -629,6 +636,15 @@ static int fb_probe(double t, int rate) {
     for (int i = 0; i < g_pr_n; i++) v += (g_pr_hz[i] - m) * (g_pr_hz[i] - m);
     double sd = sqrt(v / (g_pr_n - 1));
     double sd_win = sd * FB_PROBE_SUB_S;
+    double loss = g_pr_pkts > 0 ? (double)g_pr_lost / g_pr_pkts : 0;
+    if (g_in_pkts == IN_PKTS_SHORT && loss > FB_LOSS_MAX) {
+        // this host loses a poll at every URB boundary: the long ones, and the probe starts over (still silent)
+        g_in_pkts = IN_PKTS_LONG;
+        LOGI("usb: input loses %.1f%% of its packets with short transfers: long ones", 100 * loss);
+        g_pr_n = 0; g_pr_frames = 0; g_pr_time = 0; g_pr_lost = 0; g_pr_pkts = 0; g_fb_win = 0; g_fb_win_in = 0;
+        g_probe_start = t;
+        return 0;
+    }
     double nominal = rate * FB_MAX_OFF;
     double noise = 4 * sd_win;   // what a one-second reading can be off by on this host
     g_fb_decided = 1; g_probing = 0;
@@ -733,8 +749,8 @@ static void *usb_main(void *arg) {
             in_urbs[u]->buffer = calloc(1, g_in_maxpkt * IN_PKTS_PER_URB);
             struct usbdevfs_urb *iu = in_urbs[u];
             iu->type = USBDEVFS_URB_TYPE_ISO; iu->endpoint = g_in_ep; iu->flags = USBDEVFS_URB_ISO_ASAP;
-            iu->number_of_packets = IN_PKTS_PER_URB; iu->buffer_length = g_in_maxpkt * IN_PKTS_PER_URB;
-            for (int k = 0; k < IN_PKTS_PER_URB; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
+            iu->number_of_packets = g_in_pkts; iu->buffer_length = g_in_maxpkt * g_in_pkts;
+            for (int k = 0; k < g_in_pkts; k++) iu->iso_frame_desc[k].length = g_in_maxpkt;
             n_in = u + 1;
             if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) {
                 LOGI("feedback off: the input refused a URB (%s)", strerror(errno));
@@ -787,6 +803,7 @@ static void *usb_main(void *arg) {
             g_in_last = now_s();
             for (int k = 0; k < done->number_of_packets; k++) {
                 int n = done->iso_frame_desc[k].status ? 0 : (int)done->iso_frame_desc[k].actual_length / g_in_fb;
+                if (!g_fb_decided) { g_pr_pkts++; if (n == 0) g_pr_lost++; }
                 // a packet lost on the way still went by on the desk's clock: it counts for what it would have brought
                 if (n == 0) { lost_acc += (double)g_out_rate / pkts_per_sec; n = (int)lost_acc; lost_acc -= n; st_in_lost++; }
                 g_tot_in += n; st_in_frames += n; g_fb_win_in += n;
@@ -825,7 +842,8 @@ static void *usb_main(void *arg) {
             // An input that can't be followed is only read again to probe it (FB_PROBE_S): on the host that loses its
             // packets, reading it at all costs the output (hiss and thumps heard with the input running, 07/11/2026)
             if (tail || g_in_ep < 0 || (g_fb_bad && !g_fb_probing && !DIAG)) { in_idle++; continue; }
-            int npk = done->number_of_packets;
+            int npk = g_in_pkts;   // the size in force now: a switch takes effect as the URBs come back
+            done->number_of_packets = npk; done->buffer_length = g_in_maxpkt * npk;
             done->status = 0; done->actual_length = 0; done->start_frame = 0; done->error_count = 0;
             for (int k = 0; k < npk; k++) { done->iso_frame_desc[k].length = g_in_maxpkt; done->iso_frame_desc[k].actual_length = 0; done->iso_frame_desc[k].status = 0; }
             if (ioctl(g_fd, USBDEVFS_SUBMITURB, done) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; }
@@ -853,7 +871,8 @@ static void *usb_main(void *arg) {
                 for (int u = 0; u < n_in; u++) {
                     struct usbdevfs_urb *iu = in_urbs[u];
                     iu->status = 0; iu->actual_length = 0; iu->start_frame = 0; iu->error_count = 0;
-                    for (int k = 0; k < IN_PKTS_PER_URB; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
+                    iu->number_of_packets = g_in_pkts; iu->buffer_length = g_in_maxpkt * g_in_pkts;
+                    for (int k = 0; k < g_in_pkts; k++) { iu->iso_frame_desc[k].length = g_in_maxpkt; iu->iso_frame_desc[k].actual_length = 0; iu->iso_frame_desc[k].status = 0; }
                     if (ioctl(g_fd, USBDEVFS_SUBMITURB, iu) < 0) { LOGI("feedback dropped: %s", strerror(errno)); g_in_ep = -1; break; }
                     inflight++;
                 }
@@ -1041,6 +1060,7 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
     g_tot_in = g_tot_out = g_fb_off = 0; g_fb_locked = 0; g_fb_mode = 0; g_fb_bad = 0; g_fb_good = 0; g_fb_probing = 0; g_fb_probe_t = 0;
     g_fb_decided = g_in_ep < 0; g_fb_open_bad = 0; g_fb_off_n = 0; g_pr_n = 0; g_pr_frames = 0; g_pr_time = 0; g_fb_win = 0; g_fb_win_in = 0;
+    g_in_pkts = IN_PKTS_SHORT; g_pr_lost = g_pr_pkts = 0;
     g_fb_tol_hz = OUT_RATE * FB_MAX_OFF; g_probe_start = now_s(); g_probing = g_in_ep >= 0;
     g_pace_t0 = g_pace_err = g_pace_off = g_pace_ratio = g_pace_int = g_pace_last = g_pace_lock_t = 0; g_pace_locked = 0; g_pace_slow = 0; g_in_last = 0;
     g_fd = fd; g_ep = ep; g_maxpkt = maxpkt; g_dev_ch = ch; g_subslot = subslot;
