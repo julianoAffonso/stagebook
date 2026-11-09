@@ -102,6 +102,8 @@ static int disconnected = 0, fail_next_reap = 0;
 static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
 static double clock_ratio = 1.0002;    // desk clock slightly fast (the feedback corrects it)
 static double in_jitter = 0;               // each input URB comes back up to this many seconds early or late: a host whose timing is noisy
+static double in_spike = 0;                // and every in_spike_n-th input URB comes this late (a busy moment of the host)
+static long in_spike_n = 0, in_urb_count = 0;
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
 static long out_urbs = 0;
@@ -203,7 +205,7 @@ int fake_ioctl(int fd, unsigned long req, ...) {
             }
             if (*line < t) *line = t;
             *line += u->number_of_packets / 8000.0;   // a URB takes its own packets' worth of microframes (the input's are longer)
-            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line + ((u->endpoint & 0x80) && in_jitter > 0 ? (drand48() * 2 - 1) * in_jitter : 0), 0};
+            q[nq++] = (qent){u, (u->endpoint & 0x80) && in_dead_from > 0 && t > in_dead_from ? 1e18 : *line + ((u->endpoint & 0x80) && in_jitter > 0 ? (drand48() * 2 - 1) * in_jitter : 0) + ((u->endpoint & 0x80) && in_spike_n > 0 && ++in_urb_count % in_spike_n == 0 ? in_spike : 0), 0};
             pthread_cond_broadcast(&dev_cv);
         }
     } else if (req == USBDEVFS_REAPURB || req == USBDEVFS_REAPURBNDELAY) {
@@ -627,7 +629,9 @@ int main(int argc, char **argv) {
     // the verdict; a host whose timing is only noisy keeps plan A for the whole song; a clock really off goes to plan B
     // before the first note, and the plan never changes in the middle of a song
     printf("[7d] the input clock is judged at open, before any sound\n");
-    pthread_mutex_lock(&dev_mx); in_jitter = 0.006; pthread_mutex_unlock(&dev_mx);   // noise of +-6 ms on every URB, clock fine
+    // a host whose timing has busy moments: a little noise on every URB and, now and then, one URB 4 ms late (a one-second
+    // reading off by 0.4%, the OnePlus), with the clock itself right
+    pthread_mutex_lock(&dev_mx); in_jitter = 0.0003; in_spike = 0.004; in_spike_n = 400; in_urb_count = 0; pthread_mutex_unlock(&dev_mx);
     E_START_FAST();
     FN(seek)(env, NULL, 60000);
     FN(play)(env, NULL);
@@ -641,10 +645,10 @@ int main(int argc, char **argv) {
     sleep_s(30.0);
     long p_noisy = FN(position)(env, NULL);
     snprintf(buf, sizeof buf, "plan A at open=%d, plan A after 30 s=%d, tolerance %.2f%%, position %ld ms", noisy_plan_a, !g_fb_bad, tol_pct, p_noisy);
-    check(noisy_plan_a && !g_fb_bad && tol_pct > 0.3 && p_noisy > 89000, "noise alone keeps plan A for the whole song, with a tolerance that fits it", buf);
+    check(noisy_plan_a && !g_fb_bad && p_noisy > 89000, "busy moments alone keep plan A for the whole song", buf);
     FN(stop)(env, NULL);
     sim_close_conn();
-    pthread_mutex_lock(&dev_mx); in_jitter = 0; pthread_mutex_unlock(&dev_mx);
+    pthread_mutex_lock(&dev_mx); in_jitter = 0; in_spike_n = 0; pthread_mutex_unlock(&dev_mx);
 
     pthread_mutex_lock(&dev_mx); clock_ratio = 1.012; pthread_mutex_unlock(&dev_mx);   // a clock 1.2% fast
     E_START_FAST();
@@ -658,7 +662,20 @@ int main(int argc, char **argv) {
     check(off_at_open && p_off > 62500 && p_off < 63500, "a clock really off goes to plan B before the first note and holds the pace", buf);
     FN(stop)(env, NULL);
     sim_close_conn();
-    pthread_mutex_lock(&dev_mx); clock_ratio = 1.0002; pthread_mutex_unlock(&dev_mx);
+
+    // the worst case, seen on the budget tablet: the clock is off (-0.6%) AND the readings are noisy: the noise must not
+    // buy room for the offset (it did, and the output ran 6 s on a bad clock before leaving plan A)
+    pthread_mutex_lock(&dev_mx); clock_ratio = 0.994; in_jitter = 0.006; pthread_mutex_unlock(&dev_mx);
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    wait_probe();
+    int worst_off = g_fb_bad && g_fb_open_bad;
+    snprintf(buf, sizeof buf, "off at open=%d", worst_off);
+    check(worst_off, "an offset clock with noisy readings goes to plan B at open, not 6 s into the song", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    pthread_mutex_lock(&dev_mx); clock_ratio = 1.0002; in_jitter = 0; pthread_mutex_unlock(&dev_mx);
 
     // a clean host: nothing in the way, plan A, and a pause and a resume with the stream open are instant
     E_START();

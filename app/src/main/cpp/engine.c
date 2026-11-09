@@ -332,7 +332,7 @@ static long g_fb_win_in = 0;
 #define FB_PROBE_MAX_S 3.0            // the output is held at most this long waiting for the input
 #define FB_LEAVE_OFF 0.01
 #define FB_LEAVE_N 3
-#define FB_TOL_MAX 0.01
+#define FB_NOISE_MAX 0.006            // a host whose one-second reading can be off by more than this isn't a clock to follow
 static volatile int g_probing = 0;    // the clock is being judged: the output is silent
 static int g_fb_decided = 0, g_fb_open_bad = 0, g_fb_off_n = 0, g_pr_n = 0;
 static double g_fb_tol_hz = 0, g_pr_hz[FB_PROBE_SUBS], g_pr_time = 0, g_probe_start = 0;
@@ -614,8 +614,8 @@ static int reap_wait(struct usbdevfs_urb **out) {
 // ---- thread USB ----
 // An input URB came back during the probe. Readings of FB_PROBE_SUB_S; after FB_PROBE_SUBS the clock is judged. Returns
 // 1 when it is off (plan B for this stream). The timing noise of a reading is the same in absolute terms whatever its
-// length, so its effect on the rate shrinks with the window: the spread of the whole probe's mean is the spread of a
-// reading times SUB/total, and of a one-second window, times SUB.
+// length, so its effect on the rate shrinks with the window: the spread of a one-second window is the spread of a
+// reading times SUB.
 static int fb_probe(double t, int rate) {
     if (g_fb_win == 0) { g_fb_win = t; g_fb_win_in = 0; return 0; }
     double dt = t - g_fb_win;
@@ -628,15 +628,19 @@ static int fb_probe(double t, int rate) {
     m /= g_pr_n;
     for (int i = 0; i < g_pr_n; i++) v += (g_pr_hz[i] - m) * (g_pr_hz[i] - m);
     double sd = sqrt(v / (g_pr_n - 1));
-    double sd_mean = sd * FB_PROBE_SUB_S / g_pr_time, sd_win = sd * FB_PROBE_SUB_S;
+    double sd_win = sd * FB_PROBE_SUB_S;
     double nominal = rate * FB_MAX_OFF;
+    double noise = 4 * sd_win;   // what a one-second reading can be off by on this host
     g_fb_decided = 1; g_probing = 0;
-    if (fabs(mean - rate) > fmax(nominal, 3 * sd_mean)) {
-        LOGI("usb: input clock off at open (%.0f Hz), keeping our own pace", mean);
+    // off: the mean is away from the nominal rate (the noise gives no room: a clock that is off AND noisy is the worst case,
+    // seen on the tablet whose mean was -0.6% with readings 5 times noisier than the others), or the readings are too
+    // noisy to be followed at all
+    if (fabs(mean - rate) > nominal || noise > rate * FB_NOISE_MAX) {
+        LOGI("usb: input clock off at open (%.0f Hz, noise %.2f%%), keeping our own pace", mean, 100 * noise / rate);
         return 1;
     }
-    g_fb_tol_hz = fmin(fmax(nominal, 4 * sd_win), rate * FB_TOL_MAX);
-    LOGI("usb: input clock on at open (%.0f Hz, tolerance %.2f%%)", mean, 100 * g_fb_tol_hz / rate);
+    g_fb_tol_hz = fmax(nominal, noise);
+    LOGI("usb: input clock on at open (%.0f Hz, noise %.2f%%)", mean, 100 * noise / rate);
     return 0;
 }
 
