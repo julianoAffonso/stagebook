@@ -183,6 +183,8 @@ object AppIcons {
             "M10.8,16L16.4,5.6L18,6.5L12.4,16.9z",
         )
     }
+    // Material "usb_off": the track button while the USB interface is away mid-song
+    val UsbOff by lazy { icon("usb_off", "M15,8h4v4h-1v2c0,0.34 -0.08,0.66 -0.22,0.94L16,13.17V12h-1V8zM11,7.17l2,2V6h2l-3,-4l-3,4h2v1.17zM13,16v2.28c0.6,0.34 1,0.98 1,1.72c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2c0,-0.74 0.4,-1.37 1,-1.72V16H8c-1.11,0 -2,-0.89 -2,-2v-2.28C5.4,11.38 5,10.74 5,10c0,-0.59 0.26,-1.13 0.68,-1.49L1.39,4.22l1.41,-1.41l18.38,18.38l-1.41,1.41L13.17,16H13zM11,14v-0.17l-2.03,-2.03c-0.2,0.07 -0.4,0.12 -0.62,0.16V14H11z") }
     val Stop by lazy { icon("stop", "M8,6h8c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H8c-1.1,0 -2,-0.9 -2,-2V8c0,-1.1 0.9,-2 2,-2z") }
     // two down arrows: stage auto-scroll
     val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // thick stroke (request from 29/10)

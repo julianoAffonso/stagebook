@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.stage
 
+import androidx.compose.animation.core.animateFloat
 import br.app.stagebook.ui.components.AppMenu
 import androidx.compose.foundation.clickable
 import br.app.stagebook.domain.forSong
@@ -271,6 +272,7 @@ fun StageRoute(
             onSaveShape = viewModel::saveShape,
             note = playerNote,
             playing = playerUi.playing || playerUi.waiting,
+            usbAway = playerUi.away,
             onTogglePlay = ::onPlay,
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
             onRemoveTrack = viewModel::removeTrack,
@@ -342,6 +344,7 @@ fun StageScreen(
     onTranspose: (songId: String, semitones: Int) -> Unit = { _, _ -> },
     onCapo: (songId: String, capo: Int) -> Unit = { _, _ -> },
     playing: Boolean = false,
+    usbAway: Boolean = false,
     onTogglePlay: () -> Unit = {},
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
@@ -1206,6 +1209,7 @@ fun StageScreen(
                 TrackButton(
                     hasTrack = song.track.isNotEmpty() || playing,
                     playing = playing,
+                    away = usbAway,
                     stops = look.trackStops,
                     fg = fg,
                     onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
@@ -1687,6 +1691,7 @@ private fun TrackButton(
     hasTrack: Boolean,
     playing: Boolean,
     stops: Boolean,
+    away: Boolean = false,
     fg: Color,
     onClick: () -> Unit,
     onChange: () -> Unit,
@@ -1712,11 +1717,17 @@ private fun TrackButton(
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,
         ) {
+            // the interface away mid-song (user, 09/11): one sign for both ways back. Waiting it pulses (it carries on by
+            // itself); after the wait it stands still (a tap carries on where it was). Only animates while waiting
+            val pulse = if (away && playing) {
+                val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "usbAway")
+                t.animateFloat(0.35f, 0.85f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(700), androidx.compose.animation.core.RepeatMode.Reverse), label = "pulse").value
+            } else 0.85f
             Icon(
                 // playing: stop (back to the start, the default) or pause, as chosen in Settings → Player
-                when { !hasTrack -> AppIcons.QueueMusic; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
-                stringResource(when { !hasTrack -> R.string.stage_track_pick; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
-                tint = fg.copy(alpha = if (hasTrack) 0.85f else 0.5f),
+                when { !hasTrack -> AppIcons.QueueMusic; away -> AppIcons.UsbOff; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
+                stringResource(when { !hasTrack -> R.string.stage_track_pick; away && playing -> R.string.stage_track_usb_waiting; away -> R.string.stage_track_usb_away; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
+                tint = fg.copy(alpha = if (!hasTrack) 0.5f else if (away) pulse else 0.85f),
             )
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {

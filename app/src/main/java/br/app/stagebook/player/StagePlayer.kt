@@ -46,7 +46,9 @@ import javax.inject.Singleton
  * none).
  */
 @Immutable
-data class PlayerUi(val playing: Boolean = false, val waiting: Boolean = false, val message: String = "")
+// [away]: the USB output dropped mid-song and hasn't come back; the track button shows it (user, 09/11), while waiting
+// (it carries on by itself) and after the wait (a tap carries on where it was)
+data class PlayerUi(val playing: Boolean = false, val waiting: Boolean = false, val message: String = "", val away: Boolean = false)
 
 /**
  * The stage's bridge to the engine. Nothing from the player starts before the first play: not the service, not the
@@ -124,6 +126,7 @@ class StagePlayer @Inject constructor(
     /** Stops and goes back to the start, with the same steps as the end of the song (live, a pause makes no sense). */
     fun stop() {
         pause()
+        _ui.update { it.copy(away = false) }   // stopped on purpose: back to the start, nothing left to carry on
         if (PlayerService.running) scope.launch { engine.withLock { Engine.seek(0) } }
     }
 
@@ -304,13 +307,14 @@ class StagePlayer @Inject constructor(
             repository.updateLook { it.copy(mixer = it.mixer.copy(output = out)) }
         }
         if (PlayerService.connected) {
+            if (_ui.value.away) _ui.update { it.copy(away = false) }   // the interface is back
             // a click asked while the stream was closed starts now, with its count-in, as if it had just been asked
             if (!probing) pendingClick?.let { pendingClick = null; usbClick(it.bpm, it.out, it.skip, it.volume) }
             startIfConnected()
         } else if (_ui.value.playing) {
             // the output dropped while playing: the engine holds the position and the service reconnects by itself
             // within 5 s. A cable that doesn't come back ends the wait (OutputWait): the button shows Play again
-            _ui.update { it.copy(playing = false, waiting = true) }
+            _ui.update { it.copy(playing = false, waiting = true, away = true) }
             dropWait?.cancel()
             dropWait = scope.launch {
                 delay(br.app.stagebook.domain.OutputWait.GIVE_UP_MS)
