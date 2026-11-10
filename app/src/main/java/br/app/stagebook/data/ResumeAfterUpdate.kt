@@ -12,7 +12,8 @@ import br.app.stagebook.domain.ResumePoint
 
 /**
  * Where to open again after the app installs its own update (user, 09/11): saved right before installing, taken once
- * on the next launch if still fresh ([ResumePoint.FRESH_MS]), cleared when the install doesn't happen. [currentRoute]
+ * on the next launch if still fresh ([ResumePoint.FRESH_MS]) and the app was replaced since, cleared when the install
+ * doesn't happen. [currentRoute]
  * follows the navigation in memory.
  */
 object ResumeAfterUpdate {
@@ -30,12 +31,20 @@ object ResumeAfterUpdate {
     /** No update is coming (the person said no, or it failed): the next start is a plain one. */
     fun clear(c: Context) = prefs(c).edit { clear() }
 
-    /** The place to go back to, once: a fresh mark is used up, an old one only cleared. */
+    /**
+     * The place to go back to, once: a fresh mark the update really followed is used up, any other only cleared.
+     * Android's installer screen answers nothing when the person says no there (nor does a confirmation left open), so
+     * the mark alone used to open the next start on the saved screen for 15 minutes (audit 10/11).
+     */
     fun take(c: Context): String? {
-        val where = if (pending(c)) prefs(c).getString("where", null) else null
+        val at = prefs(c).getLong("at", 0)
+        val where = if (pending(c) && ResumePoint.replacedSince(at, updatedAt(c))) prefs(c).getString("where", null) else null
         clear(c)
         return where
     }
+
+    // when Android last installed this package (same clock as the mark)
+    private fun updatedAt(c: Context): Long = runCatching { c.packageManager.getPackageInfo(c.packageName, 0).lastUpdateTime }.getOrDefault(0L)
 
     /** The app is open again: the "tap to go back" notice has done its job. */
     fun opened(c: Context) = c.getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION)

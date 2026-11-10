@@ -15,6 +15,13 @@ class ResumePointTest {
         assertFalse(ResumePoint.fresh(savedAt = 9_000, now = 5_000))   // clock went back: not trusted
     }
 
+    @Test fun `the mark counts only when the app was replaced after it`() {
+        assertTrue(ResumePoint.replacedSince(savedAt = 5_000, updatedAt = 5_000))
+        assertTrue(ResumePoint.replacedSince(savedAt = 5_000, updatedAt = 9_000))
+        assertFalse(ResumePoint.replacedSince(savedAt = 5_000, updatedAt = 4_999))   // the install that was already here
+        assertFalse(ResumePoint.replacedSince(savedAt = 5_000, updatedAt = 0))
+    }
+
     @Test fun `a route is filled with its arguments`() {
         assertEquals("p.SetlistDetail/abc%20d", ResumePoint.fill("p.SetlistDetail/{setId}", mapOf("setId" to "abc d")) { it.replace(" ", "%20") })
         assertEquals("p.Stage?setId=s1&songId=x&start=2",

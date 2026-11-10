@@ -9,14 +9,18 @@ import android.util.Log
 import br.app.stagebook.domain.InstallNotice
 import br.app.stagebook.domain.InstallOutcome
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.onEach
 
 /** Messages about an update being installed, from the installer session to the screen (the receiver has no screen). */
 object InstallResults {
-    private val _notices = MutableSharedFlow<InstallNotice>(extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    val notices: SharedFlow<InstallNotice> = _notices.asSharedFlow()
+    // replay: a screen being recreated when the notice comes (rotation during the copy) has nobody listening for a
+    // moment, and the screen that arrives next still hears it
+    private val _notices = MutableSharedFlow<InstallNotice>(replay = 1, extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Each notice is said once: the screen that takes it keeps the one arriving after from hearing it again. */
+    val notices: Flow<InstallNotice> = _notices.onEach { _notices.resetReplayCache() }
 
     /** A session failed in this launch: the next try uses the system installer screen instead of another session. */
     @Volatile var sessionFailed = false
@@ -38,7 +42,7 @@ object InstallResults {
     }
 
     // as in a fresh launch (tests: this object outlives each of them)
-    internal fun reset() { sessionFailed = false; session = NO_SESSION }
+    internal fun reset() { sessionFailed = false; session = NO_SESSION; _notices.resetReplayCache() }
 
     const val ACTION = "br.app.stagebook.INSTALL_RESULT"
     const val NO_SESSION = 0

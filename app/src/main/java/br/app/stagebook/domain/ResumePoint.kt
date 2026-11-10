@@ -10,6 +10,9 @@ object ResumePoint {
 
     fun fresh(savedAt: Long, now: Long): Boolean = savedAt > 0 && now >= savedAt && now - savedAt <= FRESH_MS
 
+    /** The app was really replaced after the mark: [updatedAt] is when Android last installed this package. */
+    fun replacedSince(savedAt: Long, updatedAt: Long): Boolean = updatedAt >= savedAt
+
     /**
      * A navigation route pattern ("pkg.SetlistDetail/{setId}?x={x}") filled with its arguments, or null when one is
      * missing or null (nothing to go back to safely). [encode] escapes a value for a route.

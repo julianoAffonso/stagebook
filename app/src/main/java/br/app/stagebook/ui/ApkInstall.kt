@@ -10,6 +10,8 @@ import br.app.stagebook.domain.InstallNotice
 import br.app.stagebook.domain.InstallPlan
 import br.app.stagebook.data.InstallResults
 import br.app.stagebook.data.ResumeAfterUpdate
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -33,7 +35,12 @@ suspend fun Context.installApk(updater: AppUpdater, apk: File?, resumeAt: String
                 startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.fromParts("package", packageName, null)))
             InstallPlan.SESSION -> {
                 ResumeAfterUpdate.save(this, resumeAt)
-                if (updater.installWithSession(apk)) { InstallResults.post(InstallNotice.STARTED); return true }
+                // not cut half way: a screen recreated during the copy (rotation) cancels the tap's work, and the session
+                // was committed all the same, with nobody told that the update was going in
+                val started = withContext(NonCancellable) {
+                    updater.installWithSession(apk).also { if (it) InstallResults.post(InstallNotice.STARTED) }
+                }
+                if (started) return true
                 startActivity(updater.installIntent(apk))
             }
             InstallPlan.SCREEN -> {

@@ -12,12 +12,15 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,6 +52,11 @@ class ApkInstallTest {
 
     private fun allowInstalls() = shadowOf(context.packageManager).setCanRequestPackageInstalls(true)
 
+    // the update went in: Android stamps the package with the time it was replaced
+    private fun replaced() {
+        shadowOf(context.packageManager).getInternalMutablePackageInfo(context.packageName).lastUpdateTime = System.currentTimeMillis()
+    }
+
     private fun downloaded() = File(context.cacheDir, "atualizacao/stagebook.apk").apply { parentFile?.mkdirs(); writeBytes(ByteArray(1000)) }
 
     @Test fun `a session that starts marks the place and says the update is going in`() = runBlocking {
@@ -56,6 +64,7 @@ class ApkInstallTest {
         val said = async(start = CoroutineStart.UNDISPATCHED) { InstallResults.notices.first() }
         assertTrue(screen.installApk(updater, downloaded(), where))
         assertEquals(InstallNotice.STARTED, withTimeout(5_000) { said.await() })
+        replaced()
         assertEquals(where, ResumeAfterUpdate.take(context))
     }
 
@@ -64,6 +73,7 @@ class ApkInstallTest {
         val missing = File(context.cacheDir, "atualizacao/stagebook.apk")   // nothing to copy: the session fails
         assertFalse(screen.installApk(updater, missing, where))
         assertEquals(Intent.ACTION_VIEW, shadowOf(screen).nextStartedActivity.action)
+        replaced()
         assertEquals(where, ResumeAfterUpdate.take(context))
     }
 
@@ -72,6 +82,7 @@ class ApkInstallTest {
         allowInstalls()
         assertFalse(screen.installApk(updater, downloaded(), where))
         assertEquals(Intent.ACTION_VIEW, shadowOf(screen).nextStartedActivity.action)
+        replaced()
         assertEquals(where, ResumeAfterUpdate.take(context))
     }
 
@@ -95,5 +106,36 @@ class ApkInstallTest {
         assertTrue(first.await())
         assertEquals(1, copies.get())
         assertTrue(ResumeAfterUpdate.pending(context))   // the tap that did nothing didn't undo the first one's mark
+    }
+
+    // Android's installer screen answers nothing when the person says no there (audit 10/11): the mark stayed for 15
+    // minutes and the next start opened on the saved screen, as if the update had gone in
+    @Test fun `a mark no update followed leaves the next start a plain one`() {
+        ResumeAfterUpdate.save(context, where)   // what a tap on Install leaves before Android's installer screen opens
+        assertNull(ResumeAfterUpdate.take(context))
+    }
+
+    // rotating during the copy cancelled the tap's work after the session was already committed (audit 10/11): the
+    // update went in and nobody said so
+    @Test fun `a screen recreated during the copy still hears that the update is going in`() = runBlocking {
+        allowInstalls()
+        val copying = CountDownLatch(1)
+        val finish = CountDownLatch(1)
+        val apk = object : File(downloaded().path) {
+            override fun length(): Long { copying.countDown(); finish.await(10, TimeUnit.SECONDS); return super.length() }
+        }
+        val tap = launch(Dispatchers.Default) { screen.installApk(updater, apk, where) }
+        withContext(Dispatchers.IO) { assertTrue(copying.await(10, TimeUnit.SECONDS)) }
+        tap.cancel()   // the old screen is gone
+        finish.countDown()
+        tap.join()
+        // the new screen starts listening only now
+        assertEquals(InstallNotice.STARTED, withTimeout(5_000) { InstallResults.notices.first() })
+    }
+
+    @Test fun `a notice already shown is not said again to the next screen`() = runBlocking {
+        InstallResults.post(InstallNotice.STARTED)
+        assertEquals(InstallNotice.STARTED, withTimeout(5_000) { InstallResults.notices.first() })
+        assertNull(withTimeoutOrNull(300) { InstallResults.notices.first() })
     }
 }
