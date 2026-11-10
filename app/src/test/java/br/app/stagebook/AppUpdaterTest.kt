@@ -3,6 +3,7 @@ package br.app.stagebook
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.AppUpdater
 import br.app.stagebook.data.LibraryRepository
+import br.app.stagebook.data.ResumeAfterUpdate
 import br.app.stagebook.ui.settings.SettingsViewModel
 import br.app.stagebook.ui.settings.UpdateState
 import com.sun.net.httpserver.HttpServer
@@ -22,14 +23,17 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /** Settings → Update the app, with a local "Drive" in place of the real one. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -59,6 +63,7 @@ class AppUpdaterTest {
     @After fun stop() {
         server.stop(0)
         Dispatchers.resetMain()
+        br.app.stagebook.data.InstallResults.reset()
     }
 
     /** A /flaky address that answers with each status of [statuses] in turn (the last one repeats); counts the hits. */
@@ -151,4 +156,38 @@ class AppUpdaterTest {
         assertEquals(null, vm.downloadedApk)
     }
 
+    // the mark opens the next start on the saved screen: it only exists while an install is really under way
+    @Test fun `install with nothing downloaded leaves no place to come back to`() = runBlocking {
+        val vm = vm(updater())
+        vm.install(context)
+        assertFalse(ResumeAfterUpdate.pending(context))
+    }
+
+    @Test fun `while Android still has to allow installs, there is no place to come back to`() = runBlocking {
+        shadowOf(context.packageManager).setCanRequestPackageInstalls(false)   // Robolectric keeps it from other tests
+        apk = ByteArray(1000)
+        // what Android would read from the downloaded file: this app, newer
+        shadowOf(context.packageManager).setPackageArchiveInfo(
+            File(context.cacheDir, "atualizacao/stagebook.apk.part").path,
+            android.content.pm.PackageInfo().apply { packageName = context.packageName; longVersionCode = Long.MAX_VALUE },
+        )
+        val vm = vm(updater())
+        vm.downloadUpdate()
+        vm.waitUpdate { it == UpdateState.Ready }
+        val screen = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        vm.install(screen)
+        assertEquals(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, shadowOf(screen).nextStartedActivity.action)
+        assertFalse(ResumeAfterUpdate.pending(context))
+    }
+
+    // copying the whole APK froze the screen on a slow tablet
+    @Test fun `the APK goes into the installer session off the main thread`() = runBlocking {
+        val copiedOnMain = AtomicReference<Boolean>()
+        val file = object : File(context.cacheDir, "update.apk") {
+            override fun length(): Long = super.length().also { copiedOnMain.set(android.os.Looper.getMainLooper().isCurrentThread) }
+        }
+        file.writeBytes(ByteArray(1000))
+        assertTrue(updater().installWithSession(file))
+        assertEquals(false, copiedOnMain.get())
+    }
 }

@@ -131,11 +131,11 @@ class MainActivity : ComponentActivity() {
                         onUpdate = { updateOffer.accept() },
                         onLater = updateOffer::decline,
                         onInstall = {
-                            // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
                             (updateOffer.offer.value as? UpdateOffer.Ready)?.let {
                                 // the screen it was on comes back after the update (user, 09/11)
-                                br.app.stagebook.data.ResumeAfterUpdate.save(this@MainActivity, br.app.stagebook.data.ResumeAfterUpdate.currentRoute ?: br.app.stagebook.data.ResumeAfterUpdate.HOME)
-                                if (installApk(updater, it.apk)) updateOffer.dismiss()
+                                val route = br.app.stagebook.data.ResumeAfterUpdate.currentRoute ?: br.app.stagebook.data.ResumeAfterUpdate.HOME
+                                // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
+                                lifecycleScope.launch { if (installApk(updater, it.apk, route)) updateOffer.dismiss() }
                             }
                         },
                         onClose = updateOffer::dismiss,

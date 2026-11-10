@@ -12,7 +12,8 @@ import br.app.stagebook.domain.ResumePoint
 
 /**
  * Where to open again after the app installs its own update (user, 09/11): saved right before installing, taken once
- * on the next launch if still fresh ([ResumePoint.FRESH_MS]). [currentRoute] follows the navigation in memory.
+ * on the next launch if still fresh ([ResumePoint.FRESH_MS]), cleared when the install doesn't happen. [currentRoute]
+ * follows the navigation in memory.
  */
 object ResumeAfterUpdate {
     @Volatile var currentRoute: String? = null
@@ -26,10 +27,13 @@ object ResumeAfterUpdate {
 
     fun pending(c: Context): Boolean = ResumePoint.fresh(prefs(c).getLong("at", 0), System.currentTimeMillis())
 
+    /** No update is coming (the person said no, or it failed): the next start is a plain one. */
+    fun clear(c: Context) = prefs(c).edit { clear() }
+
     /** The place to go back to, once: a fresh mark is used up, an old one only cleared. */
     fun take(c: Context): String? {
         val where = if (pending(c)) prefs(c).getString("where", null) else null
-        prefs(c).edit { clear() }
+        clear(c)
         return where
     }
 

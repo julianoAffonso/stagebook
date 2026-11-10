@@ -22,12 +22,27 @@ object InstallResults {
     @Volatile var sessionFailed = false
         private set
 
+    /**
+     * The session this launch is waiting on: [NO_SESSION] before it starts one (an answer is then about the last
+     * launch's), [BETWEEN_SESSIONS] while the next one is prepared. Starting a session abandons the older ones, and
+     * their "aborted" answers say nothing about the new one.
+     */
+    @Volatile var session = NO_SESSION
+        internal set
+
+    fun isAbout(sessionId: Int): Boolean = session == NO_SESSION || session == sessionId
+
     fun post(notice: InstallNotice) {
         if (notice == InstallNotice.FAILED) sessionFailed = true
         _notices.tryEmit(notice)
     }
 
+    // as in a fresh launch (tests: this object outlives each of them)
+    internal fun reset() { sessionFailed = false; session = NO_SESSION }
+
     const val ACTION = "br.app.stagebook.INSTALL_RESULT"
+    const val NO_SESSION = 0
+    const val BETWEEN_SESSIONS = -1
 }
 
 /**
@@ -43,14 +58,27 @@ class InstallResultReceiver : BroadcastReceiver() {
                 val confirm = if (android.os.Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
                 else intent.getParcelableExtra(Intent.EXTRA_INTENT)
                 runCatching { confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let(context::startActivity) }
-                    .onFailure { Log.w("stagebook", "couldn't open the install confirmation", it); InstallResults.post(InstallNotice.FAILED) }
+                    .onFailure {
+                        Log.w("stagebook", "couldn't open the install confirmation", it)
+                        InstallResults.post(InstallNotice.FAILED)
+                        noUpdateComing(context, intent)
+                    }
             }
             InstallOutcome.FAILED -> {
                 Log.w("stagebook", "update install failed: status=$status ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}")
                 InstallResults.post(InstallNotice.FAILED)
+                noUpdateComing(context, intent)
             }
-            InstallOutcome.DONE, InstallOutcome.CANCELLED -> Unit
+            InstallOutcome.CANCELLED -> noUpdateComing(context, intent)
+            InstallOutcome.DONE -> Unit
         }
+    }
+
+    // the app keeps running: without this, closing and opening it within minutes opened on the saved screen, as if an
+    // update had just gone in
+    private fun noUpdateComing(context: Context, intent: Intent) {
+        val about = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, InstallResults.NO_SESSION)
+        if (InstallResults.isAbout(about)) ResumeAfterUpdate.clear(context)
     }
 
     internal companion object {

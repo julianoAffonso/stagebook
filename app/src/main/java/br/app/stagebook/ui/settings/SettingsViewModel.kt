@@ -338,10 +338,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** Installs the downloaded APK (session on Android 12+, the system screen otherwise); nothing if not downloaded yet. */
-    fun install(context: android.content.Context): Boolean {
+    fun install(context: android.content.Context): Job = viewModelScope.launch {
         // installed from Settings → About: the app opens there again after the update (user, 09/11)
-        br.app.stagebook.data.ResumeAfterUpdate.save(context, br.app.stagebook.domain.ResumePoint.SETTINGS + SettingsSection.ABOUT.name)
-        return context.installApk(updater, downloaded)
+        context.installApk(updater, downloaded, br.app.stagebook.domain.ResumePoint.SETTINGS + SettingsSection.ABOUT.name)
     }
 
     /** The downloaded APK that passed the checks, or null. */
