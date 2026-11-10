@@ -8,7 +8,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.domain.MetronomeTest
+import br.app.stagebook.data.model.Look
 import br.app.stagebook.ui.settings.MetronomeTestButton
+import br.app.stagebook.ui.settings.SettingsActions
+import br.app.stagebook.ui.settings.SettingsScreen
+import br.app.stagebook.ui.settings.SettingsSection
+import br.app.stagebook.ui.settings.SettingsUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,5 +57,16 @@ class MetronomeTestButtonTest {
         compose.waitForIdle()
         assertEquals(listOf("start", "stop"), log)
         assertFalse(test.playing.value)
+    }
+
+    @Test fun `device output says the order it picks - headphones, Bluetooth, speaker`() {
+        // a Bluetooth speaker near the desk got the click and it looked like the USB (XR18 test, 10/11)
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(SettingsUiState(loading = false, look = Look(metroSound = true, playerMode = true)), SettingsActions(), section = SettingsSection.METRONOME)
+            }
+        }
+        compose.onNodeWithText("Aparelho").assertExists()
+        compose.onNodeWithText("No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.").assertExists()
     }
 }

@@ -951,7 +951,8 @@
     <string name="player_title">Player</string>
     <string name="player_on_alone">Ligado</string>
     <string name="metro_out">Saída do som</string>
-    <string name="metro_out_device">Aparelho (fone ou alto-falante)</string>
+    <string name="metro_out_device">Aparelho</string>
+    <string name="metro_out_device_order">No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.</string>
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
     <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>

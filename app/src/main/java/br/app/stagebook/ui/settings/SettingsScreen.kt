@@ -1565,6 +1565,7 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
                 enabledOf = { !it.device || actions.clickApart },
                 onOpen = actions.onMetronomeMenu,
             )
+            if (chosen.device) Text(stringResource(R.string.metro_out_device_order), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (!actions.clickApart) Text(stringResource(R.string.metro_out_together), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
