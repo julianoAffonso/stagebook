@@ -55,7 +55,7 @@ class ReceivedFileRestoreTest {
         runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
         backup = Backup(context, repo, TrackStore(context))
         incoming = IncomingFiles(context, backup)
-        vm = SettingsViewModel(repo, context, AppUpdater(context), MidiPedal(context, repo, scope), backup, MetronomeSound(context), MidiOut(context, repo, scope))
+        vm = SettingsViewModel(repo, context, AppUpdater(context), MidiPedal(context, repo, scope), backup, MetronomeSound(context), MidiOut(context, repo, scope), br.app.stagebook.player.StagePlayer(context, repo))
     }
 
     @After fun stop() = Dispatchers.resetMain()

@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -101,6 +102,7 @@ class SettingsViewModel @Inject constructor(
     private val backup: br.app.stagebook.data.Backup,
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val midiOut: br.app.stagebook.data.MidiOut,
+    private val player: br.app.stagebook.player.StagePlayer,
 ) : ViewModel() {
     private val _midiOutputs = MutableStateFlow<List<br.app.stagebook.data.MidiOutput>>(emptyList())
     /** The MIDI outputs there are right now (read when the list opens). */
@@ -113,17 +115,34 @@ class SettingsViewModel @Inject constructor(
 
     val clickApart = metronome.keepsApart
 
-    // the Settings test click: the stage's own path (USB output when the player is on, otherwise the device), no count-in
+    // the Settings test click: the stage's own path (ClickPath), no count-in
+    private var testWait: kotlinx.coroutines.Job? = null
     private val clickTest = br.app.stagebook.domain.MetronomeTest(
         start = { bpm ->
             val look = repository.library.value.look
             val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
-            if (look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, look.metroVolume)) metronome.stop()
-            // the USB stream was closed for being idle: opens again and the test click starts when it's ready
-            else if (look.playerMode && br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, 0, look.metroVolume)) metronome.stop()
-            else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, look.metroVolume) }
+            val vol = look.metroVolume
+            val way = br.app.stagebook.domain.ClickPath.choose(
+                look.playerMode, usb,
+                usbNow = { br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, vol) },
+                wake = { br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, 0, vol) },
+                connect = { player.connectForClick() },
+            )
+            when (way) {
+                br.app.stagebook.domain.ClickPath.Way.USB, br.app.stagebook.domain.ClickPath.Way.WAKE -> metronome.stop()
+                // the player turns on for the test: it sounds on the interface once it's ready, on the device if it never is
+                br.app.stagebook.domain.ClickPath.Way.CONNECT -> {
+                    metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff()
+                    testWait = viewModelScope.launch {
+                        val ready = kotlinx.coroutines.withTimeoutOrNull(TEST_USB_WAIT_MS) { player.usbReady.first { it } } != null
+                        if (ready && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, vol)) metronome.stop()
+                        else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, vol) }
+                    }
+                }
+                br.app.stagebook.domain.ClickPath.Way.DEVICE -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, vol) }
+            }
         },
-        stop = { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
+        stop = { testWait?.cancel(); metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
     )
     val clickTesting: StateFlow<Boolean> = clickTest.playing
     fun toggleClickTest() = clickTest.toggle()
@@ -426,3 +445,4 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
+private const val TEST_USB_WAIT_MS = 6_000L   // the interface not ready by then: the test sounds on the device

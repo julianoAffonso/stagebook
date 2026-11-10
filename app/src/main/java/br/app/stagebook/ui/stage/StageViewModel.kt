@@ -103,12 +103,18 @@ class StageViewModel @Inject constructor(
         val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
         val skip = if (look.metroCount) br.app.stagebook.domain.MetronomeClick.COUNT_IN_SKIP else 0L
         val volume = look.metroVolume
-        when {
-            bpm == null -> { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() }
-            look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, skip, volume) -> metronome.stop()
+        if (bpm == null) { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff(); return }
+        val way = br.app.stagebook.domain.ClickPath.choose(
+            look.playerMode, usb,
+            usbNow = { br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, skip, volume) },
+            wake = { br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, skip, volume) },
+            connect = { player.connectForClick() },
+        )
+        when (way) {
+            br.app.stagebook.domain.ClickPath.Way.USB -> metronome.stop()
             // the USB stream was closed for being idle: opens again, and the click starts by itself (count-in included) as
             // soon as it's ready, with the player's "preparing the interface" notice; the device after a while if it never is
-            look.playerMode && br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, skip, volume) -> {
+            br.app.stagebook.domain.ClickPath.Way.WAKE -> {
                 metronome.stop()
                 clickFallback = viewModelScope.launch {
                     kotlinx.coroutines.delay(USB_WAIT_MS)
@@ -120,13 +126,13 @@ class StageViewModel @Inject constructor(
             }
             // a USB output chosen and the interface plugged in: the metronome turns the player on, track or not, and
             // sounds there once it's connected ([usbReady] restarts it on the stage); meanwhile nothing on the device
-            look.playerMode && !usb.device && player.connectForClick() -> {
+            br.app.stagebook.domain.ClickPath.Way.CONNECT -> {
                 metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff()
                 // the interface never got ready (USB permission refused, an error): the device after a while instead of
                 // silence (audit 02/11 #4); if it gets ready later the stage restarts the metronome there
                 clickFallback = viewModelScope.launch { kotlinx.coroutines.delay(USB_WAIT_MS); if (!player.usbReady.value) metronome.start(bpm, skip, volume) }
             }
-            else -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, skip, volume) }
+            br.app.stagebook.domain.ClickPath.Way.DEVICE -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, skip, volume) }
         }
     }
 
