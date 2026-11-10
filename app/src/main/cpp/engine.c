@@ -805,7 +805,10 @@ static void *usb_main(void *arg) {
         }
         inflight--;
         g_last_reap = now_s();
-        if (!(done->endpoint & 0x80)) g_last_out_reap = g_last_reap;
+        // a URB came back, so the watcher's verdict is over. Its signal doesn't always interrupt the reap (it can find
+        // this thread outside it), and a verdict left set would send a later EINTR down the wrong branch
+        g_stalled = 0;
+        if (!(done->endpoint & 0x80)) { g_last_out_reap = g_last_reap; g_out_starved = 0; }
         if (done->endpoint & 0x80) {
             if (DIAG) {   // diagnostics: the first input URBs
                 static int dbg = 0;

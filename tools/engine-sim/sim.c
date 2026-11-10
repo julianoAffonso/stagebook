@@ -110,8 +110,15 @@ static int nq = 0;
 static double out_due = 0, in_due = 0, in_acc = 0;
 static int disconnected = 0, fail_next_reap = 0;
 static int sim_intr = 0;   // a signal for the USB thread: the next blocking reap returns EINTR
+// usb_hold: the USB thread loses the CPU inside its next output submit, until the stall watch has signalled it. On the
+// device a signal that finds the thread outside the reap only runs the handler, no REAPURB returns EINTR for it: so it is
+// here while usb_held, from the hold to the thread's next reap
+static int usb_hold = 0, usb_held = 0, held_signals = 0;
 static int sim_pthread_kill(pthread_t thr, int sig) {
-    pthread_mutex_lock(&dev_mx); sim_intr = 1; pthread_cond_broadcast(&dev_cv); pthread_mutex_unlock(&dev_mx);
+    pthread_mutex_lock(&dev_mx);
+    if (usb_held) held_signals++;
+    else { sim_intr = 1; pthread_cond_broadcast(&dev_cv); }
+    pthread_mutex_unlock(&dev_mx);
     return 0;
 }
 static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
@@ -198,6 +205,7 @@ static int pop_ready(struct usbdevfs_urb **out, int block) {
         qent e = q[best]; q[best] = q[--nq];
         complete(e.u, e.st);
         *out = e.u;
+        usb_held = 0;
         return 0;
     }
 }
@@ -210,6 +218,14 @@ int fake_ioctl(int fd, unsigned long req, ...) {
     int r = 0;
     if (req == USBDEVFS_SUBMITURB) {
         struct usbdevfs_urb *u = arg;
+        if (usb_hold && !(u->endpoint & 0x80)) {
+            usb_hold = 0; usb_held = 1;
+            for (int ms = 0; !held_signals && ms < 2000; ms++) {
+                pthread_mutex_unlock(&dev_mx);
+                struct timespec w = {0, 1000000}; nanosleep(&w, NULL);
+                pthread_mutex_lock(&dev_mx);
+            }
+        }
         if (disconnected) { errno = ENODEV; r = -1; }
         else if (nq == QMAX) { errno = ENOMEM; r = -1; }
         else {
@@ -249,6 +265,16 @@ static void sim_unplug(void) {   // cable unplugged: the kernel returns everythi
     for (int i = 0; i < nq; i++) { q[i].due = now(); q[i].st = -ENODEV; }
     pthread_cond_broadcast(&dev_cv);
     pthread_mutex_unlock(&dev_mx);
+}
+// Holds the USB thread (see usb_hold) and waits for it to go on: 1 when the stall watch signalled it meanwhile
+static int sim_hold_usb(void) {
+    pthread_mutex_lock(&dev_mx); usb_hold = 1; held_signals = 0; pthread_mutex_unlock(&dev_mx);
+    for (int i = 0; i < 300; i++) {
+        struct timespec w = {0, 10000000}; nanosleep(&w, NULL);
+        pthread_mutex_lock(&dev_mx); int went_on = held_signals > 0 && !usb_held; pthread_mutex_unlock(&dev_mx);
+        if (went_on) return 1;
+    }
+    return 0;
 }
 static int sim_kernel_urbs(void) { pthread_mutex_lock(&dev_mx); int n = nq; pthread_mutex_unlock(&dev_mx); return n; }
 static void sim_close_conn(void) {   // UsbLink.close(): closing the fd returns what's left
@@ -493,7 +519,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    // SIM_ONLY=starve: only that scenario, in seconds, while working on it (the full run is for commits and CI)
+    // SIM_ONLY=starve: only the stall watch's scenarios, in seconds, while working on it (the full run is for commits and CI)
     const char *only = getenv("SIM_ONLY");
 #ifdef ENGINE_HAS_PROBE
     if (only && !strcmp(only, "starve")) { e_load(ogg); goto only_starve; }
@@ -802,6 +828,46 @@ only_starve:
     check(FN(isRunning)(env, NULL) && p_noin1 - p_noin0 > 1800 && !FN(inputStarvedOutput)(env, NULL), "without the input that output plays on", buf);
     FN(stop)(env, NULL);
     sim_close_conn();
+    pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0; pthread_mutex_unlock(&dev_mx);
+
+    // 7f) the stall watch's verdict must not outlive the stall (audit, 10/11): its signal can find the USB thread outside
+    // the reap (it lost the CPU for a moment), where no EINTR comes of it. The flag stayed set, and the next interrupted
+    // reap, whatever its reason, was taken for a stalled queue: half the queue and a connection more
+    printf("[7f] a stall verdict the USB thread outlived is dropped\n");
+    FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, -1, 0, 0);
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.3);
+    int q_before = FN(queueMs)(env, NULL);
+    int woke = sim_hold_usb();
+    sleep_s(0.2);
+    sim_pthread_kill(g_usb_thr, SIGUSR2);   // a signal with no verdict behind it: the reap has only to wait again
+    sleep_s(0.3);
+    snprintf(buf, sizeof buf, "watch signalled the held thread=%d, running=%d, queue %d ms (was %d), status \"%s\"",
+             woke, FN(isRunning)(env, NULL), FN(queueMs)(env, NULL), q_before, g_status);
+    check(woke && FN(isRunning)(env, NULL) && FN(queueMs)(env, NULL) == q_before, "an interrupted wait after an outlived stall just waits again", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    FN(setQueue)(env, NULL, q_before);   // a failure here must not shorten the queue of the scenarios below
+
+    // the same outlived stall, and then the input really starves the output: that is what the stream has to say
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.3);
+    woke = sim_hold_usb();
+    sleep_s(0.1);
+    pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 1e-9; pthread_mutex_unlock(&dev_mx);   // from now on
+    sleep_s(0.8);
+    // a runner so slow that the hold outlasted FB_STALL_S: the input was given up and everything stalled, another scenario
+    int held_too_long = g_fb_bad;
+    snprintf(buf, sizeof buf, "watch signalled the held thread=%d, stream ended=%d, input starved the output=%d, queue %d ms (was %d), status \"%s\"",
+             woke, !FN(isRunning)(env, NULL), FN(inputStarvedOutput)(env, NULL), FN(queueMs)(env, NULL), q_before, g_status);
+    check(held_too_long || (woke && !FN(isRunning)(env, NULL) && FN(inputStarvedOutput)(env, NULL) && FN(queueMs)(env, NULL) == q_before),
+          held_too_long ? "an output starved after an outlived stall is still told apart (skipped: the runner is too noisy)" : "an output starved after an outlived stall is still told apart: no input, the queue as it was", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    FN(setQueue)(env, NULL, q_before);
     pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0; pthread_mutex_unlock(&dev_mx);
     if (only) { printf("%s: %d failure(s)\n", ENGINE_NAME, fails); return fails ? 1 : 0; }
 #endif
