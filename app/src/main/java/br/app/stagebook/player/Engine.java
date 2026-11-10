@@ -9,6 +9,8 @@ final class Engine {
     static native void stop();
     // the last stream ended because reading the input stopped the output: connect again without the input
     static native boolean inputStarvedOutput();
+    // output packets the host really sent, in % of what the speed calls for (0 = not measured yet)
+    static native float hostDelivery();
     // for a reconnection: the same stop without the half second of silence at the end
     static native void stopFast();
     // no USB interface: plays on the device's output (AAudio, 48 kHz stereo); false if Android didn't open it

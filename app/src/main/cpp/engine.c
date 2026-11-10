@@ -602,6 +602,12 @@ static volatile double g_last_reap = 0;
 // The input kept the all-URBs watch quiet, so this one looks at the output only. Read by Java to connect again without
 // the input; cleared on each start.
 static volatile double g_last_out_reap = 0;
+// How many output packets the host really sent over a few seconds, against what the interface's speed calls for (user,
+// 10/11: the Chuwi lost 2-4% with an 18-channel desk and the sound broke, with no error anywhere). Only counted, the
+// sound path never reads it; Java warns from it. 0 = not measured yet in this stream.
+#define HD_SKIP_S 0.5                 // the queue is still filling
+#define HD_WIN_S 3.0
+static volatile float g_host_delivery = 0;
 static volatile int g_out_starved = 0, g_in_starved_out = 0;
 static volatile int g_stalled = 0, g_watching = 0;
 static pthread_t g_watch_thr;
@@ -784,6 +790,8 @@ static void *usb_main(void *arg) {
     }
     set_status("USB active");
     g_stalled = 0; g_out_starved = 0; g_last_reap = g_last_out_reap = now_s(); g_watching = 1;
+    g_host_delivery = 0;
+    double hd_from = g_last_reap, hd_t0 = 0; long hd_n = 0;
     { struct sigaction sa = {0}; sa.sa_handler = wake_usb; sigaction(SIGUSR2, &sa, NULL); }   // no SA_RESTART: REAPURB returns
     pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
 
@@ -818,6 +826,13 @@ static void *usb_main(void *arg) {
         // this thread outside it), and a verdict left set would send a later EINTR down the wrong branch
         g_stalled = 0;
         if (!(done->endpoint & 0x80)) { g_last_out_reap = g_last_reap; g_out_starved = 0; }
+        if (!(done->endpoint & 0x80) && g_host_delivery == 0) {
+            if (hd_t0 == 0) { if (g_last_reap - hd_from >= HD_SKIP_S) hd_t0 = g_last_reap; }
+            else if (++hd_n, g_last_reap - hd_t0 >= HD_WIN_S) {
+                g_host_delivery = (float)(100.0 * hd_n * PKTS_PER_URB / ((g_last_reap - hd_t0) * pkts_per_sec));
+                LOGI("usb: the host delivered %.1f%% of the output packets", g_host_delivery);
+            }
+        }
         if (done->endpoint & 0x80) {
             if (DIAG) {   // diagnostics: the first input URBs
                 static int dbg = 0;
@@ -1374,6 +1389,8 @@ JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
 // the last stream ended because reading the input stopped the output (see g_last_out_reap): connect again without it
 JNIEXPORT jboolean JNICALL FN(inputStarvedOutput)(JNIEnv *e, jclass c) { return g_in_starved_out ? JNI_TRUE : JNI_FALSE; }
+// output packets the host really sent, in % of what the speed calls for (0 = not measured yet)
+JNIEXPORT jfloat JNICALL FN(hostDelivery)(JNIEnv *e, jclass c) { return g_host_delivery; }
 // 1 while the interface's clock is being judged at open (the output is silent), else 0.
 JNIEXPORT jint JNICALL FN(probing)(JNIEnv *e, jclass c) { return g_probing; }
 

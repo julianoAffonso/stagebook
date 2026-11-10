@@ -595,6 +595,12 @@ int main(int argc, char **argv) {
     sleep_s(8.0);
     snprintf(buf, sizeof buf, "%ld times the desk ran out of packets, worst gap %.1f ms", iso_gaps, worst_starve * 1000);
     check(worst_starve < MAX_STARVE, "8 s without a long packet gap", buf);
+#ifdef HD_WIN_S
+    // a host that sends every packet measures close to 100% (the measurement only counts, the sound above is the same)
+    float hd = FN(hostDelivery)(env, NULL);
+    snprintf(buf, sizeof buf, "%.1f%%", hd);
+    check(hd > 98.0f && hd < 102.0f, "a host losing nothing measures ~100% delivered", buf);
+#endif
     FN(pause)(env, NULL);
 
     // 2) slow disk + hot CPU: a 40 ms seek with the song playing
