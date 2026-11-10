@@ -241,8 +241,10 @@ class Backup @Inject constructor(
         private const val SONGS = "biblioteca.json"
         private const val SETTINGS = "ajustes.json"
         private const val TRACKS_DIR = "faixas/"
-        // settings that go in the backup: player and USB interface profiles, normalization, band (who's in it) and
-        // language. Left out: the identity (Keystore), the inbox and the internet queue (temporary)
-        val PREFS = listOf("player", "norm", "band", "lingua")
+        // settings that go in the backup besides the Look (which holds the USB interface profiles): track loudness
+        // measures, band (who's in it) and language. Left out: the identity (Keystore), the inbox and the internet
+        // queue (temporary), and "player", which only says the battery question was asked: freeing the app from
+        // battery saving is each device's own, and a restored "asked" kept the new device from ever asking (user, 10/11)
+        val PREFS = listOf("norm", "band", "lingua")
     }
 }

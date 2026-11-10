@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,7 +66,7 @@ class BackupTest {
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "linha", zoom = 1.4f, track = "faixa.ogg"))
         // the metronome's volume too (user, 07/11), and the show's length on the clock
         repo.updateLook { it.copy(fontSp = 44f, metroVolume = 40, showMinutes = 150) }
-        context.getSharedPreferences("player", 0).edit().putFloat("volume", 0.7f).putString("perfil", "Interface X").commit()
+        context.getSharedPreferences("player", 0).edit().putBoolean("batteryAsked", true).commit()
         val out = ByteArrayOutputStream()
         backup.write(out, Part.entries.toSet())
         val bytes = out.toByteArray()
@@ -85,8 +86,8 @@ class BackupTest {
         assertEquals(44f, repo.library.value.look.fontSp)
         assertEquals(40, repo.library.value.look.metroVolume)
         assertEquals(150, repo.library.value.look.showMinutes)
-        assertEquals(0.7f, context.getSharedPreferences("player", 0).getFloat("volume", 0f))
-        assertEquals("Interface X", context.getSharedPreferences("player", 0).getString("perfil", null))
+        // the battery question is each device's own: freeing the app from battery saving doesn't travel either
+        assertFalse(context.getSharedPreferences("player", 0).getBoolean("batteryAsked", false))
     }
 
     @Test fun `unchecking - without tracks the song points to no file, and settings only leave songs alone`() = runBlocking {
