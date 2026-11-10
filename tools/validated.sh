@@ -7,6 +7,7 @@
 #   tools/validated.sh has <key>           exits 0 if it was validated
 #   tools/validated.sh add <key>           records it
 #   tools/validated.sh dirty               lists the files of that part the working tree has and the index doesn't
+#   tools/validated.sh unlike-head         lists the files of that part that differ from HEAD (staged, changed or new)
 set -euo pipefail
 PATHS=(app gradle build.gradle.kts settings.gradle.kts gradle.properties)
 LIST="$(git rev-parse --git-common-dir)/stagebook-validated"
@@ -15,5 +16,6 @@ case "${1:-}" in
   has) [ -f "$LIST" ] && grep -qx "$2" "$LIST" ;;
   add) echo "$2" >> "$LIST"; tail -n 300 "$LIST" > "$LIST.tmp" && mv "$LIST.tmp" "$LIST" ;;
   dirty) git diff --name-only -- "${PATHS[@]}"; git ls-files --others --exclude-standard -- "${PATHS[@]}" ;;
-  *) sed -n '2,9p' "$0"; exit 2 ;;
+  unlike-head) git status --porcelain --untracked-files=all -- "${PATHS[@]}" | cut -c4- ;;
+  *) sed -n '2,10p' "$0"; exit 2 ;;
 esac
