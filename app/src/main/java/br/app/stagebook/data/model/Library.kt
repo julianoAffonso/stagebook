@@ -264,4 +264,14 @@ data class Library(
 
     fun song(id: String): Song? = byId[id]
     fun setlist(id: String): Setlist? = sets.firstOrNull { it.id == id }
+
+    /**
+     * The same library without the links to track files that aren't on this device (Android's own copy brings the songs
+     * to a new device and leaves the tracks behind): the track's name stays, so the song says which file to attach
+     * again. Returns this very library when nothing is missing.
+     */
+    fun withoutMissingTracks(exists: (String) -> Boolean): Library {
+        if (songs.none { it.track.isNotEmpty() && !exists(it.track) }) return this
+        return copy(songs = songs.map { if (it.track.isNotEmpty() && !exists(it.track)) it.copy(track = "") else it })
+    }
 }

@@ -73,11 +73,17 @@ class LibraryRepository @Inject constructor(
 
     init {
         scope.launch(Dispatchers.IO) {
-            _library.value = load()
+            val read = load()
+            // a song pointing to a track that isn't here (the songs came with Android's copy, the tracks never do)
+            // would look ready and fail on stage: the link goes, the track's name stays
+            val tracks = File(context.filesDir, "tracks")
+            val clean = read.withoutMissingTracks { File(tracks, it).exists() }
+            _library.value = clean
             // ready first: whoever reacts to "loaded" and changes something right away must see the change applied,
             // not queued for later (a read right after a save could see the old library)
             ready.complete(Unit)
             _loaded.value = true
+            if (clean !== read && writePending.compareAndSet(false, true)) persist()
         }
     }
 

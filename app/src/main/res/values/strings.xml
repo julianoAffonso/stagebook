@@ -287,6 +287,7 @@
     <string name="reset_title">Erase everything</string>
     <string name="reset_info">Makes the app like new. Erases songs, setlists, backing tracks, settings and the band on this device.</string>
     <string name="reset_warning">Erases every song, setlist, backing track and setting on this device. It can\'t be undone.</string>
+    <string name="reset_android_copy">If Android keeps a copy of the app in your account, the songs and setlists can come back when you install it again.</string>
     <string name="reset_backup_first">Back up first</string>
     <string name="reset_type_code">To confirm, type the code:</string>
     <string name="reset_code_label">Code</string>
