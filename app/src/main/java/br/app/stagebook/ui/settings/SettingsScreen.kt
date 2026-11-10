@@ -173,6 +173,7 @@ fun SettingsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val clickApart by viewModel.clickApart.collectAsStateWithLifecycle()
+    val installWaiting by br.app.stagebook.data.InstallResults.waiting.collectAsStateWithLifecycle()
     val clickTesting by viewModel.clickTesting.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -401,6 +402,7 @@ fun SettingsRoute(
                 },
                 onDownloadUpdate = viewModel::downloadUpdate,
                 onInstallUpdate = install,
+                installWaiting = installWaiting,
             ),
         )
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
@@ -497,6 +499,7 @@ data class SettingsActions(
     val onOpenHelp: () -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
     val onInstallUpdate: () -> Unit = {},
+    val installWaiting: Boolean = false,   // the install is with Android: Install stays off until it answers
 )
 
 /**
@@ -1708,7 +1711,7 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
             is UpdateState.Available, UpdateState.DownloadFailed ->
                 ActionButton(stringResource(R.string.settings_update_download), actions.onDownloadUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
             UpdateState.Ready -> {
-                ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
+                ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download, enabled = !actions.installWaiting)
                 if (actions.advanced.autoBlocker) {
                     InfoText(stringResource(R.string.auto_blocker_hint))
                     ActionButton(stringResource(R.string.auto_blocker_open), actions.onAutoBlocker, Modifier.fillMaxWidth(), icon = AppIcons.Public, tone = ButtonTone.Tonal)

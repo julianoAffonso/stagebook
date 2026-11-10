@@ -1,5 +1,9 @@
 package br.app.stagebook
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -33,6 +37,23 @@ class AboutHelpTest {
         }
         compose.onNodeWithText(context.getString(R.string.about_help_open)).performScrollTo().performClick()
         assertEquals(1, opened)
+    }
+
+    // a second tap only started the same install over (audit, 10/11): Install stays off while Android has it
+    @Test fun `Install stays off while the install is with Android`() {
+        var waiting by androidx.compose.runtime.mutableStateOf(true)
+        var taps = 0
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(SettingsUiState(loading = false, update = br.app.stagebook.ui.settings.UpdateState.Ready),
+                    SettingsActions(onInstallUpdate = { taps++ }, installWaiting = waiting), section = SettingsSection.ABOUT)
+            }
+        }
+        val install = context.getString(R.string.settings_update_install)
+        compose.onNodeWithText(install).performScrollTo().assertIsNotEnabled()
+        waiting = false
+        compose.onNodeWithText(install).performScrollTo().assertIsEnabled().performClick()
+        assertEquals(1, taps)
     }
 
     // the rail's logo opens About by itself, on a wide tablet too: no section list, and back leaves it (user, 03/11)

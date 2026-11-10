@@ -11,6 +11,9 @@ import br.app.stagebook.domain.InstallOutcome
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
 
 /** Messages about an update being installed, from the installer session to the screen (the receiver has no screen). */
@@ -36,13 +39,27 @@ object InstallResults {
 
     fun isAbout(sessionId: Int): Boolean = session == NO_SESSION || session == sessionId
 
+    private val _waiting = MutableStateFlow(false)
+    /**
+     * A session was committed and Android hasn't answered yet: Install stays off, since a second tap would only start
+     * the same install over (audit, 10/11). Any answer turns it back on, and so does coming back to the app after
+     * leaving it for Android's confirmation, which may be abandoned without an answer.
+     */
+    val waiting: StateFlow<Boolean> = _waiting.asStateFlow()
+    @Volatile private var leftWhileWaiting = false
+
+    fun started() { leftWhileWaiting = false; _waiting.value = true }
+    fun answered() { _waiting.value = false }
+    fun appLeft() { if (_waiting.value) leftWhileWaiting = true }
+    fun appBack() { if (leftWhileWaiting) { leftWhileWaiting = false; _waiting.value = false } }
+
     fun post(notice: InstallNotice) {
         if (notice == InstallNotice.FAILED) sessionFailed = true
         _notices.tryEmit(notice)
     }
 
     // as in a fresh launch (tests: this object outlives each of them)
-    internal fun reset() { sessionFailed = false; session = NO_SESSION; _notices.resetReplayCache() }
+    internal fun reset() { sessionFailed = false; session = NO_SESSION; _notices.resetReplayCache(); _waiting.value = false; leftWhileWaiting = false }
 
     const val ACTION = "br.app.stagebook.INSTALL_RESULT"
     const val NO_SESSION = 0
@@ -82,7 +99,7 @@ class InstallResultReceiver : BroadcastReceiver() {
     // update had just gone in
     private fun noUpdateComing(context: Context, intent: Intent) {
         val about = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, InstallResults.NO_SESSION)
-        if (InstallResults.isAbout(about)) ResumeAfterUpdate.clear(context)
+        if (InstallResults.isAbout(about)) { ResumeAfterUpdate.clear(context); InstallResults.answered() }
     }
 
     internal companion object {

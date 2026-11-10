@@ -186,8 +186,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         br.app.stagebook.data.ResumeAfterUpdate.opened(this)
+        br.app.stagebook.data.InstallResults.appBack()   // back from Android's install confirmation, answered or not
         checkUsbRecord()   // also when the app was opened by plugging in the interface
         window.decorView.post { hideSystemBars() }
+    }
+
+    override fun onPause() {
+        br.app.stagebook.data.InstallResults.appLeft()
+        super.onPause()
     }
 
     override fun onStop() {

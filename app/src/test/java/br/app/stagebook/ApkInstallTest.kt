@@ -108,6 +108,33 @@ class ApkInstallTest {
         assertTrue(ResumeAfterUpdate.pending(context))   // the tap that did nothing didn't undo the first one's mark
     }
 
+    // a second tap after the session started only started the same install over (audit, 10/11)
+    @Test fun `once a session is with Android, Install waits for its answer, and any answer frees it`() = runBlocking {
+        allowInstalls()
+        assertTrue(screen.installApk(updater, downloaded(), where))
+        assertTrue(InstallResults.waiting.value)
+        val session = InstallResults.session
+        assertFalse(screen.installApk(updater, downloaded(), where))
+        assertEquals(session, InstallResults.session)   // no other session
+        // the person says no on Android's confirmation
+        br.app.stagebook.data.InstallResultReceiver().onReceive(context, Intent()
+            .putExtra(android.content.pm.PackageInstaller.EXTRA_STATUS, android.content.pm.PackageInstaller.STATUS_FAILURE_ABORTED)
+            .putExtra(android.content.pm.PackageInstaller.EXTRA_SESSION_ID, session))
+        assertFalse(InstallResults.waiting.value)
+        assertTrue(screen.installApk(updater, downloaded(), where))
+    }
+
+    // Android's confirmation can be left without an answer (home button, another app): Install must not stay dead
+    @Test fun `coming back from Android's confirmation frees Install even with no answer`() = runBlocking {
+        allowInstalls()
+        assertTrue(screen.installApk(updater, downloaded(), where))
+        InstallResults.appBack()   // never left: still with Android
+        assertTrue(InstallResults.waiting.value)
+        InstallResults.appLeft()   // its confirmation covered the app
+        InstallResults.appBack()
+        assertFalse(InstallResults.waiting.value)
+    }
+
     // Android's installer screen answers nothing when the person says no there (audit 10/11): the mark stayed for 15
     // minutes and the next start opened on the saved screen, as if the update had gone in
     @Test fun `a mark no update followed leaves the next start a plain one`() {

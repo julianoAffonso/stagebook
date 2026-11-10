@@ -28,6 +28,7 @@ private val installing = AtomicBoolean(false)
  */
 suspend fun Context.installApk(updater: AppUpdater, apk: File?, resumeAt: String): Boolean {
     apk ?: return false
+    if (InstallResults.waiting.value) return false   // the last tap's install is still with Android
     if (!installing.compareAndSet(false, true)) return false
     try {
         when (InstallPlan.choose(Build.VERSION.SDK_INT, updater.canInstall(), InstallResults.sessionFailed)) {
@@ -38,7 +39,7 @@ suspend fun Context.installApk(updater: AppUpdater, apk: File?, resumeAt: String
                 // not cut half way: a screen recreated during the copy (rotation) cancels the tap's work, and the session
                 // was committed all the same, with nobody told that the update was going in
                 val started = withContext(NonCancellable) {
-                    updater.installWithSession(apk).also { if (it) InstallResults.post(InstallNotice.STARTED) }
+                    updater.installWithSession(apk).also { if (it) { InstallResults.started(); InstallResults.post(InstallNotice.STARTED) } }
                 }
                 if (started) return true
                 startActivity(updater.installIntent(apk))
