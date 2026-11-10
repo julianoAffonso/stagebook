@@ -18,11 +18,8 @@ MARK="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.cla
 
 [ -z "$(git status --porcelain)" ] || { echo "refused: uncommitted changes"; exit 1; }
 [ ! -e "$MARK" ] || { echo "refused: audit pending ($MARK)"; exit 1; }
-"${ADB[@]}" get-state >/dev/null 2>&1 || { echo "refused: device $SERIAL does not answer on adb"; exit 1; }
-services="$("${ADB[@]}" shell dumpsys activity services br.app.stagebook 2>/dev/null)" || { echo "refused: could not read the player state"; exit 1; }
-if grep -q "br.app.stagebook/.player.PlayerService" <<<"$services"; then
-    echo "refused: the Stagebook player is on on the device (tap Turn off on the Stagebook notification)"; exit 1
-fi
+# device answering and player off: the same check the direct path uses (tools/install-apk.sh)
+tools/player-off.sh "$SERIAL" || exit 1
 
 want="0.1.$(git rev-list --count HEAD) ($(git rev-parse --short HEAD))"
 if [ "$VARIANT" = debug ]; then ./gradlew -q assembleDebug; else ./gradlew -q assembleRelease; fi
