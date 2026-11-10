@@ -142,7 +142,10 @@ class SettingsViewModel @Inject constructor(
 
     /** Open file: a .stagebook shows the parts to choose; an old songs file (.json) adds the songs. */
     fun inspectBackup(uri: Uri) = viewModelScope.launch {
-        val c = runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
+        // a file tapped outside the app while the window of the one before is still open: the cache keeps one received
+        // file, so that window would restore from a copy that is gone. The new file takes its place, whatever it is
+        _pendingRestore.value = null
+        val c =runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
         when {
             c == null -> importFrom(uri)   // not a .stagebook: tries the old songs file (or says it couldn't)
             c.newer -> _messages.send(SettingsMessage.ImportNewer)
