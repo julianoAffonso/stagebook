@@ -952,10 +952,14 @@
     <string name="player_on_alone">Ligado</string>
     <string name="metro_out">Saída do som</string>
     <string name="metro_out_device">Aparelho</string>
+    <string name="host_warning_title">A USB pode falhar</string>
+    <string name="host_warning_text">A USB deste aparelho não está dando conta da %1$s: perdeu %2$s dos pacotes. O som pode engasgar ou falhar no meio da música. Usar mesmo assim é por sua conta e risco.</string>
+    <string name="host_warning_channels">Esta interface tem %d canais, o que exige muito da USB. Num aparelho mais forte, ou com uma interface de menos canais, o som tende a sair limpo.</string>
+    <string name="mixer_now_unread">Conectada: %1$s. As saídas aparecem quando você abrir uma música com trilha.</string>
     <string name="mixer_out_missing">Esta saída não toca agora. Pela rota do Android, o sistema só entrega as saídas 1 a %d desta interface.</string>
     <string name="metro_out_device_order">No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.</string>
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
-    <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
+    <string name="metro_out_hint">Para escolher uma saída da interface USB, espete-a e abra uma música com trilha.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>
     <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que pode engasgar.</string>
     <string name="usb_route_auto_android">O app ligou esta chave para %1$s, porque o som falhou várias vezes no motor do Stagebook.</string>

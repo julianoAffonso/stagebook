@@ -36,7 +36,10 @@ data class OutputInfo(val key: String = DEVICE, val name: String = "", val count
     val usable: Int get() = count.coerceAtMost(MAX)
 
     /** A chosen USB output this way doesn't have (through Android the system gives at most 8): it stays chosen, silent. */
-    fun lacks(out: Int, pair: Boolean): Boolean = key != DEVICE && out + (if (pair) 1 else 0) >= usable
+    fun lacks(out: Int, pair: Boolean): Boolean = key != DEVICE && count > 0 && out + (if (pair) 1 else 0) >= usable
+
+    /** A plugged interface whose outputs haven't been read yet (they come when a song with a track opens). */
+    val unread: Boolean get() = key != DEVICE && count <= 0
 
     companion object {
         const val DEVICE = "device"
@@ -58,7 +61,22 @@ data class MixerConfig(
     val output: OutputInfo = OutputInfo(),
     // routing saved per output (OutputInfo key): each channel's first output; -1 = the one with the same number
     val routes: Map<String, List<Int>> = emptyMap(),
+    // every interface the player has opened (key → name and outputs): plugged in again, it comes back as it was
+    val known: Map<String, OutputInfo> = emptyMap(),
 ) {
+    /**
+     * What the mixer shows for the interface on the cable (user, 10/11: it kept the previous one until play): [key] null =
+     * none, the device. A known one comes back with its outputs; a new one has its name and outputs still unread.
+     */
+    fun plugged(key: String?, name: String): OutputInfo = when {
+        key == null -> OutputInfo()
+        else -> known[key]?.let { k -> if (name.isEmpty()) k else k.copy(name = name) } ?: OutputInfo(key, name, 0)
+    }
+
+    /** The player opened [out]: shown, and remembered when it's an interface. */
+    fun connected(out: OutputInfo): MixerConfig =
+        copy(output = out, known = if (out.key == OutputInfo.DEVICE || out.count <= 0) known else known + (out.key to out))
+
     fun strip(i: Int): MixChannel = strips.getOrElse(i) { MixChannel() }
 
     /** The EQ has no switch of its own: it's on while a channel goes through it (user, 06/11). */

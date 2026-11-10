@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -289,6 +290,9 @@ fun StagebookNavHost(
         }
     }
     SnackbarHost(message.host, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = messageLift.bottom))
+    // over any screen, the stage included: this device's USB can't carry the interface just opened
+    val hostWarning by br.app.stagebook.player.StagePlayer.hostWarning.collectAsStateWithLifecycle()
+    hostWarning?.let { br.app.stagebook.ui.components.HostWarningDialog(it, br.app.stagebook.player.StagePlayer::dismissHostWarning) }
     }
     br.app.stagebook.ui.band.ConductRoute()
     }

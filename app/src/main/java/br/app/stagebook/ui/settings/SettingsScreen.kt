@@ -1419,7 +1419,8 @@ internal fun MixerCard(
         if (monitorSwitch) SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
         // which output the shown routing belongs to (the one in use or the last used)
         Text(
-            pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
+            if (mixer.output.unread) stringResource(R.string.mixer_now_unread, mixer.output.label())
+            else pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.lockedDim(),
         )

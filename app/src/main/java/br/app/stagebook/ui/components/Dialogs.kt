@@ -138,6 +138,18 @@ fun InfoDialog(
 }
 
 /**
+ * This device's USB doesn't carry the interface (user, 10/11): how much it lost and that going on is at the musician's
+ * own risk; with many channels, that they are what weighs. Shown once per interface and device (StagePlayer).
+ */
+@Composable
+fun HostWarningDialog(w: br.app.stagebook.domain.HostWarning, onDismiss: () -> Unit) {
+    val loss = String.format(androidx.compose.ui.platform.LocalConfiguration.current.locales[0], "%.1f%%", w.lossPct)
+    val text = stringResource(R.string.host_warning_text, w.name, loss) +
+        if (w.channels >= br.app.stagebook.domain.HostDelivery.MANY_CHANNELS) "\n\n" + stringResource(R.string.host_warning_channels, w.channels) else ""
+    InfoDialog(stringResource(R.string.host_warning_title), text, onDismiss)
+}
+
+/**
  * The songs that just lost their audio, each with the audio's own name (user, 10/11): said once, when it happens. The
  * list scrolls: a library restored without its tracks can bring dozens.
  */

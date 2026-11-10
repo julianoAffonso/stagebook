@@ -15,6 +15,7 @@ import br.app.stagebook.domain.Mixer
 import br.app.stagebook.domain.NormMode
 import br.app.stagebook.domain.OutputInfo
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -108,6 +109,83 @@ class StagePlayer @Inject constructor(
     /** Song open on stage (null = no backing track): loads its track, or, with a track playing, after it stops. */
     fun open(track: File?) {
         if (queue.open(track) && PlayerService.running) scope.launch { load() }
+        if (track != null) prepareUnread()
+    }
+
+    // ---- the interface on the cable (user, 10/11): known as soon as it's plugged in, not only on play ----
+    private val usbManager get() = context.getSystemService(android.hardware.usb.UsbManager::class.java)
+    private val deliveryPrefs get() = context.getSharedPreferences("usb_delivery", Context.MODE_PRIVATE)   // this device's only
+    @Volatile private var deliveryWatch: Job? = null
+    @Volatile private var deliveryRead = false   // this stream's reading is in; a new stream reads again
+
+    private val usbWatch = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            syncPlugged()
+            // plugged with a song with a track on stage: the new interface is read right away
+            if (i.action == android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED && wanted != null) prepareUnread()
+        }
+    }
+
+    init {
+        // after usbWatch exists (initializers run in order). A receiver costs nothing until a cable comes or goes
+        val f = android.content.IntentFilter().apply {
+            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
+        ContextCompat.registerReceiver(context, usbWatch, f, ContextCompat.RECEIVER_NOT_EXPORTED)
+        scope.launch { repository.loaded.first { it }; syncPlugged() }
+    }
+
+    /**
+     * The mixer and the metronome show the interface on the cable, or the device when there's none. While the player is
+     * connected, the player's own word wins (it knows the way and the real outputs). A cable pulled by accident and put
+     * back comes back the same: the known interface keeps its outputs and routing.
+     */
+    fun syncPlugged() {
+        if (PlayerService.connected) return
+        val d = usbManager?.let { UsbLink.find(it) }
+        repository.updateLook { look ->
+            val m = look.mixer
+            val out = m.plugged(d?.let(::keyOf), d?.productName?.trim().orEmpty())
+            if (out == m.output) look else look.copy(mixer = m.copy(output = out))
+        }
+    }
+
+    /**
+     * A song with a track opened (or the interface was plugged with one on stage) and the interface on the cable has
+     * never been read on this device: the player opens it now, with "preparing the interface", to read its outputs and
+     * how well this device's USB carries it. Once per interface and device; the idle stream closes by itself after 10 s.
+     */
+    private fun prepareUnread() {
+        if (PlayerService.running || !repository.library.value.look.playerMode) return
+        val d = usbManager?.let { UsbLink.find(it) } ?: return
+        val key = keyOf(d)
+        if (repository.library.value.look.mixer.known.containsKey(key) && deliveryPrefs.contains(key)) return
+        ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
+    }
+
+    // the engine measures the delivery about 3.5 s after opening: read once it's there, warned about when it's low
+    private fun checkDelivery(out: OutputInfo) {
+        if (deliveryWatch?.isActive == true) return
+        deliveryWatch = scope.launch {
+            var hd = 0f
+            for (i in 0 until DELIVERY_TRIES) {
+                delay(DELIVERY_POLL_MS)
+                if (!PlayerService.connected) return@launch
+                hd = Engine.hostDelivery()
+                if (hd > 0f) break
+            }
+            if (hd <= 0f) return@launch
+            deliveryRead = true
+            val warned = if (deliveryPrefs.contains(out.key + WARNED)) deliveryPrefs.getFloat(out.key + WARNED, 0f) else null
+            deliveryPrefs.edit {
+                putFloat(out.key, hd)
+                if (br.app.stagebook.domain.HostDelivery.warns(hd, warned)) putFloat(out.key + WARNED, hd)
+            }
+            if (br.app.stagebook.domain.HostDelivery.warns(hd, warned)) {
+                _hostWarning.value = br.app.stagebook.domain.HostWarning(out.name, 100f - hd, out.count)
+            }
+        }
     }
 
     /** Ask to skip battery saving (play with the screen off)? Only once, and only if it hasn't yet. */
@@ -305,8 +383,11 @@ class StagePlayer @Inject constructor(
         // another output connected: Settings start showing its routing, and the engine starts using it
         val out = OutputInfo(PlayerService.outputKey, PlayerService.outputName, PlayerService.outputCount)
         if (PlayerService.connected && out.key.isNotEmpty() && out != mixer.output) {
-            repository.updateLook { it.copy(mixer = it.mixer.copy(output = out)) }
+            repository.updateLook { it.copy(mixer = it.mixer.connected(out)) }
         }
+        if (!PlayerService.connected) deliveryRead = false
+        if (onUsb && !PlayerService.viaAndroid && !deliveryRead) checkDelivery(out)
+        if (!PlayerService.connected) syncPlugged()   // dropped: what's on the cable now (none: the device)
         if (PlayerService.connected) {
             if (_ui.value.away) _ui.update { it.copy(away = false) }   // the interface is back
             // a click asked while the stream was closed starts now, with its count-in, as if it had just been asked
@@ -336,6 +417,19 @@ class StagePlayer @Inject constructor(
 
     companion object {
         const val END_POLL_MS = 250L
+        private const val DELIVERY_POLL_MS = 500L
+        private const val DELIVERY_TRIES = 16   // 8 s: the reading comes about 3.5 s after opening
+        private const val WARNED = "|warned"
+
+        private fun keyOf(d: android.hardware.usb.UsbDevice) =
+            String.format(java.util.Locale.ROOT, "usb:%04x:%04x", d.vendorId, d.productId)
+
+        // the USB of this device can't carry the interface (shown over any screen, once; see HostDelivery)
+        private val _hostWarning = MutableStateFlow<br.app.stagebook.domain.HostWarning?>(null)
+        val hostWarning: StateFlow<br.app.stagebook.domain.HostWarning?> = _hostWarning
+
+        fun dismissHostWarning() { _hostWarning.value = null }
+
         private const val KEY_BATTERY_ASKED = "batteryAsked"
         const val END_MARGIN_MS = 300L   // the real end comes when the last packet goes out; before that, it's already the end
 
