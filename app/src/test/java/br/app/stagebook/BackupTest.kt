@@ -179,6 +179,18 @@ class BackupTest {
         assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
     }
 
+    @Test fun `tracks in the file but left out when opening it take their names along`() = runBlocking {
+        val (repo, tracks, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
+        repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY, Part.TRACKS))
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY)))
+        assertEquals("", repo.library.value.songs.single().trackName)
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
+    }
+
     @Test fun `a track that should have come and didn't is named, and joining names only the songs that came in`() = runBlocking {
         val (repo, tracks, backup) = setup()
         repo.restore(emptyList(), emptyList())

@@ -136,10 +136,11 @@ class Backup @Inject constructor(
             var songs: Songs? = null
             var settings: JsonObject? = null
             var savedBy = ""
+            var savedParts = emptyList<Part>()
             ZipInputStream(input).use { zip ->
                 generateSequence { zip.nextEntry }.forEach { e ->
                     when {
-                        e.name == MANIFEST -> savedBy = json.decodeFromString(Manifest.serializer(), zip.readBytes().decodeToString()).device
+                        e.name == MANIFEST -> json.decodeFromString(Manifest.serializer(), zip.readBytes().decodeToString()).let { savedBy = it.device; savedParts = it.parts }
                         e.name == SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readBytes().decodeToString())
                         e.name == SETTINGS -> settings = json.parseToJsonElement(zip.readBytes().decodeToString()).jsonObject
                         e.name.startsWith(TRACKS_DIR) && Part.TRACKS in parts -> {
@@ -157,7 +158,16 @@ class Backup @Inject constructor(
                 // the same filter as the band: a "song" that isn't song text stays out (user's request of 30/10)
                 val allowed = s.songs.filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
                 skipped = s.songs.size - allowed.size
-                val songs = allowed.map { if (keepTracks && it.track in partFiles) it else it.copy(track = "") }
+                // the tracks were in the file and left out on purpose: the names go too, there is nothing to attach
+                // again (user, 10/11). A track that should have come and didn't keeps its name, for the alert.
+                val dropNames = !keepTracks && Part.TRACKS in savedParts
+                val songs = allowed.map {
+                    when {
+                        keepTracks && it.track in partFiles -> it
+                        dropNames -> it.copy(track = "", trackName = "")
+                        else -> it.copy(track = "")
+                    }
+                }
                 val here = repository.library.value.songs.mapTo(HashSet()) { it.id }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
                 // what came in without its audio is named in a window; joining, only the songs that are new here
