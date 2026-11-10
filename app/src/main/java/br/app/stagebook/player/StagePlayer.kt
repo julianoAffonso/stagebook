@@ -46,8 +46,8 @@ import javax.inject.Singleton
  * none).
  */
 @Immutable
-// [away]: the USB output dropped mid-song and hasn't come back; the track button shows it (user, 09/11), while waiting
-// (it carries on by itself) and after the wait (a tap carries on where it was)
+// [away]: the USB output dropped mid-song and hasn't come back; the track button shows it (user, 09/11), only while
+// waiting (it carries on by itself): whatever ends the wait (a stop, a pause, the minute) ends it too
 data class PlayerUi(val playing: Boolean = false, val waiting: Boolean = false, val message: String = "", val away: Boolean = false)
 
 /**
@@ -160,7 +160,8 @@ class StagePlayer @Inject constructor(
         endWatch?.cancel()
         dropWait?.cancel()
         PlayerService.playWanted(false)
-        _ui.update { it.copy(playing = false, waiting = false) }
+        // the sign goes with the wait: left on, it blinked on every song with nothing waiting for the interface (audit 10/11)
+        _ui.update { it.copy(playing = false, waiting = false, away = false) }
         if (PlayerService.running) {
             Engine.pause()
             PlayerService.playing(false)
