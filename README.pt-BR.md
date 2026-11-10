@@ -62,12 +62,12 @@ não deixa, eles nunca aparecem.
 Tudo passou na versão 0.1.900 do app. Passar quer dizer: uma música inteira ouvida limpa, pausar e retomar, e tirar e
 pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo aviso.
 
-| Aparelho | Mixer Behringer FLOW 8 (USB Audio 2.0, 4 saídas) | Placa Nanocore (USB Audio 1.0, 44,1 kHz) | Behringer UMC404HD (USB Audio 2.0, 4 saídas) |
-|---|---|---|---|
-| TCL NXTPAPER 11 Plus (tablet, 8 núcleos, Android 14) | Passou | Passou | Passou (4) |
-| Chuwi Hi10 XPro (tablet simples, Android 13) | Passou, com nota (1) | Passou | Não testado |
-| Samsung Galaxy S26 Ultra (celular, Android 17) | Passou, com nota (2) | Passou | Não testado |
-| OnePlus 10 Pro (celular, Android 16) | Passou pelos dois caminhos (3) | Passou | Não testado |
+| Aparelho | Mixer Behringer FLOW 8 (USB Audio 2.0, 4 saídas) | Placa Nanocore (USB Audio 1.0, 44,1 kHz) | Behringer UMC404HD (USB Audio 2.0, 4 saídas) | Mixer digital Behringer XR18 (USB Audio 2.0, 18 saídas) |
+|---|---|---|---|---|
+| TCL NXTPAPER 11 Plus (tablet, 8 núcleos, Android 14) | Passou | Passou | Passou (4) | Não testado |
+| Chuwi Hi10 XPro (tablet simples, Android 13) | Passou, com nota (1) | Passou | Passou | Falhou (5) |
+| Samsung Galaxy S26 Ultra (celular, Android 17) | Passou, com nota (2) | Passou | Passou | Passou |
+| OnePlus 10 Pro (celular, Android 16) | Passou pelos dois caminhos (3) | Passou | Passou | Não testado |
 
 1. O USB desse tablet perde leituras na entrada da interface, então o motor marca o ritmo da saída pelo relógio do
    sistema. O som sai limpo, com um soluço curto e raro a cada 15 a 60 s. É o limite do USB do tablet; acontece também
@@ -76,7 +76,10 @@ pôr o cabo com a música tocando voltou sozinho. Pelo motor do Stagebook, salvo
    versões mais novas começam com transferências curtas na entrada, e nesse celular ela continua respondendo.
 3. Pelo áudio do Android e pelo motor. O motor pede a janela de permissão USB do Android na primeira vez.
 4. Na versão 0.1.1011, ligada direto e alimentada pelo tablet: uma música inteira ouvida limpa pelo motor, no relógio da
-   própria interface; parar e o cabo voltaram sozinhos.
+   própria interface; parar e o cabo voltaram sozinhos. Nos outros aparelhos, nas versões 0.1.1038 a 0.1.1066.
+5. Na versão 0.1.1066 o USB do tablet entregou só de 96 a 99,5% dos pacotes para essa mesa de 18 canais, e o som
+   engasgou, pelos dois caminhos. É o limite do tablet: o app mede isso quando a interface abre e avisa que usar assim
+   é por sua conta e risco.
 
 Não testado: as células acima que dizem isso, outras interfaces e um fone USB simples (suportados, mas fora desta tabela).
 
