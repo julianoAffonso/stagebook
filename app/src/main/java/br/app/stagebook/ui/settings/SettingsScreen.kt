@@ -1561,7 +1561,8 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             val options = br.app.stagebook.domain.MetronomeOut.options(outputs)
             val chosen = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair).takeIf { it in options } ?: br.app.stagebook.domain.MetronomeOut.DEVICE
             OptionDropdown(
-                stringResource(R.string.metro_out), options, chosen, { actions.onMetronomeOut(it) },
+                // a test playing stops when the output changes (user, 10/11): it kept clicking on the old one
+                stringResource(R.string.metro_out), options, chosen, { if (it != chosen && actions.clickTesting) actions.onClickTestStop(); actions.onMetronomeOut(it) },
                 { o -> if (o.device) stringResource(R.string.metro_out_device) else outputs.label() + " · " + br.app.stagebook.ui.components.outputName(o.out, o.pair, outputs) },
                 enabledOf = { !it.device || actions.clickApart },
                 onOpen = actions.onMetronomeMenu,

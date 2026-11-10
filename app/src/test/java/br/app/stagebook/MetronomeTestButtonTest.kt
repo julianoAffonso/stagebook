@@ -69,4 +69,24 @@ class MetronomeTestButtonTest {
         compose.onNodeWithText("Aparelho").assertExists()
         compose.onNodeWithText("No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.").assertExists()
     }
+
+    @Test fun `changing the output stops a test that is playing`() {
+        var stopped = 0
+        var picked: br.app.stagebook.domain.MetronomeOut? = null
+        val desk = br.app.stagebook.domain.OutputInfo("usb:1397:00d4", "X18/XR18", 18)
+        val look = Look(metroSound = true, playerMode = true, mixer = br.app.stagebook.domain.MixerConfig(output = desk))
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(
+                    SettingsUiState(loading = false, look = look),
+                    SettingsActions(clickTesting = true, onClickTestStop = { stopped++ }, onMetronomeOut = { picked = it }),
+                    section = SettingsSection.METRONOME,
+                )
+            }
+        }
+        compose.onNodeWithText("Aparelho").performClick()
+        compose.onNodeWithText("X18/XR18 · Saídas 9-10").performClick()
+        assertEquals(1, stopped)
+        assertEquals(br.app.stagebook.domain.MetronomeOut(8, true), picked)
+    }
 }
