@@ -68,8 +68,9 @@ class Backup @Inject constructor(
             fun put(name: String, bytes: ByteArray) { zip.putNextEntry(ZipEntry(name)); zip.write(bytes); zip.closeEntry() }
             put(MANIFEST, json.encodeToString(Manifest.serializer(), Manifest(app = appVersion(), parts = parts.toList(), device = if (Part.SETTINGS in parts) DeviceIdentity.storedId(context) else "")).toByteArray())
             if (Part.LIBRARY in parts) {
-                // without the tracks in the backup, the song doesn't point to a file that isn't included
-                val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.copy(track = "") }
+                // without the tracks, chosen on purpose, the song carries neither the file nor its name: nothing to
+                // attach again on the other side (user, 10/11)
+                val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.copy(track = "", trackName = "") }
                 put(SONGS, json.encodeToString(Songs.serializer(), Songs(songs, lib.sets)).toByteArray())
                 if (Part.TRACKS in parts) {
                     lib.songs.map { it.track }.filter { it.isNotEmpty() }.distinct().forEach { name ->

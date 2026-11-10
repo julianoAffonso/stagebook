@@ -125,7 +125,7 @@ class EditorTabsTest {
         compose.onNodeWithText("Hazard", substring = true).performClick()   // opens the details
         compose.onNodeWithText("Hazard (backing)").assertExists()
         compose.onNodeWithText("O áudio não está neste aparelho. Anexe de novo.").assertExists()
-        compose.onNodeWithContentDescription("Remover o backing track").assertExists()   // forgets the name
+        compose.onNodeWithContentDescription("Remover o backing track").assertDoesNotExist()   // nothing to remove
     }
 
     @Test fun `the shown name drops the extension`() {

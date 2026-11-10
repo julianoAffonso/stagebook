@@ -276,7 +276,6 @@ fun StageRoute(
             onTogglePlay = ::onPlay,
             onPickTrack = { id -> pickingFor = id; picker.launch(TrackStore.MIME) },
             onRemoveTrack = viewModel::removeTrack,
-            onForgetTrack = viewModel::forgetTrack,
             onHiddenChords = viewModel::setHiddenChords,
             onTranspose = viewModel::transpose,
             onCapo = viewModel::setCapo,
@@ -349,7 +348,6 @@ fun StageScreen(
     onTogglePlay: () -> Unit = {},
     onPickTrack: (songId: String) -> Unit = {},
     onRemoveTrack: (songId: String) -> Unit = {},
-    onForgetTrack: (songId: String) -> Unit = {},
     onAutoScroll: (level: Int) -> Unit = {},
     onNextClock: () -> Unit = {},
     onStepShow: (up: Boolean) -> Unit = {},
@@ -1216,14 +1214,13 @@ fun StageScreen(
             // player (player mode only): transparent play/pause in the bottom right corner, over the lyrics
             // only songs with a backing track show the button (T29, user's decision); the track is picked in the editor.
             // A track playing goes on when the song changes, so the button stays (to stop it) on any song meanwhile
-            // a song whose audio didn't come (a backup without the tracks) shows an alert there instead, never over a
+            // a song whose audio didn't come (Android's own copy, a file whose track was lost) shows an alert there instead, never over a
             // track that is playing
             if (look.playerMode && !song.missing && song.lostTrack.isNotEmpty() && !playing) {
                 LostTrackButton(
                     name = song.lostTrack,
                     bg = Color(look.bg),
                     onPick = { onPickTrack(song.id) },
-                    onForget = { onForgetTrack(song.id) },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
                 )
             } else if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
@@ -1706,10 +1703,10 @@ private class PageHit {
 
 /**
  * Where play would be, on a song whose audio didn't come with it (user, 10/11): an alert in the error color. The tap
- * says which audio is missing and offers to attach it again or to leave the song without audio.
+ * says which audio is missing and offers to attach it again.
  */
 @Composable
-private fun LostTrackButton(name: String, bg: Color, onPick: () -> Unit, onForget: () -> Unit, modifier: Modifier = Modifier) {
+private fun LostTrackButton(name: String, bg: Color, onPick: () -> Unit, modifier: Modifier = Modifier) {
     var asking by remember { mutableStateOf(false) }
     if (asking) {
         br.app.stagebook.ui.components.QuestionDialog(
@@ -1717,8 +1714,8 @@ private fun LostTrackButton(name: String, bg: Color, onPick: () -> Unit, onForge
             message = stringResource(R.string.editor_track_missing),
             yesLabel = stringResource(R.string.editor_track_pick),
             onYes = { asking = false; onPick() },
-            noLabel = stringResource(R.string.stage_track_forget),
-            onNo = { asking = false; onForget() },
+            noLabel = stringResource(R.string.action_cancel),
+            onNo = { asking = false },
             onOutside = { asking = false },
             icon = AppIcons.Warning,
         )

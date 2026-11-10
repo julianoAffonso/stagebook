@@ -166,21 +166,34 @@ class BackupTest {
         assertEquals(false, bandAgainAfter(identity = false) { becomeAnotherDevice() })
     }
 
-    @Test fun `songs restored without their audio are named, and joining names only the ones that came in`() = runBlocking {
+    // leaving the tracks out on purpose takes their names too: nothing to attach again on the other side (user, 10/11)
+    @Test fun `a file saved without the tracks carries no audio names, and nothing comes in as lost`() = runBlocking {
         val (repo, tracks, backup) = setup()
         repo.restore(emptyList(), emptyList())
         val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
         repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
-        repo.saveSong(Song(title = "Plain", author = "x", text = "line"))
         val out = ByteArrayOutputStream()
-        backup.write(out, setOf(Part.LIBRARY))   // without the tracks
+        backup.write(out, setOf(Part.LIBRARY))
         assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY)))
-        val lost = listOf(br.app.stagebook.data.model.LostAudio("With audio", "Live take"))
+        assertEquals("", repo.library.value.songs.single().trackName)
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
+    }
+
+    @Test fun `a track that should have come and didn't is named, and joining names only the songs that came in`() = runBlocking {
+        val (repo, tracks, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
+        repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
+        repo.saveSong(Song(title = "Gone", author = "x", text = "line", track = "gone.ogg", trackName = "Gone live"))   // no file
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY, Part.TRACKS))
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY, Part.TRACKS)))
+        val lost = listOf(br.app.stagebook.data.model.LostAudio("Gone", "Gone live"))
         assertEquals(lost, repo.lostAudio.value)
         assertEquals(lost, backup.lost)
         // joining the same file again brings nothing new: nothing to say
         repo.lostAudioSeen()
-        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY), replace = false))
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY, Part.TRACKS), replace = false))
         assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), repo.lostAudio.value)
         assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
     }

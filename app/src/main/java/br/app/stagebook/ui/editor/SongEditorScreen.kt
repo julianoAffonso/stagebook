@@ -362,8 +362,8 @@ fun SongEditorScreen(
 
 /**
  * The backing track as a field like the others (user, 01/11): "Backing track" on top and the track's name, or
- * "None" in grey; tapping picks or swaps it, × takes it off. A song whose audio didn't come with it (a backup without
- * the tracks, Android's own copy) keeps the name, in grey, as an alert that says the audio has to be attached again.
+ * "None" in grey; tapping picks or swaps it, × takes it off. A song whose audio didn't come with it (Android's own copy, a
+ * file whose track was lost) keeps the name as an alert that says the audio has to be attached again.
  */
 @Composable
 private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
@@ -384,8 +384,7 @@ private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove:
             if (missing) Icon(AppIcons.Warning, null, tint = MaterialTheme.colorScheme.error)
             else Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else muted)
         },
-        // on a missing one, × forgets the name: the song has no audio any more
-        trailingIcon = if (has || missing) {
+        trailingIcon = if (has) {
             { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
         } else null,
         textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (has) MaterialTheme.colorScheme.onSurface else muted),

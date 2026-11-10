@@ -167,12 +167,13 @@ class WebEditorMoreTest {
         repo.restore(emptyList(), emptyList())
         val audio = tracks.file("lost.ogg").apply { parentFile!!.mkdirs(); writeBytes("OggS".toByteArray() + ByteArray(8)) }
         repo.saveSong(Song(title = "Com áudio", author = "x", text = "linha", track = audio.name, trackName = "Ao vivo"))
-        val saved = java.io.ByteArrayOutputStream().also { backup.write(it, setOf(Backup.Part.LIBRARY)) }.toByteArray()   // without the tracks
+        repo.saveSong(Song(title = "Sem o arquivo", author = "x", text = "linha", track = "gone.ogg", trackName = "Perdido"))   // no file
+        val saved = java.io.ByteArrayOutputStream().also { backup.write(it, setOf(Backup.Part.LIBRARY, Backup.Part.TRACKS)) }.toByteArray()
         val api = WebEditorApi(repo, tracks = { tracks }, backup = { backup }, workDir = { context.cacheDir })
         val file = File(context.cacheDir, "lost.part").apply { writeBytes(saved) }
         val token = Regex("\"token\":\"([^\"]+)\"").find(call(api, "POST", "/api/backup/inspect", file = file).text())!!.groupValues[1]
-        val done = call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["library"],"replace":true}""").text()
-        assertTrue(done, """"lost":[{"title":"Com áudio","track":"Ao vivo"}]""" in done)
+        val done = call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["library","tracks"],"replace":true}""").text()
+        assertTrue(done, """"lost":[{"title":"Sem o arquivo","track":"Perdido"}]""" in done)
     }
 
     @Test fun `a second track for the same song leaves no orphan file, and turning off drops a waiting backup`() = runBlocking {

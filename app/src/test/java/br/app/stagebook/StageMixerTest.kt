@@ -77,11 +77,11 @@ class StageMixerTest {
         compose.onNodeWithText("Usar o mixer global").assertExists()
     }
 
-    private fun lostStage(playerMode: Boolean = true, playing: Boolean = false, onPick: (String) -> Unit = {}, onForget: (String) -> Unit = {}) {
+    private fun lostStage(playerMode: Boolean = true, playing: Boolean = false, onPick: (String) -> Unit = {}) {
         val song = StageSong("Música", "", "[G]linha", false, id = "s1", lostTrack = "Hazard (backing)")
         compose.setContent {
             StagebookTheme {
-                StageScreen(StageUiState(false, listOf(song), look = Look(playerMode = playerMode)), 0, 0, { _, _ -> }, playing = playing, onPickTrack = onPick, onForgetTrack = onForget)
+                StageScreen(StageUiState(false, listOf(song), look = Look(playerMode = playerMode)), 0, 0, { _, _ -> }, playing = playing, onPickTrack = onPick)
             }
         }
     }
@@ -96,14 +96,6 @@ class StageMixerTest {
         compose.onNodeWithText("O áudio não está neste aparelho. Anexe de novo.").assertExists()
         compose.onNodeWithText("Escolher").performClick()
         org.junit.Assert.assertEquals("s1", picked)
-    }
-
-    @Test fun `leaving the song without audio forgets the name`() {
-        var forgotten = ""
-        lostStage(onForget = { forgotten = it })
-        compose.onNodeWithContentDescription("O áudio desta música está faltando").performClick()
-        compose.onNodeWithText("Não usar áudio").performClick()
-        org.junit.Assert.assertEquals("s1", forgotten)
     }
 
     @Test fun `the alert stays out with the player off, and never covers a track that is playing`() {

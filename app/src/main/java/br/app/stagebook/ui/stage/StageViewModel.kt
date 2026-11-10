@@ -170,8 +170,6 @@ class StageViewModel @Inject constructor(
         return true
     }
 
-    /** "Don't use audio" on a song whose audio didn't come: only the name goes (nothing is playing from it). */
-    fun forgetTrack(songId: String) { repository.updateSong(songId) { if (it.audioLost) it.copy(trackName = "") else it } }
 
     fun removeTrack(songId: String) {
         val old = repository.song(songId)?.track.orEmpty()

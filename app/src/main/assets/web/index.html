@@ -433,7 +433,7 @@ function drawTrack() {
     : lost ? `⚠ ${current.trackName}. ${t.trackMissing}` : t.trackNone;
   $("track-name").className = lost ? "warn" : "muted";
   $("track-pick").textContent = has ? t.trackChange : t.trackPick;
-  $("track-remove").hidden = !has && !lost;   // on a lost one it forgets the name: the song has no audio any more
+  $("track-remove").hidden = !has;
 }
 
 // the song's MIDI: the same types, channels and ranges as the app's editor; the tablet holds the values again on save
