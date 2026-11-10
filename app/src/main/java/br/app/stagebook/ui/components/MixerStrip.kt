@@ -154,7 +154,8 @@ private fun Header(
                 Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
             Text(
-                summary, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                summary, style = MaterialTheme.typography.labelSmall,
+                color = if (outputs.lacks(output, pair)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = if (centered) 2 else 1, overflow = TextOverflow.Ellipsis, textAlign = if (centered) TextAlign.Center else TextAlign.Start,
             )
         }
@@ -204,6 +205,9 @@ fun MixerChannelForm(
         NormDropdown(strip, onChange, Modifier.fillMaxWidth())
         HelpTip(stringResource(R.string.mixer_norm_help), label = stringResource(R.string.mixer_norm_about))
         OutputDropdown(output, pair, outputs, onOutput, Modifier.fillMaxWidth())
+        if (outputs.lacks(output, pair)) {
+            Text(stringResource(R.string.mixer_out_missing, outputs.usable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
         SwitchRow(stringResource(R.string.mixer_eq_switch), strip.eq, { onChange(strip.copy(eq = it)) })
         SwitchRow(stringResource(if (pair) R.string.mixer_center_pair else R.string.mixer_center_one), strip.center, {
             onChange(strip.copy(center = it))

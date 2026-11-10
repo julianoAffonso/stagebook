@@ -35,6 +35,9 @@ data class OutputInfo(val key: String = DEVICE, val name: String = "", val count
     /** The outputs the engine can reach (a desk with more than [MAX] shows only the first ones). */
     val usable: Int get() = count.coerceAtMost(MAX)
 
+    /** A chosen USB output this way doesn't have (through Android the system gives at most 8): it stays chosen, silent. */
+    fun lacks(out: Int, pair: Boolean): Boolean = key != DEVICE && out + (if (pair) 1 else 0) >= usable
+
     companion object {
         const val DEVICE = "device"
         const val MAX = 32   // engine.c OUTS_MAX: 18- and 32-channel desks, not just 8

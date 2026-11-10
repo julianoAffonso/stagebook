@@ -952,6 +952,7 @@
     <string name="player_on_alone">Ligado</string>
     <string name="metro_out">Saída do som</string>
     <string name="metro_out_device">Aparelho</string>
+    <string name="mixer_out_missing">Esta saída não toca agora. Pela rota do Android, o sistema só entrega as saídas 1 a %d desta interface.</string>
     <string name="metro_out_device_order">No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.</string>
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
     <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
