@@ -789,6 +789,10 @@ static void *usb_main(void *arg) {
         if (!tail && g_usb_stop) { tail = 1; if (g_fast_stop) tail_max = 0; }   // fast: only what is already queued drains
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
+            // the watch decides on a clock it read a moment before: a URB may have come back since, after which it
+            // still wrote its verdict (audit, 10/11). This thread writes those clocks, so it checks them before acting
+            if (errno == EINTR && g_stalled && now_s() - g_last_reap <= STALL_S) g_stalled = 0;
+            if (errno == EINTR && g_out_starved && g_last_reap - g_last_out_reap <= STALL_S) g_out_starved = 0;
             if (errno == EINTR && g_out_starved && !g_stalled) {
                 LOGI("usb: the output stopped coming back while the input runs: connecting again without the input");
                 set_status("USB dropped: the input starved the output");

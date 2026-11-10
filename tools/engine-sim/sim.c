@@ -899,6 +899,30 @@ only_starve:
         sim_close_conn();
         FN(setQueue)(env, NULL, q_before);
     }
+    // 7h) the watch can decide on an old clock: it read the last reap, the USB thread then got a URB back and cleared
+    // the verdict, and only then did the watch write it and signal (audit, 10/11). The queue is flowing again, so the
+    // interrupted reap must just wait again: no connection more, no halved queue, and no input given up
+    printf("[7h] a verdict written after the queue came back is dropped\n");
+    for (int which = 0; which < 2; which++) {
+        E_START_FAST();
+        FN(seek)(env, NULL, 60000);
+        FN(play)(env, NULL);
+        sleep_s(0.3);
+        int q0 = FN(queueMs)(env, NULL);
+        for (int k = 0; k < 20 && FN(isRunning)(env, NULL); k++) {
+            if (which) g_out_starved = 1; else g_stalled = 1;   // the late write
+            sim_pthread_kill(g_usb_thr, SIGUSR2);
+            sleep_s(0.02);
+        }
+        sleep_s(0.2);
+        snprintf(buf, sizeof buf, "running=%d, input starved the output=%d, queue %d ms (was %d), status \"%s\"",
+                 FN(isRunning)(env, NULL), FN(inputStarvedOutput)(env, NULL), FN(queueMs)(env, NULL), q0, g_status);
+        check(FN(isRunning)(env, NULL) && !FN(inputStarvedOutput)(env, NULL) && FN(queueMs)(env, NULL) == q0,
+              which ? "a late output-starved verdict on a flowing queue just waits again" : "a late stall verdict on a flowing queue just waits again", buf);
+        FN(stop)(env, NULL);
+        sim_close_conn();
+        FN(setQueue)(env, NULL, q0);
+    }
     if (only) { printf("%s: %d failure(s)\n", ENGINE_NAME, fails); return fails ? 1 : 0; }
 #endif
 
