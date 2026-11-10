@@ -46,6 +46,7 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 #define OUT_CH 4
 // source channels kept in the ring (Stagebook): up to 8, each as it came; the default mix rebuilds the 4 from before
 #define LANES_MAX 8
+#define OUTS_MAX 32                   // outputs the mix can reach: a USB desk can take 18 or 32 channels, not just 8
 // 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
 // refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
 #define NURBS 32                      // most URBs in the kernel's queue: 32 ms at high speed
@@ -408,7 +409,7 @@ static double now_s(void) {
 static float g_ch_gain[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // fader × on/off of each source channel
 static float g_ch_norm[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // normalization of each channel
 static int g_ch_eq = 0;                     // bits: channels that go through the EQ (each separate)
-static float g_route[LANES_MAX][LANES_MAX] = {   // [output][source channel]: how much of the channel goes to the output
+static float g_route[OUTS_MAX][LANES_MAX] = {   // [output][source channel]: how much of the channel goes to the output
     {1}, {0, 1}, {0, 0, 1}, {0, 0, 0, 1}, {0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1},
 };
 
@@ -432,10 +433,11 @@ static inline void click_add_locked(float *out) {
     if (beat < 64 && ((g_clk_skip >> beat) & 1)) return;
     if (at >= g_clk_len[k]) return;
     for (int q = 0; q < 2; q++)
-        if (g_clk_out[q] >= 0 && g_clk_out[q] < LANES_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
+        if (g_clk_out[q] >= 0 && g_clk_out[q] < OUTS_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
 }
 
-static inline void mix_custom(const float *lane, float *out) {
+// [nout] outputs are mixed (the ones the device has, up to OUTS_MAX); out holds OUTS_MAX for the click
+static inline void mix_custom(const float *lane, float *out, int nout) {
     float s[LANES_MAX];
     float p = 0;
     for (int c = 0; c < g_lanes; c++) {
@@ -453,7 +455,7 @@ static inline void mix_custom(const float *lane, float *out) {
         g_lim += (1.0f - g_lim) * g_lim_rel;
     }
     if (g_meter_on) for (int c = 0; c < g_lanes; c++) if (fabsf(s[c]) > g_lpk[c]) g_lpk[c] = fabsf(s[c]);
-    for (int o = 0; o < LANES_MAX; o++) {
+    for (int o = 0; o < nout; o++) {
         float a = 0;
         for (int c = 0; c < g_lanes; c++) a += g_route[o][c] * s[c];
         out[o] = a;
@@ -738,11 +740,11 @@ static void *usb_main(void *arg) {
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
                 if (g_fade > 0) { if (ring_pop_locked(lane)) g_consumed++; else if (want_play && !g_eof) st_underrun++; } \
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
-                float outv[LANES_MAX]; \
-                mix_custom(lane, outv); \
+                float outv[OUTS_MAX]; \
+                mix_custom(lane, outv, g_dev_ch < OUTS_MAX ? g_dev_ch : OUTS_MAX); \
                 click_add_locked(outv); \
                 for (int c = 0; c < g_dev_ch; c++) { \
-                    float s = c < LANES_MAX ? outv[c] : 0; \
+                    float s = c < OUTS_MAX ? outv[c] : 0; \
                     if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
                     put_sample(b + off + c * g_subslot, s); \
                 } \
@@ -1039,11 +1041,11 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
         if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES;
         if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1;
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
-        float outv[LANES_MAX];
-        mix_custom(lane, outv);
+        float outv[OUTS_MAX];
+        mix_custom(lane, outv, ch < OUTS_MAX ? ch : OUTS_MAX);
         click_add_locked(outv);   // only set when this output is a USB interface (StagePlayer.usbClick)
         for (int c = 0; c < ch; c++) {
-            float v = c < LANES_MAX ? outv[c] : 0;
+            float v = c < OUTS_MAX ? outv[c] : 0;
             if (mon && c < OUT_CH && fabsf(v) > g_pk[c]) g_pk[c] = fabsf(v);
             o[f * ch + c] = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
         }
@@ -1239,12 +1241,12 @@ JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray j
 
 
 // Mix: gains/norms per source channel, eqMask with the channels that go through the EQ (each separate), route[output *
-// LANES_MAX + channel] (LANES_MAX × LANES_MAX).
+// LANES_MAX + channel] (OUTS_MAX × LANES_MAX).
 JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloatArray jnorm, jint eqMask, jfloatArray jroute) {
-    float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[LANES_MAX * LANES_MAX] = {0};
+    float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[OUTS_MAX * LANES_MAX] = {0};
     if (jgain) (*e)->GetFloatArrayRegion(e, jgain, 0, LANES_MAX, gain);
     if (jnorm) (*e)->GetFloatArrayRegion(e, jnorm, 0, LANES_MAX, norm);
-    if (jroute) (*e)->GetFloatArrayRegion(e, jroute, 0, LANES_MAX * LANES_MAX, route);
+    if (jroute) (*e)->GetFloatArrayRegion(e, jroute, 0, OUTS_MAX * LANES_MAX, route);
     pthread_mutex_lock(&g_mx);
     memcpy(g_ch_gain, gain, sizeof gain);
     memcpy(g_ch_norm, norm, sizeof norm);

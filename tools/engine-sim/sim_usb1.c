@@ -152,7 +152,7 @@ static double pitch(const float *s, long n) {
 }
 
 static void mix(void) {
-    float g[8] = {1, 1}, nm[8] = {1, 1}, r[64] = {0};
+    float g[8] = {1, 1}, nm[8] = {1, 1}, r[32 * 8] = {0};
     r[0] = 1; r[9] = 1;
     FN(setMix)(env, NULL, (jfloatArray)g, (jfloatArray)nm, 0, (jfloatArray)r);
 }

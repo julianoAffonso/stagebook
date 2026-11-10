@@ -251,7 +251,7 @@ private fun NormDropdown(strip: MixChannel, onChange: (MixChannel) -> Unit, modi
 private fun OutputDropdown(output: Int, pair: Boolean, outputs: OutputInfo, onOutput: (Int) -> Unit, modifier: Modifier) =
     OptionDropdown(
         stringResource(R.string.mixer_output_in, outputs.label()),
-        (0 until maxOf(outputs.count, output + 1) step if (pair) 2 else 1).toList(),
+        (0 until maxOf(outputs.usable, output + 1) step if (pair) 2 else 1).toList(),
         output, onOutput, { outputName(it, pair, outputs) }, modifier,
     )
 

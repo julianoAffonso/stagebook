@@ -35,6 +35,19 @@ class MixerTest {
         assertEquals(1f, route(p, 0, 0)); assertEquals(1f, route(p, 1, 1))
     }
 
+    @Test fun `an 18-channel desk takes the track on outputs above 8 - the engine reaches 32`() {
+        val desk = br.app.stagebook.domain.OutputInfo("usb:1234:5678", "Interface USB", 18)
+        val cfg = MixerConfig(channels = 2, output = desk).withOutput(0, 12).withOutput(1, 17)
+        val p = Mixer.plan(cfg, lanes = 2)
+        assertEquals(32 * MixerConfig.MAX, p.route.size)   // engine.c reads OUTS_MAX × LANES_MAX
+        assertEquals(1f, route(p, 12, 0)); assertEquals(0f, route(p, 7, 0))
+        assertEquals(1f, route(p, 17, 1)); assertEquals(0f, route(p, 7, 1))
+        val click = br.app.stagebook.domain.MetronomeOut.options(desk)
+        assert(br.app.stagebook.domain.MetronomeOut(17, false) in click)
+        assert(br.app.stagebook.domain.MetronomeOut(16, true) in click)
+        assertEquals(32, br.app.stagebook.domain.OutputInfo("usb:1:2", "", 64).usable)
+    }
+
     @Test fun `loudness never goes over the peak ceiling and peak goes to -6 dB`() {
         assertEquals(-1f - Mixer.db(0.9f), Mixer.normDb(NormMode.VOLUME, Measure(-30f, 0.9f)), 1e-4f)
         assertEquals(-6f - Mixer.db(0.25f), Mixer.normDb(NormMode.PEAK, Measure(-30f, 0.25f)), 1e-4f)

@@ -32,8 +32,12 @@ data class MixChannel(
 @Immutable
 @Serializable
 data class OutputInfo(val key: String = DEVICE, val name: String = "", val count: Int = 2) {
+    /** The outputs the engine can reach (a desk with more than [MAX] shows only the first ones). */
+    val usable: Int get() = count.coerceAtMost(MAX)
+
     companion object {
         const val DEVICE = "device"
+        const val MAX = 32   // engine.c OUTS_MAX: 18- and 32-channel desks, not just 8
     }
 }
 
@@ -145,13 +149,14 @@ object Mixer {
         val n = MixerConfig.MAX
         val gains = FloatArray(n) { 1f }
         val norms = FloatArray(n) { 1f }
-        val route = FloatArray(n * n)
+        val outs = OutputInfo.MAX
+        val route = FloatArray(outs * n)   // [output * n + channel], as engine.c reads it
         var eq = 0
         for (g in cfg.groups(lanes)) {
             val s = cfg.strip(g.first)
             val gain = if (!s.on || s.gainDb <= MixerConfig.MIN_DB) 0f else lin(s.gainDb)
             val norm = lin(normDb(s.norm, measures[g.first]))
-            val base = cfg.outputOf(g.first, key).coerceIn(0, n - 1)
+            val base = cfg.outputOf(g.first, key).coerceIn(0, outs - 1)
             for ((k, c) in g.withIndex()) {
                 gains[c] = gain
                 norms[c] = norm
@@ -161,10 +166,10 @@ object Mixer {
                     // output pair
                     val left = if (g.count() == 2) base else base - base % 2
                     val w = if (g.count() == 2) 0.5f else HALF
-                    for (o in left..minOf(left + 1, n - 1)) route[o * n + c] = w
+                    for (o in left..minOf(left + 1, outs - 1)) route[o * n + c] = w
                 } else {
                     val o = base + k
-                    if (o < n) route[o * n + c] = 1f
+                    if (o < outs) route[o * n + c] = 1f
                 }
             }
         }

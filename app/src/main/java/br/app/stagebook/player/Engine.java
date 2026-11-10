@@ -29,7 +29,7 @@ final class Engine {
     // {backing lufs (1/2), backing peak, click peak (3/4)} or null
     static native float[] analyze(String path);
     // the mix (per channel only): gains/norms per source channel (8), eqMask = channels with EQ (each separate),
-    // route[output * 8 + channel]; without calling, each channel goes to the output with the same number at gain 1
+    // route[output * 8 + channel] for 32 outputs (OutputInfo.MAX); without calling, each channel goes to the output with the same number at gain 1
     static native void setMix(float[] gains, float[] norms, int eqMask, float[] route);
     // source channels of the loaded track (up to 8)
     static native int lanes();

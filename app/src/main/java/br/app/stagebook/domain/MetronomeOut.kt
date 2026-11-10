@@ -13,8 +13,8 @@ data class MetronomeOut(val out: Int, val pair: Boolean) {
          */
         fun options(output: OutputInfo): List<MetronomeOut> {
             if (output.key == OutputInfo.DEVICE || output.count <= 0) return listOf(DEVICE)
-            val pairs = (0 until output.count - 1 step 2).map { MetronomeOut(it, true) }
-            val singles = (0 until output.count).map { MetronomeOut(it, false) }
+            val pairs = (0 until output.usable - 1 step 2).map { MetronomeOut(it, true) }
+            val singles = (0 until output.usable).map { MetronomeOut(it, false) }
             return listOf(DEVICE) + pairs + singles
         }
     }

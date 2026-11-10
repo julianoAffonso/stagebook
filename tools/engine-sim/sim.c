@@ -344,7 +344,7 @@ static void open_judged_a(long seek_ms) {
 static float s_gb = 1, s_gc = 1, s_nb = 1, s_nc = 1;
 static void sim_mix(void) {
 #ifdef ENGINE_HAS_MIX
-    float g[8] = {s_gb, s_gb, s_gc, s_gc}, n[8] = {s_nb, s_nb, s_nc, s_nc}, r[64] = {0};
+    float g[8] = {s_gb, s_gb, s_gc, s_gc}, n[8] = {s_nb, s_nb, s_nc, s_nc}, r[32 * 8] = {0};
     for (int o = 0; o < 4; o++) r[o * 8 + o] = 1.0f;
     FN(setMix)(env, NULL, (jfloatArray)g, (jfloatArray)n, 0x3, (jfloatArray)r);
 #endif
@@ -533,6 +533,22 @@ int main(int argc, char **argv) {
 #endif
     if (only) { printf("SIM_ONLY=%s: no such scenario here (starve needs an engine with the clock probe)\n", only); return 2; }
 
+#ifdef OUTS_MAX
+    // 0) an 18-channel desk: a channel routed above output 8 reaches it (the matrix used to stop at 8 outputs)
+    printf("[0] a channel routed to output 13 of 18 reaches it\n");
+    {
+        float g[8] = {1, 1}, nm[8] = {1, 1}, r[OUTS_MAX * 8] = {0}, lane[8] = {0.5f, 0.25f}, out[OUTS_MAX];
+        r[12 * 8 + 0] = 1; r[17 * 8 + 1] = 1;
+        FN(setMix)(env, NULL, (jfloatArray)g, (jfloatArray)nm, 0, (jfloatArray)r);
+        int lanes_was = g_lanes; float fade_was = g_fade;
+        g_lanes = 2; g_fade = 1;
+        mix_custom(lane, out, 18);
+        g_lanes = lanes_was; g_fade = fade_was;
+        char d[96]; snprintf(d, sizeof d, "out13=%.2f out18=%.2f out8=%.2f", out[12], out[17], out[7]);
+        check(out[12] == 0.5f && out[17] == 0.25f && out[7] == 0, "a channel routed above output 8 reaches it", d);
+        sim_mix();
+    }
+#endif
     // 1) play, seek and change songs: the output is recorded to compare both versions
     printf("[1] play the 44.1 kHz track (resampled), seek to 1:00 and switch to the 48 kHz track\n");
     E_START();
