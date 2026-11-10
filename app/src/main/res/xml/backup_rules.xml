@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Android's own copy (Google account, up to Android 11) carries: the songs and setlists and the language, nothing
+     else. The device's identity and the band stay (they are worth nothing on another device), and so do the backing
+     tracks (too big) and what was learned about this device's audio. AndroidBackupRulesTest keeps this list honest. -->
+<full-backup-content>
+    <include domain="file" path="stagebook.json" />
+    <include domain="file" path="stagebook.json.bak" />
+    <include domain="sharedpref" path="lingua.xml" />
+</full-backup-content>

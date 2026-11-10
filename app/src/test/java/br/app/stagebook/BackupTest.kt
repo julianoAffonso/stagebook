@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,7 +66,7 @@ class BackupTest {
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "linha", zoom = 1.4f, track = "faixa.ogg"))
         // the metronome's volume too (user, 07/11), and the show's length on the clock
         repo.updateLook { it.copy(fontSp = 44f, metroVolume = 40, showMinutes = 150) }
-        context.getSharedPreferences("player", 0).edit().putFloat("volume", 0.7f).putString("perfil", "Interface X").commit()
+        context.getSharedPreferences("player", 0).edit().putBoolean("batteryAsked", true).commit()
         val out = ByteArrayOutputStream()
         backup.write(out, Part.entries.toSet())
         val bytes = out.toByteArray()
@@ -85,8 +86,8 @@ class BackupTest {
         assertEquals(44f, repo.library.value.look.fontSp)
         assertEquals(40, repo.library.value.look.metroVolume)
         assertEquals(150, repo.library.value.look.showMinutes)
-        assertEquals(0.7f, context.getSharedPreferences("player", 0).getFloat("volume", 0f))
-        assertEquals("Interface X", context.getSharedPreferences("player", 0).getString("perfil", null))
+        // the battery question is each device's own: freeing the app from battery saving doesn't travel either
+        assertFalse(context.getSharedPreferences("player", 0).getBoolean("batteryAsked", false))
     }
 
     @Test fun `unchecking - without tracks the song points to no file, and settings only leave songs alone`() = runBlocking {
@@ -120,6 +121,94 @@ class BackupTest {
         assertEquals(listOf("ana"), trust.members.value.map { it.id })
         trust.add("caio", "Caio", "k3")   // the next change keeps the restored band
         assertEquals(listOf("ana", "caio"), br.app.stagebook.data.BandTrust(context).members.value.map { it.id }.sorted())
+    }
+
+    // a band saved with [members] by one device, restored after [between] ran (audit 10/11, user: "Faça")
+    private suspend fun bandAgainAfter(members: Boolean = true, identity: Boolean = true, between: () -> Unit): Boolean {
+        val prefs = context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        if (identity) br.app.stagebook.data.DeviceIdentity(context).id   // the key pair is made on first use
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val trust = br.app.stagebook.data.BandTrust(context)
+        trust.members.value.forEach { trust.remove(it.id) }
+        val backup = Backup(context, repo, TrackStore(context), trust)
+        if (members) trust.add("ana", "Tablet da Ana", "k1")
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.SETTINGS))
+        between()
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.SETTINGS)))
+        return backup.bandAgain
+    }
+
+    private fun becomeAnotherDevice() {
+        context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE).edit().clear().commit()
+        br.app.stagebook.data.DeviceIdentity(context).id
+    }
+
+    @Test fun `a band restored on the device that saved it asks for nothing`() = runBlocking {
+        assertEquals(false, bandAgainAfter { })
+    }
+
+    @Test fun `a band restored on another device says it has to be approved again`() = runBlocking {
+        assertEquals(true, bandAgainAfter { becomeAnotherDevice() })
+    }
+
+    @Test fun `a device that never had an identity is new to the band too`() = runBlocking {
+        assertEquals(true, bandAgainAfter { context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE).edit().clear().commit() })
+    }
+
+    @Test fun `with no band in the file, another device has nothing to approve`() = runBlocking {
+        assertEquals(false, bandAgainAfter(members = false) { becomeAnotherDevice() })
+    }
+
+    @Test fun `a file that does not say who saved it shows no notice`() = runBlocking {
+        // the same as a file from before the device was written in it
+        assertEquals(false, bandAgainAfter(identity = false) { becomeAnotherDevice() })
+    }
+
+    // leaving the tracks out on purpose takes their names too: nothing to attach again on the other side (user, 10/11)
+    @Test fun `a file saved without the tracks carries no audio names, and nothing comes in as lost`() = runBlocking {
+        val (repo, tracks, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
+        repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY))
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY)))
+        assertEquals("", repo.library.value.songs.single().trackName)
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
+    }
+
+    @Test fun `tracks in the file but left out when opening it take their names along`() = runBlocking {
+        val (repo, tracks, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
+        repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY, Part.TRACKS))
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY)))
+        assertEquals("", repo.library.value.songs.single().trackName)
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
+    }
+
+    @Test fun `a track that should have come and didn't is named, and joining names only the songs that came in`() = runBlocking {
+        val (repo, tracks, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
+        repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
+        repo.saveSong(Song(title = "Gone", author = "x", text = "line", track = "gone.ogg", trackName = "Gone live"))   // no file
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY, Part.TRACKS))
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY, Part.TRACKS)))
+        val lost = listOf(br.app.stagebook.data.model.LostAudio("Gone", "Gone live"))
+        assertEquals(lost, repo.lostAudio.value)
+        assertEquals(lost, backup.lost)
+        // joining the same file again brings nothing new: nothing to say
+        repo.lostAudioSeen()
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY, Part.TRACKS), replace = false))
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), repo.lostAudio.value)
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
     }
 
     @Test fun `file that is not a backup is not read`() = runBlocking {

@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -101,6 +102,7 @@ class SettingsViewModel @Inject constructor(
     private val backup: br.app.stagebook.data.Backup,
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val midiOut: br.app.stagebook.data.MidiOut,
+    private val player: br.app.stagebook.player.StagePlayer,
 ) : ViewModel() {
     private val _midiOutputs = MutableStateFlow<List<br.app.stagebook.data.MidiOutput>>(emptyList())
     /** The MIDI outputs there are right now (read when the list opens). */
@@ -113,19 +115,39 @@ class SettingsViewModel @Inject constructor(
 
     val clickApart = metronome.keepsApart
 
-    // the Settings test click: the stage's own path (USB output when the player is on, otherwise the device), no count-in
+    // the Settings test click: the stage's own path (ClickPath), no count-in
+    private var testWait: kotlinx.coroutines.Job? = null
     private val clickTest = br.app.stagebook.domain.MetronomeTest(
         start = { bpm ->
             val look = repository.library.value.look
             val usb = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair)
-            if (look.playerMode && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, look.metroVolume)) metronome.stop()
-            // the USB stream was closed for being idle: opens again and the test click starts when it's ready
-            else if (look.playerMode && br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, 0, look.metroVolume)) metronome.stop()
-            else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, look.metroVolume) }
+            val vol = look.metroVolume
+            val way = br.app.stagebook.domain.ClickPath.choose(
+                look.playerMode, usb,
+                usbNow = { br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, vol) },
+                wake = { br.app.stagebook.player.StagePlayer.clickWhenReady(bpm, usb, 0, vol) },
+                connect = { player.connectForClick() },
+            )
+            when (way) {
+                br.app.stagebook.domain.ClickPath.Way.USB, br.app.stagebook.domain.ClickPath.Way.WAKE -> metronome.stop()
+                // the player turns on for the test: it sounds on the interface once it's ready, on the device if it never is
+                br.app.stagebook.domain.ClickPath.Way.CONNECT -> {
+                    metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff()
+                    testWait = viewModelScope.launch {
+                        val ready = kotlinx.coroutines.withTimeoutOrNull(TEST_USB_WAIT_MS) { player.usbReady.first { it } } != null
+                        if (ready && br.app.stagebook.player.StagePlayer.usbClick(bpm, usb, 0, vol)) metronome.stop()
+                        else { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, vol) }
+                    }
+                }
+                br.app.stagebook.domain.ClickPath.Way.DEVICE -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, 0, vol) }
+            }
         },
-        stop = { metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
+        stop = { testWait?.cancel(); metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
     )
     val clickTesting: StateFlow<Boolean> = clickTest.playing
+
+    /** Metronome settings open with a new interface plugged in: read its outputs there (user, 10/11). */
+    fun readInterface() = player.prepareUnread()
     fun toggleClickTest() = clickTest.toggle()
     fun stopClickTest() = clickTest.stop()
 
@@ -142,7 +164,10 @@ class SettingsViewModel @Inject constructor(
 
     /** Open file: a .stagebook shows the parts to choose; an old songs file (.json) adds the songs. */
     fun inspectBackup(uri: Uri) = viewModelScope.launch {
-        val c = runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
+        // a file tapped outside the app while the window of the one before is still open: the cache keeps one received
+        // file, so that window would restore from a copy that is gone. The new file takes its place, whatever it is
+        _pendingRestore.value = null
+        val c =runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
         when {
             c == null -> importFrom(uri)   // not a .stagebook: tries the old songs file (or says it couldn't)
             c.newer -> _messages.send(SettingsMessage.ImportNewer)
@@ -152,6 +177,11 @@ class SettingsViewModel @Inject constructor(
 
     fun cancelRestore() { _pendingRestore.value = null }
 
+    /** The file just restored brought a band saved by another device: said in a window that outlives the screen. */
+    private val _bandAgain = MutableStateFlow(false)
+    val bandAgain: StateFlow<Boolean> = _bandAgain.asStateFlow()
+    fun bandAgainSeen() { _bandAgain.value = false }
+
     /** Erase everything: Android clears the app data (songs, tracks, settings, band) and closes it; it opens clean. */
     fun factoryReset() { context.getSystemService(android.app.ActivityManager::class.java)?.clearApplicationUserData() }
 
@@ -159,6 +189,7 @@ class SettingsViewModel @Inject constructor(
         val p = _pendingRestore.value ?: return@launch
         _pendingRestore.value = null
         val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } }.getOrDefault(false)
+        if (ok && backup.bandAgain) _bandAgain.value = true
         // settings restored (language, look): the screen opens again so they apply
         _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(br.app.stagebook.data.Backup.Part.SETTINGS in parts, backup.skipped))
     }
@@ -338,10 +369,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** Installs the downloaded APK (session on Android 12+, the system screen otherwise); nothing if not downloaded yet. */
-    fun install(context: android.content.Context): Boolean {
+    fun install(context: android.content.Context): Job = viewModelScope.launch {
         // installed from Settings → About: the app opens there again after the update (user, 09/11)
-        br.app.stagebook.data.ResumeAfterUpdate.save(context, br.app.stagebook.domain.ResumePoint.SETTINGS + SettingsSection.ABOUT.name)
-        return context.installApk(updater, downloaded)
+        context.installApk(updater, downloaded, br.app.stagebook.domain.ResumePoint.SETTINGS + SettingsSection.ABOUT.name)
     }
 
     /** The downloaded APK that passed the checks, or null. */
@@ -418,3 +448,4 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
+private const val TEST_USB_WAIT_MS = 6_000L   // the interface not ready by then: the test sounds on the device

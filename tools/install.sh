@@ -11,14 +11,13 @@ cd "$(dirname "$0")/.."
 SERIAL="${1:?usage: tools/install.sh <serial> [--debug]}"
 VARIANT=release; [ "${2:-}" = "--debug" ] && VARIANT=debug
 ADB=(adb -s "$SERIAL")
-# audit-pending marker: its path lives outside the repository (~/.cache/stagebook-audit-mark holds it; none = no check)
-MARK=$(cat "$HOME/.cache/stagebook-audit-mark" 2>/dev/null || true)
-# without it the audit lock is off: say so instead of installing quietly (audit 02/11)
-[ -n "$MARK" ] || echo "warning: no ~/.cache/stagebook-audit-mark, the audit lock is off" >&2
-MARK="${MARK/#\~/$HOME}"   # a path written with ~
+# audit-pending marker: .claude/audit-pending of the main checkout, where the hook that asks for an audit writes it
+# (.claude is not in git, so a worktree has none). Its path used to come from a file in ~/.cache, which went on naming
+# the project's previous folder: the lock looked at nothing and installed during an audit (audit 10/11)
+MARK="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.claude/audit-pending"
 
 [ -z "$(git status --porcelain)" ] || { echo "refused: uncommitted changes"; exit 1; }
-[ -z "$MARK" ] || [ ! -e "$MARK" ] || { echo "refused: audit pending ($MARK)"; exit 1; }
+[ ! -e "$MARK" ] || { echo "refused: audit pending ($MARK)"; exit 1; }
 "${ADB[@]}" get-state >/dev/null 2>&1 || { echo "refused: device $SERIAL does not answer on adb"; exit 1; }
 services="$("${ADB[@]}" shell dumpsys activity services br.app.stagebook 2>/dev/null)" || { echo "refused: could not read the player state"; exit 1; }
 if grep -q "br.app.stagebook/.player.PlayerService" <<<"$services"; then

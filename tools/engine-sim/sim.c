@@ -110,8 +110,15 @@ static int nq = 0;
 static double out_due = 0, in_due = 0, in_acc = 0;
 static int disconnected = 0, fail_next_reap = 0;
 static int sim_intr = 0;   // a signal for the USB thread: the next blocking reap returns EINTR
+// usb_hold: the USB thread loses the CPU inside its next output submit, until the stall watch has signalled it. On the
+// device a signal that finds the thread outside the reap only runs the handler, no REAPURB returns EINTR for it: so it is
+// here while usb_held, from the hold to the thread's next reap
+static int usb_hold = 0, usb_held = 0, held_signals = 0;
 static int sim_pthread_kill(pthread_t thr, int sig) {
-    pthread_mutex_lock(&dev_mx); sim_intr = 1; pthread_cond_broadcast(&dev_cv); pthread_mutex_unlock(&dev_mx);
+    pthread_mutex_lock(&dev_mx);
+    if (usb_held) held_signals++;
+    else { sim_intr = 1; pthread_cond_broadcast(&dev_cv); }
+    pthread_mutex_unlock(&dev_mx);
     return 0;
 }
 static double in_dead_from = 0;   // from this time on, input URBs are accepted and never come back (an input that went quiet)
@@ -122,6 +129,12 @@ static long in_spike_n = 0, in_urb_count = 0;
 static double runner_jitter = 0;           // SIM_RUNNER_JITTER=<seconds>: a shared CI runner's timing noise, on top of everything
 static int in_loss_boundary = 0;           // packets lost at the start of every input URB (a host controller that loses a poll or two per boundary)
 static double out_dies_with_in_s = 0;      // output URBs stop coming back this long after the first input URB, the input keeps going (the S26 with a high-speed interface)
+// From all_dead_from on no URB comes back, and no error says so (a queue that stalled for good); the input's keep coming
+// for in_lingers_s more, so the last URB back is an input one, well after the output's last. A discarded URB still returns
+static double all_dead_from = 0, in_lingers_s = 0;
+static int stalled_for_good(const struct usbdevfs_urb *u, int st, double t) {
+    return all_dead_from > 0 && !st && t > all_dead_from + ((u->endpoint & 0x80) ? in_lingers_s : 0);
+}
 static double in_long_dies_s = 0, in_t0 = 0;   // input URBs longer than 16 packets stop coming back this long after the first input URB (the S26)
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
@@ -178,7 +191,8 @@ static int pop_ready(struct usbdevfs_urb **out, int block) {
     for (;;) {
         if (block && sim_intr) { sim_intr = 0; errno = EINTR; return -1; }
         int best = -1;
-        for (int i = 0; i < nq; i++) if (best < 0 || q[i].due < q[best].due) best = i;
+        double at = now();
+        for (int i = 0; i < nq; i++) if (!stalled_for_good(q[i].u, q[i].st, at) && (best < 0 || q[i].due < q[best].due)) best = i;
         if (best < 0) {
             if (disconnected || !block) { errno = disconnected ? ENODEV : EAGAIN; return -1; }
             pthread_cond_wait(&dev_cv, &dev_mx);
@@ -198,6 +212,7 @@ static int pop_ready(struct usbdevfs_urb **out, int block) {
         qent e = q[best]; q[best] = q[--nq];
         complete(e.u, e.st);
         *out = e.u;
+        usb_held = 0;
         return 0;
     }
 }
@@ -210,6 +225,14 @@ int fake_ioctl(int fd, unsigned long req, ...) {
     int r = 0;
     if (req == USBDEVFS_SUBMITURB) {
         struct usbdevfs_urb *u = arg;
+        if (usb_hold && !(u->endpoint & 0x80)) {
+            usb_hold = 0; usb_held = 1;
+            for (int ms = 0; !held_signals && ms < 2000; ms++) {
+                pthread_mutex_unlock(&dev_mx);
+                struct timespec w = {0, 1000000}; nanosleep(&w, NULL);
+                pthread_mutex_lock(&dev_mx);
+            }
+        }
         if (disconnected) { errno = ENODEV; r = -1; }
         else if (nq == QMAX) { errno = ENOMEM; r = -1; }
         else {
@@ -250,10 +273,20 @@ static void sim_unplug(void) {   // cable unplugged: the kernel returns everythi
     pthread_cond_broadcast(&dev_cv);
     pthread_mutex_unlock(&dev_mx);
 }
+// Holds the USB thread (see usb_hold) and waits for it to go on: 1 when the stall watch signalled it meanwhile
+static int sim_hold_usb(void) {
+    pthread_mutex_lock(&dev_mx); usb_hold = 1; held_signals = 0; pthread_mutex_unlock(&dev_mx);
+    for (int i = 0; i < 300; i++) {
+        struct timespec w = {0, 10000000}; nanosleep(&w, NULL);
+        pthread_mutex_lock(&dev_mx); int went_on = held_signals > 0 && !usb_held; pthread_mutex_unlock(&dev_mx);
+        if (went_on) return 1;
+    }
+    return 0;
+}
 static int sim_kernel_urbs(void) { pthread_mutex_lock(&dev_mx); int n = nq; pthread_mutex_unlock(&dev_mx); return n; }
 static void sim_close_conn(void) {   // UsbLink.close(): closing the fd returns what's left
     pthread_mutex_lock(&dev_mx);
-    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0; in_t0 = 0;
+    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0; in_t0 = 0; all_dead_from = 0; in_lingers_s = 0;
     pthread_mutex_unlock(&dev_mx);
 }
 
@@ -311,7 +344,7 @@ static void open_judged_a(long seek_ms) {
 static float s_gb = 1, s_gc = 1, s_nb = 1, s_nc = 1;
 static void sim_mix(void) {
 #ifdef ENGINE_HAS_MIX
-    float g[8] = {s_gb, s_gb, s_gc, s_gc}, n[8] = {s_nb, s_nb, s_nc, s_nc}, r[64] = {0};
+    float g[8] = {s_gb, s_gb, s_gc, s_gc}, n[8] = {s_nb, s_nb, s_nc, s_nc}, r[32 * 8] = {0};
     for (int o = 0; o < 4; o++) r[o * 8 + o] = 1.0f;
     FN(setMix)(env, NULL, (jfloatArray)g, (jfloatArray)n, 0x3, (jfloatArray)r);
 #endif
@@ -493,13 +526,29 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    // SIM_ONLY=starve: only that scenario, in seconds, while working on it (the full run is for commits and CI)
+    // SIM_ONLY=starve: only the stall watch's scenarios, in seconds, while working on it (the full run is for commits and CI)
     const char *only = getenv("SIM_ONLY");
 #ifdef ENGINE_HAS_PROBE
     if (only && !strcmp(only, "starve")) { e_load(ogg); goto only_starve; }
 #endif
     if (only) { printf("SIM_ONLY=%s: no such scenario here (starve needs an engine with the clock probe)\n", only); return 2; }
 
+#ifdef OUTS_MAX
+    // 0) an 18-channel desk: a channel routed above output 8 reaches it (the matrix used to stop at 8 outputs)
+    printf("[0] a channel routed to output 13 of 18 reaches it\n");
+    {
+        float g[8] = {1, 1}, nm[8] = {1, 1}, r[OUTS_MAX * 8] = {0}, lane[8] = {0.5f, 0.25f}, out[OUTS_MAX];
+        r[12 * 8 + 0] = 1; r[17 * 8 + 1] = 1;
+        FN(setMix)(env, NULL, (jfloatArray)g, (jfloatArray)nm, 0, (jfloatArray)r);
+        int lanes_was = g_lanes; float fade_was = g_fade;
+        g_lanes = 2; g_fade = 1;
+        mix_custom(lane, out, 18);
+        g_lanes = lanes_was; g_fade = fade_was;
+        char d[96]; snprintf(d, sizeof d, "out13=%.2f out18=%.2f out8=%.2f", out[12], out[17], out[7]);
+        check(out[12] == 0.5f && out[17] == 0.25f && out[7] == 0, "a channel routed above output 8 reaches it", d);
+        sim_mix();
+    }
+#endif
     // 1) play, seek and change songs: the output is recorded to compare both versions
     printf("[1] play the 44.1 kHz track (resampled), seek to 1:00 and switch to the 48 kHz track\n");
     E_START();
@@ -546,6 +595,12 @@ int main(int argc, char **argv) {
     sleep_s(8.0);
     snprintf(buf, sizeof buf, "%ld times the desk ran out of packets, worst gap %.1f ms", iso_gaps, worst_starve * 1000);
     check(worst_starve < MAX_STARVE, "8 s without a long packet gap", buf);
+#ifdef HD_WIN_S
+    // a host that sends every packet measures close to 100% (the measurement only counts, the sound above is the same)
+    float hd = FN(hostDelivery)(env, NULL);
+    snprintf(buf, sizeof buf, "%.1f%%", hd);
+    check(hd > 98.0f && hd < 102.0f, "a host losing nothing measures ~100% delivered", buf);
+#endif
     FN(pause)(env, NULL);
 
     // 2) slow disk + hot CPU: a 40 ms seek with the song playing
@@ -803,6 +858,93 @@ only_starve:
     FN(stop)(env, NULL);
     sim_close_conn();
     pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0; pthread_mutex_unlock(&dev_mx);
+
+    // 7f) the stall watch's verdict must not outlive the stall (audit, 10/11): its signal can find the USB thread outside
+    // the reap (it lost the CPU for a moment), where no EINTR comes of it. The flag stayed set, and the next interrupted
+    // reap, whatever its reason, was taken for a stalled queue: half the queue and a connection more
+    printf("[7f] a stall verdict the USB thread outlived is dropped\n");
+    FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, -1, 0, 0);
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.3);
+    int q_before = FN(queueMs)(env, NULL);
+    int woke = sim_hold_usb();
+    sleep_s(0.2);
+    sim_pthread_kill(g_usb_thr, SIGUSR2);   // a signal with no verdict behind it: the reap has only to wait again
+    sleep_s(0.3);
+    snprintf(buf, sizeof buf, "watch signalled the held thread=%d, running=%d, queue %d ms (was %d), status \"%s\"",
+             woke, FN(isRunning)(env, NULL), FN(queueMs)(env, NULL), q_before, g_status);
+    check(woke && FN(isRunning)(env, NULL) && FN(queueMs)(env, NULL) == q_before, "an interrupted wait after an outlived stall just waits again", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    FN(setQueue)(env, NULL, q_before);   // a failure here must not shorten the queue of the scenarios below
+
+    // the same outlived stall, and then the input really starves the output: that is what the stream has to say
+    E_START_FAST();
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.3);
+    woke = sim_hold_usb();
+    sleep_s(0.1);
+    pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 1e-9; pthread_mutex_unlock(&dev_mx);   // from now on
+    sleep_s(0.8);
+    // a runner so slow that the hold outlasted FB_STALL_S: the input was given up and everything stalled, another scenario
+    int held_too_long = g_fb_bad;
+    snprintf(buf, sizeof buf, "watch signalled the held thread=%d, stream ended=%d, input starved the output=%d, queue %d ms (was %d), status \"%s\"",
+             woke, !FN(isRunning)(env, NULL), FN(inputStarvedOutput)(env, NULL), FN(queueMs)(env, NULL), q_before, g_status);
+    check(held_too_long || (woke && !FN(isRunning)(env, NULL) && FN(inputStarvedOutput)(env, NULL) && FN(queueMs)(env, NULL) == q_before),
+          held_too_long ? "an output starved after an outlived stall is still told apart (skipped: the runner is too noisy)" : "an output starved after an outlived stall is still told apart: no input, the queue as it was", buf);
+    FN(stop)(env, NULL);
+    sim_close_conn();
+    FN(setQueue)(env, NULL, q_before);
+    pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0; pthread_mutex_unlock(&dev_mx);
+
+    // every URB stops coming back and nothing says so: the stream has to end by itself with half the queue, for Java to
+    // connect again. With no input first, then with one
+    printf("[7g] a queue stalled for good ends the stream with half the queue\n");
+    for (int with_in = 0; with_in < 2; with_in++) {
+        if (with_in) E_START_FAST(); else FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, -1, 0, 0);
+        FN(seek)(env, NULL, 60000);
+        FN(play)(env, NULL);
+        sleep_s(0.3);
+        // the input's last URB comes back 60 ms after the output's last: longer than a turn of the stall watch (50 ms),
+        // so one of them always sees an output quiet for STALL_S beside an input that is not yet. It is still a stalled
+        // queue, not an input starving the output: that verdict makes Java give the input up on this device for good
+        pthread_mutex_lock(&dev_mx); in_lingers_s = 0.06; all_dead_from = now(); pthread_mutex_unlock(&dev_mx);
+        sleep_s(0.8);
+        int halved = q_before > QUEUE_MS_MIN ? q_before / 2 : q_before;
+        snprintf(buf, sizeof buf, "stream ended=%d, input starved the output=%d, queue %d ms (was %d), status \"%s\"",
+                 !FN(isRunning)(env, NULL), FN(inputStarvedOutput)(env, NULL), FN(queueMs)(env, NULL), q_before, g_status);
+        check(!FN(isRunning)(env, NULL) && !FN(inputStarvedOutput)(env, NULL) && FN(queueMs)(env, NULL) == halved && strstr(g_status, "queue stalled"),
+              with_in ? "a stalled queue with the input on is not taken for an input starving the output" : "a stalled queue ends the stream with half the queue", buf);
+        FN(stop)(env, NULL);
+        sim_close_conn();
+        FN(setQueue)(env, NULL, q_before);
+    }
+    // 7h) the watch can decide on an old clock: it read the last reap, the USB thread then got a URB back and cleared
+    // the verdict, and only then did the watch write it and signal (audit, 10/11). The queue is flowing again, so the
+    // interrupted reap must just wait again: no connection more, no halved queue, and no input given up
+    printf("[7h] a verdict written after the queue came back is dropped\n");
+    for (int which = 0; which < 2; which++) {
+        E_START_FAST();
+        FN(seek)(env, NULL, 60000);
+        FN(play)(env, NULL);
+        sleep_s(0.3);
+        int q0 = FN(queueMs)(env, NULL);
+        for (int k = 0; k < 20 && FN(isRunning)(env, NULL); k++) {
+            if (which) g_out_starved = 1; else g_stalled = 1;   // the late write
+            sim_pthread_kill(g_usb_thr, SIGUSR2);
+            sleep_s(0.02);
+        }
+        sleep_s(0.2);
+        snprintf(buf, sizeof buf, "running=%d, input starved the output=%d, queue %d ms (was %d), status \"%s\"",
+                 FN(isRunning)(env, NULL), FN(inputStarvedOutput)(env, NULL), FN(queueMs)(env, NULL), q0, g_status);
+        check(FN(isRunning)(env, NULL) && !FN(inputStarvedOutput)(env, NULL) && FN(queueMs)(env, NULL) == q0,
+              which ? "a late output-starved verdict on a flowing queue just waits again" : "a late stall verdict on a flowing queue just waits again", buf);
+        FN(stop)(env, NULL);
+        sim_close_conn();
+        FN(setQueue)(env, NULL, q0);
+    }
     if (only) { printf("%s: %d failure(s)\n", ENGINE_NAME, fails); return fails ? 1 : 0; }
 #endif
 

@@ -111,11 +111,16 @@ class DeviceIdentity @Inject constructor(@ApplicationContext private val context
         return c.doFinal(data, 12, data.size - 12)
     }
 
-    private companion object {
-        const val ALIAS = "stagebook_identity"
-        const val KEY_PUB = "pub"
-        const val KEY_PRIV = "priv"
-        const val KEY_WRAPPED = "wrapped"
-        const val KEY_NAME = "name"
+    companion object {
+        private const val ALIAS = "stagebook_identity"
+        private const val KEY_PUB = "pub"
+        private const val KEY_PRIV = "priv"
+        private const val KEY_WRAPPED = "wrapped"
+        private const val KEY_NAME = "name"
+
+        /** The id this device already has for the band, or "" when it has none yet: asking never creates the keys. */
+        fun storedId(context: Context): String = runCatching {
+            context.getSharedPreferences("identity", Context.MODE_PRIVATE).getString(KEY_PUB, null)?.let(BandCrypto::idOf)
+        }.getOrNull().orEmpty()
     }
 }

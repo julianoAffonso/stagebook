@@ -1,10 +1,27 @@
 #!/usr/bin/env bash
 # A commit only goes in with the checks of what it touches green: a filter in a pipe has hidden failures before.
+# The index being committed: commit -a and commit <paths> hand over a temporary one, and reading the usual one instead
+# saw nothing to validate. Only this hook's own reads use it: the tools it runs make repositories of their own.
+index=${GIT_INDEX_FILE:-}
 unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
-files=$(git diff --cached --name-only)
+committed() { if [ -n "$index" ]; then GIT_INDEX_FILE="$index" "$@"; else "$@"; fi; }
+files=$(committed git diff --cached --name-only)
 touches() { grep -qE "$1" <<<"$files"; }
+# validate.sh builds the working tree and the commit takes the index: under the validated paths the two must be the
+# same, or a tree that never compiled is recorded as validated (a new file never added, audit 10/11)
+same_as_built() {
+  local dirty; dirty=$(committed tools/validated.sh dirty)
+  [ -z "$dirty" ] && return 0
+  echo "Commit refused: validation builds these files but the commit leaves them out, so it would not be what passed:"
+  sed 's/^/  /' <<<"$dirty"
+  echo "Stage them (git add), or to commit only part set the rest aside first: git stash -k -u"
+  return 1
+}
 if touches '^(app/|gradle/|build\.gradle|settings\.gradle|gradle\.properties)'; then
+  same_as_built || exit 1   # before the long validation, not after it
   tools/validate.sh || { echo "Commit refused: validation failed"; exit 1; }
+  same_as_built || exit 1   # and again: nothing changed while it ran
+  tools/validated.sh add "$(tools/validated.sh key "$(committed git write-tree)")"   # pre-push trusts this tree from now on
 fi
 if touches '^mcp/'; then
   (cd mcp && npm test) || { echo "Commit refused: MCP tests failed"; exit 1; }

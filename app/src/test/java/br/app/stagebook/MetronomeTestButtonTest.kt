@@ -8,7 +8,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.domain.MetronomeTest
+import br.app.stagebook.data.model.Look
 import br.app.stagebook.ui.settings.MetronomeTestButton
+import br.app.stagebook.ui.settings.SettingsActions
+import br.app.stagebook.ui.settings.SettingsScreen
+import br.app.stagebook.ui.settings.SettingsSection
+import br.app.stagebook.ui.settings.SettingsUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,5 +57,50 @@ class MetronomeTestButtonTest {
         compose.waitForIdle()
         assertEquals(listOf("start", "stop"), log)
         assertFalse(test.playing.value)
+    }
+
+    @Test fun `device output says the order it picks - headphones, Bluetooth, speaker`() {
+        // a Bluetooth speaker near the desk got the click and it looked like the USB (XR18 test, 10/11)
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(SettingsUiState(loading = false, look = Look(metroSound = true, playerMode = true)), SettingsActions(), section = SettingsSection.METRONOME)
+            }
+        }
+        compose.onNodeWithText("Aparelho").assertExists()
+        compose.onNodeWithText("No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.").assertExists()
+    }
+
+    @Test fun `changing the output stops a test that is playing`() {
+        var stopped = 0
+        var picked: br.app.stagebook.domain.MetronomeOut? = null
+        val desk = br.app.stagebook.domain.OutputInfo("usb:1397:00d4", "X18/XR18", 18)
+        val look = Look(metroSound = true, playerMode = true, mixer = br.app.stagebook.domain.MixerConfig(output = desk))
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(
+                    SettingsUiState(loading = false, look = look),
+                    SettingsActions(clickTesting = true, onClickTestStop = { stopped++ }, onMetronomeOut = { picked = it }),
+                    section = SettingsSection.METRONOME,
+                )
+            }
+        }
+        compose.onNodeWithText("Aparelho").performClick()
+        compose.onNodeWithText("X18/XR18 · Saídas 9-10").performClick()
+        assertEquals(1, stopped)
+        assertEquals(br.app.stagebook.domain.MetronomeOut(8, true), picked)
+    }
+
+    @Test fun `a new interface plugged in is read right on the metronome settings`() {
+        // the S26 showed only Device with the XR18 plugged in, until a song with a track was opened on stage
+        var reads = 0
+        val fresh = br.app.stagebook.domain.OutputInfo("usb:1397:00d4", "X18/XR18", 0)
+        val look = Look(metroSound = true, playerMode = true, mixer = br.app.stagebook.domain.MixerConfig(output = fresh))
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(SettingsUiState(loading = false, look = look), SettingsActions(onReadInterface = { reads++ }), section = SettingsSection.METRONOME)
+            }
+        }
+        compose.onNodeWithText("Lendo as saídas da X18/XR18…").assertExists()
+        assertEquals(1, reads)
     }
 }

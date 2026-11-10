@@ -47,7 +47,11 @@ class Backup @Inject constructor(
     enum class Part { LIBRARY, TRACKS, SETTINGS }
 
     @Serializable
-    private data class Manifest(val format: Int = FORMAT, val app: String = "", val parts: List<Part> = emptyList())
+    private data class Manifest(
+        val format: Int = FORMAT, val app: String = "", val parts: List<Part> = emptyList(),
+        // the device that saved the band in this file ("" = no settings in it, or a file from before 10/11)
+        val device: String = "",
+    )
 
     @Serializable
     private data class Songs(val songs: List<Song> = emptyList(), val sets: List<Setlist> = emptyList())
@@ -62,10 +66,11 @@ class Backup @Inject constructor(
         val lib = repository.library.value
         ZipOutputStream(out).use { zip ->
             fun put(name: String, bytes: ByteArray) { zip.putNextEntry(ZipEntry(name)); zip.write(bytes); zip.closeEntry() }
-            put(MANIFEST, json.encodeToString(Manifest.serializer(), Manifest(app = appVersion(), parts = parts.toList())).toByteArray())
+            put(MANIFEST, json.encodeToString(Manifest.serializer(), Manifest(app = appVersion(), parts = parts.toList(), device = if (Part.SETTINGS in parts) DeviceIdentity.storedId(context) else "")).toByteArray())
             if (Part.LIBRARY in parts) {
-                // without the tracks in the backup, the song doesn't point to a file that isn't included
-                val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.copy(track = "") }
+                // without the tracks, chosen on purpose, the song carries neither the file nor its name: nothing to
+                // attach again on the other side (user, 10/11)
+                val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.copy(track = "", trackName = "") }
                 put(SONGS, json.encodeToString(Songs.serializer(), Songs(songs, lib.sets)).toByteArray())
                 if (Part.TRACKS in parts) {
                     lib.songs.map { it.track }.filter { it.isNotEmpty() }.distinct().forEach { name ->
@@ -86,6 +91,18 @@ class Backup @Inject constructor(
 
     /** Songs left out by the last [restore] because they weren't song text. */
     @Volatile var skipped = 0
+        private set
+
+    /**
+     * The last [restore] brought a band saved by another device: the members are back here, but for them this device is
+     * one they never approved. On the device that saved the file nothing changes, and a file from before the device
+     * was written in it says nothing either way.
+     */
+    @Volatile var bandAgain = false
+        private set
+
+    /** The songs the last [restore] brought without their audio (the editor on the computer says which). */
+    @Volatile var lost: List<br.app.stagebook.data.model.LostAudio> = emptyList()
         private set
 
     suspend fun inspect(input: InputStream): Contents? = withContext(Dispatchers.IO) {
@@ -110,15 +127,20 @@ class Backup @Inject constructor(
      */
     suspend fun restore(input: InputStream, parts: Set<Part>, replace: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         skipped = 0
+        bandAgain = false
+        lost = emptyList()
         // each track goes straight to a .part file next to the others, never all of them in memory (a backup with 30
         // tracks of 15 MB used to need ~450 MB of heap and closed the app on the Fire; audit 30/10)
         val partFiles = mutableMapOf<String, java.io.File>()
         val ok = runCatching {
             var songs: Songs? = null
             var settings: JsonObject? = null
+            var savedBy = ""
+            var savedParts = emptyList<Part>()
             ZipInputStream(input).use { zip ->
                 generateSequence { zip.nextEntry }.forEach { e ->
                     when {
+                        e.name == MANIFEST -> json.decodeFromString(Manifest.serializer(), zip.readBytes().decodeToString()).let { savedBy = it.device; savedParts = it.parts }
                         e.name == SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readBytes().decodeToString())
                         e.name == SETTINGS -> settings = json.parseToJsonElement(zip.readBytes().decodeToString()).jsonObject
                         e.name.startsWith(TRACKS_DIR) && Part.TRACKS in parts -> {
@@ -136,8 +158,21 @@ class Backup @Inject constructor(
                 // the same filter as the band: a "song" that isn't song text stays out (user's request of 30/10)
                 val allowed = s.songs.filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
                 skipped = s.songs.size - allowed.size
-                val songs = allowed.map { if (keepTracks && it.track in partFiles) it else it.copy(track = "") }
+                // the tracks were in the file and left out on purpose: the names go too, there is nothing to attach
+                // again (user, 10/11). A track that should have come and didn't keeps its name, for the alert.
+                val dropNames = !keepTracks && Part.TRACKS in savedParts
+                val songs = allowed.map {
+                    when {
+                        keepTracks && it.track in partFiles -> it
+                        dropNames -> it.copy(track = "", trackName = "")
+                        else -> it.copy(track = "")
+                    }
+                }
+                val here = repository.library.value.songs.mapTo(HashSet()) { it.id }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
+                // what came in without its audio is named in a window; joining, only the songs that are new here
+                repository.reportLostAudio(repository.library.value.songs.filter { it.audioLost && (replace || it.id !in here) })
+                lost = repository.lostAudio.value
                 // the replaced library's tracks don't stay on the disk
                 tracks.sweep(repository.library.value.songs.mapTo(HashSet()) { it.track })
             }
@@ -145,6 +180,7 @@ class Backup @Inject constructor(
                 st["look"]?.let { repository.updateLook { _ -> json.decodeFromJsonElement(Look.serializer(), st["look"]!!) } }
                 st["prefs"]?.jsonObject?.forEach { (name, values) -> if (name in PREFS) jsonToPrefs(name, values.jsonObject) }
                 trust?.reload()
+                bandAgain = savedBy.isNotEmpty() && savedBy != DeviceIdentity.storedId(context) && hasMembers()
             }
             true
         }.getOrDefault(false)
@@ -162,6 +198,10 @@ class Backup @Inject constructor(
         if (!good) part.delete()
         return part.takeIf { good }
     }
+
+    private fun hasMembers(): Boolean = runCatching {
+        json.parseToJsonElement(context.getSharedPreferences("band", Context.MODE_PRIVATE).getString(BandTrust.KEY, null) ?: return false).jsonArray.isNotEmpty()
+    }.getOrDefault(false)
 
     // SharedPreferences ↔ JSON, with each value's type (text, yes/no, int/long/float, list of texts)
     private fun prefsToJson(name: String): JsonElement = buildJsonObject {
@@ -201,8 +241,10 @@ class Backup @Inject constructor(
         private const val SONGS = "biblioteca.json"
         private const val SETTINGS = "ajustes.json"
         private const val TRACKS_DIR = "faixas/"
-        // settings that go in the backup: player and USB interface profiles, normalization, band (who's in it) and
-        // language. Left out: the identity (Keystore), the inbox and the internet queue (temporary)
-        val PREFS = listOf("player", "norm", "band", "lingua")
+        // settings that go in the backup besides the Look (which holds the USB interface profiles): track loudness
+        // measures, band (who's in it) and language. Left out: the identity (Keystore), the inbox and the internet
+        // queue (temporary), and "player", which only says the battery question was asked: freeing the app from
+        // battery saving is each device's own, and a restored "asked" kept the new device from ever asking (user, 10/11)
+        val PREFS = listOf("norm", "band", "lingua")
     }
 }

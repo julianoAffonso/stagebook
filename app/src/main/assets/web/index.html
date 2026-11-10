@@ -425,9 +425,13 @@ function markOpen() {
 
 function drawTrack() {
   const has = !!(current && current.track);
+  const lost = !has && !!(current && current.trackName);
   $("track-row").hidden = !(current && current.id);
   // the track's own name, as the app keeps it; an old track without one shows its file
-  $("track-name").textContent = has ? current.trackName || current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓" : t.trackNone;
+  $("track-name").textContent = has ? current.trackName || current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓"
+    // the audio didn't come with the song (a backup without the tracks): the name stays, to know which one to send
+    : lost ? `⚠ ${current.trackName}. ${t.trackMissing}` : t.trackNone;
+  $("track-name").className = lost ? "warn" : "muted";
   $("track-pick").textContent = has ? t.trackChange : t.trackPick;
   $("track-remove").hidden = !has;
 }
@@ -863,9 +867,12 @@ async function restore(replace) {
   if (replace && !confirm(t.replace + "?")) return;
   const r = await post("/api/backup/restore", { token: backupToken, parts, replace });
   if (!r || r.status !== 200) return say("backup-status", t.unreadable, "error");
-  const { skipped } = await r.json();
+  const { skipped, bandAgain, lost } = await r.json();
   $("backup-parts").hidden = true;
-  say("backup-status", skipped ? `${t.restored}. ${t.notSong} (${skipped})` : t.restored, "ok");
+  const done = skipped ? `${t.restored}. ${t.notSong} (${skipped})` : t.restored;
+  // the songs that came without their audio, each with the audio's name, to know what to send again
+  const noAudio = lost && lost.length ? `. ${t.lostAudio}: ${lost.map((l) => `${l.title} (${l.track})`).join(", ")}` : "";
+  say("backup-status", (bandAgain ? `${done}. ${t.bandAgain}` : done) + noAudio, "ok");
   await Promise.all([loadList(), loadSets()]);
 }
 $("backup-merge").onclick = () => restore(false);

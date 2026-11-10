@@ -57,6 +57,14 @@ class StageMetaTest {
         assertEquals(true, saved.contains("[A]linha [E]outra"))
     }
 
+    @Test fun `the stage carries the name of the audio that did not come`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val id = repo.saveSong(Song(title = "Sem o áudio", text = "[G]linha", trackName = "Ao vivo"))
+        val vm = stage(repo, id)
+        assertEquals("Ao vivo", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().lostTrack)
+    }
+
     private fun stage(repo: LibraryRepository, id: String) = StageViewModel(repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)), StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
         br.app.stagebook.data.BandConduct(
             br.app.stagebook.data.BandLink(

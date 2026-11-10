@@ -294,6 +294,7 @@
     <string name="reset_title">Apagar tudo</string>
     <string name="reset_info">Deixa o app como novo. Apaga músicas, setlists, backing tracks, ajustes e a banda deste aparelho.</string>
     <string name="reset_warning">Apaga deste aparelho todas as músicas, setlists, backing tracks e ajustes. Não dá para desfazer.</string>
+    <string name="reset_android_copy">Se o Android guarda uma cópia do app na sua conta, as músicas e os setlists podem voltar quando você instalar de novo.</string>
     <string name="reset_backup_first">Fazer um backup antes</string>
     <string name="reset_type_code">Para confirmar, digite o código:</string>
     <string name="reset_code_label">Código</string>
@@ -318,6 +319,7 @@
     <string name="backup_not_backup">Esse arquivo não é um backup do Stagebook</string>
     <string name="backup_restore_failed">Não deu para restaurar o backup</string>
     <string name="backup_restored">Backup restaurado</string>
+    <string name="backup_band_again">Este aparelho é novo para a banda. Autorize a banda de novo em Ajustes → Banda.</string>
     <string name="editor_data_label">Dados da música</string>
     <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>
@@ -949,9 +951,16 @@
     <string name="player_title">Player</string>
     <string name="player_on_alone">Ligado</string>
     <string name="metro_out">Saída do som</string>
-    <string name="metro_out_device">Aparelho (fone ou alto-falante)</string>
+    <string name="metro_out_device">Aparelho</string>
+    <string name="metro_out_reading">Lendo as saídas da %s…</string>
+    <string name="host_warning_title">A USB pode falhar</string>
+    <string name="host_warning_text">A USB deste aparelho não está dando conta da %1$s: perdeu %2$s dos pacotes. O som pode engasgar ou falhar no meio da música. Usar mesmo assim é por sua conta e risco.</string>
+    <string name="host_warning_channels">Esta interface tem %d canais, o que exige muito da USB. Num aparelho mais forte, ou com uma interface de menos canais, o som tende a sair limpo.</string>
+    <string name="mixer_now_unread">Conectada: %1$s. Lendo as saídas…</string>
+    <string name="mixer_out_missing">Esta saída não toca agora. Pela rota do Android, o sistema só entrega as saídas 1 a %d desta interface.</string>
+    <string name="metro_out_device_order">No aparelho ele vai para o fone, depois o Bluetooth, depois o alto-falante. Usa o primeiro que estiver conectado.</string>
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
-    <string name="metro_out_hint">Para escolher uma saída da interface USB, toque uma faixa com ela conectada.</string>
+    <string name="metro_out_hint">Para escolher uma saída da interface USB, espete-a com o player ligado.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>
     <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que pode engasgar.</string>
     <string name="usb_route_auto_android">O app ligou esta chave para %1$s, porque o som falhou várias vezes no motor do Stagebook.</string>
@@ -1031,6 +1040,10 @@
     <string name="editor_auto_meta_short">Em branco: o app completa</string>
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
+    <string name="editor_track_missing">O áudio não está neste aparelho. Anexe de novo.</string>
+    <string name="stage_track_lost">O áudio desta música está faltando</string>
+    <string name="lost_audio_title">Músicas sem o áudio</string>
+    <string name="lost_audio_message">O áudio destas músicas não veio. Anexe de novo na edição de cada música ou no palco.</string>
     <string name="tags_empty">Nenhuma</string>
     <string name="editor_lyrics_chords">Letra e cifra</string>
     <plurals name="scan_parked">

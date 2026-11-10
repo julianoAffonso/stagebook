@@ -131,11 +131,11 @@ class MainActivity : ComponentActivity() {
                         onUpdate = { updateOffer.accept() },
                         onLater = updateOffer::decline,
                         onInstall = {
-                            // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
                             (updateOffer.offer.value as? UpdateOffer.Ready)?.let {
                                 // the screen it was on comes back after the update (user, 09/11)
-                                br.app.stagebook.data.ResumeAfterUpdate.save(this@MainActivity, br.app.stagebook.data.ResumeAfterUpdate.currentRoute ?: br.app.stagebook.data.ResumeAfterUpdate.HOME)
-                                if (installApk(updater, it.apk)) updateOffer.dismiss()
+                                val route = br.app.stagebook.data.ResumeAfterUpdate.currentRoute ?: br.app.stagebook.data.ResumeAfterUpdate.HOME
+                                // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
+                                lifecycleScope.launch { if (installApk(updater, it.apk, route)) updateOffer.dismiss() }
                             }
                         },
                         onClose = updateOffer::dismiss,
@@ -156,6 +156,9 @@ class MainActivity : ComponentActivity() {
                 val requests by band.requests.collectAsStateWithLifecycle()
                 val onStage by stageGate.onStage.collectAsStateWithLifecycle()
                 if (!onStage) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
+                // the songs that just lost their audio (a file opened without the tracks, Android's own copy), named once
+                val lostAudio by repository.lostAudio.collectAsStateWithLifecycle()
+                if (!onStage && lostAudio.isNotEmpty()) br.app.stagebook.ui.components.LostAudioDialog(lostAudio, repository::lostAudioSeen)
                 // "Chrome · Windows wants to edit" (editor on the computer, T37): also never on stage; the browser waits
                 val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
                 if (!onStage && requests.isEmpty()) webRequests.firstOrNull()?.let { r ->
@@ -183,8 +186,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         br.app.stagebook.data.ResumeAfterUpdate.opened(this)
+        br.app.stagebook.data.InstallResults.appBack()   // back from Android's install confirmation, answered or not
         checkUsbRecord()   // also when the app was opened by plugging in the interface
         window.decorView.post { hideSystemBars() }
+    }
+
+    override fun onPause() {
+        br.app.stagebook.data.InstallResults.appLeft()
+        super.onPause()
     }
 
     override fun onStop() {

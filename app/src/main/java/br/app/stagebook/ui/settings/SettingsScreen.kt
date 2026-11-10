@@ -173,6 +173,7 @@ fun SettingsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val clickApart by viewModel.clickApart.collectAsStateWithLifecycle()
+    val installWaiting by br.app.stagebook.data.InstallResults.waiting.collectAsStateWithLifecycle()
     val clickTesting by viewModel.clickTesting.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -198,6 +199,11 @@ fun SettingsRoute(
             warning = stringResource(R.string.backup_restore_warning),
         )
     }
+
+    // the band came back from another device's file: here it's a device they never approved. A window held by the view
+    // model, not the snackbar: restoring settings opens the screen again, and the snackbar goes with the old one.
+    val bandAgain by viewModel.bandAgain.collectAsStateWithLifecycle()
+    if (bandAgain) InfoDialog(stringResource(R.string.backup_restored), stringResource(R.string.backup_band_again), viewModel::bandAgainSeen)
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { m ->
@@ -381,6 +387,7 @@ fun SettingsRoute(
                 onMetronomeVolume = viewModel::setMetronomeVolume,
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
+                onReadInterface = viewModel::readInterface,
                 onMetronomeMenu = viewModel::probeClickRoute,
                 clickApart = clickApart || !usb.androidOr(uiState.look.usbViaAndroid),
                 clickTesting = clickTesting,
@@ -396,6 +403,7 @@ fun SettingsRoute(
                 },
                 onDownloadUpdate = viewModel::downloadUpdate,
                 onInstallUpdate = install,
+                installWaiting = installWaiting,
             ),
         )
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
@@ -481,6 +489,7 @@ data class SettingsActions(
     val onMetronomeVolume: (Int) -> Unit = {},
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
+    val onReadInterface: () -> Unit = {},
     val onMetronomeMenu: () -> Unit = {},
     val clickApart: Boolean = true,
     val clickTesting: Boolean = false,
@@ -492,6 +501,7 @@ data class SettingsActions(
     val onOpenHelp: () -> Unit = {},
     val onDownloadUpdate: () -> Unit = {},
     val onInstallUpdate: () -> Unit = {},
+    val installWaiting: Boolean = false,   // the install is with Android: Install stays off until it answers
 )
 
 /**
@@ -1411,7 +1421,8 @@ internal fun MixerCard(
         if (monitorSwitch) SwitchRow(stringResource(R.string.mixer_monitor), monitoring, onMonitoring)
         // which output the shown routing belongs to (the one in use or the last used)
         Text(
-            pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
+            if (mixer.output.unread) stringResource(R.string.mixer_now_unread, mixer.output.label())
+            else pluralStringResource(R.plurals.mixer_now_output, mixer.output.count, mixer.output.label(), mixer.output.count),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.lockedDim(),
         )
@@ -1552,13 +1563,18 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             val options = br.app.stagebook.domain.MetronomeOut.options(outputs)
             val chosen = br.app.stagebook.domain.MetronomeOut(look.metroUsbOut, look.metroUsbPair).takeIf { it in options } ?: br.app.stagebook.domain.MetronomeOut.DEVICE
             OptionDropdown(
-                stringResource(R.string.metro_out), options, chosen, { actions.onMetronomeOut(it) },
+                // a test playing stops when the output changes (user, 10/11): it kept clicking on the old one
+                stringResource(R.string.metro_out), options, chosen, { if (it != chosen && actions.clickTesting) actions.onClickTestStop(); actions.onMetronomeOut(it) },
                 { o -> if (o.device) stringResource(R.string.metro_out_device) else outputs.label() + " · " + br.app.stagebook.ui.components.outputName(o.out, o.pair, outputs) },
                 enabledOf = { !it.device || actions.clickApart },
                 onOpen = actions.onMetronomeMenu,
             )
+            if (chosen.device) Text(stringResource(R.string.metro_out_device_order), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (!actions.clickApart) Text(stringResource(R.string.metro_out_together), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // a new interface on the cable: its outputs are read right here, with no trip to the stage (user, 10/11)
+            if (outputs.unread) androidx.compose.runtime.LaunchedEffect(outputs.key) { actions.onReadInterface() }
+            if (outputs.unread) Text(stringResource(R.string.metro_out_reading, outputs.label()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (look.metroSound) MetronomeTestButton(actions.clickTesting, actions.onClickTest, actions.onClickTestStop)
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })
@@ -1703,7 +1719,7 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
             is UpdateState.Available, UpdateState.DownloadFailed ->
                 ActionButton(stringResource(R.string.settings_update_download), actions.onDownloadUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
             UpdateState.Ready -> {
-                ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download)
+                ActionButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, Modifier.fillMaxWidth(), icon = AppIcons.Download, enabled = !actions.installWaiting)
                 if (actions.advanced.autoBlocker) {
                     InfoText(stringResource(R.string.auto_blocker_hint))
                     ActionButton(stringResource(R.string.auto_blocker_open), actions.onAutoBlocker, Modifier.fillMaxWidth(), icon = AppIcons.Public, tone = ButtonTone.Tonal)

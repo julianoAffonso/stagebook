@@ -287,6 +287,7 @@
     <string name="reset_title">Erase everything</string>
     <string name="reset_info">Makes the app like new. Erases songs, setlists, backing tracks, settings and the band on this device.</string>
     <string name="reset_warning">Erases every song, setlist, backing track and setting on this device. It can\'t be undone.</string>
+    <string name="reset_android_copy">If Android keeps a copy of the app in your account, the songs and setlists can come back when you install it again.</string>
     <string name="reset_backup_first">Back up first</string>
     <string name="reset_type_code">To confirm, type the code:</string>
     <string name="reset_code_label">Code</string>
@@ -311,6 +312,7 @@
     <string name="backup_not_backup">This file isn\'t a Stagebook backup</string>
     <string name="backup_restore_failed">Couldn\'t restore the backup</string>
     <string name="backup_restored">Backup restored</string>
+    <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band.</string>
     <string name="editor_data_label">Song details</string>
     <string name="editor_data_untitled">Untitled song</string>
     <string name="editor_data_capo">capo %1$d</string>
@@ -919,9 +921,16 @@
     <string name="player_title">Player</string>
     <string name="player_on_alone">On</string>
     <string name="metro_out">Sound output</string>
-    <string name="metro_out_device">Device (headphones or speaker)</string>
+    <string name="metro_out_device">Device</string>
+    <string name="metro_out_reading">Reading the outputs of %s…</string>
+    <string name="host_warning_title">USB may fail</string>
+    <string name="host_warning_text">This device\'s USB isn\'t keeping up with %1$s: it lost %2$s of the packets. The sound may stutter or drop in the middle of a song. Using it anyway is at your own risk.</string>
+    <string name="host_warning_channels">This interface has %d channels, which asks a lot of the USB. On a stronger device, or with an interface with fewer channels, the sound tends to come out clean.</string>
+    <string name="mixer_now_unread">Plugged in: %1$s. Reading its outputs…</string>
+    <string name="mixer_out_missing">This output doesn\'t play now. Through Android, the system gives this interface only outputs 1 to %d.</string>
+    <string name="metro_out_device_order">On the device it goes to headphones, then Bluetooth, then the speaker. It uses the first one connected.</string>
     <string name="metro_out_together">Through Android, this device sends the click to the USB interface with the song.</string>
-    <string name="metro_out_hint">To pick a USB interface output, play a track with it connected.</string>
+    <string name="metro_out_hint">To pick a USB interface output, plug it in with the player on.</string>
     <string name="usb_via_android">Play on the interface through Android</string>
     <string name="usb_via_android_detail">Use it only if the interface connects but there\'s no sound or it stutters. Sound goes through Android\'s audio, which can stutter too.</string>
     <string name="usb_route_auto_android">The app turned this on for %1$s, because the sound failed several times on Stagebook\'s engine.</string>
@@ -996,6 +1005,10 @@
     <string name="editor_auto_meta_short">Blank: the app fills it in</string>
     <string name="editor_track_empty">None</string>
     <string name="editor_track_unnamed">Audio attached</string>
+    <string name="editor_track_missing">The audio isn\'t on this device. Attach it again.</string>
+    <string name="stage_track_lost">The audio of this song is missing</string>
+    <string name="lost_audio_title">Songs without their audio</string>
+    <string name="lost_audio_message">The audio of these songs didn\'t come. Attach it again in each song\'s editor or on the stage.</string>
     <string name="tags_empty">None</string>
     <string name="editor_lyrics_chords">Lyrics and chords</string>
     <plurals name="scan_parked">

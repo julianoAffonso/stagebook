@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Nothing goes up whose app tree never passed tools/validate.sh (observation 0029, 09/11): pre-commit validates what it
+# commits, but a clean cherry-pick, a rebase or a merge makes commits without it. Each pushed commit's app tree must be
+# one pre-commit (or this hook) validated; if the one being pushed is the checked-out commit and the tree is clean, it
+# is validated here instead of refused.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+zero=0000000000000000000000000000000000000000
+empty_tree=$(git hash-object -t tree /dev/null)   # what a first commit is compared with
+while read -r _ local_sha _ remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue   # deleting a branch
+  key=$(tools/validated.sh key "$local_sha")
+  # The commits on the way go up too, and only the last one used to be looked at (audit 10/11). The ones the remote has
+  # not seen (not under its side of this branch nor on any remote-tracking ref), merges aside, must not change the app
+  # to a tree that never passed. Only git reads, and before the last one's validation: a refusal must not cost a build.
+  seen=(--remotes); git cat-file -e "$remote_sha^{commit}" 2>/dev/null && seen+=("$remote_sha")
+  # With nothing of any remote known here (no remote-tracking ref, a branch the remote doesn't have) the walk has no
+  # end: it took the whole history and refused commits published long ago (audit 10/11). Only the last one is checked.
+  way=""
+  if [ "${#seen[@]}" -gt 1 ] || [ -n "$(git for-each-ref --count=1 refs/remotes)" ]; then
+    way=$(git rev-list --no-merges "$local_sha" --not "${seen[@]}")
+  else
+    echo "pre-push: nothing of a remote is known here, so only $(git log -1 --format=%h "$local_sha") is checked, not the commits on the way"
+  fi
+  never=""
+  for c in $way; do
+    k=$(tools/validated.sh key "$c")
+    [ "$k" = "$key" ] && continue   # the app tree being pushed: looked at below
+    parent=$(git rev-parse -q --verify "$c^" || echo "$empty_tree")
+    [ "$k" = "$(tools/validated.sh key "$parent")" ] && continue   # does not touch the app
+    tools/validated.sh has "$k" || never+="  $(git log -1 --format='%h %s' "$c")"$'\n'
+  done
+  if [ -n "$never" ]; then
+    echo "Push refused: these commits change the app and their tree never passed tools/validate.sh (a cherry-pick or a"
+    echo "rebase skips pre-commit):"
+    printf '%s' "$never"
+    echo "Validate each one: check it out, run tools/validate.sh, then"
+    echo "  tools/validated.sh add \"\$(tools/validated.sh key HEAD)\""
+    echo "or squash them into a validated commit."
+    exit 1
+  fi
+  tools/validated.sh has "$key" && continue
+  # validate.sh builds the working tree: under the validated paths it must be this commit, new files included (a file
+  # never added used to be built along and the commit recorded as passed without it, audit 10/11)
+  unlike=$(tools/validated.sh unlike-head)
+  if [ "$(git rev-parse HEAD)" = "$local_sha" ] && [ -z "$unlike" ]; then
+    echo "pre-push: $(git log -1 --format=%h "$local_sha") was never validated as a whole: running tools/validate.sh"
+    # </dev/null: this loop's input is the list of refs, and a tool reading it would swallow the ones still to check
+    tools/validate.sh </dev/null || { echo "Push refused: validation failed"; exit 1; }
+    tools/validated.sh add "$key"
+  else
+    echo "Push refused: $(git log -1 --format=%h "$local_sha") was never validated as a whole (a cherry-pick, rebase or"
+    echo "merge skips pre-commit). Check it out with a clean tree and push again, or run tools/validate.sh on it."
+    [ "$(git rev-parse HEAD)" = "$local_sha" ] && { echo "Not in the commit, and validation would build them:"; sed 's/^/  /' <<<"$unlike"; }
+    exit 1
+  fi
+done
+exit 0

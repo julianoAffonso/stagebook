@@ -45,6 +45,8 @@ fun FactoryResetDialog(onBackupFirst: () -> Unit, onReset: () -> Unit, onDismiss
                         icon = br.app.stagebook.ui.components.AppIcons.Download, tone = br.app.stagebook.ui.components.ButtonTone.Tonal,
                     )
                 }
+                // erasing here doesn't reach the copy Android keeps of the library: better said now than found later
+                Text(stringResource(R.string.reset_android_copy), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(R.string.reset_type_code), style = MaterialTheme.typography.bodyMedium)
                 Text(code, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.error)
                 OutlinedTextField(

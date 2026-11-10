@@ -362,19 +362,28 @@ fun SongEditorScreen(
 
 /**
  * The backing track as a field like the others (user, 01/11): "Backing track" on top and the track's name, or
- * "None" in grey; tapping picks or swaps it, × takes it off.
+ * "None" in grey; tapping picks or swaps it, × takes it off. A song whose audio didn't come with it (Android's own copy, a
+ * file whose track was lost) keeps the name as an alert that says the audio has to be attached again.
  */
 @Composable
 private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
     val taps = br.app.stagebook.ui.components.rememberTapSource(onPick)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val missing = !has && name.isNotEmpty()
     OutlinedTextField(
-        value = if (has) name.ifEmpty { stringResource(R.string.editor_track_unnamed) } else stringResource(R.string.editor_track_empty),
+        value = if (has) name.ifEmpty { stringResource(R.string.editor_track_unnamed) } else name.ifEmpty { stringResource(R.string.editor_track_empty) },
+        supportingText = if (missing) {
+            { Text(stringResource(R.string.editor_track_missing)) }
+        } else null,
         onValueChange = {},
         readOnly = true,
         singleLine = true,
         label = { Text(stringResource(R.string.stage_backing_track)) },
-        leadingIcon = { Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else muted) },
+        isError = missing,
+        leadingIcon = {
+            if (missing) Icon(AppIcons.Warning, null, tint = MaterialTheme.colorScheme.error)
+            else Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else muted)
+        },
         trailingIcon = if (has) {
             { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
         } else null,

@@ -119,6 +119,15 @@ class EditorTabsTest {
         compose.onNodeWithText("Hazard (backing)").assertExists()
     }
 
+    @Test fun `a track that did not come with the song still shows its name, and says to attach it again`() {
+        val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "")
+        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = "", trackName = "Hazard (backing)") } }
+        compose.onNodeWithText("Hazard", substring = true).performClick()   // opens the details
+        compose.onNodeWithText("Hazard (backing)").assertExists()
+        compose.onNodeWithText("O áudio não está neste aparelho. Anexe de novo.").assertExists()
+        compose.onNodeWithContentDescription("Remover o backing track").assertDoesNotExist()   // nothing to remove
+    }
+
     @Test fun `the shown name drops the extension`() {
         assertEquals("Under Pressure", br.app.stagebook.data.TrackStore.shownName("Under Pressure.ogg"))
         assertEquals("", br.app.stagebook.data.TrackStore.shownName(""))

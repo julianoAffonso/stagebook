@@ -139,6 +139,43 @@ class WebEditorMoreTest {
         assertEquals(listOf("Do backup"), repo.library.value.songs.map { it.title })
     }
 
+    @Test fun `restoring a band saved by another device tells the page to say so`() = runBlocking {
+        val identity = context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE)
+        identity.edit().clear().commit()
+        br.app.stagebook.data.DeviceIdentity(context).id
+        val trust = br.app.stagebook.data.BandTrust(context)
+        val backup = Backup(context, repo, TrackStore(context), trust)
+        trust.add("ana", "Tablet da Ana", "k1")
+        val saved = java.io.ByteArrayOutputStream().also { backup.write(it, setOf(Backup.Part.SETTINGS)) }.toByteArray()
+        val api = WebEditorApi(repo, backup = { backup }, workDir = { context.cacheDir })
+        suspend fun restore(): String {
+            val file = File(context.cacheDir, "band.part").apply { writeBytes(saved) }   // the page sends it again each time
+            val token = Regex("\"token\":\"([^\"]+)\"").find(call(api, "POST", "/api/backup/inspect", file = file).text())!!.groupValues[1]
+            return call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["settings"],"replace":true}""").text()
+        }
+        val same = restore()
+        assertTrue(same, "\"bandAgain\":true" !in same)
+        identity.edit().clear().commit()
+        br.app.stagebook.data.DeviceIdentity(context).id   // another device now
+        val other = restore()
+        assertTrue(other, "\"bandAgain\":true" in other)
+    }
+
+    @Test fun `restoring songs without their audio tells the page which songs and which audio`() = runBlocking {
+        val tracks = TrackStore(context)
+        val backup = Backup(context, repo, tracks)
+        repo.restore(emptyList(), emptyList())
+        val audio = tracks.file("lost.ogg").apply { parentFile!!.mkdirs(); writeBytes("OggS".toByteArray() + ByteArray(8)) }
+        repo.saveSong(Song(title = "Com áudio", author = "x", text = "linha", track = audio.name, trackName = "Ao vivo"))
+        repo.saveSong(Song(title = "Sem o arquivo", author = "x", text = "linha", track = "gone.ogg", trackName = "Perdido"))   // no file
+        val saved = java.io.ByteArrayOutputStream().also { backup.write(it, setOf(Backup.Part.LIBRARY, Backup.Part.TRACKS)) }.toByteArray()
+        val api = WebEditorApi(repo, tracks = { tracks }, backup = { backup }, workDir = { context.cacheDir })
+        val file = File(context.cacheDir, "lost.part").apply { writeBytes(saved) }
+        val token = Regex("\"token\":\"([^\"]+)\"").find(call(api, "POST", "/api/backup/inspect", file = file).text())!!.groupValues[1]
+        val done = call(api, "POST", "/api/backup/restore", """{"token":"$token","parts":["library","tracks"],"replace":true}""").text()
+        assertTrue(done, """"lost":[{"title":"Sem o arquivo","track":"Perdido"}]""" in done)
+    }
+
     @Test fun `a second track for the same song leaves no orphan file, and turning off drops a waiting backup`() = runBlocking {
         val tracks = TrackStore(context)
         val backup = Backup(context, repo, tracks)

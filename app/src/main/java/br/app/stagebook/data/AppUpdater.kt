@@ -113,20 +113,24 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
     /**
      * Installs through an installer session: on Android 12+ the system applies an update without asking again when this
      * app installed the previous version (the first time it still asks). False if the session couldn't start; the caller
-     * then falls back to [installIntent]. The result comes later through [InstallResultReceiver].
+     * then falls back to [installIntent]. The result comes later through [InstallResultReceiver]. Off the main thread:
+     * copying the whole APK into the session froze the screen on a slow tablet.
      */
-    fun installWithSession(apk: File): Boolean {
+    suspend fun installWithSession(apk: File): Boolean = withContext(Dispatchers.IO) {
         val installer = context.packageManager.packageInstaller
+        // the sessions let go below answer "aborted": that isn't about the one being started
+        InstallResults.session = InstallResults.BETWEEN_SESSIONS
         // sessions left waiting by an earlier try (or by a version whose answer never arrived) hold the APK: let go first
         installer.mySessions.filter { it.appPackageName == context.packageName }
             .forEach { runCatching { installer.abandonSession(it.sessionId) } }
         var id = -1
-        return try {
+        try {
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(context.packageName)
                 if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
             id = installer.createSession(params)
+            InstallResults.session = id
             installer.openSession(id).use { session ->
                 apk.inputStream().use { input ->
                     session.openWrite("stagebook.apk", 0, apk.length()).use { out -> input.copyTo(out); session.fsync(out) }
@@ -136,6 +140,7 @@ class AppUpdater @Inject constructor(@ApplicationContext private val context: Co
             true
         } catch (e: Exception) {
             Log.w(TAG, "couldn't start the install session", e)
+            InstallResults.session = InstallResults.BETWEEN_SESSIONS
             if (id >= 0) runCatching { installer.abandonSession(id) }
             false
         }

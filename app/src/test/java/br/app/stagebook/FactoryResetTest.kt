@@ -48,6 +48,11 @@ class FactoryResetTest {
         assertEquals(0, reset)
     }
 
+    @Test fun `the window says Android's copy can bring the songs back`() {
+        compose.setContent { StagebookTheme { FactoryResetDialog({}, {}, {}, code = "4827") } }
+        compose.onNodeWithText("cópia do app na sua conta", substring = true).assertExists()
+    }
+
     @Test fun `with the right code it erases`() {
         var reset = 0
         compose.setContent { StagebookTheme { FactoryResetDialog({}, { reset++ }, {}, code = "4827") } }

@@ -32,8 +32,18 @@ data class MixChannel(
 @Immutable
 @Serializable
 data class OutputInfo(val key: String = DEVICE, val name: String = "", val count: Int = 2) {
+    /** The outputs the engine can reach (a desk with more than [MAX] shows only the first ones). */
+    val usable: Int get() = count.coerceAtMost(MAX)
+
+    /** A chosen USB output this way doesn't have (through Android the system gives at most 8): it stays chosen, silent. */
+    fun lacks(out: Int, pair: Boolean): Boolean = key != DEVICE && count > 0 && out + (if (pair) 1 else 0) >= usable
+
+    /** A plugged interface whose outputs haven't been read yet (they come when a song with a track opens). */
+    val unread: Boolean get() = key != DEVICE && count <= 0
+
     companion object {
         const val DEVICE = "device"
+        const val MAX = 32   // engine.c OUTS_MAX: 18- and 32-channel desks, not just 8
     }
 }
 
@@ -51,7 +61,22 @@ data class MixerConfig(
     val output: OutputInfo = OutputInfo(),
     // routing saved per output (OutputInfo key): each channel's first output; -1 = the one with the same number
     val routes: Map<String, List<Int>> = emptyMap(),
+    // every interface the player has opened (key → name and outputs): plugged in again, it comes back as it was
+    val known: Map<String, OutputInfo> = emptyMap(),
 ) {
+    /**
+     * What the mixer shows for the interface on the cable (user, 10/11: it kept the previous one until play): [key] null =
+     * none, the device. A known one comes back with its outputs; a new one has its name and outputs still unread.
+     */
+    fun plugged(key: String?, name: String): OutputInfo = when {
+        key == null -> OutputInfo()
+        else -> known[key]?.let { k -> if (name.isEmpty()) k else k.copy(name = name) } ?: OutputInfo(key, name, 0)
+    }
+
+    /** The player opened [out]: shown, and remembered when it's an interface. */
+    fun connected(out: OutputInfo): MixerConfig =
+        copy(output = out, known = if (out.key == OutputInfo.DEVICE || out.count <= 0) known else known + (out.key to out))
+
     fun strip(i: Int): MixChannel = strips.getOrElse(i) { MixChannel() }
 
     /** The EQ has no switch of its own: it's on while a channel goes through it (user, 06/11). */
@@ -145,13 +170,14 @@ object Mixer {
         val n = MixerConfig.MAX
         val gains = FloatArray(n) { 1f }
         val norms = FloatArray(n) { 1f }
-        val route = FloatArray(n * n)
+        val outs = OutputInfo.MAX
+        val route = FloatArray(outs * n)   // [output * n + channel], as engine.c reads it
         var eq = 0
         for (g in cfg.groups(lanes)) {
             val s = cfg.strip(g.first)
             val gain = if (!s.on || s.gainDb <= MixerConfig.MIN_DB) 0f else lin(s.gainDb)
             val norm = lin(normDb(s.norm, measures[g.first]))
-            val base = cfg.outputOf(g.first, key).coerceIn(0, n - 1)
+            val base = cfg.outputOf(g.first, key).coerceIn(0, outs - 1)
             for ((k, c) in g.withIndex()) {
                 gains[c] = gain
                 norms[c] = norm
@@ -161,10 +187,10 @@ object Mixer {
                     // output pair
                     val left = if (g.count() == 2) base else base - base % 2
                     val w = if (g.count() == 2) 0.5f else HALF
-                    for (o in left..minOf(left + 1, n - 1)) route[o * n + c] = w
+                    for (o in left..minOf(left + 1, outs - 1)) route[o * n + c] = w
                 } else {
                     val o = base + k
-                    if (o < n) route[o * n + c] = 1f
+                    if (o < outs) route[o * n + c] = 1f
                 }
             }
         }

@@ -46,6 +46,7 @@ static int g_out_rate = BASE_RATE;     // the interface's rate: a USB Audio 1.0 
 #define OUT_CH 4
 // source channels kept in the ring (Stagebook): up to 8, each as it came; the default mix rebuilds the 4 from before
 #define LANES_MAX 8
+#define OUTS_MAX 32                   // outputs the mix can reach: a USB desk can take 18 or 32 channels, not just 8
 // 32 URBs x 8 packets = 32 ms in the USB queue. With 8 (8 ms), a busy TCL (another app playing on the speaker) delayed
 // refilling by 10-16 ms and the interface ran out of audio: hiccup (19/10/2026).
 #define NURBS 32                      // most URBs in the kernel's queue: 32 ms at high speed
@@ -408,7 +409,7 @@ static double now_s(void) {
 static float g_ch_gain[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // fader × on/off of each source channel
 static float g_ch_norm[LANES_MAX] = {1, 1, 1, 1, 1, 1, 1, 1};   // normalization of each channel
 static int g_ch_eq = 0;                     // bits: channels that go through the EQ (each separate)
-static float g_route[LANES_MAX][LANES_MAX] = {   // [output][source channel]: how much of the channel goes to the output
+static float g_route[OUTS_MAX][LANES_MAX] = {   // [output][source channel]: how much of the channel goes to the output
     {1}, {0, 1}, {0, 0, 1}, {0, 0, 0, 1}, {0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1},
 };
 
@@ -432,10 +433,11 @@ static inline void click_add_locked(float *out) {
     if (beat < 64 && ((g_clk_skip >> beat) & 1)) return;
     if (at >= g_clk_len[k]) return;
     for (int q = 0; q < 2; q++)
-        if (g_clk_out[q] >= 0 && g_clk_out[q] < LANES_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
+        if (g_clk_out[q] >= 0 && g_clk_out[q] < OUTS_MAX) out[g_clk_out[q]] += g_clk_buf[k][at];
 }
 
-static inline void mix_custom(const float *lane, float *out) {
+// [nout] outputs are mixed (the ones the device has, up to OUTS_MAX); out holds OUTS_MAX for the click
+static inline void mix_custom(const float *lane, float *out, int nout) {
     float s[LANES_MAX];
     float p = 0;
     for (int c = 0; c < g_lanes; c++) {
@@ -453,7 +455,7 @@ static inline void mix_custom(const float *lane, float *out) {
         g_lim += (1.0f - g_lim) * g_lim_rel;
     }
     if (g_meter_on) for (int c = 0; c < g_lanes; c++) if (fabsf(s[c]) > g_lpk[c]) g_lpk[c] = fabsf(s[c]);
-    for (int o = 0; o < LANES_MAX; o++) {
+    for (int o = 0; o < nout; o++) {
         float a = 0;
         for (int c = 0; c < g_lanes; c++) a += g_route[o][c] * s[c];
         out[o] = a;
@@ -600,6 +602,12 @@ static volatile double g_last_reap = 0;
 // The input kept the all-URBs watch quiet, so this one looks at the output only. Read by Java to connect again without
 // the input; cleared on each start.
 static volatile double g_last_out_reap = 0;
+// How many output packets the host really sent over a few seconds, against what the interface's speed calls for (user,
+// 10/11: the Chuwi lost 2-4% with an 18-channel desk and the sound broke, with no error anywhere). Only counted, the
+// sound path never reads it; Java warns from it. 0 = not measured yet in this stream.
+#define HD_SKIP_S 0.5                 // the queue is still filling
+#define HD_WIN_S 3.0
+static volatile float g_host_delivery = 0;
 static volatile int g_out_starved = 0, g_in_starved_out = 0;
 static volatile int g_stalled = 0, g_watching = 0;
 static pthread_t g_watch_thr;
@@ -610,7 +618,10 @@ static void *stall_watch(void *arg) {
         struct timespec t = {0, 50000000}; nanosleep(&t, NULL);
         double at = now_s();
         if (g_watching && at - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
-        else if (g_watching && g_in_ep >= 0 && at - g_last_out_reap > STALL_S) { g_out_starved = 1; pthread_kill(g_usb_thr, SIGUSR2); }
+        // The input starves the output only while it goes on itself: its URBs kept coming back for STALL_S after the
+        // output's last one. A queue that stalls for good can end on an input URB a little after the output's last,
+        // and timing the output against the clock took that for a starved output: Java then gave the input up for good
+        else if (g_watching && g_in_ep >= 0 && g_last_reap - g_last_out_reap > STALL_S) { g_out_starved = 1; pthread_kill(g_usb_thr, SIGUSR2); }
     }
     return NULL;
 }
@@ -735,11 +746,11 @@ static void *usb_main(void *arg) {
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
                 if (g_fade > 0) { if (ring_pop_locked(lane)) g_consumed++; else if (want_play && !g_eof) st_underrun++; } \
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
-                float outv[LANES_MAX]; \
-                mix_custom(lane, outv); \
+                float outv[OUTS_MAX]; \
+                mix_custom(lane, outv, g_dev_ch < OUTS_MAX ? g_dev_ch : OUTS_MAX); \
                 click_add_locked(outv); \
                 for (int c = 0; c < g_dev_ch; c++) { \
-                    float s = c < LANES_MAX ? outv[c] : 0; \
+                    float s = c < OUTS_MAX ? outv[c] : 0; \
                     if (mon && c < OUT_CH && fabsf(s) > g_pk[c]) g_pk[c] = fabsf(s); \
                     put_sample(b + off + c * g_subslot, s); \
                 } \
@@ -779,6 +790,8 @@ static void *usb_main(void *arg) {
     }
     set_status("USB active");
     g_stalled = 0; g_out_starved = 0; g_last_reap = g_last_out_reap = now_s(); g_watching = 1;
+    g_host_delivery = 0;
+    double hd_from = g_last_reap, hd_t0 = 0; long hd_n = 0;
     { struct sigaction sa = {0}; sa.sa_handler = wake_usb; sigaction(SIGUSR2, &sa, NULL); }   // no SA_RESTART: REAPURB returns
     pthread_create(&g_watch_thr, NULL, stall_watch, NULL);
 
@@ -786,6 +799,10 @@ static void *usb_main(void *arg) {
         if (!tail && g_usb_stop) { tail = 1; if (g_fast_stop) tail_max = 0; }   // fast: only what is already queued drains
         struct usbdevfs_urb *done = NULL;
         if (ioctl(g_fd, USBDEVFS_REAPURB, &done) < 0) {
+            // the watch decides on a clock it read a moment before: a URB may have come back since, after which it
+            // still wrote its verdict (audit, 10/11). This thread writes those clocks, so it checks them before acting
+            if (errno == EINTR && g_stalled && now_s() - g_last_reap <= STALL_S) g_stalled = 0;
+            if (errno == EINTR && g_out_starved && g_last_reap - g_last_out_reap <= STALL_S) g_out_starved = 0;
             if (errno == EINTR && g_out_starved && !g_stalled) {
                 LOGI("usb: the output stopped coming back while the input runs: connecting again without the input");
                 set_status("USB dropped: the input starved the output");
@@ -805,7 +822,17 @@ static void *usb_main(void *arg) {
         }
         inflight--;
         g_last_reap = now_s();
-        if (!(done->endpoint & 0x80)) g_last_out_reap = g_last_reap;
+        // a URB came back, so the watcher's verdict is over. Its signal doesn't always interrupt the reap (it can find
+        // this thread outside it), and a verdict left set would send a later EINTR down the wrong branch
+        g_stalled = 0;
+        if (!(done->endpoint & 0x80)) { g_last_out_reap = g_last_reap; g_out_starved = 0; }
+        if (!(done->endpoint & 0x80) && g_host_delivery == 0) {
+            if (hd_t0 == 0) { if (g_last_reap - hd_from >= HD_SKIP_S) hd_t0 = g_last_reap; }
+            else if (++hd_n, g_last_reap - hd_t0 >= HD_WIN_S) {
+                g_host_delivery = (float)(100.0 * hd_n * PKTS_PER_URB / ((g_last_reap - hd_t0) * pkts_per_sec));
+                LOGI("usb: the host delivered %.1f%% of the output packets", g_host_delivery);
+            }
+        }
         if (done->endpoint & 0x80) {
             if (DIAG) {   // diagnostics: the first input URBs
                 static int dbg = 0;
@@ -1029,11 +1056,11 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
         if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES;
         if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1;
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
-        float outv[LANES_MAX];
-        mix_custom(lane, outv);
+        float outv[OUTS_MAX];
+        mix_custom(lane, outv, ch < OUTS_MAX ? ch : OUTS_MAX);
         click_add_locked(outv);   // only set when this output is a USB interface (StagePlayer.usbClick)
         for (int c = 0; c < ch; c++) {
-            float v = c < LANES_MAX ? outv[c] : 0;
+            float v = c < OUTS_MAX ? outv[c] : 0;
             if (mon && c < OUT_CH && fabsf(v) > g_pk[c]) g_pk[c] = fabsf(v);
             o[f * ch + c] = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
         }
@@ -1229,12 +1256,12 @@ JNIEXPORT void JNICALL FN(setEq)(JNIEnv *e, jclass c, jboolean on, jfloatArray j
 
 
 // Mix: gains/norms per source channel, eqMask with the channels that go through the EQ (each separate), route[output *
-// LANES_MAX + channel] (LANES_MAX × LANES_MAX).
+// LANES_MAX + channel] (OUTS_MAX × LANES_MAX).
 JNIEXPORT void JNICALL FN(setMix)(JNIEnv *e, jclass c, jfloatArray jgain, jfloatArray jnorm, jint eqMask, jfloatArray jroute) {
-    float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[LANES_MAX * LANES_MAX] = {0};
+    float gain[LANES_MAX] = {0}, norm[LANES_MAX] = {0}, route[OUTS_MAX * LANES_MAX] = {0};
     if (jgain) (*e)->GetFloatArrayRegion(e, jgain, 0, LANES_MAX, gain);
     if (jnorm) (*e)->GetFloatArrayRegion(e, jnorm, 0, LANES_MAX, norm);
-    if (jroute) (*e)->GetFloatArrayRegion(e, jroute, 0, LANES_MAX * LANES_MAX, route);
+    if (jroute) (*e)->GetFloatArrayRegion(e, jroute, 0, OUTS_MAX * LANES_MAX, route);
     pthread_mutex_lock(&g_mx);
     memcpy(g_ch_gain, gain, sizeof gain);
     memcpy(g_ch_norm, norm, sizeof norm);
@@ -1362,6 +1389,8 @@ JNIEXPORT jfloatArray JNICALL FN(lanePeaks)(JNIEnv *e, jclass c) {
 JNIEXPORT jint JNICALL FN(feedback)(JNIEnv *e, jclass c) { return g_in_ep < 0 ? -1 : g_fb_locked; }
 // the last stream ended because reading the input stopped the output (see g_last_out_reap): connect again without it
 JNIEXPORT jboolean JNICALL FN(inputStarvedOutput)(JNIEnv *e, jclass c) { return g_in_starved_out ? JNI_TRUE : JNI_FALSE; }
+// output packets the host really sent, in % of what the speed calls for (0 = not measured yet)
+JNIEXPORT jfloat JNICALL FN(hostDelivery)(JNIEnv *e, jclass c) { return g_host_delivery; }
 // 1 while the interface's clock is being judged at open (the output is silent), else 0.
 JNIEXPORT jint JNICALL FN(probing)(JNIEnv *e, jclass c) { return g_probing; }
 

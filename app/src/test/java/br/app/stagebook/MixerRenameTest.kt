@@ -31,4 +31,18 @@ class MixerRenameTest {
         assertEquals("Playback", changed?.name)
         assertEquals(false, edited)
     }
+
+    @Test fun `an output this way lacks says so - through Android only 1 to 8`() {
+        // XR18 on the Chuwi through Android (10/11): the channel on 9-10 stayed chosen and went silent with no word
+        val android = br.app.stagebook.domain.OutputInfo("usb:1397:00d4", "X18/XR18", 8)
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.components.MixerChannelForm(0, MixChannel(), pair = true, canPair = true, output = 8, outputs = android, onChange = {}, onOutput = {})
+            }
+        }
+        compose.onNodeWithText("Esta saída não toca agora. Pela rota do Android, o sistema só entrega as saídas 1 a 8 desta interface.").assertExists()
+        assertEquals(true, android.lacks(8, pair = true))
+        assertEquals(false, android.lacks(6, pair = true))
+        assertEquals(false, br.app.stagebook.domain.OutputInfo("usb:1397:00d4", "X18/XR18", 18).lacks(8, pair = true))
+    }
 }

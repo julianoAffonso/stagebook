@@ -17,6 +17,8 @@ import javax.inject.Inject
 class StagebookApp : Application() {
     @Inject lateinit var repository: LibraryRepository
     @Inject lateinit var tracks: TrackStore
+    // made at start so it follows the USB cable from the first moment (the interface shows as soon as it's plugged in)
+    @Inject lateinit var player: br.app.stagebook.player.StagePlayer
 
     // texts read outside the screens (notices, messages) also use the chosen language
     override fun attachBaseContext(base: Context) = super.attachBaseContext(Languages.wrap(base))

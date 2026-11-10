@@ -42,7 +42,15 @@ data class Song(
     val tags: List<String> = emptyList(),
     // MIDI sent when the song shows on stage and when it leaves (user, 07/11); goes in the backup, not to the band
     val midi: br.app.stagebook.domain.SongMidi? = null,
-)
+) {
+    /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
+    val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
+}
+
+/** A song that just lost its audio, for the window that says so: the song and the audio's own name. */
+@Immutable
+@Serializable
+data class LostAudio(val title: String, val track: String)
 
 @Immutable
 @Serializable
@@ -264,4 +272,14 @@ data class Library(
 
     fun song(id: String): Song? = byId[id]
     fun setlist(id: String): Setlist? = sets.firstOrNull { it.id == id }
+
+    /**
+     * The same library without the links to track files that aren't on this device (Android's own copy brings the songs
+     * to a new device and leaves the tracks behind): the track's name stays, so the song says which file to attach
+     * again. Returns this very library when nothing is missing.
+     */
+    fun withoutMissingTracks(exists: (String) -> Boolean): Library {
+        if (songs.none { it.track.isNotEmpty() && !exists(it.track) }) return this
+        return copy(songs = songs.map { if (it.track.isNotEmpty() && !exists(it.track)) it.copy(track = "") else it })
+    }
 }

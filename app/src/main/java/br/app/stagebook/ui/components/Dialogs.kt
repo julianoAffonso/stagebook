@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -134,6 +135,51 @@ fun InfoDialog(
         confirmButton = { TextButton(onClick = { if (neverAgain != null) neverAgain(never) else onDismiss() }) { Text(stringResource(R.string.action_ok)) } },
         dismissButton = extra?.let { (label, action) -> { TextButton(onClick = action) { Text(label) } } },
     )
+}
+
+/**
+ * This device's USB doesn't carry the interface (user, 10/11): how much it lost and that going on is at the musician's
+ * own risk; with many channels, that they are what weighs. Shown once per interface and device (StagePlayer).
+ */
+@Composable
+fun HostWarningDialog(w: br.app.stagebook.domain.HostWarning, onDismiss: () -> Unit) {
+    val loss = String.format(androidx.compose.ui.platform.LocalConfiguration.current.locales[0], "%.1f%%", w.lossPct)
+    val text = stringResource(R.string.host_warning_text, w.name, loss) +
+        if (w.channels >= br.app.stagebook.domain.HostDelivery.MANY_CHANNELS) "\n\n" + stringResource(R.string.host_warning_channels, w.channels) else ""
+    InfoDialog(stringResource(R.string.host_warning_title), text, onDismiss)
+}
+
+/**
+ * The songs that just lost their audio, each with the audio's own name (user, 10/11): said once, when it happens. The
+ * list scrolls: a library restored without its tracks can bring dozens.
+ */
+@Composable
+fun LostAudioDialog(lost: List<br.app.stagebook.data.model.LostAudio>, onDismiss: () -> Unit) {
+    InfoDialog(stringResource(R.string.lost_audio_title), stringResource(R.string.lost_audio_message), onDismiss) {
+        androidx.compose.foundation.lazy.LazyColumn(
+            Modifier.padding(top = br.app.stagebook.ui.theme.Spacing.s)
+                .then(Modifier.heightIn(max = br.app.stagebook.ui.theme.Sizes.fader)),
+        ) {
+            items(lost.size) { i ->
+                androidx.compose.foundation.layout.Column(Modifier.padding(vertical = br.app.stagebook.ui.theme.Spacing.xs)) {
+                    Text(lost[i].title, style = MaterialTheme.typography.bodyLarge)
+                    Text(lost[i].track, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@LightPreview
+@Composable
+private fun LostAudioDialogLightPreview() = PreviewSurface(dark = false) {
+    LostAudioDialog(listOf(br.app.stagebook.data.model.LostAudio("Hazard", "Hazard (backing)")), onDismiss = {})
+}
+
+@DarkPreview
+@Composable
+private fun LostAudioDialogDarkPreview() = PreviewSurface(dark = true) {
+    LostAudioDialog(listOf(br.app.stagebook.data.model.LostAudio("Hazard", "Hazard (backing)")), onDismiss = {})
 }
 
 @LightPreview
