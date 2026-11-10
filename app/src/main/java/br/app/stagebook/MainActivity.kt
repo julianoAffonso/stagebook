@@ -156,6 +156,9 @@ class MainActivity : ComponentActivity() {
                 val requests by band.requests.collectAsStateWithLifecycle()
                 val onStage by stageGate.onStage.collectAsStateWithLifecycle()
                 if (!onStage) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
+                // the songs that just lost their audio (a file opened without the tracks, Android's own copy), named once
+                val lostAudio by repository.lostAudio.collectAsStateWithLifecycle()
+                if (!onStage && lostAudio.isNotEmpty()) br.app.stagebook.ui.components.LostAudioDialog(lostAudio, repository::lostAudioSeen)
                 // "Chrome · Windows wants to edit" (editor on the computer, T37): also never on stage; the browser waits
                 val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
                 if (!onStage && requests.isEmpty()) webRequests.firstOrNull()?.let { r ->

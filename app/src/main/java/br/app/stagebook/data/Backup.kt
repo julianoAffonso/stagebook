@@ -100,6 +100,10 @@ class Backup @Inject constructor(
     @Volatile var bandAgain = false
         private set
 
+    /** The songs the last [restore] brought without their audio (the editor on the computer says which). */
+    @Volatile var lost: List<br.app.stagebook.data.model.LostAudio> = emptyList()
+        private set
+
     suspend fun inspect(input: InputStream): Contents? = withContext(Dispatchers.IO) {
         runCatching {
             var manifest: Manifest? = null
@@ -123,6 +127,7 @@ class Backup @Inject constructor(
     suspend fun restore(input: InputStream, parts: Set<Part>, replace: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         skipped = 0
         bandAgain = false
+        lost = emptyList()
         // each track goes straight to a .part file next to the others, never all of them in memory (a backup with 30
         // tracks of 15 MB used to need ~450 MB of heap and closed the app on the Fire; audit 30/10)
         val partFiles = mutableMapOf<String, java.io.File>()
@@ -152,7 +157,11 @@ class Backup @Inject constructor(
                 val allowed = s.songs.filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
                 skipped = s.songs.size - allowed.size
                 val songs = allowed.map { if (keepTracks && it.track in partFiles) it else it.copy(track = "") }
+                val here = repository.library.value.songs.mapTo(HashSet()) { it.id }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
+                // what came in without its audio is named in a window; joining, only the songs that are new here
+                repository.reportLostAudio(repository.library.value.songs.filter { it.audioLost && (replace || it.id !in here) })
+                lost = repository.lostAudio.value
                 // the replaced library's tracks don't stay on the disk
                 tracks.sweep(repository.library.value.songs.mapTo(HashSet()) { it.track })
             }

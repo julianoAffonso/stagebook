@@ -281,6 +281,7 @@ class WebEditorServer @Inject constructor(
             "track" to R.string.stage_backing_track,
             "trackNone" to R.string.editor_track_none,
             "trackMissing" to R.string.editor_track_missing,
+            "lostAudio" to R.string.lost_audio_title,
             "trackPick" to R.string.editor_track_pick,
             "trackChange" to R.string.editor_track_change,
             "trackRemove" to R.string.stage_track_remove,

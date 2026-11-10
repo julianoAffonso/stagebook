@@ -999,6 +999,10 @@
     <string name="editor_track_empty">None</string>
     <string name="editor_track_unnamed">Audio attached</string>
     <string name="editor_track_missing">The audio isn\'t on this device. Attach it again.</string>
+    <string name="stage_track_forget">Don\'t use audio</string>
+    <string name="stage_track_lost">The audio of this song is missing</string>
+    <string name="lost_audio_title">Songs without their audio</string>
+    <string name="lost_audio_message">The audio of these songs didn\'t come. Attach it again in each song\'s editor or on the stage.</string>
     <string name="tags_empty">None</string>
     <string name="editor_lyrics_chords">Lyrics and chords</string>
     <plurals name="scan_parked">

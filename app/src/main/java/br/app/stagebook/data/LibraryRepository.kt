@@ -65,6 +65,15 @@ class LibraryRepository @Inject constructor(
         .flowOn(Dispatchers.Default)
         // a single index for Songs and Pick songs, kept 5 s after the last screen leaves
         .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    /**
+     * Songs that have just lost their audio (a file opened without the tracks, Android's own copy on a new device),
+     * for one window that names them; empty once it was seen. Later the editor and the stage still say it per song.
+     */
+    private val _lostAudio = MutableStateFlow<List<br.app.stagebook.data.model.LostAudio>>(emptyList())
+    val lostAudio: StateFlow<List<br.app.stagebook.data.model.LostAudio>> = _lostAudio.asStateFlow()
+    fun reportLostAudio(songs: List<Song>) { _lostAudio.value = songs.map { br.app.stagebook.data.model.LostAudio(it.title, it.trackName) } }
+    fun lostAudioSeen() { _lostAudio.value = emptyList() }
+
     private val _loaded = MutableStateFlow(false)
     val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
     private val ready = CompletableDeferred<Unit>()
@@ -79,6 +88,10 @@ class LibraryRepository @Inject constructor(
             val tracks = File(context.filesDir, "tracks")
             val clean = read.withoutMissingTracks { File(tracks, it).exists() }
             _library.value = clean
+            if (clean !== read) {
+                val linked = read.songs.filter { it.track.isNotEmpty() }.mapTo(HashSet()) { it.id }
+                reportLostAudio(clean.songs.filter { it.audioLost && it.id in linked })
+            }
             // ready first: whoever reacts to "loaded" and changes something right away must see the change applied,
             // not queued for later (a read right after a save could see the old library)
             ready.complete(Unit)

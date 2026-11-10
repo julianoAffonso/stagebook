@@ -29,6 +29,7 @@ import javax.inject.Inject
 
 @Immutable
 data class StageSong(val title: String, val meta: String, val text: String, val missing: Boolean, val id: String = "", val zoom: Float = 1f, val track: String = "", val mix: br.app.stagebook.domain.SongMix? = null,
+    val lostTrack: String = "",   // the name of an audio that didn't come with the song ("" = none lost)
     val zooms: Map<String, br.app.stagebook.data.model.ScreenZoom> = emptyMap(),
     val fit: br.app.stagebook.data.model.ScreenZoom? = null,   // the calculated zoom saved for this screen
 ) {
@@ -169,6 +170,9 @@ class StageViewModel @Inject constructor(
         return true
     }
 
+    /** "Don't use audio" on a song whose audio didn't come: only the name goes (nothing is playing from it). */
+    fun forgetTrack(songId: String) { repository.updateSong(songId) { if (it.audioLost) it.copy(trackName = "") else it } }
+
     fun removeTrack(songId: String) {
         val old = repository.song(songId)?.track.orEmpty()
         repository.updateSong(songId) { it.copy(track = "", trackName = "") }
@@ -213,7 +217,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, s?.zooms.orEmpty())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty())
             },
             look = lib.look,
         )

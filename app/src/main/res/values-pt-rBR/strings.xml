@@ -1034,6 +1034,10 @@
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
     <string name="editor_track_missing">O áudio não está neste aparelho. Anexe de novo.</string>
+    <string name="stage_track_forget">Não usar áudio</string>
+    <string name="stage_track_lost">O áudio desta música está faltando</string>
+    <string name="lost_audio_title">Músicas sem o áudio</string>
+    <string name="lost_audio_message">O áudio destas músicas não veio. Anexe de novo na edição de cada música ou no palco.</string>
     <string name="tags_empty">Nenhuma</string>
     <string name="editor_lyrics_chords">Letra e cifra</string>
     <plurals name="scan_parked">

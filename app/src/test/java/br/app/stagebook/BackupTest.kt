@@ -166,6 +166,25 @@ class BackupTest {
         assertEquals(false, bandAgainAfter(identity = false) { becomeAnotherDevice() })
     }
 
+    @Test fun `songs restored without their audio are named, and joining names only the ones that came in`() = runBlocking {
+        val (repo, tracks, backup) = setup()
+        repo.restore(emptyList(), emptyList())
+        val file = tracks.file("a.ogg").apply { parentFile!!.mkdirs(); writeBytes(OGG) }
+        repo.saveSong(Song(title = "With audio", author = "x", text = "line", track = file.name, trackName = "Live take"))
+        repo.saveSong(Song(title = "Plain", author = "x", text = "line"))
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.LIBRARY))   // without the tracks
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY)))
+        val lost = listOf(br.app.stagebook.data.model.LostAudio("With audio", "Live take"))
+        assertEquals(lost, repo.lostAudio.value)
+        assertEquals(lost, backup.lost)
+        // joining the same file again brings nothing new: nothing to say
+        repo.lostAudioSeen()
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.LIBRARY), replace = false))
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), repo.lostAudio.value)
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), backup.lost)
+    }
+
     @Test fun `file that is not a backup is not read`() = runBlocking {
         val (_, _, backup) = setup()
         assertEquals(null, backup.inspect(ByteArrayInputStream("não é zip".toByteArray())))

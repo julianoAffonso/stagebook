@@ -77,6 +77,46 @@ class StageMixerTest {
         compose.onNodeWithText("Usar o mixer global").assertExists()
     }
 
+    private fun lostStage(playerMode: Boolean = true, playing: Boolean = false, onPick: (String) -> Unit = {}, onForget: (String) -> Unit = {}) {
+        val song = StageSong("Música", "", "[G]linha", false, id = "s1", lostTrack = "Hazard (backing)")
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(StageUiState(false, listOf(song), look = Look(playerMode = playerMode)), 0, 0, { _, _ -> }, playing = playing, onPickTrack = onPick, onForgetTrack = onForget)
+            }
+        }
+    }
+
+    // a song whose audio didn't come with it (user, 10/11): an alert where play would be, naming the audio
+    @Test fun `a song whose audio did not come shows an alert that names it and offers to attach it again`() {
+        var picked = ""
+        lostStage(onPick = { picked = it })
+        compose.onNodeWithContentDescription("Tocar o backing track").assertDoesNotExist()
+        compose.onNodeWithContentDescription("O áudio desta música está faltando").performClick()
+        compose.onNodeWithText("Hazard (backing)").assertExists()
+        compose.onNodeWithText("O áudio não está neste aparelho. Anexe de novo.").assertExists()
+        compose.onNodeWithText("Escolher").performClick()
+        org.junit.Assert.assertEquals("s1", picked)
+    }
+
+    @Test fun `leaving the song without audio forgets the name`() {
+        var forgotten = ""
+        lostStage(onForget = { forgotten = it })
+        compose.onNodeWithContentDescription("O áudio desta música está faltando").performClick()
+        compose.onNodeWithText("Não usar áudio").performClick()
+        org.junit.Assert.assertEquals("s1", forgotten)
+    }
+
+    @Test fun `the alert stays out with the player off, and never covers a track that is playing`() {
+        lostStage(playerMode = false)
+        compose.onNodeWithContentDescription("O áudio desta música está faltando").assertDoesNotExist()
+    }
+
+    @Test fun `with another song's track playing, the stop button stays instead of the alert`() {
+        lostStage(playing = true)
+        compose.onNodeWithContentDescription("O áudio desta música está faltando").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Parar o backing track e voltar ao início").assertExists()
+    }
+
     @Test fun `no mixer button on a song without a backing track`() {
         stage(track = "")
         compose.onNodeWithContentDescription("Abrir o mixer").assertDoesNotExist()

@@ -107,6 +107,11 @@ class AndroidBackupRulesTest {
         assertEquals("here.ogg", songs.getValue("Here").track)
         assertEquals("", songs.getValue("Gone").track)
         assertEquals("Gone live", songs.getValue("Gone").trackName)
-        withTimeout(5_000) { while (file.readText().contains("gone.ogg")) delay(20) }
+        // said once, in a window that names the song and the audio
+        assertEquals(listOf(br.app.stagebook.data.model.LostAudio("Gone", "Gone live")), second.lostAudio.value)
+        second.lostAudioSeen()
+        assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), second.lostAudio.value)
+        // the swap moves the old file to the backup first: for an instant there is no file to read
+        withTimeout(5_000) { while (runCatching { file.readText() }.getOrDefault("gone.ogg").contains("gone.ogg")) delay(20) }
     }
 }
