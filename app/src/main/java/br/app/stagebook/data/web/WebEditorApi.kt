@@ -93,7 +93,7 @@ class WebEditorApi(
     private data class TrackSet(val track: String, val trackName: String = "")
 
     @Serializable
-    private data class RestoreDone(val skipped: Int)
+    private data class RestoreDone(val skipped: Int, val bandAgain: Boolean = false)
 
     @Serializable
     data class Received(val id: String, val from: String, val name: String, val count: Int, val updated: Boolean)
@@ -315,7 +315,7 @@ class WebEditorApi(
         val done = kotlinx.coroutines.runBlocking { file.inputStream().use { b.restore(it, parts, r.replace) } }
         file.delete()
         waitingBackup.compareAndSet(waiting, null)
-        return if (done) ok(json.encodeToString(RestoreDone(b.skipped))) else problem("unreadable")
+        return if (done) ok(json.encodeToString(RestoreDone(b.skipped, b.bandAgain))) else problem("unreadable")
     }
 
     /** The editor turned off: a backup waiting for its parts goes away (it could be 1 GB). */

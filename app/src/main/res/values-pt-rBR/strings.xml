@@ -319,6 +319,7 @@
     <string name="backup_not_backup">Esse arquivo não é um backup do Stagebook</string>
     <string name="backup_restore_failed">Não deu para restaurar o backup</string>
     <string name="backup_restored">Backup restaurado</string>
+    <string name="backup_band_again">Este aparelho é novo para a banda. Autorize a banda de novo em Ajustes → Banda.</string>
     <string name="editor_data_label">Dados da música</string>
     <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>

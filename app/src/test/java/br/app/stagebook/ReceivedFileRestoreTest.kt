@@ -87,6 +87,21 @@ class ReceivedFileRestoreTest {
         assertNull(vm.pendingRestore.value)
     }
 
+    @Test fun `a band restored from another device's file raises the notice until it is seen`() = runBlocking {
+        val identity = context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE)
+        identity.edit().clear().commit()
+        br.app.stagebook.data.DeviceIdentity(context).id
+        br.app.stagebook.data.BandTrust(context).add("ana", "Tablet da Ana", "k1")
+        val file = receive(backupFile("band.stagebook", "With the band"))
+        identity.edit().clear().commit()
+        br.app.stagebook.data.DeviceIdentity(context).id   // another device now
+        vm.inspectBackup(file).join()
+        vm.restore(setOf(Part.SETTINGS), replace = true).join()
+        assertTrue(vm.bandAgain.value)
+        vm.bandAgainSeen()
+        assertTrue(!vm.bandAgain.value)
+    }
+
     @Test fun `a second backup takes the window, and it restores from a copy that is there`() = runBlocking {
         val first = receive(backupFile("first.stagebook", "First"))
         vm.inspectBackup(first).join()

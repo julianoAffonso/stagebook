@@ -863,9 +863,10 @@ async function restore(replace) {
   if (replace && !confirm(t.replace + "?")) return;
   const r = await post("/api/backup/restore", { token: backupToken, parts, replace });
   if (!r || r.status !== 200) return say("backup-status", t.unreadable, "error");
-  const { skipped } = await r.json();
+  const { skipped, bandAgain } = await r.json();
   $("backup-parts").hidden = true;
-  say("backup-status", skipped ? `${t.restored}. ${t.notSong} (${skipped})` : t.restored, "ok");
+  const done = skipped ? `${t.restored}. ${t.notSong} (${skipped})` : t.restored;
+  say("backup-status", bandAgain ? `${done}. ${t.bandAgain}` : done, "ok");
   await Promise.all([loadList(), loadSets()]);
 }
 $("backup-merge").onclick = () => restore(false);

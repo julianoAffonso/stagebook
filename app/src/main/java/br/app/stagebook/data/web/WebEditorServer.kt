@@ -309,6 +309,7 @@ class WebEditorServer @Inject constructor(
             "partTracks" to R.string.backup_part_tracks,
             "partSettings" to R.string.backup_part_settings,
             "restored" to R.string.backup_restored,
+            "bandAgain" to R.string.backup_band_again,
             "bandNone" to R.string.web_band_none,
             "receiveTitle" to R.string.web_receive_title,
             "backupHint" to R.string.web_backup_hint,

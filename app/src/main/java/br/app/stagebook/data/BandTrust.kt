@@ -55,7 +55,7 @@ class BandTrust @Inject constructor(@ApplicationContext context: Context) {
 
     private fun save() = prefs.edit { putString(KEY, json.encodeToString(_members.value)) }
 
-    private companion object {
+    companion object {
         const val KEY = "members"
     }
 }

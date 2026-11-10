@@ -312,6 +312,7 @@
     <string name="backup_not_backup">This file isn\'t a Stagebook backup</string>
     <string name="backup_restore_failed">Couldn\'t restore the backup</string>
     <string name="backup_restored">Backup restored</string>
+    <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band.</string>
     <string name="editor_data_label">Song details</string>
     <string name="editor_data_untitled">Untitled song</string>
     <string name="editor_data_capo">capo %1$d</string>

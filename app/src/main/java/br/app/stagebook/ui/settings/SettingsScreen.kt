@@ -199,6 +199,11 @@ fun SettingsRoute(
         )
     }
 
+    // the band came back from another device's file: here it's a device they never approved. A window held by the view
+    // model, not the snackbar: restoring settings opens the screen again, and the snackbar goes with the old one.
+    val bandAgain by viewModel.bandAgain.collectAsStateWithLifecycle()
+    if (bandAgain) InfoDialog(stringResource(R.string.backup_restored), stringResource(R.string.backup_band_again), viewModel::bandAgainSeen)
+
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { m ->
             val r = resources

@@ -155,6 +155,11 @@ class SettingsViewModel @Inject constructor(
 
     fun cancelRestore() { _pendingRestore.value = null }
 
+    /** The file just restored brought a band saved by another device: said in a window that outlives the screen. */
+    private val _bandAgain = MutableStateFlow(false)
+    val bandAgain: StateFlow<Boolean> = _bandAgain.asStateFlow()
+    fun bandAgainSeen() { _bandAgain.value = false }
+
     /** Erase everything: Android clears the app data (songs, tracks, settings, band) and closes it; it opens clean. */
     fun factoryReset() { context.getSystemService(android.app.ActivityManager::class.java)?.clearApplicationUserData() }
 
@@ -162,6 +167,7 @@ class SettingsViewModel @Inject constructor(
         val p = _pendingRestore.value ?: return@launch
         _pendingRestore.value = null
         val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } }.getOrDefault(false)
+        if (ok && backup.bandAgain) _bandAgain.value = true
         // settings restored (language, look): the screen opens again so they apply
         _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(br.app.stagebook.data.Backup.Part.SETTINGS in parts, backup.skipped))
     }

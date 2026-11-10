@@ -122,6 +122,50 @@ class BackupTest {
         assertEquals(listOf("ana", "caio"), br.app.stagebook.data.BandTrust(context).members.value.map { it.id }.sorted())
     }
 
+    // a band saved with [members] by one device, restored after [between] ran (audit 10/11, user: "Faça")
+    private suspend fun bandAgainAfter(members: Boolean = true, identity: Boolean = true, between: () -> Unit): Boolean {
+        val prefs = context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        if (identity) br.app.stagebook.data.DeviceIdentity(context).id   // the key pair is made on first use
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val trust = br.app.stagebook.data.BandTrust(context)
+        trust.members.value.forEach { trust.remove(it.id) }
+        val backup = Backup(context, repo, TrackStore(context), trust)
+        if (members) trust.add("ana", "Tablet da Ana", "k1")
+        val out = ByteArrayOutputStream()
+        backup.write(out, setOf(Part.SETTINGS))
+        between()
+        assertTrue(backup.restore(ByteArrayInputStream(out.toByteArray()), setOf(Part.SETTINGS)))
+        return backup.bandAgain
+    }
+
+    private fun becomeAnotherDevice() {
+        context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE).edit().clear().commit()
+        br.app.stagebook.data.DeviceIdentity(context).id
+    }
+
+    @Test fun `a band restored on the device that saved it asks for nothing`() = runBlocking {
+        assertEquals(false, bandAgainAfter { })
+    }
+
+    @Test fun `a band restored on another device says it has to be approved again`() = runBlocking {
+        assertEquals(true, bandAgainAfter { becomeAnotherDevice() })
+    }
+
+    @Test fun `a device that never had an identity is new to the band too`() = runBlocking {
+        assertEquals(true, bandAgainAfter { context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE).edit().clear().commit() })
+    }
+
+    @Test fun `with no band in the file, another device has nothing to approve`() = runBlocking {
+        assertEquals(false, bandAgainAfter(members = false) { becomeAnotherDevice() })
+    }
+
+    @Test fun `a file that does not say who saved it shows no notice`() = runBlocking {
+        // the same as a file from before the device was written in it
+        assertEquals(false, bandAgainAfter(identity = false) { becomeAnotherDevice() })
+    }
+
     @Test fun `file that is not a backup is not read`() = runBlocking {
         val (_, _, backup) = setup()
         assertEquals(null, backup.inspect(ByteArrayInputStream("não é zip".toByteArray())))
