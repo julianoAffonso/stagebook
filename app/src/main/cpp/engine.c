@@ -610,7 +610,10 @@ static void *stall_watch(void *arg) {
         struct timespec t = {0, 50000000}; nanosleep(&t, NULL);
         double at = now_s();
         if (g_watching && at - g_last_reap > STALL_S) { g_stalled = 1; pthread_kill(g_usb_thr, SIGUSR2); }
-        else if (g_watching && g_in_ep >= 0 && at - g_last_out_reap > STALL_S) { g_out_starved = 1; pthread_kill(g_usb_thr, SIGUSR2); }
+        // The input starves the output only while it goes on itself: its URBs kept coming back for STALL_S after the
+        // output's last one. A queue that stalls for good can end on an input URB a little after the output's last,
+        // and timing the output against the clock took that for a starved output: Java then gave the input up for good
+        else if (g_watching && g_in_ep >= 0 && g_last_reap - g_last_out_reap > STALL_S) { g_out_starved = 1; pthread_kill(g_usb_thr, SIGUSR2); }
     }
     return NULL;
 }

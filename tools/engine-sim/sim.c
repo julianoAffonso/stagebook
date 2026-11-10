@@ -129,6 +129,12 @@ static long in_spike_n = 0, in_urb_count = 0;
 static double runner_jitter = 0;           // SIM_RUNNER_JITTER=<seconds>: a shared CI runner's timing noise, on top of everything
 static int in_loss_boundary = 0;           // packets lost at the start of every input URB (a host controller that loses a poll or two per boundary)
 static double out_dies_with_in_s = 0;      // output URBs stop coming back this long after the first input URB, the input keeps going (the S26 with a high-speed interface)
+// From all_dead_from on no URB comes back, and no error says so (a queue that stalled for good); the input's keep coming
+// for in_lingers_s more, so the last URB back is an input one, well after the output's last. A discarded URB still returns
+static double all_dead_from = 0, in_lingers_s = 0;
+static int stalled_for_good(const struct usbdevfs_urb *u, int st, double t) {
+    return all_dead_from > 0 && !st && t > all_dead_from + ((u->endpoint & 0x80) ? in_lingers_s : 0);
+}
 static double in_long_dies_s = 0, in_t0 = 0;   // input URBs longer than 16 packets stop coming back this long after the first input URB (the S26)
 static long iso_gaps = 0;              // the desk ran out of packets: on the device it becomes a click/repeat
 static double worst_starve = 0;
@@ -185,7 +191,8 @@ static int pop_ready(struct usbdevfs_urb **out, int block) {
     for (;;) {
         if (block && sim_intr) { sim_intr = 0; errno = EINTR; return -1; }
         int best = -1;
-        for (int i = 0; i < nq; i++) if (best < 0 || q[i].due < q[best].due) best = i;
+        double at = now();
+        for (int i = 0; i < nq; i++) if (!stalled_for_good(q[i].u, q[i].st, at) && (best < 0 || q[i].due < q[best].due)) best = i;
         if (best < 0) {
             if (disconnected || !block) { errno = disconnected ? ENODEV : EAGAIN; return -1; }
             pthread_cond_wait(&dev_cv, &dev_mx);
@@ -279,7 +286,7 @@ static int sim_hold_usb(void) {
 static int sim_kernel_urbs(void) { pthread_mutex_lock(&dev_mx); int n = nq; pthread_mutex_unlock(&dev_mx); return n; }
 static void sim_close_conn(void) {   // UsbLink.close(): closing the fd returns what's left
     pthread_mutex_lock(&dev_mx);
-    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0; in_t0 = 0;
+    nq = 0; disconnected = 0; out_due = in_due = 0; out_urbs = 0; in_dead_from = 0; in_t0 = 0; all_dead_from = 0; in_lingers_s = 0;
     pthread_mutex_unlock(&dev_mx);
 }
 
@@ -869,6 +876,29 @@ only_starve:
     sim_close_conn();
     FN(setQueue)(env, NULL, q_before);
     pthread_mutex_lock(&dev_mx); out_dies_with_in_s = 0; pthread_mutex_unlock(&dev_mx);
+
+    // every URB stops coming back and nothing says so: the stream has to end by itself with half the queue, for Java to
+    // connect again. With no input first, then with one
+    printf("[7g] a queue stalled for good ends the stream with half the queue\n");
+    for (int with_in = 0; with_in < 2; with_in++) {
+        if (with_in) E_START_FAST(); else FN(start)(env, NULL, 3, 0x01, 7 * OUT_FB, 4, 4, 1, 1, -1, 0, 0);
+        FN(seek)(env, NULL, 60000);
+        FN(play)(env, NULL);
+        sleep_s(0.3);
+        // the input's last URB comes back 60 ms after the output's last: longer than a turn of the stall watch (50 ms),
+        // so one of them always sees an output quiet for STALL_S beside an input that is not yet. It is still a stalled
+        // queue, not an input starving the output: that verdict makes Java give the input up on this device for good
+        pthread_mutex_lock(&dev_mx); in_lingers_s = 0.06; all_dead_from = now(); pthread_mutex_unlock(&dev_mx);
+        sleep_s(0.8);
+        int halved = q_before > QUEUE_MS_MIN ? q_before / 2 : q_before;
+        snprintf(buf, sizeof buf, "stream ended=%d, input starved the output=%d, queue %d ms (was %d), status \"%s\"",
+                 !FN(isRunning)(env, NULL), FN(inputStarvedOutput)(env, NULL), FN(queueMs)(env, NULL), q_before, g_status);
+        check(!FN(isRunning)(env, NULL) && !FN(inputStarvedOutput)(env, NULL) && FN(queueMs)(env, NULL) == halved && strstr(g_status, "queue stalled"),
+              with_in ? "a stalled queue with the input on is not taken for an input starving the output" : "a stalled queue ends the stream with half the queue", buf);
+        FN(stop)(env, NULL);
+        sim_close_conn();
+        FN(setQueue)(env, NULL, q_before);
+    }
     if (only) { printf("%s: %d failure(s)\n", ENGINE_NAME, fails); return fails ? 1 : 0; }
 #endif
 
