@@ -1033,6 +1033,7 @@
     <string name="editor_auto_meta_short">Em branco: o app completa</string>
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
+    <string name="editor_track_missing">O áudio não está neste aparelho. Anexe de novo.</string>
     <string name="tags_empty">Nenhuma</string>
     <string name="editor_lyrics_chords">Letra e cifra</string>
     <plurals name="scan_parked">

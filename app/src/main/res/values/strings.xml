@@ -998,6 +998,7 @@
     <string name="editor_auto_meta_short">Blank: the app fills it in</string>
     <string name="editor_track_empty">None</string>
     <string name="editor_track_unnamed">Audio attached</string>
+    <string name="editor_track_missing">The audio isn\'t on this device. Attach it again.</string>
     <string name="tags_empty">None</string>
     <string name="editor_lyrics_chords">Lyrics and chords</string>
     <plurals name="scan_parked">

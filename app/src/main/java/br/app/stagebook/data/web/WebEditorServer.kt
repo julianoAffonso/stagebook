@@ -280,6 +280,7 @@ class WebEditorServer @Inject constructor(
             "addCount" to R.string.pick_add_short,
             "track" to R.string.stage_backing_track,
             "trackNone" to R.string.editor_track_none,
+            "trackMissing" to R.string.editor_track_missing,
             "trackPick" to R.string.editor_track_pick,
             "trackChange" to R.string.editor_track_change,
             "trackRemove" to R.string.stage_track_remove,

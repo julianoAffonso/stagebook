@@ -427,7 +427,9 @@ function drawTrack() {
   const has = !!(current && current.track);
   $("track-row").hidden = !(current && current.id);
   // the track's own name, as the app keeps it; an old track without one shows its file
-  $("track-name").textContent = has ? current.trackName || current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓" : t.trackNone;
+  $("track-name").textContent = has ? current.trackName || current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓"
+    // the audio didn't come with the song (a backup without the tracks): the name stays, to know which one to send
+    : current && current.trackName ? `${current.trackName}. ${t.trackMissing}` : t.trackNone;
   $("track-pick").textContent = has ? t.trackChange : t.trackPick;
   $("track-remove").hidden = !has;
 }
