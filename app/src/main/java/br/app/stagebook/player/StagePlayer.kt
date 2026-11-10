@@ -121,8 +121,8 @@ class StagePlayer @Inject constructor(
     private val usbWatch = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             syncPlugged()
-            // plugged with a song with a track on stage: the new interface is read right away
-            if (i.action == android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED && wanted != null) prepareUnread()
+            // plugged in: a new interface is read right away, wherever the app is (user, 10/11: waiting for a song was wrong)
+            if (i.action == android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED) prepareUnread()
         }
     }
 
@@ -133,7 +133,7 @@ class StagePlayer @Inject constructor(
             addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
         }
         ContextCompat.registerReceiver(context, usbWatch, f, ContextCompat.RECEIVER_NOT_EXPORTED)
-        scope.launch { repository.loaded.first { it }; syncPlugged() }
+        scope.launch { repository.loaded.first { it }; syncPlugged(); prepareUnread() }
     }
 
     /**
@@ -152,11 +152,11 @@ class StagePlayer @Inject constructor(
     }
 
     /**
-     * A song with a track opened (or the interface was plugged with one on stage) and the interface on the cable has
-     * never been read on this device: the player opens it now, with "preparing the interface", to read its outputs and
-     * how well this device's USB carries it. Once per interface and device; the idle stream closes by itself after 10 s.
+     * The interface on the cable has never been read on this device: the player opens it now (plugged in, the app
+     * opened with it plugged, a song with a track, the metronome settings), to read its outputs and how well this
+     * device's USB carries it. Once per interface and device; the idle stream closes by itself after 10 s.
      */
-    private fun prepareUnread() {
+    fun prepareUnread() {
         if (PlayerService.running || !repository.library.value.look.playerMode) return
         val d = usbManager?.let { UsbLink.find(it) } ?: return
         val key = keyOf(d)

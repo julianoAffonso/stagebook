@@ -387,6 +387,7 @@ fun SettingsRoute(
                 onMetronomeVolume = viewModel::setMetronomeVolume,
                 onMetronomeShown = viewModel::setMetronomeShown,
                 onMetronomeOut = viewModel::setMetronomeOut,
+                onReadInterface = viewModel::readInterface,
                 onMetronomeMenu = viewModel::probeClickRoute,
                 clickApart = clickApart || !usb.androidOr(uiState.look.usbViaAndroid),
                 clickTesting = clickTesting,
@@ -488,6 +489,7 @@ data class SettingsActions(
     val onMetronomeVolume: (Int) -> Unit = {},
     val onMetronomeShown: (Boolean) -> Unit = {},
     val onMetronomeOut: (br.app.stagebook.domain.MetronomeOut) -> Unit = {},
+    val onReadInterface: () -> Unit = {},
     val onMetronomeMenu: () -> Unit = {},
     val clickApart: Boolean = true,
     val clickTesting: Boolean = false,
@@ -1569,7 +1571,10 @@ private fun MetronomeDetail(look: Look, actions: SettingsActions) {
             )
             if (chosen.device) Text(stringResource(R.string.metro_out_device_order), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (!actions.clickApart) Text(stringResource(R.string.metro_out_together), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // a new interface on the cable: its outputs are read right here, with no trip to the stage (user, 10/11)
+            if (outputs.unread) androidx.compose.runtime.LaunchedEffect(outputs.key) { actions.onReadInterface() }
+            if (outputs.unread) Text(stringResource(R.string.metro_out_reading, outputs.label()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else if (options.size == 1) Text(stringResource(R.string.metro_out_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (look.metroSound) MetronomeTestButton(actions.clickTesting, actions.onClickTest, actions.onClickTestStop)
         SwitchRow(stringResource(R.string.metro_glow), look.metroGlow, { set(glow = it) })

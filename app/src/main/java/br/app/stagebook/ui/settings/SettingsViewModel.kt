@@ -145,6 +145,9 @@ class SettingsViewModel @Inject constructor(
         stop = { testWait?.cancel(); metronome.stop(); br.app.stagebook.player.StagePlayer.usbClickOff() },
     )
     val clickTesting: StateFlow<Boolean> = clickTest.playing
+
+    /** Metronome settings open with a new interface plugged in: read its outputs there (user, 10/11). */
+    fun readInterface() = player.prepareUnread()
     fun toggleClickTest() = clickTest.toggle()
     fun stopClickTest() = clickTest.stop()
 

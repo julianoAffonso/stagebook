@@ -922,14 +922,15 @@
     <string name="player_on_alone">On</string>
     <string name="metro_out">Sound output</string>
     <string name="metro_out_device">Device</string>
+    <string name="metro_out_reading">Reading the outputs of %s…</string>
     <string name="host_warning_title">USB may fail</string>
     <string name="host_warning_text">This device\'s USB isn\'t keeping up with %1$s: it lost %2$s of the packets. The sound may stutter or drop in the middle of a song. Using it anyway is at your own risk.</string>
     <string name="host_warning_channels">This interface has %d channels, which asks a lot of the USB. On a stronger device, or with an interface with fewer channels, the sound tends to come out clean.</string>
-    <string name="mixer_now_unread">Plugged in: %1$s. Its outputs show up when you open a song with a track.</string>
+    <string name="mixer_now_unread">Plugged in: %1$s. Reading its outputs…</string>
     <string name="mixer_out_missing">This output doesn\'t play now. Through Android, the system gives this interface only outputs 1 to %d.</string>
     <string name="metro_out_device_order">On the device it goes to headphones, then Bluetooth, then the speaker. It uses the first one connected.</string>
     <string name="metro_out_together">Through Android, this device sends the click to the USB interface with the song.</string>
-    <string name="metro_out_hint">To pick a USB interface output, plug it in and open a song with a track.</string>
+    <string name="metro_out_hint">To pick a USB interface output, plug it in with the player on.</string>
     <string name="usb_via_android">Play on the interface through Android</string>
     <string name="usb_via_android_detail">Use it only if the interface connects but there\'s no sound or it stutters. Sound goes through Android\'s audio, which can stutter too.</string>
     <string name="usb_route_auto_android">The app turned this on for %1$s, because the sound failed several times on Stagebook\'s engine.</string>

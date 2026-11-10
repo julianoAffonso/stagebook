@@ -89,4 +89,18 @@ class MetronomeTestButtonTest {
         assertEquals(1, stopped)
         assertEquals(br.app.stagebook.domain.MetronomeOut(8, true), picked)
     }
+
+    @Test fun `a new interface plugged in is read right on the metronome settings`() {
+        // the S26 showed only Device with the XR18 plugged in, until a song with a track was opened on stage
+        var reads = 0
+        val fresh = br.app.stagebook.domain.OutputInfo("usb:1397:00d4", "X18/XR18", 0)
+        val look = Look(metroSound = true, playerMode = true, mixer = br.app.stagebook.domain.MixerConfig(output = fresh))
+        compose.setContent {
+            StagebookTheme {
+                SettingsScreen(SettingsUiState(loading = false, look = look), SettingsActions(onReadInterface = { reads++ }), section = SettingsSection.METRONOME)
+            }
+        }
+        compose.onNodeWithText("Lendo as saídas da X18/XR18…").assertExists()
+        assertEquals(1, reads)
+    }
 }
