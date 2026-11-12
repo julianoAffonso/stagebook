@@ -180,10 +180,15 @@ object Chords {
     /** A mark that goes with chords on a chords-only line: `|`, `/`, `%`, `-`, `2x`, `(x2)`. */
     fun isChordLineMark(token: String) = chordLineExtras.matches(token)
 
+    private val TUNING_LABEL = Regex("""(?i)\[?(afina[cç][aã]o|afinaci[oó]n|accordatura|tuning)[:\]]""")
+
     fun isChordLine(line: String): Boolean {
         val tokens = line.trim().split(SPACES).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false
-        val body = if (tokens.size > 1 && isLabel(tokens[0])) tokens.drop(1) else tokens
+        val labelled = tokens.size > 1 && isLabel(tokens[0])
+        // "Afinação: B F# B E G# C#" names the strings, not chords (user's riff song, 11/11)
+        if (labelled && TUNING_LABEL.matches(tokens[0])) return false
+        val body = if (labelled) tokens.drop(1) else tokens
         // the "all" first: a lyric line stops at its first word that isn't a chord (it ran on every line of the stage
         // and the editor preview, and "any" parsed every word first; audit 03/11)
         if (body.all { isChord(it) || chordLineExtras.matches(it) } && body.any(::isChord)) return true
