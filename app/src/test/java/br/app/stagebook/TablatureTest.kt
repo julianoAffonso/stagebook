@@ -114,4 +114,17 @@ class TablatureTest {
         // the first lyrics line keeps its chord
         assertTrue(out, "D\nUma linha inventada de exemplo" in out)
     }
+
+    @Test fun `without the tab, its captions go and a part left with nothing goes too (user, 11-11)`() {
+        val page = listOf(
+            "[Intro]", "", "[Tab - Intro]", "", "(Guitarra Base)", "", "Riff Principal", "E|--------------|", "B|-0h1---1---0h1|", "",
+            "Variação 1 do Riff Principal", "E|--------------|", "B|-0h1-1-1---0h1|", "", "(Guitarra Solo)", "", "E|-14--14-------|", "",
+            "[Refrão]", "", "[Tab - Refrão]", "", "E|-0h1---1---0h2|", "", "Uma linha inventada de exemplo", "Outra linha da letra aqui", "",
+            "[Primeira Parte]", "", "(Riff Principal)", "", "Mais uma linha cantada", "",
+            "[Solo]", "", "[Tab - Solo]", "", "(Guitarra Solo)", "", "E|-12b14--------|", "  ~", "",
+            "[Refrão]", "", "[Final]", "", "[Tab - Final]", "", "E|-0------------|",
+        ).joinToString("\n")
+        val out = Tablature.strip(page)
+        assertEquals("[Refrão]\n\nUma linha inventada de exemplo\nOutra linha da letra aqui\n\n[Primeira Parte]\n\nMais uma linha cantada\n\n[Refrão]", out.trim())
+    }
 }

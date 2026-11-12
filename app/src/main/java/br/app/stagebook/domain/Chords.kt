@@ -182,6 +182,9 @@ object Chords {
 
     private val TUNING_LABEL = Regex("""(?i)\[?(afina[cç][aã]o|afinaci[oó]n|accordatura|tuning)[:\]]""")
 
+    /** "Afinação: B F# B E G# C#": the strings' tuning, for who plays. */
+    fun isTuningLine(line: String): Boolean = line.trim().split(SPACES).let { it.size > 1 && TUNING_LABEL.matches(it[0]) }
+
     fun isChordLine(line: String): Boolean {
         val tokens = line.trim().split(SPACES).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return false

@@ -166,8 +166,11 @@ class ImportChordsTest {
     }
 
     @Test fun `lyrics only - tablature and lyrics without chords come in as the lyrics, without asking`() = runBlocking {
-        val text = (importer(chords = false).fromPage(tabOnlyPage(), null) as br.app.stagebook.data.PageImport.Song).text
+        val page = tabOnlyPage().let { it.copy(chordText = "\u200BAfinação: B F# B E G# C#\n\n" + it.chordText, preLyrics = "\u200BAfinação: B F# B E G# C#\n\n" + it.preLyrics) }
+        val text = (importer(chords = false).fromPage(page, null) as br.app.stagebook.data.PageImport.Song).text
         assertFalse(text, text.contains("|--"))
+        // only what is sung: no tuning, no part that was all tablature
+        assertFalse(text, text.contains("Afinação") || text.contains("[Intro]"))
         assertTrue(text, text.contains("Saio cedo pela rua\nPra você ouvir"))
         assertTrue(text, text.contains("E a última linha"))
     }

@@ -74,7 +74,9 @@ class PageImporter @Inject constructor(
         } else {
             // lyrics only: no chords, but the page's key and capo are kept (hidden in this profile; not lost if the
             // profile changes or the song goes to someone who plays)
-            val lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+            // the tuning is for who plays
+            val sung = page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) }.lineSequence().filterNot(Chords::isTuningLine).joinToString("\n")
+            val lyrics = LyricsCleaner.clean(sung)
             ChordImport.withPageInfo(lyrics, page.chordText, page.pageText, page.chordText)
         }
         if (text.lines().size < 3) return PageImport.Problem(ImportProblem.NOT_FOUND)

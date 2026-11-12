@@ -103,9 +103,11 @@ SECTIONS = [
                 ["Key, capo and BPM come from what the page says, on any site. With a capo, the saved key is the one of the chart's shapes. Whatever is missing of artist, year and BPM the app fills in over the internet. Offline, fill it in under Song details."]),
             sub("importar-tab", "Tablatura", "Tablature",
                 ["Se a cifra tiver tablatura, o app pergunta se ela vem junto: Com a tablatura ou Sem a tablatura. Dá para apagar depois no editor.",
-                 "Música que só tem tablatura e letra, sem acordes, entra sem pergunta. No perfil de letra e cifra a tablatura vem junto. No perfil só letra ela fica de fora."],
+                 "Música que só tem tablatura e letra, sem acordes, entra sem pergunta. No perfil de letra e cifra a tablatura vem junto. No perfil só letra entra só o que é cantado.",
+                 "Sem a tablatura, saem também as legendas dela e as partes que eram só tablatura, como um solo."],
                 ["If the chart has tablature, the app asks whether to bring it: With the tab or Without the tab. You can delete it later in the editor.",
-                 "A song with only tablature and lyrics, no chords, comes in without the question. With the lyrics and chords profile the tab comes along. With lyrics only it stays out."]),
+                 "A song with only tablature and lyrics, no chords, comes in without the question. With the lyrics and chords profile the tab comes along. With lyrics only, just what is sung comes in.",
+                 "Without the tab, its captions and the parts that were only tablature, like a solo, go too."]),
         ],
     },
     {
