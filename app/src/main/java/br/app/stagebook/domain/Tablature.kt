@@ -142,7 +142,19 @@ object Tablature {
         val lines = text.split('\n')
         val flags = lines.map(::isTabLine)
         val out = ArrayList<String>()
+        // the last part title, while nothing but blank lines came after it
+        var lastTitle: String? = null
         lines.forEachIndexed { i, line ->
+            // "[Intro]" and right under it "[Tab - Intro]" (Cifra Club) are one part: the stage showed it twice (user, 11/11)
+            val title = PART_TITLE.matchEntire(line.trim())?.groupValues?.get(1)?.trim()
+            if (title != null) {
+                val above = lastTitle
+                lastTitle = title
+                if (above != null && TAB_PART.containsMatchIn(title) && title.replace(TAB_PREFIX, "").equals(above, ignoreCase = true)) {
+                    if (out.lastOrNull()?.isBlank() == true) out.removeAt(out.lastIndex)
+                    return@forEachIndexed
+                }
+            } else if (line.isNotBlank()) lastTitle = null
             val prev = i > 0 && flags[i - 1]
             val next = i < lines.lastIndex && flags[i + 1]
             if (flags[i] && !prev) out += START
@@ -209,6 +221,7 @@ object Tablature {
 
     private val PART_TITLE = Regex("""\[([^\[\]]+)]""")
     private val TAB_PART = Regex("""^(tab|tabs|tablatura|tablature)\b""", RegexOption.IGNORE_CASE)
+    private val TAB_PREFIX = Regex("""^(tab|tabs|tablatura|tablature)\s*[-:]?\s*""", RegexOption.IGNORE_CASE)
     private val TAB_PIECE = Regex("""(parte|part)\s+\d+\s+(de|of)\s+\d+|\(?\d+x\)?|riff""", RegexOption.IGNORE_CASE)
     private val RIFF_CUE = Regex("""\([^()]*\briff\b[^()]*\)""", RegexOption.IGNORE_CASE)
 }

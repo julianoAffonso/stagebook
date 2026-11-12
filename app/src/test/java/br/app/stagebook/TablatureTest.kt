@@ -127,4 +127,13 @@ class TablatureTest {
         val out = Tablature.strip(page)
         assertEquals("[Refrão]\n\nUma linha inventada de exemplo\nOutra linha da letra aqui\n\n[Primeira Parte]\n\nMais uma linha cantada\n\n[Refrão]", out.trim())
     }
+
+    @Test fun `a part's tab title right under the part's own title doesn't repeat the part (user, 11-11)`() {
+        val page = listOf("[Intro]", "", "[Tab - Intro]", "", "(Guitarra Base)", "E|-----0-----|", "B|---0---0---|", "",
+            "[Primeira Parte]", "Uma linha", "", "[Tab - Solo]", "E|-----3-----|", "B|---0---0---|").joinToString("\n")
+        val out = Tablature.wrap(page)
+        assertTrue(out, out.startsWith("[Intro]\n\n(Guitarra Base)\n{start_of_tab}"))
+        // a tab part with no title of its own above it keeps its title
+        assertTrue(out, "[Tab - Solo]\n{start_of_tab}" in out)
+    }
 }
