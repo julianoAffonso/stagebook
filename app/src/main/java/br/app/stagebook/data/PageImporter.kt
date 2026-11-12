@@ -49,23 +49,34 @@ class PageImporter @Inject constructor(
     suspend fun fromPage(source: PageData, withTab: Boolean? = null): PageImport {
         // a page that big is no song (a log, a book): not worth reading (limits in ExtractScript)
         if (maxOf(source.text.length, source.chordText.length) > 2 * br.app.stagebook.domain.BandContent.MAX_TEXT) return PageImport.Problem(ImportProblem.NOT_SONG)
-        // a <pre> only counts if it has chords: others (code, notes) leave the page's text as it is
-        val parsed = if (ChordImport.hasChords(source.chordText)) source.copy(text = source.preLyrics.ifBlank { source.text }) else source.copy(chordText = "")
+        // a <pre> only counts if it has chords or tablature: others (code, notes) leave the page's text as it is. A riff
+        // song has tablature and lyrics and not one chord: without its <pre> a piece from the middle came in (user, 11/11)
+        val charted = ChordImport.hasChords(source.chordText)
+        val preTab = !charted && Tablature.hasTab(ChordImport.plainSpaces(source.chordText))
+        val parsed = if (charted || preTab) source.copy(text = source.preLyrics.ifBlank { source.text }) else source.copy(chordText = "")
+        // pasted text too: tablature and no chords
+        val tabOnly = ChordImport.plainSpaces(parsed.chordText.ifBlank { parsed.text }).let { !ChordImport.hasChords(it) && Tablature.hasTab(it) }
         // the search results aren't a song: Google's summary has bits of lyrics and came in as "cifra wave tom jobim"
         // with a made-up key (device test B-05): open the chords page first
         if (SEARCH_HOST.containsMatchIn(parsed.site)) return PageImport.Problem(ImportProblem.SEARCH_PAGE)
         // invisible marks start every line on some sites: the tablature only shows after they're gone
+        val chordsProfile = repository.library.value.look.chords
+        // nothing to choose when the tablature is all the chart has: it comes in with the chords profile, stays out of
+        // the lyrics only one
+        @Suppress("NAME_SHADOWING") val withTab = withTab ?: chordsProfile.takeIf { tabOnly }
         if (withTab == null && (Tablature.hasTab(ChordImport.plainSpaces(parsed.chordText)) || Tablature.hasTab(ChordImport.plainSpaces(parsed.text)))) return PageImport.AskTab
         val tab: (String) -> String = { t -> if (withTab == true) Tablature.wrap(t) else Tablature.strip(t) }
         val page = parsed.copy(text = tab(ChordImport.plainSpaces(parsed.text)), chordText = tab(ChordImport.plainSpaces(parsed.chordText)), pageText = ChordImport.plainSpaces(parsed.pageText))
         // lyrics and chords profile + page with chords: comes in as ChordPro (with key and capo); otherwise, lyrics only
         val chordSource = page.chordText.ifBlank { page.text }
-        var text = if (repository.library.value.look.chords && ChordImport.hasChords(chordSource)) {
+        var text = if (chordsProfile && (ChordImport.hasChords(chordSource) || Tablature.hasTab(chordSource))) {
             ChordImport.toChordPro(chordSource, page.pageText)
         } else {
             // lyrics only: no chords, but the page's key and capo are kept (hidden in this profile; not lost if the
             // profile changes or the song goes to someone who plays)
-            val lyrics = LyricsCleaner.clean(page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) })
+            // the tuning is for who plays
+            val sung = page.text.ifBlank { Chords.stripChords(Chords.fromChordsOverLyrics(page.chordText)) }.lineSequence().filterNot(Chords::isTuningLine).joinToString("\n")
+            val lyrics = LyricsCleaner.clean(sung)
             ChordImport.withPageInfo(lyrics, page.chordText, page.pageText, page.chordText)
         }
         if (text.lines().size < 3) return PageImport.Problem(ImportProblem.NOT_FOUND)

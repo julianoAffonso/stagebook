@@ -138,6 +138,43 @@ class ImportChordsTest {
         assertEquals(2, Chords.capo(text))
     }
 
+    // a riff song: tablature and lyrics, not one chord. The page's own blocks made the script's fallback pick a piece from
+    // the middle (user, 11/11): the <pre> counts, and there is nothing to ask
+    private val tabOnly = "\u200B[Intro]\n\n\u200B[Tab - Intro]\n\nE|--------------|\nB|--------------|\nG|--------------|\nD|-0h1---1---0h1|\n\n" +
+        "\u200B[Refrão]\n\n\u200BSaio cedo pela rua\n\u200BPra você ouvir\n\n\u200B[Primeira Parte]\n\n\u200BE mais uma linha\n\u200BE outra linha aqui\n\u200BE a última linha"
+    private fun tabOnlyPage() = br.app.stagebook.domain.PageData(text = "D|-0h1---1---0h1|\n\n\u200B[Refrão]", chordText = tabOnly, preLyrics = tabOnly, site = "www.exemplo.com")
+
+    @Test fun `tablature and lyrics without chords come in whole, tab included, without asking`() = runBlocking {
+        val text = (importer(chords = true).fromPage(tabOnlyPage(), null) as br.app.stagebook.data.PageImport.Song).text
+        assertTrue(text, text.contains("{start_of_tab}\nE|--------------|"))
+        assertTrue(text, text.contains("D|-0h1---1---0h1|\n{end_of_tab}"))
+        assertTrue(text, text.contains("Saio cedo pela rua\nPra você ouvir"))
+        assertTrue(text, text.contains("E a última linha"))
+    }
+
+    @Test fun `pasted tablature and lyrics without chords come in with the tab, without asking`() = runBlocking {
+        val text = (importer(chords = true).fromText(tabOnly) as br.app.stagebook.data.PageImport.Song).text
+        assertTrue(text, text.contains("D|-0h1---1---0h1|\n{end_of_tab}"))
+        assertTrue(text, text.contains("E a última linha"))
+    }
+
+    @Test fun `the tuning line names strings, not chords`() = runBlocking {
+        val text = (importer(chords = true).fromPage(tabOnlyPage().let { it.copy(chordText = "\u200BAfinação: B F# B E G# C#\n\n" + it.chordText) }, null) as br.app.stagebook.data.PageImport.Song).text
+        assertTrue(text, text.contains("Afinação: B F# B E G# C#"))
+        assertFalse(Chords.isChordLine("Tuning: D A D G B E"))
+        assertTrue(Chords.isChordLine("Intro: D A D G"))
+    }
+
+    @Test fun `lyrics only - tablature and lyrics without chords come in as the lyrics, without asking`() = runBlocking {
+        val page = tabOnlyPage().let { it.copy(chordText = "\u200BAfinação: B F# B E G# C#\n\n" + it.chordText, preLyrics = "\u200BAfinação: B F# B E G# C#\n\n" + it.preLyrics) }
+        val text = (importer(chords = false).fromPage(page, null) as br.app.stagebook.data.PageImport.Song).text
+        assertFalse(text, text.contains("|--"))
+        // only what is sung: no tuning, no part that was all tablature
+        assertFalse(text, text.contains("Afinação") || text.contains("[Intro]"))
+        assertTrue(text, text.contains("Saio cedo pela rua\nPra você ouvir"))
+        assertTrue(text, text.contains("E a última linha"))
+    }
+
     // page with tablature: asks; with the tab it comes in as a block, without it it's gone
     private fun rawWithTab(): String {
         val page = buildJsonObject {
