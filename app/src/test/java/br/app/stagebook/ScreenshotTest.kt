@@ -288,7 +288,7 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.filter { it.id != "1" && it.id != "4" }.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = false, selected = it.id == "2") },
+                rows = songs.songs.filter { it.id != "1" && it.id != "4" }.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = false, selected = it.id == "2", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
                 selectedCount = 1,
                 tags = listOf(s("Internacional"), s("Nacional")),
                 chosenTags = setOf(s("Nacional")),
@@ -872,7 +872,7 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
+                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
                 selectedCount = 2,
                 tags = listOf(s("Internacional"), s("Nacional")),
                 chosenTags = setOf(s("Nacional")),
@@ -886,7 +886,7 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
+                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
                 selectedCount = 2,
             ),
             "", {}, {}, {}, {},

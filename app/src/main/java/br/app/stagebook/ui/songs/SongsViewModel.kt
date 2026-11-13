@@ -75,14 +75,11 @@ sealed interface AddResult {
 /** Waits for the person to stop typing before filtering; clearing the search is immediate. */
 fun typingDelay(q: String): Long = if (q.isEmpty()) 0L else 150L
 
-/** Artist and year: under the song's name on stage, and where songs are picked for a setlist. */
+/** Artist and year: under the song's name on stage. */
 fun Song.subtitle(): String = listOf(author, year).filter { it.isNotBlank() }.joinToString(" · ") { it.trim() }
 
 /** The artist alone: a list's rows leave the year out (user, 13/11). */
 fun Song.artistLine(): String = author.trim()
-
-/** What a row shows besides the title and the artist, read from the song once and kept while it doesn't change. */
-private class RowFacts(val text: String, val title: String, val meta: br.app.stagebook.domain.SongMeta, val letter: String, val hasTrack: Boolean)
 
 @HiltViewModel
 class SongsViewModel @Inject constructor(
@@ -122,23 +119,8 @@ class SongsViewModel @Inject constructor(
     // the setlists for "Add to which setlist?": they change without the songs changing (audit 01/11)
     private val setPicks = repository.library.map { l -> l.sets.map { SetPick(it.id, it.name) } }.distinctUntilChanged()
 
-    // key, tempo, capo and the index letter of every song, read off the main thread and only when the songs change.
-    // Each song's text is read again only if it changed: saving a zoom doesn't go through 200 lyrics on a slow tablet
-    @Volatile private var factsKept = emptyMap<String, RowFacts>()
-    private val facts = repository.library.map { it.songs }.distinctUntilChanged()
-        .map { songs ->
-            val kept = factsKept
-            songs.associate { s ->
-                val old = kept[s.id]
-                val track = s.track.isNotEmpty()
-                s.id to when {
-                    old == null || old.text != s.text -> RowFacts(s.text, s.title, br.app.stagebook.domain.Chords.meta(s.text), SongGroups.letter(s.title), track)
-                    old.title != s.title || old.hasTrack != track -> RowFacts(s.text, s.title, old.meta, SongGroups.letter(s.title), track)
-                    else -> old
-                }
-            }.also { factsKept = it }
-        }
-        .flowOn(Dispatchers.Default)
+    // key, tempo, capo and the index letter of every song, shared with the screen that picks songs for a setlist
+    private val facts = RowFactsReader().of(repository.library.map { it.songs })
 
     @OptIn(FlowPreview::class)
     val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search.combine(facts, ::Pair), query.debounce(::typingDelay), chosenTags, setPicks) { loaded, (s, known), q, chosen, sets ->

@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import br.app.stagebook.R
 import br.app.stagebook.ui.theme.Spacing
@@ -28,9 +29,12 @@ fun SongKeyBadge(key: String, modifier: Modifier = Modifier) {
     )
 }
 
+/** The mark of a song with a backing track. Not the play triangle: in a row that one reads as a button. */
+internal val TrackMarkIcon: ImageVector get() = AppIcons.AudioWave
+
 /**
  * What the musician checks before the song starts, at the end of its row (the song list and a setlist): the key, and
- * under it the tempo, the capo and a play mark with a backing track. Only what the song has; nothing at all with none.
+ * under it the tempo, the capo and an audio wave with a backing track. Only what the song has; nothing at all with none.
  */
 @Composable
 fun SongFacts(songKey: String, bpm: Int, capo: Int, hasTrack: Boolean, modifier: Modifier = Modifier) {
@@ -43,7 +47,7 @@ fun SongFacts(songKey: String, bpm: Int, capo: Int, hasTrack: Boolean, modifier:
                 val color = MaterialTheme.colorScheme.onSurfaceVariant
                 if (bpm > 0) Text(stringResource(R.string.set_bpm, bpm), style = small, color = color, maxLines = 1)
                 if (capo > 0) Text(stringResource(R.string.editor_data_capo, capo), style = small, color = color, maxLines = 1)
-                if (hasTrack) Icon(AppIcons.Play, stringResource(R.string.stage_backing_track), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)
+                if (hasTrack) Icon(TrackMarkIcon, stringResource(R.string.stage_backing_track), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
