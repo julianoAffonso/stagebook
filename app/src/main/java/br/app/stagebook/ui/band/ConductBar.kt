@@ -137,6 +137,7 @@ internal fun BandConduct.Notice.text(resources: android.content.res.Resources): 
     is BandConduct.Notice.NoChords -> resources.getString(R.string.conduct_no_chords, title)
     is BandConduct.Notice.Nobody -> resources.getString(if (chords) R.string.conduct_nobody_has_chords else R.string.conduct_nobody_has)
     is BandConduct.Notice.ChordsKept -> resources.getString(R.string.conduct_chords_kept, title, from)
+    is BandConduct.Notice.ChordsCame -> resources.getString(R.string.conduct_chords_came, title, from)
 }
 
 @HiltViewModel

@@ -215,6 +215,7 @@
     <string name="conduct_no_chords">%1$s came without chords</string>
     <string name="conduct_arrived">%1$s arrived from %2$s</string>
     <string name="conduct_chords_kept">%1$s with chords arrived from %2$s. Check it in Received from the band.</string>
+    <string name="conduct_chords_came">%1$s now has chords, from %2$s</string>
     <string name="about_support">Support Stagebook</string>
     <string name="about_support_text">Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about buying me a coffee? Any amount helps keep the app going and bring new features.</string>
     <string name="about_donate">Buy me a coffee</string>

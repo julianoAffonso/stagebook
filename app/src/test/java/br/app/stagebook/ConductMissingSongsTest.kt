@@ -252,15 +252,31 @@ class ConductMissingSongsTest {
         assertEquals(Notice.Nobody(chords = true), b.notices.last())
         assertTrue(b.inbox.items.value.isEmpty())
 
-        // one with chords: it waits to be reviewed, the song here stays as it is
+        // one with chords: it takes the place of the copy that had just come, untouched since
         await { !b.follower.asking.value }
         b.answers = { listOf(answer(shared("Segunda", chords), "Baixo")) }
         b.follower.ask()
         await { b.notices.size == 3 }
-        assertEquals(Notice.ChordsKept("Segunda", "Baixo"), b.notices.last())
-        assertFalse(br.app.stagebook.domain.Chords.hasChords(b.has("Segunda")!!.text))
-        assertEquals(listOf(shared("Segunda", chords)), b.inbox.items.value.single().songs)
+        assertEquals(Notice.ChordsCame("Segunda", "Baixo"), b.notices.last())
+        assertTrue(br.app.stagebook.domain.Chords.hasChords(b.has("Segunda")!!.text))
+        assertTrue("nothing waits to be reviewed", b.inbox.items.value.isEmpty())
         assertFalse("nothing left to ask", (b.strip() as ConductUi.Following).noChords)
+    }
+
+    @Test fun `a copy the musician changed after it came is never replaced - the one with chords waits to be reviewed`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        b.answers = { listOf(answer(shared("Segunda", lyrics), "Voz")) }
+        b.follower.ask()
+        await { b.notices.isNotEmpty() && !b.follower.asking.value }
+        val mine = b.has("Segunda")!!
+        b.repo.saveSong(mine.copy(text = mine.text + "\nUma linha minha"))
+
+        b.answers = { listOf(answer(shared("Segunda", chords), "Baixo")) }
+        b.follower.ask()
+        await { b.notices.size == 2 }
+        assertEquals(Notice.ChordsKept("Segunda", "Baixo"), b.notices.last())
+        assertTrue(b.has("Segunda")!!.text.endsWith("Uma linha minha"))
+        assertEquals(listOf(shared("Segunda", chords)), b.inbox.items.value.single().songs)
     }
 
     @Test fun `on the lyrics only profile any copy is taken and nothing is said about chords`() {

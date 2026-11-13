@@ -310,8 +310,10 @@ class BandConduct @Inject constructor(
         data class NoChords(val title: String) : Notice
         /** Nobody on this network has the song asked for; [chords]: a copy with chords was what was asked. */
         data class Nobody(val chords: Boolean) : Notice
-        /** The copy with chords asked for came, and waits in the inbox: the song here is never replaced by itself. */
+        /** The copy with chords asked for came, and waits in the inbox: a song the musician touched is never replaced by itself. */
         data class ChordsKept(val title: String, val from: String) : Notice
+        /** The copy with chords asked for took the place of the one that had just come without them. */
+        data class ChordsCame(val title: String, val from: String) : Notice
     }
 
     private val _notices = MutableSharedFlow<Notice>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -329,6 +331,8 @@ class BandConduct @Inject constructor(
     // ask for a copy with chords. Until the app closes
     private val _chordless = MutableStateFlow<Set<String>>(emptySet())
     val chordless: StateFlow<Set<String>> = _chordless.asStateFlow()
+    // the text each of them came in with: only a copy nobody touched since may give way to one with chords
+    private val chordlessText = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /** How songs reach one member on this network, and how the band is asked (the tests look at what goes out). */
     internal var sendSongs: suspend (String, List<br.app.stagebook.data.model.Song>) -> Boolean = { id, songs -> link.sendSongsTo(id, songs) }
@@ -390,11 +394,15 @@ class BandConduct @Inject constructor(
                 when {
                     got == null -> _notices.tryEmit(Notice.Nobody(forChords))
                     own == null && enter(got.song, got.fromName) -> Unit
+                    // the copy that had just come without chords, untouched since: the one with chords takes its place
+                    // (user, 13/11: a guitarist shouldn't have to leave the stage to accept it)
+                    own != null && replaceChordless(own, got.song) -> _notices.tryEmit(Notice.ChordsCame(got.song.title, got.fromName))
                     else -> {
                         // a song with this title and artist is here (or following ended meanwhile): reviewed like the rest
                         link.keep(got.fromId, got.fromName, listOf(got.song))
                         if (own != null) {
                             _chordless.update { it - own.id }
+                            chordlessText.remove(own.id)
                             _notices.tryEmit(Notice.ChordsKept(got.song.title, got.fromName))
                         }
                     }
@@ -418,6 +426,23 @@ class BandConduct @Inject constructor(
     private val entering = Any()
 
     /**
+     * The copy with chords takes the place of the one that came in without them through this device's own request:
+     * only while following, only if that copy is still exactly as it came (anything the musician changed is theirs).
+     */
+    private fun replaceChordless(own: br.app.stagebook.data.model.Song, song: SetlistCloud.SharedSong): Boolean {
+        if (!bandOn() || !song.allowed() || !br.app.stagebook.domain.Chords.hasChords(song.text)) return false
+        synchronized(entering) {
+            if (_role.value !is Role.Following) return false
+            val now = repository.song(own.id) ?: return false
+            if (chordlessText[own.id] != now.text) return false
+            repository.saveSong(now.copy(text = br.app.stagebook.domain.Chords.withDetectedKey(song.text)))
+            chordlessText.remove(own.id)
+            _chordless.update { it - own.id }
+        }
+        return true
+    }
+
+    /**
      * A song the band sent goes straight into the library, without the review: only while following, only one that
      * may travel, and never when a song with that title and artist is here (the musician's own is not replaced). The
      * callers let in only what this device asked for, or what the leader sent of its setlist. False = not let in.
@@ -431,7 +456,10 @@ class BandConduct @Inject constructor(
                 br.app.stagebook.data.model.Song(title = song.title, author = song.author, year = song.year, text = br.app.stagebook.domain.Chords.withDetectedKey(song.text)),
             )
             noChords = repository.library.value.look.chords && !br.app.stagebook.domain.Chords.hasChords(song.text)
-            if (noChords) _chordless.update { it + id }
+            if (noChords) {
+                chordlessText[id] = repository.song(id)?.text.orEmpty()
+                _chordless.update { it + id }
+            }
         }
         val current = (_role.value as? Role.Following)?.item?.let { Conduct.isFor(it, song.title, song.author) } == true
         songArrived()
