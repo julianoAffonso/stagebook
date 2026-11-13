@@ -35,6 +35,7 @@ import br.app.stagebook.ui.editor.SongEditorScreen
 import br.app.stagebook.ui.editor.SongEditorUiState
 import br.app.stagebook.ui.home.HomeScaffold
 import br.app.stagebook.ui.home.HomeTab
+import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.ui.setlists.SetItemUi
 import br.app.stagebook.ui.setlists.SetlistDetailScreen
 import br.app.stagebook.ui.setlists.SetlistDetailUiState
@@ -100,7 +101,17 @@ class ScreenshotTest {
     private val set = SetlistDetailUiState(
         loading = false,
         name = s("Show de sábado"),
-        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false) },
+        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false) }.let { (a, b, c, d, e) ->
+            listOf(
+                a.copy(songKey = "A", bpm = 76), b.copy(songKey = "G", bpm = 96, capo = 2), c.copy(songKey = "C", bpm = 118, hasTrack = true),
+                d.copy(songKey = "G", bpm = 70), e.copy(songKey = "D"),
+            )
+        },
+    )
+    // mid show: two songs played, the third on stage and the fourth next
+    private val setShow = set.copy(
+        items = set.items.mapIndexed { i, it -> it.copy(state = listOf(SetlistShow.State.PLAYED, SetlistShow.State.PLAYED, SetlistShow.State.NOW, SetlistShow.State.NEXT).getOrElse(i) { SetlistShow.State.NONE }) },
+        anyPlayed = true,
     )
     private val lyrics = s("[Verse 1]\nPrimeira linha da letra de exemplo\nSegunda linha ==um pouco mais comprida== que a outra\nTerceira linha\n\n" +
         "[Chorus]\nO refrão aparece aqui\nE repete mais uma vez\n\n[Verse 2]\nMais uma estrofe\nCom outra linha\nE a última")
@@ -160,12 +171,27 @@ class ScreenshotTest {
     }
 
     @Test fun setlistDetailTablet() = shoot("tablet_3_setlist") {
-        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        SetlistDetailScreen(setShow, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistDetailPhone() = shoot("celular_3_setlist") {
-        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        SetlistDetailScreen(setShow, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+    }
+
+    // editing the setlist (the pencil): a handle and a remove button on every row, the break's too
+    @Test fun setlistEditTablet() = shootSetlistEdit("tablet_3_setlist_editar")
+
+    @Test @Config(qualifiers = PHONE)
+    fun setlistEditPhone() = shootSetlistEdit("celular_3_setlist_editar")
+
+    private fun shootSetlistEdit(name: String) {
+        compose.setContent {
+            StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SetlistDetailScreen(setShow.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
+        }
+        compose.onNodeWithContentDescription(str(R.string.set_edit)).performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
     // a break in the setlist: its row between the songs, the two blocks and the count under the name

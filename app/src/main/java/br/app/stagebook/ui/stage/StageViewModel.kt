@@ -66,6 +66,7 @@ class StageViewModel @Inject constructor(
     private val chordPlayer: br.app.stagebook.data.ChordPlayer,
     private val announcer: br.app.stagebook.data.StageAnnouncer,
     private val midiOut: br.app.stagebook.data.MidiOut,
+    private val show: br.app.stagebook.data.SetlistShowStore,
 ) : ViewModel() {
     /** The song's MIDI on entering, and the one before's on leaving (user, 07/11); a stage extra (T19). */
     private fun sendMidi(index: Int) {
@@ -143,7 +144,30 @@ class StageViewModel @Inject constructor(
         route.setId?.let { conduct.open(it, index) }
         announce(index)
         sendMidi(index)
+        markOnStage(index)
     }
+
+    /**
+     * The setlist screen's marks: this song is the one on stage now, and after a minute in a row on it, played. Only
+     * for a stage opened from a setlist. A break doesn't change the song on stage, so its time never counts for the
+     * song that comes after it.
+     */
+    private fun markOnStage(index: Int) {
+        val setId = route.setId ?: return
+        val songId = repository.library.value.setlist(setId)?.items?.getOrNull(index) ?: return
+        if (songId == markedSong) return   // shown again (the screen turned): its minute goes on counting
+        markedSong = songId
+        show.onStage(setId, songId)
+        playedJob?.cancel()
+        // dies with the stage: a song left before its minute isn't played
+        playedJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(br.app.stagebook.domain.SetlistShow.PLAYED_AFTER_MS)
+            show.played(setId, songId)
+        }
+    }
+
+    private var markedSong: String? = null
+    private var playedJob: kotlinx.coroutines.Job? = null
 
     /** Playing (or waiting for the USB output to play) and the player notice. */
     val playerUi: StateFlow<PlayerUi> = player.ui
@@ -206,6 +230,9 @@ class StageViewModel @Inject constructor(
         // something and the band stays together; only "End" releases everyone
     }
     private val route = savedStateHandle.toRoute<Stage>()
+
+    // a show on another day starts with no song marked (after `route`, which the init block above can't see yet)
+    init { route.setId?.let(show::stageOpened) }
 
     /**
      * The setlist's break on screen: when it started (null = no break). The song on stage stays the one before the

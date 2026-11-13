@@ -85,22 +85,31 @@ class StageMetaTest {
         assertEquals(null, vm.breakSince.value)
     }
 
-    private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
-        br.app.stagebook.data.BandConduct(
-            br.app.stagebook.data.BandLink(
-                context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-                StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-            ),
-            repo, br.app.stagebook.data.DeviceIdentity(context),
-        ),
-        br.app.stagebook.data.MetronomeSound(context),
-        br.app.stagebook.data.ChordPlayer(),
-        br.app.stagebook.data.StageAnnouncer(
-            br.app.stagebook.data.BandLink(
-                context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-                StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-            ),
-        ),
-        br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
-    )
+    private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = testStage(context, repo, saved)
 }
+
+/** A stage with the real pieces around it (no audio plays in a test); [show] is where the setlist's marks go. */
+internal fun testStage(
+    context: android.app.Application,
+    repo: LibraryRepository,
+    saved: SavedStateHandle,
+    show: br.app.stagebook.data.SetlistShowStore = br.app.stagebook.data.SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO)),
+) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
+    br.app.stagebook.data.BandConduct(
+        br.app.stagebook.data.BandLink(
+            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
+            StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+        ),
+        repo, br.app.stagebook.data.DeviceIdentity(context),
+    ),
+    br.app.stagebook.data.MetronomeSound(context),
+    br.app.stagebook.data.ChordPlayer(),
+    br.app.stagebook.data.StageAnnouncer(
+        br.app.stagebook.data.BandLink(
+            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
+            StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+        ),
+    ),
+    br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
+    show,
+)

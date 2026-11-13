@@ -75,6 +75,19 @@ import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.domain.SetlistBreaks
+import br.app.stagebook.domain.SetlistShow
+import br.app.stagebook.ui.components.MenuAction
+import br.app.stagebook.ui.components.OverflowMenu
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.PathEffect
@@ -134,6 +147,8 @@ fun SetlistDetailRoute(
         onDeleteSetlist = viewModel::delete,   // the setlist goes away and the LaunchedEffect above comes back
         onAddBreak = viewModel::addBreak,
         onRemoveBreak = viewModel::removeBreak,
+        onUndoRemove = viewModel::undoRemove,
+        onClearPlayed = viewModel::clearPlayed,
     )
 }
 
@@ -164,11 +179,17 @@ fun SetlistDetailScreen(
     onConduct: () -> Unit = {},
     onAddBreak: () -> Unit = {},
     onRemoveBreak: (position: Int) -> Unit = {},   // the break before the song at that position
+    onUndoRemove: () -> Unit = {},   // the last song taken out goes back to its place
+    onClearPlayed: () -> Unit = {},
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
     var sharing by rememberSaveable { mutableStateOf(false) }   // the "Share" sheet open
     var deleting by rememberSaveable { mutableStateOf(false) }
+    // two faces: the show (what was played, what's next, nothing to move by accident) and the edit (drag and remove)
+    var editing by rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
+    val message = br.app.stagebook.ui.components.LocalAppMessage.current
     // holding a song selects it (Google's pattern, as in the song list): the top bar removes them from the setlist
     val selection = br.app.stagebook.ui.components.rememberSelection()   // item keys
     var selected by selection.state
@@ -186,7 +207,7 @@ fun SetlistDetailScreen(
     var dragNow by remember { mutableStateOf(false) }
     // busy here holds a band follower on this screen until done (a rename or a reorder isn't lost; audit 02/11)
     val followHold = br.app.stagebook.ui.components.LocalFollowHold.current
-    val busy = renaming || sharing || deleting || removingMany || selecting || dragNow
+    val busy = renaming || sharing || deleting || removingMany || selecting || dragNow || editing
     LaunchedEffect(busy) { followHold.value = busy }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { followHold.value = false } }
     val listState = rememberLazyListState()
@@ -214,33 +235,48 @@ fun SetlistDetailScreen(
                         onSelectAll = { selected = items.map { it.key } },
                         modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                     )
-                } else ScreenHeader(
-                    title = uiState.name,
-                    subtitle = br.app.stagebook.ui.components.songCountText(items.size).let { songs ->
-                        val count = if (breakCount == 0) songs
-                            else stringResource(R.string.set_count_with_breaks, songs, pluralStringResource(R.plurals.break_count, breakCount, breakCount))
-                        // with breaks the line is already long: the hint would wrap on a phone
-                        if (items.isNotEmpty() && breakCount == 0) stringResource(R.string.set_tap_to_play, count) else count
-                    },
-                    onBack = onBack,
-                    // tapping the name renames it, like a song's name in its editor (user, 01/11)
-                    onTitleClick = { renaming = true },
-                    titleClickLabel = stringResource(R.string.sets_rename),
-                    modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-                ) {
-                    // small play: the stage from the start (tapping a song opens on it)
-                    IconButton(onClick = { onPlay(0) }, enabled = items.isNotEmpty()) {
-                        Icon(AppIcons.Slideshow, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
+                } else {
+                    val count = br.app.stagebook.ui.components.songCountText(items.size).let { songs ->
+                        if (breakCount == 0) songs
+                        else stringResource(R.string.set_count_with_breaks, songs, pluralStringResource(R.plurals.break_count, breakCount, breakCount))
                     }
-                    // everything in view, no ⋮ (user, 01/11, as in the song editor); holding an icon shows its name;
-                    // rename is a tap on the name.
-                    // Conducting the band only with a band member and songs
-                    if (band > 0 && items.isNotEmpty()) TipIcon(stringResource(R.string.conduct_start), AppIcons.Group, onConduct)
-                    IconButton(onClick = { deleting = true }) {
-                        Icon(AppIcons.Delete, stringResource(R.string.sets_delete), tint = MaterialTheme.colorScheme.error)
+                    if (editing) ScreenHeader(
+                        title = stringResource(R.string.set_edit),
+                        subtitle = count,
+                        onBack = { editing = false },
+                        closes = true,
+                        iconActions = false,
+                        modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
+                    ) {
+                        TextButton(onClick = { editing = false }) { Text(stringResource(R.string.action_done)) }
+                    } else ScreenHeader(
+                        title = uiState.name,
+                        // with breaks the line is already long: the hint would wrap on a phone
+                        subtitle = if (items.isNotEmpty() && breakCount == 0) stringResource(R.string.set_tap_to_play, count) else count,
+                        onBack = onBack,
+                        // tapping the name renames it, like a song's name in its editor (user, 01/11)
+                        onTitleClick = { renaming = true },
+                        titleClickLabel = stringResource(R.string.sets_rename),
+                        modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
+                    ) {
+                        IconButton(onClick = { editing = true }) { Icon(AppIcons.Edit, stringResource(R.string.set_edit)) }
+                        // small play: the stage from the start (tapping a song opens on it)
+                        IconButton(onClick = { onPlay(0) }, enabled = items.isNotEmpty()) {
+                            Icon(AppIcons.Slideshow, stringResource(R.string.action_stage), tint = MaterialTheme.colorScheme.primary)
+                        }
+                        // Conducting the band only with a band member and songs
+                        if (band > 0 && items.isNotEmpty()) TipIcon(stringResource(R.string.conduct_start), AppIcons.Group, onConduct)
+                        // what is rarely used, and deleting, away from the thumb during a show (user, 13/11)
+                        OverflowMenu(
+                            listOfNotNull(
+                                MenuAction(stringResource(R.string.sets_rename), AppIcons.Edit, { renaming = true }),
+                                MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, onClearPlayed).takeIf { uiState.anyPlayed },
+                                MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
+                            ),
+                        )
                     }
                 }
-                if (!selecting) {
+                if (!selecting && !editing) {
                     val canBreak = br.app.stagebook.domain.SetlistBreaks.canAdd(uiState.breaks, uiState.items.size)
                     SetActions(items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak, Modifier.padding(bottom = Spacing.m))
                 }
@@ -265,35 +301,60 @@ fun SetlistDetailScreen(
                                         // with breaks, each block says its number and how many songs it has
                                         if (mark.block > 0) BlockHeader(mark.block, mark.blockSongs)
                                         when (row) {
+                                            // outside the edit a break only shows: nothing to drag or remove
                                             is SetRow.Break -> BreakRow(
-                                                handle = handle.takeUnless { selecting },
-                                                onRemove = { onRemoveBreak(mark.songsBefore) },
+                                                handle = handle.takeIf { editing },
+                                                onRemove = { onRemoveBreak(mark.songsBefore) }.takeIf { editing },
                                                 modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
                                             )
                                             is SetRow.Song -> {
                                                 val item = row.item
-                                                SongListItem(
-                                                    title = if (item.missing) stringResource(R.string.set_item_missing) else item.title,
-                                                    subtitle = item.subtitle,
-                                                    onClick = { if (selecting) toggle(item.key) else onPlay(mark.songsBefore) },
-                                                    onLongClick = { toggle(item.key) },
-                                                    modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
-                                                    titleStyle = MaterialTheme.typography.titleLarge,
-                                                    inline = wide,
-                                                    // YouTube Music pattern: the drag handle at the start of the row and
-                                                    // the ⋮ alone at the end
-                                                    leading = {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            if (selecting) androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) })
-                                                            else IconButton(onClick = {}, modifier = handle) {
-                                                                Icon(AppIcons.DragHandle, stringResource(R.string.set_reorder), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                val title = if (item.missing) stringResource(R.string.set_item_missing) else item.title
+                                                val state = if (editing) SetlistShow.State.NONE else item.state
+                                                val left = stringResource(R.string.set_song_left, title)
+                                                val undo = stringResource(R.string.action_undo)
+                                                Box(
+                                                    Modifier.shadow(elevation, MaterialTheme.shapes.medium).clip(MaterialTheme.shapes.medium)
+                                                        .alpha(if (state == SetlistShow.State.PLAYED) PLAYED_ALPHA else 1f),
+                                                ) {
+                                                    SongListItem(
+                                                        title = title,
+                                                        subtitle = item.subtitle,
+                                                        onClick = { if (selecting) toggle(item.key) else if (!editing) onPlay(mark.songsBefore) },
+                                                        onLongClick = { toggle(item.key) }.takeUnless { editing },
+                                                        titleStyle = MaterialTheme.typography.titleLarge,
+                                                        containerColor = stateContainer(state),
+                                                        inline = wide,
+                                                        // the strip is drawn over the row's start edge; with no state its room
+                                                        // stays empty, so the titles line up
+                                                        startPadding = if (editing) Spacing.m else STATE_STRIP + Spacing.s,
+                                                        // YouTube Music pattern: the drag handle at the start of the row
+                                                        leading = {
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                if (selecting) androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) })
+                                                                else if (editing) IconButton(onClick = {}, modifier = handle) {
+                                                                    Icon(AppIcons.DragHandle, stringResource(R.string.set_reorder), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                                }
+                                                                // the numbers go on counting past a break
+                                                                NumberBadge(
+                                                                    mark.songsBefore + 1,
+                                                                    color = if (state == SetlistShow.State.NOW) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                                                )
                                                             }
-                                                            // the numbers go on counting past a break
-                                                            NumberBadge(mark.songsBefore + 1)
-                                                        }
-                                                    },
-                                                    // editing is on the stage's pencil; removing is done by selecting (user, 01/11)
-                                                )
+                                                        },
+                                                        trailing = {
+                                                            // out at once, with "Undo" in the message: a confirmation for
+                                                            // every song made cleaning a setlist slow (user, 13/11)
+                                                            if (editing) IconButton(onClick = {
+                                                                onRemove(mark.songsBefore, item.songId)
+                                                                message.show(left, action = undo, onAction = onUndoRemove)
+                                                            }) {
+                                                                Icon(AppIcons.RemoveCircle, stringResource(R.string.set_remove_song), tint = MaterialTheme.colorScheme.error)
+                                                            } else SongFacts(item)
+                                                        },
+                                                    )
+                                                    if (state != SetlistShow.State.NONE) StateStrip(state, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
+                                                }
                                             }
                                         }
                                     }
@@ -353,6 +414,70 @@ private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () ->
     }
 }
 
+/** The row's color by where the show is: the song on stage and the one after it stand out. */
+@Composable
+private fun stateContainer(state: SetlistShow.State): Color = when (state) {
+    SetlistShow.State.NOW -> MaterialTheme.colorScheme.primaryContainer
+    // the theme has no tertiary container of its own: a tint of its tertiary over the row's surface
+    SetlistShow.State.NEXT -> MaterialTheme.colorScheme.tertiary.copy(alpha = NEXT_TINT).compositeOver(MaterialTheme.colorScheme.surface)
+    else -> MaterialTheme.colorScheme.surface
+}
+
+/** The strip on the row's start edge, with the state written from bottom to top. */
+@Composable
+private fun StateStrip(state: SetlistShow.State, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val (label, color, onColor) = when (state) {
+        SetlistShow.State.NOW -> Triple(R.string.set_state_now, scheme.primary, scheme.onPrimary)
+        SetlistShow.State.NEXT -> Triple(R.string.set_state_next, scheme.tertiary, scheme.onTertiary)
+        else -> Triple(R.string.set_state_played, scheme.surfaceVariant, scheme.onSurfaceVariant)
+    }
+    Box(modifier.width(STATE_STRIP).fillMaxHeight().background(color), contentAlignment = Alignment.Center) {
+        // smaller rather than cut: a tablet's row is barely as tall as the longest word, and less with big system text
+        Text(
+            stringResource(label), Modifier.vertical().padding(horizontal = Spacing.xs), style = MaterialTheme.typography.labelSmall, color = onColor, maxLines = 1, softWrap = false,
+            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = STATE_LABEL_MIN, maxFontSize = MaterialTheme.typography.labelSmall.fontSize),
+        )
+    }
+}
+
+/** Turned a quarter, reading upwards: takes the room of the turned text, not of the text lying down. */
+private fun Modifier.vertical(): Modifier = layout { measurable, constraints ->
+    val text = measurable.measure(Constraints(maxWidth = constraints.maxHeight, maxHeight = constraints.maxWidth))
+    layout(text.height, text.width) { text.place(-(text.width - text.height) / 2, -(text.height - text.width) / 2) }
+}.rotate(-90f)
+
+/** What the musician checks before the song starts: the key, and under it the tempo, the capo and a play mark with a backing track. */
+@Composable
+private fun SongFacts(item: SetItemUi, modifier: Modifier = Modifier) {
+    if (item.songKey.isEmpty() && item.bpm <= 0 && item.capo <= 0 && !item.hasTrack) return
+    Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        if (item.songKey.isNotEmpty()) {
+            Text(
+                item.songKey,
+                Modifier.background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.small).padding(horizontal = Spacing.s),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1,
+            )
+        }
+        if (item.bpm > 0 || item.capo > 0 || item.hasTrack) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                val small = MaterialTheme.typography.labelSmall
+                val color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (item.bpm > 0) Text(stringResource(R.string.set_bpm, item.bpm), style = small, color = color, maxLines = 1)
+                if (item.capo > 0) Text(stringResource(R.string.editor_data_capo, item.capo), style = small, color = color, maxLines = 1)
+                if (item.hasTrack) Icon(AppIcons.Play, stringResource(R.string.stage_backing_track), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+private val STATE_STRIP = Spacing.l
+private val STATE_LABEL_MIN = 8.sp
+private const val PLAYED_ALPHA = 0.5f
+private const val NEXT_TINT = 0.16f
+
 /** A row of the setlist: a song or a break. [key] is stable while dragging. */
 private sealed interface SetRow {
     val key: String
@@ -400,9 +525,9 @@ private fun BlockHeader(block: Int, songs: Int, modifier: Modifier = Modifier) {
     )
 }
 
-/** A break between two songs: a dashed outline, dragged like a song ([handle] null while selecting) and taken out by its ×. */
+/** A break between two songs: a dashed outline; while editing, dragged by its [handle] like a song and taken out by [onRemove]. */
 @Composable
-private fun BreakRow(handle: Modifier?, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+private fun BreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.primary
     val shape = MaterialTheme.shapes.medium
     Row(
@@ -425,7 +550,7 @@ private fun BreakRow(handle: Modifier?, onRemove: () -> Unit, modifier: Modifier
             Icon(AppIcons.DragHandle, stringResource(R.string.set_reorder), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(stringResource(R.string.set_break), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = color)
-        IconButton(onClick = onRemove) {
+        if (onRemove != null) IconButton(onClick = onRemove) {
             Icon(AppIcons.RemoveCircle, stringResource(R.string.set_break_remove), tint = MaterialTheme.colorScheme.error)
         }
     }
@@ -473,9 +598,9 @@ private val previewState = SetlistDetailUiState(
     loading = false,
     name = "Show de sábado",
     items = listOf(
-        SetItemUi("1", "1", "Malandragem", "Cássia Eller · 1994", false),
-        SetItemUi("2", "2", "Hazard", "Richard Marx · 1991", false),
-        SetItemUi("3", "3", "", "", true),
+        SetItemUi("1", "1", "Malandragem", "Cássia Eller · 1994", false, songKey = "G", bpm = 96, state = SetlistShow.State.PLAYED),
+        SetItemUi("2", "2", "Hazard", "Richard Marx · 1991", false, songKey = "Em", bpm = 120, capo = 2, hasTrack = true, state = SetlistShow.State.NOW),
+        SetItemUi("3", "3", "", "", true, state = SetlistShow.State.NEXT),
     ),
     breaks = listOf(2),
 )

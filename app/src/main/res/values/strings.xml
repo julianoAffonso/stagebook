@@ -87,6 +87,16 @@
     <string name="sets_add_break">Break</string>
     <string name="set_break">BREAK</string>
     <string name="set_break_remove">Remove break</string>
+    <string name="set_edit">Edit setlist</string>
+    <string name="action_done">Done</string>
+    <string name="action_undo">Undo</string>
+    <string name="set_clear_played">Clear played</string>
+    <string name="set_remove_song">Remove from this setlist</string>
+    <string name="set_song_left">%1$s left this setlist</string>
+    <string name="set_state_played">PLAYED</string>
+    <string name="set_state_now">NOW</string>
+    <string name="set_state_next">NEXT</string>
+    <string name="set_bpm">%1$d bpm</string>
     <string name="set_count_with_breaks">%1$s · %2$s</string>
     <plurals name="break_count">
         <item quantity="one">%d break</item>

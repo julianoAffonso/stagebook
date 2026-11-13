@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Dragging by the handle changes the setlist order (reorderable library). */
+/** Dragging by the handle, while editing the setlist, changes its order (reorderable library). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class SetlistReorderTest {
@@ -35,6 +35,7 @@ class SetlistReorderTest {
         compose.setContent {
             StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
         }
+        compose.onNodeWithContentDescription("Editar setlist").performClick()   // the handles only show while editing
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
             repeat(20) { moveBy(Offset(0f, 8f)) }   // ~1.5 lines down, slow like a finger
@@ -54,6 +55,7 @@ class SetlistReorderTest {
         compose.setContent {
             StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
         }
+        compose.onNodeWithContentDescription("Editar setlist").performClick()   // the handles only show while editing
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
             repeat(40) { moveBy(Offset(0f, 8f)) }   // ~2.5 lines down

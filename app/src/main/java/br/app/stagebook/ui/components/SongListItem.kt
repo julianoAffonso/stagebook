@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
@@ -43,6 +44,7 @@ fun SongListItem(
     trailing: (@Composable () -> Unit)? = null,
     inline: Boolean = false,
     onLongClick: (() -> Unit)? = null,   // hold: selection (share several), where the list supports it
+    startPadding: Dp = Spacing.m,   // more when something is drawn over the row's start edge (a setlist's state strip)
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -52,7 +54,8 @@ fun SongListItem(
         Row(
             modifier = Modifier
                 .heightIn(min = if (inline) Sizes.touch else Sizes.row)
-                .padding(horizontal = Spacing.m, vertical = if (inline) Spacing.xs else Spacing.s),
+                .padding(start = startPadding, end = Spacing.m)
+                .padding(vertical = if (inline) Spacing.xs else Spacing.s),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
@@ -95,9 +98,9 @@ fun wideLists(): Boolean = with(LocalDensity.current) { LocalWindowInfo.current.
 
 /** Song number in the setlist, in the accent color with no background (fixed width: the titles line up). */
 @Composable
-fun NumberBadge(number: Int, modifier: Modifier = Modifier) {
+fun NumberBadge(number: Int, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
     Box(modifier.width(40.dp), contentAlignment = Alignment.Center) {
-        Text(number.toString(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        Text(number.toString(), style = MaterialTheme.typography.titleLarge, color = color)
     }
 }
 

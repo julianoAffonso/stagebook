@@ -21,7 +21,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A break inside a setlist: its row between the songs, the blocks it makes and the count under the name. */
+/**
+ * A break inside a setlist: its row between the songs, the blocks it makes and the count under the name. It is dragged
+ * and taken out while editing the setlist (the pencil).
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class SetlistBreakScreenTest {
@@ -74,6 +77,8 @@ class SetlistBreakScreenTest {
     @Test fun `the x on the break takes it out`() {
         val removed = mutableListOf<Int>()
         show(state(5, listOf(3)), onRemoveBreak = { removed += it })
+        compose.onNodeWithContentDescription("Tirar o intervalo").assertDoesNotExist()   // only while editing
+        compose.onNodeWithContentDescription("Editar setlist").performClick()
         compose.onNodeWithContentDescription("Tirar o intervalo").performClick()
         assertEquals(listOf(3), removed)
     }
@@ -100,6 +105,7 @@ class SetlistBreakScreenTest {
     @Test fun `the break is dragged by its handle like a song`() {
         val moves = mutableListOf<Pair<Int, Int>>()
         show(state(5, listOf(3)), onMove = { f, t -> moves += f to t })
+        compose.onNodeWithContentDescription("Editar setlist").performClick()   // the handles only show while editing
         // rows: a b c | d e, so the 4th handle is the break's
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[3].performTouchInput {
             down(center)

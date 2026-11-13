@@ -21,6 +21,8 @@ import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.QrEncoder
 import br.app.stagebook.domain.QrPayload
+import br.app.stagebook.domain.Chords
+import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.navigation.SetlistDetail
 import br.app.stagebook.ui.songs.subtitle
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +40,18 @@ import kotlinx.coroutines.Job
 
 /** `key` is stable when reordering (the same song can appear twice in old setlists). */
 @Immutable
-data class SetItemUi(val key: String, val songId: String, val title: String, val subtitle: String, val missing: Boolean)
+data class SetItemUi(
+    val key: String,
+    val songId: String,
+    val title: String,
+    val subtitle: String,
+    val missing: Boolean,
+    val songKey: String = "",   // the song's key ("" = none written)
+    val bpm: Int = 0,           // 0 = none
+    val capo: Int = 0,
+    val hasTrack: Boolean = false,
+    val state: SetlistShow.State = SetlistShow.State.NONE,   // where the show is (this device only)
+)
 
 @Immutable
 data class SetlistDetailUiState(
@@ -48,6 +61,8 @@ data class SetlistDetailUiState(
     val items: List<SetItemUi> = emptyList(),
     /** Breaks: each one sits before the song at that position (see SetlistBreaks). */
     val breaks: List<Int> = emptyList(),
+    /** A song is marked played: "Clear played" has something to clear. */
+    val anyPlayed: Boolean = false,
 )
 
 /** QR ready: the image and how many songs go in it (the ones removed from the library don't). */
@@ -64,6 +79,7 @@ class SetlistDetailViewModel @Inject constructor(
     private val bandTrust: BandTrust,
     private val bandInternet: BandInternet,
     private val conduct: br.app.stagebook.data.BandConduct,
+    private val show: br.app.stagebook.data.SetlistShowStore,
 ) : ViewModel() {
     /** "Lead the band": sends the setlist (each one says what's missing) and the leader goes to the stage. */
     fun conductBand() {
@@ -98,19 +114,26 @@ class SetlistDetailViewModel @Inject constructor(
     /** Sends the setlist (with the songs, if [withSongs]) to everyone in the band on the network now. */
     fun sendBand(withSongs: Boolean) = share.sendBand { setlistCloud.setlistPackage(setId, withSongs) }
 
-    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library) { loaded, lib ->
+    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks) { loaded, lib, marks ->
         val set = lib.setlist(setId)
         val seen = HashMap<String, Int>()
+        val states = SetlistShow.states(set?.items.orEmpty(), marks[setId])
         SetlistDetailUiState(
             loading = !loaded,
             exists = set != null,
             name = set?.name.orEmpty(),
-            items = set?.items.orEmpty().map { id ->
+            items = set?.items.orEmpty().mapIndexed { i, id ->
                 val n = seen.merge(id, 1, Int::plus)!!
                 val song = lib.song(id)
-                SetItemUi(if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.subtitle().orEmpty(), song == null)
+                val text = song?.text.orEmpty()
+                SetItemUi(
+                    if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.subtitle().orEmpty(), song == null,
+                    songKey = Chords.key(text), bpm = Chords.tempo(text), capo = Chords.capo(text),
+                    hasTrack = song?.track?.isNotEmpty() == true, state = states[i],
+                )
             },
             breaks = set?.breaks.orEmpty(),
+            anyPlayed = marks[setId]?.played?.isNotEmpty() == true,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
 
@@ -124,7 +147,25 @@ class SetlistDetailViewModel @Inject constructor(
 
     fun removeBreak(position: Int) = repository.removeBreak(setId, position)
 
-    fun remove(index: Int, songId: String) = repository.removeItem(setId, index, songId)
+    /** Takes the song out of the setlist; [undoRemove] puts the last one back. */
+    fun remove(index: Int, songId: String) {
+        val set = repository.library.value.setlist(setId) ?: return
+        if (set.items.getOrNull(index) != songId) return
+        removed = index to set
+        repository.removeItem(setId, index, songId)
+    }
+
+    // the setlist as it was before the last song left, for the message's "Undo"
+    private var removed: Pair<Int, br.app.stagebook.data.model.Setlist>? = null
+
+    fun undoRemove() {
+        val (index, before) = removed ?: return
+        removed = null
+        repository.restoreItem(setId, index, before)
+    }
+
+    /** "Clear played": no song of this setlist is marked any more. */
+    fun clearPlayed() = show.clear(setId)
 
     /** QR limit notice: [LimitNotice.Songs] (doesn't fit to send) or [LimitNotice.Name] (name too long). */
     enum class LimitNotice { Songs, Name }

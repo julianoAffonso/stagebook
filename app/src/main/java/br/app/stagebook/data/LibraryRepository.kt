@@ -245,6 +245,26 @@ class LibraryRepository @Inject constructor(
         else s.copy(items = s.items.toMutableList().apply { removeAt(index) }, breaks = SetlistBreaks.afterRemoving(s.breaks, s.items.size, setOf(index)))
     }
 
+    /**
+     * Undoes [removeItem]: the song that was at [index] of [before] goes back there. With the setlist as the removal
+     * left it, the breaks come back too; changed meanwhile, the song goes as near as it can and the breaks stay.
+     */
+    fun restoreItem(setId: String, index: Int, before: Setlist) = mutate { lib ->
+        val songId = before.items.getOrNull(index)
+        if (songId == null || lib.song(songId) == null) return@mutate lib
+        lib.copy(sets = lib.sets.map { s ->
+            when {
+                s.id != setId -> s
+                s.items == before.items.filterIndexed { i, _ -> i != index } -> s.copy(items = before.items, breaks = before.breaks).withValidBreaks()
+                songId in s.items -> s
+                else -> {
+                    val at = index.coerceAtMost(s.items.size)
+                    s.copy(items = s.items.toMutableList().apply { add(at, songId) }, breaks = s.breaks.map { if (it > at) it + 1 else it }).withValidBreaks()
+                }
+            }
+        })
+    }
+
     /** They go at the end, in the chosen order; one already in the setlist doesn't go in again. */
     fun addToSetlist(setId: String, songIds: List<String>) = updateSet(setId) { s ->
         s.copy(items = s.items + songIds.filterNot { it in s.items }.distinct()).withValidBreaks()
