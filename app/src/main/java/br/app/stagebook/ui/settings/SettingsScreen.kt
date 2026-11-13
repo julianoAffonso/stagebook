@@ -338,6 +338,7 @@ fun SettingsRoute(
                 // some Android builds have no Bluetooth screen to open: nothing happens instead of a crash (audit 01/11)
                 onPairPedal = { runCatching { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) } },
                 onPedalAction = viewModel::setPedalAction,
+                onPedalForget = viewModel::forgetPedalKey,
                 onResetPedalKeys = viewModel::resetPedalKeys,
                 onMidiScan = { if (viewModel.hasMidiPermissions()) viewModel.scanMidi() else midiPermissions.launch(viewModel.midiPermissions()) },
                 onMidiChoose = viewModel::chooseMidi,
@@ -447,6 +448,7 @@ data class SettingsActions(
     val onNormalize: () -> Unit = {},
     val onPairPedal: () -> Unit = {},
     val onPedalAction: (Int, PedalAction) -> Unit = { _, _ -> },
+    val onPedalForget: (Int) -> Unit = {},
     val onResetPedalKeys: () -> Unit = {},
     val onMidiScan: () -> Unit = {},
     val onMidiChoose: (MidiFound) -> Unit = {},
@@ -1184,6 +1186,8 @@ private data class PedalGroup(val name: String, val on: Boolean, val codes: List
 /** A pedal's buttons with what each does; a pedal that isn't connected shows faded, still editable. */
 @Composable
 private fun PedalKeyGroup(g: PedalGroup, keys: Map<Int, PedalAction>, actions: SettingsActions, showName: Boolean, playerMode: Boolean) {
+    // a button listed once stayed for good, even from a pedal that was sold: it can be taken off the list
+    var forgetting by rememberSaveable { mutableStateOf<Int?>(null) }
     Column(Modifier.fillMaxWidth().alpha(if (g.on) 1f else 0.6f), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         if (showName) {
             Text(
@@ -1200,6 +1204,16 @@ private fun PedalKeyGroup(g: PedalGroup, keys: Map<Int, PedalAction>, actions: S
                 { actions.onPedalAction(code, it) },
                 playerMode,
                 onRemove = if (custom != null) ({ actions.onPedalAction(code, PedalAction.default(code)) }) else null,
+                onForget = { forgetting = code },
+            )
+        }
+        forgetting?.let { code ->
+            ConfirmDialog(
+                stringResource(R.string.settings_pedal_key_forget_ask),
+                stringResource(R.string.settings_pedal_forget),
+                onConfirm = { actions.onPedalForget(code) },
+                onDismiss = { forgetting = null },
+                destructive = false,   // nothing is lost for good: the button comes back when pressed
             )
         }
         val changed = g.codes.filter { it in keys }
@@ -1261,12 +1275,14 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
 )
 
 @Composable
-private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, playerMode: Boolean, onRemove: (() -> Unit)?) {
+private fun PedalKeyRow(name: String, action: PedalAction, onSelect: (PedalAction) -> Unit, playerMode: Boolean, onRemove: (() -> Unit)?, onForget: () -> Unit) {
     // a choice field per button (like the button test above): the key or MIDI message is the label, the command is
-    // the value, so it's visible that it can be changed; × resets that button to default
+    // the value, so it's visible that it can be changed; × resets that button to default, and the circle takes the
+    // button off the list
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         OptionDropdown(name, pedalActions(playerMode, action), action, onSelect, nameOf = { pedalActionLabel(it) }, modifier = Modifier.weight(1f))
         if (onRemove != null) IconButton(onClick = onRemove) { Icon(AppIcons.Close, contentDescription = stringResource(R.string.settings_pedal_key_reset, name)) }
+        IconButton(onClick = onForget) { Icon(AppIcons.RemoveCircle, contentDescription = stringResource(R.string.settings_pedal_key_forget)) }
     }
 }
 

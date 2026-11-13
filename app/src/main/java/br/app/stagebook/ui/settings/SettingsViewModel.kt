@@ -405,6 +405,15 @@ class SettingsViewModel @Inject constructor(
     fun setPedalAction(keyCode: Int, action: PedalAction) =
         repository.updateLook { it.copy(pedalKeys = PedalAction.assign(it.pedalKeys, keyCode, action)) }
 
+    /**
+     * Takes a button off the list (a pedal that isn't used any more, a key pressed by mistake): its command goes back
+     * to the default too. Pressing it again lists it again.
+     */
+    fun forgetPedalKey(keyCode: Int) {
+        repository.updateLook { it.copy(pedalSeen = it.pedalSeen - keyCode, pedalKeys = it.pedalKeys - keyCode) }
+        if (lastKey.value?.keyCode == keyCode) lastKey.value = null
+    }
+
     fun resetPedalKeys() = repository.updateLook { it.copy(pedalKeys = emptyMap()) }
 
     fun midiPermissions() = midi.permissions()

@@ -521,6 +521,8 @@
     <string name="language_en" translatable="false">English</string>
     <string name="pedal_key_code">Key %1$d</string>
     <string name="settings_pedal_key_reset">Reset %1$s to default</string>
+    <string name="settings_pedal_key_forget">Forget this button</string>
+    <string name="settings_pedal_key_forget_ask">Forget this button? It comes back when you press it again.</string>
     <string name="midi_cc">MIDI CC %1$d (channel %2$d)</string>
     <string name="midi_cc_value">MIDI CC %1$d = %2$d (channel %3$d)</string>
     <string name="midi_note">MIDI note %1$d (channel %2$d)</string>
