@@ -628,7 +628,12 @@ fun StageScreen(
     // forward opens the next song, back shows again the song before the break
     fun leaveBreak(forward: Boolean) {
         onBreak(false)
-        if (forward) { presses.from = index to page; onPosition(index + 1, 0) }
+        if (forward) {
+            // the break stops the show's stopwatch and timer, and the set after it counts from zero (user, 13/11); the
+            // break covers them meanwhile, so starting again here is what the musician sees. Going back changes nothing
+            if (look.clockMode != br.app.stagebook.data.model.StageClockMode.CLOCK) onRestartShow()
+            presses.from = index to page; onPosition(index + 1, 0)
+        }
     }
     fun go(forward: Boolean) {
         if (onBreakNow) { leaveBreak(forward); return }

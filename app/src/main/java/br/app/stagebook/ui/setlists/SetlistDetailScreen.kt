@@ -347,7 +347,7 @@ fun SetlistDetailScreen(
                                                             // every song made cleaning a setlist slow (user, 13/11)
                                                             if (editing) IconButton(onClick = {
                                                                 onRemove(mark.songsBefore, item.songId)
-                                                                message.show(left, action = undo, onAction = onUndoRemove)
+                                                                message.show(left, long = true, action = undo, onAction = onUndoRemove)
                                                             }) {
                                                                 Icon(AppIcons.RemoveCircle, stringResource(R.string.set_remove_song), tint = MaterialTheme.colorScheme.error)
                                                             } else SongFacts(item)

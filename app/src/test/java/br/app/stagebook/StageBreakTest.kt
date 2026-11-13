@@ -46,6 +46,7 @@ class StageBreakTest {
     private var page by mutableIntStateOf(0)
     private var since by mutableStateOf<Long?>(null)
     private val pedal = PedalInput()
+    private var restarts = 0
 
     private fun show(breaks: List<Int>, look: Look = Look(), start: Int = 0) {
         song = start
@@ -55,6 +56,7 @@ class StageBreakTest {
                     StageScreen(
                         StageUiState(loading = false, songs = songs, look = look, live = true, breaks = breaks), song, page, { s, p -> song = s; page = p },
                         breakSince = since, onBreak = { on -> since = if (on) System.currentTimeMillis() else null },
+                        onRestartShow = { restarts++ },
                     )
                 }
             }
@@ -71,6 +73,25 @@ class StageBreakTest {
     }
     private fun forward() = press(KeyEvent.KEYCODE_PAGE_DOWN)
     private fun back() = press(KeyEvent.KEYCODE_PAGE_UP)
+
+    // the show's stopwatch and timer stop at the break and count from zero in the set after it (user, 13/11)
+    @Test fun `leaving the break forward starts the show's time again, going back doesn't, and the plain clock is left alone`() {
+        show(listOf(1), Look(clockMode = br.app.stagebook.data.model.StageClockMode.ELAPSED))
+        forward()
+        assertEquals(0, restarts)
+        back()
+        assertEquals(0, restarts)
+        forward(); forward()
+        assertEquals(1, song)
+        assertEquals(1, restarts)
+    }
+
+    @Test fun `with the plain clock the break restarts nothing`() {
+        show(listOf(1))
+        forward(); forward()
+        assertEquals(1, song)
+        assertEquals(0, restarts)
+    }
 
     @Test fun `the end of the song before a break says the break comes next`() {
         show(listOf(1))
