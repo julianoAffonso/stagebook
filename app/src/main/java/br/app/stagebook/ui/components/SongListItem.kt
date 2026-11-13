@@ -47,6 +47,7 @@ fun SongListItem(
     startPadding: Dp = Spacing.m,   // more when something is drawn over the row's start edge (a setlist's state strip)
     gap: Dp = Spacing.m,   // between the leading, the texts and the trailing; a setlist's rows keep them closer
     titleLines: Int = 2,   // one where the row's end has more to show than the title's second line (the song list)
+    dense: Boolean = false,   // a lower row with less room around the texts, where many must fit (the setlist over the stage)
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -55,9 +56,9 @@ fun SongListItem(
     ) {
         Row(
             modifier = Modifier
-                .heightIn(min = if (inline) Sizes.touch else Sizes.row)
+                .heightIn(min = if (inline) Sizes.touch else if (dense) Sizes.rowDense else Sizes.row)
                 .padding(start = startPadding, end = Spacing.m)
-                .padding(vertical = if (inline) Spacing.xs else Spacing.s),
+                .padding(vertical = if (inline || dense) Spacing.xs else Spacing.s),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(gap),
         ) {
@@ -82,7 +83,7 @@ fun SongListItem(
                 if (subtitle.isNotEmpty()) {
                     Text(
                         subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = if (dense) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

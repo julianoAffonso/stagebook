@@ -58,6 +58,7 @@ fun SetlistSongRow(
     inline: Boolean = false,
     titleStyle: TextStyle = MaterialTheme.typography.titleLarge,
     stripRoom: Boolean = true,
+    dense: Boolean = false,
     beforeNumber: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -73,6 +74,7 @@ fun SetlistSongRow(
             // the strip is drawn over the row's start edge; with no state its room stays empty, so the titles line up
             startPadding = if (stripRoom) STATE_STRIP + Spacing.xs else 0.dp,
             gap = Spacing.s,
+            dense = dense,
             leading = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     beforeNumber?.invoke()
@@ -139,7 +141,7 @@ fun SetlistDragHandle(drag: Modifier, modifier: Modifier = Modifier) {
  * songs' handles) and taken out by [onRemove].
  */
 @Composable
-fun SetlistBreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun SetlistBreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifier = Modifier, dense: Boolean = false) {
     val color = MaterialTheme.colorScheme.primary
     val shape = MaterialTheme.shapes.medium
     Row(
@@ -153,7 +155,7 @@ fun SetlistBreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifi
                     drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(line, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))))
                 }
             }
-            .heightIn(min = Sizes.touch)
+            .heightIn(min = if (dense) Sizes.breakDense else Sizes.touch)
             .padding(start = if (handle != null) 0.dp else Spacing.m, end = Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
     ) {

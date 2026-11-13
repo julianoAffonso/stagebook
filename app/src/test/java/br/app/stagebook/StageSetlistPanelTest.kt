@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -110,6 +111,18 @@ class StageSetlistPanelTest {
     private fun handle() = compose.onNodeWithContentDescription("Abrir o setlist")
     private fun open() { handle().performClick(); compose.waitForIdle() }
     private fun panel() = compose.onNodeWithTag("stage_setlist")
+
+    // the rows were as tall as the setlist screen's and few fitted on a tablet (user, 13/11): here they are lower
+    @Test fun `the panel's rows are lower than a song row, and still a full touch target`() {
+        show()
+        open()
+        // two songs in a row with no break between them (the one on stage is also written in the stage's header)
+        val first = compose.onNodeWithText("Terceira").getUnclippedBoundsInRoot().top
+        val second = compose.onNodeWithText("Quarta").getUnclippedBoundsInRoot().top
+        val step = second - first
+        assertEquals(true, step < br.app.stagebook.ui.theme.Sizes.row)
+        assertEquals(true, step >= br.app.stagebook.ui.theme.Sizes.touch)
+    }
 
     @Test fun `a single song from the library has no handle and no panel`() {
         show(StageUiState(loading = false, songs = songs.take(1), look = Look(pedalKeys = PedalAction.assign(emptyMap(), KeyEvent.KEYCODE_B, PedalAction.OPEN_SETLIST))), start = 0)

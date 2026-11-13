@@ -20,6 +20,8 @@ object Sizes {
     val meter = 8.dp            // width of the live meter bar
     val button = 56.dp          // main buttons (finger on stage, tablet far away)
     val row = 72.dp             // song row
+    val rowDense = 56.dp        // a song row where many must fit (the setlist over the stage); still above the touch minimum
+    val breakDense = 32.dp      // the break between them there: it isn't tapped
     val swipeTrigger = 56.dp    // row opened by dragging: only the icon button (24) + margin (16) on each side
     val swatch = 48.dp
     val artistField = 200.dp    // artist or band (tablet): names are short; longer ones scroll inside the field

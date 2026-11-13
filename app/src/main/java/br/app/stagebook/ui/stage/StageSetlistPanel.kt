@@ -166,9 +166,10 @@ private fun SetlistPanelContent(setlist: StageSetlist, songs: List<StageSong>, b
             Modifier.padding(bottom = Spacing.m),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
         )
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), list, verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.m)) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), list, verticalArrangement = Arrangement.spacedBy(Spacing.xs), contentPadding = PaddingValues(bottom = Spacing.m)) {
             itemsIndexed(rows, key = { i, _ -> i }) { _, row ->
-                if (row == SetlistBreaks.BREAK) SetlistBreakRow(handle = null, onRemove = null)
+                // lower rows than the setlist screen's: on stage the list is for finding a song, and more of them must show (user, 13/11)
+                if (row == SetlistBreaks.BREAK) SetlistBreakRow(handle = null, onRemove = null, dense = true)
                 else {
                     val song = songs[row]
                     val key = setlist.keys.getOrNull(row).orEmpty()
@@ -179,6 +180,7 @@ private fun SetlistPanelContent(setlist: StageSetlist, songs: List<StageSong>, b
                         state = setlist.states.getOrElse(row) { SetlistShow.State.NONE },
                         onClick = { onSong(row) },
                         titleStyle = MaterialTheme.typography.titleMedium,
+                        dense = true,
                         trailing = if (key.isEmpty()) null else ({ SongKeyBadge(key) }),
                     )
                 }
