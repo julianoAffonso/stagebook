@@ -46,6 +46,8 @@ data class SetlistDetailUiState(
     val exists: Boolean = true,
     val name: String = "",
     val items: List<SetItemUi> = emptyList(),
+    /** Breaks: each one sits before the song at that position (see SetlistBreaks). */
+    val breaks: List<Int> = emptyList(),
 )
 
 /** QR ready: the image and how many songs go in it (the ones removed from the library don't). */
@@ -108,13 +110,19 @@ class SetlistDetailViewModel @Inject constructor(
                 val song = lib.song(id)
                 SetItemUi(if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.subtitle().orEmpty(), song == null)
             },
+            breaks = set?.breaks.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
 
     private val _qr = MutableStateFlow<QrUi?>(null)
     val qr: StateFlow<QrUi?> = _qr.asStateFlow()
 
-    fun move(from: Int, to: Int) = repository.moveItem(setId, from, to)
+    /** A row dragged to another place: positions on screen, songs and breaks counted together. */
+    fun move(from: Int, to: Int) = repository.moveRow(setId, from, to)
+
+    fun addBreak() = repository.addBreak(setId)
+
+    fun removeBreak(position: Int) = repository.removeBreak(setId, position)
 
     fun remove(index: Int, songId: String) = repository.removeItem(setId, index, songId)
 

@@ -84,6 +84,19 @@
     <string name="sets_rename">Rename</string>
     <string name="sets_delete">Delete setlist</string>
     <string name="sets_add_songs">Songs</string>
+    <string name="sets_add_break">Break</string>
+    <string name="set_break">BREAK</string>
+    <string name="set_break_remove">Remove break</string>
+    <string name="set_count_with_breaks">%1$s · %2$s</string>
+    <plurals name="break_count">
+        <item quantity="one">%d break</item>
+        <item quantity="other">%d breaks</item>
+    </plurals>
+    <plurals name="set_block">
+        <item quantity="one">SET %1$d · %2$d song</item>
+        <item quantity="other">SET %1$d · %2$d songs</item>
+    </plurals>
+    <string name="stage_break_next">Up next: %1$s</string>
     <string name="qr_limit_title">Setlist full</string>
     <string name="qr_limit_message">This setlist is full. To go on, create another one.</string>
     <string name="qr_limit_batch_title">They don\'t all fit</string>

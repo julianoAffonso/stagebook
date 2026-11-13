@@ -87,6 +87,21 @@
     <string name="sets_rename">Renomear</string>
     <string name="sets_delete">Excluir setlist</string>
     <string name="sets_add_songs">Músicas</string>
+    <string name="sets_add_break">Intervalo</string>
+    <string name="set_break">INTERVALO</string>
+    <string name="set_break_remove">Tirar o intervalo</string>
+    <string name="set_count_with_breaks">%1$s · %2$s</string>
+    <plurals name="break_count">
+        <item quantity="one">%d intervalo</item>
+        <item quantity="many">%d intervalos</item>
+        <item quantity="other">%d intervalos</item>
+    </plurals>
+    <plurals name="set_block">
+        <item quantity="one">BLOCO %1$d · %2$d música</item>
+        <item quantity="many">BLOCO %1$d · %2$d músicas</item>
+        <item quantity="other">BLOCO %1$d · %2$d músicas</item>
+    </plurals>
+    <string name="stage_break_next">A seguir: %1$s</string>
     <string name="qr_limit_title">Setlist cheio</string>
     <string name="qr_limit_message">Este setlist já está cheio. Para continuar, crie outro.</string>
     <string name="qr_limit_batch_title">Não cabem todas</string>

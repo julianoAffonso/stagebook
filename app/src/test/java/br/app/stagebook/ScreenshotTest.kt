@@ -168,6 +168,30 @@ class ScreenshotTest {
         SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
     }
 
+    // a break in the setlist: its row between the songs, the two blocks and the count under the name
+    @Test fun setlistBreakTablet() = shoot("tablet_3_setlist_intervalo") { SetlistBreak() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun setlistBreakPhone() = shoot("celular_3_setlist_intervalo") { SetlistBreak() }
+
+    @Composable
+    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+
+    // the break on stage, twelve and a half minutes in, with the song that comes next
+    @Test fun stageBreakTablet() = shoot("tablet_6_palco_intervalo") { StageBreak() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageBreakPhone() = shoot("celular_7_palco_intervalo") { StageBreak() }
+
+    @Composable
+    private fun StageBreak() {
+        val since = androidx.compose.runtime.remember { System.currentTimeMillis() - 750_000L }
+        StageScreen(
+            stage.copy(songs = listOf(stage.songs[0], StageSong("Malandragem", s("Cássia Eller · 1994"), "{key: G}\n$lyrics", false)), live = true, breaks = listOf(1)),
+            0, 0, { _, _ -> }, onBack = {}, breakSince = since,
+        )
+    }
+
     // setlist journey (user, 01/11): list, select, inside, select songs, add songs with the tag filter, add from Songs
     private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6), SetlistRowUi("3", "Casamento", 22)))
 

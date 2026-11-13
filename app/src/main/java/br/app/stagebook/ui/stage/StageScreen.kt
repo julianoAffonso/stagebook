@@ -58,6 +58,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -195,6 +196,7 @@ fun StageRoute(
         }
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
+    val breakSince by viewModel.breakSince.collectAsStateWithLifecycle()
     KeepScreenOn()
     StageDoNotDisturb(uiState.look.stageDnd && !uiState.loading)
     // the first time on stage without Android's permission: asks once (Settings can turn it on later)
@@ -291,6 +293,8 @@ fun StageRoute(
             onKeyboardHintSeen = viewModel::keyboardCapoHintSeen,
             onSongMix = viewModel::setSongMix,
             onGlobalMix = viewModel::setGlobalMix,
+            breakSince = breakSince,
+            onBreak = viewModel::setBreak,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -360,6 +364,8 @@ fun StageScreen(
     onKeyboardHintSeen: () -> Unit = {},
     onSongMix: (songId: String, mixer: br.app.stagebook.domain.MixerConfig?) -> Unit = { _, _ -> },
     onGlobalMix: (br.app.stagebook.domain.MixerConfig) -> Unit = {},
+    breakSince: Long? = null,   // the setlist's break after this song is on screen since then (null = no break)
+    onBreak: (on: Boolean) -> Unit = {},
 ) {
     // the mixer over the stage, with the song playing (user, 31/10)
     var mixerOpen by remember { mutableStateOf(false) }
@@ -387,6 +393,13 @@ fun StageScreen(
         }
     }
     val song = uiState.songs[index]
+    // a break after this song: going past its end shows the break before the next song. The song on stage stays this
+    // one meanwhile, so the next one's MIDI, Now Playing and band message only go out when the break is left
+    val breakNext = index < uiState.songs.lastIndex && (index + 1) in uiState.breaks
+    val onBreakNow = breakSince != null && breakNext
+    // a break that isn't there any more (taken out of the setlist meanwhile) doesn't come back later
+    LaunchedEffect(breakSince != null, breakNext) { if (breakSince != null && !breakNext) onBreak(false) }
+    BackHandler(enabled = onBreakNow) { onBreak(false) }
     // keyboard doesn't use capo: chords show in the sounding key (chart in G with capo on fret 2 → A), without changing
     // the saved song (user's request, 29/10)
     val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD
@@ -612,9 +625,16 @@ fun StageScreen(
     }
     val countColor = MaterialTheme.colorScheme.tertiary
     val metroColor = if (counting) countColor else Color(look.metroGlowColor)
+    // forward opens the next song, back shows again the song before the break
+    fun leaveBreak(forward: Boolean) {
+        onBreak(false)
+        if (forward) { presses.from = index to page; onPosition(index + 1, 0) }
+    }
     fun go(forward: Boolean) {
+        if (onBreakNow) { leaveBreak(forward); return }
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
+        if (forward && breakNext && current >= pageCount - 1) { onBreak(true); return }
         val target = (if (forward) nextTarget() else previousTarget()) ?: return
         presses.from = index to page
         onPosition(target.first, target.second)
@@ -623,7 +643,9 @@ fun StageScreen(
     fun previous() = go(false)
     // pedal set to "next song"/"previous song": always at its start; with a page turn on the way, it waits
     fun goSong(forward: Boolean) {
+        if (onBreakNow) { leaveBreak(forward); return }
         if (presses.from != null) return
+        if (forward && breakNext) { onBreak(true); return }
         val target = index + if (forward) 1 else -1
         if (target !in uiState.songs.indices) return
         presses.from = index to page
@@ -1353,6 +1375,7 @@ fun StageScreen(
             } else {
                 Text(
                     when {
+                        breakNext -> stringResource(R.string.stage_next, stringResource(R.string.sets_add_break))
                         nextTitle != null -> stringResource(R.string.stage_next, nextTitle)
                         uiState.songs.size > 1 || uiState.followEnd -> stringResource(R.string.stage_end)
                         else -> ""
@@ -1366,6 +1389,20 @@ fun StageScreen(
                 )
             }
         }
+    }
+    if (onBreakNow && breakSince != null) {
+        val next = uiState.songs[index + 1]
+        val nextKey = remember(next.text) { Chords.key(next.text) }
+        val title = if (next.missing) stringResource(R.string.set_item_missing) else next.title
+        StageBreak(
+            since = breakSince,
+            next = if (nextKey.isEmpty()) title else "$title · $nextKey",
+            bg = Color(look.bg),
+            fg = fg,
+            vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
+            onNext = ::next,
+            onPrevious = ::previous,
+        )
     }
     if (keyboardHint > 0) {
         Surface(
@@ -2070,6 +2107,68 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
                 }
             }
         }
+    }
+}
+
+/**
+ * The setlist's break, over the whole stage: the word, how long it has lasted (counted from [since], so it goes on
+ * after the device is turned) and the song that comes next. A tap or a swipe goes on or back like on the lyrics.
+ */
+@Composable
+private fun StageBreak(
+    since: Long,
+    next: String,
+    bg: Color,
+    fg: Color,
+    vertical: Boolean,   // scroll mode: lower half and swipe up go on
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(since) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1_000L - (now - since).coerceAtLeast(0L) % 1_000L)
+        }
+    }
+    val goOn by rememberUpdatedState(onNext)
+    val goBack by rememberUpdatedState(onPrevious)
+    val swipeMin = with(LocalDensity.current) { Sizes.swipe.toPx() }
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(bg)
+            .pointerInput(vertical, swipeMin) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                    val drag = up.position - down.position
+                    val along = if (vertical) drag.y else drag.x
+                    val across = if (vertical) drag.x else drag.y
+                    val forward = when {
+                        abs(along) > swipeMin && abs(along) > abs(across) -> along < 0
+                        abs(along) <= viewConfiguration.touchSlop && abs(across) <= viewConfiguration.touchSlop ->
+                            if (vertical) down.position.y > size.height / 2f else down.position.x > size.width / 2f
+                        else -> return@awaitEachGesture
+                    }
+                    if (forward) goOn() else goBack()
+                }
+            }
+            .padding(Spacing.l),
+        verticalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.set_break), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+        Text(br.app.stagebook.domain.SetlistBreaks.clock(now - since), style = MaterialTheme.typography.displayLarge, color = fg, maxLines = 1)
+        Text(
+            stringResource(R.string.stage_break_next, next),
+            style = MaterialTheme.typography.titleLarge,
+            color = fg.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

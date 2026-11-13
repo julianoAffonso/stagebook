@@ -65,7 +65,27 @@ class StageMetaTest {
         assertEquals("Ao vivo", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().lostTrack)
     }
 
-    private fun stage(repo: LibraryRepository, id: String) = StageViewModel(repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)), StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
+    // a setlist's break (see StageBreakTest for the screen): the stage knows where the breaks are, and the time the
+    // break started stays with the stage's saved state, so turning the device doesn't restart its counter
+    @Test fun `the stage carries the setlist's breaks and keeps when a break started`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }
+        val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
+        val vm = stage(repo, "", saved)
+        assertEquals(listOf(2), withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.breaks)
+        assertEquals(null, vm.breakSince.value)
+        vm.setBreak(true)
+        val since = vm.breakSince.value!!
+        vm.setBreak(true)   // asked twice (a fast foot): the counter doesn't start over
+        assertEquals(since, vm.breakSince.value)
+        assertEquals(since, stage(repo, "", saved).breakSince.value)   // the stage built again from what was saved
+        vm.setBreak(false)
+        assertEquals(null, vm.breakSince.value)
+    }
+
+    private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
         br.app.stagebook.data.BandConduct(
             br.app.stagebook.data.BandLink(
                 context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),

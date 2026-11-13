@@ -50,12 +50,14 @@ data class StageUiState(
     val followEnd: Boolean = false,
     /** A show (a setlist, or following the band): leaving asks first. A single song from the library leaves at once. */
     val live: Boolean = false,
+    /** The setlist's breaks: each one comes before the song at that position (see SetlistBreaks). */
+    val breaks: List<Int> = emptyList(),
 )
 
 @HiltViewModel
 class StageViewModel @Inject constructor(
     private val repository: LibraryRepository,
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val stageGate: StageGate,
     private val tracks: TrackStore,
     private val player: StagePlayer,
@@ -204,6 +206,18 @@ class StageViewModel @Inject constructor(
         // something and the band stays together; only "End" releases everyone
     }
     private val route = savedStateHandle.toRoute<Stage>()
+
+    /**
+     * The setlist's break on screen: when it started (null = no break). The song on stage stays the one before the
+     * break, so the next one only "enters" (MIDI, Now Playing, the band) when the break is left. Kept here, with the
+     * time it started, so turning the device doesn't restart its counter.
+     */
+    val breakSince: StateFlow<Long?> = savedStateHandle.getStateFlow<Long?>(BREAK_SINCE, null)
+
+    fun setBreak(on: Boolean) {
+        if (on == (breakSince.value != null)) return
+        savedStateHandle[BREAK_SINCE] = if (on) System.currentTimeMillis() else null
+    }
     /** Song the stage opens on (position in the setlist). */
     val start: Int = route.start
 
@@ -224,6 +238,7 @@ class StageViewModel @Inject constructor(
                 StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty())
             },
             look = lib.look,
+            breaks = set?.breaks.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
 
@@ -308,5 +323,6 @@ class StageViewModel @Inject constructor(
     }
 }
 
+private const val BREAK_SINCE = "breakSince"
 private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome

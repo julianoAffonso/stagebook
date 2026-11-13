@@ -10,6 +10,7 @@ import br.app.stagebook.data.model.Song
 import br.app.stagebook.di.ApplicationScope
 import br.app.stagebook.domain.QrPayload
 import br.app.stagebook.domain.SectionGuesser
+import br.app.stagebook.domain.SetlistBreaks
 import br.app.stagebook.domain.Sections
 import br.app.stagebook.domain.SongMatch
 import br.app.stagebook.domain.SongSearch
@@ -201,7 +202,7 @@ class LibraryRepository @Inject constructor(
     /** Deletes several songs (a selection) in one save, and takes them out of the setlists. */
     fun deleteSongs(ids: Collection<String>) {
         val set = ids.toSet()
-        mutate { lib -> lib.copy(songs = lib.songs.filterNot { it.id in set }, sets = lib.sets.map { s -> s.copy(items = s.items.filterNot { it in set }) }) }
+        mutate { lib -> lib.copy(songs = lib.songs.filterNot { it.id in set }, sets = lib.sets.map { s -> s.withoutSongs(set) }) }
     }
 
     /** Deletes the song and removes it from the setlists. */
@@ -221,25 +222,42 @@ class LibraryRepository @Inject constructor(
 
     fun deleteSetlist(id: String) = mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id == id }) }
 
+    /** The song at [from] goes to [to] (positions among the songs); the breaks stay between the same songs. */
     fun moveItem(setId: String, from: Int, to: Int) = updateSet(setId) { s ->
         if (from !in s.items.indices || to !in s.items.indices) s
-        else s.copy(items = s.items.toMutableList().apply { add(to, removeAt(from)) })
+        else s.moved(SetlistBreaks.moveSong(s.items.size, s.breaks, from, to))
     }
+
+    /** A row of the setlist screen (a song or a break) dragged from [from] to [to], counting songs and breaks. */
+    fun moveRow(setId: String, from: Int, to: Int) = updateSet(setId) { s -> s.moved(SetlistBreaks.moveRow(s.items.size, s.breaks, from, to)) }
+
+    /** A new break before the last song; the person drags it into place. Nothing with fewer than 2 songs. */
+    fun addBreak(setId: String) = updateSet(setId) { s -> s.copy(breaks = SetlistBreaks.add(s.breaks, s.items.size)) }
+
+    /** Takes out the break before the song at [position]. */
+    fun removeBreak(setId: String, position: Int) = updateSet(setId) { s -> s.copy(breaks = SetlistBreaks.remove(s.breaks, position)) }
 
     /**
      * Only removes it if it's still the same song in that place: the 2nd tap of a double tap doesn't take the next one.
      */
     fun removeItem(setId: String, index: Int, songId: String) = updateSet(setId) { s ->
-        if (s.items.getOrNull(index) != songId) s else s.copy(items = s.items.toMutableList().apply { removeAt(index) })
+        if (s.items.getOrNull(index) != songId) s
+        else s.copy(items = s.items.toMutableList().apply { removeAt(index) }, breaks = SetlistBreaks.afterRemoving(s.breaks, s.items.size, setOf(index)))
     }
 
     /** They go at the end, in the chosen order; one already in the setlist doesn't go in again. */
     fun addToSetlist(setId: String, songIds: List<String>) = updateSet(setId) { s ->
-        s.copy(items = s.items + songIds.filterNot { it in s.items }.distinct())
+        s.copy(items = s.items + songIds.filterNot { it in s.items }.distinct()).withValidBreaks()
     }
 
-    /** Replaces the setlist's songs (the QR scanned over a setlist with the same name). */
-    fun setSetlistItems(setId: String, songIds: List<String>) = updateSet(setId) { it.copy(items = songIds.distinct()) }
+    /**
+     * Replaces the setlist's songs (the QR scanned over a setlist with the same name, the editor on the computer). A
+     * break stays before the same song when it's still there.
+     */
+    fun setSetlistItems(setId: String, songIds: List<String>) = updateSet(setId) { s ->
+        val items = songIds.distinct()
+        s.copy(items = items, breaks = SetlistBreaks.afterReplacing(s.breaks, s.items, items))
+    }
 
     fun qrPayload(setId: String): ByteArray? = _library.value.setlist(setId)?.let { QrPayload.build(it, _library.value) }
 
@@ -322,7 +340,11 @@ class LibraryRepository @Inject constructor(
             }
             val names = lib.sets.map { it.name.trim().lowercase() }.toSet()
             val newSets = sets.filter { it.name.trim().lowercase() !in names }
-                .map { it.copy(id = newId(), items = it.items.mapNotNull(idOf::get)) }
+                // a song that didn't come in leaves its place: the breaks follow the ones that did
+                .map { s ->
+                    val gone = s.items.indices.filterTo(HashSet()) { s.items[it] !in idOf }
+                    s.copy(id = newId(), items = s.items.mapNotNull(idOf::get), breaks = SetlistBreaks.afterRemoving(s.breaks, s.items.size, gone))
+                }
             addedSets = newSets.size
             // at the top, like a new one: the stored order is newest first (the Setlists tab's "Newest")
             lib.copy(songs = all, sets = newSets + lib.sets)
@@ -333,8 +355,15 @@ class LibraryRepository @Inject constructor(
     /** Backup restored: its songs and setlists replace the ones here (the look stays). */
     suspend fun restore(songs: List<Song>, sets: List<Setlist>) {
         ready.await()
-        mutate { lib -> lib.copy(songs = songs, sets = sets) }
+        mutate { lib -> lib.copy(songs = songs, sets = sets.map { it.withValidBreaks() }) }
     }
+
+    private fun Setlist.withoutSongs(ids: Set<String>): Setlist {
+        val gone = items.indices.filterTo(HashSet()) { items[it] in ids }
+        return if (gone.isEmpty()) this else copy(items = items.filterNot { it in ids }, breaks = SetlistBreaks.afterRemoving(breaks, items.size, gone))
+    }
+
+    private fun Setlist.moved(to: SetlistBreaks.Moved): Setlist = copy(items = to.order.map { items[it] }, breaks = to.breaks)
 
 }
 
