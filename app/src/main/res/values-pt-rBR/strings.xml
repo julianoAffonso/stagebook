@@ -200,6 +200,8 @@
         <item quantity="other">%1$d da banda não responderam</item>
     </plurals>
     <string name="conduct_see_lacks">Ver o que falta</string>
+    <string name="conduct_see_lacks_here">Ver o que falta aqui</string>
+    <string name="conduct_lacks_here_title">Faltam neste aparelho</string>
     <string name="conduct_search">Procurar a banda</string>
     <string name="conduct_end">Encerrar</string>
     <string name="conduct_leave">Sair</string>

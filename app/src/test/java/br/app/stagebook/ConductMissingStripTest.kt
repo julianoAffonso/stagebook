@@ -12,6 +12,7 @@ import br.app.stagebook.data.BandConduct.Notice
 import br.app.stagebook.domain.Conduct
 import br.app.stagebook.ui.band.ConductBar
 import br.app.stagebook.ui.band.ConductUi
+import br.app.stagebook.ui.band.conductUi
 import br.app.stagebook.ui.band.LacksDialog
 import br.app.stagebook.ui.band.text
 import br.app.stagebook.ui.theme.StagebookTheme
@@ -93,11 +94,49 @@ class ConductMissingStripTest {
         compose.onNodeWithText("Enviar a todos").assertIsNotEnabled()
     }
 
-    @Test fun `a follower's list of what is missing has nothing to send`() {
-        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("Voz", "Música", false, false, listOf("Baixo"), lacks), {}, {}, {}, {}) } }
+    @Test fun `a follower's list is what this device lacks, with nothing to send`() {
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("Voz", "Música", false, false, listOf("Baixo"), listOf("Evidências", "Asa Branca")), {}, {}, {}, {}) } }
         compose.onNodeWithText("Voz", substring = true).performClick()
-        compose.onNodeWithText("O que falta").assertExists()
+        compose.onNodeWithText("Faltam neste aparelho").assertExists()
+        compose.onNodeWithText("Evidências\nAsa Branca").assertExists()
         compose.onAllNodesWithText("Enviar a todos").assertCountEquals(0)
+    }
+
+    // ---- what the strip is made from: the leader's message and this device's library ----
+
+    private val set = listOf(Conduct.Item("Evidências"), Conduct.Item("Asa Branca"))
+    private fun song(title: String) = br.app.stagebook.data.model.Song(id = title, title = title, text = "[G]La")
+    private fun role(vararg missing: Conduct.Lack) = br.app.stagebook.data.BandConduct.Role.Following(
+        "voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = set, index = 0, missing = missing.toList()), "Evidências",
+    )
+
+    // two devices, 13/11: a phone on a song it had was offered "See what's missing", the leader's list of the band
+    @Test fun `a follower that has every song is offered no list, whatever the others lack`() {
+        val ui = conductUi(role(Conduct.Lack("Baixo", listOf("Asa Branca"))), set.map { song(it.title) }, System.currentTimeMillis(), true)!!
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Acompanhando Voz").assertExists()
+        compose.onAllNodesWithText("Ver o que falta", substring = true).assertCountEquals(0)
+        compose.onNodeWithText("Acompanhando Voz").performClick()
+        compose.onAllNodesWithText("O que falta").assertCountEquals(0)
+        compose.onAllNodesWithText("Faltam neste aparelho").assertCountEquals(0)
+    }
+
+    @Test fun `a follower that lacks a song of the setlist is offered its own list, on a song it has too`() {
+        val ui = conductUi(role(), listOf(song("Evidências")), System.currentTimeMillis(), true)!!
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Ver o que falta aqui").performClick()
+        compose.onNodeWithText("Faltam neste aparelho").assertExists()
+        compose.onNodeWithText("Asa Branca").assertExists()
+    }
+
+    // the leader's list still names this device until its next message: the song that just arrived is here
+    @Test fun `the strip of a follower that has the song isn't red because the leader's list still names it`() {
+        val named = role(Conduct.Lack("Celular", listOf("Evidências")), Conduct.Lack("Baixo", listOf("Asa Branca")))
+        val ui = conductUi(named, set.map { song(it.title) }, System.currentTimeMillis(), true, me = "Celular") as ConductUi.Following
+        assertEquals(emptyList<String>(), ui.nowMissing)
+        // someone else without it still shows
+        val other = conductUi(role(Conduct.Lack("Baixo", listOf("Evidências"))), set.map { song(it.title) }, System.currentTimeMillis(), true, me = "Celular") as ConductUi.Following
+        assertEquals(listOf("Baixo"), other.nowMissing)
     }
 
     @Test fun `the short messages say what happened`() {

@@ -192,6 +192,8 @@
         <item quantity="other">%1$d band members didn\'t answer</item>
     </plurals>
     <string name="conduct_see_lacks">See what\'s missing</string>
+    <string name="conduct_see_lacks_here">See what\'s missing here</string>
+    <string name="conduct_lacks_here_title">Missing on this device</string>
     <string name="conduct_search">Look for the band</string>
     <string name="conduct_end">End</string>
     <string name="conduct_leave">Leave</string>

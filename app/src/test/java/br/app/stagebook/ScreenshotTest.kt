@@ -915,8 +915,7 @@ class ScreenshotTest {
         androidx.compose.foundation.layout.Column {
             androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
             br.app.stagebook.ui.band.ConductBar(
-                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")),
-                    listOf(br.app.stagebook.domain.Conduct.Lack(s("Baixo"), listOf("Garota de Ipanema")))),
+                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")), emptyList()),
                 {}, {}, {}, {},
             )
         }
