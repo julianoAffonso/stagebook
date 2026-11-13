@@ -75,6 +75,9 @@ fun SetlistSongRow(
             startPadding = if (stripRoom) STATE_STRIP + Spacing.xs else 0.dp,
             gap = Spacing.s,
             dense = dense,
+            // one line: the row's end has the key and the tempo, and a long title made some rows taller than others
+            // (seen on a phone with large text, 13/11)
+            titleLines = 1,
             leading = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     beforeNumber?.invoke()

@@ -377,7 +377,9 @@ fun SetlistDetailScreen(
 /** Songs, Break and Share side by side (the stage opens by tapping a song in the list). */
 @Composable
 private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, canBreak: Boolean, onAddBreak: () -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+    // three buttons don't fit one line on a phone with large text ("Compartilha / r", 13/11): the one that doesn't fit
+    // goes whole to the next line
+    androidx.compose.foundation.layout.FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
         // all secondary: side by side at the start (stretched, Share floated in the middle)
         ActionButton(stringResource(R.string.sets_add_songs), onAddSongs, icon = AppIcons.Add, tone = ButtonTone.Tonal)
         // a break sits between two songs: with fewer than two there's no place for it
