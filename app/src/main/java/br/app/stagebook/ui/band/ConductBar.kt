@@ -31,6 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -222,7 +226,7 @@ fun ConductBar(
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
     @Composable
     fun Buttons(lacksButton: Boolean) {
-        if (lacksButton && hasLacks) TextButton({ showLacks = true }) { Text(seeLacks) }
+        if (lacksButton && hasLacks) TextButton({ showLacks = true }) { ActionText(seeLacks) }
         when (ui) {
             is ConductUi.Conducting -> {
                 // the search runs 30 s with nothing else on screen: the button says so meanwhile, otherwise
@@ -230,18 +234,18 @@ fun ConductBar(
                 var searching by remember { mutableStateOf(false) }
                 LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
                 TextButton({ searching = true; onSearch() }, enabled = !searching) {
-                    Text(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
+                    ActionText(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
                 }
-                TextButton(onEnd) { Text(stringResource(R.string.conduct_end)) }
+                TextButton(onEnd) { ActionText(stringResource(R.string.conduct_end)) }
             }
             is ConductUi.Following -> {
                 // the song isn't here, or came without chords: ask the band on this Wi-Fi. Busy while the answer comes
                 if (ui.missingHere || ui.noChords) {
-                    TextButton(onAsk, enabled = !asking) { Text(stringResource(if (asking) R.string.conduct_asking else R.string.conduct_ask)) }
+                    TextButton(onAsk, enabled = !asking) { ActionText(stringResource(if (asking) R.string.conduct_asking else R.string.conduct_ask)) }
                 }
-                TextButton(onLeave) { Text(stringResource(R.string.conduct_leave)) }
+                TextButton(onLeave) { ActionText(stringResource(R.string.conduct_leave)) }
             }
-            is ConductUi.Left -> TextButton(onFollow) { Text(stringResource(R.string.conduct_follow)) }
+            is ConductUi.Left -> TextButton(onFollow) { ActionText(stringResource(R.string.conduct_follow)) }
         }
     }
     Surface(
@@ -265,32 +269,35 @@ fun ConductBar(
                             if (lacksInText) Modifier.clickable(onClickLabel = seeLacks) { showLacks = true } else Modifier,
                         ),
                     ) {
-                        Text(
+                        // each line is one line, and what gets cut is the name in it (a setlist, a device, a song):
+                        // on a phone with bigger text the break's line wrapped and a long title pushed its own
+                        // sentence off (two devices, 13/11)
+                        CutLine(
                             when (ui) {
-                                is ConductUi.Conducting -> stringResource(R.string.conduct_conducting, ui.set)
-                                is ConductUi.Following -> if (ui.gone) stringResource(R.string.conduct_gone, ui.from) else stringResource(R.string.conduct_following, ui.from)
-                                is ConductUi.Left -> stringResource(R.string.conduct_left, ui.from)
+                                is ConductUi.Conducting -> cutLine(R.string.conduct_conducting, ui.set)
+                                is ConductUi.Following -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
+                                is ConductUi.Left -> cutLine(R.string.conduct_left, ui.from)
                             },
-                            style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            MaterialTheme.typography.titleSmall, "conductTitle",
                         )
                         val rest = (ui as? ConductUi.Following)?.takeIf { it.breakSince != null }
                         val detail = when {
                             // the leader's break, for a follower on any screen: its time and what comes next (or that
-                            // the next song isn't here), in place of the song
-                            rest?.breakSince != null -> stringResource(
-                                R.string.conduct_break, br.app.stagebook.ui.components.breakClock(rest.breakSince),
-                                stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
+                            // the next song isn't here), in place of the song. The time is never cut
+                            rest?.breakSince != null -> cutLine(
+                                R.string.conduct_break, stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
+                                br.app.stagebook.ui.components.breakClock(rest.breakSince),
                             )
-                            ui is ConductUi.Following && ui.missingHere -> stringResource(R.string.conduct_missing_here, ui.song)
-                            ui is ConductUi.Following && ui.noChords -> stringResource(R.string.conduct_no_chords, ui.song)
-                            nowMissing.isNotEmpty() -> stringResource(R.string.conduct_missing_now, nowMissing.joinToString(", "))
-                            ui is ConductUi.Conducting && ui.noAnswer > 0 -> pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer)
-                            lacksInText -> seeLacks
+                            ui is ConductUi.Following && ui.missingHere -> cutLine(R.string.conduct_missing_here, ui.song)
+                            ui is ConductUi.Following && ui.noChords -> cutLine(R.string.conduct_no_chords, ui.song)
+                            nowMissing.isNotEmpty() -> cutLine(R.string.conduct_missing_now, nowMissing.joinToString(", "))
+                            ui is ConductUi.Conducting && ui.noAnswer > 0 -> CutText(cut = pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer))
+                            lacksInText -> CutText(cut = seeLacks)
                             else -> null
                         }
                         detail?.let {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                CutLine(it, MaterialTheme.typography.bodySmall, "conductLine", Modifier.weight(1f, fill = false))
                                 if (lacksInText) Icon(AppIcons.ChevronRight, null, Modifier.size(16.dp))
                             }
                         }
@@ -308,6 +315,41 @@ fun ConductBar(
         InfoDialog(stringResource(R.string.conduct_lacks_here_title), ui.lacksHere.joinToString("\n"), onDismiss = { showLacks = false })
     }
 }
+
+/** A strip line in three pieces: only [cut] gives way when the line doesn't fit; [start] and [end] stay whole. */
+@Immutable
+internal data class CutText(val start: String = "", val cut: String, val end: String = "") {
+    val whole: String get() = start + cut + end
+}
+
+/**
+ * The sentence [id] with [name] in it, split around the name so that the name is what gets cut. [first], when the
+ * sentence has two values, is the one before it and is never cut (the break's time).
+ */
+@Composable
+private fun cutLine(id: Int, name: String, first: String? = null): CutText {
+    val sentence = if (first == null) stringResource(id, CUT_HERE) else stringResource(id, first, CUT_HERE)
+    // the space before the name goes with it: a text's trailing space isn't sure to be measured
+    val start = sentence.substringBefore(CUT_HERE)
+    val kept = start.trimEnd()
+    return CutText(kept, start.substring(kept.length) + name, sentence.substringAfter(CUT_HERE, ""))
+}
+
+@Composable
+private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, tag: String, modifier: Modifier = Modifier) {
+    // read and found as the one sentence it is
+    Row(modifier.semantics { this.text = androidx.compose.ui.text.AnnotatedString(text.whole) }) {
+        if (text.start.isNotEmpty()) Text(text.start, Modifier.clearAndSetSemantics { testTag = tag + "Start" }, style = style, maxLines = 1, softWrap = false)
+        Text(text.cut, Modifier.weight(1f, fill = false).clearAndSetSemantics {}, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (text.end.isNotEmpty()) Text(text.end, Modifier.clearAndSetSemantics { testTag = tag + "End" }, style = style, maxLines = 1, softWrap = false)
+    }
+}
+
+/** An action's text: whole, on one line, whatever is beside it. */
+@Composable
+private fun ActionText(text: String) = Text(text, maxLines = 1, softWrap = false)
+
+private const val CUT_HERE = "\u2060"   // stands for the name while the sentence is split around it
 
 private val sampleLacks = listOf(Conduct.Lack("Baixo", listOf("Evidências", "Asa Branca")))
 internal val sampleLackers = listOf(
