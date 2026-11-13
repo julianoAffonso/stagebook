@@ -401,7 +401,13 @@
     <string name="settings_chords_card">Chords in the lyrics</string>
     <string name="settings_chords_show">On stage</string>
     <string name="settings_lyrics_only">Lyrics only</string>
-    <string name="settings_chords_show_help">Lyrics and chords: the chords show above the lyrics. Lyrics only: the stage shows just the lyrics, even in songs with chords.</string>
+    <string name="settings_profile_auto">Automatic</string>
+    <string name="settings_profile_auto_detail">Each song shows the most it has: chords where it has them, lyrics where it doesn\'t. On import, the app asks whether it is lyrics or chords.</string>
+    <string name="import_kind_title">What do you want to import?</string>
+    <string name="import_kind_lyrics">Lyrics</string>
+    <string name="import_kind_chords">Chords</string>
+    <string name="settings_import_sites">Import sites</string>
+    <string name="settings_chords_show_help">Lyrics and chords: the chords show above the lyrics. Lyrics only: the stage shows just the lyrics, even in songs with chords. Automatic: like lyrics and chords, and the importer asks whether a song comes in as lyrics or chords.</string>
     <string name="settings_chords_size">Chord size: %1$d%% of the lyrics</string>
     <string name="settings_chords_color">Chord color</string>
     <string name="settings_translate_sections">Section names in the app\'s language</string>

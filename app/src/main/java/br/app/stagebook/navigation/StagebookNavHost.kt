@@ -238,7 +238,7 @@ fun StagebookNavHost(
             HomeScreen(
                 onOpenSong = { entry.ifResumed { nav.navigate(Stage(songId = it)) } },
                 onEditSong = { entry.ifResumed { nav.navigate(SongEditor(songId = it)) } },
-                onImport = { entry.ifResumed { nav.navigate(Importer(it)) } },
+                onImport = { query, kind -> entry.ifResumed { nav.navigate(Importer(query, kind = kind)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
                 onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },

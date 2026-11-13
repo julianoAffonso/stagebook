@@ -9,6 +9,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import br.app.stagebook.data.model.SiteKind
+import br.app.stagebook.data.model.siteKind
+import br.app.stagebook.data.model.sites
 import br.app.stagebook.data.ImportDraft
 import br.app.stagebook.data.ImportQueue
 import br.app.stagebook.data.LibraryRepository
@@ -57,8 +60,10 @@ class ImportViewModel @Inject constructor(
 
     /** Where the importer opens: the profile's default site (chords or lyrics), and what the search looks for. */
     private val look get() = repository.library.value.look
-    val home: String get() = (if (look.chords) look.chordSites else look.lyricSites).firstOrNull()?.url ?: HOME
-    fun urlFor(q: String): String = urlFor(q, if (look.chords) "cifra" else "letra")
+    // what is being imported: what the automatic profile asked for, otherwise the profile's own kind
+    private val kind: SiteKind get() = SiteKind.entries.firstOrNull { it.name == route.kind } ?: look.siteKind
+    val home: String get() = look.sites(kind).firstOrNull()?.url ?: HOME
+    fun urlFor(q: String): String = urlFor(q, if (kind == SiteKind.CHORDS) "cifra" else "letra")
 
     private val _uiState = MutableStateFlow(ImportUiState())
     val uiState: StateFlow<ImportUiState> = _uiState.asStateFlow()

@@ -65,7 +65,7 @@ import br.app.stagebook.ui.theme.Spacing
 fun SongsRoute(
     onOpenSong: (String) -> Unit,
     onEditSong: (String?) -> Unit,
-    onImport: (String) -> Unit,
+    onImport: (query: String, kind: String) -> Unit,
     viewModel: SongsViewModel = hiltViewModel(),
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
@@ -80,6 +80,8 @@ fun SongsRoute(
     BandResultMessage(viewModel.bandResult)
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
+    var askKind by rememberSaveable { mutableStateOf(false) }
+    if (askKind) br.app.stagebook.ui.importer.ImportKindDialog({ kind -> askKind = false; onImport(query, kind.name) }, { askKind = false })
     SongsScreen(
         uiState = uiState,
         online = online,
@@ -88,7 +90,8 @@ fun SongsRoute(
         query = query,
         onQueryChange = { query = it },
         onNewSong = { onEditSong(null) },
-        onImport = { onImport(query) },
+        // the automatic profile has no kind of its own: the musician says what this one is, to open on the right site
+        onImport = { if (viewModel.asksKind()) askKind = true else onImport(query, "") },
         // found what they were looking for: coming back from the stage the whole list shows
         onOpen = { query = ""; onOpenSong(it) },
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,

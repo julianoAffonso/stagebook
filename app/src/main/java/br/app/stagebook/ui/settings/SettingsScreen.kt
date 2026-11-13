@@ -1,5 +1,10 @@
 package br.app.stagebook.ui.settings
 
+import br.app.stagebook.data.model.SiteKind
+import br.app.stagebook.data.model.SongProfile
+import br.app.stagebook.data.model.profile
+import br.app.stagebook.data.model.siteKind
+import br.app.stagebook.data.model.sites
 import br.app.stagebook.data.model.essential
 import androidx.core.net.toUri
 import br.app.stagebook.data.AppLinks
@@ -318,7 +323,7 @@ fun SettingsRoute(
                 onSectionColor = viewModel::setSectionColor,
                 onShowSections = viewModel::setShowSections,
                 onTranslateSections = viewModel::setTranslateSections,
-                onChords = viewModel::setChords,
+                onProfile = viewModel::setProfile,
                 onChordScale = viewModel::setChordScale,
                 onSectionScale = viewModel::setSectionScale,
                 onChordColor = viewModel::setChordColor,
@@ -428,7 +433,7 @@ data class SettingsActions(
     val onSectionColor: (Int) -> Unit = {},
     val onShowSections: (Boolean) -> Unit = {},
     val onTranslateSections: (Boolean) -> Unit = {},
-    val onChords: (Boolean) -> Unit = {},
+    val onProfile: (SongProfile) -> Unit = {},
     val onChordScale: (Float) -> Unit = {},
     val onSectionScale: (Float) -> Unit = {},
     val onChordColor: (Int) -> Unit = {},
@@ -451,7 +456,7 @@ data class SettingsActions(
     val onMidiOutputsOpen: () -> Unit = {},
     val onMidiOut: (br.app.stagebook.data.MidiOutput?) -> Unit = {},
     val onLanguage: (AppLanguage) -> Unit = {},
-    val onSites: (chords: Boolean, sites: List<ImportSite>) -> Unit = { _, _ -> },
+    val onSites: (kind: SiteKind, sites: List<ImportSite>) -> Unit = { _, _ -> },
     val onPlayerMode: (Boolean) -> Unit = {},
     // Settings → Band: the band state (BandViewModel) and what the screen does
     val band: BandUi = BandUi(),
@@ -548,6 +553,8 @@ object SettingsLinks {
 /** The section's name: the import sites say which kind, by the profile (user, 01/11: a friendlier name). */
 @StringRes
 fun SettingsSection.titleOf(look: Look): Int = when {
+    // the automatic profile imports both kinds: the item names neither
+    this == SettingsSection.IMPORT && look.autoProfile -> R.string.settings_import_sites
     this == SettingsSection.IMPORT && !look.chords -> R.string.settings_lyric_sites
     // named after what essential mode left on (user, 02/11)
     this == SettingsSection.METRONOME && !look.playerMode -> R.string.metro_title
@@ -893,7 +900,11 @@ private fun ChordsLookCard(look: Look, actions: SettingsActions, draft: StageDra
     SettingsCard(stringResource(R.string.settings_chords_card), help = stringResource(R.string.settings_chords_show_help)) {
         // two buttons, like turn pages / scroll: the switch in the middle of the card wasn't found (user, 02/11)
         Text(stringResource(R.string.settings_chords_show), style = MaterialTheme.typography.bodyLarge)
-        br.app.stagebook.ui.components.SegmentedChoice(listOf(br.app.stagebook.ui.components.Choice(true, R.string.editor_lyrics_chords), br.app.stagebook.ui.components.Choice(false, R.string.settings_lyrics_only)), look.chords, actions.onChords)
+        br.app.stagebook.ui.components.SegmentedChoice(
+            listOf(br.app.stagebook.ui.components.Choice(SongProfile.CHORDS, R.string.editor_lyrics_chords), br.app.stagebook.ui.components.Choice(SongProfile.LYRICS, R.string.settings_lyrics_only), br.app.stagebook.ui.components.Choice(SongProfile.AUTO, R.string.settings_profile_auto)),
+            look.profile, actions.onProfile,
+        )
+        if (look.autoProfile) Text(stringResource(R.string.settings_profile_auto_detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (look.chords) {
             // the same order as the lyrics card: size, font and colour; the pinned preview above shows them (user, 01/11)
             Text(stringResource(R.string.settings_chords_size, (draft.chordScale * 100).roundToInt()), style = MaterialTheme.typography.bodyLarge)
@@ -1272,8 +1283,11 @@ internal fun pedalActions(playerMode: Boolean, current: PedalAction): List<Pedal
 private fun ImportSitesDetail(look: Look, actions: SettingsActions) {
     // only the list for the user's profile: chord sites with lyrics and chords, lyrics sites with lyrics only (the
     // importer opens the profile's default; the other list would just be noise)
-    if (look.chords) SiteListCard(stringResource(R.string.settings_chord_sites), look.chordSites) { actions.onSites(true, it) }
-    else SiteListCard(stringResource(R.string.settings_lyric_sites), look.lyricSites) { actions.onSites(false, it) }
+    // the automatic profile imports both kinds (the importer asks which), so it shows both lists
+    val kinds = if (look.autoProfile) listOf(SiteKind.CHORDS, SiteKind.LYRICS) else listOf(look.siteKind)
+    kinds.forEach { kind ->
+        SiteListCard(stringResource(if (kind == SiteKind.CHORDS) R.string.settings_chord_sites else R.string.settings_lyric_sites), look.sites(kind)) { actions.onSites(kind, it) }
+    }
 }
 
 @Composable

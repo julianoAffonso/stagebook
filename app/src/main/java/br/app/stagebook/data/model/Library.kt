@@ -148,6 +148,30 @@ enum class StageColumns {
  */
 val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !extrasOn
 
+/** The stage's profile, as Settings offers it. */
+enum class SongProfile { CHORDS, LYRICS, AUTO }
+
+/** What a list of import sites is for. */
+enum class SiteKind { LYRICS, CHORDS }
+
+val Look.profile: SongProfile get() = when {
+    autoProfile -> SongProfile.AUTO
+    chords -> SongProfile.CHORDS
+    else -> SongProfile.LYRICS
+}
+
+/** The automatic profile shows chords where a song has them: it is the chords profile that also asks on import. */
+fun Look.withProfile(profile: SongProfile): Look = copy(chords = profile != SongProfile.LYRICS, autoProfile = profile == SongProfile.AUTO)
+
+/**
+ * The kind of site the stage's profile imports from. The automatic profile has no kind of its own: the importer asks,
+ * and what can't ask (a setlist's missing songs) takes the chord sites.
+ */
+val Look.siteKind: SiteKind get() = if (chords) SiteKind.CHORDS else SiteKind.LYRICS
+
+/** The import sites of one kind, in the user's order. */
+fun Look.sites(kind: SiteKind): List<ImportSite> = if (kind == SiteKind.CHORDS) chordSites else lyricSites
+
 /** Some part is off (band, internet, player, extras): the alert on open lists which. */
 val Look.anyOff: Boolean get() = !bandOn || !internetOn || !playerMode || !extrasOn
 
@@ -212,6 +236,8 @@ data class Look(
     val midiOutName: String = "",
     // chords (step 3): "lyrics and chords" profile (false = lyrics only), chord size relative to the lyrics and color
     val chords: Boolean = true,
+    // the automatic profile (user, 13/11): each song shows the most it has, and the importer asks what is coming in
+    val autoProfile: Boolean = false,
     val chordScale: Float = 0.8f,
     val chordColor: Int = 0xFFFFC107.toInt(),
     // highlighted phrases (==…==): a see-through marker, chosen in Stage look (user, 01/11)

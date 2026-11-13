@@ -73,7 +73,7 @@ enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
 fun HomeScreen(
     onOpenSong: (String) -> Unit,
     onEditSong: (String?) -> Unit,
-    onImport: (String) -> Unit,
+    onImport: (query: String, kind: String) -> Unit,
     onOpenSetlist: (String) -> Unit,
     onPlaySetlist: (String) -> Unit,
     onScanSetlist: () -> Unit = {},
