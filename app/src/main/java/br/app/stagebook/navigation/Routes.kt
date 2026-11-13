@@ -33,4 +33,4 @@ data class Stage(
 )
 
 @Serializable
-data class Importer(val query: String = "", val queued: Boolean = false)   // queued: batch importing into a setlist
+data class Importer(val query: String = "", val queued: Boolean = false, val kind: String = "")   // queued: batch importing into a setlist

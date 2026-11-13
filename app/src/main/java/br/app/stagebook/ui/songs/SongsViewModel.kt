@@ -115,6 +115,8 @@ class SongsViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 
+    /** The automatic profile imports lyrics or chords: the importer has to ask which before it opens a site. */
+    fun asksKind(): Boolean = repository.library.value.look.autoProfile
     fun onQueryChange(q: String) { query.value = q }
 
     fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }

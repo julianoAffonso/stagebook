@@ -1,6 +1,9 @@
 package br.app.stagebook.ui.settings
 
 import br.app.stagebook.ui.installApk
+import br.app.stagebook.data.model.SiteKind
+import br.app.stagebook.data.model.SongProfile
+import br.app.stagebook.data.model.withProfile
 import br.app.stagebook.data.model.ImportSite
 import br.app.stagebook.data.model.Instrument
 import br.app.stagebook.data.model.ChordListPlace
@@ -261,8 +264,8 @@ class SettingsViewModel @Inject constructor(
     fun setChordFont(f: StageFont) = repository.updateLook { it.copy(chordFont = f) }
     fun setSectionFont(f: StageFont) = repository.updateLook { it.copy(sectionFont = f) }
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
-    fun setSites(chords: Boolean, sites: List<ImportSite>) =
-        repository.updateLook { if (chords) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
+    fun setSites(kind: SiteKind, sites: List<ImportSite>) =
+        repository.updateLook { if (kind == SiteKind.CHORDS) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
 
     fun setPlayerMode(on: Boolean) {
         repository.updateLook { it.copy(playerMode = on).copy(essentialAlertOff = false) }
@@ -290,7 +293,7 @@ class SettingsViewModel @Inject constructor(
     fun setChordTap(on: Boolean) = repository.updateLook { it.copy(chordTap = on) }
     fun setWebEditorOn(on: Boolean) = repository.updateLook { it.copy(webEditorOn = on) }
     fun setChordList(p: ChordListPlace) = repository.updateLook { it.copy(chordList = p) }
-    fun setChords(on: Boolean) = repository.updateLook { it.copy(chords = on) }
+    fun setProfile(profile: SongProfile) = repository.updateLook { it.withProfile(profile) }
     fun setSectionScale(s: Float) = repository.updateLook { it.copy(sectionScale = s.coerceIn(Look.MIN_SECTION_SCALE, Look.MAX_SECTION_SCALE)) }
     fun setChordScale(s: Float) = repository.updateLook { it.copy(chordScale = s.coerceIn(Look.MIN_CHORD_SCALE, Look.MAX_CHORD_SCALE)) }
     fun setChordColor(argb: Int) = repository.updateLook { it.copy(chordColor = argb) }

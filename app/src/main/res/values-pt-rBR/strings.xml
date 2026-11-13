@@ -410,7 +410,13 @@
     <string name="settings_chords_card">Acordes na letra</string>
     <string name="settings_chords_show">No palco</string>
     <string name="settings_lyrics_only">Só letra</string>
-    <string name="settings_chords_show_help">Letra e cifra: os acordes aparecem em cima da letra. Só letra: o palco mostra só a letra, mesmo nas músicas com cifra.</string>
+    <string name="settings_profile_auto">Automático</string>
+    <string name="settings_profile_auto_detail">Cada música mostra o mais completo que ela tem: cifra quando tem, letra quando não. Ao importar, o app pergunta se é letra ou cifra.</string>
+    <string name="import_kind_title">O que você quer importar?</string>
+    <string name="import_kind_lyrics">Letra</string>
+    <string name="import_kind_chords">Cifra</string>
+    <string name="settings_import_sites">Sites de importação</string>
+    <string name="settings_chords_show_help">Letra e cifra: os acordes aparecem em cima da letra. Só letra: o palco mostra só a letra, mesmo nas músicas com cifra. Automático: como letra e cifra, e o importador pergunta se a música entra como letra ou cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
     <string name="settings_translate_sections">Nomes de seção no idioma do app</string>
