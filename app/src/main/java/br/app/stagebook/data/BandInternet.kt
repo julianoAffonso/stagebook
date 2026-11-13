@@ -208,7 +208,7 @@ class BandInternet @Inject constructor(
                 }
                 got.packages.forEach { (pid, text, songs) ->
                     // a repeat (a resend that arrived twice) doesn't come in again; the receipt goes anyway
-                    if (seen.add("${m.id}|$pid")) inbox.add(m.id, m.name, text, songs)
+                    if (seen.add("${m.id}|$pid")) inbox.add(m.id, m.name, text, songs, got.breaks[pid])
                     cloud.receipt(key, m.id, pid)
                 }
                 out = out.filterNot { it.to == m.id && it.id in got.receipts }

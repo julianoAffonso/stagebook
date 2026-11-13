@@ -749,7 +749,7 @@ fun StageScreen(
         Modifier
             .fillMaxSize()
             // under the break the song is still drawn, but a screen reader must not read what the break covers
-            .then(if (onBreakNow) Modifier.clearAndSetSemantics {} else Modifier)
+            .then(if (onBreakNow || uiState.followBreak != null) Modifier.clearAndSetSemantics {} else Modifier)
             .background(Color(look.bg))
             .padding(horizontal = Spacing.l),
     ) {
@@ -1430,6 +1430,20 @@ fun StageScreen(
             vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
             onNext = ::next,
             onPrevious = ::previous,
+        )
+    }
+    // following the band: the leader's break covers this stage too, with the song each one has. Only the leader ends
+    // it (a tap here does nothing); leaving the stage, or the band, works as on any song
+    uiState.followBreak?.takeIf { !onBreakNow }?.let { rest ->
+        StageBreak(
+            since = rest.since,
+            next = rest.next,
+            nextKey = rest.key,
+            bg = Color(look.bg),
+            fg = fg,
+            vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
+            onNext = {},
+            onPrevious = {},
         )
     }
     // above the break too: there it is the only way out on screen besides going on or back

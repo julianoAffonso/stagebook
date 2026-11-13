@@ -49,6 +49,24 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
 @Immutable
 data class StageSetlist(val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList())
 
+/**
+ * The leader's break on a follower's stage: [since] when it started (this device's clock), [next] the song that comes
+ * after it and that song's [key] here ("" = none written, or the song isn't on this device).
+ */
+@Immutable
+data class FollowBreak(val since: Long, val next: String, val key: String = "")
+
+/**
+ * The break a follower's stage shows: the next song is the one the leader announced, with the title and key of this
+ * device's own copy when it has one.
+ */
+internal fun followBreak(role: br.app.stagebook.data.BandConduct.Role.Following, songs: List<br.app.stagebook.data.model.Song>): FollowBreak? {
+    val since = role.breakSince ?: return null
+    val item = role.msg.songs.getOrNull(role.msg.index + 1) ?: return null
+    val own = br.app.stagebook.domain.Conduct.find(item, songs)
+    return FollowBreak(since, own?.title ?: item.title, own?.let { Chords.key(it.text) }.orEmpty())
+}
+
 @Immutable
 data class StageUiState(
     val loading: Boolean = true,
@@ -57,6 +75,8 @@ data class StageUiState(
     /** Following the band: the leader's next song (the follower's stage holds only the current one); [followEnd]: it's the last. */
     val followNext: String? = null,
     val followEnd: Boolean = false,
+    /** Following the band: the leader is on a break, and this stage shows it too (null = no break). */
+    val followBreak: FollowBreak? = null,
     /** A show (a setlist, or following the band): leaving asks first. A single song from the library leaves at once. */
     val live: Boolean = false,
     /** The setlist's breaks: each one comes before the song at that position (see SetlistBreaks). */
@@ -231,6 +251,8 @@ class StageViewModel @Inject constructor(
     }
     override fun onCleared() {
         stageGate.leave()
+        // the break goes away with this stage: the band doesn't stay on a break nobody can end
+        route.setId?.let { conduct.rest(it, null) }
         // leaving the stage stops the backing track; a follower going to the leader's next song swaps one stage for
         // another (the new one enters first), and the track playing goes on, as when changing songs (audit 02/11)
         // back to the start: the same song on another stage (a setlist) went on from where it was left
@@ -274,6 +296,14 @@ class StageViewModel @Inject constructor(
         shownIndex = index
         if (savedStateHandle.get<Int>(BREAK_AT) != index) savedStateHandle.remove<Long>(BREAK_START)
     }
+    // leading the band: the followers' stages show this stage's break, and leave it, with it. How long it has lasted
+    // goes along, so a stage that comes back in the middle of a break (the device turned) says the right time
+    init {
+        route.setId?.let { setId ->
+            viewModelScope.launch { breakSince.collect { since -> conduct.rest(setId, since?.let { System.currentTimeMillis() - it }) } }
+        }
+    }
+
     /** Song the stage opens on (position in the setlist). */
     val start: Int = route.start
 
@@ -282,11 +312,13 @@ class StageViewModel @Inject constructor(
         val ids = set?.items ?: listOfNotNull(route.songId)
         // following, the "Next:" at the end of the song comes from the leader's setlist, which the message carries
         // (user, 02/11: the follower saw no next song even with the same setlist)
-        val follow = (role as? br.app.stagebook.data.BandConduct.Role.Following)?.takeIf { set == null && it.songId != null && it.songId == route.songId }?.msg
+        val following = (role as? br.app.stagebook.data.BandConduct.Role.Following)?.takeIf { set == null && it.songId != null && it.songId == route.songId }
+        val follow = following?.msg
         val followNext = follow?.songs?.getOrNull(follow.index + 1)?.title
         StageUiState(
             followNext = followNext,
             followEnd = follow != null && followNext == null && follow.index >= 0,
+            followBreak = following?.let { followBreak(it, lib.songs) },
             live = set != null || role is br.app.stagebook.data.BandConduct.Role.Following,
             loading = !loaded,
             songs = ids.map { id ->
