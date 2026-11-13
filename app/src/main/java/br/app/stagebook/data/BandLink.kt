@@ -139,7 +139,7 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, packageBytes(list, songs))
     }
 
-    private fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray =
+    internal fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray =
         json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
 
     /**
@@ -270,11 +270,20 @@ class BandLink @Inject constructor(
         val member = trust.member(from.id) ?: return false
         val key = pairKeyWith(member.id) ?: return false
         val plain = ShareCode.decrypt(key, body) ?: return false
-        val pkg = runCatching { json.decodeFromString(Package.serializer(), plain.decodeToString()) }.getOrNull() ?: return false
-        val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return false
-        if (QrPayload.parse(text) == null) return false
-        inbox.add(member.id, from.name.ifBlank { member.name }, text, pkg.songs)
+        val pkg = openPackage(plain) ?: return false
+        inbox.add(member.id, from.name.ifBlank { member.name }, pkg.text, pkg.songs, pkg.breaks)
         return true
+    }
+
+    /** What a band package holds, already decrypted: the list's text, the songs and the list's breaks (null = it says none). */
+    internal class Opened(val text: String, val songs: List<SetlistCloud.SharedSong>, val breaks: List<Int>?)
+
+    internal fun openPackage(plain: ByteArray): Opened? {
+        val pkg = runCatching { json.decodeFromString(Package.serializer(), plain.decodeToString()) }.getOrNull() ?: return null
+        val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
+        val text = QrPayload.unpack(packed) ?: return null
+        if (QrPayload.parse(text) == null) return null
+        return Opened(text, pkg.songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
     }
 
     @Synchronized

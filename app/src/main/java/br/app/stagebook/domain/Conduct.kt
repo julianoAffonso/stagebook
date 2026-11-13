@@ -9,6 +9,9 @@ import kotlinx.serialization.json.Json
  * needing the setlist, only the song. Before starting, the leader sends [CHECK] and each one answers what's missing;
  * everyone's missing songs come back in every message ([Msg.missing]) so the whole band sees the alert, otherwise the
  * song starts and someone has no lyrics. Travels encrypted as [BandProtocol.Kind.CONDUCT].
+ *
+ * The leader's break (a setlist's break on its stage) goes in the same [OPEN] message, as [Msg.breakMs]: an app that
+ * doesn't know the field reads the message as before and stays on the song before the break.
  */
 object Conduct {
     const val CHECK = "check"   // this is the setlist: what are you missing?
@@ -30,7 +33,16 @@ object Conduct {
         val songs: List<Item> = emptyList(),
         val index: Int = -1,
         val missing: List<Lack> = emptyList(),
-    )
+        // the leader is on the break after song [index], for this long when the message left (-1 = no break). How long,
+        // not since when: two devices' clocks never agree. Left out of the message when there is no break
+        val breakMs: Long = -1,
+    ) {
+        /**
+         * How long the leader's break has lasted, or null when there's none. Only what makes sense counts: a break
+         * comes after the song on stage and before another one of the setlist, and doesn't last days.
+         */
+        val rest: Long? get() = breakMs.takeIf { type == OPEN && it in 0..MAX_BREAK_MS && index >= 0 && index + 1 < songs.size }
+    }
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -61,4 +73,5 @@ object Conduct {
     fun lacks(replies: Collection<Lack>): List<Lack> = replies.filter { it.titles.isNotEmpty() }.sortedBy { it.who }
 
     const val MAX_SONGS = 200
+    const val MAX_BREAK_MS = 24 * 60 * 60_000L
 }

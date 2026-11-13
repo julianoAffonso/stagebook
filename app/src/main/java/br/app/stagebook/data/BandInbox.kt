@@ -33,6 +33,7 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         val at: Long = System.currentTimeMillis(),
         val seen: Boolean = false,
         val updated: Boolean = false,   // the same person sent again with changes: "updated at 21:04"
+        val breaks: List<Int>? = null,   // the setlist's breaks, between the songs of [text]; null = the sender said nothing
     ) {
         /** Setlist name; empty = loose songs. */
         val setName: String get() = text.split('\n').getOrNull(2).orEmpty()
@@ -53,12 +54,17 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
      * Keeps what arrived. The same send arriving twice (over Wi-Fi and the internet) doesn't repeat; the same setlist
      * from the same person replaces the old one (they fixed it and sent again: no point reviewing the old version).
      */
-    fun add(fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>) {
+    fun add(fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>, breaks: List<Int>? = null) {
         // everything from the band (local network or internet) passes here: only setlists and songs in plain text
         if (!br.app.stagebook.domain.BandContent.listOk(text)) return
-        val item = Item(UUID.randomUUID().toString(), fromId, fromName, text, songs.filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS))
+        // and breaks only where this setlist can have one
+        val valid = breaks?.let { br.app.stagebook.domain.SetlistBreaks.normalise(it, br.app.stagebook.domain.QrPayload.parse(text)?.songs?.size ?: 0) }
+        val item = Item(
+            UUID.randomUUID().toString(), fromId, fromName, text, songs.filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS),
+            breaks = valid,
+        )
         _items.update { list ->
-            if (list.any { it.fromId == fromId && it.text == text && it.songs == item.songs }) return@update list
+            if (list.any { it.fromId == fromId && it.text == text && it.songs == item.songs && it.breaks == item.breaks }) return@update list
             val old = if (item.setName.isEmpty()) emptyList() else list.filter { it.fromId == fromId && it.setName == item.setName }
             // the same person's new version replaces the old one and is marked updated (and unseen again)
             ((list - old.toSet()) + item.copy(updated = old.isNotEmpty())).takeLast(MAX)

@@ -1429,6 +1429,19 @@ fun StageScreen(
             onPrevious = ::previous,
         )
     }
+    // following the band: the leader's break covers this stage too, with the song each one has. Only the leader ends
+    // it (a tap here does nothing); leaving the stage, or the band, works as on any song
+    uiState.followBreak?.takeIf { !onBreakNow }?.let { rest ->
+        StageBreak(
+            since = rest.since,
+            next = if (rest.key.isEmpty()) rest.next else "${rest.next} · ${rest.key}",
+            bg = Color(look.bg),
+            fg = fg,
+            vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
+            onNext = {},
+            onPrevious = {},
+        )
+    }
     // above the break too: there it is the only way out on screen besides going on or back
     if (setlist != null) {
         StageSetlistLayer(

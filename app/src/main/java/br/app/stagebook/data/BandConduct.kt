@@ -37,9 +37,15 @@ class BandConduct @Inject constructor(
         @Immutable
         data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0) : Role
 
-        /** [songId]: the current song here (null = missing here); [at]: last news from the leader (device clock). */
+        /**
+         * [songId]: the current song here (null = missing here); [at]: last news from the leader (device clock);
+         * [breakSince]: the leader is on the break after that song since then, on this device's clock (null = no break).
+         */
         @Immutable
-        data class Following(val fromId: String, val msg: Conduct.Msg, val songId: String?, val at: Long = System.currentTimeMillis()) : Role {
+        data class Following(
+            val fromId: String, val msg: Conduct.Msg, val songId: String?, val at: Long = System.currentTimeMillis(),
+            val breakSince: Long? = null,
+        ) : Role {
             /** No news for more than [GONE_MS]: the leader is gone (battery, app closed, off the Wi-Fi). */
             fun gone(now: Long = System.currentTimeMillis()) = now - at > GONE_MS
         }
@@ -60,6 +66,22 @@ class BandConduct @Inject constructor(
     @Volatile private var leftFrom: String? = null
     private val scope = backgroundScope(Dispatchers.IO)   // errors logged, never a crash on stage
     private var searchedAt = -1   // the song for which a delivery failure already started the search (once per song)
+
+    /** This device's clock; the tests' own, so a break's time is checked without waiting. */
+    internal var clock: () -> Long = System::currentTimeMillis
+
+    /** How a message reaches the band (the tests look at what goes out). */
+    internal var deliver: suspend (Conduct.Msg) -> Map<String, Conduct.Lack> = { link.conduct(it) }
+
+    // leading: the break on this stage, when it started (null = none). Kept apart from the message: each one that
+    // leaves, the keep-alive and a resend to who just arrived too, says how long the break has lasted by then
+    @Volatile private var breakStart: Long? = null
+    private val moves = java.util.concurrent.atomic.AtomicInteger()   // song changes and breaks, to tell a newer one came
+
+    private fun stamped(msg: Conduct.Msg): Conduct.Msg {
+        val start = breakStart?.takeIf { msg.type == Conduct.OPEN } ?: return msg
+        return msg.copy(breakMs = (clock() - start).coerceIn(0L, Conduct.MAX_BREAK_MS))
+    }
 
     init {
         link.conductHandler = ::onMessage
@@ -97,6 +119,7 @@ class BandConduct @Inject constructor(
      */
     fun start(setId: String, set: String, songs: List<Conduct.Item>, index: Int = 0) {
         searchedAt = -1
+        breakStart = null
         val msg = Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index)
         _role.value = Role.Conducting(setId, msg)
         link.burst(evenOnStage = true)
@@ -107,7 +130,32 @@ class BandConduct @Inject constructor(
     fun open(setId: String, index: Int) {
         val now = _role.value as? Role.Conducting ?: return
         if (now.setId != setId || (now.msg.index == index && now.msg.type == Conduct.OPEN)) return
+        breakStart = null   // another song on stage: the break, if there was one, is over
+        moves.incrementAndGet()
         scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, index = index)) }
+    }
+
+    /**
+     * The leader's stage of setlist [setId] is on the break after the song on stage, for [elapsedMs] now, or left it
+     * (null): the followers' stages show the break, or go back to the song. Nothing happens when not leading.
+     */
+    fun rest(setId: String, elapsedMs: Long?) {
+        val now = _role.value as? Role.Conducting ?: return
+        if (now.setId != setId) return
+        val start = elapsedMs?.let { clock() - it.coerceAtLeast(0L) }
+        if ((start == null) == (breakStart == null)) return
+        breakStart = start
+        val move = moves.incrementAndGet()
+        scope.launch {
+            // leaving forward, the next song's message follows at once and already says there's no break; sent now,
+            // this one could arrive after it and take the band back a song. It only goes if nothing else did
+            if (start == null) {
+                kotlinx.coroutines.delay(LEFT_BREAK_MS)
+                if (moves.get() != move) return@launch
+            }
+            val still = _role.value as? Role.Conducting ?: return@launch
+            send(still.setId, still.msg.copy(type = Conduct.OPEN))
+        }
     }
 
     /**
@@ -129,7 +177,8 @@ class BandConduct @Inject constructor(
     fun end() {
         val now = (_role.value as? Role.Conducting)?.msg ?: return
         _role.value = Role.None
-        scope.launch { link.conduct(now.copy(type = Conduct.END, missing = emptyList())) }
+        breakStart = null
+        scope.launch { deliver(now.copy(type = Conduct.END, missing = emptyList())) }
     }
 
     /** Follower: stops following (comes back if the leader starts again with [start]). */
@@ -150,14 +199,14 @@ class BandConduct @Inject constructor(
         if (_role.value !is Role.Conducting) return   // ended before sending: doesn't turn back on
         val ticket = newest.ticket()
         if (!keepLeading(Role.Conducting(setId, msg))) return
-        val replies = link.conduct(msg)
+        val replies = deliver(stamped(msg))
         if (_role.value !is Role.Conducting) return   // ended while sending
         if (!newest.isNewest(ticket)) return   // a newer song went out meanwhile: this late answer would bring back the old one
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
         val noAnswer = (members - replies.size).coerceAtLeast(0)
         if (!keepLeading(Role.Conducting(setId, withLacks, noAnswer))) return
         // the missing songs changed: send again so everyone sees the same alert
-        if (withLacks.missing != msg.missing && newest.isNewest(ticket)) link.conduct(withLacks)
+        if (withLacks.missing != msg.missing && newest.isNewest(ticket)) deliver(stamped(withLacks))
         // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)
         if (noAnswer > 0 && searchedAt != msg.index) { searchedAt = msg.index; link.burst(evenOnStage = true) }
     }
@@ -174,12 +223,22 @@ class BandConduct @Inject constructor(
         val library = repository.library.value.songs
         val song = msg.songs.getOrNull(msg.index)?.let { Conduct.find(it, library) }
         val before = _role.value as? Role.Following
-        _role.value = Role.Following(from.id, msg, song?.id)
+        _role.value = Role.Following(from.id, msg, song?.id, breakSince = breakSince(from.id, msg, before))
         if (song != null && (before?.songId != song.id || before.msg.index != msg.index)) _openSong.tryEmit(song.id)
         return Conduct.lackFor(identity.name.value, msg, library)
     }
 
+    // the leader says how long its break has lasted; here that becomes when it started on this device's clock. The same
+    // break told again (keep-alive, a resend) keeps the earliest start: the message's trip only ever makes it look later
+    private fun breakSince(fromId: String, msg: Conduct.Msg, before: Role.Following?): Long? {
+        val since = clock() - (msg.rest ?: return null)
+        val known = before?.takeIf { it.fromId == fromId && it.msg.index == msg.index }?.breakSince ?: return since
+        return if (kotlin.math.abs(since - known) <= SAME_BREAK_MS) minOf(since, known) else since
+    }
+
     companion object {
+        const val LEFT_BREAK_MS = 300L
+        const val SAME_BREAK_MS = 2_000L
         const val ALIVE_MS = 3 * 60_000L
         const val SEARCH_SENDS = 3
         const val SEARCH_EVERY_MS = 5_000L

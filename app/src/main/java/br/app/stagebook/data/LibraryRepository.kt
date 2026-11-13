@@ -279,6 +279,15 @@ class LibraryRepository @Inject constructor(
         s.copy(items = items, breaks = SetlistBreaks.afterReplacing(s.breaks, s.items, items))
     }
 
+    /**
+     * A setlist that came from the band or by the 3 words, with its breaks: [slots] are its songs in the sender's
+     * order (null = not here). The sender's [breaks] replace the ones the setlist had.
+     */
+    fun setReceivedSetlist(setId: String, slots: List<String?>, breaks: List<Int>) = updateSet(setId) { s ->
+        val placed = SetlistBreaks.place(slots, breaks)
+        s.copy(items = placed.items, breaks = placed.breaks)
+    }
+
     fun qrPayload(setId: String): ByteArray? = _library.value.setlist(setId)?.let { QrPayload.build(it, _library.value) }
 
     // ---- look ----

@@ -92,6 +92,21 @@ object SetlistBreaks {
         return normalise(moved, new.size)
     }
 
+    /** A received setlist as it ends up here: its songs (ids) and the breaks between them. */
+    data class Placed(val items: List<String>, val breaks: List<Int>)
+
+    /**
+     * A received setlist whose songs are [slots], in the sender's order (null = a song that isn't here; a song that
+     * shows up twice counts once, as in any setlist), with the sender's [breaks]: each stays before the same song, or
+     * before the next one that is here.
+     */
+    fun place(slots: List<String?>, breaks: List<Int>): Placed {
+        val seen = HashSet<String>()
+        val gone = HashSet<Int>()
+        slots.forEachIndexed { i, id -> if (id == null || !seen.add(id)) gone += i }
+        return Placed(slots.filterIndexed { i, _ -> i !in gone }.filterNotNull(), afterRemoving(breaks, slots.size, gone))
+    }
+
     /** The break's counter on stage, minutes and seconds since it started: "00:07", "12:30", "75:03". */
     fun clock(elapsedMs: Long): String {
         val seconds = elapsedMs.coerceAtLeast(0L) / 1_000L
