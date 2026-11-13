@@ -125,39 +125,29 @@ fun StagebookNavHost(
     // shows the current song. Just looking at a setlist does pull (the S26 sat on the setlist while the band played, 02/11)
     // A song asked for while on one of those screens waits and opens on coming back to a screen that pulls, if it's
     // still the leader's current song: before, coming back showed nothing until the next song (hotspot test, 02/11)
-    var pendingFollow by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    // The leader's break opens the stage the same way for a follower who doesn't have the song before it: a stage with
+    // the break alone (user, 13/11)
+    val pendingFollow = remember { br.app.stagebook.domain.PendingFollow() }
+    fun stageFor(target: String) = if (target == br.app.stagebook.data.BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
     // the setlist screen busy (renaming, sharing, deleting, selecting, dragging): the song waits for it
     val followHold = remember { androidx.compose.runtime.mutableStateOf(false) }
     fun pulls(dest: androidx.navigation.NavDestination) = dest.pullsToStage() && !(dest.hasRoute<SetlistDetail>() && followHold.value)
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             val here = nav.currentBackStackEntry?.destination ?: return@collect
-            if (pulls(here)) {
-                pendingFollow = null
-                nav.navigate(Stage(songId = id)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
-            } else {
-                pendingFollow = id
-            }
+            pendingFollow.arrive(id, pulls(here))?.let { nav.navigate(stageFor(it)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true } }
         }
     }
     LaunchedEffect(nav) {
         nav.currentBackStackEntryFlow.collect { entry ->
-            val id = pendingFollow ?: return@collect
-            if (pulls(entry.destination)) {
-                pendingFollow = null
-                if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
-            }
+            pendingFollow.release(pulls(entry.destination), followingSong.value)?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }
         }
     }
     // the setlist screen done with what it was doing: a song that waited for it opens now
     LaunchedEffect(nav) {
         androidx.compose.runtime.snapshotFlow { followHold.value }.collect { busy ->
-            val id = pendingFollow ?: return@collect
             val here = nav.currentBackStackEntry?.destination ?: return@collect
-            if (!busy && here.hasRoute<SetlistDetail>()) {
-                pendingFollow = null
-                if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
-            }
+            pendingFollow.release(!busy && here.hasRoute<SetlistDetail>(), followingSong.value)?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }
         }
     }
     val appContext = androidx.compose.ui.platform.LocalContext.current

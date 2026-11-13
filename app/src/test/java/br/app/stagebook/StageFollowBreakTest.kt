@@ -13,6 +13,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import br.app.stagebook.ui.LocalPedalInput
 import br.app.stagebook.ui.PedalInput
 import br.app.stagebook.ui.stage.FollowBreak
@@ -94,5 +98,96 @@ class StageFollowBreakTest {
         compose.onNodeWithText("INTERVALO").assertIsDisplayed()
         assertEquals(0, index)
         assertEquals("a follower's stage starts no break of its own", 0, asked)
+    }
+
+    // ---- nothing moves under the leader's break (the pedal still turned the page there, user 13/11) ----
+
+    private val long = StageSong("Longa", "", (1..30).joinToString("\n\n") { v -> (1..4).joinToString("\n") { "longa estrofe $v linha $it" } }, false, id = "s1")
+    private val keys = mapOf(
+        KeyEvent.KEYCODE_B to br.app.stagebook.domain.PedalAction.NEXT_SONG,
+        KeyEvent.KEYCODE_C to br.app.stagebook.domain.PedalAction.PREVIOUS_SONG,
+        KeyEvent.KEYCODE_D to br.app.stagebook.domain.PedalAction.OPEN_SETLIST,
+    )
+    private var page by mutableIntStateOf(0)
+    private val moves = mutableListOf<Pair<Int, Int>>()
+
+    /** A stage of several pages (and, with [songs], several songs) under the leader's break. */
+    private fun showLong(songs: List<StageSong> = listOf(long), start: Int = 0, startPage: Int = 1, setlist: br.app.stagebook.ui.stage.StageSetlist? = null) {
+        index = start
+        page = startPage
+        compose.setContent {
+            StagebookTheme {
+                CompositionLocalProvider(LocalPedalInput provides pedal) {
+                    StageScreen(
+                        StageUiState(
+                            loading = false, songs = songs, live = true, followNext = "Segunda", followBreak = rest, setlist = setlist,
+                            look = br.app.stagebook.data.model.Look(fontSp = 34f, pedalKeys = keys),
+                        ),
+                        index, page, { s, p -> moves += s to p; index = s; page = p },
+                        onBreak = { asked++ },
+                    )
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun swipe(forward: Boolean) {
+        compose.onRoot().performTouchInput {
+            if (forward) swipeLeft(startX = centerX + width / 4f, endX = centerX - width / 4f)
+            else swipeRight(startX = centerX - width / 4f, endX = centerX + width / 4f)
+        }
+        compose.waitForIdle()
+    }
+
+    @Test fun `under the leader's break the pedal, a tap and a swipe turn no page`() {
+        rest = FollowBreak(System.currentTimeMillis(), "Segunda", "G")
+        showLong()
+        press(KeyEvent.KEYCODE_PAGE_DOWN)
+        press(KeyEvent.KEYCODE_PAGE_UP)
+        compose.onRoot().performTouchInput { click(Offset(width * 0.9f, height / 2f)) }
+        compose.onRoot().performTouchInput { click(Offset(width * 0.1f, height / 2f)) }
+        swipe(forward = true)
+        swipe(forward = false)
+        assertEquals("nothing asked the stage to move", emptyList<Pair<Int, Int>>(), moves)
+        assertEquals(0 to 1, index to page)
+        compose.onNodeWithText("INTERVALO").assertIsDisplayed()
+    }
+
+    @Test fun `under the leader's break the pedal changes no song either`() {
+        rest = FollowBreak(System.currentTimeMillis(), "Segunda", "G")
+        val three = listOf(long.copy(id = "a"), long.copy(id = "b"), long.copy(id = "c"))
+        showLong(three, start = 1)
+        press(KeyEvent.KEYCODE_B)   // next song
+        press(KeyEvent.KEYCODE_C)   // previous song
+        press(KeyEvent.KEYCODE_PAGE_DOWN)
+        press(KeyEvent.KEYCODE_PAGE_UP)
+        assertEquals(emptyList<Pair<Int, Int>>(), moves)
+        assertEquals(1 to 1, index to page)
+        assertEquals(0, asked)
+    }
+
+    @Test fun `the pedal still opens the setlist over the leader's break, and a song tapped there opens nothing`() {
+        rest = FollowBreak(System.currentTimeMillis(), "Segunda", "G")
+        val three = listOf(long.copy(id = "a", title = "Um"), long.copy(id = "b", title = "Dois"), long.copy(id = "c", title = "Tres"))
+        showLong(three, start = 1, setlist = br.app.stagebook.ui.stage.StageSetlist("Show de sábado"))
+        press(KeyEvent.KEYCODE_D)
+        compose.onNodeWithTag("stage_setlist").assertIsDisplayed()
+        compose.onNode(androidx.compose.ui.test.hasText("Tres") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("stage_setlist"))).performClick()
+        compose.waitForIdle()
+        assertEquals(emptyList<Pair<Int, Int>>(), moves)
+        assertEquals(1 to 1, index to page)
+    }
+
+    @Test fun `when the leader leaves the break the pedal turns the page again`() {
+        rest = FollowBreak(System.currentTimeMillis(), "Segunda", "G")
+        showLong()
+        press(KeyEvent.KEYCODE_PAGE_DOWN)
+        assertEquals(0 to 1, index to page)
+        rest = null
+        compose.waitForIdle()
+        compose.onNodeWithText("INTERVALO").assertDoesNotExist()
+        press(KeyEvent.KEYCODE_PAGE_DOWN)
+        assertEquals(0 to 2, index to page)
     }
 }

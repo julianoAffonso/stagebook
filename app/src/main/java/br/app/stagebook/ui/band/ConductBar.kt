@@ -61,7 +61,11 @@ sealed interface ConductUi {
     @Immutable
     data class Conducting(val set: String, val noAnswer: Int, val nowMissing: List<String>, val lacks: List<Conduct.Lack>) : ConductUi
 
-    /** [missingHere]: the current song isn't on this device; [gone]: the leader is gone (10 min with no news). */
+    /**
+     * [missingHere]: the current song isn't on this device; [gone]: the leader is gone (10 min with no news).
+     * [breakSince]: the leader is on a break since then (this device's clock); the strip then says so, with its time,
+     * and [song], [missingHere] and [nowMissing] are about the song that comes after the break, the one that matters now.
+     */
     @Immutable
     data class Following(
         val from: String,
@@ -70,22 +74,35 @@ sealed interface ConductUi {
         val gone: Boolean,
         val nowMissing: List<String>,
         val lacks: List<Conduct.Lack>,
+        val breakSince: Long? = null,
     ) : ConductUi
 }
 
+/** What the strip tells a follower: the leader's song, or the leader's break and the song after it. */
+internal fun followingUi(role: Role.Following, songs: List<br.app.stagebook.data.model.Song>, now: Long): ConductUi.Following {
+    val msg = role.msg
+    val next = role.breakSince?.let { msg.songs.getOrNull(msg.index + 1) }
+    if (next != null) {
+        val own = Conduct.find(next, songs)
+        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), Conduct.missingAt(msg, msg.index + 1), msg.missing, role.breakSince)
+    }
+    return ConductUi.Following(
+        msg.from, msg.songs.getOrNull(msg.index)?.title.orEmpty(), role.songId == null, role.gone(now),
+        Conduct.missingAt(msg, msg.index), msg.missing,
+    )
+}
+
 @HiltViewModel
-class ConductViewModel @Inject constructor(private val conduct: BandConduct) : ViewModel() {
+class ConductViewModel @Inject constructor(private val conduct: BandConduct, repository: br.app.stagebook.data.LibraryRepository) : ViewModel() {
     // clock for "gone" (every 30 s; only while the strip is on screen)
     private val tick = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
 
-    val ui: StateFlow<ConductUi?> = combine(conduct.role, tick) { role, now ->
+    // the library too: on a break the strip says whether the next song is here (looked up only then)
+    val ui: StateFlow<ConductUi?> = combine(conduct.role, tick, repository.library) { role, now, library ->
         when (role) {
             Role.None -> null
             is Role.Conducting -> ConductUi.Conducting(role.msg.set, role.noAnswer, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing)
-            is Role.Following -> ConductUi.Following(
-                role.msg.from, role.msg.songs.getOrNull(role.msg.index)?.title.orEmpty(), role.songId == null, role.gone(now),
-                Conduct.missingAt(role.msg, role.msg.index), role.msg.missing,
-            )
+            is Role.Following -> followingUi(role, library.songs, now)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -155,7 +172,14 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
                             },
                             style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
+                        val rest = (ui as? ConductUi.Following)?.takeIf { it.breakSince != null }
                         val detail = when {
+                            // the leader's break, for a follower on any screen: its time and what comes next (or that
+                            // the next song isn't here), in place of the song
+                            rest?.breakSince != null -> stringResource(
+                                R.string.conduct_break, br.app.stagebook.ui.components.breakClock(rest.breakSince),
+                                stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
+                            )
                             ui is ConductUi.Following && ui.missingHere -> stringResource(R.string.conduct_missing_here, ui.song)
                             nowMissing.isNotEmpty() -> stringResource(R.string.conduct_missing_now, nowMissing.joinToString(", "))
                             ui is ConductUi.Conducting && ui.noAnswer > 0 -> pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer)
@@ -195,6 +219,9 @@ private fun ConductBarSamples() {
         ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList()), {}, {}, {})
         ConductBar(ConductUi.Following("Voz", "Evidências", true, false, listOf("Baixo"), sampleLacks), {}, {}, {})
         ConductBar(ConductUi.Following("Voz", "", false, true, emptyList(), emptyList()), {}, {}, {})
+        // the leader's break, two minutes in, with the song that comes next
+        val since = remember { System.currentTimeMillis() - 125_000L }
+        ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), since), {}, {}, {})
     }
 }
 

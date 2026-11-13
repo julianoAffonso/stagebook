@@ -147,14 +147,15 @@ internal fun testStage(
     repo: LibraryRepository,
     saved: SavedStateHandle,
     show: br.app.stagebook.data.SetlistShowStore = br.app.stagebook.data.SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO)),
-) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
-    br.app.stagebook.data.BandConduct(
+    conduct: br.app.stagebook.data.BandConduct = br.app.stagebook.data.BandConduct(
         br.app.stagebook.data.BandLink(
             context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
             StageGate(), br.app.stagebook.data.BandInbox(context), repo,
         ),
         repo, br.app.stagebook.data.DeviceIdentity(context),
     ),
+) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
+    conduct,
     br.app.stagebook.data.MetronomeSound(context),
     br.app.stagebook.data.ChordPlayer(),
     br.app.stagebook.data.StageAnnouncer(

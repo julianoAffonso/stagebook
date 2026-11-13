@@ -22,7 +22,8 @@ import javax.inject.Singleton
  * "Lead the band" / "follow" (over the local network, [BandLink.conduct]). The leader starts with the setlist ([start]:
  * each one says what's missing), changes songs ([open]) and ends ([end]); everyone's missing songs go in every message,
  * so the whole band sees the alert. A follower turns nothing on: the first message already makes them follow and the
- * song opens by itself ([openSong]); [leave] stops following until the leader starts again.
+ * song opens by itself ([openSong]); [leave] stops following until the leader starts again. The leader's break opens
+ * the stage too, for a follower who doesn't have the song before it ([BREAK_ONLY]).
  */
 @Singleton
 class BandConduct @Inject constructor(
@@ -48,6 +49,12 @@ class BandConduct @Inject constructor(
         ) : Role {
             /** No news for more than [GONE_MS]: the leader is gone (battery, app closed, off the Wi-Fi). */
             fun gone(now: Long = System.currentTimeMillis()) = now - at > GONE_MS
+
+            /**
+             * What this device's stage shows for it: the leader's song here, or the leader's break alone when that song
+             * isn't here ([BREAK_ONLY]); null = nothing to show (the song is missing and there's no break).
+             */
+            val stage: String? get() = songId ?: BREAK_ONLY.takeIf { breakSince != null }
         }
     }
 
@@ -55,12 +62,15 @@ class BandConduct @Inject constructor(
     val role: StateFlow<Role> = _role.asStateFlow()
 
     private val _openSong = MutableSharedFlow<String>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    /** Follower: the song to open on stage now. */
+    /** Follower: the song to open on stage now, or [BREAK_ONLY]. */
     val openSong: SharedFlow<String> = _openSong
 
-    /** Follower: the leader's current song here (null = not following, or missing here). */
+    /**
+     * Follower: what the stage shows for the leader now, the song here or [BREAK_ONLY] (null = not following, or the
+     * song is missing here and the leader isn't on a break).
+     */
     val followingSong: StateFlow<String?> by lazy {   // lazy: [scope] is declared further down
-        _role.map { (it as? Role.Following)?.songId }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+        _role.map { (it as? Role.Following)?.stage }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
     }
 
     @Volatile private var leftFrom: String? = null
@@ -223,8 +233,11 @@ class BandConduct @Inject constructor(
         val library = repository.library.value.songs
         val song = msg.songs.getOrNull(msg.index)?.let { Conduct.find(it, library) }
         val before = _role.value as? Role.Following
-        _role.value = Role.Following(from.id, msg, song?.id, breakSince = breakSince(from.id, msg, before))
-        if (song != null && (before?.songId != song.id || before.msg.index != msg.index)) _openSong.tryEmit(song.id)
+        val now = Role.Following(from.id, msg, song?.id, breakSince = breakSince(from.id, msg, before))
+        _role.value = now
+        // a song, or a break after a song that isn't here: the stage opens once for it, not again on each sign of life
+        val stage = now.stage
+        if (stage != null && (before?.stage != stage || before.msg.index != msg.index)) _openSong.tryEmit(stage)
         return Conduct.lackFor(identity.name.value, msg, library)
     }
 
@@ -237,6 +250,11 @@ class BandConduct @Inject constructor(
     }
 
     companion object {
+        /**
+         * In place of a song's id: the leader is on a break and the song before it isn't on this device, so the stage
+         * opens on the break alone (a follower without that song saw no break, user 13/11). Never a song's id.
+         */
+        const val BREAK_ONLY = ""
         const val LEFT_BREAK_MS = 300L
         const val SAME_BREAK_MS = 2_000L
         const val ALIVE_MS = 3 * 60_000L

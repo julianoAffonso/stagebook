@@ -179,6 +179,13 @@ fun StageRoute(
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
+    if (viewModel.breakOnly) {
+        KeepScreenOn()
+        StageDoNotDisturb(uiState.look.stageDnd && !uiState.loading)
+        LeaderBreakStage(uiState, onBack)
+        return
+    }
     val playerUi by viewModel.playerUi.collectAsStateWithLifecycle()
     val usbReady by viewModel.usbReady.collectAsStateWithLifecycle()
     var index by rememberSaveable { mutableIntStateOf(viewModel.start) }
@@ -324,6 +331,40 @@ internal fun leaveWhenEmptied(loading: Boolean, showing: Boolean, onLeave: () ->
 }
 
 /**
+ * The stage of a follower who doesn't have the leader's song, while the leader is on a break: the break's screen
+ * alone, with the next song as this device has it (see [followBreak]). Only the leader ends the break; when it's over
+ * and no song of this device takes its place ([StageUiState.breakOver]), the stage leaves for the screen behind it.
+ * Leaving by hand asks first, as on any show.
+ */
+@Composable
+internal fun LeaderBreakStage(uiState: StageUiState, onBack: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val look = uiState.look
+    // on resume too: the way back is refused until then
+    LifecycleResumeEffect(uiState.breakOver) {
+        if (uiState.breakOver) onBack?.invoke()
+        onPauseOrDispose {}
+    }
+    var askExit by rememberSaveable { mutableStateOf(false) }
+    if (onBack != null) {
+        BackHandler { askExit = true }
+        if (askExit) {
+            ConfirmDialog(
+                stringResource(R.string.stage_exit_confirm),
+                stringResource(R.string.stage_exit),
+                onConfirm = onBack,
+                onDismiss = { askExit = false },
+                destructive = false,
+            )
+        }
+    }
+    Box(modifier.fillMaxSize().background(Color(look.bg))) {
+        uiState.followBreak?.let { rest ->
+            StageBreak(since = rest.since, next = rest.next, nextKey = rest.key, bg = Color(look.bg), fg = Color(look.fg), vertical = false, onNext = {}, onPrevious = {})
+        }
+    }
+}
+
+/**
  * Stage: one song at a time, full screen and lit, in pages (no scrolling: the pedal turns the whole page, so you don't
  * lose track of what was sung). At the end of a song it goes to the next in the setlist. A tap on the right half goes
  * forward, on the left goes back. Holding a line offers to edit the lyrics there; the top pencil opens the editor on
@@ -400,6 +441,9 @@ fun StageScreen(
     // a break that isn't there any more (taken out of the setlist meanwhile) doesn't come back later
     LaunchedEffect(breakSince != null, breakNext) { if (breakSince != null && !breakNext) onBreak(false) }
     BackHandler(enabled = onBreakNow) { onBreak(false) }
+    // following the band, the leader's break covers this stage and only the leader ends it: nothing moves underneath,
+    // or the song comes back on another page (the pedal still turned it, user 13/11)
+    val followRest = uiState.followBreak != null && !onBreakNow
     // the setlist over the stage (only on a stage opened from one): back closes it before anything else
     val setlist = uiState.setlist
     var setlistOpen by rememberSaveable { mutableStateOf(false) }
@@ -641,6 +685,7 @@ fun StageScreen(
     }
     fun go(forward: Boolean) {
         if (onBreakNow) { leaveBreak(forward); return }
+        if (followRest) { presses.steps = 0; return }
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
         if (forward && breakNext && current >= pageCount - 1) { onBreak(true); return }
@@ -653,6 +698,7 @@ fun StageScreen(
     // pedal set to "next song"/"previous song": always at its start; with a page turn on the way, it waits
     fun goSong(forward: Boolean) {
         if (onBreakNow) { leaveBreak(forward); return }
+        if (followRest) return
         if (presses.from != null) return
         if (forward && breakNext) { onBreak(true); return }
         val target = index + if (forward) 1 else -1
@@ -664,7 +710,7 @@ fun StageScreen(
     // MIDI, Now Playing and band message follow. No break on the way, and one on screen is left
     fun jumpTo(target: Int) {
         setlistOpen = false
-        if (target !in uiState.songs.indices) return
+        if (target !in uiState.songs.indices || followRest) return
         if (onBreakNow) {
             onBreak(false)
             // into the set after the break: its time counts from zero, as when the break is left forward
@@ -675,6 +721,8 @@ fun StageScreen(
         presses.from = index to page
         onPosition(target, 0)
     }
+    // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves
+    LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) autoOn = false }
     val settled = pageCountFor == index
     SideEffect {
         if (presses.from != null && settled && presses.from != index to page) {
@@ -2187,13 +2235,7 @@ private fun StageBreak(
     onPrevious: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(since) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(1_000L - (now - since).coerceAtLeast(0L) % 1_000L)
-        }
-    }
+    val elapsed = br.app.stagebook.ui.components.breakClock(since)
     val goOn by rememberUpdatedState(onNext)
     val goBack by rememberUpdatedState(onPrevious)
     val swipeMin = with(LocalDensity.current) { Sizes.swipe.toPx() }
@@ -2222,7 +2264,7 @@ private fun StageBreak(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(stringResource(R.string.set_break), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
-        Text(br.app.stagebook.domain.SetlistBreaks.clock(now - since), style = MaterialTheme.typography.displayLarge, color = fg, maxLines = 1)
+        Text(elapsed, style = MaterialTheme.typography.displayLarge, color = fg, maxLines = 1)
         // one line: a long name is cut and the key stays whole (on a phone the name wrapped and left the key alone
         // on the second line); read as one sentence
         val nextStyle = MaterialTheme.typography.titleLarge

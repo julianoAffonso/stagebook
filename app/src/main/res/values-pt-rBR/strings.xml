@@ -191,8 +191,9 @@
     <string name="conduct_conducting">Conduzindo · %1$s</string>
     <string name="conduct_following">Acompanhando %1$s</string>
     <string name="conduct_gone">%1$s desconectou há 10 minutos</string>
-    <string name="conduct_missing_here">Você não tem "%1$s"</string>
+    <string name="conduct_missing_here">Você não tem \"%1$s\"</string>
     <string name="conduct_missing_now">Sem esta música: %1$s</string>
+    <string name="conduct_break">Intervalo · %1$s · %2$s</string>
     <plurals name="conduct_no_answer">
         <item quantity="one">%1$d da banda não respondeu</item>
         <item quantity="many">%1$d da banda não responderam</item>

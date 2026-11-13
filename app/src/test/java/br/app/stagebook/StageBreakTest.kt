@@ -170,4 +170,24 @@ class StageBreakTest {
         compose.onNodeWithText("INTERVALO").assertDoesNotExist()
         compose.onNodeWithText("Uma linha da segunda", substring = true).assertIsDisplayed()
     }
+
+    // only going on or back leaves the break: nothing else moves the song it covers
+    @Test fun `on the break only going on or back moves the stage`() {
+        val keys = mapOf(
+            KeyEvent.KEYCODE_B to PedalAction.PLAY_PAUSE, KeyEvent.KEYCODE_C to PedalAction.OPEN_SETLIST, KeyEvent.KEYCODE_D to PedalAction.NONE,
+        )
+        show(listOf(1), Look(pedalKeys = keys))
+        forward()
+        compose.onNodeWithText("INTERVALO").assertIsDisplayed()
+        val before = since
+        press(KeyEvent.KEYCODE_B); press(KeyEvent.KEYCODE_C); press(KeyEvent.KEYCODE_D); press(KeyEvent.KEYCODE_A)
+        // a drag across the way the pages turn is no page turn
+        compose.onRoot().performTouchInput { down(Offset(width / 2f, height * 0.3f)); moveTo(Offset(width / 2f, height * 0.7f)); up() }
+        compose.waitForIdle()
+        assertEquals(0 to 0, song to page)
+        assertEquals("the break is the same one", before, since)
+        compose.onNodeWithText("INTERVALO").assertIsDisplayed()
+        forward()
+        assertEquals(1, song)
+    }
 }

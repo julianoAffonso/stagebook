@@ -186,6 +186,7 @@
     <string name="conduct_gone">%1$s disconnected 10 minutes ago</string>
     <string name="conduct_missing_here">You don\'t have \"%1$s\"</string>
     <string name="conduct_missing_now">Missing this song: %1$s</string>
+    <string name="conduct_break">Break · %1$s · %2$s</string>
     <plurals name="conduct_no_answer">
         <item quantity="one">%1$d band member didn\'t answer</item>
         <item quantity="other">%1$d band members didn\'t answer</item>
