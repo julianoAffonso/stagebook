@@ -53,8 +53,8 @@ class StageSetlistPanelTest {
     // long enough for a second page, so "back to the first page" is a real change
     private val long = (1..120).joinToString("\n") { "Linha $it da letra" }
     private val songs = listOf(
-        StageSong("Primeira", "Banda um", "Uma linha da primeira", false, id = "s1"),
-        StageSong("Segunda", "Banda dois", long, false, id = "s2"),
+        StageSong("Primeira", "Banda um · 1985", "Uma linha da primeira", false, id = "s1", artist = "Banda um"),
+        StageSong("Segunda", "Banda dois · 1999", long, false, id = "s2", artist = "Banda dois"),
         StageSong("Terceira", "", "Uma linha da terceira", false, id = "s3"),
         StageSong("Quarta", "", "Uma linha da quarta", false, id = "s4"),
     )
@@ -137,6 +137,7 @@ class StageSetlistPanelTest {
         listOf("Primeira", "Segunda", "Terceira", "Quarta").forEach { panelText(it).assertIsDisplayed() }
         listOf("1", "2", "3", "4").forEach { panelText(it).assertIsDisplayed() }
         panelText("Banda um").assertIsDisplayed()
+        panelText("Banda um · 1985").assertDoesNotExist()   // the year is the header's, not the row's
         panelText("INTERVALO").assertIsDisplayed()
         listOf("G", "Em", "A").forEach { panelText(it).assertIsDisplayed() }
         // in the setlist's order, the break between the second and the third

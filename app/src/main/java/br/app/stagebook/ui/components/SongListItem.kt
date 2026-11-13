@@ -46,6 +46,7 @@ fun SongListItem(
     onLongClick: (() -> Unit)? = null,   // hold: selection (share several), where the list supports it
     startPadding: Dp = Spacing.m,   // more when something is drawn over the row's start edge (a setlist's state strip)
     gap: Dp = Spacing.m,   // between the leading, the texts and the trailing; a setlist's rows keep them closer
+    titleLines: Int = 2,   // one where the row's end has more to show than the title's second line (the song list)
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -62,7 +63,7 @@ fun SongListItem(
         ) {
             leading?.invoke()
             if (inline) {
-                // the title has priority; whatever doesn't fit of the artist/year becomes "…"
+                // the title has priority; whatever doesn't fit of the artist becomes "…"
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (subtitle.isNotEmpty()) {
@@ -77,7 +78,7 @@ fun SongListItem(
                     }
                 }
             } else Column(Modifier.weight(1f)) {
-                Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
                 if (subtitle.isNotEmpty()) {
                     Text(
                         subtitle,

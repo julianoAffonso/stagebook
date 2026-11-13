@@ -67,7 +67,7 @@ import br.app.stagebook.ui.components.EmptyState
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.SetlistBreakRow
 import br.app.stagebook.ui.components.SetlistDragHandle
-import br.app.stagebook.ui.components.SetlistKeyBadge
+import br.app.stagebook.ui.components.SongFacts
 import br.app.stagebook.ui.components.SetlistSongRow
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.ScreenInsets
@@ -324,7 +324,7 @@ fun SetlistDetailScreen(
                                                             message.show(left, long = true, action = undo, onAction = onUndoRemove)
                                                         }) {
                                                             Icon(AppIcons.RemoveCircle, stringResource(R.string.set_remove_song), tint = MaterialTheme.colorScheme.error)
-                                                        } else SongFacts(item)
+                                                        } else SongFacts(item.songKey, item.bpm, item.capo, item.hasTrack)
                                                     },
                                                 )
                                             }
@@ -383,26 +383,6 @@ private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () ->
         // a break sits between two songs: with fewer than two there's no place for it
         ActionButton(stringResource(R.string.sets_add_break), onAddBreak, icon = AppIcons.Add, tone = ButtonTone.Tonal, enabled = canBreak)
         ActionButton(stringResource(R.string.share_title), onShare, icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = hasSongs)
-    }
-}
-
-/** What the musician checks before the song starts: the key, and under it the tempo, the capo and a play mark with a backing track. */
-@Composable
-private fun SongFacts(item: SetItemUi, modifier: Modifier = Modifier) {
-    if (item.songKey.isEmpty() && item.bpm <= 0 && item.capo <= 0 && !item.hasTrack) return
-    Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        if (item.songKey.isNotEmpty()) {
-            SetlistKeyBadge(item.songKey)
-        }
-        if (item.bpm > 0 || item.capo > 0 || item.hasTrack) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                val small = MaterialTheme.typography.labelSmall
-                val color = MaterialTheme.colorScheme.onSurfaceVariant
-                if (item.bpm > 0) Text(stringResource(R.string.set_bpm, item.bpm), style = small, color = color, maxLines = 1)
-                if (item.capo > 0) Text(stringResource(R.string.editor_data_capo, item.capo), style = small, color = color, maxLines = 1)
-                if (item.hasTrack) Icon(AppIcons.Play, stringResource(R.string.stage_backing_track), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)
-            }
-        }
     }
 }
 

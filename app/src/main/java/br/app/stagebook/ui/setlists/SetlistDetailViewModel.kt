@@ -24,7 +24,7 @@ import br.app.stagebook.domain.QrPayload
 import br.app.stagebook.domain.Chords
 import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.navigation.SetlistDetail
-import br.app.stagebook.ui.songs.subtitle
+import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +44,7 @@ data class SetItemUi(
     val key: String,
     val songId: String,
     val title: String,
-    val subtitle: String,
+    val subtitle: String,   // the artist
     val missing: Boolean,
     val songKey: String = "",   // the song's key ("" = none written)
     val bpm: Int = 0,           // 0 = none
@@ -127,7 +127,7 @@ class SetlistDetailViewModel @Inject constructor(
                 val song = lib.song(id)
                 val text = song?.text.orEmpty()
                 SetItemUi(
-                    if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.subtitle().orEmpty(), song == null,
+                    if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
                     songKey = Chords.key(text), bpm = Chords.tempo(text), capo = Chords.capo(text),
                     hasTrack = song?.track?.isNotEmpty() == true, state = states[i],
                 )

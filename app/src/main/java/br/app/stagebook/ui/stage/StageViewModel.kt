@@ -17,6 +17,7 @@ import br.app.stagebook.data.StageGate
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.navigation.Stage
 import br.app.stagebook.ui.songs.subtitle
+import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +33,7 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     val lostTrack: String = "",   // the name of an audio that didn't come with the song ("" = none lost)
     val zooms: Map<String, br.app.stagebook.data.model.ScreenZoom> = emptyMap(),
     val fit: br.app.stagebook.data.model.ScreenZoom? = null,   // the calculated zoom saved for this screen
+    val artist: String = "",   // for the setlist's panel, whose rows leave the year out ([meta] is the header's: artist and year)
 ) {
     /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
     fun onScreen(screen: String): StageSong {
@@ -271,7 +273,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty())
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),

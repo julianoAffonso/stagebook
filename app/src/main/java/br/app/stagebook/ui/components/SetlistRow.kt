@@ -122,18 +122,6 @@ private fun Modifier.vertical(): Modifier = layout { measurable, constraints ->
     layout(text.height, text.width) { text.place(-(text.width - text.height) / 2, -(text.height - text.width) / 2) }
 }.rotate(-90f)
 
-/** The song's key in a small badge, at the end of its row. */
-@Composable
-fun SetlistKeyBadge(key: String, modifier: Modifier = Modifier) {
-    Text(
-        key,
-        modifier.background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.small).padding(horizontal = Spacing.s),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSecondaryContainer,
-        maxLines = 1,
-    )
-}
-
 /**
  * The handle a row is dragged by while editing a setlist ([drag] comes from the list): a narrow column at the row's
  * very edge, as tall as a touch target, so the title keeps the width.
@@ -193,11 +181,11 @@ private val DRAG_ICON = 20.dp
 @Composable
 private fun SetlistRowsSample() {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        SetlistSongRow(1, "Malandragem", "Cássia Eller · 1994", SetlistShow.State.PLAYED, {}, trailing = { SetlistKeyBadge("G") })
-        SetlistSongRow(2, "Hazard", "Richard Marx · 1991", SetlistShow.State.NOW, {}, trailing = { SetlistKeyBadge("Em") })
+        SetlistSongRow(1, "Malandragem", "Cássia Eller", SetlistShow.State.PLAYED, {}, trailing = { SongFacts("G", 96, 2, false) })
+        SetlistSongRow(2, "Hazard", "Richard Marx", SetlistShow.State.NOW, {}, trailing = { SongFacts("Em", 120, 0, true) })
         SetlistBreakRow(null, null)
-        SetlistSongRow(3, "Tempo Perdido", "Legião Urbana · 1986", SetlistShow.State.NEXT, {})
-        SetlistSongRow(4, "Wild Horses", "The Rolling Stones · 1971", SetlistShow.State.NONE, {}, stripRoom = false, beforeNumber = { SetlistDragHandle(Modifier) })
+        SetlistSongRow(3, "Tempo Perdido", "Legião Urbana", SetlistShow.State.NEXT, {})
+        SetlistSongRow(4, "Wild Horses", "The Rolling Stones", SetlistShow.State.NONE, {}, stripRoom = false, beforeNumber = { SetlistDragHandle(Modifier) })
         SetlistBreakRow(Modifier, {})
     }
 }

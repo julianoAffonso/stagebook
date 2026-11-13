@@ -31,9 +31,24 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import br.app.stagebook.domain.SongGroups
 
 @Immutable
-data class SongRowUi(val id: String, val title: String, val subtitle: String, val tags: List<String> = emptyList())
+data class SongRowUi(
+    val id: String,
+    val title: String,
+    val subtitle: String,   // the artist
+    val tags: List<String> = emptyList(),
+    val songKey: String = "",   // the song's key ("" = none written)
+    val bpm: Int = 0,           // 0 = none
+    val capo: Int = 0,
+    val hasTrack: Boolean = false,
+)
+
+/** A letter of the A to Z index and where its first song is in [SongsUiState.songs]. */
+@Immutable
+data class SongGroupUi(val letter: String, val first: Int)
 
 @Immutable
 data class SongsUiState(
@@ -44,6 +59,7 @@ data class SongsUiState(
     val chosenTags: Set<String> = emptySet(),
     val sets: List<SetPick> = emptyList(),        // setlists to add a selection to
     val query: String = "",                       // the search these rows came from
+    val groups: List<SongGroupUi> = emptyList(),  // the A to Z groups of these rows (none: a plain list)
 )
 
 @Immutable
@@ -59,7 +75,14 @@ sealed interface AddResult {
 /** Waits for the person to stop typing before filtering; clearing the search is immediate. */
 fun typingDelay(q: String): Long = if (q.isEmpty()) 0L else 150L
 
+/** Artist and year: under the song's name on stage, and where songs are picked for a setlist. */
 fun Song.subtitle(): String = listOf(author, year).filter { it.isNotBlank() }.joinToString(" · ") { it.trim() }
+
+/** The artist alone: a list's rows leave the year out (user, 13/11). */
+fun Song.artistLine(): String = author.trim()
+
+/** What a row shows besides the title and the artist, read from the song once and kept while it doesn't change. */
+private class RowFacts(val text: String, val title: String, val meta: br.app.stagebook.domain.SongMeta, val letter: String, val hasTrack: Boolean)
 
 @HiltViewModel
 class SongsViewModel @Inject constructor(
@@ -99,19 +122,43 @@ class SongsViewModel @Inject constructor(
     // the setlists for "Add to which setlist?": they change without the songs changing (audit 01/11)
     private val setPicks = repository.library.map { l -> l.sets.map { SetPick(it.id, it.name) } }.distinctUntilChanged()
 
+    // key, tempo, capo and the index letter of every song, read off the main thread and only when the songs change.
+    // Each song's text is read again only if it changed: saving a zoom doesn't go through 200 lyrics on a slow tablet
+    @Volatile private var factsKept = emptyMap<String, RowFacts>()
+    private val facts = repository.library.map { it.songs }.distinctUntilChanged()
+        .map { songs ->
+            val kept = factsKept
+            songs.associate { s ->
+                val old = kept[s.id]
+                val track = s.track.isNotEmpty()
+                s.id to when {
+                    old == null || old.text != s.text -> RowFacts(s.text, s.title, br.app.stagebook.domain.Chords.meta(s.text), SongGroups.letter(s.title), track)
+                    old.title != s.title || old.hasTrack != track -> RowFacts(s.text, s.title, old.meta, SongGroups.letter(s.title), track)
+                    else -> old
+                }
+            }.also { factsKept = it }
+        }
+        .flowOn(Dispatchers.Default)
+
     @OptIn(FlowPreview::class)
-    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search, query.debounce(::typingDelay), chosenTags, setPicks) { loaded, s, q, chosen, sets ->
+    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search.combine(facts, ::Pair), query.debounce(::typingDelay), chosenTags, setPicks) { loaded, (s, known), q, chosen, sets ->
         val all = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
         val kept = br.app.stagebook.domain.Tags.stillUsed(chosen, all)
-        val songs = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
+        val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map {
+            val fact = known[it.id]
+            // a song the search already has and the facts don't yet: its row comes bare and is redone right after
+            SongRowUi(it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true) to (fact?.letter ?: SongGroups.letter(it.title))
+        }
+        val grouped = SongGroups.group(rows) { it.second }
         SongsUiState(
             loading = !loaded,
-            songs = songs.map { SongRowUi(it.id, it.title, it.subtitle(), it.tags) },
+            songs = grouped.rows.map { it.first },
             total = repository.library.value.songs.size,
             tags = all,
             chosenTags = kept,
             sets = sets,
             query = q,
+            groups = grouped.groups.map { SongGroupUi(it.letter, it.first) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 

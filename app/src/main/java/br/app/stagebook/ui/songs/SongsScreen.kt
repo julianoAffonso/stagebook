@@ -50,6 +50,12 @@ import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.SearchField
 import br.app.stagebook.ui.components.SongListItem
+import br.app.stagebook.ui.components.SongFacts
+import br.app.stagebook.ui.components.LetterHeader
+import br.app.stagebook.ui.components.LetterIndex
+import br.app.stagebook.ui.components.rememberLetterIndexShown
+import androidx.compose.foundation.layout.offset
+import kotlinx.coroutines.launch
 import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.wideLists
@@ -145,6 +151,7 @@ fun SongsScreen(
     tagsOf: (ids: List<String>) -> List<List<String>> = { ids -> uiState.songs.filter { it.id in ids }.map { it.tags } },
     onDeleteMany: (List<String>) -> Unit = {},
     onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
+    indexPinned: Boolean = false,   // screenshots and tests: the A to Z index shows without a scroll
 ) {
     var deletingMany by remember { mutableStateOf(false) }
     var addingToSet by remember { mutableStateOf(false) }
@@ -222,25 +229,52 @@ fun SongsScreen(
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.total == 0 -> EmptyState(AppIcons.MusicNote, stringResource(R.string.songs_empty_title), stringResource(R.string.songs_empty_message))
                     uiState.songs.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.songs_not_found), "")
-                    else -> LazyColumn(
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(if (wide) Spacing.xs else Spacing.s),
-                        contentPadding = PaddingValues(bottom = Spacing.l),
-                    ) {
-                        items(uiState.songs, key = { it.id }) { song ->
+                    else -> Box {
+                        val groups = uiState.groups
+                        val row: @Composable androidx.compose.foundation.lazy.LazyItemScope.(SongRowUi) -> Unit = { song ->
                             SongListItem(
                                 title = song.title,
                                 subtitle = song.subtitle,
                                 onClick = { if (selecting) toggle(song.id) else onOpen(song.id) },
                                 onLongClick = { toggle(song.id) },
                                 leading = if (selecting) { { Checkbox(song.id in selected, { toggle(song.id) }) } } else null,
+                                // what the musician checks before the song, as on a setlist's rows (user, 13/11)
+                                trailing = { SongFacts(song.songKey, song.bpm, song.capo, song.hasTrack) },
                                 // animate only the removal on delete: enter and move animated dozens of rows on every
                                 // search letter
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
+                                titleLines = 1,
                                 // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete
                                 // in the editor (user, 01/11: the row's own pencil was one too many)
+                            )
+                        }
+                        LazyColumn(
+                            state = listState,
+                            verticalArrangement = Arrangement.spacedBy(if (wide) Spacing.xs else Spacing.s),
+                            contentPadding = PaddingValues(bottom = Spacing.l),
+                        ) {
+                            if (groups.isEmpty()) items(uiState.songs, key = { it.id }, contentType = { ROW }) { row(it) }
+                            // a letter before each group; the index at the edge counts on this order to find them
+                            else groups.forEachIndexed { g, group ->
+                                item(key = HEADER_KEY + group.letter, contentType = HEADER_KEY) { LetterHeader(group.letter) }
+                                val end = groups.getOrNull(g + 1)?.first ?: uiState.songs.size
+                                items(uiState.songs.subList(group.first, end), key = { it.id }, contentType = { ROW }) { row(it) }
+                            }
+                        }
+                        if (groups.isNotEmpty()) {
+                            var held by remember { mutableStateOf(false) }
+                            val scope = androidx.compose.runtime.rememberCoroutineScope()
+                            val letters = remember(groups) { groups.map { it.letter } }
+                            LetterIndex(
+                                letters = letters,
+                                shown = rememberLetterIndexShown(listState, held) || indexPinned,
+                                // each header sits after the rows and the headers before it
+                                onLetter = { g -> groups.getOrNull(g)?.let { scope.launch { listState.scrollToItem(it.first + g) } } },
+                                onHeld = { held = it },
+                                // over the screen's margin, so it covers nothing of a row's key
+                                modifier = Modifier.align(Alignment.CenterEnd).offset(x = Spacing.m),
                             )
                         }
                     }
@@ -322,12 +356,16 @@ private fun SetPickDialog(sets: List<SetPick>, onPick: (String?) -> Unit, onDism
     )
 }
 
+// a header's key can't be a song's id
+private const val HEADER_KEY = "letter:"
+private const val ROW = "song"
+
 private val previewState = SongsUiState(
     loading = false,
     songs = listOf(
-        SongRowUi("1", "Hazard", "Richard Marx · 1991"),
-        SongRowUi("2", "Tempo Perdido", "Legião Urbana · 1986"),
-        SongRowUi("3", "Wild Horses", "The Rolling Stones · 1971"),
+        SongRowUi("1", "Hazard", "Richard Marx", songKey = "A", bpm = 76),
+        SongRowUi("2", "Tempo Perdido", "Legião Urbana", songKey = "C", bpm = 118, hasTrack = true),
+        SongRowUi("3", "Wild Horses", "The Rolling Stones", songKey = "G", capo = 2),
     ),
     total = 3,
 )

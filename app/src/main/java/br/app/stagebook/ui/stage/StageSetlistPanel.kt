@@ -54,7 +54,7 @@ import br.app.stagebook.R
 import br.app.stagebook.domain.SetlistBreaks
 import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.ui.components.SetlistBreakRow
-import br.app.stagebook.ui.components.SetlistKeyBadge
+import br.app.stagebook.ui.components.SongKeyBadge
 import br.app.stagebook.ui.components.SetlistSongRow
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
@@ -175,11 +175,11 @@ private fun SetlistPanelContent(setlist: StageSetlist, songs: List<StageSong>, b
                     SetlistSongRow(
                         number = row + 1,
                         title = if (song.missing) stringResource(R.string.set_item_missing) else song.title,
-                        subtitle = song.meta,
+                        subtitle = song.artist,
                         state = setlist.states.getOrElse(row) { SetlistShow.State.NONE },
                         onClick = { onSong(row) },
                         titleStyle = MaterialTheme.typography.titleMedium,
-                        trailing = if (key.isEmpty()) null else ({ SetlistKeyBadge(key) }),
+                        trailing = if (key.isEmpty()) null else ({ SongKeyBadge(key) }),
                     )
                 }
             }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import br.app.stagebook.ui.theme.Spacing
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.geometry.Offset
@@ -89,11 +90,11 @@ class ScreenshotTest {
     private val songs = SongsUiState(
         loading = false,
         songs = listOf(
-            SongRowUi("1", "Hazard", "Richard Marx · 1991"),
-            SongRowUi("2", "Malandragem", "Cássia Eller · 1994"),
-            SongRowUi("3", "Tempo Perdido", "Legião Urbana · 1986"),
-            SongRowUi("4", "Wild Horses", "The Rolling Stones · 1971"),
-            SongRowUi("5", "Por Enquanto", "Legião Urbana · 1985"),
+            SongRowUi("1", "Hazard", "Richard Marx", songKey = "A", bpm = 76),
+            SongRowUi("2", "Malandragem", "Cássia Eller", songKey = "G", bpm = 96, capo = 2),
+            SongRowUi("3", "Tempo Perdido", "Legião Urbana", songKey = "C", bpm = 118, hasTrack = true),
+            SongRowUi("4", "Wild Horses", "The Rolling Stones", songKey = "G", bpm = 70),
+            SongRowUi("5", "Por Enquanto", "Legião Urbana", songKey = "D"),
         ),
         total = 5,
         tags = listOf(s("Internacional"), s("Nacional")),
@@ -101,12 +102,7 @@ class ScreenshotTest {
     private val set = SetlistDetailUiState(
         loading = false,
         name = s("Show de sábado"),
-        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false) }.let { (a, b, c, d, e) ->
-            listOf(
-                a.copy(songKey = "A", bpm = 76), b.copy(songKey = "G", bpm = 96, capo = 2), c.copy(songKey = "C", bpm = 118, hasTrack = true),
-                d.copy(songKey = "G", bpm = 70), e.copy(songKey = "D"),
-            )
-        },
+        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false, it.songKey, it.bpm, it.capo, it.hasTrack) },
     )
     // mid show: two songs played, the third on stage and the fourth next
     private val setShow = set.copy(
@@ -156,6 +152,44 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun homeSongsPhone() = shoot("celular_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+
+    // a library long enough for the A to Z index (made-up songs): grouped as the view model groups them
+    private val manySongs = run {
+        val english = SHOTS_LANG?.startsWith("en") == true
+        val artists = if (english) listOf("The Made-Ups", "Imaginary Trio", "Nobody's Band", "Pretend Duo", "") else listOf("Banda Fictícia", "Trio Imaginário", "Os Inventados", "Duo de Mentira", "")
+        val keys = listOf("G", "Em", "C", "A", "D", "F#m", "")
+        val titles = if (english) listOf(
+            "7 Days of Rain", "Above the Hills", "All the Way Back", "Autumn Window", "Back Porch Light", "Blue Sunflower", "Bridge by the Mill",
+            "Calm Breeze", "Corner Dance", "Cold Lighthouse", "Dirt Road", "Down the Bend", "Early Tide", "Élan of Summer",
+            "Far Horizon", "Field of Paper", "Garden Gate", "High Noon Sun", "Island Song", "June Moonlight", "Long Way Round",
+            "Market Night", "Morning Clear", "North Wind", "Open Window", "Paper Boat", "Quiet River", "Sand Between", "Small Hours",
+            "Song of the Wind", "Too Late Not", "Under the Bridge", "Village Square", "Winter Flower", "Yard at Home", "Zigzag Bee",
+        ) else listOf(
+            "7 Dias de Chuva", "Água de Março Não", "Alvorada na Serra", "Aquarela do Sul", "Baile da Esquina", "Barco de Papel", "Brisa Mansa",
+            "Caminho de Volta", "Canção do Vento", "Céu de Brigadeiro", "Dança das Folhas", "Depois da Curva", "Estrada de Terra", "Élan de Verão",
+            "Farol Apagado", "Flor de Inverno", "Girassol Azul", "Horizonte Perto", "Ilha Pequena", "Janela Aberta", "Luar de Agosto",
+            "Madrugada Clara", "Maré Cheia", "Noite de Feira", "Outro Lugar", "Pé na Areia", "Ponte Velha", "Quintal de Casa", "Rio Sem Pressa",
+            "Sol de Domingo", "Tarde Demais Não", "Um Dia Qualquer", "Vento Norte", "Xote da Praça", "Zunido de Abelha",
+        )
+        val rows = br.app.stagebook.domain.TextKey.sorted(titles) { it }.mapIndexed { i, title ->
+            SongRowUi("m$i", title, artists[i % artists.size], songKey = keys[i % keys.size], bpm = if (i % 4 == 3) 0 else 72 + i * 3, capo = if (i % 5 == 1) 2 else 0, hasTrack = i % 3 == 0)
+        }
+        val grouped = br.app.stagebook.domain.SongGroups.group(rows) { br.app.stagebook.domain.SongGroups.letter(it.title) }
+        songs.copy(songs = grouped.rows, total = rows.size, groups = grouped.groups.map { br.app.stagebook.ui.songs.SongGroupUi(it.letter, it.first) })
+    }
+
+    // the list taken to the letter C by its index, which is on screen as while the list is scrolled
+    private fun shootSongsIndex(name: String) {
+        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(manySongs, "", {}, {}, {}, {}, it, indexPinned = true) } } } }
+        compose.onNodeWithTag("letter_index_C", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun homeSongsIndexTablet() = shootSongsIndex("tablet_1_musicas_indice")
+
+    @Test @Config(qualifiers = PHONE)
+    fun homeSongsIndexPhone() = shootSongsIndex("celular_1_musicas_indice")
 
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {
         HomeScaffold(HomeTab.SETLISTS, {}) {
@@ -1235,7 +1269,7 @@ class ScreenshotTest {
 
     private fun shootStageSetlist(name: String) {
         val show = stage.copy(
-            songs = set.items.mapIndexed { i, it -> StageSong(it.title, it.subtitle, if (i == 2) stage.songs[0].text else "", false) },
+            songs = set.items.mapIndexed { i, it -> StageSong(it.title, it.subtitle, if (i == 2) stage.songs[0].text else "", false, artist = it.subtitle) },
             live = true,
             breaks = listOf(3),
             setlist = br.app.stagebook.ui.stage.StageSetlist(set.name, setShow.items.map { it.state }, set.items.map { it.songKey }),
