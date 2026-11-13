@@ -82,15 +82,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
      * Loose songs (from the Songs tab), with no setlist: the list goes in the same format as a setlist, **with no
      * name**, which is how the receiver knows they're just songs for the library.
      */
-    fun songsPackage(songIds: List<String>): Pair<ByteArray, List<SharedSong>>? {
-        val songs = songIds.mapNotNull(repository.library.value::song)
-        if (songs.isEmpty()) return null
-        val list = (listOf(QrPayload.HEADER, songs.size.toString(), "") + songs.map { listOf(it.title, it.author).joinToString("\t") { s -> s.replace('\n', ' ').replace('\t', ' ').trim() }.trimEnd('\t') })
-            .joinToString("\n")
-        return QrPayload.pack(list) to songs.map { it.shared() }
-    }
+    fun songsPackage(songIds: List<String>): Pair<ByteArray, List<SharedSong>>? = looseSongs(songIds.mapNotNull(repository.library.value::song))
 
-    private fun br.app.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text)
 
     suspend fun send(setId: String, withSongs: Boolean): Sent? = setlistPackage(setId, withSongs)?.let { (p, s) -> sendPackage(p, s) }
 
@@ -353,6 +346,19 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     }.getOrNull()
 
     companion object {
+        private fun br.app.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text)
+
+        /** [songs] as loose songs: a list with no name (how the receiver knows they aren't a setlist) and their texts. */
+        fun looseSongs(songs: List<br.app.stagebook.data.model.Song>): Pair<ByteArray, List<SharedSong>>? {
+            if (songs.isEmpty()) return null
+            return QrPayload.pack(looseList(songs.map { it.title to it.author })) to songs.map { it.shared() }
+        }
+
+        /** The list of loose songs (title to artist), in the QR's format with no setlist name. */
+        fun looseList(songs: List<Pair<String, String>>): String =
+            (listOf(QrPayload.HEADER, songs.size.toString(), "") + songs.map { (title, artist) -> listOf(title, artist).joinToString("\t") { s -> s.replace('\n', ' ').replace('\t', ' ').trim() }.trimEnd('\t') })
+                .joinToString("\n")
+
         private const val SERVER = "https://ntfy.sh"
 
         /** The invite's format: 1 = the 3 words open it (still read), 2 = it also needs the secret from its link. */

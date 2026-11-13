@@ -26,6 +26,10 @@ import javax.inject.Singleton
  * song opens by itself ([openSong]); [leave] stops following, and while that leader goes on leading the strip offers
  * to come back ([Role.Left], [follow]); the leader starting again, or calling the band ([search]), brings them back too.
  * The leader's break opens the stage too, for a follower who doesn't have the song before it ([BREAK_ONLY]).
+ *
+ * Missing songs during the show: the leader sends each follower the ones it lacks ([sendLacking]) and a follower asks
+ * the band for the one on the strip ([ask]), both over this network only. Those, and only those, go straight into the
+ * follower's library ([enter]); everything else the band sends keeps waiting in the inbox.
  */
 @Singleton
 class BandConduct @Inject constructor(
@@ -36,9 +40,12 @@ class BandConduct @Inject constructor(
     sealed interface Role {
         data object None : Role
 
-        /** [noAnswer]: band members online who didn't answer (another version, outside the app). */
+        /**
+         * [noAnswer]: band members online who didn't answer (another version, outside the app). [lackers]: the devices
+         * following that lack songs, by id (the message only carries their names).
+         */
         @Immutable
-        data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0) : Role
+        data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0, val lackers: Map<String, Conduct.Lack> = emptyMap()) : Role
 
         /**
          * [songId]: the current song here (null = missing here); [at]: last news from the leader (device clock);
@@ -57,6 +64,9 @@ class BandConduct @Inject constructor(
              * isn't here ([BREAK_ONLY]); null = nothing to show (the song is missing and there's no break).
              */
             val stage: String? get() = songId ?: BREAK_ONLY.takeIf { breakSince != null }
+
+            /** The song that matters now, the one the strip is about: the leader's, or on its break the one after it. */
+            val item: Conduct.Item? get() = breakSince?.let { msg.songs.getOrNull(msg.index + 1) } ?: msg.songs.getOrNull(msg.index)
         }
 
         /**
@@ -107,6 +117,7 @@ class BandConduct @Inject constructor(
 
     init {
         link.conductHandler = ::onMessage
+        link.showIntake = ::intake
         // essential mode (T19): "Band on the network" off ends Lead the band (leading or following) and the strip goes
         // away
         scope.launch {
@@ -237,17 +248,21 @@ class BandConduct @Inject constructor(
     /** Leading goes on with [now]; ended meanwhile, it stays ended: checking and then writing let a send bring it back. */
     private fun keepLeading(now: Role.Conducting): Boolean = _role.updateAndGet { if (it is Role.Conducting) now else it } is Role.Conducting
 
+    // a message leaving: who lacks what stays as known until the answers say otherwise
+    private fun keepLeading(setId: String, msg: Conduct.Msg): Boolean =
+        _role.updateAndGet { if (it is Role.Conducting) Role.Conducting(setId, msg, lackers = if (it.setId == setId) it.lackers else emptyMap()) else it } is Role.Conducting
+
     private suspend fun send(setId: String, msg: Conduct.Msg) {
         val members = link.onlineMembers.value.size
         if (_role.value !is Role.Conducting) return   // ended before sending: doesn't turn back on
         val ticket = newest.ticket()
-        if (!keepLeading(Role.Conducting(setId, msg))) return
+        if (!keepLeading(setId, msg)) return
         val replies = deliver(stamped(msg))
         if (_role.value !is Role.Conducting) return   // ended while sending
         if (!newest.isNewest(ticket)) return   // a newer song went out meanwhile: this late answer would bring back the old one
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
         val noAnswer = (members - replies.size).coerceAtLeast(0)
-        if (!keepLeading(Role.Conducting(setId, withLacks, noAnswer))) return
+        if (!keepLeading(Role.Conducting(setId, withLacks, noAnswer, replies.filterValues { it.titles.isNotEmpty() }))) return
         // the missing songs changed: send again so everyone sees the same alert
         if (withLacks.missing != msg.missing && newest.isNewest(ticket)) deliver(stamped(withLacks))
         // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)
@@ -282,6 +297,159 @@ class BandConduct @Inject constructor(
         val stage = now.stage
         if (stage != null && (was?.stage != stage || was.msg.index != msg.index)) _openSong.tryEmit(stage)
         return Conduct.lackFor(identity.name.value, msg, repository.library.value.songs)
+    }
+
+    // ---- missing songs during the show ----
+
+    /** What the strip tells in a short message ([notices]). */
+    sealed interface Notice {
+        data class Sent(val to: String) : Notice
+        data class SentMany(val devices: Int) : Notice
+        data object NotSent : Notice
+        data class Arrived(val title: String, val from: String) : Notice
+        data class NoChords(val title: String) : Notice
+        /** Nobody on this network has the song asked for; [chords]: a copy with chords was what was asked. */
+        data class Nobody(val chords: Boolean) : Notice
+        /** The copy with chords asked for came, and waits in the inbox: the song here is never replaced by itself. */
+        data class ChordsKept(val title: String, val from: String) : Notice
+    }
+
+    private val _notices = MutableSharedFlow<Notice>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val notices: SharedFlow<Notice> = _notices
+
+    private val _sending = MutableStateFlow(false)
+    /** Leading: the missing songs are going out. */
+    val sending: StateFlow<Boolean> = _sending.asStateFlow()
+
+    private val _asking = MutableStateFlow(false)
+    /** Following: the band is being asked for the strip's song. */
+    val asking: StateFlow<Boolean> = _asking.asStateFlow()
+
+    // songs that went straight in without chords on a profile that shows them, by id: the strip says so and offers to
+    // ask for a copy with chords. Until the app closes
+    private val _chordless = MutableStateFlow<Set<String>>(emptySet())
+    val chordless: StateFlow<Set<String>> = _chordless.asStateFlow()
+
+    /** How songs reach one member on this network, and how the band is asked (the tests look at what goes out). */
+    internal var sendSongs: suspend (String, List<br.app.stagebook.data.model.Song>) -> Boolean = { id, songs -> link.sendSongsTo(id, songs) }
+    internal var request: suspend (List<BandLink.Wanted>) -> List<BandLink.Answer> = { link.askBand(it) }
+
+    private fun bandOn() = repository.library.value.look.bandOn
+
+    /**
+     * Leading: sends each follower in [memberIds] (null = every one that lacks something) the setlist songs it lacks,
+     * to its device on this network and nowhere else. Then everyone says again what's missing, so who got them leaves
+     * the list.
+     */
+    fun sendLacking(memberIds: Set<String>? = null) {
+        if (!bandOn()) return
+        val now = _role.value as? Role.Conducting ?: return
+        val targets = now.lackers.filterKeys { memberIds == null || it in memberIds }
+        if (targets.isEmpty() || !_sending.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                val library = repository.library.value.songs
+                val reached = targets.filter { (id, lack) ->
+                    // a song that isn't here either is left out
+                    val songs = now.msg.songs.filter { it.title in lack.titles }.mapNotNull { Conduct.find(it, library) }.distinctBy { it.id }
+                    songs.isNotEmpty() && sendSongs(id, songs)
+                }
+                _notices.tryEmit(
+                    when {
+                        reached.isEmpty() -> Notice.NotSent
+                        memberIds?.size == 1 -> Notice.Sent(reached.values.first().who)
+                        else -> Notice.SentMany(reached.size)
+                    },
+                )
+                (_role.value as? Role.Conducting)?.takeIf { reached.isNotEmpty() }?.let { send(it.setId, it.msg.copy(type = Conduct.OPEN)) }
+            } finally {
+                _sending.value = false
+            }
+        }
+    }
+
+    /**
+     * Following: asks the band on this network for the strip's song, when it isn't here. When it came without chords
+     * ([chordless]) only a copy with chords is taken, so the same one never comes again.
+     */
+    fun ask() {
+        if (!bandOn()) return
+        val item = (_role.value as? Role.Following)?.item ?: return
+        val library = repository.library.value
+        val own = Conduct.find(item, library.songs)
+        val forChords = own != null
+        if (own != null && !(own.id in _chordless.value && library.look.chords && !br.app.stagebook.domain.Chords.hasChords(own.text))) return
+        if (!_asking.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                // several copies can answer (one per member, and per spelling of the artist): one with chords first
+                val got = request(listOf(BandLink.Wanted(item.title, item.artist)))
+                    .filter { it.song.allowed() && Conduct.isFor(item, it.song.title, it.song.author) }
+                    .filter { !forChords || br.app.stagebook.domain.Chords.hasChords(it.song.text) }
+                    .maxByOrNull { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 }
+                when {
+                    got == null -> _notices.tryEmit(Notice.Nobody(forChords))
+                    own == null && enter(got.song, got.fromName) -> Unit
+                    else -> {
+                        // a song with this title and artist is here (or following ended meanwhile): reviewed like the rest
+                        link.keep(got.fromId, got.fromName, listOf(got.song))
+                        if (own != null) {
+                            _chordless.update { it - own.id }
+                            _notices.tryEmit(Notice.ChordsKept(got.song.title, got.fromName))
+                        }
+                    }
+                }
+            } finally {
+                _asking.value = false
+            }
+        }
+    }
+
+    // a package from the band arrived (another thread): from the leader followed now, loose songs of its setlist go
+    // straight in; returns what is left for the inbox
+    private fun intake(fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>): List<SetlistCloud.SharedSong> {
+        val following = _role.value as? Role.Following ?: return songs
+        if (following.fromId != fromId || !br.app.stagebook.domain.BandContent.listOk(text)) return songs
+        // a setlist is always reviewed: the leader sends the missing songs loose
+        if (br.app.stagebook.domain.QrPayload.parse(text)?.name?.isEmpty() != true) return songs
+        return songs.filterNot { s -> following.msg.songs.any { Conduct.isFor(it, s.title, s.author) } && enter(s, fromName) }
+    }
+
+    private val entering = Any()
+
+    /**
+     * A song the band sent goes straight into the library, without the review: only while following, only one that
+     * may travel, and never when a song with that title and artist is here (the musician's own is not replaced). The
+     * callers let in only what this device asked for, or what the leader sent of its setlist. False = not let in.
+     */
+    private fun enter(song: SetlistCloud.SharedSong, fromName: String): Boolean {
+        if (!bandOn() || !song.allowed()) return false
+        val noChords: Boolean
+        synchronized(entering) {   // two arrivals of the same song: the second one finds the first
+            if (_role.value !is Role.Following || repository.findSong(song.title, song.author) != null) return false
+            val id = repository.saveSong(
+                br.app.stagebook.data.model.Song(title = song.title, author = song.author, year = song.year, text = br.app.stagebook.domain.Chords.withDetectedKey(song.text)),
+            )
+            noChords = repository.library.value.look.chords && !br.app.stagebook.domain.Chords.hasChords(song.text)
+            if (noChords) _chordless.update { it + id }
+        }
+        val current = (_role.value as? Role.Following)?.item?.let { Conduct.isFor(it, song.title, song.author) } == true
+        songArrived()
+        if (noChords) _notices.tryEmit(Notice.NoChords(song.title)) else if (!current) _notices.tryEmit(Notice.Arrived(song.title, fromName))
+        return true
+    }
+
+    // the library changed under the follower: the leader's song may be here now, and the stage opens on it
+    private fun songArrived() {
+        while (true) {
+            val before = _role.value as? Role.Following ?: return
+            val id = songHere(before.msg)?.id
+            if (id == before.songId) return
+            val now = before.copy(songId = id)
+            if (!_role.compareAndSet(before, now)) continue
+            now.stage?.takeIf { it != before.stage }?.let(_openSong::tryEmit)
+            return
+        }
     }
 
     // the leader says how long its break has lasted; here that becomes when it started on this device's clock. The same

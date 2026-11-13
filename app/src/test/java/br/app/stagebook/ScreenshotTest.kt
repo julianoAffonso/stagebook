@@ -927,6 +927,20 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun conductBarPhone() = shoot("banda_conduzir_faixas_celular") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }
 
+    // the leader's "What's missing", with what it sends
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun conductLacks() {
+        compose.setContent { StagebookTheme { br.app.stagebook.ui.band.LacksDialog(br.app.stagebook.ui.band.sampleLackers, false, {}, {}) } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/banda_conduzir_falta.png")
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun conductLacksPhone() {
+        compose.setContent { StagebookTheme { br.app.stagebook.ui.band.LacksDialog(br.app.stagebook.ui.band.sampleLackers, false, {}, {}) } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/banda_conduzir_falta_celular.png")
+    }
+
     @Test fun settingsUpdateTablet() = shoot("tablet_5_ajustes_atualizar") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
             SettingsScreen(

@@ -188,11 +188,17 @@ class BandLink @Inject constructor(
         return BandCrypto.pairKey(identity.privateKey, identity.id, theirs, member.id)
     }
 
+    /** A song a band member answered with, and who it was. */
+    class Answer(val song: SetlistCloud.SharedSong, val fromId: String, val fromName: String)
+
     /**
-     * Asks everyone in the band on the network now who has the [wanted] songs; collects the answers (the first to
-     * arrive for each title). Nobody on the other side has to tap anything.
+     * Asks everyone in the band on the network now who has the [wanted] songs; collects the answers (one per title).
+     * Nobody on the other side has to tap anything.
      */
-    suspend fun askMissing(wanted: List<Wanted>): List<SetlistCloud.SharedSong> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
+    suspend fun askMissing(wanted: List<Wanted>): List<SetlistCloud.SharedSong> = askBand(wanted).map { it.song }
+
+    /** [askMissing], also saying who each song came from. */
+    suspend fun askBand(wanted: List<Wanted>): List<Answer> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
         if (wanted.isEmpty()) return@io emptyList()
         val plain = json.encodeToString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), wanted).toByteArray()
         val answers = onlineMembers.value.map { peer ->
@@ -201,16 +207,34 @@ class BandLink @Inject constructor(
                 runCatching {
                     val s = dial(peer)
                     val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain)) ?: return@async emptyList()
-                    val bytes = ShareCode.decrypt(key, body) ?: return@async emptyList()
-                    json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), bytes.decodeToString())
-                        .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
+                    readAnswer(ShareCode.decrypt(key, body) ?: return@async emptyList()).map { Answer(it, peer.id, peer.name) }
                 }.getOrDefault(emptyList())
             }
         }.flatMap { it.await() }
-        // more than one device has the same song: the version with chords wins (in the lyrics only profile it's kept,
-        // hidden)
-        answers.groupBy { br.app.stagebook.domain.TextKey.of(it.title) + "|" + br.app.stagebook.domain.TextKey.of(it.author) }
-            .values.map { versions -> versions.maxBy { if (br.app.stagebook.domain.Chords.hasChords(it.text)) 1 else 0 } }
+        pick(answers)
+    }
+
+    /** What a member answered, already decrypted: only what may travel, and no more than a setlist holds. */
+    internal fun readAnswer(plain: ByteArray): List<SetlistCloud.SharedSong> =
+        runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), plain.decodeToString()) }
+            .getOrDefault(emptyList()).filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
+
+    /**
+     * One answer per song. More than one device has the same song: the version with chords wins (in the lyrics only
+     * profile it's kept, hidden).
+     */
+    internal fun pick(answers: List<Answer>): List<Answer> =
+        answers.groupBy { br.app.stagebook.domain.TextKey.of(it.song.title) + "|" + br.app.stagebook.domain.TextKey.of(it.song.author) }
+            .values.map { versions -> versions.maxBy { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 } }
+
+    /**
+     * Sends loose [songs] to one band member, only if that device is on this network now (never over the internet).
+     * It gets them as any package from the band; true if it stored them.
+     */
+    suspend fun sendSongsTo(memberId: String, songs: List<br.app.stagebook.data.model.Song>): Boolean {
+        val peer = onlineMembers.value.firstOrNull { it.id == memberId } ?: return false
+        val (list, shared) = SetlistCloud.looseSongs(songs) ?: return false
+        return sendTo(peer, packageFor(memberId, list, shared) ?: return false)
     }
 
     /** A follower gets the leader's message and answers what's missing here (null = not following). */
@@ -265,15 +289,33 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
     }
 
+    /**
+     * Who takes songs of a band package straight into the library ([BandConduct], during a show, and only what the
+     * rule there lets in): gets who sent, the list's text and the songs, and returns the songs left for the inbox.
+     */
+    @Volatile var showIntake: ((fromId: String, fromName: String, text: String, songs: List<SetlistCloud.SharedSong>) -> List<SetlistCloud.SharedSong>)? = null
+
     // package from a band member: decrypt with the pair key and keep it in the inbox
     private fun receive(from: BandProtocol.Hello, body: String): Boolean {
         val member = trust.member(from.id) ?: return false
         val key = pairKeyWith(member.id) ?: return false
         val plain = ShareCode.decrypt(key, body) ?: return false
+        return accept(member.id, from.name.ifBlank { member.name }, plain)
+    }
+
+    /** A package from band member [fromId], already decrypted: kept in the inbox, but for what [showIntake] took. */
+    internal fun accept(fromId: String, fromName: String, plain: ByteArray): Boolean {
         val pkg = openPackage(plain) ?: return false
-        inbox.add(member.id, from.name.ifBlank { member.name }, pkg.text, pkg.songs, pkg.breaks)
+        val rest = showIntake?.invoke(fromId, fromName, pkg.text, pkg.songs) ?: pkg.songs
+        // every song went straight in: nothing is left to review
+        if (rest.isEmpty() && pkg.songs.isNotEmpty()) return true
+        inbox.add(fromId, fromName, pkg.text, rest, pkg.breaks)
         return true
     }
+
+    /** Keeps loose [songs] from a band member in the inbox, to be reviewed like anything the band sends. */
+    internal fun keep(fromId: String, fromName: String, songs: List<SetlistCloud.SharedSong>) =
+        inbox.add(fromId, fromName, SetlistCloud.looseList(songs.map { it.title to it.author }), songs)
 
     /** What a band package holds, already decrypted: the list's text, the songs and the list's breaks (null = it says none). */
     internal class Opened(val text: String, val songs: List<SetlistCloud.SharedSong>, val breaks: List<Int>?)

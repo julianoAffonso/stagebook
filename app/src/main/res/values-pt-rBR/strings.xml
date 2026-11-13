@@ -207,6 +207,23 @@
     <string name="conduct_follow">Acompanhar</string>
     <string name="conduct_lacks_title">O que falta</string>
     <string name="conduct_lack_line">%1$s: %2$s</string>
+    <plurals name="conduct_send_lacks">
+        <item quantity="one">Enviar %1$d que falta</item>
+        <item quantity="many">Enviar as %1$d que faltam</item>
+        <item quantity="other">Enviar as %1$d que faltam</item>
+    </plurals>
+    <string name="conduct_send_one">Enviar a que falta</string>
+    <string name="conduct_send_all">Enviar a todos</string>
+    <string name="conduct_sent_to">Enviado para %1$s</string>
+    <string name="conduct_not_sent">Não deu para enviar. Confira o Wi-Fi e tente de novo.</string>
+    <string name="conduct_lacks_none">Ninguém está sem música.</string>
+    <string name="conduct_ask">Pedir</string>
+    <string name="conduct_asking">Pedindo…</string>
+    <string name="conduct_nobody_has">Ninguém neste Wi-Fi tem esta música</string>
+    <string name="conduct_nobody_has_chords">Ninguém neste Wi-Fi tem esta música com cifra</string>
+    <string name="conduct_no_chords">%1$s chegou sem cifra</string>
+    <string name="conduct_arrived">%1$s chegou de %2$s</string>
+    <string name="conduct_chords_kept">%1$s com cifra chegou de %2$s. Confira em Recebidos da banda.</string>
     <string name="about_support">Apoie o Stagebook</string>
     <string name="about_support_text">O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café? Qualquer valor ajuda a manter o app e a trazer novidades.</string>
     <string name="about_donate">Pagar um café</string>

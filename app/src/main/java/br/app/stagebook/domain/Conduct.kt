@@ -58,6 +58,9 @@ object Conduct {
     fun find(item: Item, library: List<Song>): Song? =
         (SetlistMatcher.match(QrPayload.Entry(item.title, item.artist), library) as? QrMatch.Found)?.song
 
+    /** Is a song with this [title] and [artist] the one [item] names? The title, and the artist when both say one. */
+    fun isFor(item: Item, title: String, artist: String): Boolean = SongMatch.same(item.title, item.artist, title, artist)
+
     fun missing(songs: List<Item>, library: List<Song>): List<String> = songs.filter { find(it, library) == null }.map { it.title }
 
     /** The missing songs that apply to song [index] (for the alert when opening). */

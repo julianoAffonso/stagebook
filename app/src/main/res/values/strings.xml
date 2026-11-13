@@ -199,6 +199,22 @@
     <string name="conduct_follow">Follow</string>
     <string name="conduct_lacks_title">What\'s missing</string>
     <string name="conduct_lack_line">%1$s: %2$s</string>
+    <plurals name="conduct_send_lacks">
+        <item quantity="one">Send the %1$d it lacks</item>
+        <item quantity="other">Send the %1$d it lacks</item>
+    </plurals>
+    <string name="conduct_send_one">Send the one it lacks</string>
+    <string name="conduct_send_all">Send to all</string>
+    <string name="conduct_sent_to">Sent to %1$s</string>
+    <string name="conduct_not_sent">Couldn\'t send. Check the Wi-Fi and try again.</string>
+    <string name="conduct_lacks_none">Nobody is missing a song.</string>
+    <string name="conduct_ask">Ask</string>
+    <string name="conduct_asking">Asking…</string>
+    <string name="conduct_nobody_has">Nobody on this Wi-Fi has this song</string>
+    <string name="conduct_nobody_has_chords">Nobody on this Wi-Fi has this song with chords</string>
+    <string name="conduct_no_chords">%1$s came without chords</string>
+    <string name="conduct_arrived">%1$s arrived from %2$s</string>
+    <string name="conduct_chords_kept">%1$s with chords arrived from %2$s. Check it in Received from the band.</string>
     <string name="about_support">Support Stagebook</string>
     <string name="about_support_text">Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about buying me a coffee? Any amount helps keep the app going and bring new features.</string>
     <string name="about_donate">Buy me a coffee</string>
