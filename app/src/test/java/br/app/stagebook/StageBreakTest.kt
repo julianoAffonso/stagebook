@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -105,7 +106,7 @@ class StageBreakTest {
         assertEquals("the song on stage is still the one before the break", 0, song)
         compose.onNodeWithText("INTERVALO").assertIsDisplayed()
         compose.onNodeWithText("00:00").assertIsDisplayed()
-        compose.onNodeWithText("A seguir: Segunda · G").assertIsDisplayed()
+        compose.onNode(hasText("A seguir: Segunda") and hasText(" · G")).assertIsDisplayed()   // one sentence, in two pieces
         forward()
         assertEquals(1, song)
         assertEquals(null, since)

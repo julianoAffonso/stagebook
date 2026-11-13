@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -102,6 +103,39 @@ class StageMetaTest {
 
         val single = stage(repo, ids[0])
         assertEquals(null, withTimeout(5_000) { single.uiState.first { it.songs.isNotEmpty() && !it.loading } }.setlist)
+    }
+
+    // back to the song to check something and on to the break again: the break goes on counting (user, 13/11)
+    @Test fun `a break left backward keeps its start, and another song on screen forgets it`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids) }
+        val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
+        val vm = stage(repo, "", saved)
+        withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }
+        vm.songShown(0)
+        vm.setBreak(true)
+        val since = vm.breakSince.value!!
+        vm.setBreak(false)   // back to the song before the break
+        assertEquals(null, vm.breakSince.value)
+        Thread.sleep(20)   // a new start would be a later time
+        vm.songShown(0)    // the same song shown again (the screen turned)
+        vm.setBreak(true)
+        assertEquals("the break goes on from where it started", since, vm.breakSince.value)
+        // the stage built again from what was saved, on the song before the break: still the same start
+        vm.setBreak(false)
+        val again = stage(repo, "", saved)
+        again.songShown(0)
+        again.setBreak(true)
+        assertEquals(since, again.breakSince.value)
+
+        vm.setBreak(false)   // left forward: the next song opens
+        vm.songShown(1)
+        vm.songShown(0)      // and back on the first song: its break starts over
+        Thread.sleep(20)
+        vm.setBreak(true)
+        assertTrue("a new break: ${vm.breakSince.value} after $since", vm.breakSince.value!! > since)
     }
 
     private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = testStage(context, repo, saved)

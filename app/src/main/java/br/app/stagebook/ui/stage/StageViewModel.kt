@@ -152,6 +152,7 @@ class StageViewModel @Inject constructor(
 
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
+        forgetBreakAway(index)
         route.setId?.let { conduct.open(it, index) }
         announce(index)
         sendMidi(index)
@@ -252,9 +253,26 @@ class StageViewModel @Inject constructor(
      */
     val breakSince: StateFlow<Long?> = savedStateHandle.getStateFlow<Long?>(BREAK_SINCE, null)
 
+    /**
+     * Going back to the song to check something and on to the break again goes on counting from the same start: the
+     * start is kept while the stage stays on the song before the break, and forgotten when another song opens.
+     */
     fun setBreak(on: Boolean) {
         if (on == (breakSince.value != null)) return
-        savedStateHandle[BREAK_SINCE] = if (on) System.currentTimeMillis() else null
+        if (!on) { savedStateHandle[BREAK_SINCE] = null; return }
+        val start = savedStateHandle.get<Long>(BREAK_START) ?: System.currentTimeMillis()
+        savedStateHandle[BREAK_START] = start
+        savedStateHandle[BREAK_AT] = shownIndex
+        savedStateHandle[BREAK_SINCE] = start
+    }
+
+    // the position on screen, as [songShown] last heard it
+    private var shownIndex = -1
+
+    /** Another song on screen: the break that was kept is over. */
+    private fun forgetBreakAway(index: Int) {
+        shownIndex = index
+        if (savedStateHandle.get<Int>(BREAK_AT) != index) savedStateHandle.remove<Long>(BREAK_START)
     }
     /** Song the stage opens on (position in the setlist). */
     val start: Int = route.start
@@ -365,5 +383,7 @@ class StageViewModel @Inject constructor(
 }
 
 private const val BREAK_SINCE = "breakSince"
+private const val BREAK_START = "breakStart"   // kept while the break is hidden by the song before it
+private const val BREAK_AT = "breakAt"         // the song the kept break comes after
 private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome

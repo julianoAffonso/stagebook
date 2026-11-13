@@ -748,6 +748,8 @@ fun StageScreen(
     Column(
         Modifier
             .fillMaxSize()
+            // under the break the song is still drawn, but a screen reader must not read what the break covers
+            .then(if (onBreakNow) Modifier.clearAndSetSemantics {} else Modifier)
             .background(Color(look.bg))
             .padding(horizontal = Spacing.l),
     ) {
@@ -1421,7 +1423,8 @@ fun StageScreen(
         val title = if (next.missing) stringResource(R.string.set_item_missing) else next.title
         StageBreak(
             since = breakSince,
-            next = if (nextKey.isEmpty()) title else "$title · $nextKey",
+            next = title,
+            nextKey = nextKey,
             bg = Color(look.bg),
             fg = fg,
             vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
@@ -2161,7 +2164,8 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
 @Composable
 private fun StageBreak(
     since: Long,
-    next: String,
+    next: String,      // the next song's name
+    nextKey: String,   // its key ("" = none written)
     bg: Color,
     fg: Color,
     vertical: Boolean,   // scroll mode: lower half and swipe up go on
@@ -2205,14 +2209,20 @@ private fun StageBreak(
     ) {
         Text(stringResource(R.string.set_break), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
         Text(br.app.stagebook.domain.SetlistBreaks.clock(now - since), style = MaterialTheme.typography.displayLarge, color = fg, maxLines = 1)
-        Text(
-            stringResource(R.string.stage_break_next, next),
-            style = MaterialTheme.typography.titleLarge,
-            color = fg.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // one line: a long name is cut and the key stays whole (on a phone the name wrapped and left the key alone
+        // on the second line); read as one sentence
+        val nextStyle = MaterialTheme.typography.titleLarge
+        Row(Modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.stage_break_next, next),
+                Modifier.weight(1f, fill = false),
+                style = nextStyle,
+                color = fg.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (nextKey.isNotEmpty()) Text(" · $nextKey", style = nextStyle, color = fg.copy(alpha = 0.7f), maxLines = 1)
+        }
     }
 }
 
