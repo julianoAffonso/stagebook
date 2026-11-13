@@ -68,11 +68,11 @@ class ConductBreakTest {
 
         fun following(who: BandConduct = follower) = who.role.value as Role.Following
 
-        /** [act] and the one message it sends, already dealt with by the listener. */
-        fun told(act: () -> Unit) {
+        /** [act] and the [messages] it sends ("Look for the band" sends two), already dealt with by the listener. */
+        fun told(messages: Int = 1, act: () -> Unit) {
             val before = arrived.get()
             act()
-            await { arrived.get() > before }
+            await { arrived.get() >= before + messages }
         }
 
         /** Leading from song [index], and the follower already there. */
@@ -119,7 +119,7 @@ class ConductBreakTest {
         val lateLink = b.link(b.repo)
         val late = BandConduct(lateLink, b.repo, DeviceIdentity(context)).also { it.clock = { 5_000_000L } }
         b.listening = lateLink
-        b.told { b.leader.search() }
+        b.told(2) { b.leader.search() }
         assertEquals(5_000_000L - 240_000, b.following(late).breakSince)
         assertEquals(240_000L, b.sent.last().breakMs)
     }
@@ -131,7 +131,7 @@ class ConductBreakTest {
         // 3 minutes on both devices, and this message takes 700 ms to arrive
         b.leaderClock += 180_000
         b.followerClock += 180_700
-        b.told { b.leader.search() }
+        b.told(2) { b.leader.search() }
         assertEquals(180_000L, b.sent.last().breakMs)
         assertEquals(since, b.following().breakSince)
         // a break that started again is another one: it counts from its own start

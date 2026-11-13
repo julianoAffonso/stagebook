@@ -304,10 +304,13 @@ private fun Review(
     val toImport = ui.rows.count { it.chosen == null && !it.carried && it.candidates.isEmpty() }
 
     val found = ui.rows.count { it.chosen != null || it.carried }
+    val foundText = pluralStringResource(R.plurals.scan_found, ui.rows.size, found, ui.rows.size)
+    // the sender's breaks that stay with the songs going in now; nothing about breaks when none came or none stays
+    val breaks = ui.breakCount
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         OutlinedTextField(ui.name, onName, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.scan_name)) }, singleLine = true)
         Text(
-            pluralStringResource(R.plurals.scan_found, ui.rows.size, found, ui.rows.size),
+            if (breaks == 0) foundText else stringResource(R.string.set_count_with_breaks, foundText, pluralStringResource(R.plurals.break_count, breaks, breaks)),
             style = MaterialTheme.typography.titleSmall,
             // red only when a song really is missing; when only a choice is pending, the same orange as that row
             color = when {

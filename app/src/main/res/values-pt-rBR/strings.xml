@@ -203,6 +203,8 @@
     <string name="conduct_search">Procurar a banda</string>
     <string name="conduct_end">Encerrar</string>
     <string name="conduct_leave">Sair</string>
+    <string name="conduct_left">%1$s está conduzindo</string>
+    <string name="conduct_follow">Acompanhar</string>
     <string name="conduct_lacks_title">O que falta</string>
     <string name="conduct_lack_line">%1$s: %2$s</string>
     <string name="about_support">Apoie o Stagebook</string>

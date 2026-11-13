@@ -195,6 +195,8 @@
     <string name="conduct_search">Look for the band</string>
     <string name="conduct_end">End</string>
     <string name="conduct_leave">Leave</string>
+    <string name="conduct_left">%1$s is leading</string>
+    <string name="conduct_follow">Follow</string>
     <string name="conduct_lacks_title">What\'s missing</string>
     <string name="conduct_lack_line">%1$s: %2$s</string>
     <string name="about_support">Support Stagebook</string>

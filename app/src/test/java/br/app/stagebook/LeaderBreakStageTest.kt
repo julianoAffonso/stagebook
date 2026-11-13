@@ -111,7 +111,7 @@ class LeaderBreakStageTest {
     // ---- the strip, for a follower on any screen ----
 
     private fun strip(ui: ConductUi.Following) {
-        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}) } }
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}) } }
         compose.waitForIdle()
     }
 

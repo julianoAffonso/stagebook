@@ -74,11 +74,24 @@ sealed interface ScanUi {
     /** Fetching by the internet code, or what went wrong. */
     data class Fetching(val problem: CodeProblem? = null) : ScanUi
 
-    /** [songsOnly]: loose songs came (no setlist name): they only go into the library, no setlist is created. */
+    /**
+     * [songsOnly]: loose songs came (no setlist name): they only go into the library, no setlist is created. [breaks]:
+     * the breaks the sender put between the rows (null = it said nothing: the QR, an older app, loose songs).
+     */
     @Immutable
-    data class Review(val name: String, val rows: List<ScanRow>, val songsOnly: Boolean = false) : ScanUi {
+    data class Review(val name: String, val rows: List<ScanRow>, val songsOnly: Boolean = false, val breaks: List<Int>? = null) : ScanUi {
         /** The ones that will be left out: no choice and not carried along. */
         val missing: List<ScanRow> get() = rows.filter { it.chosen == null && !it.carried }
+
+        /**
+         * How many of the sender's breaks the setlist will have with the songs that go in now: one whose songs are left
+         * out goes to the next song that is in, joins another or goes away. Placed by what places them on creating; a
+         * song that came along has no id yet, so it counts as one nothing else has.
+         */
+        val breakCount: Int get() {
+            val sent = breaks ?: return 0
+            return br.app.stagebook.domain.SetlistBreaks.place(rows.mapIndexed { i, r -> r.chosen ?: "\u0000$i".takeIf { r.carried } }, sent).breaks.size
+        }
     }
 }
 
@@ -304,12 +317,12 @@ class ScanSetlistViewModel @Inject constructor(
     fun parkedShown() { _parked.value = 0 }
 
     // the breaks the sender put between the review's rows (null = it said nothing: the QR, an older app, loose songs)
-    private var received: List<Int>? = null
+    private val received: List<Int>? get() = (_ui.value as? ScanUi.Review)?.breaks
 
     internal fun review(text: String, songs: List<SetlistCloud.SharedSong>, breaks: List<Int>? = null) {
         val parsed = QrPayload.parse(text) ?: run { _ui.value = ScanUi.Fetching(CodeProblem.NOT_FOUND); return }
         // what comes from another device is never taken as it is: only breaks this setlist can have
-        received = breaks?.takeIf { parsed.name.isNotEmpty() }?.let { br.app.stagebook.domain.SetlistBreaks.normalise(it, parsed.songs.size) }
+        val received = breaks?.takeIf { parsed.name.isNotEmpty() }?.let { br.app.stagebook.domain.SetlistBreaks.normalise(it, parsed.songs.size) }
         val library = repository.library.value.songs
         val came = mutableMapOf<Int, SetlistCloud.SharedSong>()
         val other = mutableMapOf<Int, SetlistCloud.SharedSong>()
@@ -336,7 +349,7 @@ class ScanSetlistViewModel @Inject constructor(
         carried = came
         incoming = other
         finished = false   // a new review can be created once
-        _ui.value = ScanUi.Review(parsed.name, rows, songsOnly)
+        _ui.value = ScanUi.Review(parsed.name, rows, songsOnly, received)
     }
 
     private fun Song.ref() = SongRef(id, title, author)

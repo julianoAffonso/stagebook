@@ -76,6 +76,22 @@ sealed interface ConductUi {
         val lacks: List<Conduct.Lack>,
         val breakSince: Long? = null,
     ) : ConductUi
+
+    /** Left [from], who goes on leading: one action, to follow again. */
+    @Immutable
+    data class Left(val from: String) : ConductUi
+}
+
+/**
+ * What the strip shows for [role], or null for no strip: with the band off, with nobody leading, and for a leader this
+ * device left once it has been silent for as long as a followed one takes to count as disconnected.
+ */
+internal fun conductUi(role: Role, songs: List<br.app.stagebook.data.model.Song>, now: Long, bandOn: Boolean): ConductUi? = when {
+    !bandOn -> null
+    role is Role.Conducting -> ConductUi.Conducting(role.msg.set, role.noAnswer, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing)
+    role is Role.Following -> followingUi(role, songs, now)
+    role is Role.Left && !role.gone(now) -> ConductUi.Left(role.msg.from)
+    else -> null
 }
 
 /** What the strip tells a follower: the leader's song, or the leader's break and the song after it. */
@@ -99,15 +115,12 @@ class ConductViewModel @Inject constructor(private val conduct: BandConduct, rep
 
     // the library too: on a break the strip says whether the next song is here (looked up only then)
     val ui: StateFlow<ConductUi?> = combine(conduct.role, tick, repository.library) { role, now, library ->
-        when (role) {
-            Role.None -> null
-            is Role.Conducting -> ConductUi.Conducting(role.msg.set, role.noAnswer, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing)
-            is Role.Following -> followingUi(role, library.songs, now)
-        }
+        conductUi(role, library.songs, now, library.look.bandOn)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun end() = conduct.end()
     fun leave() = conduct.leave()
+    fun follow() = conduct.follow()
     fun search() = conduct.search()
 }
 
@@ -115,15 +128,15 @@ class ConductViewModel @Inject constructor(private val conduct: BandConduct, rep
 fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     AnimatedVisibility(ui != null, modifier) {
-        ui?.let { ConductBar(it, viewModel::end, viewModel::leave, viewModel::search) }
+        ui?.let { ConductBar(it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow) }
     }
 }
 
 @Composable
-fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: () -> Unit, modifier: Modifier = Modifier) {
+fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: () -> Unit, onFollow: () -> Unit, modifier: Modifier = Modifier) {
     var showLacks by rememberSaveable { mutableStateOf(false) }
-    val lacks = when (ui) { is ConductUi.Conducting -> ui.lacks; is ConductUi.Following -> ui.lacks }
-    val nowMissing = when (ui) { is ConductUi.Conducting -> ui.nowMissing; is ConductUi.Following -> ui.nowMissing }
+    val lacks = when (ui) { is ConductUi.Conducting -> ui.lacks; is ConductUi.Following -> ui.lacks; is ConductUi.Left -> emptyList() }
+    val nowMissing = when (ui) { is ConductUi.Conducting -> ui.nowMissing; is ConductUi.Following -> ui.nowMissing; is ConductUi.Left -> emptyList() }
     // someone is missing a song now (or the leader is gone): the whole strip turns red, so the band sees it before
     // starting
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
@@ -142,6 +155,7 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
                 TextButton(onEnd) { Text(stringResource(R.string.conduct_end)) }
             }
             is ConductUi.Following -> TextButton(onLeave) { Text(stringResource(R.string.conduct_leave)) }
+            is ConductUi.Left -> TextButton(onFollow) { Text(stringResource(R.string.conduct_follow)) }
         }
     }
     Surface(
@@ -169,6 +183,7 @@ fun ConductBar(ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: 
                             when (ui) {
                                 is ConductUi.Conducting -> stringResource(R.string.conduct_conducting, ui.set)
                                 is ConductUi.Following -> if (ui.gone) stringResource(R.string.conduct_gone, ui.from) else stringResource(R.string.conduct_following, ui.from)
+                                is ConductUi.Left -> stringResource(R.string.conduct_left, ui.from)
                             },
                             style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
@@ -214,14 +229,16 @@ private val sampleLacks = listOf(Conduct.Lack("Baixo", listOf("Evidências", "As
 @Composable
 private fun ConductBarSamples() {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        ConductBar(ConductUi.Conducting("Show de sábado", 1, emptyList(), sampleLacks), {}, {}, {})
-        ConductBar(ConductUi.Conducting("Show de sábado", 0, listOf("Baixo"), sampleLacks), {}, {}, {})
-        ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList()), {}, {}, {})
-        ConductBar(ConductUi.Following("Voz", "Evidências", true, false, listOf("Baixo"), sampleLacks), {}, {}, {})
-        ConductBar(ConductUi.Following("Voz", "", false, true, emptyList(), emptyList()), {}, {}, {})
+        ConductBar(ConductUi.Conducting("Show de sábado", 1, emptyList(), sampleLacks), {}, {}, {}, {})
+        ConductBar(ConductUi.Conducting("Show de sábado", 0, listOf("Baixo"), sampleLacks), {}, {}, {}, {})
+        ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList()), {}, {}, {}, {})
+        ConductBar(ConductUi.Following("Voz", "Evidências", true, false, listOf("Baixo"), sampleLacks), {}, {}, {}, {})
+        ConductBar(ConductUi.Following("Voz", "", false, true, emptyList(), emptyList()), {}, {}, {}, {})
         // the leader's break, two minutes in, with the song that comes next
         val since = remember { System.currentTimeMillis() - 125_000L }
-        ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), since), {}, {}, {})
+        ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), since), {}, {}, {}, {})
+        // left, and the leader goes on: the way back
+        ConductBar(ConductUi.Left("Voz"), {}, {}, {}, {})
     }
 }
 

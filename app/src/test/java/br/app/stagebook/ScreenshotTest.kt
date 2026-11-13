@@ -917,7 +917,7 @@ class ScreenshotTest {
             br.app.stagebook.ui.band.ConductBar(
                 br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")),
                     listOf(br.app.stagebook.domain.Conduct.Lack(s("Baixo"), listOf("Garota de Ipanema")))),
-                {}, {}, {},
+                {}, {}, {}, {},
             )
         }
     }
@@ -1593,14 +1593,14 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun receiveCodeReviewPhone() = shoot("jornada_compartilhar_3_receber") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }, breaks = listOf(2)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
         )
     }
 
     @Test fun receiveCodeReviewTablet() = shoot("jornada_compartilhar_3_receber_tablet") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }, breaks = listOf(2)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
         )
     }

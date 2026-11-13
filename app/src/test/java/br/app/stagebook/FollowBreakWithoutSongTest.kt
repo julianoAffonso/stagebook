@@ -79,10 +79,10 @@ class FollowBreakWithoutSongTest {
 
         fun following(who: BandConduct = follower) = who.role.value as Role.Following
 
-        fun told(act: () -> Unit) {
+        fun told(messages: Int = 1, act: () -> Unit) {
             val before = arrived.get()
             act()
-            await { arrived.get() > before }
+            await { arrived.get() >= before + messages }
         }
 
         fun started(index: Int = 0): Band {
@@ -126,7 +126,7 @@ class FollowBreakWithoutSongTest {
         assertEquals("Segunda" to false, strip.song to strip.missingHere)
 
         // the same break told again (a sign of life) opens nothing again
-        b.told { b.leader.search() }
+        b.told(2) { b.leader.search() }
         assertEquals(listOf(BandConduct.BREAK_ONLY), b.opened)
 
         // the leader goes on: the next song opens, as it always did
@@ -178,7 +178,7 @@ class FollowBreakWithoutSongTest {
         val opened = CopyOnWriteArrayList<String>()
         b.watch(late, opened)
         b.listening = lateLink
-        b.told { b.leader.search() }
+        b.told(2) { b.leader.search() }
         assertEquals(listOf(BandConduct.BREAK_ONLY), opened)
         assertEquals(5_000_000L - 240_000, b.following(late).breakSince)
         assertEquals(FollowBreak(5_000_000L - 240_000, "Segunda", "G"), followBreak(b.following(late), b.library()))
