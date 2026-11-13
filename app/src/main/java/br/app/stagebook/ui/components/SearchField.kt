@@ -53,14 +53,42 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
  * The search with its label always small on top (phones, beside the tag filter, which shows "Tags" the same way). Only
  * the state-based field can keep the label up while empty; the text still comes from and goes to [value].
  */
+/**
+ * Tells a text coming back to a field that sent it from one set from outside. Typed fast, the second letter left the
+ * field before the first came back, and the field was put back to the first: letters were lost (seen on a phone, 13/11).
+ */
+internal class TextEcho(first: String) {
+    private var last = first
+    private val sent = ArrayDeque<String>()
+
+    /** The field now reads [text]: true when that is news to tell (not what was just set from outside). */
+    fun typed(text: String): Boolean {
+        if (text == last) return false
+        last = text
+        sent.addLast(text)
+        return true
+    }
+
+    /** The owner now holds [value]: true when it was set from outside (cleared, restored), and the field must take it. */
+    fun fromOutside(value: String): Boolean {
+        val at = sent.indexOf(value)
+        if (at >= 0) { repeat(at + 1) { sent.removeFirst() }; return false }
+        if (value == last) return false
+        sent.clear()
+        last = value
+        return true
+    }
+}
+
 @Composable
 private fun LabeledSearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, label: String, modifier: Modifier) {
     val state = androidx.compose.foundation.text.input.rememberTextFieldState(value)
-    val current by androidx.compose.runtime.rememberUpdatedState(value)
     val change by androidx.compose.runtime.rememberUpdatedState(onValueChange)
-    androidx.compose.runtime.LaunchedEffect(value) { if (state.text.toString() != value) state.edit { replace(0, length, value) } }
+    // the field's own text leads while the person types: a [value] coming back is only an echo of what the field sent
+    val echo = androidx.compose.runtime.remember { TextEcho(value) }
+    androidx.compose.runtime.LaunchedEffect(value) { if (echo.fromOutside(value) && state.text.toString() != value) state.edit { replace(0, length, value) } }
     androidx.compose.runtime.LaunchedEffect(state) {
-        androidx.compose.runtime.snapshotFlow { state.text.toString() }.collect { if (it != current) change(it) }
+        androidx.compose.runtime.snapshotFlow { state.text.toString() }.collect { if (echo.typed(it)) change(it) }
     }
     TextField(
         state = state,

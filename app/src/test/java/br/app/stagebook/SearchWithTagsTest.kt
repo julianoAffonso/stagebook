@@ -34,4 +34,40 @@ class SearchWithTagsTest {
         compose.waitForIdle()
         assertEquals("legião", typed)
     }
+
+    // typed fast, the second letter left the field before the first came back from the screen, and the field was put
+    // back to the first: "Vocalise" read "Va" (S26, 13/11)
+    @Test fun `phone - a letter coming back late doesn't undo the ones typed after it`() {
+        var shown by mutableStateOf("")
+        var typed = ""
+        compose.setContent { StagebookTheme { SearchWithTags(shown, { typed = it }, "Buscar música ou artista", listOf("Nacional"), emptySet(), {}) } }
+        compose.onNodeWithText("Buscar").performTextInput("V")
+        compose.onNodeWithText("Buscar").performTextInput("o")
+        compose.waitForIdle()
+        assertEquals("Vo", typed)
+        // the screen is one letter behind
+        shown = "V"
+        compose.waitForIdle()
+        compose.onNodeWithText("Vo").assertExists()
+        assertEquals("Vo", typed)
+        shown = "Vo"
+        compose.waitForIdle()
+        compose.onNodeWithText("Vo").assertExists()
+        // cleared from outside (the ✕ of the header, a song opened): the field follows
+        shown = ""
+        compose.waitForIdle()
+        compose.onNodeWithText("Vo").assertDoesNotExist()
+        compose.onNodeWithText("Música, artista").assertExists()
+    }
+
+    @Test fun `an echo is told from a text set from outside`() {
+        val echo = br.app.stagebook.ui.components.TextEcho("")
+        assertEquals(true, echo.typed("V")); assertEquals(true, echo.typed("Vo"))
+        assertEquals(false, echo.fromOutside("V")); assertEquals(false, echo.fromOutside("Vo"))
+        assertEquals(true, echo.fromOutside(""))
+        // what was set from outside is not typed news; the next letter is
+        assertEquals(false, echo.typed("")); assertEquals(true, echo.typed("a"))
+        // the screen skipped a step: the latest echo settles the earlier ones
+        assertEquals(true, echo.typed("ab")); assertEquals(false, echo.fromOutside("ab")); assertEquals(true, echo.fromOutside("a"))
+    }
 }
