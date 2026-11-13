@@ -646,6 +646,8 @@ private fun SectionList(uiState: SettingsUiState, selected: SettingsSection?, on
                         }) else null,
                     )
                 }
+                // room under the last item: on a phone "About" ended against the bottom bar, its edge cut by it (user, 13/11)
+                Spacer(Modifier.height(Spacing.s))
             }
         }
     }
