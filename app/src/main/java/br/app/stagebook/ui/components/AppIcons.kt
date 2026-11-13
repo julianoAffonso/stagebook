@@ -110,6 +110,11 @@ object AppIcons {
         icon("capo", "M6,3h1.5v18H6zM10,3h1.5v18H10zM14,3h1.5v18H14zM18,3h1.5v18H18zM3.5,9.5h17a1.5,1.5 0,0 1,1.5 1.5v1a1.5,1.5 0,0 1,-1.5 1.5h-17a1.5,1.5 0,0 1,-1.5 -1.5v-1a1.5,1.5 0,0 1,1.5 -1.5z")
     }
     val Remove by lazy { icon("remove", "M19,13H5v-2h14v2z") }
+    // takes something out of a list without deleting it (a song or a break out of a setlist): the bin read as "delete
+    // the song", and × as "close" (user, 13/11)
+    val RemoveCircle by lazy {
+        icon("removecircle", "M7,11v2h10v-2L7,11zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z")
+    }
     val ArrowUp by lazy { icon("up", "M4,12l1.41,1.41L11,7.83V20h2V7.83l5.58,5.59L20,12l-8,-8 -8,8z") }
     val ArrowDown by lazy { icon("down", "M20,12l-1.41,-1.41L13,16.17V4h-2v12.17l-5.58,-5.59L4,12l8,8 8,-8z") }
     val Visibility by lazy {

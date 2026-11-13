@@ -219,7 +219,8 @@ fun SetlistDetailScreen(
                     subtitle = br.app.stagebook.ui.components.songCountText(items.size).let { songs ->
                         val count = if (breakCount == 0) songs
                             else stringResource(R.string.set_count_with_breaks, songs, pluralStringResource(R.plurals.break_count, breakCount, breakCount))
-                        if (items.isNotEmpty()) stringResource(R.string.set_tap_to_play, count) else count
+                        // with breaks the line is already long: the hint would wrap on a phone
+                        if (items.isNotEmpty() && breakCount == 0) stringResource(R.string.set_tap_to_play, count) else count
                     },
                     onBack = onBack,
                     // tapping the name renames it, like a song's name in its editor (user, 01/11)
@@ -425,7 +426,7 @@ private fun BreakRow(handle: Modifier?, onRemove: () -> Unit, modifier: Modifier
         }
         Text(stringResource(R.string.set_break), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = color)
         IconButton(onClick = onRemove) {
-            Icon(AppIcons.Close, stringResource(R.string.set_break_remove), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(AppIcons.RemoveCircle, stringResource(R.string.set_break_remove), tint = MaterialTheme.colorScheme.error)
         }
     }
 }
