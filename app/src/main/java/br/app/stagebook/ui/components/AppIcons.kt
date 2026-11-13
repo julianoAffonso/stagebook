@@ -111,6 +111,8 @@ object AppIcons {
     }
     val Remove by lazy { icon("remove", "M19,13H5v-2h14v2z") }
     // takes something out of a list without deleting it (a song or a break out of a setlist): the bin read as "delete
+    // renaming: letters, where the pencil already means "edit the setlist" in the same bar (user, 13/11)
+    val Rename by lazy { icon("rename", "M2.5,4v3h5v12h3V7h5V4H2.5zM21.5,9h-9v3h3v7h3v-7h3V9z") }
     // the song", and × as "close" (user, 13/11)
     val RemoveCircle by lazy {
         icon("removecircle", "M7,11v2h10v-2L7,11zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z")

@@ -255,7 +255,7 @@ fun SetlistDetailScreen(
                         // what is rarely used, and deleting, away from the thumb during a show (user, 13/11)
                         OverflowMenu(
                             listOfNotNull(
-                                MenuAction(stringResource(R.string.sets_rename), AppIcons.Edit, { renaming = true }),
+                                MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
                                 MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, onClearPlayed).takeIf { uiState.anyPlayed },
                                 MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
                             ),
