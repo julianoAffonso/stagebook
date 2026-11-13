@@ -65,35 +65,21 @@ import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.EmptyState
 import br.app.stagebook.ui.components.LightPreview
-import br.app.stagebook.ui.components.NumberBadge
+import br.app.stagebook.ui.components.SetlistBreakRow
+import br.app.stagebook.ui.components.SetlistDragHandle
+import br.app.stagebook.ui.components.SetlistKeyBadge
+import br.app.stagebook.ui.components.SetlistSongRow
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.ScreenInsets
-import br.app.stagebook.ui.components.SongListItem
 import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.components.wideLists
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
-import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.domain.SetlistBreaks
 import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.inset
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -302,7 +288,7 @@ fun SetlistDetailScreen(
                                         if (mark.block > 0) BlockHeader(mark.block, mark.blockSongs)
                                         when (row) {
                                             // outside the edit a break only shows: nothing to drag or remove
-                                            is SetRow.Break -> BreakRow(
+                                            is SetRow.Break -> SetlistBreakRow(
                                                 handle = handle.takeIf { editing },
                                                 onRemove = { onRemoveBreak(mark.songsBefore) }.takeIf { editing },
                                                 modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
@@ -310,51 +296,37 @@ fun SetlistDetailScreen(
                                             is SetRow.Song -> {
                                                 val item = row.item
                                                 val title = if (item.missing) stringResource(R.string.set_item_missing) else item.title
-                                                val state = if (editing) SetlistShow.State.NONE else item.state
                                                 val left = stringResource(R.string.set_song_left, title)
                                                 val undo = stringResource(R.string.action_undo)
-                                                Box(
-                                                    Modifier.shadow(elevation, MaterialTheme.shapes.medium).clip(MaterialTheme.shapes.medium)
-                                                        .alpha(if (state == SetlistShow.State.PLAYED) PLAYED_ALPHA else 1f),
-                                                ) {
-                                                    SongListItem(
-                                                        title = title,
-                                                        subtitle = item.subtitle,
-                                                        onClick = { if (selecting) toggle(item.key) else if (!editing) onPlay(mark.songsBefore) },
-                                                        onLongClick = { toggle(item.key) }.takeUnless { editing },
-                                                        titleStyle = MaterialTheme.typography.titleLarge,
-                                                        containerColor = stateContainer(state),
-                                                        inline = wide,
-                                                        // the strip is drawn over the row's start edge; with no state its room
-                                                        // stays empty, so the titles line up
-                                                        startPadding = if (editing) Spacing.m else STATE_STRIP + Spacing.s,
-                                                        // YouTube Music pattern: the drag handle at the start of the row
-                                                        leading = {
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                if (selecting) androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) })
-                                                                else if (editing) IconButton(onClick = {}, modifier = handle) {
-                                                                    Icon(AppIcons.DragHandle, stringResource(R.string.set_reorder), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                                }
-                                                                // the numbers go on counting past a break
-                                                                NumberBadge(
-                                                                    mark.songsBefore + 1,
-                                                                    color = if (state == SetlistShow.State.NOW) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
-                                                                )
-                                                            }
-                                                        },
-                                                        trailing = {
-                                                            // out at once, with "Undo" in the message: a confirmation for
-                                                            // every song made cleaning a setlist slow (user, 13/11)
-                                                            if (editing) IconButton(onClick = {
-                                                                onRemove(mark.songsBefore, item.songId)
-                                                                message.show(left, long = true, action = undo, onAction = onUndoRemove)
-                                                            }) {
-                                                                Icon(AppIcons.RemoveCircle, stringResource(R.string.set_remove_song), tint = MaterialTheme.colorScheme.error)
-                                                            } else SongFacts(item)
-                                                        },
-                                                    )
-                                                    if (state != SetlistShow.State.NONE) StateStrip(state, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
-                                                }
+                                                SetlistSongRow(
+                                                    // the numbers go on counting past a break
+                                                    number = mark.songsBefore + 1,
+                                                    title = title,
+                                                    subtitle = item.subtitle,
+                                                    state = if (editing) SetlistShow.State.NONE else item.state,
+                                                    onClick = { if (selecting) toggle(item.key) else if (!editing) onPlay(mark.songsBefore) },
+                                                    modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
+                                                    onLongClick = { toggle(item.key) }.takeUnless { editing },
+                                                    inline = wide,
+                                                    // the edit's handle sits at the row's very edge, in a narrow column
+                                                    // (user, 13/11: the wide number and handle took the title's room)
+                                                    stripRoom = !editing,
+                                                    beforeNumber = when {
+                                                        selecting -> ({ androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) }) })
+                                                        editing -> ({ SetlistDragHandle(handle) })
+                                                        else -> null
+                                                    },
+                                                    trailing = {
+                                                        // out at once, with "Undo" in the message: a confirmation for
+                                                        // every song made cleaning a setlist slow (user, 13/11)
+                                                        if (editing) IconButton(onClick = {
+                                                            onRemove(mark.songsBefore, item.songId)
+                                                            message.show(left, long = true, action = undo, onAction = onUndoRemove)
+                                                        }) {
+                                                            Icon(AppIcons.RemoveCircle, stringResource(R.string.set_remove_song), tint = MaterialTheme.colorScheme.error)
+                                                        } else SongFacts(item)
+                                                    },
+                                                )
                                             }
                                         }
                                     }
@@ -414,52 +386,13 @@ private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () ->
     }
 }
 
-/** The row's color by where the show is: the song on stage and the one after it stand out. */
-@Composable
-private fun stateContainer(state: SetlistShow.State): Color = when (state) {
-    SetlistShow.State.NOW -> MaterialTheme.colorScheme.primaryContainer
-    // the theme has no tertiary container of its own: a tint of its tertiary over the row's surface
-    SetlistShow.State.NEXT -> MaterialTheme.colorScheme.tertiary.copy(alpha = NEXT_TINT).compositeOver(MaterialTheme.colorScheme.surface)
-    else -> MaterialTheme.colorScheme.surface
-}
-
-/** The strip on the row's start edge, with the state written from bottom to top. */
-@Composable
-private fun StateStrip(state: SetlistShow.State, modifier: Modifier = Modifier) {
-    val scheme = MaterialTheme.colorScheme
-    val (label, color, onColor) = when (state) {
-        SetlistShow.State.NOW -> Triple(R.string.set_state_now, scheme.primary, scheme.onPrimary)
-        SetlistShow.State.NEXT -> Triple(R.string.set_state_next, scheme.tertiary, scheme.onTertiary)
-        else -> Triple(R.string.set_state_played, scheme.surfaceVariant, scheme.onSurfaceVariant)
-    }
-    Box(modifier.width(STATE_STRIP).fillMaxHeight().background(color), contentAlignment = Alignment.Center) {
-        // smaller rather than cut: a tablet's row is barely as tall as the longest word, and less with big system text
-        Text(
-            stringResource(label), Modifier.vertical().padding(horizontal = Spacing.xs), style = MaterialTheme.typography.labelSmall, color = onColor, maxLines = 1, softWrap = false,
-            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = STATE_LABEL_MIN, maxFontSize = MaterialTheme.typography.labelSmall.fontSize),
-        )
-    }
-}
-
-/** Turned a quarter, reading upwards: takes the room of the turned text, not of the text lying down. */
-private fun Modifier.vertical(): Modifier = layout { measurable, constraints ->
-    val text = measurable.measure(Constraints(maxWidth = constraints.maxHeight, maxHeight = constraints.maxWidth))
-    layout(text.height, text.width) { text.place(-(text.width - text.height) / 2, -(text.height - text.width) / 2) }
-}.rotate(-90f)
-
 /** What the musician checks before the song starts: the key, and under it the tempo, the capo and a play mark with a backing track. */
 @Composable
 private fun SongFacts(item: SetItemUi, modifier: Modifier = Modifier) {
     if (item.songKey.isEmpty() && item.bpm <= 0 && item.capo <= 0 && !item.hasTrack) return
     Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (item.songKey.isNotEmpty()) {
-            Text(
-                item.songKey,
-                Modifier.background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.small).padding(horizontal = Spacing.s),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                maxLines = 1,
-            )
+            SetlistKeyBadge(item.songKey)
         }
         if (item.bpm > 0 || item.capo > 0 || item.hasTrack) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -472,11 +405,6 @@ private fun SongFacts(item: SetItemUi, modifier: Modifier = Modifier) {
         }
     }
 }
-
-private val STATE_STRIP = Spacing.l
-private val STATE_LABEL_MIN = 8.sp
-private const val PLAYED_ALPHA = 0.5f
-private const val NEXT_TINT = 0.16f
 
 /** A row of the setlist: a song or a break. [key] is stable while dragging. */
 private sealed interface SetRow {
@@ -524,39 +452,6 @@ private fun BlockHeader(block: Int, songs: Int, modifier: Modifier = Modifier) {
         modifier = modifier.padding(start = Spacing.m, top = Spacing.s, bottom = Spacing.s),
     )
 }
-
-/** A break between two songs: a dashed outline; while editing, dragged by its [handle] like a song and taken out by [onRemove]. */
-@Composable
-private fun BreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifier = Modifier) {
-    val color = MaterialTheme.colorScheme.primary
-    val shape = MaterialTheme.shapes.medium
-    Row(
-        modifier
-            .fillMaxWidth()
-            .drawBehind {
-                val dash = Spacing.s.toPx()
-                val line = BREAK_OUTLINE.toPx()
-                // inside the row's bounds, so the line isn't cut in half at the edges
-                inset(line / 2) {
-                    drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(line, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))))
-                }
-            }
-            .heightIn(min = Sizes.touch)
-            .padding(horizontal = Spacing.m),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-    ) {
-        if (handle != null) IconButton(onClick = {}, modifier = handle) {
-            Icon(AppIcons.DragHandle, stringResource(R.string.set_reorder), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Text(stringResource(R.string.set_break), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = color)
-        if (onRemove != null) IconButton(onClick = onRemove) {
-            Icon(AppIcons.RemoveCircle, stringResource(R.string.set_break_remove), tint = MaterialTheme.colorScheme.error)
-        }
-    }
-}
-
-private val BREAK_OUTLINE = 2.dp
 
 @Composable
 private fun QrDialog(qr: QrUi, onDismiss: () -> Unit) {

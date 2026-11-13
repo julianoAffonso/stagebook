@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.StageGate
 import br.app.stagebook.data.model.Song
+import br.app.stagebook.domain.SetlistShow.State
 import br.app.stagebook.ui.stage.StageViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +84,24 @@ class StageMetaTest {
         assertEquals(since, stage(repo, "", saved).breakSince.value)   // the stage built again from what was saved
         vm.setBreak(false)
         assertEquals(null, vm.breakSince.value)
+    }
+
+    // the setlist over the stage (see StageSetlistPanelTest for the screen): only a stage opened from a setlist has
+    // one, with its name, each song's key and the same marks the setlist's screen shows
+    @Test fun `a stage opened from a setlist carries it, and a single song carries none`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf("{key: G}\nlinha", "linha", "{key: Em}\nlinha").mapIndexed { i, text -> repo.saveSong(Song(title = "Painel $i", text = text)) }
+        val set = repo.createSetlist("Show do painel").also { repo.addToSetlist(it, ids) }
+        val vm = stage(repo, "", SavedStateHandle(mapOf("setId" to set, "start" to 0)))
+        val opened = withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.setlist!!
+        assertEquals("Show do painel", opened.name)
+        assertEquals(listOf("G", "", "Em"), opened.keys)
+        vm.songShown(1)
+        assertEquals(listOf(State.NONE, State.NOW, State.NEXT), withTimeout(5_000) { vm.uiState.first { it.setlist?.states?.contains(State.NOW) == true } }.setlist!!.states)
+
+        val single = stage(repo, ids[0])
+        assertEquals(null, withTimeout(5_000) { single.uiState.first { it.songs.isNotEmpty() && !it.loading } }.setlist)
     }
 
     private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = testStage(context, repo, saved)

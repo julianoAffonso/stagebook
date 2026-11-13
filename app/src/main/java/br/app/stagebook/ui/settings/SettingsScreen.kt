@@ -1255,6 +1255,7 @@ private fun pedalActionLabel(a: PedalAction): String = stringResource(
         PedalAction.NEXT_SONG -> R.string.settings_pedal_cmd_next_song
         PedalAction.PREVIOUS_SONG -> R.string.settings_pedal_cmd_previous_song
         PedalAction.PLAY_PAUSE -> R.string.settings_pedal_cmd_play_pause
+        PedalAction.OPEN_SETLIST -> R.string.settings_pedal_cmd_setlist
         PedalAction.NONE -> R.string.settings_pedal_cmd_none
     },
 )

@@ -154,6 +154,8 @@
     <string name="stage_exit">Sair</string>
     <string name="stage_position">%1$d de %2$d</string>
     <string name="stage_next">Próxima: %1$s</string>
+    <string name="stage_setlist_open">Abrir o setlist</string>
+    <string name="stage_setlist_close">Fechar o setlist</string>
     <string name="stage_end">Fim do setlist</string>
     <string name="stage_edit">Editar a letra nesta página</string>
     <string name="stage_edit_line">Editar esta linha</string>
@@ -523,6 +525,7 @@
     <string name="settings_pedal_cmd_next_song">Próxima música</string>
     <string name="settings_pedal_cmd_previous_song">Música anterior</string>
     <string name="settings_pedal_cmd_play_pause">Play/pause do backing track</string>
+    <string name="settings_pedal_cmd_setlist">Abrir o setlist</string>
     <string name="settings_pedal_cmd_none">Nada</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_help">Quer o Stagebook no seu idioma? Ajude a traduzir: o passo a passo está no %1$s.</string>

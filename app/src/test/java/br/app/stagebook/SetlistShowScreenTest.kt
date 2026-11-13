@@ -25,6 +25,7 @@ import br.app.stagebook.ui.setlists.SetlistDetailScreen
 import br.app.stagebook.ui.setlists.SetlistDetailUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,6 +60,7 @@ class SetlistShowScreenTest {
     private var deleted = 0
     private var cleared = 0
     private var removedBreaks = 0
+    private val density = 1.5f   // hdpi
 
     private fun show(initial: SetlistDetailUiState = show) {
         state = initial
@@ -90,6 +92,8 @@ class SetlistShowScreenTest {
 
     private fun handles() = compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")
     private fun removeButtons() = compose.onAllNodesWithContentDescription("Tirar deste setlist")
+    /** Where one text of a row is drawn (the row's texts are read together, so each one is looked up on its own). */
+    private fun part(text: String) = compose.onNodeWithText(text, useUnmergedTree = true).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
     private fun edit() { compose.onNodeWithContentDescription("Editar setlist").performClick(); compose.waitForIdle() }
 
     // ---- the show ----
@@ -121,6 +125,34 @@ class SetlistShowScreenTest {
         compose.onNodeWithText("TOCADA").assertExists()
         compose.onNodeWithText("AGORA").assertExists()
         compose.onNodeWithText("PRÓX.").assertExists()
+    }
+
+    // the number and the title share the row, the number first and small, right after the state strip
+    @Test fun `in the show a row draws its small number and then its title, with no handle`() {
+        show()
+        val number = part("2")
+        val title = part("Música b")
+        val strip = part("AGORA")
+        assertTrue("strip, number, title: $strip $number $title", strip.right <= number.left && number.right <= title.left)
+        assertTrue("the number's column is narrow: ${title.left - strip.right}", title.left - strip.right <= 48 * density)
+        assertTrue("centered on the title's line", kotlin.math.abs(number.center.y - title.center.y) <= 2 * density)
+        compose.onNodeWithText("Em").assertIsDisplayed()
+    }
+
+    @Test fun `in the edit a row draws its handle, its small number, its title and its remove button, in that order`() {
+        show()
+        edit()
+        val handle = handles()[1].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val number = part("2")
+        val title = part("Música b")
+        val remove = removeButtons()[1].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue("$handle $number $title $remove", handle.right <= number.left && number.right <= title.left && title.right <= remove.left)
+        assertTrue("handle and number at the same height", kotlin.math.abs(handle.center.y - number.center.y) <= 2 * density)
+        // the handle sits at the row's very edge, and the break's is in line with it
+        val row = compose.onNodeWithText("Música b").fetchSemanticsNode().boundsInRoot   // the row speaks as one: its texts together
+        assertTrue("row $row handle $handle", handle.left - row.left <= 8 * density)
+        val breakHandle = handles()[3].fetchSemanticsNode().boundsInRoot
+        assertEquals(handle.left, breakHandle.left, 1f)
     }
 
     @Test fun `only the states the songs have are written`() {

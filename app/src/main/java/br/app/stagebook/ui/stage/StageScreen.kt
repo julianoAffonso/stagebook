@@ -400,6 +400,10 @@ fun StageScreen(
     // a break that isn't there any more (taken out of the setlist meanwhile) doesn't come back later
     LaunchedEffect(breakSince != null, breakNext) { if (breakSince != null && !breakNext) onBreak(false) }
     BackHandler(enabled = onBreakNow) { onBreak(false) }
+    // the setlist over the stage (only on a stage opened from one): back closes it before anything else
+    val setlist = uiState.setlist
+    var setlistOpen by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = setlistOpen && setlist != null) { setlistOpen = false }
     // keyboard doesn't use capo: chords show in the sounding key (chart in G with capo on fret 2 → A), without changing
     // the saved song (user's request, 29/10)
     val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD
@@ -656,6 +660,21 @@ fun StageScreen(
         presses.from = index to page
         onPosition(target, 0)
     }
+    // a song tapped on the setlist over the stage: at its start, by the same way a page turn changes song, so its
+    // MIDI, Now Playing and band message follow. No break on the way, and one on screen is left
+    fun jumpTo(target: Int) {
+        setlistOpen = false
+        if (target !in uiState.songs.indices) return
+        if (onBreakNow) {
+            onBreak(false)
+            // into the set after the break: its time counts from zero, as when the break is left forward
+            if (target > index && look.clockMode != br.app.stagebook.data.model.StageClockMode.CLOCK) onRestartShow()
+        }
+        presses.steps = 0
+        if (target == index && page == 0) return
+        presses.from = index to page
+        onPosition(target, 0)
+    }
     val settled = pageCountFor == index
     SideEffect {
         if (presses.from != null && settled && presses.from != index to page) {
@@ -718,6 +737,7 @@ fun StageScreen(
                 PedalAction.NEXT_SONG -> goSong(true)
                 PedalAction.PREVIOUS_SONG -> goSong(false)
                 PedalAction.PLAY_PAUSE -> if (look.playerMode && !song.missing && song.track.isNotEmpty()) onTogglePlay()
+                PedalAction.OPEN_SETLIST -> if (setlist != null) setlistOpen = !setlistOpen
                 PedalAction.NONE -> Unit
             }
         }
@@ -1409,6 +1429,20 @@ fun StageScreen(
             onPrevious = ::previous,
         )
     }
+    // above the break too: there it is the only way out on screen besides going on or back
+    if (setlist != null) {
+        StageSetlistLayer(
+            open = setlistOpen,
+            onOpen = { setlistOpen = it },
+            setlist = setlist,
+            songs = uiState.songs,
+            breaks = uiState.breaks,
+            index = index,
+            fg = fg,
+            bg = Color(look.bg),
+            onSong = ::jumpTo,
+        )
+    }
     if (keyboardHint > 0) {
         Surface(
             shape = MaterialTheme.shapes.large,
@@ -1775,6 +1809,14 @@ private fun LostTrackButton(name: String, bg: Color, onPick: () -> Unit, modifie
 }
 
 /**
+ * What floats over the lyrics (play, the setlist's handle): the stage's own background at 50%, under a light tint. It
+ * reads as on top of the lyrics and what's behind still shows faintly (user, 09/11: at 12% "Frase 5" looked over it,
+ * at 92% it hid it).
+ */
+internal fun Modifier.overLyrics(bg: Color, fg: Color): Modifier =
+    then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.5f)) else Modifier).background(fg.copy(alpha = 0.12f))
+
+/**
  * Track play/pause: a circle in the stage's own color, on top of the lyrics (09/11). Without a track, the tap picks the file; with
  * a track, a long press opens the song's mixer, or changes or removes the track.
  */
@@ -1808,10 +1850,7 @@ private fun TrackButton(
             Modifier
                 .size(Sizes.touch + Spacing.m)
                 .clip(CircleShape)
-                // the stage's own background at 50%, under the old light tint: the button reads as on top of the lyrics
-                // and what's behind still shows faintly (user, 09/11: at 12% "Frase 5" looked over it, at 92% it hid it)
-                .then(if (bg != Color.Unspecified) Modifier.background(bg.copy(alpha = 0.5f)) else Modifier)
-                .background(fg.copy(alpha = 0.12f))
+                .overLyrics(bg, fg)
                 .combinedClickable(onClick = onClick, onLongClick = { if (hasTrack) menu = true }),
             contentAlignment = Alignment.Center,
         ) {

@@ -147,6 +147,8 @@
     <string name="stage_exit">Leave</string>
     <string name="stage_position">%1$d of %2$d</string>
     <string name="stage_next">Next: %1$s</string>
+    <string name="stage_setlist_open">Open the setlist</string>
+    <string name="stage_setlist_close">Close the setlist</string>
     <string name="stage_end">End of setlist</string>
     <string name="stage_edit">Edit the lyrics on this page</string>
     <string name="stage_edit_line">Edit this line</string>
@@ -510,6 +512,7 @@
     <string name="settings_pedal_cmd_next_song">Next song</string>
     <string name="settings_pedal_cmd_previous_song">Previous song</string>
     <string name="settings_pedal_cmd_play_pause">Play/pause backing track</string>
+    <string name="settings_pedal_cmd_setlist">Open the setlist</string>
     <string name="settings_pedal_cmd_none">Nothing</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_help">Want Stagebook in your language? Help translate it: the steps are in the %1$s.</string>

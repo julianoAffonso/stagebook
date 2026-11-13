@@ -15,6 +15,7 @@ enum class PedalAction {
     @SerialName("nextSong") NEXT_SONG,
     @SerialName("previousSong") PREVIOUS_SONG,
     @SerialName("playPause") PLAY_PAUSE,   // play/pause the backing track (only in player mode and with a song that has a backing track)
+    @SerialName("openSetlist") OPEN_SETLIST,   // opens the setlist over the stage, and closes it (only on a stage opened from a setlist)
     @SerialName("none") NONE;
 
     companion object {

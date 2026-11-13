@@ -45,6 +45,7 @@ fun SongListItem(
     inline: Boolean = false,
     onLongClick: (() -> Unit)? = null,   // hold: selection (share several), where the list supports it
     startPadding: Dp = Spacing.m,   // more when something is drawn over the row's start edge (a setlist's state strip)
+    gap: Dp = Spacing.m,   // between the leading, the texts and the trailing; a setlist's rows keep them closer
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -57,7 +58,7 @@ fun SongListItem(
                 .padding(start = startPadding, end = Spacing.m)
                 .padding(vertical = if (inline) Spacing.xs else Spacing.s),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+            horizontalArrangement = Arrangement.spacedBy(gap),
         ) {
             leading?.invoke()
             if (inline) {
@@ -96,13 +97,19 @@ fun SongListItem(
 @Composable
 fun wideLists(): Boolean = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } >= 600.dp
 
-/** Song number in the setlist, in the accent color with no background (fixed width: the titles line up). */
+/**
+ * Song number in the setlist, in the accent color with no background (fixed width: the titles line up). [compact]: a
+ * small number in a narrow column, which leaves the width to the title.
+ */
 @Composable
-fun NumberBadge(number: Int, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
-    Box(modifier.width(40.dp), contentAlignment = Alignment.Center) {
-        Text(number.toString(), style = MaterialTheme.typography.titleLarge, color = color)
+fun NumberBadge(number: Int, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, compact: Boolean = false) {
+    Box(modifier.width(if (compact) NUMBER_COMPACT else 40.dp), contentAlignment = Alignment.Center) {
+        Text(number.toString(), style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge, color = color, maxLines = 1, softWrap = false)
     }
 }
+
+/** The compact number's column. */
+internal val NUMBER_COMPACT = Spacing.l + Spacing.xs
 
 @Composable
 private fun SongListItemSample(song: SampleSong) {

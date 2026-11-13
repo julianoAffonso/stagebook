@@ -40,6 +40,13 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     }
 }
 
+/**
+ * The setlist the stage was opened from, for the panel over the stage: its [name] and, for each song, where the show
+ * is ([states], the same marks the setlist's screen shows) and its key ([keys], "" = none written).
+ */
+@Immutable
+data class StageSetlist(val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList())
+
 @Immutable
 data class StageUiState(
     val loading: Boolean = true,
@@ -52,6 +59,8 @@ data class StageUiState(
     val live: Boolean = false,
     /** The setlist's breaks: each one comes before the song at that position (see SetlistBreaks). */
     val breaks: List<Int> = emptyList(),
+    /** Opened from a setlist: it can be opened over the stage. Null for a single song (the library, or following the band). */
+    val setlist: StageSetlist? = null,
 )
 
 @HiltViewModel
@@ -248,7 +257,7 @@ class StageViewModel @Inject constructor(
     /** Song the stage opens on (position in the setlist). */
     val start: Int = route.start
 
-    val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library, conduct.role) { loaded, lib, role ->
+    val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library, conduct.role, show.marks) { loaded, lib, role, marks ->
         val set = route.setId?.let(lib::setlist)
         val ids = set?.items ?: listOfNotNull(route.songId)
         // following, the "Next:" at the end of the song comes from the leader's setlist, which the message carries
@@ -266,6 +275,9 @@ class StageViewModel @Inject constructor(
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),
+            setlist = set?.let {
+                StageSetlist(it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> Chords.key(lib.song(id)?.text.orEmpty()) })
+            },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
 
