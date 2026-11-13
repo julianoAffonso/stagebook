@@ -281,11 +281,16 @@ class LibraryRepository @Inject constructor(
 
     /**
      * A setlist that came from the band or by the 3 words, with its breaks: [slots] are its songs in the sender's
-     * order (null = not here). The sender's [breaks] replace the ones the setlist had.
+     * order (null = not here). The sender's [breaks] replace the ones the setlist had, each kept only where this
+     * setlist can have one; with nothing said about breaks (null: the QR, an older app) the setlist's own stay, as
+     * when its songs are replaced. The one way in for the app's receive screen and the editor on the computer.
      */
-    fun setReceivedSetlist(setId: String, slots: List<String?>, breaks: List<Int>) = updateSet(setId) { s ->
-        val placed = SetlistBreaks.place(slots, breaks)
-        s.copy(items = placed.items, breaks = placed.breaks)
+    fun setReceivedSetlist(setId: String, slots: List<String?>, breaks: List<Int>?) {
+        if (breaks == null) { setSetlistItems(setId, slots.filterNotNull()); return }
+        updateSet(setId) { s ->
+            val placed = SetlistBreaks.place(slots, breaks)
+            s.copy(items = placed.items, breaks = placed.breaks)
+        }
     }
 
     fun qrPayload(setId: String): ByteArray? = _library.value.setlist(setId)?.let { QrPayload.build(it, _library.value) }

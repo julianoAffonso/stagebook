@@ -392,7 +392,7 @@ class ScanSetlistViewModel @Inject constructor(
         val id = replaceId ?: repository.createSetlist(uniqueName(ui.name.trim()))
         // with the sender's breaks, they take the place of the ones a setlist of the same name had; a song left out
         // hands its break to the next one that came in
-        received?.let { repository.setReceivedSetlist(id, slots, it) } ?: repository.setSetlistItems(id, slots.filterNotNull())
+        repository.setReceivedSetlist(id, slots, received)
         applyIncoming(ui)
         done()
         return id to slots

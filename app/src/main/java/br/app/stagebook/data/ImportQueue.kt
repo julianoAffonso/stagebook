@@ -60,7 +60,7 @@ class ImportQueue @Inject constructor(private val repository: LibraryRepository)
         val item = s.current ?: return
         val slots = s.slots.toMutableList().also { it[item.slot] = songId }
         // the sender's breaks are placed again: one that waited before the next song goes back before this one
-        if (s.breaks != null) repository.setReceivedSetlist(s.setId, slots, s.breaks) else repository.setSetlistItems(s.setId, slots.filterNotNull())
+        repository.setReceivedSetlist(s.setId, slots, s.breaks)
         advance(s.copy(slots = slots))
     }
 

@@ -283,7 +283,7 @@ class WebEditorApi(
         val r = receiver() ?: return HttpResponse.status(404)
         val id = runCatching { json.decodeFromString<ReceiveRequest>(req.text()).code }.getOrNull().orEmpty()
         val item = b.items().firstOrNull { it.id == id } ?: return problem("not_found")
-        val review = r.fromInbox(item.id, item.text, item.songs) ?: return problem("not_found")
+        val review = r.fromInbox(item.id, item.text, item.songs, item.breaks) ?: return problem("not_found")
         return ok(json.encodeToString(review))
     }
 
