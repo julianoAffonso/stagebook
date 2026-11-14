@@ -16,7 +16,7 @@ type Song = {
   id: string; title: string; author: string; year: string; tempo: string; text: string;
   track: string; trackName: string; key: string; capo: number; tags: string[];
 };
-type SongItem = { id: string; title: string; author: string; year: string; key: string; tags: string[] };
+type SongItem = { id: string; title: string; author: string; year: string; key: string; tags: string[]; bpm?: number; capo?: number; hasTrack?: boolean };
 
 const text = (value: unknown) => ({ content: [{ type: "text" as const, text: typeof value === "string" ? value : JSON.stringify(value, null, 2) }] });
 
@@ -175,7 +175,7 @@ export function buildServer(client: StagebookClient): McpServer {
     "list_songs",
     {
       title: "List songs",
-      description: "The library's songs (id, title, artist, year, key, tags), in the app's order. Optional filters.",
+      description: "The library's songs (id, title, artist, year, key, tags, bpm, capo, hasTrack), in the app's order: bpm and capo are 0 when the song has none, hasTrack says a backing track is attached. Optional filters.",
       inputSchema: {
         query: z.string().optional().describe("Part of the title or artist (accents and case ignored)."),
         tag: z.string().optional().describe("Only songs with this tag."),

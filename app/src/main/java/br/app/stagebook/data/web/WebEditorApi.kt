@@ -29,7 +29,11 @@ class WebEditorApi(
     class Band(val items: () -> List<br.app.stagebook.data.BandInbox.Item>, val sync: () -> Unit)
 
     @Serializable
-    data class SongItem(val id: String, val title: String, val author: String, val year: String, val key: String, val tags: List<String> = emptyList())
+    data class SongItem(
+        val id: String, val title: String, val author: String, val year: String, val key: String, val tags: List<String> = emptyList(),
+        // what the device's rows show at the end (ui/songs/RowFacts.kt): tempo (0 = none or out of range), capo and a backing track
+        val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false,
+    )
 
     @Serializable
     data class SongData(
@@ -164,8 +168,14 @@ class WebEditorApi(
         repository.library.value.songs
             // the app's order (accents and case ignored): "À Francesa" with the A's, not after Z (device test B-22)
             .sortedBy { br.app.stagebook.domain.TextKey.of(it.title) }
-            .map { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text), it.tags) },
+            .map(::item),
     )
+
+    /** The song's list row with the same facts the device's rows read once per song (key, BPM, capo, track). */
+    private fun item(s: br.app.stagebook.data.model.Song): SongItem {
+        val meta = Chords.meta(s.text)
+        return SongItem(s.id, s.title, s.author, s.year, meta.key, s.tags, meta.tempo, meta.capo, s.track.isNotEmpty())
+    }
 
     // the BPM has its own field: out of the text, so it isn't in two places
     private fun data(s: Song): SongData {
@@ -360,7 +370,7 @@ class WebEditorApi(
     // setlists (T37d): the same as the Setlists tab; an empty name becomes the date and time, as in the app
     private fun setData(set: br.app.stagebook.data.model.Setlist) = SetData(
         set.id, set.name,
-        set.items.map { id -> repository.song(id)?.let { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text)) } ?: SongItem(id, "", "", "", "") },
+        set.items.map { id -> repository.song(id)?.let(::item) ?: SongItem(id, "", "", "", "") },
         SetlistBreaks.normalise(set.breaks, set.items.size),
     )
 

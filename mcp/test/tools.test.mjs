@@ -55,6 +55,10 @@ test("songs: list with filters, read without and with the text", async () => {
   assert.equal((await call("list_songs")).json.count, 2);
   assert.equal((await call("list_songs", { query: "made up" })).json.songs[0].id, "s2");
   assert.equal((await call("list_songs", { tag: "Nacional" })).json.count, 1);
+  // the device's row facts reach the assistant (bpm and capo 0 = none)
+  const night = (await call("list_songs", { query: "night" })).json.songs[0];
+  assert.deepEqual([night.bpm, night.capo, night.hasTrack], [120, 0, false]);
+  assert.deepEqual([(await call("list_songs", { query: "morning" })).json.songs[0].bpm], [0]);
   const song = (await call("get_song", { id: "s1" })).json;
   assert.equal(song.text, undefined);
   assert.deepEqual(song.chords, ["G", "D"]);
