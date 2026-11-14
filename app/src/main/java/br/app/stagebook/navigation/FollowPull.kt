@@ -26,8 +26,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 // screens the leader's song can take the follower away from: nothing is being typed or chosen there. Home's Songs and
-// Setlists tabs do; its Settings tab (and the screens inside it) waits, like the setlist when busy (FollowHoldWhile)
-internal fun NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>() || hasRoute<SetlistDetail>()
+// Setlists tabs do; its Settings tab (and the screens inside it) waits (FollowHoldWhile), and so do the editors and the
+// setlist's edit screen (an action under way, held the whole time it is open)
+internal fun NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>()
 
 internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
 
@@ -45,7 +46,7 @@ internal fun NavController.openFollowStage(target: String) {
 
 /**
  * The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking), unless the
- * person is in the middle of something: a screen with typing or choosing (editor, importer, a setlist being changed), a
+ * person is in the middle of something: a screen with typing or choosing (editor, importer, the setlist's edit screen), a
  * menu or window open, the keyboard open. Then the song waits (only the latest, with no time limit, nothing running
  * meanwhile) and opens by itself when they finish, if the leader is still on it; the strip says so and its "Go" opens it
  * at once ([gate]). Back from the stage returns to the screen they were on.
@@ -67,7 +68,7 @@ internal fun FollowToStage(
     val wait: FollowWait? = here?.let {
         // on the stage only our own menus and windows hold the song: the window losing focus there (split screen, the
         // shade) must not stop a follower for good
-        followBlock(it.pullsToStage(), (it.hasRoute<SetlistDetail>() || it.hasRoute<Home>()) && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
+        followBlock(it.pullsToStage(), it.hasRoute<Home>() && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
     }
     val waitNow by rememberUpdatedState(wait)
     fun sync() { gate.pending = pendingFollow.waiting?.let { FollowPending(it, pendingFollow.reason ?: FollowWait.SCREEN) } }

@@ -184,12 +184,20 @@ fun SetlistDetailScreen(
     val breakCount = rows.size - items.size
     val dragStart = remember { DragStart() }
     var dragNow by remember { mutableStateOf(false) }
-    // busy here holds a band follower on this screen until done (a rename or a reorder isn't lost; audit 02/11); only
-    // looking at the edit doesn't: the band's song takes the follower to the stage
-    val followHold = br.app.stagebook.ui.components.LocalFollowHold.current
-    val busy = renaming || sharing || deleting || removingMany || selecting || dragNow
-    LaunchedEffect(busy) { followHold.value = busy }
-    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { followHold.value = false } }
+    // this screen is an action under way: while it is open the band's song doesn't take the follower to the stage (the strip
+    // says so; FollowToStage holds any screen that is not Home or the stage). Every change but two is already in the library
+    // when made (a break, a removal), so "Go" on the strip only asks when a drag is going on or the rename window is open:
+    // the same question the song editor asks
+    val unsaved by rememberUpdatedState(renaming || dragNow)
+    var discarding by rememberSaveable { mutableStateOf(false) }
+    var afterLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val leave = remember(onBack) { { onBack(); afterLeave?.invoke(); afterLeave = null } }
+    val gate = br.app.stagebook.ui.components.LocalFollowGate.current
+    androidx.compose.runtime.DisposableEffect(gate, leave) {
+        val guard: (() -> Unit) -> Unit = { go -> afterLeave = go; if (unsaved) discarding = true else leave() }
+        gate.leaveGuard = guard
+        onDispose { if (gate.leaveGuard === guard) gate.leaveGuard = null }
+    }
     val listState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         rows = rows.toMutableList().apply { add(to.index, removeAt(from.index)) }
@@ -311,6 +319,14 @@ fun SetlistDetailScreen(
         }
     }
 
+    if (discarding) {
+        ConfirmDialog(
+            stringResource(R.string.editor_discard_confirm),
+            stringResource(R.string.editor_discard),
+            { discarding = false; leave() },
+            { discarding = false; afterLeave = null },
+        )
+    }
     if (renaming) {
         TextInputDialog(stringResource(R.string.sets_rename), uiState.name, stringResource(R.string.sets_name), onRename, { renaming = false })
     }

@@ -12,9 +12,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import br.app.stagebook.domain.FollowWait
 
 /**
- * A screen that can pull a band follower to the leader's song (the setlist) says here when it's busy (a dialog open,
- * a drag going on): the song then waits and opens when it's done, so a rename or a reorder isn't thrown away (audit
- * 02/11).
+ * Home says here when its Settings tab is in front: the song then waits and opens when it's done.
  */
 val LocalFollowHold = staticCompositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
 
