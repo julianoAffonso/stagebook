@@ -105,6 +105,25 @@ class StageBreakTest {
         compose.onNodeWithText("INTERVALO").assertDoesNotExist()
     }
 
+    // the footer's "Next: Break" is a touch target: it does what a tap on the right side of the lyrics does
+    @Test fun `touching Next break in the footer opens the break`() {
+        show(listOf(1))
+        compose.onNodeWithText("Próxima: Intervalo").performClick()
+        compose.waitForIdle()
+        assertEquals(0, song)
+        compose.onNodeWithText("INTERVALO").assertIsDisplayed()
+        compose.onRoot().performTouchInput { click(Offset(width * 0.9f, height / 2f)) }
+        compose.waitForIdle()
+        assertEquals(1, song)
+    }
+
+    @Test fun `touching Next song in the footer opens the song`() {
+        show(emptyList(), start = 1)
+        compose.onNodeWithText("Próxima: Terceira").performClick()
+        compose.waitForIdle()
+        assertEquals(2, song)
+    }
+
     @Test fun `going on shows the break with the next song, and going on again opens it`() {
         show(listOf(1))
         forward()
