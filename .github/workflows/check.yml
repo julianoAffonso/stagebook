@@ -53,6 +53,8 @@ jobs:
       - run: python3 -I tools/release_notes_test.py
       # the editor page's setlist breaks (node comes with the runner)
       - run: python3 -I tools/web_breaks_test.py
+      # the editor page's setlist save: one at a time, breaks only when touched, errors by kind
+      - run: python3 -I tools/web_save_test.py
       # the editor page's song rows (key, BPM, capo and backing track as on the device)
       - run: python3 -I tools/web_rows_test.py
       # the list of validated trees that pre-push trusts keeps the latest 5000, with no duplicates

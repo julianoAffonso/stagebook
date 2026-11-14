@@ -861,15 +861,28 @@ function drawSetAdd() {
   } })));
 }
 
+// <save-logic>
+// Saving a setlist: one save at a time (two quick clicks on a new setlist were two POSTs, two setlists)
+let saving = false;
+async function runOnce(run, busy) {
+  if (saving) return;
+  saving = true;
+  busy(true);
+  try { return await run(); } finally { saving = false; busy(false); }
+}
+// </save-logic>
+
 async function saveSet() {
-  const body = { name: $("set-name").value, items: currentSet.songs.map((s) => s.id), breaks: breakNorm(currentSet.breaks, currentSet.songs.length) };
-  const id = currentSet.id;
-  const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
-  if (!r || r.status !== 200) return offline();
-  const saved = (await r.json()).id;
-  dirty = false;
-  await openSet(saved);
-  say("set-status", t.saved);
+  return runOnce(async () => {
+    const body = { name: $("set-name").value, items: currentSet.songs.map((s) => s.id), breaks: breakNorm(currentSet.breaks, currentSet.songs.length) };
+    const id = currentSet.id;
+    const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
+    if (!r || r.status !== 200) return offline();
+    const saved = (await r.json()).id;
+    dirty = false;
+    await openSet(saved);
+    say("set-status", t.saved);
+  }, (on) => ($("set-save").disabled = on));
 }
 
 $("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [] }); };
