@@ -187,8 +187,7 @@ fun StagebookNavHost(
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
-    androidx.compose.foundation.layout.Column {
-    Box(Modifier.weight(1f)) {
+    BandStripLayout(screens = {
     NavHost(
         modifier = Modifier.fillMaxSize(),
         navController = nav,
@@ -256,9 +255,7 @@ fun StagebookNavHost(
     // over any screen, the stage included: this device's USB can't carry the interface just opened
     val hostWarning by br.app.stagebook.player.StagePlayer.hostWarning.collectAsStateWithLifecycle()
     hostWarning?.let { br.app.stagebook.ui.components.HostWarningDialog(it, br.app.stagebook.player.StagePlayer::dismissHostWarning) }
-    }
-    br.app.stagebook.ui.band.ConductRoute()
-    }
+    }, strip = { br.app.stagebook.ui.band.ConductRoute() })
     }
 }
 
