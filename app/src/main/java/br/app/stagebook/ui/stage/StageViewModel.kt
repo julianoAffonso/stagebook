@@ -51,6 +51,11 @@ data class StageSetlist(
     val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList(),
     /** The breaks left open, by the songs before them: their counters, running or paused. */
     val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
+    val id: String = "",
+    /** A song is marked played: the menu's "Clear played" has something to clear. */
+    val anyPlayed: Boolean = false,
+    /** There is a band to lead and this device isn't already leading or following it: the menu's "Lead the band". */
+    val canConduct: Boolean = false,
 )
 
 /**
@@ -117,7 +122,20 @@ class StageViewModel @Inject constructor(
     private val announcer: br.app.stagebook.data.StageAnnouncer,
     private val midiOut: br.app.stagebook.data.MidiOut,
     private val show: br.app.stagebook.data.SetlistShowStore,
+    private val bandTrust: br.app.stagebook.data.BandTrust,
 ) : ViewModel() {
+    /** The setlist's menu, "Lead the band": sends it from the song on stage (each member says what's missing). */
+    fun conductBand() {
+        val setId = route.setId ?: return
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return
+        val songs = set.items.mapNotNull(lib::song).map { br.app.stagebook.domain.Conduct.Item(it.title, it.author) }
+        conduct.start(setId, set.name, songs, shownIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0)))
+    }
+
+    /** The setlist's menu, "Clear played": no song of this setlist is marked any more. */
+    fun clearPlayed() { route.setId?.let(show::clear) }
+
     /** The song's MIDI on entering, and the one before's on leaving (user, 07/11); a stage extra (T19). */
     private fun sendMidi(index: Int) {
         val lib = repository.library.value
@@ -393,6 +411,9 @@ class StageViewModel @Inject constructor(
                 StageSetlist(
                     it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> Chords.key(lib.song(id)?.text.orEmpty()) },
                     br.app.stagebook.domain.BreakTimer.openAt(it.id, it.items, it.breaks, breaks, show.today()),
+                    id = it.id,
+                    anyPlayed = marks[it.id]?.played?.isNotEmpty() == true,
+                    canConduct = lib.look.bandOn && role is br.app.stagebook.data.BandConduct.Role.None && bandTrust.members.value.isNotEmpty() && it.items.isNotEmpty(),
                 )
             },
         )

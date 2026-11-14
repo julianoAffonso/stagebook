@@ -201,7 +201,7 @@ fun StagebookNavHost(
                 onEditSong = { entry.ifResumed { nav.navigate(SongEditor(songId = it)) } },
                 onImport = { query, kind -> entry.ifResumed { nav.navigate(Importer(query, kind = kind)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
-                onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
+                onPlaySetlist = { id, start, atBreak -> entry.ifResumed { nav.navigate(Stage(setId = id, start = start, atBreak = atBreak)) } },
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },
                 onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
                 onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
@@ -219,9 +219,8 @@ fun StagebookNavHost(
         composable<SetlistDetail> { entry ->
             SetlistDetailRoute(
                 onBack = dropUnlessResumed { nav.popBackStack() },
-                onPlay = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start)) } },
-                onPlayBreak = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start, atBreak = true)) } },
                 onAddSongs = { entry.ifResumed { nav.navigate(PickSongs(it)) } },
+                openShare = remember { entry.toRoute<SetlistDetail>().share },
             )
         }
         composable<ScanSetlist> {
@@ -238,6 +237,9 @@ fun StagebookNavHost(
             StageRoute(
                 onEditSong = { id, cursor -> entry.ifResumed { nav.navigate(SongEditor(songId = id, cursor = cursor)) } },
                 onBack = dropUnlessResumed { nav.popBackStack() },
+                // the setlist's own screen is only the edit now; it opens over the stage, and back comes back to it
+                onEditSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id)) } },
+                onShareSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id, share = true)) } },
             )
         }
         composable<Importer> { entry ->

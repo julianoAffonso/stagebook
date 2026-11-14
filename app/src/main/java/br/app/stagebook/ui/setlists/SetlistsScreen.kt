@@ -54,7 +54,7 @@ import br.app.stagebook.ui.theme.Spacing
 @Composable
 fun SetlistsRoute(
     onOpen: (String) -> Unit,
-    onPlay: (String) -> Unit,
+    onPlay: (setId: String, start: Int, atBreak: Boolean) -> Unit,
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     viewModel: SetlistsViewModel = hiltViewModel(),
@@ -77,7 +77,8 @@ fun SetlistsRoute(
         onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name)) } },
         // found what they were looking for: coming back the whole list shows, as in Songs
         onOpen = { query = ""; onOpen(it) },
-        onPlay = { query = ""; onPlay(it) },
+        // tapping a setlist opens its stage where the show stopped (an empty one has nothing to play: the edit)
+        onPlay = { query = ""; val at = viewModel.resume(it); onPlay(it, at.start, at.atBreak) },
         query = query,
         onQueryChange = { query = it },
         onScan = onScan,
@@ -106,8 +107,8 @@ fun SetlistsRoute(
 fun SetlistsScreen(
     uiState: SetlistsUiState,
     onCreate: (String) -> Unit,
-    onOpen: (String) -> Unit,
-    onPlay: (String) -> Unit,
+    onOpen: (String) -> Unit,   // the pencil, and an empty setlist: the edit
+    onPlay: (String) -> Unit,   // tapping a setlist: its stage
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     cloud: br.app.stagebook.ui.share.CloudUi? = null,
@@ -196,19 +197,15 @@ fun SetlistsScreen(
                             SongListItem(
                                 title = set.name,
                                 subtitle = br.app.stagebook.ui.components.songCountText(set.count),
-                                onClick = { if (selecting) toggle(set.id) else onOpen(set.id) },
+                                onClick = { if (selecting) toggle(set.id) else if (set.count > 0) onPlay(set.id) else onOpen(set.id) },
                                 onLongClick = { toggle(set.id) },
                                 leading = if (selecting) { { androidx.compose.material3.Checkbox(set.id in selected, { toggle(set.id) }) } } else null,
                                 modifier = Modifier.animateItem(),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 trailing = {
                                     if (!selecting) Row {
-                                        IconButton(onClick = { onPlay(set.id) }, enabled = set.count > 0) {
-                                            Icon(
-                                                AppIcons.Slideshow,
-                                                contentDescription = stringResource(R.string.action_stage),
-                                                tint = if (set.count > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
+                                        IconButton(onClick = { onOpen(set.id) }) {
+                                            Icon(AppIcons.Edit, contentDescription = stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                 },
