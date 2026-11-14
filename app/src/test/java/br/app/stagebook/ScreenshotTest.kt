@@ -235,7 +235,7 @@ class ScreenshotTest {
     fun setlistBreakPhone() = shoot("celular_3_setlist_intervalo") { SetlistBreak() }
 
     @Composable
-    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3), openBreaks = mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true))), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
 
     // the break on stage, twelve and a half minutes in, with the song that comes next
     @Test fun stageBreakTablet() = shoot("tablet_6_palco_intervalo") { StageBreak() }

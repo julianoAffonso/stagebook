@@ -314,15 +314,17 @@ class StageViewModel @Inject constructor(
     private var reopened = false
 
     /**
-     * The stage opened on the song before a break that was on screen when it was left (to fix a song, the setlist): the
-     * break comes back, with its counter. Only the first song shown counts, and not for a follower (the leader's stage
-     * says what is shown).
+     * The stage opened from the setlist's open break row ([Stage.atBreak]), on the song before it: the break comes back,
+     * with its counter. Only that: a tap on the song before an open break opens the song (a stage that opened the break
+     * by itself made it impossible to play that song, user 14/11). Only the first song shown counts, and not for a
+     * follower (the leader's stage says what is shown). Coming back from an editor or Settings needs none of this: the
+     * stage is still in the back stack, with its break.
      */
     private fun resumeBreak(index: Int) {
         if (reopened) return
         reopened = true
         val setId = route.setId ?: return
-        if (breakOnly || conduct.role.value is br.app.stagebook.data.BandConduct.Role.Following) return
+        if (!route.atBreak || breakOnly || conduct.role.value is br.app.stagebook.data.BandConduct.Role.Following) return
         val next = repository.library.value.setlist(setId)?.items?.getOrNull(index + 1) ?: return
         if ((index + 1) in repository.library.value.setlist(setId)!!.breaks && show.breakOpen(setId, next)) setBreak(true)
     }

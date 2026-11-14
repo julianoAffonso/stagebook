@@ -75,3 +75,12 @@ internal fun FollowToStage(
         gate.go = { pendingFollow.take()?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }; sync() }
     }
 }
+
+/**
+ * A link to a Settings section: Home, which opens Settings on it. From the stage Home goes over it (back returns to the
+ * stage that was there, with its break, its page and its counters); from anywhere else it takes the place of what is
+ * above Home, as before.
+ */
+internal fun NavController.openSettingsFrom() {
+    if (currentBackStackEntry?.destination?.hasRoute<Stage>() == true) navigate(Home) else popBackStack<Home>(inclusive = false)
+}

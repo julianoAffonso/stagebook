@@ -86,6 +86,8 @@
     <string name="sets_add_songs">Songs</string>
     <string name="sets_add_break">Break</string>
     <string name="set_break">BREAK</string>
+    <string name="set_break_time">BREAK · %1$s</string>
+    <string name="set_break_paused">Paused</string>
     <string name="set_break_remove">Remove break</string>
     <string name="set_edit">Edit setlist</string>
     <string name="action_done">Done</string>

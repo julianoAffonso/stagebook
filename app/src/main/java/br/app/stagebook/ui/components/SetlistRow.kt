@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -144,7 +145,11 @@ fun SetlistDragHandle(drag: Modifier, modifier: Modifier = Modifier) {
  * songs' handles) and taken out by [onRemove].
  */
 @Composable
-fun SetlistBreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifier = Modifier, dense: Boolean = false) {
+fun SetlistBreakRow(
+    handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifier = Modifier, dense: Boolean = false,
+    // the break left open on the stage: its time, running or paused, and a tap opens it
+    timer: br.app.stagebook.domain.BreakTimer.Timer? = null, onOpen: (() -> Unit)? = null,
+) {
     val color = MaterialTheme.colorScheme.primary
     val shape = MaterialTheme.shapes.medium
     Row(
@@ -158,6 +163,7 @@ fun SetlistBreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifi
                     drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(line, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))))
                 }
             }
+            .then(if (timer != null && onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier)
             .heightIn(min = if (dense) Sizes.breakDense else Sizes.touch)
             .padding(start = if (handle != null) 0.dp else Spacing.m, end = Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
@@ -165,10 +171,12 @@ fun SetlistBreakRow(handle: Modifier?, onRemove: (() -> Unit)?, modifier: Modifi
         if (handle != null) SetlistDragHandle(handle)
         // with the handle, the word starts where the songs' titles do
         Text(
-            stringResource(R.string.set_break),
+            if (timer != null) stringResource(R.string.set_break_time, br.app.stagebook.ui.components.breakClock(timer)) else stringResource(R.string.set_break),
             Modifier.weight(1f).padding(start = if (handle != null) NUMBER_COMPACT + Spacing.s else 0.dp),
             style = MaterialTheme.typography.labelLarge, color = color,
         )
+        // paused: the clock says so (a running one just counts)
+        if (timer != null && !timer.running) Icon(AppIcons.Pause, stringResource(R.string.set_break_paused), tint = color)
         if (onRemove != null) IconButton(onClick = onRemove) {
             Icon(AppIcons.RemoveCircle, stringResource(R.string.set_break_remove), tint = MaterialTheme.colorScheme.error)
         }

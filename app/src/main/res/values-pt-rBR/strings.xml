@@ -89,6 +89,8 @@
     <string name="sets_add_songs">Músicas</string>
     <string name="sets_add_break">Intervalo</string>
     <string name="set_break">INTERVALO</string>
+    <string name="set_break_time">INTERVALO · %1$s</string>
+    <string name="set_break_paused">Pausado</string>
     <string name="set_break_remove">Tirar o intervalo</string>
     <string name="set_edit">Editar setlist</string>
     <string name="action_done">Pronto</string>

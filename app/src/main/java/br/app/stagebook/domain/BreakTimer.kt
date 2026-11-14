@@ -33,6 +33,13 @@ object BreakTimer {
     /** Back to 00:00, still running if it was running, still paused if it was paused. */
     fun reset(timer: Timer, now: Long): Timer = if (timer.running) timer.copy(startedAt = now, accumulated = 0L) else timer.copy(accumulated = 0L)
 
+    /**
+     * The setlist's breaks that were on screen when its stage was left and still are today, by position (the songs
+     * before it): what the setlist's rows show, with the counter running or paused.
+     */
+    fun openAt(setId: String, items: List<String>, breaks: List<Int>, all: Map<String, Timer>, day: String): Map<Int, Timer> =
+        breaks.mapNotNull { p -> items.getOrNull(p)?.let { all[key(setId, it)] }?.takeIf { it.open && it.day == day }?.let { p to it } }.toMap()
+
     /** The start a running counter would have to show [timer]'s time: what the band's strip counts from. */
     fun since(timer: Timer, now: Long): Long = now - timer.elapsed(now)
 }
