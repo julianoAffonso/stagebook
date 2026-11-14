@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -31,7 +33,13 @@ fun <T> SegmentedChoice(options: List<Choice<T>>, selected: T, onSelect: (T) -> 
                 onClick = { onSelect(o.value) },
                 shape = SegmentedButtonDefaults.itemShape(i, options.size, baseShape = CircleShape),
                 icon = { o.icon?.let { Icon(it, contentDescription = null, modifier = Modifier.size(SegmentedButtonDefaults.IconSize)) } ?: SegmentedButtonDefaults.Icon(selected == o.value) },
-            ) { Text(stringResource(o.label)) }
+            ) {
+                // one line whatever the text size: on a narrow phone with bigger text "Letra e cifra" wrapped and was cut
+                Text(
+                    stringResource(o.label), maxLines = 1,
+                    autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = MaterialTheme.typography.labelLarge.fontSize),
+                )
+            }
         }
     }
 }
