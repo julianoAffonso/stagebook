@@ -82,30 +82,52 @@ class BandLink @Inject constructor(
     /** Announced on the network (the server waiting). Searching for the others is separate and shorter. */
     val running: StateFlow<Boolean> = _running
 
-    private var foreground = false
+    @Volatile private var foreground = false   // written by the UI thread, read by the collector's
     private var searchUsers = 0   // open screens that need to find the others (Settings → Band, Share sheet)
     private val screenOpen get() = searchUsers > 0
     private var server: ServerSocket? = null
     private var serverJob: Job? = null
     private var multicast: WifiManager.MulticastLock? = null
 
+    /** Someone is in this device's band (the saved list, online or not): without it there is nobody to lead. */
+    fun hasSavedMembers(): Boolean = trust.members.value.isNotEmpty()
+
+    /** The stage is open (a show): nothing automatic runs then ([BandInternet] waits for it to close). */
+    val stageOpen: StateFlow<Boolean> get() = stage.onStage
+
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
         foreground = on
-        val cm = context.getSystemService(ConnectivityManager::class.java)
-        if (on && netCallback == null && cm != null) {
-            netCallback = object : ConnectivityManager.NetworkCallback() {
-                override fun onCapabilitiesChanged(network: android.net.Network, caps: NetworkCapabilities) { _wifi.value = onWifi(); update() }
-                override fun onLost(network: android.net.Network) { _wifi.value = onWifi(); update() }
-            }.also { runCatching { cm.registerDefaultNetworkCallback(it) } }
-        } else if (!on) {
-            netCallback?.let { runCatching { cm?.unregisterNetworkCallback(it) } }
-            netCallback = null
-        }
+        syncNetCallback()
         _wifi.value = onWifi()
         update()
     }
 
+    // the Wi-Fi callback wakes the app on every network change: only in front AND with the band on (nothing to follow
+    // otherwise). Always worked out from the state NOW and idempotent (register only if not registered, unregister only
+    // if registered), so a switch off and on too quick for the collector to see both, a state flow conflates, still
+    // ends right. True = it registered or unregistered now.
+    @Synchronized
+    internal fun syncNetCallback(): Boolean {
+        val want = foreground && repository.library.value.look.bandOn
+        if (want == (netCallback != null)) return false
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        if (want) {
+            if (cm == null) return false
+            netCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: android.net.Network, caps: NetworkCapabilities) { _wifi.value = onWifi(); update() }
+                override fun onLost(network: android.net.Network) { _wifi.value = onWifi(); update() }
+            }.also { runCatching { cm.registerDefaultNetworkCallback(it) } }
+        } else {
+            netCallback?.let { runCatching { cm?.unregisterNetworkCallback(it) } }
+            netCallback = null
+        }
+        return true
+    }
+
+    /** The band switch the collector has dealt with last (the tests wait for it to have seen a change). */
+    @Volatile internal var seenOn: Boolean? = null
+    @Volatile internal var collectError: Throwable? = null   // the last error of the band switch's collector (tests)
     private var netCallback: ConnectivityManager.NetworkCallback? = null
 
     private val _wifi = MutableStateFlow(false)
@@ -179,7 +201,7 @@ class BandLink @Inject constructor(
     data class Wanted(val title: String, val artist: String = "")
 
     // a connection to a device on the Wi-Fi, with the usual timeout (it was written out in five places)
-    private fun dial(peer: Peer): Socket = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+    private fun dial(peer: Peer): Socket = dialSocket(Socket(), peer.host, peer.port, CONNECT_TIMEOUT_MS)
 
     // pair key with a member (null if they're no longer in the band or the saved key doesn't open)
     private fun pairKeyWith(id: String): ByteArray? {
@@ -276,7 +298,7 @@ class BandLink @Inject constructor(
     private fun found(wanted: List<Wanted>): List<br.app.stagebook.data.model.Song> {
         val library = repository.library.value.songs
         return wanted.take(MAX_ASK).mapNotNull { w ->
-            (br.app.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? br.app.stagebook.domain.QrMatch.Found)?.song
+            br.app.stagebook.domain.SetlistMatcher.matchExact(QrPayload.Entry(w.title, w.artist), library)
         }
     }
 
@@ -335,6 +357,7 @@ class BandLink @Inject constructor(
 
     @Synchronized
     fun update() {
+        syncNetCallback()   // from the state now: a change of the band switch the collector never saw (a state flow conflates) is caught here
         // essential mode (T19): "Band on the network" off, nothing announces, searches or answers
         val want = repository.library.value.look.bandOn && foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
         if (want && !_running.value) start() else if (!want && _running.value) stop()
@@ -519,6 +542,36 @@ class BandLink @Inject constructor(
     // fields: the collection runs on another thread and can call update() before the rest of the class exists
     init {
         scope.launch { stage.onStage.collect { update() } }
-        scope.launch { repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { update() } }
+        scope.launch {
+            // the callback is reconciled on every emission (cheap, and the state read is the current one); the rest only
+            // when the switch changed or the callback did
+            var last: Boolean? = null
+            repository.library.map { it.look.bandOn }.collect { on ->
+                // an error in one pass must not end the collector: the next change would find nobody listening
+                try {
+                    val changed = syncNetCallback()
+                    if (changed || on != last) { last = on; _wifi.value = onWifi(); update() }
+                    seenOn = on
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    collectError = e
+                    Log.w(TAG, "band switch: $e")
+                }
+            }
+        }
     }
+}
+
+/**
+ * Connects [socket] to a device on the Wi-Fi. A connect that fails (timeout, refused) closes the socket before the
+ * error goes up: the callers swallow it, and the descriptor stayed open until the GC (audit 14/11).
+ */
+internal fun dialSocket(socket: Socket, host: InetAddress, port: Int, timeoutMs: Int = 5_000): Socket {
+    try {
+        socket.connect(InetSocketAddress(host, port), timeoutMs)
+    } catch (e: Throwable) {
+        runCatching { socket.close() }
+        throw e
+    }
+    return socket
 }

@@ -938,6 +938,8 @@
     <string name="web_not_found">Didn\'t find lyrics there.</string>
     <string name="web_no_internet">The device has no internet (or essential mode is on).</string>
     <string name="web_bad_address">Use an address that starts with http:// or https://.</string>
+    <string name="web_bad_breaks">The breaks do not fit the setlist. Nothing was saved.</string>
+    <string name="web_save_failed">The setlist was not saved. Try again.</string>
     <string name="web_band_none">Nothing from the band yet.</string>
     <string name="web_receive_title">Received from someone</string>
     <string name="web_backup_hint">A backup from Settings → Import and backup. Pick what comes in.</string>
@@ -1153,7 +1155,7 @@
     <string name="reset_zone">Danger zone</string>
     <string name="advanced_permission_see">To change these, follow the steps in Settings → Device → Advanced.</string>
     <string name="settings_search_label">Search Settings</string>
-    <string name="settings_search_hint">e.g. midi, screen, capo</string>
+    <string name="settings_search_hint">e.g. midi, screen, pedal</string>
     <string name="settings_search_none">Nothing found in Settings.</string>
     <!-- synonyms for the Settings search: both languages in each, so "tela" and "screen" find the same item -->
     <string name="kw_size">tamanho grande pequeno aumentar diminuir fonte letra size big small bigger smaller zoom</string>

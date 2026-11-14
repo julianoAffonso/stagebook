@@ -120,10 +120,10 @@ class SetlistDetailViewModel @Inject constructor(
             items = set?.items.orEmpty().mapIndexed { i, id ->
                 val n = seen.merge(id, 1, Int::plus)!!
                 val song = lib.song(id)
-                val text = song?.text.orEmpty()
+                val meta = Chords.meta(song?.text.orEmpty())   // one pass, not three (key, tempo and capo)
                 SetItemUi(
                     if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
-                    songKey = Chords.key(text), bpm = Chords.tempo(text), capo = Chords.capo(text),
+                    songKey = meta.key, bpm = meta.tempo, capo = meta.capo,
                     hasTrack = song?.track?.isNotEmpty() == true, state = states[i],
                 )
             },

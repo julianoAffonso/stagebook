@@ -61,12 +61,12 @@ class WebEditorServer @Inject constructor(
     private val api = WebEditorApi(
         repository, afterSave = { metadata.get().completeLater(it) },
         importer = { importer.get() }, readPage = { url, script -> pages.get().read(url, script ?: br.app.stagebook.data.ExtractScript.SOURCE) },
-        receiver = { receiver },
+        receiver = { receiver.value }, clearReview = { if (receiver.isInitialized()) receiver.value.clear() },
         band = { WebEditorApi.Band({ inbox.get().items.value }, { bandInternet.get().syncNow() }) },
         backup = { backup.get() }, tracks = { tracks.get() },
         workDir = { java.io.File(context.cacheDir, "web").apply { mkdirs() } },
     )
-    private val receiver by lazy {
+    private val receiver = lazy {
         WebReceive(repository, { cloud.get().receive(it) }, { code, ok -> bandInternet.get().accepted(code, ok.from) }, { inbox.get().remove(it) })
     }
 
@@ -358,6 +358,8 @@ class WebEditorServer @Inject constructor(
             "notFound" to R.string.web_not_found,
             "noInternet" to R.string.web_no_internet,
             "badAddress" to R.string.web_bad_address,
+            "badBreaks" to R.string.web_bad_breaks,
+            "saveFailed" to R.string.web_save_failed,
         )
     }
 }

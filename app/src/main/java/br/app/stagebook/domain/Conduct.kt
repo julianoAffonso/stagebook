@@ -63,7 +63,7 @@ object Conduct {
      * side.
      */
     fun find(item: Item, library: List<Song>): Song? =
-        (SetlistMatcher.match(QrPayload.Entry(item.title, item.artist), library) as? QrMatch.Found)?.song
+        SetlistMatcher.matchExact(QrPayload.Entry(item.title, item.artist), library)
 
     /** Is a song with this [title] and [artist] the one [item] names? The title, and the artist when both say one. */
     fun isFor(item: Item, title: String, artist: String): Boolean = SongMatch.same(item.title, item.artist, title, artist)

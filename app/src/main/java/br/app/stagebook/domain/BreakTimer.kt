@@ -26,6 +26,21 @@ object BreakTimer {
 
     fun started(day: String, now: Long) = Timer(day, now, 0L, open = true)
 
+    /** [all] with the break at [key] on screen: an existing counter goes on (open again), else a new one starts. */
+    fun entered(all: Map<String, Timer>, key: String, day: String, now: Long): Map<String, Timer> =
+        all + (key to (all[key]?.copy(open = true) ?: started(day, now)))
+
+    /**
+     * The counters that still belong to a break: the setlist exists and has a break right before the counter's song
+     * (a break taken out or moved elsewhere leaves nothing behind to come back later).
+     */
+    fun pruned(all: Map<String, Timer>, sets: Map<String, br.app.stagebook.data.model.Setlist>): Map<String, Timer> =
+        all.filterKeys { k ->
+            val set = sets[k.substringBefore('|')] ?: return@filterKeys false
+            val song = k.substringAfter('|')
+            set.items.indices.any { set.items[it] == song && it in set.breaks }
+        }
+
     fun pause(timer: Timer, now: Long): Timer = if (timer.running) timer.copy(startedAt = 0L, accumulated = timer.elapsed(now)) else timer
 
     fun resume(timer: Timer, now: Long): Timer = if (timer.running) timer else timer.copy(startedAt = now)

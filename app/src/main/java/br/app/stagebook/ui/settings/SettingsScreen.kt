@@ -116,6 +116,8 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -601,15 +603,18 @@ fun SettingsScreen(
     // the search: its text survives a rotation; what a result opened flashes once (the focus is cleared after)
     var query by rememberSaveable { mutableStateOf("") }
     val resources = LocalResources.current
-    var focus by remember { mutableStateOf<br.app.stagebook.ui.components.SettingsFocus?>(null) }
-    LaunchedEffect(focus) { if (focus != null) { kotlinx.coroutines.delay(2500); focus = null } }
+    // a State handed down (not its value): the screen never reads it while composing, only the item that flashes does
+    val focus = remember { mutableStateOf<br.app.stagebook.ui.components.SettingsFocus?>(null) }
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { focus.value }.collectLatest { if (it != null) { delay(2500); focus.value = null } }
+    }
     val search = SettingsSearch(
         query, { query = it },
         IndexCtx(uiState.look, uiState.midi.supported, actions.advanced, br.app.stagebook.ui.components.nationalTagsShown()),
     ) { hit ->
         // a hidden item opens the place that turns it on (never changes the setting itself); a visible one, its own place
         val target = hit.hide?.opens?.let(::settingsItemById) ?: hit.item
-        focus = br.app.stagebook.ui.components.SettingsFocus(resources.getString(target.card), (focus?.nonce ?: 0) + 1, target.id)
+        focus.value = br.app.stagebook.ui.components.SettingsFocus(resources.getString(target.card), (focus.value?.nonce ?: 0) + 1, target.id)
         onSection(target.group)
     }
     // the system's Back closes the search before it leaves the list
@@ -665,6 +670,8 @@ fun SettingsScreen(
 }
 
 /** The search over the settings: the text, the items that can show now, and what tapping a result does. */
+internal const val SEARCH_DEBOUNCE_MS = 120L
+
 internal class SettingsSearch(val query: String, val onQuery: (String) -> Unit, val ctx: IndexCtx, val onOpen: (SettingsHit) -> Unit)
 
 @Composable
@@ -684,7 +691,11 @@ private fun SectionList(
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 if (search != null && search.query.isNotBlank()) {
                     val resources = LocalResources.current
-                    val hits = remember(search.query, search.ctx, resources) { searchSettings(search.query, search.ctx, resources) }
+                    val index = remember(resources) { SettingsSearchIndex(resources) }
+                    // typing fast: the list follows ~120 ms after the last key, not on every one (as the song search)
+                    var shown by remember { mutableStateOf(search.query) }
+                    LaunchedEffect(search.query) { if (shown != search.query) { delay(SEARCH_DEBOUNCE_MS); shown = search.query } }
+                    val hits = remember(shown, search.ctx, index) { index.search(shown, search.ctx) }
                     if (hits.isEmpty()) Text(stringResource(R.string.settings_search_none), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(Spacing.m))
                     hits.forEach { SearchResultRow(it) { search.onOpen(it) } }
                 } else SettingsSection.entries.filter { it.shown(uiState.look) }.forEach { s ->

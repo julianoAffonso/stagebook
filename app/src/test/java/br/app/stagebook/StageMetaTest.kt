@@ -114,7 +114,7 @@ class StageMetaTest {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
-        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids) }
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it); repo.addBreak(it) }   // breaks before B and C: the counter belongs to a real break
         val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
         val vm = stage(repo, "", saved)
         withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }

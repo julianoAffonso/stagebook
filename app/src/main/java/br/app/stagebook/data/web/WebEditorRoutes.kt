@@ -52,7 +52,7 @@ class WebEditorRoutes(
         onAccess()
         if (req.path == "/api/ping") return HttpResponse.status(204)
         if (req.path == "/api/session" && req.method == "GET") {
-            // each visit renews the cookie: a computer in use keeps its key, a forgotten one loses it in 90 days
+            // each visit renews the cookie: the cookie stays a session cookie
             return HttpResponse.json(
                 200, buildJsonObject { put("name", device.name); put("app", deviceName()) }.toString(),
                 mapOf("Set-Cookie" to cookie(req.cookie(COOKIE).orEmpty())),
@@ -82,10 +82,9 @@ class WebEditorRoutes(
 
     companion object {
         const val COOKIE = "stagebook_key"
-        // the key travels over plain HTTP on the local network: 90 days, renewed on each visit, instead of 10 years
-        private const val KEY_DAYS = 90L * 24 * 3600
-
-        private fun cookie(key: String) = "$COOKIE=$key; Path=/; Max-Age=$KEY_DAYS; HttpOnly; SameSite=Strict"
+        // the key travels over plain HTTP on the local network: a session cookie (no Max-Age/Expires), so it dies with
+        // the browser session and a browser that reopens asks to be approved again
+        private fun cookie(key: String) = "$COOKIE=$key; Path=/; HttpOnly; SameSite=Strict"
 
         /** "192.168.0.10:8090" yes; "evil.example:8090" no. */
         fun hostIsAddress(host: String): Boolean {

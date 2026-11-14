@@ -787,8 +787,9 @@ fun StageScreen(
         presses.from = index to page
         onPosition(target, 0)
     }
-    // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves
-    LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) autoOn = false }
+    // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves, and
+    // the click doesn't go on either (it stays off on coming back: the musician turns it on again)
+    LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) { autoOn = false; metroOn = false } }
     val settled = pageCountFor == index
     SideEffect {
         if (presses.from != null && settled && presses.from != index to page) {
@@ -845,11 +846,14 @@ fun StageScreen(
         if (action == PedalAction.NONE) return@PedalHandler false
         // a foot resting on the pedal repeats the key: only the first one turns the page
         if (runs) {
+            // the setlist over the stage is a panel to look at: the pedal doesn't turn pages or songs under it (it still
+            // closes it, and plays/pauses the track)
+            val underPanel = setlistOpen && setlist != null
             when (action) {
-                PedalAction.NEXT -> next()
-                PedalAction.PREVIOUS -> previous()
-                PedalAction.NEXT_SONG -> goSong(true)
-                PedalAction.PREVIOUS_SONG -> goSong(false)
+                PedalAction.NEXT -> if (!underPanel) next()
+                PedalAction.PREVIOUS -> if (!underPanel) previous()
+                PedalAction.NEXT_SONG -> if (!underPanel) goSong(true)
+                PedalAction.PREVIOUS_SONG -> if (!underPanel) goSong(false)
                 PedalAction.PLAY_PAUSE -> if (look.playerMode && !song.missing && song.track.isNotEmpty()) onTogglePlay()
                 PedalAction.OPEN_SETLIST -> if (setlist != null) setlistOpen = !setlistOpen
                 PedalAction.NONE -> Unit

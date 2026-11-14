@@ -247,7 +247,7 @@ class LibraryRepository @Inject constructor(
 
     /**
      * Undoes [removeItem]: the song that was at [index] of [before] goes back there. With the setlist as the removal
-     * left it, the breaks come back too; changed meanwhile, the song goes as near as it can and the breaks stay.
+     * left it, the breaks come back too; changed meanwhile (songs or breaks), the song goes as near as it can and the current breaks stay (shifted).
      */
     fun restoreItem(setId: String, index: Int, before: Setlist) = mutate { lib ->
         val songId = before.items.getOrNull(index)
@@ -255,7 +255,12 @@ class LibraryRepository @Inject constructor(
         lib.copy(sets = lib.sets.map { s ->
             when {
                 s.id != setId -> s
-                s.items == before.items.filterIndexed { i, _ -> i != index } -> s.copy(items = before.items, breaks = before.breaks).withValidBreaks()
+                s.items == before.items.filterIndexed { i, _ -> i != index } -> {
+                    // the breaks as the removal left them: the old ones come back; moved meanwhile, the current ones shift
+                    val left = SetlistBreaks.afterRemoving(before.breaks, before.items.size, setOf(index))
+                    val breaks = if (s.breaks == left) before.breaks else s.breaks.map { if (it > index) it + 1 else it }
+                    s.copy(items = before.items, breaks = breaks).withValidBreaks()
+                }
                 songId in s.items -> s
                 else -> {
                     val at = index.coerceAtMost(s.items.size)

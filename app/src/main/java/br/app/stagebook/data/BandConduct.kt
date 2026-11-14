@@ -136,6 +136,14 @@ class BandConduct internal constructor(
         return msg.copy(breakMs = (clock() - start).coerceIn(0L, Conduct.MAX_BREAK_MS))
     }
 
+    // declared before [init]: its first coroutine already touches it
+    private val _armed = MutableStateFlow(false)
+
+    // leading: the 3 min sign of life, alive only while leading ([start] to [end]; the singleton lives as long as the app)
+    private var aliveJob: kotlinx.coroutines.Job? = null
+    internal var aliveMs = ALIVE_MS
+    internal val keepAliveRunning: Boolean get() = aliveJob?.isActive == true
+
     init {
         link.conductHandler = ::onMessage
         link.showIntake = ::intake
@@ -144,15 +152,8 @@ class BandConduct internal constructor(
         // away
         scope.launch {
             repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { on ->
+                if (!on) _armed.value = false   // armed, then the band turned off: nothing is waiting for a setlist any more
                 if (!on) when (_role.value) { is Role.Conducting -> end(); is Role.Following -> leave(); is Role.Left, Role.None -> Unit }
-            }
-        }
-        // leading: a sign of life every 3 min (the current song again; followers don't change songs because of it)
-        scope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(ALIVE_MS)
-                val now = _role.value as? Role.Conducting ?: continue
-                send(now.setId, now.msg.copy(type = Conduct.OPEN))
             }
         }
         // leading: a band member came back to the Wi-Fi (found in a short search) → gets the current song, no tap
@@ -180,6 +181,14 @@ class BandConduct internal constructor(
         _role.value = Role.Conducting(setId, msg)
         link.burst(evenOnStage = true)
         scope.launch { send(setId, msg) }
+        aliveJob?.cancel()
+        aliveJob = scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(aliveMs)
+                val now = _role.value as? Role.Conducting ?: continue
+                send(now.setId, now.msg.copy(type = Conduct.OPEN))
+            }
+        }
     }
 
     /**
@@ -187,6 +196,7 @@ class BandConduct internal constructor(
      * False = nothing started: the setlist is gone or has no song here.
      */
     fun startSetlist(setId: String, index: Int): Boolean {
+        if (!bandOn() || !link.hasSavedMembers()) return false   // band off or nobody in it: nothing to lead (an armed button left behind doesn't lead either)
         val lib = repository.library.value
         val set = lib.setlist(setId) ?: return false
         val songs = set.items.mapNotNull(lib::song).map { Conduct.Item(it.title, it.author) }
@@ -194,8 +204,6 @@ class BandConduct internal constructor(
         start(setId, set.name, songs, index.coerceIn(0, songs.size - 1))
         return true
     }
-
-    private val _armed = MutableStateFlow(false)
 
     /**
      * "Lead the band" armed from the Setlists list: leading always belongs to a setlist, so with none chosen the button
@@ -205,7 +213,7 @@ class BandConduct internal constructor(
     val armed: StateFlow<Boolean> = _armed.asStateFlow()
 
     /** Arms it (only while this device is neither leading nor following). */
-    fun arm() { if (_role.value is Role.None) _armed.value = true }
+    fun arm() { if (bandOn() && link.hasSavedMembers() && _role.value is Role.None) _armed.value = true }
 
     fun disarm() { _armed.value = false }
 
@@ -271,7 +279,10 @@ class BandConduct internal constructor(
                 if (i > 0) kotlinx.coroutines.delay(SEARCH_EVERY_MS)
                 val now = _role.value as? Role.Conducting ?: return@launch
                 deliver(now.msg.copy(type = Conduct.CHECK))
-                send(now.setId, now.msg.copy(type = Conduct.OPEN))
+                // the call can take 5 to 15 s with a member out of reach: the leader may have turned the page meanwhile,
+                // so what goes out is the song as it is NOW, never the one read before the call
+                val cur = _role.value as? Role.Conducting ?: return@launch
+                send(cur.setId, cur.msg.copy(type = Conduct.OPEN))
             }
         }
     }
@@ -279,6 +290,7 @@ class BandConduct internal constructor(
     fun end() {
         val now = (_role.value as? Role.Conducting)?.msg ?: return
         _role.value = Role.None
+        aliveJob?.cancel(); aliveJob = null
         breakStart = null; breakFrozen = null
         scope.launch { deliver(now.copy(type = Conduct.END, missing = emptyList())) }
     }
@@ -350,39 +362,55 @@ class BandConduct internal constructor(
         }
     }
 
-    // follower: arrives over the network (another thread); answers what's missing here
+    /** The tests' hook between reading the role and writing the new one (a message and a tap racing each other). */
+    internal var beforeCommit: (() -> Unit)? = null
+
+    // follower: arrives over the network (another thread); answers what's missing here. The role is read, worked out and
+    // written only if it is still the one read (compare and set, as in [follow]): a "Leave" tap, another message or
+    // [songArrived] in between was overwritten by a blind write (the follower tapped "Leave" as a keep-alive arrived
+    // and went back to following)
     private fun onMessage(from: BandProtocol.Hello, msg: Conduct.Msg): Conduct.Lack? {
-        val before = _role.value
-        if (msg.type == Conduct.END) {
-            if ((before as? Role.Following)?.fromId == from.id || (before as? Role.Left)?.fromId == from.id) _role.value = Role.None
-            return Conduct.Lack(identity.name.value, emptyList())
+        while (true) {
+            val before = _role.value
+            if (msg.type == Conduct.END) {
+                if ((before as? Role.Following)?.fromId == from.id || (before as? Role.Left)?.fromId == from.id) {
+                    beforeCommit?.invoke()
+                    if (!_role.compareAndSet(before, Role.None)) continue
+                }
+                return Conduct.Lack(identity.name.value, emptyList())
+            }
+            if (before is Role.Conducting) return null
+            // left this leader: what it says only keeps "follow again" up to date. The setlist sent again is the call back
+            if (before is Role.Left && before.fromId == from.id && msg.type != Conduct.CHECK) {
+                val same = before.msg.index == msg.index && before.breakFrozen == null
+                val left = Role.Left(from.id, msg, breakSince = breakSince(msg, before.breakSince.takeIf { same }, before.msg.rest.takeIf { same }), breakFrozen = frozenOf(msg))
+                beforeCommit?.invoke()
+                if (!_role.compareAndSet(before, left)) continue
+                return null
+            }
+            val song = songHere(msg)
+            val known = when (before) {
+                is Role.Following -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { Triple(it.msg, it.breakSince, it.breakFrozen) }
+                is Role.Left -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { Triple(it.msg, it.breakSince, it.breakFrozen) }
+                else -> null
+            }
+            // the call says nothing about the break: the one already known stays until the song that follows it says
+            val kept = msg.type == Conduct.CHECK && known?.first?.songs == msg.songs
+            val running = known?.takeIf { it.third == null }
+            val since = if (kept) known?.second else breakSince(msg, running?.second, running?.first?.rest)
+            val now = Role.Following(from.id, msg, song?.id, breakSince = since, breakFrozen = if (kept) known?.third else frozenOf(msg))
+            beforeCommit?.invoke()
+            if (!_role.compareAndSet(before, now)) continue
+            _armed.value = false   // someone else leads: nothing to wait for
+            // a song, or a break after a song that isn't here: the stage opens once for it, not again on each sign of life
+            val was = before as? Role.Following
+            val stage = now.stage
+            // the break starting over the song this device already has is told too: a screen that holds the follower (the
+            // editor) then says the leader went to the break, with "Go"; where the stage is open it asks for nothing
+            val breakStarted = was != null && was.breakSince == null && now.breakSince != null
+            if (stage != null && (was?.stage != stage || was.msg.index != msg.index || breakStarted)) _openSong.tryEmit(stage)
+            return Conduct.lackFor(identity.name.value, msg, repository.library.value.songs)
         }
-        if (before is Role.Conducting) return null
-        // left this leader: what it says only keeps "follow again" up to date. The setlist sent again is the call back
-        if (before is Role.Left && before.fromId == from.id && msg.type != Conduct.CHECK) {
-            _role.compareAndSet(before, Role.Left(from.id, msg, breakSince = breakSince(msg, before.breakSince.takeIf { before.msg.index == msg.index && before.breakFrozen == null }), breakFrozen = frozenOf(msg)))
-            return null
-        }
-        val song = songHere(msg)
-        val known = when (before) {
-            is Role.Following -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { Triple(it.msg, it.breakSince, it.breakFrozen) }
-            is Role.Left -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { Triple(it.msg, it.breakSince, it.breakFrozen) }
-            else -> null
-        }
-        // the call says nothing about the break: the one already known stays until the song that follows it says
-        val kept = msg.type == Conduct.CHECK && known?.first?.songs == msg.songs
-        val since = if (kept) known?.second else breakSince(msg, known?.takeIf { it.third == null }?.second)
-        val now = Role.Following(from.id, msg, song?.id, breakSince = since, breakFrozen = if (kept) known?.third else frozenOf(msg))
-        _armed.value = false   // someone else leads: nothing to wait for
-        _role.value = now
-        // a song, or a break after a song that isn't here: the stage opens once for it, not again on each sign of life
-        val was = before as? Role.Following
-        val stage = now.stage
-        // the break starting over the song this device already has is told too: a screen that holds the follower (the
-        // editor) then says the leader went to the break, with "Go"; where the stage is open it asks for nothing
-        val breakStarted = was != null && was.breakSince == null && now.breakSince != null
-        if (stage != null && (was?.stage != stage || was.msg.index != msg.index || breakStarted)) _openSong.tryEmit(stage)
-        return Conduct.lackFor(identity.name.value, msg, repository.library.value.songs)
     }
 
     // ---- missing songs during the show ----
@@ -577,9 +605,13 @@ class BandConduct internal constructor(
     // look later
     private fun frozenOf(msg: Conduct.Msg): Long? = msg.rest?.takeIf { msg.restPaused }
 
-    private fun breakSince(msg: Conduct.Msg, known: Long?): Long? {
-        val since = clock() - (msg.rest ?: return null)
+    // [knownRest]: what the leader's previous message of this same break said. The leader's count only grows for the same
+    // break, so a smaller one means it zeroed the counter: the new start stands, even inside [SAME_BREAK_MS] of the old
+    private fun breakSince(msg: Conduct.Msg, known: Long?, knownRest: Long? = null): Long? {
+        val rest = msg.rest ?: return null
+        val since = clock() - rest
         if (known == null) return since
+        if (knownRest != null && rest < knownRest) return since
         return if (kotlin.math.abs(since - known) <= SAME_BREAK_MS) minOf(since, known) else since
     }
 

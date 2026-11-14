@@ -65,6 +65,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -178,26 +180,46 @@ internal fun BandConduct.Notice.text(resources: android.content.res.Resources): 
     is BandConduct.Notice.ChordsCame -> resources.getString(R.string.conduct_chords_came, title, from)
 }
 
+private fun ticks() = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
+
+/**
+ * [active] runs (is collected) only while [on] says true; otherwise the result is null and nothing of it is collected.
+ * The tests count how many times it starts.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun <T : Any> whileBandOn(on: kotlinx.coroutines.flow.Flow<Boolean>, active: () -> kotlinx.coroutines.flow.Flow<T?>): kotlinx.coroutines.flow.Flow<T?> =
+    on.flatMapLatest { if (it) active() else flowOf(null) }
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ConductViewModel @Inject constructor(
     private val conduct: BandConduct, repository: br.app.stagebook.data.LibraryRepository, identity: br.app.stagebook.data.DeviceIdentity,
 ) : ViewModel() {
-    // clock for "gone" (every 30 s; only while the strip is on screen)
-    private val tick = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
+    // "Band on the network" off: the strip has nothing to show and nothing here runs: the library isn't read for it, the
+    // clock doesn't tick (the strip is in every screen, and this used to wake every 30 s and rebuild the list of titles
+    // at each save of the library)
+    private val bandOn = repository.library.map { it.look.bandOn }.distinctUntilChanged()
+
+    // clock for "gone": every 30 s, only while following (or having left) a leader; otherwise just the time now
+    private val tick = conduct.role.map { it is Role.Following || it is Role.Left }.distinctUntilChanged()
+        .flatMapLatest { watching -> if (watching) ticks() else flowOf(System.currentTimeMillis()) }
 
     // the library too: on a break the strip says whether the next song is here (looked up only then)
     // following: the leader's songs that aren't here. Looked up again only when the setlist or the library's titles
-    // change, not on every save (the stage saves a song's size while it opens)
-    private val lacksHere = combine(
-        conduct.role.map { (it as? Role.Following)?.msg?.songs }.distinctUntilChanged(),
-        repository.library.map { it.songs.map { s -> s.title to s.author } }.distinctUntilChanged(),
-    ) { items, _ -> items?.let { Conduct.missing(it, repository.library.value.songs) } }.flowOn(kotlinx.coroutines.Dispatchers.Default)
+    // change, not on every save (the stage saves a song's size while it opens). Not following: the library isn't read
+    private val lacksHere = conduct.role.map { (it as? Role.Following)?.msg?.songs }.distinctUntilChanged().flatMapLatest { items ->
+        if (items == null) flowOf(null)
+        else repository.library.map { it.songs.map { s -> s.title to s.author } }.distinctUntilChanged()
+            .map { Conduct.missing(items, repository.library.value.songs) }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
 
     // who is online now, and who it's about (the strip counts who didn't answer against the people online at this moment)
     private val around = combine(conduct.chordless, lacksHere, conduct.online) { chordless, lacks, online -> Triple(chordless, lacks, online) }
 
-    val ui: StateFlow<ConductUi?> = combine(conduct.role, tick, repository.library, around, conduct.armed) { role, now, library, (chordless, lacks, online), armed ->
-        conductUi(role, library.songs, now, library.look.bandOn, chordless, library.look.chords, identity.name.value, lacks, online, armed)
+    val ui: StateFlow<ConductUi?> = whileBandOn(bandOn) {
+        combine(conduct.role, tick, repository.library, around, conduct.armed) { role, now, library, (chordless, lacks, online), armed ->
+            conductUi(role, library.songs, now, library.look.bandOn, chordless, library.look.chords, identity.name.value, lacks, online, armed)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val asking: StateFlow<Boolean> = conduct.asking
