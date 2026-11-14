@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -282,13 +281,15 @@ fun ConductBar(
                 var searching by remember { mutableStateOf(false) }
                 LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
                 if (compact) {
-                    // on a phone the search is an icon (the strip has room for it and "End" beside the title); the
-                    // spinner takes its place meanwhile, disabled, so a second tap sends nothing
+                    // on a phone the search is an icon (the strip has room for it and "End" beside the title); a still
+                    // hourglass takes its place meanwhile, disabled, so a second tap sends nothing. Not a spinner: an
+                    // endless animation redraws the whole screen every frame (43 to 50% of the app for 30 s on the
+                    // OnePlus, v0.1.1134; the band screen dropped it for the same reason)
                     val accent = MaterialTheme.colorScheme.primary
                     if (searching) {
                         val name = stringResource(R.string.conduct_searching)
                         IconButton({}, Modifier.semantics { contentDescription = name }, enabled = false) {
-                            CircularProgressIndicator(Modifier.size(Sizes.icon), color = accent, strokeWidth = Sizes.progressStroke)
+                            Icon(AppIcons.Hourglass, null, Modifier.size(Sizes.icon), tint = accent)
                         }
                     } else {
                         TipIcon(stringResource(R.string.conduct_search), AppIcons.Search, { searching = true; onSearch() }, tint = accent)
