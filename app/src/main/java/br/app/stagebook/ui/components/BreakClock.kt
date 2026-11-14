@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import br.app.stagebook.domain.BreakTimer
 import br.app.stagebook.domain.SetlistBreaks
 import kotlinx.coroutines.delay
 
@@ -18,16 +19,24 @@ import kotlinx.coroutines.delay
  * in the background nothing runs.
  */
 @Composable
-fun breakClock(since: Long): String {
-    var now by remember(since) { mutableLongStateOf(System.currentTimeMillis()) }
+fun breakClock(since: Long): String = breakClock(BreakTimer.Timer(startedAt = since))
+
+/**
+ * The same for a break's [timer] (by wall clock, see [BreakTimer]): a paused one shows what it had counted and ticks
+ * nothing. The time is worked out when it is drawn, so coming back to the screen shows the right time at once.
+ */
+@Composable
+fun breakClock(timer: BreakTimer.Timer): String {
+    var now by remember(timer) { mutableLongStateOf(System.currentTimeMillis()) }
     val owner = LocalLifecycleOwner.current
-    LaunchedEffect(since, owner) {
+    LaunchedEffect(timer, owner) {
+        if (!timer.running) return@LaunchedEffect
         owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
                 now = System.currentTimeMillis()
-                delay(1_000L - (now - since).coerceAtLeast(0L) % 1_000L)
+                delay(1_000L - timer.elapsed(now) % 1_000L)
             }
         }
     }
-    return SetlistBreaks.clock(now - since)
+    return SetlistBreaks.clock(timer.elapsed(now))
 }

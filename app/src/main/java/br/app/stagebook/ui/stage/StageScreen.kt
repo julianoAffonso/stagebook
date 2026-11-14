@@ -140,6 +140,7 @@ import br.app.stagebook.domain.StageFit
 import br.app.stagebook.ui.PedalHandler
 import br.app.stagebook.ui.components.EmptyState
 import br.app.stagebook.ui.components.AppIcons
+import br.app.stagebook.ui.components.TipIcon
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.wideLists
@@ -204,6 +205,7 @@ fun StageRoute(
     }
     var page by rememberSaveable { mutableIntStateOf(0) }
     val breakSince by viewModel.breakSince.collectAsStateWithLifecycle()
+    val breakTimer by viewModel.breakTimer.collectAsStateWithLifecycle()
     KeepScreenOn()
     StageDoNotDisturb(uiState.look.stageDnd && !uiState.loading)
     // the first time on stage without Android's permission: asks once (Settings can turn it on later)
@@ -302,6 +304,10 @@ fun StageRoute(
             onGlobalMix = viewModel::setGlobalMix,
             breakSince = breakSince,
             onBreak = viewModel::setBreak,
+            breakTimer = breakTimer,
+            onBreakPause = viewModel::pauseBreak,
+            onBreakResume = viewModel::resumeBreak,
+            onBreakReset = viewModel::resetBreak,
         )
     } else {
         Box(Modifier.fillMaxSize().background(Color(uiState.look.bg))) {
@@ -359,7 +365,7 @@ internal fun LeaderBreakStage(uiState: StageUiState, onBack: (() -> Unit)?, modi
     }
     Box(modifier.fillMaxSize().background(Color(look.bg))) {
         uiState.followBreak?.let { rest ->
-            StageBreak(since = rest.since, next = rest.next, nextKey = rest.key, bg = Color(look.bg), fg = Color(look.fg), vertical = false, onNext = {}, onPrevious = {})
+            StageBreak(timer = br.app.stagebook.domain.BreakTimer.Timer(startedAt = rest.since), next = rest.next, nextKey = rest.key, bg = Color(look.bg), fg = Color(look.fg), vertical = false, onNext = {}, onPrevious = {})
         }
     }
 }
@@ -407,6 +413,10 @@ fun StageScreen(
     onGlobalMix: (br.app.stagebook.domain.MixerConfig) -> Unit = {},
     breakSince: Long? = null,   // the setlist's break after this song is on screen since then (null = no break)
     onBreak: (on: Boolean) -> Unit = {},
+    breakTimer: br.app.stagebook.domain.BreakTimer.Timer? = null,   // its counter: pausable (null = counting from breakSince)
+    onBreakPause: () -> Unit = {},
+    onBreakResume: () -> Unit = {},
+    onBreakReset: () -> Unit = {},
 ) {
     // the mixer over the stage, with the song playing (user, 31/10)
     var mixerOpen by remember { mutableStateOf(false) }
@@ -683,12 +693,24 @@ fun StageScreen(
             presses.from = index to page; onPosition(index + 1, 0)
         }
     }
+    // the song before the break to show once the stage is on it
+    var breakAgain by remember { mutableIntStateOf(-1) }
+    LaunchedEffect(index, breakAgain) {
+        if (breakAgain >= 0 && breakAgain == index) { breakAgain = -1; onBreak(true) }
+    }
     fun go(forward: Boolean) {
         if (onBreakNow) { leaveBreak(forward); return }
         if (followRest) { presses.steps = 0; return }
         if (autoOn) { autoOn = false; return }
         if (presses.from != null) { presses.steps += if (forward) 1 else -1; return }
         if (forward && breakNext && current >= pageCount - 1) { onBreak(true); return }
+        // back from the first page of the song after a break shows the break again (it used to skip it)
+        if (!forward && current == 0 && index > 0 && index in uiState.breaks) {
+            presses.from = index to page
+            breakAgain = index - 1
+            onPosition(index - 1, LAST_PAGE)
+            return
+        }
         val target = (if (forward) nextTarget() else previousTarget()) ?: return
         presses.from = index to page
         onPosition(target.first, target.second)
@@ -1470,7 +1492,7 @@ fun StageScreen(
         val nextKey = remember(next.text) { Chords.key(next.text) }
         val title = if (next.missing) stringResource(R.string.set_item_missing) else next.title
         StageBreak(
-            since = breakSince,
+            timer = breakTimer ?: br.app.stagebook.domain.BreakTimer.Timer(startedAt = breakSince),
             next = title,
             nextKey = nextKey,
             bg = Color(look.bg),
@@ -1478,13 +1500,16 @@ fun StageScreen(
             vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
             onNext = ::next,
             onPrevious = ::previous,
+            onPause = onBreakPause,
+            onResume = onBreakResume,
+            onReset = onBreakReset,
         )
     }
     // following the band: the leader's break covers this stage too, with the song each one has. Only the leader ends
     // it (a tap here does nothing); leaving the stage, or the band, works as on any song
     uiState.followBreak?.takeIf { !onBreakNow }?.let { rest ->
         StageBreak(
-            since = rest.since,
+            timer = br.app.stagebook.domain.BreakTimer.Timer(startedAt = rest.since),
             next = rest.next,
             nextKey = rest.key,
             bg = Color(look.bg),
@@ -2225,7 +2250,7 @@ private fun PageDots(current: Int, count: Int, color: Color, modifier: Modifier 
  */
 @Composable
 private fun StageBreak(
-    since: Long,
+    timer: br.app.stagebook.domain.BreakTimer.Timer,
     next: String,      // the next song's name
     nextKey: String,   // its key ("" = none written)
     bg: Color,
@@ -2234,8 +2259,11 @@ private fun StageBreak(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     modifier: Modifier = Modifier,
+    onPause: (() -> Unit)? = null,    // pause, resume and zero are for whoever leads or plays alone: a follower only sees
+    onResume: () -> Unit = {},
+    onReset: () -> Unit = {},
 ) {
-    val elapsed = br.app.stagebook.ui.components.breakClock(since)
+    val elapsed = br.app.stagebook.ui.components.breakClock(timer)
     val goOn by rememberUpdatedState(onNext)
     val goBack by rememberUpdatedState(onPrevious)
     val swipeMin = with(LocalDensity.current) { Sizes.swipe.toPx() }
@@ -2264,7 +2292,17 @@ private fun StageBreak(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(stringResource(R.string.set_break), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
-        Text(elapsed, style = MaterialTheme.typography.displayLarge, color = fg, maxLines = 1)
+        Text(elapsed, style = MaterialTheme.typography.displayLarge, color = if (timer.running) fg else fg.copy(alpha = 0.5f), maxLines = 1)
+        if (onPause != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+                if (timer.running) {
+                    TipIcon(stringResource(R.string.stage_break_pause), AppIcons.PauseRounded, onPause, tint = fg)
+                } else {
+                    TipIcon(stringResource(R.string.stage_break_resume), AppIcons.PlayRounded, onResume, tint = fg)
+                }
+                TipIcon(stringResource(R.string.stage_break_reset), AppIcons.Replay, onReset, tint = fg)
+            }
+        }
         // one line: a long name is cut and the key stays whole (on a phone the name wrapped and left the key alone
         // on the second line); read as one sentence
         val nextStyle = MaterialTheme.typography.titleLarge

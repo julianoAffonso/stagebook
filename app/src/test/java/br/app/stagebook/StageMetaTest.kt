@@ -106,7 +106,7 @@ class StageMetaTest {
     }
 
     // back to the song to check something and on to the break again: the break goes on counting (user, 13/11)
-    @Test fun `a break left backward keeps its start, and another song on screen forgets it`() = runBlocking {
+    @Test fun `a break keeps its start when left backward or forward and found again`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
         val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
@@ -132,10 +132,9 @@ class StageMetaTest {
 
         vm.setBreak(false)   // left forward: the next song opens
         vm.songShown(1)
-        vm.songShown(0)      // and back on the first song: its break starts over
-        Thread.sleep(20)
+        vm.songShown(0)      // and back on the first song: the break goes on (user, 14/11; only a played next song ends it)
         vm.setBreak(true)
-        assertTrue("a new break: ${vm.breakSince.value} after $since", vm.breakSince.value!! > since)
+        assertEquals(since, vm.breakSince.value)
     }
 
     private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = testStage(context, repo, saved)

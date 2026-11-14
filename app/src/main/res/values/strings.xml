@@ -107,6 +107,9 @@
         <item quantity="other">SET %1$d · %2$d songs</item>
     </plurals>
     <string name="stage_break_next">Up next: %1$s</string>
+    <string name="stage_break_pause">Pause the break</string>
+    <string name="stage_break_resume">Resume the break</string>
+    <string name="stage_break_reset">Reset the break to zero</string>
     <string name="qr_limit_title">Setlist full</string>
     <string name="qr_limit_message">This setlist is full. To go on, create another one.</string>
     <string name="qr_limit_batch_title">They don\'t all fit</string>

@@ -184,7 +184,8 @@ class StageViewModel @Inject constructor(
 
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
-        forgetBreakAway(index)
+        shownIndex = index
+        resumeBreak(index)
         route.setId?.let { conduct.open(it, index) }
         announce(index)
         sendMidi(index)
@@ -281,38 +282,71 @@ class StageViewModel @Inject constructor(
     init { route.setId?.let(show::stageOpened) }
 
     /**
-     * The setlist's break on screen: when it started (null = no break). The song on stage stays the one before the
-     * break, so the next one only "enters" (MIDI, Now Playing, the band) when the break is left. Kept here, with the
-     * time it started, so turning the device doesn't restart its counter.
+     * The setlist's break on screen: where its counter would have started (null = no break). The song on stage stays the
+     * one before the break, so the next one only "enters" (MIDI, Now Playing, the band) when the break is left. The
+     * counter itself is in [show] (by wall clock, per setlist and break), so turning the device, leaving the stage or
+     * going on to the next song and back doesn't restart it; it ends when the song after it has been played.
      */
     val breakSince: StateFlow<Long?> = savedStateHandle.getStateFlow<Long?>(BREAK_SINCE, null)
 
-    /**
-     * Going back to the song to check something and on to the break again goes on counting from the same start: the
-     * start is kept while the stage stays on the song before the break, and forgotten when another song opens.
-     */
+    // the song after the break on screen: the counter's key in [show]
+    private val breakSong = savedStateHandle.getStateFlow<String?>(BREAK_SONG, null)
+
+    /** The counter of the break on screen (null = none): running or paused, for the stage to draw. */
+    val breakTimer: StateFlow<br.app.stagebook.domain.BreakTimer.Timer?> =
+        combine(show.breaks, breakSong) { all, song -> song?.let { all[br.app.stagebook.domain.BreakTimer.key(route.setId.orEmpty(), it)] } }
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+
     fun setBreak(on: Boolean) {
         if (on == (breakSince.value != null)) return
-        if (!on) { savedStateHandle[BREAK_SINCE] = null; return }
-        val start = savedStateHandle.get<Long>(BREAK_START) ?: System.currentTimeMillis()
-        savedStateHandle[BREAK_START] = start
-        savedStateHandle[BREAK_AT] = shownIndex
-        savedStateHandle[BREAK_SINCE] = start
+        if (!on) {
+            val setId = route.setId
+            val song = breakSong.value
+            if (setId != null && song != null) show.breakLeft(setId, song)
+            savedStateHandle[BREAK_SINCE] = null; savedStateHandle[BREAK_SONG] = null; return }
+        val setId = route.setId ?: return
+        val song = repository.library.value.setlist(setId)?.items?.getOrNull(shownIndex + 1) ?: "#${shownIndex + 1}"
+        val timer = show.breakEntered(setId, song)
+        savedStateHandle[BREAK_SONG] = song
+        savedStateHandle[BREAK_SINCE] = br.app.stagebook.domain.BreakTimer.since(timer, System.currentTimeMillis())
     }
+
+    private var reopened = false
+
+    /**
+     * The stage opened on the song before a break that was on screen when it was left (to fix a song, the setlist): the
+     * break comes back, with its counter. Only the first song shown counts, and not for a follower (the leader's stage
+     * says what is shown).
+     */
+    private fun resumeBreak(index: Int) {
+        if (reopened) return
+        reopened = true
+        val setId = route.setId ?: return
+        if (breakOnly || conduct.role.value is br.app.stagebook.data.BandConduct.Role.Following) return
+        val next = repository.library.value.setlist(setId)?.items?.getOrNull(index + 1) ?: return
+        if ((index + 1) in repository.library.value.setlist(setId)!!.breaks && show.breakOpen(setId, next)) setBreak(true)
+    }
+
+    fun pauseBreak() = breakSong.value?.let { song -> route.setId?.let { show.breakPause(it, song) } }
+
+    fun resumeBreak() = breakSong.value?.let { song -> route.setId?.let { show.breakResume(it, song) } }
+
+    /** Zero: keeps running if it was running, stays paused if it was paused. */
+    fun resetBreak() = breakSong.value?.let { song -> route.setId?.let { show.breakReset(it, song) } }
 
     // the position on screen, as [songShown] last heard it
     private var shownIndex = -1
 
-    /** Another song on screen: the break that was kept is over. */
-    private fun forgetBreakAway(index: Int) {
-        shownIndex = index
-        if (savedStateHandle.get<Int>(BREAK_AT) != index) savedStateHandle.remove<Long>(BREAK_START)
-    }
     // leading the band: the followers' stages show this stage's break, and leave it, with it. How long it has lasted
     // goes along, so a stage that comes back in the middle of a break (the device turned) says the right time
     init {
         route.setId?.let { setId ->
-            viewModelScope.launch { breakSince.collect { since -> conduct.rest(setId, since?.let { System.currentTimeMillis() - it }) } }
+            // the strip counts from the time it is told: a reset or a resume sends the new one
+            viewModelScope.launch {
+                combine(breakSince, breakTimer) { since, timer -> if (since == null) null else timer }.collect { timer ->
+                    conduct.rest(setId, timer?.elapsed(System.currentTimeMillis()))
+                }
+            }
         }
     }
 
@@ -434,7 +468,6 @@ class StageViewModel @Inject constructor(
 }
 
 private const val BREAK_SINCE = "breakSince"
-private const val BREAK_START = "breakStart"   // kept while the break is hidden by the song before it
-private const val BREAK_AT = "breakAt"         // the song the kept break comes after
+private const val BREAK_SONG = "breakSong"     // the song after the break on screen: its counter's key
 private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome

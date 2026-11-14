@@ -11,7 +11,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import br.app.stagebook.data.model.Look
@@ -48,6 +50,8 @@ class StageBreakTest {
     private var since by mutableStateOf<Long?>(null)
     private val pedal = PedalInput()
     private var restarts = 0
+    private var timer by mutableStateOf<br.app.stagebook.domain.BreakTimer.Timer?>(null)
+    private val actions = mutableListOf<String>()
 
     private fun show(breaks: List<Int>, look: Look = Look(), start: Int = 0) {
         song = start
@@ -58,6 +62,7 @@ class StageBreakTest {
                         StageUiState(loading = false, songs = songs, look = look, live = true, breaks = breaks), song, page, { s, p -> song = s; page = p },
                         breakSince = since, onBreak = { on -> since = if (on) System.currentTimeMillis() else null },
                         onRestartShow = { restarts++ },
+                        breakTimer = timer, onBreakPause = { actions += "pause" }, onBreakResume = { actions += "resume" }, onBreakReset = { actions += "reset" },
                     )
                 }
             }
@@ -189,5 +194,45 @@ class StageBreakTest {
         compose.onNodeWithText("INTERVALO").assertIsDisplayed()
         forward()
         assertEquals(1, song)
+    }
+
+    // the leader (or whoever plays alone) pauses, resumes and zeroes the break; the icons are named for touch and tooltip
+    @Test fun `the break offers pause and zero while it counts, and resume and zero while paused`() {
+        show(listOf(1))
+        timer = br.app.stagebook.domain.BreakTimer.Timer(startedAt = System.currentTimeMillis() - 5_000)
+        forward()
+        compose.onNodeWithContentDescription("Pausar o intervalo").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Zerar o intervalo").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Retomar o intervalo").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pausar o intervalo").performClick()
+        compose.onNodeWithContentDescription("Zerar o intervalo").performClick()
+        assertEquals(listOf("pause", "reset"), actions)
+        assertEquals("a tap on a control doesn't turn the stage", 0, song)
+        timer = br.app.stagebook.domain.BreakTimer.Timer(accumulated = 125_000)
+        compose.waitForIdle()
+        compose.onNodeWithText("02:05").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Retomar o intervalo").performClick()
+        assertEquals(listOf("pause", "reset", "resume"), actions.toList())
+        compose.onNodeWithContentDescription("Pausar o intervalo").assertDoesNotExist()
+    }
+
+    // back from the first page of the song after the break shows the break again (it used to skip it: V14)
+    @Test fun `going back from the first page of the song after a break shows the break again`() {
+        show(listOf(1), start = 1)
+        back()
+        assertEquals(0, song)
+        compose.onNodeWithText("INTERVALO").assertIsDisplayed()
+        forward()
+        assertEquals(1, song)
+        compose.onNodeWithText("INTERVALO").assertDoesNotExist()
+    }
+
+    @Test fun `back inside the song after a break only turns the page`() {
+        show(listOf(1), start = 1)
+        forward()   // the next song has one page: forward goes to the last song
+        assertEquals(2, song)
+        back()
+        assertEquals(1, song)
+        compose.onNodeWithText("INTERVALO").assertDoesNotExist()
     }
 }

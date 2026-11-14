@@ -112,6 +112,9 @@
         <item quantity="other">BLOCO %1$d · %2$d músicas</item>
     </plurals>
     <string name="stage_break_next">A seguir: %1$s</string>
+    <string name="stage_break_pause">Pausar o intervalo</string>
+    <string name="stage_break_resume">Retomar o intervalo</string>
+    <string name="stage_break_reset">Zerar o intervalo</string>
     <string name="qr_limit_title">Setlist cheio</string>
     <string name="qr_limit_message">Este setlist já está cheio. Para continuar, crie outro.</string>
     <string name="qr_limit_batch_title">Não cabem todas</string>
