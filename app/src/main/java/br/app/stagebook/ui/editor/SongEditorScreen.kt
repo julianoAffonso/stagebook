@@ -281,6 +281,14 @@ fun SongEditorScreen(
                 lyrics = v
                 if (v.text != before) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
             }
+            // the tools' lambdas are the same on every key (they read the live text and `edit` through states): with new ones
+            // each time, the whole strip (sections and ~15 chord chips) was drawn again on every typed character
+            val shownNow by rememberUpdatedState(shown)
+            val editNow by rememberUpdatedState<(TextFieldValue) -> Unit>(::edit)
+            val stripSection = remember { { kind: Sections.Kind -> editNow(insertSection(shownNow, kind)) } }
+            // nothing to highlight under the cursor (no selection, empty line): says how (B-28)
+            val stripHighlight = remember(appMessage, highlightHint) { { toggleHighlight(shownNow).let { if (it == shownNow) appMessage.show(highlightHint) else editNow(it) } } }
+            val stripChord = remember { { chord: String -> editNow(insertChord(shownNow, chord)) } }
             // new chord: goes where the lyrics cursor was
             if (newChord) {
                 ChordDialog(
@@ -303,12 +311,14 @@ fun SongEditorScreen(
                 detectTapGestures { if (!guarding) { focusManager.clearFocus(); keyboard?.hide() } }
             }) {
                 // top: back, the song's name with the artist under it, previous/next, save and delete (on every screen)
+                // by value: reading uiState inside would rebuild the bar on every key
+                val canDelete = uiState.canDelete
                 val headerActions: @Composable RowScope.() -> Unit = {
                     // tablets have the room on this line; on a phone it goes on the line below
                     if (wide && position != null) EditorSteps(position, step)
                     TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary)
                     // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option); only for a saved song
-                    if (uiState.canDelete) TipIcon(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, tint = MaterialTheme.colorScheme.error)
+                    if (canDelete) TipIcon(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, tint = MaterialTheme.colorScheme.error)
                 }
                 val tabChoice: @Composable (Modifier) -> Unit = { m ->
                     SegmentedChoice(
@@ -369,10 +379,9 @@ fun SongEditorScreen(
                                     kotlinx.coroutines.delay(CHORDS_AFTER_TYPING_MS)
                                     value = usedChords(uiState.text)
                                 }.value,
-                                onSection = { kind -> edit(insertSection(shown, kind)) },
-                                // nothing to highlight under the cursor (no selection, empty line): says how (B-28)
-                                onHighlight = { toggleHighlight(shown).let { if (it == shown) appMessage.show(highlightHint) else edit(it) } },
-                                onChord = { chord -> edit(insertChord(shown, chord)) },
+                                onSection = stripSection,
+                                onHighlight = stripHighlight,
+                                onChord = stripChord,
                                 onNewChord = { newChord = true },
                             )
                             // the lyrics take all the room left (bug 31/10: they stopped short of the bottom); only the
@@ -664,6 +673,8 @@ private fun TempoField(uiState: SongEditorUiState, onTempo: (String) -> Unit, mo
     )
 }
 
+internal object ToolStripProbe { @Volatile var drawn = 0 }   // tests: how many times the strip was composed
+
 /**
  * The one line of tools over the lyrics: preview, highlighter, section shortcuts and chord shortcuts, each a single tap and
  * the strip scrolls sideways. Always in view on this screen, the keyboard up or not.
@@ -679,6 +690,7 @@ private fun ToolStrip(
     onChord: (String) -> Unit,
     onNewChord: () -> Unit,
 ) {
+    androidx.compose.runtime.SideEffect { ToolStripProbe.drawn++ }
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Spacing.m),
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
