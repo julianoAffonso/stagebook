@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -20,7 +21,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,11 +38,13 @@ import java.util.TimeZone
 class ShowStoreBehaviorTest {
     private val savedZone = TimeZone.getDefault()
 
-    @Before fun main() = Dispatchers.setMain(UnconfinedTestDispatcher())
-    @After fun reset() { Dispatchers.resetMain(); TimeZone.setDefault(savedZone) }
+    // Main is replaced only by the one test that builds a view model, and every scope this class makes is cancelled after
+    // each test: a background coroutine of an earlier test reading Main while another test swapped it broke the CI run
+    private val scopes = mutableListOf<CoroutineScope>()
+    @After fun reset() { scopes.forEach { it.cancel() }; scopes.clear(); TimeZone.setDefault(savedZone) }
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
     private fun repo() = LibraryRepository(context, scope())
         .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
 
@@ -138,10 +140,13 @@ class ShowStoreBehaviorTest {
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }
         val show = SetlistShowStore(context, repo, scope())
         show.breakEntered(set, ids[1])
-        val stage = testStage(context, repo, SavedStateHandle(mapOf("setId" to set, "start" to 0, "atBreak" to true)), show)
-        repo.deleteSetlist(set)
-        stage.songShown(0)
-        assertNull(stage.breakSince.value)
-        assertNull(stage.breakTimer.value)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val stage = testStage(context, repo, SavedStateHandle(mapOf("setId" to set, "start" to 0, "atBreak" to true)), show)
+            repo.deleteSetlist(set)
+            stage.songShown(0)
+            assertNull(stage.breakSince.value)
+            assertNull(stage.breakTimer.value)
+        } finally { Dispatchers.resetMain() }
     }
 }

@@ -82,6 +82,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -242,9 +243,11 @@ fun SettingsRoute(
         }
     }
     // pedal test: while settings are open, any button shows on the pedal card
+    // with the keyboard up the keys are the text field's (Backspace was eaten here and the search never erased)
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    val typing = androidx.compose.foundation.layout.WindowInsets.isImeVisible
     PedalHandler { p ->
-        val ignored = p.code in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE)
-        if (ignored) return@PedalHandler false
+        if (!settingsPedalTakes(p.code, typing)) return@PedalHandler false
         if (p.learnable) viewModel.onKey(p)
         true
     }
@@ -670,6 +673,10 @@ fun SettingsScreen(
 }
 
 /** The search over the settings: the text, the items that can show now, and what tapping a result does. */
+/** Whether the pedal test takes this key: not the system's, and not while the keyboard is up for a text field. */
+internal fun settingsPedalTakes(keyCode: Int, typing: Boolean): Boolean =
+    !typing && keyCode !in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE)
+
 internal const val SEARCH_DEBOUNCE_MS = 120L
 
 internal class SettingsSearch(val query: String, val onQuery: (String) -> Unit, val ctx: IndexCtx, val onOpen: (SettingsHit) -> Unit)
