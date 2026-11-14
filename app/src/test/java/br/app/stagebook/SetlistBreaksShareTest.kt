@@ -108,8 +108,8 @@ class SetlistBreaksShareTest {
         // the reading as it was before the breaks (SetlistCloud.read): every message that unpacks as a setlist's text
         val lists = sent.mapNotNull { QrPayload.unpack(it) }.filter(BandContent::listOk).distinct()
         assertEquals(listOf(list("Show", "A", "B", "C", "D", "E")), lists)
-        // and what tells an app to update didn't move: the sender's version
-        assertEquals(2, BandProtocol.VERSION)
+        // the sender's version was raised (user, 14/11): an app on version 2 says "update" instead of guessing
+        assertEquals(3, BandProtocol.VERSION)
         assertTrue(cloud.read(sent) is SetlistCloud.Received.Ok)
     }
 
@@ -140,7 +140,7 @@ class SetlistBreaksShareTest {
         assertEquals(listOf(2, 4), got.breaks)
         // the reading as it was before the breaks (SetlistCloud.fetchPair)
         val old = json.parseToJsonElement(SetlistCloud.unpack(byteArrayOf('P'.code.toByte(), '1'.code.toByte()), wire, SetlistCloud.MAX_PACKAGE)!!).jsonObject
-        assertTrue((old["v"]?.jsonPrimitive?.int ?: BandProtocol.VERSION) <= 2)   // not "newer" for an app on version 2
+        assertNull(old["v"])   // "v" is a default and never goes in the package: an app on version 2 reads it as its own, with no warning
         assertEquals(got.text, QrPayload.unpack(java.util.Base64.getDecoder().decode(old["list"]!!.jsonPrimitive.content)))
     }
 
