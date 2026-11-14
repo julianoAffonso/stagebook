@@ -35,7 +35,11 @@ import javax.inject.Inject
 
 /** A library song that can go into the scanned setlist. */
 @Immutable
-data class SongRef(val id: String, val title: String, val author: String)
+data class SongRef(
+    val id: String, val title: String, val author: String,
+    // what the row shows at its end, as every song list does (0 / "" = none)
+    val songKey: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false,
+)
 
 /**
  * A review row: the setlist's song, what was found in the library and the chosen one (null = left out). [found] = found
@@ -352,7 +356,7 @@ class ScanSetlistViewModel @Inject constructor(
         _ui.value = ScanUi.Review(parsed.name, rows, songsOnly, received)
     }
 
-    private fun Song.ref() = SongRef(id, title, author)
+    private fun Song.ref() = br.app.stagebook.domain.Chords.meta(text).let { SongRef(id, title, author, it.key, it.tempo, it.capo, track.isNotEmpty()) }
 
     // in the lyrics and chords profile, flag a song that arrived with lyrics only (chords missing)
     private fun noChords(s: SetlistCloud.SharedSong) =

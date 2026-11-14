@@ -796,6 +796,13 @@
     </plurals>
     <string name="scan_missing_row">Não está na sua biblioteca e vai ficar de fora.</string>
     <string name="scan_which">Qual destas?</string>
+    <string name="scan_found_row">Encontrada na sua biblioteca</string>
+    <string name="scan_choose">Escolher</string>
+    <plurals name="scan_candidates">
+        <item quantity="one">%d candidata</item>
+        <item quantity="many">%d candidatas</item>
+        <item quantity="other">%d candidatas</item>
+    </plurals>
     <string name="scan_leave_out">Deixar de fora</string>
     <string name="scan_again">Ler de novo</string>
     <string name="scan_fetch_again">Buscar de novo</string>

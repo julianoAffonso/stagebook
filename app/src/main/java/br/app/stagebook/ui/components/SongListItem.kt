@@ -36,7 +36,7 @@ import br.app.stagebook.ui.theme.Spacing
 fun SongListItem(
     title: String,
     subtitle: String,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,   // null: a row that isn't a button (a card's top line); no ripple, no click
     modifier: Modifier = Modifier,
     titleStyle: TextStyle = MaterialTheme.typography.titleMedium,
     containerColor: Color = MaterialTheme.colorScheme.surface,
@@ -51,7 +51,7 @@ fun SongListItem(
     titleBadge: (@Composable () -> Unit)? = null,   // a small tag beside the title ("In setlist"); the title gives it room
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).let { if (onClick == null) it else it.combinedClickable(onClick = onClick, onLongClick = onLongClick) },
         shape = MaterialTheme.shapes.medium,
         color = containerColor,
     ) {

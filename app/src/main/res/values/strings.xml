@@ -774,6 +774,12 @@
     </plurals>
     <string name="scan_missing_row">Not in your library, will be left out.</string>
     <string name="scan_which">Which one?</string>
+    <string name="scan_found_row">Found in your library</string>
+    <string name="scan_choose">Choose</string>
+    <plurals name="scan_candidates">
+        <item quantity="one">%d candidate</item>
+        <item quantity="other">%d candidates</item>
+    </plurals>
     <string name="scan_leave_out">Leave out</string>
     <string name="scan_again">Scan again</string>
     <string name="scan_fetch_again">Fetch again</string>
