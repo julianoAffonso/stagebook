@@ -180,6 +180,7 @@ fun MixerChannelEditor(
     onOutput: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(channelTitle(first, pair)) },

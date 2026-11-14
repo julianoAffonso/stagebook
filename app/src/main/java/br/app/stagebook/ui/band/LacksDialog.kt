@@ -22,6 +22,7 @@ import br.app.stagebook.ui.components.PreviewSurface
  */
 @Composable
 fun LacksDialog(lackers: List<ConductUi.Lacker>, sending: Boolean, onSend: (String?) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.conduct_lacks_title)) },

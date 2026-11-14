@@ -200,6 +200,12 @@
     <string name="conduct_search">Look for the band</string>
     <string name="conduct_end">End</string>
     <string name="conduct_leave">Leave</string>
+    <string name="conduct_go">Go</string>
+    <string name="conduct_went_to">%1$s went to “%2$s”</string>
+    <string name="conduct_went_break">%1$s went to the break</string>
+    <string name="conduct_wait_menu">Opens when you close the menu</string>
+    <string name="conduct_wait_keyboard">Opens when you close the keyboard</string>
+    <string name="conduct_wait_screen">Opens when you finish here</string>
     <string name="conduct_left">%1$s is leading</string>
     <string name="conduct_follow">Follow</string>
     <string name="conduct_lacks_title">What\'s missing</string>

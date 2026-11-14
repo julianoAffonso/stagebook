@@ -208,6 +208,12 @@
     <string name="conduct_search">Procurar a banda</string>
     <string name="conduct_end">Encerrar</string>
     <string name="conduct_leave">Sair</string>
+    <string name="conduct_go">Ir</string>
+    <string name="conduct_went_to">%1$s foi para “%2$s”</string>
+    <string name="conduct_went_break">%1$s foi para o intervalo</string>
+    <string name="conduct_wait_menu">Abre quando você fechar o menu</string>
+    <string name="conduct_wait_keyboard">Abre quando você fechar o teclado</string>
+    <string name="conduct_wait_screen">Abre quando você terminar aqui</string>
     <string name="conduct_left">%1$s está conduzindo</string>
     <string name="conduct_follow">Acompanhar</string>
     <string name="conduct_lacks_title">O que falta</string>

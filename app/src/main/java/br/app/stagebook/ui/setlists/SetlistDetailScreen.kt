@@ -437,6 +437,7 @@ private fun BlockHeader(block: Int, songs: Int, modifier: Modifier = Modifier) {
 
 @Composable
 private fun QrDialog(qr: QrUi, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(qr.name) },

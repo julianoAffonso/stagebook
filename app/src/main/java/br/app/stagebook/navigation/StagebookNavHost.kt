@@ -58,9 +58,6 @@ internal fun NavController.showSaved(songId: String) {
     else navigate(Stage(songId = songId)) { popUpTo<SongEditor> { inclusive = true } }
 }
 
-// screens the leader's song can take the follower away from: nothing is being typed or chosen there
-private fun androidx.navigation.NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>() || hasRoute<SetlistDetail>()
-
 /**
  * [updateOffer]: new app version; shows on top of any screen, never on stage. [receiveCodes]: codes of receive links
  * (tapped in a message or copied by the site) that open the receive screen. [openedFiles]: `.stagebook` files tapped
@@ -120,36 +117,11 @@ fun StagebookNavHost(
     LaunchedEffect(hold) {
         hold.collect { place -> if (!place.holds) pendingLink.release(openCode())?.let(::openReceive) }
     }
-    // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
-    // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip
-    // shows the current song. Just looking at a setlist does pull (the S26 sat on the setlist while the band played, 02/11)
-    // A song asked for while on one of those screens waits and opens on coming back to a screen that pulls, if it's
-    // still the leader's current song: before, coming back showed nothing until the next song (hotspot test, 02/11)
-    // The leader's break opens the stage the same way for a follower who doesn't have the song before it: a stage with
-    // the break alone (user, 13/11)
-    val pendingFollow = remember { br.app.stagebook.domain.PendingFollow() }
-    fun stageFor(target: String) = if (target == br.app.stagebook.data.BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
+    // the leader changed songs: the follower's stage opens on it, or waits while the person is mid-action (FollowPull.kt)
     // the setlist screen busy (renaming, sharing, deleting, selecting, dragging): the song waits for it
     val followHold = remember { androidx.compose.runtime.mutableStateOf(false) }
-    fun pulls(dest: androidx.navigation.NavDestination) = dest.pullsToStage() && !(dest.hasRoute<SetlistDetail>() && followHold.value)
-    LaunchedEffect(followSongs) {
-        followSongs.collect { id ->
-            val here = nav.currentBackStackEntry?.destination ?: return@collect
-            pendingFollow.arrive(id, pulls(here))?.let { nav.navigate(stageFor(it)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true } }
-        }
-    }
-    LaunchedEffect(nav) {
-        nav.currentBackStackEntryFlow.collect { entry ->
-            pendingFollow.release(pulls(entry.destination), followingSong.value)?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }
-        }
-    }
-    // the setlist screen done with what it was doing: a song that waited for it opens now
-    LaunchedEffect(nav) {
-        androidx.compose.runtime.snapshotFlow { followHold.value }.collect { busy ->
-            val here = nav.currentBackStackEntry?.destination ?: return@collect
-            pendingFollow.release(!busy && here.hasRoute<SetlistDetail>(), followingSong.value)?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }
-        }
-    }
+    val followGate = remember { br.app.stagebook.ui.components.FollowGate() }
+    FollowToStage(nav, followSongs, followingSong, followGate, followHold)
     val appContext = androidx.compose.ui.platform.LocalContext.current
     // asks the system only when the install is at hand: the button shows there and nowhere else in this window
     val installing = updateOffer is UpdateOffer.Ready
@@ -214,7 +186,7 @@ fun StagebookNavHost(
         }
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold) {
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     androidx.compose.foundation.layout.Column {
     Box(Modifier.weight(1f)) {
     NavHost(

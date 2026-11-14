@@ -356,6 +356,7 @@ private fun Review(
     }
     // "Create setlist" with missing songs: says what's left out and offers the right path (import), against a wrong tap
     if (confirmMissing) {
+        br.app.stagebook.ui.components.FollowBusyWhile()
         AlertDialog(
             onDismissRequest = { confirmMissing = false },
             title = { Text(pluralStringResource(R.plurals.scan_missing_title, ui.missing.size, ui.missing.size)) },
@@ -567,6 +568,7 @@ private fun RowItem(
 // "See what changes": the lyrics lines leaving (mine) and coming in (theirs); my chords stay either way
 @Composable
 private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean, onChoose: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.scan_changes_title)) },

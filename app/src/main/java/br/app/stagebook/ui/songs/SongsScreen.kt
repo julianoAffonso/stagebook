@@ -342,6 +342,7 @@ fun SongsScreen(
 /** Which setlist the selection goes into, or a new one. */
 @Composable
 private fun SetPickDialog(sets: List<SetPick>, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.songs_add_to_set_title)) },

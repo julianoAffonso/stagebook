@@ -65,6 +65,7 @@ fun itemText(item: BandInbox.Item) =
 /** "Received from the band": everything not reviewed yet; tapping opens the review, the trash can discards. */
 @Composable
 fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard: (String) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.inbox_title)) },

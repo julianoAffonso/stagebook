@@ -28,6 +28,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     destructive: Boolean = true,
 ) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         text = { Text(message, style = MaterialTheme.typography.bodyLarge) },
@@ -56,6 +57,7 @@ fun TextInputDialog(
     }
     val focus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -89,6 +91,7 @@ fun QuestionDialog(
     onOutside: () -> Unit = onNo,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
 ) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onOutside,
         icon = icon?.let { { androidx.compose.material3.Icon(it, null) } },
@@ -113,6 +116,7 @@ fun InfoDialog(
     content: (@Composable () -> Unit)? = null,   // below the text (list, link)
 ) {
     var never by rememberSaveable { mutableStateOf(false) }
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },

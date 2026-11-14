@@ -1336,6 +1336,7 @@ private fun SiteListCard(title: String, sites: List<ImportSite>, onChange: (List
 private fun SiteDialog(onDone: (ImportSite) -> Unit, onDismiss: () -> Unit) {
     var address by rememberSaveable { mutableStateOf("") }
     val url = ImportSiteRules.normalize(address)
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_site_add)) },
