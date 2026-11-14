@@ -181,12 +181,12 @@ class FollowWaitsForMenuTest {
         assertEquals(FollowWait.MENU, followBlock(true, false, true, true, false))
     }
 
-    @Test fun `a waiting song with no time limit stays until it is still the band's`() {
+    @Test fun `a waiting song with no time limit stays, and opens as where the band is when released`() {
         val p = PendingFollow()
         assertNull(p.arrive("x", FollowWait.MENU))
         assertNull(p.release(FollowWait.KEYBOARD, "x"))
         assertEquals(FollowWait.KEYBOARD, p.reason)
-        assertNull(p.release(null, "y"))   // the band went elsewhere
+        assertEquals("y", p.release(null, "y"))   // the band went elsewhere: that one opens, the strip doesn't just go
         assertNull(p.waiting)
     }
 }
