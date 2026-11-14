@@ -63,6 +63,8 @@ data class SetlistDetailUiState(
     val breaks: List<Int> = emptyList(),
     /** A song is marked played: "Clear played" has something to clear. */
     val anyPlayed: Boolean = false,
+    /** The breaks left open on the stage, by position (songs before it): their counter, running or paused. */
+    val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
 )
 
 /** QR ready: the image and how many songs go in it (the ones removed from the library don't). */
@@ -114,7 +116,7 @@ class SetlistDetailViewModel @Inject constructor(
     /** Sends the setlist (with the songs, if [withSongs]) to everyone in the band on the network now. */
     fun sendBand(withSongs: Boolean) = share.sendBand { setlistCloud.setlistPackage(setId, withSongs) }
 
-    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks) { loaded, lib, marks ->
+    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks, show.breaks) { loaded, lib, marks, breaks ->
         val set = lib.setlist(setId)
         val seen = HashMap<String, Int>()
         val states = SetlistShow.states(set?.items.orEmpty(), marks[setId])
@@ -134,6 +136,7 @@ class SetlistDetailViewModel @Inject constructor(
             },
             breaks = set?.breaks.orEmpty(),
             anyPlayed = marks[setId]?.played?.isNotEmpty() == true,
+            openBreaks = set?.let { br.app.stagebook.domain.BreakTimer.openAt(setId, it.items, it.breaks, breaks, show.today()) }.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
 

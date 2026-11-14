@@ -170,10 +170,37 @@ class BreakTimerKeptTest {
         first.songShown(0)
         first.setBreak(true)
         at[0] += 70_000
-        val again = stage(repo, show, set)
+        // opened from the setlist's open break row
+        val again = testStage(context, repo, SavedStateHandle(mapOf("setId" to set, "start" to 0, "atBreak" to true)), show)
         again.songShown(0)
         assertNotNull(again.breakSince.value)
         assertEquals(70_000L, again.breakTimer.value!!.elapsed(at[0]))
+    }
+
+    // the side effect of the first version: a tap on the song before the open break landed on the break (user, 14/11)
+    @Test fun `a tap on the song before an open break opens the song, never the break`() {
+        val repo = repo()
+        val set = repo.set()
+        val at = longArrayOf(5_500_000L)
+        val show = clocked(repo, at)
+        val first = stage(repo, show, set)
+        first.songShown(0)
+        first.setBreak(true)
+        at[0] += 30_000
+        // the stage was left from the break; the song is tapped in the list
+        val tapped = stage(repo, show, set)
+        tapped.songShown(0)
+        assertEquals(null, tapped.breakSince.value)
+        // and the break is still open for its row, with its counter
+        assertEquals(30_000L, show.breaks.value.values.single().elapsed(at[0]))
+        assertEquals(true, show.breakOpen(set, repo.library.value.setlist(set)!!.items[1]))
+    }
+
+    @Test fun `the setlist rows know the open breaks, by position, only today's`() {
+        val timers = mapOf("s|b" to BreakTimer.Timer("2026-11-14", 5L, 0L, open = true), "s|c" to BreakTimer.Timer("2026-11-14", 0L, 9L, open = false), "s|x" to BreakTimer.Timer("2026-11-13", 5L, 0L, open = true))
+        val open = BreakTimer.openAt("s", listOf("a", "b", "c"), listOf(1, 2), timers, "2026-11-14")
+        assertEquals(setOf(1), open.keys)
+        assertEquals(emptyMap<Int, BreakTimer.Timer>(), BreakTimer.openAt("s", listOf("a", "x"), listOf(1), timers, "2026-11-14"))
     }
 
     @Test fun `a break that was left, or a stage opened on another song, shows no break`() {

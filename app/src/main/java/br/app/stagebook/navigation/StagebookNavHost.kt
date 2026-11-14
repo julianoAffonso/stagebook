@@ -135,7 +135,7 @@ fun StagebookNavHost(
     val openSettings: (br.app.stagebook.ui.settings.SettingsSection) -> Unit = remember(nav) {
         { section ->
             br.app.stagebook.ui.settings.SettingsLinks.pending.value = section
-            nav.popBackStack<Home>(inclusive = false)
+            nav.openSettingsFrom()
         }
     }
     // a .stagebook file tapped outside the app: Open file with its parts, as if picked there. On the stage it waits
@@ -221,6 +221,7 @@ fun StagebookNavHost(
             SetlistDetailRoute(
                 onBack = dropUnlessResumed { nav.popBackStack() },
                 onPlay = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start)) } },
+                onPlayBreak = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start, atBreak = true)) } },
                 onAddSongs = { entry.ifResumed { nav.navigate(PickSongs(it)) } },
             )
         }

@@ -32,6 +32,8 @@ data class Stage(
     val start: Int = 0,   // setlist: opens the stage on this song (the one the user tapped in the list)
     // following the band without the leader's song: a stage with the leader's break alone, gone when the break is
     val leaderBreak: Boolean = false,
+    // opened from the setlist's open break row: the stage comes back on that break (a tap on the song before it never does)
+    val atBreak: Boolean = false,
 )
 
 @Serializable

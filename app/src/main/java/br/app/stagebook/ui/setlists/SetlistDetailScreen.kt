@@ -87,6 +87,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun SetlistDetailRoute(
     onBack: () -> Unit,
     onPlay: (setId: String, start: Int) -> Unit,
+    onPlayBreak: (setId: String, start: Int) -> Unit = { _, _ -> },
     onAddSongs: (String) -> Unit,
     viewModel: SetlistDetailViewModel = hiltViewModel(),
 ) {
@@ -124,6 +125,7 @@ fun SetlistDetailRoute(
         onBack = onBack,
         onRename = viewModel::rename,
         onPlay = { start -> onPlay(viewModel.setId, start) },
+        onOpenBreak = { songsBefore -> onPlayBreak(viewModel.setId, songsBefore - 1) },
         onConduct = { viewModel.conductBand(); onPlay(viewModel.setId, 0) },
         onAddSongs = { onAddSongs(viewModel.setId) },
         onShowQr = viewModel::showQr,
@@ -167,6 +169,7 @@ fun SetlistDetailScreen(
     onRemoveBreak: (position: Int) -> Unit = {},   // the break before the song at that position
     onUndoRemove: () -> Unit = {},   // the last song taken out goes back to its place
     onClearPlayed: () -> Unit = {},
+    onOpenBreak: (songsBefore: Int) -> Unit = {},   // tap on the break left open on the stage: opens it, with its time
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -291,6 +294,8 @@ fun SetlistDetailScreen(
                                             is SetRow.Break -> SetlistBreakRow(
                                                 handle = handle.takeIf { editing },
                                                 onRemove = { onRemoveBreak(mark.songsBefore) }.takeIf { editing },
+                                                timer = uiState.openBreaks[mark.songsBefore].takeIf { !editing && !selecting },
+                                                onOpen = { onOpenBreak(mark.songsBefore) },
                                                 modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
                                             )
                                             is SetRow.Song -> {
