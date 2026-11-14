@@ -82,6 +82,7 @@ fun HomeScreen(
     onScanSetlist: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},
+    onShareSetlist: (String) -> Unit = {},
     inboxVm: InboxViewModel = hiltViewModel(),
     homeVm: HomeViewModel = hiltViewModel(),
 ) {
@@ -183,7 +184,7 @@ fun HomeScreen(
                             onOpenSong, onEditSong, onImport, onScan = onScanSetlist, onReceiveCode = onReceiveCode,
                             received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                         )
-                        HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
+                        HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = onShareSetlist, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
                         HomeTab.SETTINGS -> SettingsRoute(settingsStart)
                     }
                 }

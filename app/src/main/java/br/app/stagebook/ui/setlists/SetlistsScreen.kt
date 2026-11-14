@@ -1,6 +1,7 @@
 package br.app.stagebook.ui.setlists
 
 import androidx.compose.material3.Text
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import br.app.stagebook.ui.components.ButtonTone
@@ -30,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -57,6 +60,7 @@ fun SetlistsRoute(
     onPlay: (setId: String, start: Int, atBreak: Boolean) -> Unit,
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
+    onShare: (String) -> Unit = {},
     viewModel: SetlistsViewModel = hiltViewModel(),
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -68,6 +72,9 @@ fun SetlistsRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val nameLimit by viewModel.nameLimit.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val conductButton by viewModel.conductButton.collectAsStateWithLifecycle()
+    val message = br.app.stagebook.ui.components.LocalAppMessage.current
+    val armHint = stringResource(R.string.conduct_arm_hint)
     var query by rememberSaveable { mutableStateOf("") }
     androidx.compose.runtime.LaunchedEffect(query) { viewModel.onQueryChange(query) }
     if (nameLimit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_name), viewModel::dismissNameLimit)
@@ -78,7 +85,7 @@ fun SetlistsRoute(
         // found what they were looking for: coming back the whole list shows, as in Songs
         onOpen = { query = ""; onOpen(it) },
         // tapping a setlist opens its stage where the show stopped (an empty one has nothing to play: the edit)
-        onPlay = { query = ""; val at = viewModel.resume(it); onPlay(it, at.start, at.atBreak) },
+        onPlay = { query = ""; val at = viewModel.play(it); onPlay(it, at.start, at.atBreak) },
         query = query,
         onQueryChange = { query = it },
         onScan = onScan,
@@ -90,6 +97,10 @@ fun SetlistsRoute(
         onReceived = onReceived,
         onSync = onSync,
         onDelete = viewModel::delete,
+        onRename = viewModel::rename,
+        onShare = onShare,
+        conduct = conductButton,
+        onConduct = { if (viewModel.toggleConduct()) message.show(armHint) },
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
         onShareInternet = viewModel::shareInternet,
         onDismissCloud = viewModel::dismissCloud,
@@ -107,10 +118,14 @@ fun SetlistsRoute(
 fun SetlistsScreen(
     uiState: SetlistsUiState,
     onCreate: (String) -> Unit,
-    onOpen: (String) -> Unit,   // the pencil, and an empty setlist: the edit
+    onOpen: (String) -> Unit,   // the card menu's "Edit setlist", and an empty setlist: the edit
     onPlay: (String) -> Unit,   // tapping a setlist: its stage
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onRename: (id: String, name: String) -> Unit = { _, _ -> },
+    onShare: (String) -> Unit = {},   // the card's menu: the same sheet as the stage panel's
+    conduct: ConductButtonUi = ConductButtonUi(),
+    onConduct: () -> Unit = {},
     cloud: br.app.stagebook.ui.share.CloudUi? = null,
     onShareInternet: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
     onDismissCloud: () -> Unit = {},
@@ -137,6 +152,8 @@ fun SetlistsScreen(
     var selected by selection.state
     var deletingMany by rememberSaveable { mutableStateOf(false) }
     var sharing by rememberSaveable { mutableStateOf(false) }
+    var renamingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     val selecting = selection.active
     val toggle = selection::toggle
     // full width beside the rail, like Settings (user, 03/11: centred at 840 dp left a gap after the rail)
@@ -160,7 +177,10 @@ fun SetlistsScreen(
                 ),
                 onClearFilter = if (query.isNotBlank()) { { onQueryChange("") } } else null,
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-            ) { br.app.stagebook.ui.components.HomeStatusIcons() }
+            ) {
+                if (conduct.shown) ConductArmButton(conduct.armed, onConduct)
+                br.app.stagebook.ui.components.HomeStatusIcons()
+            }
             // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
             if (!selecting) Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
@@ -203,11 +223,10 @@ fun SetlistsScreen(
                                 modifier = Modifier.animateItem(),
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 trailing = {
-                                    if (!selecting) Row {
-                                        IconButton(onClick = { onOpen(set.id) }) {
-                                            Icon(AppIcons.Edit, contentDescription = stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.primary)
-                                        }
-                                    }
+                                    // the ⋮ replaces the pencil: edit is its first option, as in the stage panel's menu (user, 14/11)
+                                    if (!selecting) OverflowMenu(
+                                        setlistCardActions({ onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id }),
+                                    )
                                 },
                             )
                         }
@@ -223,6 +242,25 @@ fun SetlistsScreen(
             placeholder = stringResource(R.string.sets_name_hint),
             onConfirm = onCreate,
             onDismiss = { creating = false },
+        )
+    }
+    renamingId?.let { id ->
+        val set = uiState.sets.firstOrNull { it.id == id }
+        if (set != null) TextInputDialog(
+            title = stringResource(R.string.sets_rename),
+            initial = set.name,
+            placeholder = stringResource(R.string.sets_name),
+            onConfirm = { renamingId = null; onRename(id, it) },
+            onDismiss = { renamingId = null },
+        )
+    }
+    deletingId?.let { id ->
+        val set = uiState.sets.firstOrNull { it.id == id }
+        if (set != null) ConfirmDialog(
+            message = stringResource(R.string.sets_delete_confirm, set.name),
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = { deletingId = null; onDelete(id) },
+            onDismiss = { deletingId = null },
         )
     }
     if (sharing) {
@@ -247,6 +285,39 @@ fun SetlistsScreen(
             onConfirm = { selected.forEach(onDelete); selected = emptyList() },
             onDismiss = { deletingMany = false },
         )
+    }
+}
+
+/** The card's ⋮ menu, in this order. "Lead the band" is not here: it belongs to the header button and the stage panel. */
+@Composable
+internal fun setlistCardActions(onEdit: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
+    MenuAction(stringResource(R.string.set_edit), AppIcons.Edit, onEdit),
+    MenuAction(stringResource(R.string.share_title), AppIcons.Share, onShare),
+    MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, onRename),
+    MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, onDelete, danger = true),
+)
+
+/**
+ * "Lead the band" as one icon in the header: tapping arms it (lit) and the next setlist tapped is led; tapping again
+ * cancels. The name is the content description and shows when held.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ConductArmButton(armed: Boolean, onClick: () -> Unit) {
+    val name = stringResource(R.string.conduct_start)
+    androidx.compose.material3.TooltipBox(
+        positionProvider = androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider(androidx.compose.material3.TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(name) } },
+        state = androidx.compose.material3.rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.semantics { selected = armed },
+            colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(
+                containerColor = if (armed) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
+                contentColor = if (armed) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        ) { Icon(AppIcons.Group, contentDescription = name) }
     }
 }
 

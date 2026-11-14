@@ -173,6 +173,7 @@ class BandConduct internal constructor(
      * the band.
      */
     fun start(setId: String, set: String, songs: List<Conduct.Item>, index: Int = 0) {
+        _armed.value = false
         searchedAt = -1
         breakStart = null; breakFrozen = null
         val msg = Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index)
@@ -180,6 +181,36 @@ class BandConduct internal constructor(
         link.burst(evenOnStage = true)
         scope.launch { send(setId, msg) }
     }
+
+    /**
+     * Leads setlist [setId] from song [index] (what the stage does too: songs gone from the library aren't counted).
+     * False = nothing started: the setlist is gone or has no song here.
+     */
+    fun startSetlist(setId: String, index: Int): Boolean {
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return false
+        val songs = set.items.mapNotNull(lib::song).map { Conduct.Item(it.title, it.author) }
+        if (songs.isEmpty()) return false
+        start(setId, set.name, songs, index.coerceIn(0, songs.size - 1))
+        return true
+    }
+
+    private val _armed = MutableStateFlow(false)
+
+    /**
+     * "Lead the band" armed from the Setlists list: leading always belongs to a setlist, so with none chosen the button
+     * waits, with no time limit, for the one the person taps ([startIfArmed]) or for [disarm]. It lives here, not in a
+     * screen, so it survives turning the device and changing tabs. Starting to lead, or following, ends it.
+     */
+    val armed: StateFlow<Boolean> = _armed.asStateFlow()
+
+    /** Arms it (only while this device is neither leading nor following). */
+    fun arm() { if (_role.value is Role.None) _armed.value = true }
+
+    fun disarm() { _armed.value = false }
+
+    /** The person tapped setlist [setId] in the list: leads it if armed. True = it started leading. */
+    fun startIfArmed(setId: String, index: Int): Boolean = _armed.value && _role.value is Role.None && startSetlist(setId, index)
 
     /** The leader changed songs on the stage of setlist [setId]. */
     fun open(setId: String, index: Int) {
@@ -342,6 +373,7 @@ class BandConduct internal constructor(
         val kept = msg.type == Conduct.CHECK && known?.first?.songs == msg.songs
         val since = if (kept) known?.second else breakSince(msg, known?.takeIf { it.third == null }?.second)
         val now = Role.Following(from.id, msg, song?.id, breakSince = since, breakFrozen = if (kept) known?.third else frozenOf(msg))
+        _armed.value = false   // someone else leads: nothing to wait for
         _role.value = now
         // a song, or a break after a song that isn't here: the stage opens once for it, not again on each sign of life
         val was = before as? Role.Following

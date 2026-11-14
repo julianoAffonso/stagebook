@@ -25,6 +25,16 @@ data class SetlistRowUi(val id: String, val name: String, val count: Int)
 data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false, val total: Int = sets.size, val query: String = "")
 
 /**
+ * The "Lead the band" button in the Setlists header: [shown] under the same conditions as the stage panel's menu item
+ * (band on, someone in the band, and this device neither leading nor following), [armed] while it waits for a setlist.
+ */
+@Immutable
+data class ConductButtonUi(val shown: Boolean = false, val armed: Boolean = false)
+
+internal fun conductButton(bandOn: Boolean, role: br.app.stagebook.data.BandConduct.Role, hasMembers: Boolean, armed: Boolean) =
+    ConductButtonUi(shown = bandOn && hasMembers && role is br.app.stagebook.data.BandConduct.Role.None, armed = armed)
+
+/**
  * The Setlists tab's order: as stored (newest first) or A to Z, ignoring case and accents with the app's one text
  * key, as tags and songs are sorted (a Collator here was a second way of doing it; audit 03/11).
  */
@@ -46,7 +56,26 @@ class SetlistsViewModel @Inject constructor(
     bandTrust: br.app.stagebook.data.BandTrust,
     bandInternet: br.app.stagebook.data.BandInternet,
     private val show: br.app.stagebook.data.SetlistShowStore,
+    private val conduct: br.app.stagebook.data.BandConduct,
 ) : ViewModel() {
+    /** The header's "Lead the band" button; the armed state lives in [conduct], so it survives this screen. */
+    val conductButton: StateFlow<ConductButtonUi> = combine(repository.library, conduct.role, bandTrust.members, conduct.armed) { lib, role, members, armed ->
+        conductButton(lib.look.bandOn, role, members.isNotEmpty(), armed)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConductButtonUi())
+
+    /** Taps the button: arms it, or cancels when already armed. True = it just armed (say what it waits for). */
+    fun toggleConduct(): Boolean {
+        if (conduct.armed.value) { conduct.disarm(); return false }
+        conduct.arm()
+        return conduct.armed.value
+    }
+
+    /**
+     * Tapping a setlist: where its stage opens, and, with the button armed, leading it from there (the one place that
+     * starts leading from this list).
+     */
+    fun play(id: String): br.app.stagebook.domain.StageStart = resume(id).also { conduct.startIfArmed(id, it.start) }
+
     /** Where tapping the setlist opens its stage: the song where the show stopped today, or the first. */
     fun resume(id: String): br.app.stagebook.domain.StageStart {
         val set = repository.library.value.setlist(id) ?: return br.app.stagebook.domain.StageStart(0, false)

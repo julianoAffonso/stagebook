@@ -193,6 +193,9 @@
     <string name="about_open_source_text">O Stagebook é gratuito e qualquer um pode ver o código. Use à vontade, até em show pago, e ajude a melhorar. Só não vale copiar para fazer um app concorrente.</string>
     <string name="about_see_code">Ver o código</string>
     <string name="conduct_start">Conduzir a banda</string>
+    <string name="conduct_armed">Pronto para conduzir</string>
+    <string name="conduct_armed_pick">Escolha um setlist</string>
+    <string name="conduct_arm_hint">Escolha um setlist para começar a conduzir</string>
     <string name="conduct_conducting">Conduzindo · %1$s</string>
     <string name="conduct_following">Acompanhando %1$s</string>
     <string name="conduct_gone">%1$s desconectou há 10 minutos</string>

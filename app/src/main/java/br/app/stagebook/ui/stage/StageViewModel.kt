@@ -127,10 +127,7 @@ class StageViewModel @Inject constructor(
     /** The setlist's menu, "Lead the band": sends it from the song on stage (each member says what's missing). */
     fun conductBand() {
         val setId = route.setId ?: return
-        val lib = repository.library.value
-        val set = lib.setlist(setId) ?: return
-        val songs = set.items.mapNotNull(lib::song).map { br.app.stagebook.domain.Conduct.Item(it.title, it.author) }
-        conduct.start(setId, set.name, songs, shownIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0)))
+        conduct.startSetlist(setId, shownIndex)
     }
 
     /** The setlist's menu, "Clear played": no song of this setlist is marked any more. */

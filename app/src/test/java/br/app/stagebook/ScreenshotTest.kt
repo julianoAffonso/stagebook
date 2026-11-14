@@ -253,6 +253,31 @@ class ScreenshotTest {
 
     @Test fun setlistJourney1List() = journey("jornada_setlist_1_lista", { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } })
 
+    // V19: the card's ⋮ with Edit, Share, Rename and Delete (no pencil, no Lead the band)
+    private fun cardMenu(name: String) = journey(name, { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
+        compose.onAllNodesWithContentDescription(str(R.string.action_more))[1].performClick()
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun setlistJourney1bCardMenuPhone() = cardMenu("jornada_setlist_1b_menu_cartao")
+
+    @Test fun setlistJourney1bCardMenuTablet() = cardMenu("jornada_setlist_1b_menu_cartao_tablet")
+
+    // V18: "Lead the band" armed in the header, and the strip waiting for the setlist
+    private fun armed(name: String) = journey(name, {
+        androidx.compose.foundation.layout.Column {
+            Box(Modifier.weight(1f)) {
+                HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it, conduct = br.app.stagebook.ui.setlists.ConductButtonUi(shown = true, armed = true)) }
+            }
+            br.app.stagebook.ui.band.ConductBar(br.app.stagebook.ui.band.ConductUi.Armed, {}, {}, {}, {})
+        }
+    })
+
+    @Test @Config(qualifiers = PHONE)
+    fun setlistJourney1cArmedPhone() = armed("jornada_setlist_1c_conduzir_armado")
+
+    @Test fun setlistJourney1cArmedTablet() = armed("jornada_setlist_1c_conduzir_armado_tablet")
+
     @Test fun setlistJourney2Select() = journey("jornada_setlist_2_selecionar", { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
         compose.onNodeWithText("Casamento").performClick()

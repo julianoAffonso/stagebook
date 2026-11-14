@@ -205,6 +205,7 @@ fun StagebookNavHost(
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },
                 onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
                 onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
+                onShareSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id, share = true)) } },
             )
         }
         composable<SongEditor> { entry ->

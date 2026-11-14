@@ -186,6 +186,9 @@
     <string name="about_open_source_text">Stagebook is free and anyone can see the code. Use it as you like, paid gigs included, and help make it better. Just don\'t copy it to make a competing app.</string>
     <string name="about_see_code">See the code</string>
     <string name="conduct_start">Lead the band</string>
+    <string name="conduct_armed">Ready to lead</string>
+    <string name="conduct_armed_pick">Pick a setlist</string>
+    <string name="conduct_arm_hint">Pick a setlist to start leading</string>
     <string name="conduct_conducting">Leading · %1$s</string>
     <string name="conduct_following">Following %1$s</string>
     <string name="conduct_gone">%1$s disconnected 10 minutes ago</string>
