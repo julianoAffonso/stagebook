@@ -217,11 +217,18 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
         ui?.let {
             ConductBar(
                 it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, asking = asking, onSend = viewModel::send, sending = sending,
-                waiting = gate.pending?.reason.takeIf { _ -> it is ConductUi.Following }, onGo = { gate.go() },
+                waiting = gate.waiting().takeIf { _ -> it is ConductUi.Following }, onGo = gate::goNow,
             )
         }
     }
 }
+
+/** What the follower waits on now: a song (the navigation's) or the break held behind a window (the stage's). */
+internal fun br.app.stagebook.ui.components.FollowGate.waiting(): br.app.stagebook.domain.FollowWait? =
+    pending?.reason ?: br.app.stagebook.domain.FollowWait.MENU.takeIf { breakHeld }
+
+/** "Go": opens what waits, the song or the break. */
+internal fun br.app.stagebook.ui.components.FollowGate.goNow() { if (pending != null) go() else showBreak() }
 
 @Composable
 fun ConductBar(

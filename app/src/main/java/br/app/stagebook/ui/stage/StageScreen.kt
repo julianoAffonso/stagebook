@@ -371,6 +371,27 @@ internal fun LeaderBreakStage(uiState: StageUiState, onBack: (() -> Unit)?, modi
 }
 
 /**
+ * The break a follower's stage draws, held while a menu or window of ours is open. A song waits in the navigation
+ * (FollowToStage); the break over a stage that already has the song is drawn from state, so it waits here: with a window
+ * open it doesn't come on, the strip says the leader went to the break ([FollowGate.breakHeld]) and "Go" shows it.
+ * Closing the window shows it if the leader is still there; a break that ended meanwhile never shows. A break already on
+ * screen when the window opened stays as the leader has it.
+ */
+@Composable
+internal fun rememberFollowBreakHold(leader: FollowBreak?): FollowBreak? {
+    val gate = br.app.stagebook.ui.components.LocalFollowGate.current
+    val busy = gate.menus > 0
+    // the break was on screen before a window opened (or "Go" was tapped): it isn't held
+    var shown by remember { mutableStateOf(leader != null) }
+    val held = busy && leader != null && !shown
+    SideEffect { if (!busy || leader == null) shown = leader != null }
+    SideEffect { gate.breakHeld = held }
+    SideEffect { gate.showBreak = { shown = true } }
+    DisposableEffect(gate) { onDispose { gate.breakHeld = false } }
+    return leader.takeUnless { held }
+}
+
+/**
  * Stage: one song at a time, full screen and lit, in pages (no scrolling: the pedal turns the whole page, so you don't
  * lose track of what was sung). At the end of a song it goes to the next in the setlist. A tap on the right half goes
  * forward, on the left goes back. Holding a line offers to edit the lyrics there; the top pencil opens the editor on
@@ -418,6 +439,9 @@ fun StageScreen(
     onBreakResume: () -> Unit = {},
     onBreakReset: () -> Unit = {},
 ) {
+    // the leader's break waits behind a window of ours, as a song does (see rememberFollowBreakHold)
+    @Suppress("NAME_SHADOWING")
+    val uiState = uiState.copy(followBreak = rememberFollowBreakHold(uiState.followBreak))
     // the mixer over the stage, with the song playing (user, 31/10)
     var mixerOpen by remember { mutableStateOf(false) }
     // × on a chord in the list: asks first (on stage an accidental tap is easy)
