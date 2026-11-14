@@ -15,6 +15,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
 import br.app.stagebook.data.BandConduct
 import br.app.stagebook.domain.FollowWait
 import br.app.stagebook.domain.PendingFollow
@@ -35,8 +36,12 @@ internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) St
  * the new arguments (launchSingleTop keeps its entry and so its view model, which read the old song once): the screen
  * stayed on the song before while the band was on the next (device test v0.1.1139).
  */
-internal fun NavController.openFollowStage(target: String) =
+internal fun NavController.openFollowStage(target: String) {
+    // already on that stage (the leader's break began over the song on screen): nothing to open, the stage draws the break
+    val here = currentBackStackEntry?.takeIf { it.destination.hasRoute<Stage>() }?.toRoute<Stage>()
+    if (here != null && stageFor(target).let { it.songId == here.songId && it.leaderBreak == here.leaderBreak }) return
     navigate(stageFor(target)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
+}
 
 /**
  * The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking), unless the

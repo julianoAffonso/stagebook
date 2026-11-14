@@ -184,13 +184,17 @@ class FollowBreakWithoutSongTest {
         assertEquals(FollowBreak(5_000_000L - 240_000, "Segunda", "G"), followBreak(b.following(late), b.library()))
     }
 
-    @Test fun `with the song before the break here, the break opens no other stage`() {
+    @Test fun `with the song before the break here, the break starting is told once as that same song`() {
         val (b, ids) = band("Primeira")
         b.started()
         assertEquals(listOf(ids.getValue("Primeira")), b.opened)
         b.told { b.leader.rest("s1", 0) }
-        assertEquals(listOf(ids.getValue("Primeira")), b.opened)
+        // the break starting is told once, as the same song: a screen that holds the follower (the editor) says it (device
+        // test v0.1.1139: the strip had no "went to the break" and no "Go"); the open stage asks for nothing
+        assertEquals(listOf(ids.getValue("Primeira"), ids.getValue("Primeira")), b.opened)
         assertEquals(ids["Primeira"], b.following().stage)
+        b.told(2) { b.leader.search() }   // a sign of life: not again
+        assertEquals(2, b.opened.size)
         // the strip says the break, and that the next song isn't here
         val strip = followingUi(b.following(), b.library(), System.currentTimeMillis())
         assertEquals(Triple("Segunda", true, b.followerClock), Triple(strip.song, strip.missingHere, strip.breakSince))
