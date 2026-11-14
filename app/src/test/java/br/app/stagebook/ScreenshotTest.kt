@@ -206,28 +206,15 @@ class ScreenshotTest {
         }
     }
 
+    // the setlist's own screen is the edit (the pencil on its card): a handle and a remove button on every row, with the
+    // key, tempo, capo and backing track kept on each; where the show is lives on the stage's panel
     @Test fun setlistDetailTablet() = shoot("tablet_3_setlist") {
-        SetlistDetailScreen(setShow, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistDetailPhone() = shoot("celular_3_setlist") {
-        SetlistDetailScreen(setShow, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
-    }
-
-    // editing the setlist (the pencil): a handle and a remove button on every row, the break's too
-    @Test fun setlistEditTablet() = shootSetlistEdit("tablet_3_setlist_editar")
-
-    @Test @Config(qualifiers = PHONE)
-    fun setlistEditPhone() = shootSetlistEdit("celular_3_setlist_editar")
-
-    private fun shootSetlistEdit(name: String) {
-        compose.setContent {
-            StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SetlistDetailScreen(setShow.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
-        }
-        compose.onNodeWithContentDescription(str(R.string.set_edit)).performClick()
-        compose.waitForIdle()
-        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
+        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
     }
 
     // a break in the setlist: its row between the songs, the two blocks and the count under the name
@@ -237,7 +224,7 @@ class ScreenshotTest {
     fun setlistBreakPhone() = shoot("celular_3_setlist_intervalo") { SetlistBreak() }
 
     @Composable
-    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3), openBreaks = mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true))), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
 
     // the break on stage, twelve and a half minutes in, with the song that comes next
     @Test fun stageBreakTablet() = shoot("tablet_6_palco_intervalo") { StageBreak() }
@@ -280,9 +267,9 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription(str(R.string.share_title)).performClick()
     }
 
-    @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
+    @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
 
-    @Test fun setlistJourney4SelectSongs() = journey("jornada_setlist_4_selecionar_musicas", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }) {
+    @Test fun setlistJourney4SelectSongs() = journey("jornada_setlist_4_selecionar_musicas", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }) {
         compose.onNodeWithText("Wild Horses").performTouchInput { longClick() }
     }
 
@@ -1313,7 +1300,13 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun stageSetlistPhone() = shootStageSetlist("celular_7_palco_setlist")
 
-    private fun shootStageSetlist(name: String) {
+    // the same panel with its ⋮ open: lead the band, share, edit and clear played
+    @Test fun stageSetlistMenuTablet() = shootStageSetlist("tablet_6_palco_setlist_menu", menu = true)
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageSetlistMenuPhone() = shootStageSetlist("celular_7_palco_setlist_menu", menu = true)
+
+    private fun shootStageSetlist(name: String, menu: Boolean = false) {
         val show = stage.copy(
             songs = set.items.mapIndexed { i, it -> StageSong(it.title, it.subtitle, if (i == 2) stage.songs[0].text else "", false, artist = it.subtitle) },
             live = true,
@@ -1321,10 +1314,12 @@ class ScreenshotTest {
             setlist = br.app.stagebook.ui.stage.StageSetlist(
                 set.name, setShow.items.map { it.state }, set.items.map { it.songKey },
                 mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true)),   // the break left open, stopped at 12:30
+                id = "1", anyPlayed = true, canConduct = true,
             ),
         )
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { StageScreen(show, 2, 0, { _, _ -> }, onBack = {}) } } }
         compose.onNodeWithContentDescription(str(R.string.stage_setlist_open)).performClick()
+        if (menu) compose.onNodeWithContentDescription(str(R.string.action_more)).performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }

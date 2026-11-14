@@ -84,14 +84,6 @@ class SetlistDetailViewModel @Inject constructor(
     private val conduct: br.app.stagebook.data.BandConduct,
     private val show: br.app.stagebook.data.SetlistShowStore,
 ) : ViewModel() {
-    /** "Lead the band": sends the setlist (each one says what's missing) and the leader goes to the stage. */
-    fun conductBand() {
-        val lib = repository.library.value
-        val set = lib.setlist(setId) ?: return
-        val songs = set.items.mapNotNull(lib::song).map { br.app.stagebook.domain.Conduct.Item(it.title, it.author) }
-        conduct.start(setId, set.name, songs)
-    }
-
     // the Share sheet's internet code and band send, shared with the songs screen
     private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
     val internetOn: StateFlow<Boolean> = share.internetOn

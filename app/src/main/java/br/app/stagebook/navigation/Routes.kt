@@ -15,7 +15,8 @@ data class SongEditor(
 )
 
 @Serializable
-data class SetlistDetail(val setId: String)
+// the setlist's edit (the stage opens by tapping the setlist); share: opens with the Share sheet, from the stage's menu
+data class SetlistDetail(val setId: String, val share: Boolean = false)
 
 @Serializable
 data class PickSongs(val setId: String)

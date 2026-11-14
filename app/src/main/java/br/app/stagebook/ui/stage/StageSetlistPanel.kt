@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,12 +54,23 @@ import androidx.compose.ui.unit.dp
 import br.app.stagebook.R
 import br.app.stagebook.domain.SetlistBreaks
 import br.app.stagebook.domain.SetlistShow
+import br.app.stagebook.ui.components.AppIcons
+import br.app.stagebook.ui.components.MenuAction
+import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.SetlistBreakRow
 import br.app.stagebook.ui.components.SongKeyBadge
 import br.app.stagebook.ui.components.SetlistSongRow
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 import kotlin.math.roundToInt
+
+/** What the panel's ⋮ menu does; the menu shows only what the setlist can do now (see [StageSetlist]). */
+class SetlistActions(
+    val onConduct: () -> Unit = {},
+    val onShare: () -> Unit = {},
+    val onEdit: () -> Unit = {},
+    val onClearPlayed: () -> Unit = {},
+)
 
 /**
  * The setlist over the stage (user, 13/11): a small handle at the middle of the left edge and, pulled or tapped, a
@@ -77,6 +89,7 @@ internal fun StageSetlistLayer(
     bg: Color,
     onSong: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    actions: SetlistActions = SetlistActions(),
 ) {
     val density = LocalDensity.current
     val window = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
@@ -122,7 +135,7 @@ internal fun StageSetlistLayer(
                     .then(drag),
                 color = MaterialTheme.colorScheme.background,
             ) {
-                SetlistPanelContent(setlist, songs, breaks, index, onSong)
+                SetlistPanelContent(setlist, songs, breaks, index, onSong, actions) { onOpen(false) }
             }
         }
         val label = stringResource(if (open) R.string.stage_setlist_close else R.string.stage_setlist_open)
@@ -155,17 +168,32 @@ internal fun StageSetlistLayer(
 
 /** The setlist's name, where the show is in it, and its songs and breaks in order, with the song on stage in view. */
 @Composable
-private fun SetlistPanelContent(setlist: StageSetlist, songs: List<StageSong>, breaks: List<Int>, index: Int, onSong: (Int) -> Unit) {
+private fun SetlistPanelContent(
+    setlist: StageSetlist, songs: List<StageSong>, breaks: List<Int>, index: Int, onSong: (Int) -> Unit, actions: SetlistActions, close: () -> Unit,
+) {
     val rows = remember(songs.size, breaks) { SetlistBreaks.rows(songs.size, breaks) }
     // the song before it stays in sight too: what was just played is the musician's bearing
     val list = rememberLazyListState(initialFirstVisibleItemIndex = (rows.indexOf(index) - 1).coerceAtLeast(0))
     Column(Modifier.fillMaxSize().padding(start = Spacing.m, end = Spacing.m, top = Spacing.m)) {
-        Text(setlist.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(
-            stringResource(R.string.stage_position, index + 1, songs.size),
-            Modifier.padding(bottom = Spacing.m),
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-        )
+        // the name and where the show is, and the ⋮ with what used to need the setlist's own screen (user, 14/11)
+        Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(setlist.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    stringResource(R.string.stage_position, index + 1, songs.size),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                )
+            }
+            // each action leaves the panel closed: it is the stage that comes back, or another screen over it
+            OverflowMenu(
+                listOfNotNull(
+                    MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, { close(); actions.onConduct() }).takeIf { setlist.canConduct },
+                    MenuAction(stringResource(R.string.share_title), AppIcons.Share, { close(); actions.onShare() }),
+                    MenuAction(stringResource(R.string.set_edit), AppIcons.Edit, { close(); actions.onEdit() }),
+                    MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, actions.onClearPlayed).takeIf { setlist.anyPlayed },
+                ),
+            )
+        }
         LazyColumn(Modifier.fillMaxWidth().weight(1f), list, verticalArrangement = Arrangement.spacedBy(Spacing.xs), contentPadding = PaddingValues(bottom = Spacing.m)) {
             itemsIndexed(rows, key = { i, _ -> i }) { at, row ->
                 // lower rows than the setlist screen's: on stage the list is for finding a song, and more of them must show (user, 13/11)
