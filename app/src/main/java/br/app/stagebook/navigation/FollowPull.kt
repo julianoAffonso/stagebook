@@ -31,6 +31,14 @@ internal fun NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>
 internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
 
 /**
+ * Opens the follower's stage on [target], replacing the stage already open. Without the pop, a stage on top just takes
+ * the new arguments (launchSingleTop keeps its entry and so its view model, which read the old song once): the screen
+ * stayed on the song before while the band was on the next (device test v0.1.1139).
+ */
+internal fun NavController.openFollowStage(target: String) =
+    navigate(stageFor(target)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
+
+/**
  * The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking), unless the
  * person is in the middle of something: a screen with typing or choosing (editor, importer, a setlist being changed), a
  * menu or window open, the keyboard open. Then the song waits (only the latest, with no time limit, nothing running
@@ -61,13 +69,13 @@ internal fun FollowToStage(
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             if (nav.currentBackStackEntry?.destination == null) return@collect
-            pendingFollow.arrive(id, waitNow)?.let { nav.navigate(stageFor(it)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true } }
+            pendingFollow.arrive(id, waitNow)?.let(nav::openFollowStage)
             sync()
         }
     }
     // what they were doing is done (or it changed what it is): what waited opens now, or the reason is told again
     LaunchedEffect(wait) {
-        pendingFollow.release(wait, followingSong.value)?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }
+        pendingFollow.release(wait, followingSong.value)?.let(nav::openFollowStage)
         sync()
     }
     // the leader went elsewhere: what waits becomes where the band is now (nothing, if it isn't on anything here any more)
