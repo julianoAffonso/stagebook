@@ -47,8 +47,8 @@ class SetlistShowStore @Inject constructor(
     /** The clock the counters use; a test names another one. */
     internal var now: () -> Long = { System.currentTimeMillis() }
 
-    /** The calendar day the marks are kept by; a test names another one. */
-    internal var today: () -> String = { java.time.LocalDate.now().toString() }
+    /** The show day the marks are kept by (the night turns into a new day at 5 am, see [br.app.stagebook.domain.ShowDay]); a test names another one. */
+    internal var today: () -> String = { br.app.stagebook.domain.ShowDay.of(java.time.Instant.ofEpochMilli(now()), java.time.ZoneId.systemDefault()) }
 
     init {
         scope.launch {
