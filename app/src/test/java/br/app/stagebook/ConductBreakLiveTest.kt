@@ -71,8 +71,9 @@ class ConductBreakLiveTest {
         val sent = CopyOnWriteArrayList<Conduct.Msg>()
         val arrived = java.util.concurrent.atomic.AtomicInteger()
         var followerClock = 987_654_321_000L
+        val trust = br.app.stagebook.data.BandTrust(context)
         private fun link() = BandLink(
-            context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
+            context, DeviceIdentity(context), trust, br.app.stagebook.data.StageGate(),
             br.app.stagebook.data.BandInbox(context), repo,
         )
         val followerLink = link()
@@ -149,6 +150,21 @@ class ConductBreakLiveTest {
         p.told { p.vm.resetBreak() }
         assertEquals(0L, p.following().breakFrozen)
         assertEquals(0L, p.following().breakTimer!!.elapsed(p.followerClock + 60_000))
+    }
+
+    @Test fun `leading from the middle of a break tells the band about the break`() {
+        val p = Pair2()
+        p.vm.songShown(0)
+        p.vm.setBreak(true)   // not leading yet: nobody to tell
+        val trust = p.trust
+        trust.add("baixo", "Baixo", "key")   // leading needs someone saved in the band
+        try {
+            p.vm.conductBand()
+            // what goes out says there is a break (the message itself, not the follower's reading of it)
+            runBlocking { withTimeout(10_000) { while (p.sent.none { it.type == Conduct.OPEN && it.breakMs >= 0 }) delay(10) } }
+        } finally {
+            trust.remove("baixo")
+        }
     }
 
     @Test fun `the break told again, as the keep-alive does, stays paused`() {

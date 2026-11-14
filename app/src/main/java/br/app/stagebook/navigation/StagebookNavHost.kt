@@ -179,7 +179,7 @@ fun StagebookNavHost(
     LaunchedEffect(resume) {
         val where = resume ?: return@LaunchedEffect
         if (where.startsWith(br.app.stagebook.domain.ResumePoint.SETTINGS)) {
-            val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.valueOf(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
+            val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.fromSaved(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
             if (section != null) openSettings(section)
         } else if (where != br.app.stagebook.data.ResumeAfterUpdate.HOME && !where.contains("Home")) {
             runCatching { nav.navigate(where) }
@@ -197,7 +197,7 @@ fun StagebookNavHost(
     ) {
         composable<Home> { entry ->
             HomeScreen(
-                onOpenSong = { entry.ifResumed { nav.navigate(Stage(songId = it)) } },
+                onOpenSong = { entry.ifResumed { nav.navigate(Stage(songId = it, fromList = true)) } },
                 onEditSong = { entry.ifResumed { nav.navigate(SongEditor(songId = it)) } },
                 onImport = { query, kind -> entry.ifResumed { nav.navigate(Importer(query, kind = kind)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
@@ -205,6 +205,7 @@ fun StagebookNavHost(
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },
                 onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
                 onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
+                onShareSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id, share = true)) } },
             )
         }
         composable<SongEditor> { entry ->
@@ -214,6 +215,8 @@ fun StagebookNavHost(
                 // import queue: saves, opens the next song in the importer; when done, opens the setlist
                 onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
                 onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
+                // previous or next song: the editor of that song in place of this one (back still goes to where it came from)
+                onMoved = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id)) { popUpTo<SongEditor> { inclusive = true } } } },
             )
         }
         composable<SetlistDetail> { entry ->
@@ -235,6 +238,7 @@ fun StagebookNavHost(
         composable<PickSongs> { PickSongsRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
         composable<Stage> { entry ->
             StageRoute(
+                fromList = entry.toRoute<Stage>().fromList,
                 onEditSong = { id, cursor -> entry.ifResumed { nav.navigate(SongEditor(songId = id, cursor = cursor)) } },
                 onBack = dropUnlessResumed { nav.popBackStack() },
                 // the setlist's own screen is only the edit now; it opens over the stage, and back comes back to it

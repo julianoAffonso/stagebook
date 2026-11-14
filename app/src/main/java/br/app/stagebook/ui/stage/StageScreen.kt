@@ -176,12 +176,14 @@ private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itsel
 @Composable
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
+    fromList: Boolean = false,   // opened from the Songs list: the editor steps through that list
     onBack: (() -> Unit)? = null,
     onEditSetlist: (setId: String) -> Unit = {},
     onShareSetlist: (setId: String) -> Unit = {},
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
     // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
     if (viewModel.breakOnly) {
         KeepScreenOn()
@@ -279,7 +281,11 @@ fun StageRoute(
             // 1 is no zoom: this screen goes back to automatic
             onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
             onFit = { id, z -> viewModel.setZoom(id, screen, z) },
-            onEdit = onEditSong,
+            onEdit = { id, cursor ->
+                // the editor's previous/next follow where the stage came from: the setlist's order, or the Songs list's
+                editorQueue.openFromStage(uiState.songs.map { it.id to it.missing }, open, uiState.setlist != null, fromList, id)
+                onEditSong(id, cursor)
+            },
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             setlistActions = SetlistActions(
@@ -598,10 +604,15 @@ fun StageScreen(
     var trackButton by remember { mutableStateOf<Rect?>(null) }
     // the page's lines as they are on screen (a wrapping line with chords becomes pieces): the tap index is in these
     var pageLines by remember(sourced) { mutableStateOf(sourced) }
-    fun editAt(line: Int?) {
+    val logContext = LocalContext.current
+    // [source] is the song's line (resolved when the line was held, not when the button is tapped: the stage may lay the
+    // text out again in between and the index on screen would point to another line)
+    fun editAt(line: Int?, source: Int?) {
         if (song.missing) return
         // the chord list (source -1) isn't a lyrics line: opens at the start
-        onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }?.let { lineStart(song.text, it) } ?: -1)
+        val cursor = editCursor(song.text, source)
+        br.app.stagebook.ui.editor.EditorOpenLog.stage(logContext, line, source, cursor)
+        onEdit(song.id, cursor)
     }
     // the song's line under the finger (null: the chord list or a line the stage made, nothing to highlight)
     fun sourceLine(line: Int?): Int? = line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }
@@ -776,8 +787,9 @@ fun StageScreen(
         presses.from = index to page
         onPosition(target, 0)
     }
-    // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves
-    LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) autoOn = false }
+    // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves, and
+    // the click doesn't go on either (it stays off on coming back: the musician turns it on again)
+    LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) { autoOn = false; metroOn = false } }
     val settled = pageCountFor == index
     SideEffect {
         if (presses.from != null && settled && presses.from != index to page) {
@@ -805,7 +817,7 @@ fun StageScreen(
                 if (line != null && pageLines.getOrNull(line)?.source == -1) return@GestureTargets
                 if (!song.missing && line != null) {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    editOffer = EditOffer(p, line)
+                    editOffer = EditOffer(p, line, sourceLine(line))
                 }
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
@@ -834,11 +846,14 @@ fun StageScreen(
         if (action == PedalAction.NONE) return@PedalHandler false
         // a foot resting on the pedal repeats the key: only the first one turns the page
         if (runs) {
+            // the setlist over the stage is a panel to look at: the pedal doesn't turn pages or songs under it (it still
+            // closes it, and plays/pauses the track)
+            val underPanel = setlistOpen && setlist != null
             when (action) {
-                PedalAction.NEXT -> next()
-                PedalAction.PREVIOUS -> previous()
-                PedalAction.NEXT_SONG -> goSong(true)
-                PedalAction.PREVIOUS_SONG -> goSong(false)
+                PedalAction.NEXT -> if (!underPanel) next()
+                PedalAction.PREVIOUS -> if (!underPanel) previous()
+                PedalAction.NEXT_SONG -> if (!underPanel) goSong(true)
+                PedalAction.PREVIOUS_SONG -> if (!underPanel) goSong(false)
                 PedalAction.PLAY_PAUSE -> if (look.playerMode && !song.missing && song.track.isNotEmpty()) onTogglePlay()
                 PedalAction.OPEN_SETLIST -> if (setlist != null) setlistOpen = !setlistOpen
                 PedalAction.NONE -> Unit
@@ -913,7 +928,7 @@ fun StageScreen(
             // only shows when there is one (T29)
             // the pencil's drawing on the margin, like the arrow's (user, 03/11)
             if (!song.missing) {
-                IconButton(onClick = { editAt(hit.firstLine()) }, modifier = Modifier.offset(x = br.app.stagebook.ui.components.HeaderIconInset)) {
+                IconButton(onClick = { hit.firstLine().let { editAt(it, sourceLine(it)) } }, modifier = Modifier.offset(x = br.app.stagebook.ui.components.HeaderIconInset)) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
                 }
             }
@@ -1432,9 +1447,9 @@ fun StageScreen(
             )
             editOffer?.let { offer ->
                 // holding a line: edit it, and highlight it (or take the highlight off) right here (user, 01/11, B-28)
-                val source = sourceLine(offer.line)
+                val source = offer.source
                 EditLineButtons(
-                    onEdit = { editOffer = null; editAt(offer.line) },
+                    onEdit = { editOffer = null; editAt(offer.line, offer.source) },
                     canMark = source != null,
                     onMarker = { editOffer = null; marking = true },
                     modifier = Modifier.layout { measurable, c ->
@@ -1792,7 +1807,7 @@ private const val METRO_EARLY_NANOS = 20_000_000L
 private const val MAX_SCROLL_FRAME_NANOS = 100_000_000L
 
 /** "Edit this line" button offered where the finger held; `line` is the index in `lines`. */
-private class EditOffer(val at: Offset, val line: Int)
+private class EditOffer(val at: Offset, val line: Int, val source: Int?)
 
 /** Finds the line under the finger through the text already drawn on the page (line wraps included). */
 private class PageHit {
@@ -1989,7 +2004,7 @@ private fun TrackButton(
             } else 0.85f
             Icon(
                 // playing: stop (back to the start, the default) or pause, as chosen in Settings → Player
-                when { !hasTrack -> AppIcons.QueueMusic; away -> AppIcons.UsbOff; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
+                playButtonIcon(hasTrack, away, playing, stops),
                 stringResource(when { !hasTrack -> R.string.stage_track_pick; away -> R.string.stage_track_usb_waiting; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
                 // waiting it blinks in a translucent red (user, 09/11: the chords' yellow looked like a chord)
                 tint = when {
@@ -2003,7 +2018,7 @@ private fun TrackButton(
         br.app.stagebook.ui.components.FollowBusyWhile(menu)
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_mixer_open)) }, leadingIcon = { Icon(AppIcons.Tune, null) }, onClick = { menu = false; onMixer() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(br.app.stagebook.ui.components.TrackMarkIcon, null) }, onClick = { menu = false; onChange() })
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; removing = true })
         }
     }
@@ -2041,7 +2056,7 @@ private fun MetronomeDialog(
                 }
                 br.app.stagebook.ui.components.SettingsLinkText(
                     stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
-                    br.app.stagebook.ui.settings.SettingsSection.METRONOME, style = MaterialTheme.typography.bodySmall,
+                    br.app.stagebook.ui.settings.SettingsSection.PLAYER, style = MaterialTheme.typography.bodySmall,
                 )
                 IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                     Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
@@ -2534,3 +2549,12 @@ private class PressQueue {
 }
 
 private const val BPM_SAVE_MS = 600L   // the song's BPM is saved this long after the last + or − on the metronome
+
+/** The play button's icon: no track invites to attach one (the audio wave, the mark of a track), the rest keep the play triangle and its siblings. */
+internal fun playButtonIcon(hasTrack: Boolean, away: Boolean, playing: Boolean, stops: Boolean) = when {
+    !hasTrack -> br.app.stagebook.ui.components.TrackMarkIcon
+    away -> AppIcons.UsbOff
+    playing && stops -> AppIcons.Stop
+    playing -> AppIcons.Pause
+    else -> AppIcons.Play
+}

@@ -18,18 +18,32 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   ou com a rolagem automática. No modo Rolar, toque na metade de baixo ou arraste para cima para seguir, na de cima ou
   arraste para baixo para voltar. Cada botão do pedal pode fazer outra coisa.
 - **Cifras:** acordes em cima da letra (ChordPro), transpor, capotraste, tablatura e o diagrama de cada acorde no
-  violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom. Anotações na
-  linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam ao transpor.
-  Toque num acorde, na letra ou na lista de acordes, para ver o diagrama dele.
-- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Mande para
-  quem está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi.
-- **Banda:** com o "Conduzir a banda", quem puxa o setlist troca de música e o palco de todo mundo acompanha. Antes de
-  começar, o app avisa quem não tem alguma música.
+  violão, guitarra, ukulele, cavaquinho ou teclado, com som. Mostra também o campo harmônico do tom. Cada pessoa
+  escolhe letra e cifra, só letra ou automático (o importador então pergunta se a música é letra ou cifra).
+  Anotações na linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam
+  ao transpor. Toque num acorde, na letra ou na lista de acordes, para ver o diagrama dele.
+- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Tocar num
+  setlist abre o palco onde o show parou; o ⋮ do cartão edita, compartilha, renomeia ou apaga. Ponha um **intervalo**
+  entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O painel do setlist no
+  palco mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
+  está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi (os intervalos
+  vão junto, menos pelo QR).
+- **Banda:** com o "Conduzir a banda" (arme na aba Setlists e toque num setlist), quem conduz troca de música e o palco
+  de todo mundo acompanha, intervalo incluído. Uma faixa embaixo mostra quem está conduzindo, com o **Ir** para ir onde
+  a banda está. Quem conduz vê o **O que falta**, quem não tem cada música, e pode enviá-las; quem acompanha pode
+  **Pedir** uma música pela faixa, e prefere a cópia com cifra quando o perfil mostra cifras. Todos da banda precisam
+  da mesma versão do app: o app avisa quem não está.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
+- **Ajustes por tarefa:** sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
+  metrônomo, aparelho) com uma **busca** que também acha o que está desligado e diz por quê. A música tem a mesma linha
+  em todo lugar (título, artista, tom, BPM, capo, faixa). O editor de música tem duas telas, **Dados** e **Letra e
+  cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
+  outra versão.
 - **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume
   ([formato](docs/now-playing.pt-BR.md)), backup num arquivo `.stagebook` (toque num deles numa conversa, num download
-  ou no gerenciador de arquivos e ele abre no app) e um **modo essencial** que desliga o que você não vai usar.
+  ou no gerenciador de arquivos e ele abre no app), um **editor no computador** (no navegador, com setlists e
+  intervalos) e um **modo essencial** que desliga o que você não vai usar.
 - Sem conta, sem propaganda, sem rastreio. Suas músicas ficam no aparelho. O que vai para a banda ou pelas 3 palavras
   vai cifrado.
 
@@ -43,7 +57,7 @@ alto-falante do aparelho.
 
 Dois jeitos de tocar na interface:
 - **Pelo motor do Stagebook (padrão):** fala direto com a interface.
-- **Pelo Android:** Ajustes > Metrônomo e player > Tocar pela interface através do Android. Use só se a interface
+- **Pelo Android:** Ajustes > Player e metrônomo > Tocar pela interface através do Android. Use só se a interface
   conecta e o som não sai ou sai picotado.
 
 Cada interface guarda a sua escolha em cada aparelho: com a interface conectada, a chave vale só para ela. Se o som
@@ -109,7 +123,7 @@ números: o ganho dele é a tela mais simples.
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
 Gemini CLI, o Codex e outros assistentes de IA lerem e editarem a sua biblioteca: "monta um setlist de 15 músicas para
 sábado", "passa as músicas deste artista meio tom abaixo", "confere os acordes desta música", "importa esta página". Ele
-roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Editar no computador**; você autoriza o
+roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Banda e computador → Editar no computador**; você autoriza o
 computador uma vez no tablet. Está no npm como [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): com o [Node.js](https://nodejs.org) no
 computador, o Claude Code se liga com `claude mcp add stagebook -- npx -y stagebook-mcp`. Configuração de cada
 assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).

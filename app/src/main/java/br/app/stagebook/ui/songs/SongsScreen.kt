@@ -80,6 +80,7 @@ fun SongsRoute(
     onSync: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
     val online by viewModel.online.collectAsStateWithLifecycle()
     val localNet by viewModel.localNet.collectAsStateWithLifecycle()
     val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
@@ -99,7 +100,8 @@ fun SongsRoute(
         // the automatic profile has no kind of its own: the musician says what this one is, to open on the right site
         onImport = { if (viewModel.asksKind()) askKind = true else onImport(query, "") },
         // found what they were looking for: coming back from the stage the whole list shows
-        onOpen = { query = ""; onOpenSong(it) },
+        // the editor opened from this song steps through the list as it is now (search and filters on)
+        onOpen = { editorQueue.offerList(uiState.songs.map { s -> s.id }); query = ""; onOpenSong(it) },
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
         onShareSongs = viewModel::shareSongs,
         onDismissCloud = viewModel::dismissCloud,
@@ -119,6 +121,9 @@ fun SongsRoute(
         onAddToSetlist = viewModel::addToSetlist,
     )
 }
+
+/** A name for a question in a dialog: a very long one is cut with an ellipsis so the dialog stays readable. */
+internal fun shortName(name: String, max: Int = 40): String = name.trim().let { if (it.length > max) it.take(max - 1).trimEnd() + "…" else it }
 
 @Composable
 fun SongsScreen(
@@ -246,6 +251,7 @@ fun SongsScreen(
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
                                 titleLines = 1,
+                                gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
                                 // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete
                                 // in the editor (user, 01/11: the row's own pencil was one too many)
                             )
@@ -302,8 +308,14 @@ fun SongsScreen(
         TagsDialog(options, initial, { add, remove -> onSetTags(ids, add, remove); selected = emptyList() }, { tagging = null })
     }
     if (deletingMany) {
+        // one song: its name (and artist), so no one deletes the wrong one; several: the count. The selection can hold
+        // songs the search hides, so the name comes from the rows and falls back to the count.
+        val only = selected.singleOrNull()?.let { id -> uiState.songs.firstOrNull { it.id == id } }
         ConfirmDialog(
-            pluralStringResource(R.plurals.songs_delete_many_confirm, selected.size, selected.size),
+            if (only != null) {
+                if (only.subtitle.isBlank()) stringResource(R.string.songs_delete_one_confirm, shortName(only.title))
+                else stringResource(R.string.songs_delete_one_artist_confirm, shortName(only.title), shortName(only.subtitle))
+            } else pluralStringResource(R.plurals.songs_delete_many_confirm, selected.size, selected.size),
             stringResource(R.string.action_delete),
             { onDeleteMany(selected); selected = emptyList() },
             { deletingMany = false },

@@ -106,7 +106,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         var sent = 0
         var skipped = 0
         // the sender goes along (encrypted): whoever accepts saves this device as "band"
-        if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello()))))) return@withContext null
+        if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello(lists.maxOfOrNull(BandProtocol::packageVersion) ?: BandProtocol.PACKAGE_BASE)))))) return@withContext null
         for (song in songs) {
             val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song)))
             when {
@@ -125,7 +125,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** Essential mode (T19): "Internet" off, nothing leaves from here (sends, inbox, receipts, requests, 3 words). */
     private val internetOn get() = repository.library.value.look.internetOn
 
-    private fun post(topic: String, body: String): Boolean = if (!internetOn) false else runCatching {
+    /** The tests' own network: what goes out and what comes back, with no server. */
+    internal var postHook: ((topic: String, body: String) -> Boolean)? = null
+    internal var getHook: ((url: String) -> List<String>?)? = null
+
+    private fun post(topic: String, body: String): Boolean = postHook?.invoke(topic, body) ?: if (!internetOn) false else runCatching {
         val c = URL("$SERVER/$topic").openConnection() as HttpURLConnection
         c.requestMethod = "POST"
         c.doOutput = true
@@ -248,19 +252,20 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     /** A package for a pair's inbox, before splitting into chunks and encrypting. */
     internal fun pairPackage(list: ByteArray, songs: List<SharedSong>): ByteArray =
-        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
+        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs, BandProtocol.packageVersion(list))))
 
     internal fun openPairPackage(bytes: ByteArray): Opened? {
         // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
         val pkg = unpack(PAIR_MARK, bytes, MAX_PACKAGE)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return null
         if (pkg.v > BandProtocol.VERSION) return Opened(NEWER, emptyList(), null)   // the inbox says "update"
+        if (pkg.list.isEmpty()) return null   // the "update" notice that rides with a request: nothing to open
         val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
         val text = QrPayload.unpack(packed) ?: return null
         return Opened(text, pkg.songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
     }
 
     @Serializable
-    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
+    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.PACKAGE_BASE)
 
     /** [recipientId]'s inbox channel for the pair: derived from the pair key (only the two know which it is). */
     fun pairTopic(pairKey: ByteArray, recipientId: String): String =
@@ -293,8 +298,18 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** Asks the pair for the missing songs (T12): goes to their inbox and they answer with a songs package. */
     suspend fun requestFromPair(pairKey: ByteArray, recipientId: String, wanted: List<BandLink.Wanted>) = withContext(Dispatchers.IO) {
         val body = java.util.Base64.getEncoder().encodeToString(json.encodeToString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), wanted.take(MAX_REQUEST)).toByteArray())
-        post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray()))
+        val topic = pairTopic(pairKey, recipientId)
+        // an app before the request ignores a "req" chunk without a word; beside it goes an empty package marked version 3,
+        // which that app shows as "sent something from a newer Stagebook, update the app". This app drops it (no list)
+        val notice = Chunk("req-" + Integer.toHexString(body.hashCode()), 0, 1, java.util.Base64.getEncoder().encodeToString(updateNotice()))
+        // what counts is the request: with it delivered, a failed notice must not make the person ask again
+        val ok = post(topic, ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray()))
+        runCatching { post(topic, ShareCode.encrypt(pairKey, json.encodeToString(notice).toByteArray())) }
+        ok
     }
+
+    /** A package with nothing in it and version 3: only an older app does anything with it (says "update"). */
+    internal fun updateNotice(): ByteArray = pack(PAIR_MARK, json.encodeToString(Pack("", emptyList(), BandProtocol.BREAKS_VERSION)))
 
     /** What arrived in my inbox from a pair, since [since] (null = the last 12 h); null with no internet. */
     suspend fun fetchPair(pairKey: ByteArray, since: String?): PairFetch? = withContext(Dispatchers.IO) {
@@ -307,7 +322,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             val n = parts.first().n
             val ordered = parts.distinctBy { it.i }.sortedBy { it.i }
             if (ordered.size != n) return@mapNotNull null
-            val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
+            // a malformed chunk is an unreadable package, not an error that stops this member's sync and the next ones
+            val bytes = runCatching { ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) } }.getOrNull() ?: return@mapNotNull null
             val pkg = openPairPackage(bytes) ?: return@mapNotNull null
             pkg.breaks?.let { breaks[pid] = it }
             Triple(pid, pkg.text, pkg.songs)
@@ -333,7 +349,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         ShareCode.decrypt(ShareCode.keys(code).key, body)?.let { unpack(ACK_MARK, it) }?.let(::hello)
     }
 
-    private fun get(url: String): List<String>? = if (!internetOn) null else runCatching {
+    private fun get(url: String): List<String>? = getHook?.let { return it(url) } ?: if (!internetOn) null else runCatching {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = TIMEOUT_MS
         c.readTimeout = TIMEOUT_MS

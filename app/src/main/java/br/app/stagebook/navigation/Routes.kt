@@ -35,6 +35,8 @@ data class Stage(
     val leaderBreak: Boolean = false,
     // opened from the setlist's open break row: the stage comes back on that break (a tap on the song before it never does)
     val atBreak: Boolean = false,
+    // opened from the Songs list: the editor opened from it steps through that list (with its search and filters)
+    val fromList: Boolean = false,
 )
 
 @Serializable

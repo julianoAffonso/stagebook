@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.band
 
+import br.app.stagebook.ui.components.settingsItem
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
@@ -68,12 +69,13 @@ fun BandDetail(
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         SettingsCard(stringResource(R.string.band_this_device), help = stringResource(R.string.band_help)) {
             Text(band.name, style = MaterialTheme.typography.titleLarge)
-            ActionButton(stringResource(R.string.band_rename), { renaming = true }, icon = AppIcons.Edit, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.band_rename), { renaming = true }, Modifier.settingsItem("band_rename"), icon = AppIcons.Edit, tone = ButtonTone.Tonal)
         }
         // band members already show in their own card (marked when online): this one lists only who can still join
         val newcomers = band.nearby.filter { !it.member }
         val online = band.nearby.filter { it.member }.associateBy { it.id }
         if (lan) SettingsCard(stringResource(R.string.band_nearby)) {
+            Column(Modifier.settingsItem("band_nearby"), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             when {
                 !band.wifi -> br.app.stagebook.ui.components.StatusNote(stringResource(R.string.band_no_wifi), br.app.stagebook.ui.components.StatusTone.PROBLEM)
                 newcomers.isEmpty() -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -83,8 +85,10 @@ fun BandDetail(
                 }
                 else -> newcomers.forEach { NearbyRow(it, actions.onJoin) }
             }
+            }
         }
         SettingsCard(stringResource(R.string.band_members)) {
+            Column(Modifier.settingsItem("band_members"), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             if (band.members.isEmpty()) {
                 Text(stringResource(R.string.band_members_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -120,9 +124,10 @@ fun BandDetail(
             if (internet) {
                 ActionButton(
                     stringResource(if (band.inviting) R.string.share_sending else R.string.band_invite), actions.onInvite,
-                    icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = !band.inviting,
+                    Modifier.settingsItem("band_invite"), icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = !band.inviting,
                 )
                 Text(stringResource(R.string.band_invite_detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             }
         }
     }

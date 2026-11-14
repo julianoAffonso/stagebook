@@ -18,18 +18,30 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   a tap or auto-scroll. In Scroll mode, tap the bottom half or drag up to go on, the top half or drag down to go
   back. Each pedal button can do something else.
 - **Chords:** chords above the lyrics (ChordPro), transpose, capo, tablature and each chord's diagram on acoustic or
-  electric guitar, ukulele, cavaquinho or keyboard, with sound. It also shows the key's harmonic field. Notes on the
-  chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you transpose. Tap a
-  chord, in the lyrics or in the chord list, to see its diagram.
-- **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Send it to whoever is next to
-  you by QR, far away with 3 words over the internet, or to the whole band on the same Wi-Fi.
-- **Band:** with "Lead the band", whoever leads the setlist changes songs and everyone's stage follows. Before
-  starting, the app says who is missing a song.
+  electric guitar, ukulele, cavaquinho or keyboard, with sound. It also shows the key's harmonic field. Each person
+  picks lyrics and chords, lyrics only or automatic (the importer then asks whether a song is lyrics or chords).
+  Notes on the chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you
+  transpose. Tap a chord, in the lyrics or in the chord list, to see its diagram.
+- **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Tap a setlist to open the stage
+  where the show stopped; the ⋮ on the card edits, shares, renames or deletes it. Put a **break** between songs: on
+  stage it shows a timer, and the show time starts again after it. The setlist panel on stage shows what was played,
+  what is now and what is next, with each song's tempo, capo and track. Send it to whoever is next to you by QR, far
+  away with 3 words over the internet, or to the whole band on the same Wi-Fi (the breaks go along, except by QR).
+- **Band:** with "Lead the band" (arm it on the Setlists tab, then tap a setlist), whoever leads changes songs and
+  everyone's stage follows, break included. A strip at the bottom shows who is leading, with **Go** to jump to where
+  the band is. The leader sees **What's missing**, who lacks which song, and can send the songs; a follower can **Ask**
+  for a song from the strip, and prefers a copy with chords when the profile shows chords. Everyone in the band needs
+  the same app version: the app warns who isn't.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
   With a mixer, per-output routing, EQ and normalization.
+- **Settings by task:** seven groups (stage, chords, page turning, import and backup, band and computer, player and
+  metronome, device) with a **search** that also finds what is turned off and says why. Songs look the same everywhere
+  (title, artist, key, BPM, capo, track). The song editor has two screens, **Data** and **Lyrics and chords**; deleting
+  a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
 - **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager
-  and it opens in the app) and an **essential mode** that turns off what you won't use.
+  and it opens in the app), an **editor on the computer** (in the browser, with setlists and breaks) and an **essential
+  mode** that turns off what you won't use.
 - No account, no ads, no tracking. Your songs stay on the device. What goes to the band or through the 3 words is
   encrypted.
 
@@ -43,7 +55,7 @@ Bluetooth or speaker.
 
 Two ways to play on the interface:
 - **Through Stagebook's engine (default):** talks to the interface directly.
-- **Through Android:** Settings > Metronome and player > Play on the interface through Android. Use it only if the
+- **Through Android:** Settings > Player and metronome > Play on the interface through Android. Use it only if the
   interface connects and the sound doesn't come out or breaks up.
 
 Each interface keeps its own choice on each device: with the interface connected, the switch applies only to it. If
@@ -109,7 +121,7 @@ its gain is a simpler screen.
 Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex
 and other AI assistants read and edit your library: "build a 15-song setlist for Saturday", "move every song by this
 artist down a half tone", "check the chords of this song", "import this page". It runs on your computer and talks to the
-tablet over your Wi-Fi through **Settings → Edit on the computer**; you approve the computer once on the tablet.
+tablet over your Wi-Fi through **Settings → Band and computer → Edit on the computer**; you approve the computer once on the tablet.
 It's on npm as [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): with [Node.js](https://nodejs.org) on
 the computer, Claude Code connects with `claude mcp add stagebook -- npx -y stagebook-mcp`. Setup for each assistant:
 [mcp/README.md](mcp/README.md).

@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.settings
 
+import br.app.stagebook.ui.components.settingsItem
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -86,12 +87,12 @@ fun BackupPartsDialog(
 
 /** The checkboxes for each backup part (on the backup card and in the restore window). */
 @Composable
-fun BackupPartsChecks(available: Set<Backup.Part>, chosen: Set<Backup.Part>, onChange: (Backup.Part, Boolean) -> Unit) {
+fun BackupPartsChecks(available: Set<Backup.Part>, chosen: Set<Backup.Part>, idPrefix: String? = null, onChange: (Backup.Part, Boolean) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         Backup.Part.entries.filter { it in available }.forEach { part ->
             val on = part in chosen
             Row(
-                Modifier.fillMaxWidth().toggleable(on, role = Role.Checkbox) { onChange(part, it) },
+                Modifier.fillMaxWidth().then(if (idPrefix != null) Modifier.settingsItem(idPrefix + part.name.lowercase()) else Modifier).toggleable(on, role = Role.Checkbox) { onChange(part, it) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(checked = on, onCheckedChange = null)

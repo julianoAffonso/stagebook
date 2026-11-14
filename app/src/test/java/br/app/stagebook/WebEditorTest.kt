@@ -8,6 +8,7 @@ import br.app.stagebook.data.web.WebHttp
 import br.app.stagebook.ui.settings.SettingsSection
 import br.app.stagebook.ui.settings.shown
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,8 +137,8 @@ class WebEditorTest {
 
     @Test fun `essential mode hides the editor section`() {
         val essential = br.app.stagebook.data.model.Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false)
-        assertEquals(false, SettingsSection.WEB_EDITOR.shown(essential))
-        assertEquals(true, SettingsSection.WEB_EDITOR.shown(br.app.stagebook.data.model.Look()))
+        assertEquals(false, SettingsSection.BAND.shown(essential))
+        assertEquals(true, SettingsSection.BAND.shown(br.app.stagebook.data.model.Look()))
     }
 
     @Test fun `with no access for 5 minutes the editor is idle, only an approved computer keeps it on`() {
@@ -173,9 +174,15 @@ class WebEditorTest {
         assertTrue(auth.ask("Chrome · Windows", "192.168.0.20") != null)
     }
 
-    @Test fun `the key cookie lasts 90 days and each visit renews it`() {
-        val key = approvedKey()
-        val cookie = routes.handle(req("GET", "/api/session", cookie = key)).headers.getValue("Set-Cookie")
-        assertTrue(cookie, "${WebEditorRoutes.COOKIE}=$key" in cookie && "Max-Age=${90L * 24 * 3600}" in cookie && "HttpOnly" in cookie)
+    @Test fun `the key cookie is a session cookie - no Max-Age or Expires - on approval and on each visit`() {
+        val id = Regex("\"id\":\"([^\"]+)\"").find(routes.handle(req("POST", "/api/ask", """{"name":"Chrome · Windows"}""")).text())!!.groupValues[1]
+        auth.answer(auth.requests.value.single().id, true)
+        val approval = routes.handle(req("GET", "/api/ask?id=$id")).headers.getValue("Set-Cookie")
+        val key = Regex("${WebEditorRoutes.COOKIE}=([^;]+)").find(approval)!!.groupValues[1]
+        val visit = routes.handle(req("GET", "/api/session", cookie = key)).headers.getValue("Set-Cookie")
+        for (cookie in listOf(approval, visit)) {
+            assertTrue(cookie, "${WebEditorRoutes.COOKIE}=$key" in cookie && "HttpOnly" in cookie && "SameSite=Strict" in cookie)
+            assertFalse(cookie, "max-age" in cookie.lowercase() || "expires" in cookie.lowercase())
+        }
     }
 }

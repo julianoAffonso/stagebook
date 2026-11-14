@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -38,6 +42,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -81,11 +86,15 @@ import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.KeyCapoControls
 import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
-import br.app.stagebook.ui.components.CenteredContent
 import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.ScreenHeader
+import br.app.stagebook.ui.components.Choice
+import br.app.stagebook.ui.components.SegmentedChoice
+import br.app.stagebook.ui.components.QuestionDialog
+import br.app.stagebook.ui.components.TipIcon
+import androidx.compose.runtime.mutableIntStateOf
 import br.app.stagebook.ui.components.ScreenInsets
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
@@ -99,6 +108,7 @@ fun SongEditorRoute(
     onNextImport: () -> Unit = onDone,
     onSetlistReady: (String) -> Unit = { onDone() },
     onSaved: (String) -> Unit = { onDone() },
+    onMoved: (String) -> Unit = {},
 ) {
     LaunchedEffect(viewModel) {
         viewModel.onDone.collect { e ->
@@ -107,6 +117,7 @@ fun SongEditorRoute(
                 is EditorExit.Saved -> onSaved(e.songId)
                 EditorExit.NextImport -> onNextImport()
                 is EditorExit.SetlistReady -> onSetlistReady(e.setId)
+                is EditorExit.Moved -> onMoved(e.songId)
             }
         }
     }
@@ -142,8 +153,17 @@ fun SongEditorRoute(
         onTags = viewModel::onTags,
         midiOn = look.extrasOn && hasMidi,
         onMidi = viewModel::onMidi,
+        position = viewModel.position.collectAsStateWithLifecycle().value,
+        onGo = viewModel::go,
+        onSaveGo = viewModel::saveAndGo,
     )
 }
+
+/** Windows lower than this (dp) are "compact": the two screens' selector goes up to the title's bar to leave the height to the field. */
+const val COMPACT_HEIGHT_DP = 480
+
+/** Just after the editor opens from the stage the field ignores touches and selections that did not come from the person. */
+const val OPEN_GUARD_MS = 400L
 
 @Composable
 fun SongEditorScreen(
@@ -169,6 +189,9 @@ fun SongEditorScreen(
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
     midiOn: Boolean = false,   // the song's MIDI: a stage extra (essential mode hides it, T19) on a device with MIDI
     onMidi: (br.app.stagebook.domain.SongMidi) -> Unit = {},
+    position: EditorPosition? = null,   // where the song is in the list the editor came from; null = no previous/next
+    onGo: (step: Int) -> Unit = {},   // previous (−1) or next (+1) without saving
+    onSaveGo: (step: Int) -> Unit = {},   // save this song, then previous or next
 ) {
     var midiOpen by rememberSaveable { mutableStateOf(false) }
     if (midiOpen) MidiDialog(uiState.midi, { onMidi(it); midiOpen = false }) { midiOpen = false }
@@ -176,15 +199,18 @@ fun SongEditorScreen(
     var tagging by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
     var newChord by rememberSaveable { mutableStateOf(false) }
-    // the song details (title, artist, year, key, capo) stay collapsed on one line; a new song starts with them open
-    // (the title is required)
-    var dataOpen by rememberSaveable(uiState.loading) { mutableStateOf(!uiState.loading && cursor < 0 && uiState.mode == EditorMode.NEW && uiState.title.isEmpty()) }
-    // saving without a title (or with a repeated one): opens the details, where the error is
-    LaunchedEffect(uiState.error) { if (uiState.error != null) dataOpen = true }
+    // two screens in the same editor: the details and the lyrics. A song that exists opens on the lyrics, a new one on the
+    // details (the name is required)
+    var tab by rememberSaveable(uiState.loading) { mutableStateOf(if (uiState.canDelete) EditorTab.LYRICS else EditorTab.DATA) }
+    // saving without a title (or with a repeated one): shows the details, where the error is
+    LaunchedEffect(uiState.error) { if (uiState.error != null) tab = EditorTab.DATA }
     // Cancel sits right next to Save and the system back is easy to hit by accident
     var discarding by rememberSaveable { mutableStateOf(false) }
+    // previous/next with something unsaved: asks (−1 or +1 while the question is open, 0 = no question)
+    var moving by rememberSaveable { mutableIntStateOf(0) }
     // the same function on every key: the Save/Cancel buttons don't redraw while typing
     val unsaved by rememberUpdatedState(uiState.unsaved)
+    val step = remember(onGo) { { by: Int -> if (unsaved) moving = by else onGo(by) } }
     // "Go" on the band's strip leaves the editor like Cancel does (asking first when something wasn't saved) and then opens
     // the song the band is on; with the text unsaved it used to open over it, without asking
     var afterLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -210,17 +236,62 @@ fun SongEditorScreen(
             // back from the saved text
             val fieldText = remember(uiState.text, look.chords) { Chords.hideMeta(if (look.chords) uiState.text else LyricsView.view(uiState.text)) }
             // the cursor coming from the stage is in the saved text: subtract the hidden lines before it
-            val fieldCursor = remember { if (cursor < 0) cursor else Chords.hideMeta(uiState.text.take(cursor.coerceAtMost(uiState.text.length))).length }
-            var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
-            // the text always comes from the state; the selection and cursor live here
+            // (lyrics only profile: the chord lines and the chords inside the lines are not in the field either, so the same
+            // view is applied to the text before the cursor; otherwise the cursor fell past the end and went to the top)
+            val fieldCursor = remember {
+                if (cursor < 0) cursor
+                else uiState.text.take(cursor.coerceAtMost(uiState.text.length)).let { Chords.hideMeta(if (look.chords) it else LyricsView.view(it)).length }
+            }
+            // saveable: the Activity is recreated by the dark theme, the language, the font size or a killed process, and the
+            // selection came back to the stage's line (or the top)
+            var lyrics by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
+            // the text always comes from the state; the selection and cursor live here (so they survive the other screen)
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
             val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
             val highlightHint = stringResource(R.string.editor_highlight_hint)
-            fun edit(v: TextFieldValue) {
-                lyrics = v
-                if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
+            // opened from the stage (cursor >= 0): for a moment the route's cursor wins over a touch that came through from the
+            // long press and over an IME that restarts the selection (cursor on another line, now and then, 14/11)
+            val fromStage = cursor >= 0
+            val openedAt = remember { android.os.SystemClock.uptimeMillis() }
+            val initialSel = remember { lyrics.selection }
+            // saveable: after a recreation the 400 ms guard does not shut the touches out again
+            var guarding by rememberSaveable { mutableStateOf(fromStage) }
+            val logContext = androidx.compose.ui.platform.LocalContext.current
+            LaunchedEffect(Unit) {
+                if (fromStage) {
+                    EditorOpenLog.opened(logContext, cursor, fieldCursor, uiState.text.length)
+                    // after the focus and the first layout: the route's selection once more (the IME may have answered by now)
+                    androidx.compose.runtime.withFrameNanos { }
+                    androidx.compose.runtime.withFrameNanos { }
+                    if (guarding && lyrics.selection != initialSel) lyrics = lyrics.copy(selection = initialSel)
+                    kotlinx.coroutines.delay(OPEN_GUARD_MS)
+                    // and when the guard ends, if the person did nothing yet
+                    if (guarding && lyrics.selection != initialSel) lyrics = lyrics.copy(selection = initialSel)
+                    guarding = false
+                }
             }
-            var editingLyrics by remember { mutableStateOf(false) }
+            fun edit(v: TextFieldValue) {
+                // the text as it was when this event came, not the last composed one: two events in the same frame (the IME
+                // batching a typed and a deleted character) both saw the old one
+                val before = lyrics.text
+                val onlySelection = v.text == shown.text && v.selection != shown.selection
+                if (fromStage) {
+                    val since = android.os.SystemClock.uptimeMillis() - openedAt
+                    if (onlySelection) EditorOpenLog.selection(logContext, since, if (guarding) "ime" else "touch", v.selection.start, v.selection.end, kept = guarding)
+                    if (guarding && onlySelection) { lyrics = shown.copy(selection = initialSel); return }
+                    if (guarding) guarding = false   // typing: the person took over
+                }
+                lyrics = v
+                if (v.text != before) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
+            }
+            // the tools' lambdas are the same on every key (they read the live text and `edit` through states): with new ones
+            // each time, the whole strip (sections and ~15 chord chips) was drawn again on every typed character
+            val shownNow by rememberUpdatedState(shown)
+            val editNow by rememberUpdatedState<(TextFieldValue) -> Unit>(::edit)
+            val stripSection = remember { { kind: Sections.Kind -> editNow(insertSection(shownNow, kind)) } }
+            // nothing to highlight under the cursor (no selection, empty line): says how (B-28)
+            val stripHighlight = remember(appMessage, highlightHint) { { toggleHighlight(shownNow).let { if (it == shownNow) appMessage.show(highlightHint) else editNow(it) } } }
+            val stripChord = remember { { chord: String -> editNow(insertChord(shownNow, chord)) } }
             // new chord: goes where the lyrics cursor was
             if (newChord) {
                 ChordDialog(
@@ -228,120 +299,126 @@ fun SongEditorScreen(
                     onDismiss = { newChord = false },
                 )
             }
-            CenteredContent(Modifier.fillMaxSize()) {
-                Column {
-                    // fixed header with Save: at hand anywhere in the lyrics (back is cancel)
-                    ScreenHeader(
-                        // the title is short (it was cut on phones); the import note goes in the subtitle
-                        title = stringResource(if (uiState.mode == EditorMode.EDIT || uiState.mode == EditorMode.IMPORTED_UPDATE) R.string.editor_edit else R.string.editor_new),
-                        subtitle = when (uiState.mode) {
-                            EditorMode.IMPORTED_NEW -> stringResource(R.string.editor_imported_new)
-                            EditorMode.IMPORTED_UPDATE -> stringResource(R.string.editor_imported_update)
-                            else -> ""
-                        },
+            // a low window (a phone on its side): the top (name, steps, the two screens, the tools) took the whole height with
+            // the keyboard up and the field was left with none (test on the OnePlus, 14/11). Here the selector of the two
+            // screens goes up to the title's bar, in its middle, with the steps, save and delete on the right; the tools stay
+            // right under it and the field gets the height that is left
+            val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
+            // the steps go in the bar only where there is room for them next to the selector
+            val wide = wideLists() || (compact && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600)
+            // a tap on a neutral area (not on a button or the field: those take the touch first) takes the focus off and hides
+            // the keyboard; the cursor and selection live in `lyrics`, so they are still there when the field is tapped again
+            val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+            val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+            Column(Modifier.fillMaxSize().pointerInput(Unit) {
+                detectTapGestures { if (!guarding) { focusManager.clearFocus(); keyboard?.hide() } }
+            }) {
+                // top: back, the song's name with the artist under it, previous/next, save and delete (on every screen)
+                // by value: reading uiState inside would rebuild the bar on every key
+                val canDelete = uiState.canDelete
+                val headerActions: @Composable RowScope.() -> Unit = {
+                    // tablets have the room on this line; on a phone it goes on the line below
+                    if (wide && position != null) EditorSteps(position, step)
+                    TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary)
+                    // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option); only for a saved song
+                    if (canDelete) TipIcon(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, tint = MaterialTheme.colorScheme.error)
+                }
+                val tabChoice: @Composable (Modifier) -> Unit = { m ->
+                    SegmentedChoice(
+                        listOf(Choice(EditorTab.DATA, R.string.editor_tab_data), Choice(EditorTab.LYRICS, if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)),
+                        tab, { tab = it }, m,
+                    )
+                }
+                if (compact) {
+                    CompactBar(
+                        title = uiState.title.ifBlank { stringResource(R.string.editor_new) },
+                        subtitle = uiState.author,
                         onBack = cancel,
-                        // 16dp below: the details field's label sits on its top border and reached up into the subtitle.
-                        // 16dp at the start, like the fields: the back arrow draws on the margin (at 8dp it sat off the
-                        // fields and its touch area went past the screen's edge; audit 03/11)
-                        modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.m),
-                    ) {
-                        // stage preview (the "present" icon; while previewing it becomes the pencil, back to the text)
-                        IconButton(onClick = { previewing = !previewing }) {
-                            Icon(
-                                if (previewing) AppIcons.Edit else AppIcons.Slideshow,
-                                stringResource(if (previewing) R.string.editor_back_to_text else R.string.editor_preview),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        // the song's MIDI on entering and leaving the stage (user, 07/11): lit when it sends something
-                        if (midiOn) IconButton(onClick = { midiOpen = true }) {
-                            Icon(
-                                AppIcons.Piano, stringResource(R.string.song_midi_title),
-                                tint = if (uiState.midi.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        // save and delete in view (delete only for a saved song)
-                        IconButton(onClick = onSave) {
-                            Icon(AppIcons.Save, stringResource(R.string.action_save), tint = MaterialTheme.colorScheme.primary)
-                        }
-                        // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option)
-                        if (uiState.canDelete) {
-                            IconButton(onClick = { deleting = true }) {
-                                Icon(AppIcons.Delete, stringResource(R.string.editor_delete), tint = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
-                    // song details collapsed on one line (user's request, 29/10): tapping opens the fields right there
-                    SongDataHeader(
-                        uiState = uiState,
-                        expanded = dataOpen,
-                        onToggle = { dataOpen = !dataOpen },
-                        chords = look.chords,
-                    ) {
-                        // tablet: two lines (user, 01/11: the details took half the screen); phone: one thing per line
-                        val wideData = wideLists()
-                        SongDataFields(uiState, onTitle, onAuthor, onYear, onCollapse = { dataOpen = false }, onTempo = onTempo, wide = wideData)
-                        val showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD
-                        // tags and backing track side by side, as fields like the others (user, 01/11: on the phone too);
-                        // the track only with the player on, for new songs too (user, 30/10)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                            TagsField(uiState.tags, Modifier.weight(1f)) { tagging = true }
-                            if (track != null) TrackField(track.isNotEmpty(), trackName, onPickTrack, onRemoveTrack, Modifier.weight(1f))
-                        }
-                        // key and capo on their own line: next to the fields the capo got squeezed to "2"
-                        if (look.chords) KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = showCapo, meta = uiState.meta)
-                    }
-                    // section shortcuts at the top while editing the lyrics: they stay in view with the keyboard up
-                    AnimatedVisibility(editingLyrics && !previewing) {
-                        Column(Modifier.padding(bottom = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            SectionBar(
-                                onPick = { kind -> edit(insertSection(shown, kind)) },
-                                // nothing to highlight under the cursor (no selection, empty line): says how (B-28)
-                                onHighlight = { toggleHighlight(shown).let { if (it == shown) appMessage.show(highlightHint) else edit(it) } },
-                            )
-                            // lyrics only profile: no chords in the editor (the saved lyrics don't change)
-                            if (look.chords) {
-                                ChordBar(
+                        // 40 dp tall like the segments are drawn (the 48 dp touch area would make the bar taller than its icons)
+                        center = { androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalMinimumInteractiveComponentSize provides androidx.compose.ui.unit.Dp.Unspecified) { tabChoice(Modifier.widthIn(max = BAR_SELECTOR_WIDTH)) } },
+                        right = headerActions,
+                        modifier = Modifier.padding(horizontal = Spacing.m),
+                    )
+                } else ScreenHeader(
+                    title = uiState.title.ifBlank { stringResource(R.string.editor_new) },
+                    subtitle = uiState.author,
+                    onBack = cancel,
+                    // 16dp at the start, like the fields: the back arrow draws on the margin (at 8dp it sat off the
+                    // fields and its touch area went past the screen's edge; audit 03/11)
+                    modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.s),
+                    actions = headerActions,
+                )
+                if (!wide && position != null) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.m), horizontalArrangement = Arrangement.End) { EditorSteps(position, step) }
+                }
+                // the import note (it used to be the header's subtitle)
+                val note = when (uiState.mode) {
+                    EditorMode.IMPORTED_NEW -> R.string.editor_imported_new
+                    EditorMode.IMPORTED_UPDATE -> R.string.editor_imported_update
+                    else -> null
+                }
+                if (note != null) {
+                    Text(
+                        stringResource(note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = Spacing.m).padding(bottom = Spacing.s),
+                    )
+                }
+                // the two screens, one at a time, the same on every size; the second is named for what the profile holds
+                if (!compact) Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.m), contentAlignment = Alignment.TopCenter) { tabChoice(Modifier.widthIn(max = DATA_MAX_WIDTH)) }
+                Crossfade(tab, Modifier.weight(1f).fillMaxWidth(), label = "editor tab") { current ->
+                    when (current) {
+                        EditorTab.DATA -> DataPane(
+                            uiState, look, onTitle, onAuthor, onYear, onTempo, onTranspose, onCapo,
+                            track, trackName, onPickTrack, onRemoveTrack, midiOn, { midiOpen = true }, { tagging = true },
+                        )
+                        EditorTab.LYRICS -> Column(Modifier.fillMaxSize()) {
+                            // one line of one-tap buttons: the highlighter, the sections and the chords (the lyrics have the rest)
+                            ToolStrip(
+                                previewing = previewing,
+                                onPreview = { previewing = !previewing },
+                                chords = look.chords,
+                                usedChords = androidx.compose.runtime.produceState(remember { usedChords(uiState.text) }, uiState.text) {
                                     // read a moment after typing stops, not on every keystroke (audit 01/11)
-                                    chords = androidx.compose.runtime.produceState(remember { usedChords(uiState.text) }, uiState.text) {
-                                        kotlinx.coroutines.delay(CHORDS_AFTER_TYPING_MS)
-                                        value = usedChords(uiState.text)
-                                    }.value,
-                                    onPick = { chord -> edit(insertChord(shown, chord)) },
-                                    onNew = { newChord = true },
+                                    kotlinx.coroutines.delay(CHORDS_AFTER_TYPING_MS)
+                                    value = usedChords(uiState.text)
+                                }.value,
+                                onSection = stripSection,
+                                onHighlight = stripHighlight,
+                                onChord = stripChord,
+                                onNewChord = { newChord = true },
+                            )
+                            // the lyrics take all the room left (bug 31/10: they stopped short of the bottom); only the
+                            // preview scrolls, the text field is sized by the space instead
+                            Column(
+                                Modifier
+                                    .weight(1f)
+                                    .then(if (previewing) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                                    .padding(horizontal = Spacing.m, vertical = if (compact) 0.dp else Spacing.s),
+                            ) {
+                                if (previewing) {
+                                    EditorPreview(uiState.text, look)
+                                    return@Column
+                                }
+                                val focus = remember { FocusRequester() }
+                                if (cursor >= 0) LaunchedEffect(Unit) { focus.requestFocus() }
+                                OutlinedTextField(
+                                    value = shown,
+                                    onValueChange = ::edit,
+                                    // "Lyrics" in the lyrics only profile, "Lyrics and chords" with chords (user, 01/11)
+                                    label = { Text(stringResource(if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)) },
+                                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                                    textStyle = MaterialTheme.typography.bodyLarge,
+                                    // the highlighted phrases show with the marker, as on stage (B-28)
+                                    visualTransformation = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f).let { faded ->
+                                        remember(faded, look.highlightColor) { HighlightLook(androidx.compose.ui.graphics.Color(look.highlightColor), faded) }
+                                    },
+                                    shape = MaterialTheme.shapes.small,
+                                    modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus)
+                                        // the first moments after opening from the stage: touches that came through are ignored
+                                        .then(if (guarding) Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() } } } else Modifier),
                                 )
                             }
                         }
-                    }
-                    // the lyrics take all the room left under the details (bug 31/10: they stopped short of the bottom);
-                    // only the preview scrolls, the text field is sized by the space instead
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .then(if (previewing) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                            .padding(horizontal = Spacing.m, vertical = Spacing.m),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.m),
-                    ) {
-                        if (previewing) {
-                            EditorPreview(uiState.text, look)
-                            return@Column
-                        }
-                        val focus = remember { FocusRequester() }
-                        if (cursor >= 0) LaunchedEffect(Unit) { focus.requestFocus() }
-                        OutlinedTextField(
-                            value = shown,
-                            onValueChange = ::edit,
-                            // "Lyrics" in the lyrics only profile, "Lyrics and chords" with chords (user, 01/11)
-                            label = { Text(stringResource(if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)) },
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                            textStyle = MaterialTheme.typography.bodyLarge,
-                            // the highlighted phrases show with the marker, as on stage (B-28)
-                            visualTransformation = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f).let { faded ->
-                                remember(faded, look.highlightColor) { HighlightLook(androidx.compose.ui.graphics.Color(look.highlightColor), faded) }
-                            },
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus).onFocusChanged { editingLyrics = it.isFocused },
-                        )
                     }
                 }
             }
@@ -360,14 +437,111 @@ fun SongEditorScreen(
             { discarding = false; afterLeave = null },
         )
     }
+    if (moving != 0) {
+        val by = moving
+        // the same kind of window as "Leave without saving?", with the third answer: stay
+        QuestionDialog(
+            title = stringResource(R.string.editor_move_title),
+            message = stringResource(R.string.editor_move_message),
+            yesLabel = stringResource(R.string.editor_move_save),
+            onYes = { moving = 0; onSaveGo(by) },
+            noLabel = stringResource(R.string.editor_move_discard),
+            onNo = { moving = 0; onGo(by) },
+            onOutside = { moving = 0 },
+            cancelLabel = stringResource(R.string.action_cancel),
+            onCancel = { moving = 0 },
+        )
+    }
     if (deleting) {
         ConfirmDialog(
-            stringResource(R.string.songs_delete_confirm, uiState.title),
+            stringResource(R.string.songs_delete_confirm, br.app.stagebook.ui.songs.shortName(uiState.title)),
             stringResource(R.string.action_delete),
             onDelete,
             { deleting = false },
         )
     }
+}
+
+/** The editor's two screens. */
+private enum class EditorTab { DATA, LYRICS }
+
+/** The details screen's column is as wide as a phone's, centred on a tablet (the fields don't stretch). */
+private val DATA_MAX_WIDTH = 560.dp
+/** The selector of the two screens in the title bar of a low window: narrower, so the name and the right side fit around it. */
+private val BAR_SELECTOR_WIDTH = 280.dp
+
+/** "‹ 3 / 12 ›": the song's place in the list the editor came from, and the arrows to step through it. */
+@Composable
+private fun EditorSteps(position: EditorPosition, onStep: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TipIcon(stringResource(R.string.editor_previous), AppIcons.ChevronLeft, { onStep(-1) }, enabled = position.hasPrev)
+        Text(stringResource(R.string.editor_position, position.number, position.total), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TipIcon(stringResource(R.string.editor_next), AppIcons.ChevronRight, { onStep(1) }, enabled = position.hasNext)
+    }
+}
+
+/** The "Data" screen: everything about the song except its text, one column with room (two to a line where they fit). */
+@Composable
+private fun DataPane(
+    uiState: SongEditorUiState,
+    look: Look,
+    onTitle: (String) -> Unit,
+    onAuthor: (String) -> Unit,
+    onYear: (String) -> Unit,
+    onTempo: (String) -> Unit,
+    onTranspose: (Int) -> Unit,
+    onCapo: (Int) -> Unit,
+    track: String?,
+    trackName: String,
+    onPickTrack: () -> Unit,
+    onRemoveTrack: () -> Unit,
+    midiOn: Boolean,
+    onMidi: () -> Unit,
+    onTags: () -> Unit,
+) {
+    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.m, vertical = Spacing.m), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = DATA_MAX_WIDTH).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            TitleField(uiState, onTitle, Modifier.fillMaxWidth())
+            AuthorField(uiState, onAuthor, Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                YearField(uiState, onYear, Modifier.weight(1f))
+                TempoField(uiState, onTempo, Modifier.weight(1f))
+            }
+            // key and capo (chords profile; keyboard has no capo, as before)
+            if (look.chords) {
+                KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD, meta = uiState.meta)
+            }
+            // tags and backing track side by side, as fields like the others; the track only with the player on (user, 30/10)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                TagsField(uiState.tags, Modifier.weight(1f), onTags)
+                if (track != null) TrackField(track.isNotEmpty(), trackName, onPickTrack, onRemoveTrack, Modifier.weight(1f))
+            }
+            if (midiOn) MidiField(uiState.midi.isEmpty(), onMidi, Modifier.fillMaxWidth())
+            Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ToolDivider() = androidx.compose.material3.VerticalDivider(Modifier.height(24.dp).padding(horizontal = Spacing.xs))
+
+/** The song's MIDI (on entering and leaving the stage) as a field like the others: "None" in grey or "On" in the accent. */
+@Composable
+private fun MidiField(empty: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val taps = br.app.stagebook.ui.components.rememberTapSource(onOpen)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    OutlinedTextField(
+        value = stringResource(if (empty) R.string.editor_track_empty else R.string.editor_midi_on),
+        onValueChange = {},
+        readOnly = true,
+        singleLine = true,
+        label = { Text(stringResource(R.string.song_midi_title)) },
+        leadingIcon = { Icon(AppIcons.Piano, null, tint = if (empty) muted else MaterialTheme.colorScheme.primary) },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (empty) muted else MaterialTheme.colorScheme.onSurface),
+        interactionSource = taps,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -392,7 +566,7 @@ private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove:
         isError = missing,
         leadingIcon = {
             if (missing) Icon(AppIcons.Warning, null, tint = MaterialTheme.colorScheme.error)
-            else Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else muted)
+            else Icon(br.app.stagebook.ui.components.TrackMarkIcon, null, tint = if (has) MaterialTheme.colorScheme.primary else muted)
         },
         trailingIcon = if (has) {
             { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
@@ -429,84 +603,12 @@ internal fun lineEnd(text: String, at: Int): Int {
     return text.indexOf('\n', at).let { if (it < 0) text.length else it }
 }
 
-/**
- * Section shortcuts: each tap puts the section title in the lyrics at the cursor. Loose chips, aligned with the fields
- * (Material 3 Expressive, no background strip).
- */
-/** Thin line with the song summary (title · artist · key · capo) and the arrow; when open, shows the fields below. */
 @Composable
-private fun SongDataHeader(uiState: SongEditorUiState, expanded: Boolean, onToggle: () -> Unit, chords: Boolean, fields: @Composable () -> Unit) {
-    val key = uiState.meta.key
-    val capo = uiState.meta.capo
-    val summary = listOfNotNull(
-        uiState.title.ifBlank { null } ?: stringResource(R.string.editor_data_untitled),
-        uiState.author.ifBlank { null },
-        key.ifBlank { null }?.takeIf { chords },
-        capo.takeIf { chords && it > 0 }?.let { stringResource(R.string.editor_data_capo, it) },
-        uiState.meta.tempo.takeIf { it > 0 }?.let { stringResource(R.string.editor_data_tempo, it) },
-    ).joinToString(" · ")
-    Column(Modifier.padding(horizontal = Spacing.m)) {
-        // like a choice field (user's request, 29/10): the outlined box and label, the summary inside and the ▼;
-        // tapping opens the fields below. The field is read only: the tap arrives through the interactionSource
-        val taps = br.app.stagebook.ui.components.rememberTapSource(onToggle)
-        // when open, the summary goes away (it would repeat the title right below) and the ▲ to collapse sits in the
-        // Title field
-        if (!expanded) OutlinedTextField(
-            value = summary,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(stringResource(R.string.editor_data_label)) },
-            isError = uiState.error != null,
-            trailingIcon = {
-                Icon(
-                    if (expanded) AppIcons.DropUp else AppIcons.DropDown,
-                    stringResource(if (expanded) R.string.editor_data_close else R.string.editor_data_open),
-                )
-            },
-            interactionSource = taps,
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        AnimatedVisibility(expanded) {
-            Column(Modifier.padding(bottom = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) { fields() }
-        }
-    }
-}
-
-/** The song details: title (required, it's the name in the setlist), artist and year. */
-@Composable
-private fun SongDataFields(
-    uiState: SongEditorUiState,
-    onTitle: (String) -> Unit,
-    onAuthor: (String) -> Unit,
-    onYear: (String) -> Unit,
-    onCollapse: () -> Unit,
-    onTempo: (String) -> Unit = {},
-    wide: Boolean = false,
-) {
-    // tablet: name, artist, year and BPM on one line, the "filled in by itself" note as the artist's hint
-    if (wide) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            // the song name takes what's left; artist, year and BPM have sizes you can predict (user, 01/11)
-            TitleField(uiState, onTitle, onCollapse, Modifier.weight(1f))
-            AuthorYearTempo(uiState, onAuthor, onYear, onTempo, hint = true, artistWidth = Sizes.artistField)
-        }
-        return
-    }
-    TitleField(uiState, onTitle, onCollapse, Modifier.fillMaxWidth())
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) { AuthorYearTempo(uiState, onAuthor, onYear, onTempo, hint = false) }
-    Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable
-private fun TitleField(uiState: SongEditorUiState, onTitle: (String) -> Unit, onCollapse: () -> Unit, modifier: Modifier) {
+private fun TitleField(uiState: SongEditorUiState, onTitle: (String) -> Unit, modifier: Modifier) {
     OutlinedTextField(
         value = uiState.title,
         onValueChange = onTitle,
         label = { Text(stringResource(R.string.editor_title)) },
-        // ▲ collapses the song details (brings back the summary field)
-        trailingIcon = { IconButton(onClick = onCollapse) { Icon(AppIcons.DropUp, stringResource(R.string.editor_data_close)) } },
         isError = uiState.error != null,
         supportingText = uiState.error?.let { e ->
             {
@@ -528,23 +630,21 @@ private fun TitleField(uiState: SongEditorUiState, onTitle: (String) -> Unit, on
     )
 }
 
-/** Artist, year and BPM, side by side (inside a Row). [hint]: the "blank is filled in" note as the artist's placeholder. */
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
-    uiState: SongEditorUiState, onAuthor: (String) -> Unit, onYear: (String) -> Unit, onTempo: (String) -> Unit, hint: Boolean,
-    artistWidth: androidx.compose.ui.unit.Dp? = null,   // null: the artist takes what's left of the row
-) {
-    val artist = if (artistWidth != null) Modifier.width(artistWidth) else Modifier.weight(1f)
+private fun AuthorField(uiState: SongEditorUiState, onAuthor: (String) -> Unit, modifier: Modifier) {
     OutlinedTextField(
         value = uiState.author,
         onValueChange = onAuthor,
         label = { Text(stringResource(R.string.editor_author)) },
-        placeholder = if (hint) { { Text(stringResource(R.string.editor_auto_meta_short), maxLines = 1) } } else null,
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
         shape = MaterialTheme.shapes.small,
-        modifier = artist,
+        modifier = modifier,
     )
+}
+
+@Composable
+private fun YearField(uiState: SongEditorUiState, onYear: (String) -> Unit, modifier: Modifier) {
     OutlinedTextField(
         value = uiState.year,
         onValueChange = onYear,
@@ -552,9 +652,13 @@ private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = MaterialTheme.shapes.small,
-        modifier = Modifier.width(Sizes.yearField),   // 4 digits
+        modifier = modifier,
     )
-    // song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100)
+}
+
+/** Song BPM (`{tempo}`): the metronome starts at it (no BPM, at 100). */
+@Composable
+private fun TempoField(uiState: SongEditorUiState, onTempo: (String) -> Unit, modifier: Modifier) {
     val tempo = uiState.meta.tempoText
     OutlinedTextField(
         value = tempo,
@@ -568,49 +672,71 @@ private fun androidx.compose.foundation.layout.RowScope.AuthorYearTempo(
         } else null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = MaterialTheme.shapes.small,
-        modifier = Modifier.width(Sizes.tempoField),   // up to 3 digits
+        modifier = modifier,
     )
 }
 
+internal object ToolStripProbe { @Volatile var drawn = 0 }   // tests: how many times the strip was composed
+
+/**
+ * The one line of tools over the lyrics: preview, highlighter, section shortcuts and chord shortcuts, each a single tap and
+ * the strip scrolls sideways. Always in view on this screen, the keyboard up or not.
+ */
 @Composable
-private fun SectionBar(onPick: (Sections.Kind) -> Unit, onHighlight: () -> Unit, modifier: Modifier = Modifier) {
+private fun ToolStrip(
+    previewing: Boolean,
+    onPreview: () -> Unit,
+    chords: Boolean,
+    usedChords: List<String>,
+    onSection: (Sections.Kind) -> Unit,
+    onHighlight: () -> Unit,
+    onChord: (String) -> Unit,
+    onNewChord: () -> Unit,
+) {
+    androidx.compose.runtime.SideEffect { ToolStripProbe.drawn++ }
     Row(
-        modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.m),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Spacing.m),
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off. Its own
-        // button with the marker icon, apart from the section shortcuts (the user couldn't find it among them, B-28)
-        androidx.compose.material3.AssistChip(
-            onClick = onHighlight,
-            label = { Text(stringResource(R.string.editor_highlight), style = MaterialTheme.typography.titleSmall) },
-            leadingIcon = { androidx.compose.material3.Icon(AppIcons.Highlighter, null, Modifier.size(18.dp)) },
+        // the song as it looks on stage (while previewing it becomes the pencil, back to the text)
+        TipIcon(
+            stringResource(if (previewing) R.string.editor_back_to_text else R.string.editor_preview),
+            if (previewing) AppIcons.Edit else AppIcons.Slideshow, onPreview,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        androidx.compose.material3.VerticalDivider(Modifier.height(24.dp).padding(horizontal = Spacing.xs))
-        // a short label says what the row is (an icon alone said nothing, user 30/10)
-        Text(stringResource(R.string.editor_sections), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val names = rememberSectionNames(true)
-        SECTION_SHORTCUTS.forEach { kind ->
-            SuggestionChip(onClick = { onPick(kind) }, label = { Text(names.label(Sections.Header(kind, "", "", kind.pt)), style = MaterialTheme.typography.titleSmall) })
+        if (!previewing) {
+            // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off. Its
+            // own button with the marker icon, apart from the shortcuts (the user couldn't find it among them, B-28)
+            TipIcon(stringResource(R.string.editor_highlight), AppIcons.Highlighter, onHighlight, tint = MaterialTheme.colorScheme.primary)
+            // chords before the sections (user's order); lyrics only profile: no chords in the editor
+            if (chords) {
+                ToolDivider()
+                ChordBar(usedChords, onChord, onNewChord)
+            }
+            ToolDivider()
+            SectionBar(onSection)
         }
     }
 }
 
-/** Chord shortcuts: the ones the song already uses and "+" for a new one; each tap puts `[chord]` at the cursor. */
+/** Section shortcuts: each tap puts the section title in the lyrics at the cursor. */
 @Composable
-private fun ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Spacing.m),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(stringResource(R.string.editor_chord_label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        chords.forEach { c -> SuggestionChip(onClick = { onPick(c) }, label = { Text(c, style = MaterialTheme.typography.titleSmall) }) }
-        SuggestionChip(onClick = onNew, icon = { Icon(AppIcons.Add, null) }, label = { Text(stringResource(R.string.editor_chord_new), style = MaterialTheme.typography.titleSmall) })
+private fun RowScope.SectionBar(onPick: (Sections.Kind) -> Unit) {
+    val names = rememberSectionNames(true)
+    SECTION_SHORTCUTS.forEach { kind ->
+        SuggestionChip(onClick = { onPick(kind) }, label = { Text(names.label(Sections.Header(kind, "", "", kind.pt)), style = MaterialTheme.typography.titleSmall) })
     }
+}
+
+/**
+ * Chord shortcuts: "+" for a new chord first (so it is in view without scrolling) and then the ones the song already
+ * uses; each tap puts `[chord]` at the cursor.
+ */
+@Composable
+private fun RowScope.ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -> Unit) {
+    TipIcon(stringResource(R.string.editor_chord_new), AppIcons.Add, onNew, tint = MaterialTheme.colorScheme.primary)
+    chords.forEach { c -> SuggestionChip(onClick = { onPick(c) }, label = { Text(c, style = MaterialTheme.typography.titleSmall) }) }
 }
 
 /** The song as it looks on stage, with the look chosen in settings (just to check). */
@@ -680,3 +806,51 @@ private fun SongEditorLightPreview() = StagebookTheme(darkTheme = false) { SongE
 private fun SongEditorDarkPreview() = StagebookTheme(darkTheme = true) { SongEditorScreen(previewState, {}, {}, {}, {}, {}, {}, {}) }
 
 private const val CHORDS_AFTER_TYPING_MS = 300L
+
+/**
+ * The title's bar in a low window: back and the song's name on the left, the selector of the two screens in the middle of
+ * the bar, the steps, save and delete on the right. The middle one keeps the bar's center unless the right side needs the
+ * room; the name takes what is left of the left side and ends in an ellipsis.
+ */
+@Composable
+private fun CompactBar(
+    title: String,
+    subtitle: String,
+    onBack: () -> Unit,
+    center: @Composable () -> Unit,
+    right: @Composable RowScope.() -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.ui.layout.Layout(
+        content = {
+            Box(Modifier.layoutId("back")) { br.app.stagebook.ui.components.BackButton(onBack) }
+            Column(Modifier.layoutId("name")) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            Box(Modifier.layoutId("center")) { center() }
+            Row(Modifier.layoutId("right"), verticalAlignment = Alignment.CenterVertically, content = right)
+        },
+        modifier = modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val gap = Spacing.s.roundToPx()
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val width = constraints.maxWidth
+        fun find(id: String) = measurables.first { it.layoutId == id }
+        val r = find("right").measure(loose)
+        val b = find("back").measure(loose)
+        // the name keeps at least a few letters (and an ellipsis); the selector takes what is left, never under the back
+        val minName = 56.dp.roundToPx()
+        val left = b.width + gap + minName + gap
+        val c = find("center").measure(loose.copy(maxWidth = (width - r.width - gap - left).coerceAtLeast(0)))
+        val centerX = ((width - c.width) / 2).coerceAtMost(width - r.width - gap - c.width).coerceAtLeast(left.coerceAtMost(width - c.width).coerceAtLeast(0))
+        val n = find("name").measure(loose.copy(maxWidth = (centerX - gap - b.width - gap).coerceAtLeast(0)))
+        val h = maxOf(b.height, n.height, c.height, r.height)
+        layout(width, h) {
+            b.placeRelative(0, (h - b.height) / 2)
+            n.placeRelative(b.width + gap, (h - n.height) / 2)
+            c.placeRelative(centerX, (h - c.height) / 2)
+            r.placeRelative(width - r.width, (h - r.height) / 2)
+        }
+    }
+}

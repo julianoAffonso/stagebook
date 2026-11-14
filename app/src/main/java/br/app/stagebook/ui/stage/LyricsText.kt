@@ -316,6 +316,9 @@ fun lineStart(text: String, line: Int): Int {
     return at
 }
 
+/** The cursor for the editor on the song's line [source] (null or -1: the chord list or a line the stage made = -1, nowhere). */
+fun editCursor(text: String, source: Int?): Int = source?.takeIf { it >= 0 }?.let { lineStart(text, it) } ?: -1
+
 /** The whole lyrics in a single text (settings preview). */
 fun lyricsAnnotated(
     text: String, names: SectionNames, sectionColor: Color, showSections: Boolean, chords: ChordLook,

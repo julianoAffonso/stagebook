@@ -88,7 +88,7 @@ class PedalForgetTest {
                         forgotten += code
                         look = look.copy(pedalSeen = look.pedalSeen - code, pedalKeys = look.pedalKeys - code)
                     }),
-                    section = SettingsSection.PEDAL,
+                    section = SettingsSection.PAGE,
                 )
             }
         }

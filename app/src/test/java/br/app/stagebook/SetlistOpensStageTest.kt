@@ -1,9 +1,7 @@
 package br.app.stagebook
 
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.performClick
@@ -23,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * V08: tapping a setlist opens its stage (where the show stopped); the pencil and an empty setlist open the edit.
+ * V08: tapping a setlist opens its stage (where the show stopped); the card menu's first option and an empty setlist open the edit.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w411dp-h891dp-port-xxhdpi", application = android.app.Application::class)
@@ -46,13 +44,6 @@ class SetlistOpensStageTest {
         assertEquals(emptyList<String>(), edited)
     }
 
-    @Test fun `the pencil on the card opens the edit`() {
-        list(SetlistRowUi("a", "Show de sábado", 5))
-        compose.onNodeWithContentDescription("Editar setlist").assertIsDisplayed().performClick()
-        assertEquals(listOf("a"), edited)
-        assertEquals(emptyList<String>(), played)
-    }
-
     @Test fun `an empty setlist opens the edit when tapped, as there is nothing to play`() {
         list(SetlistRowUi("e", "Ensaio", 0))
         compose.onNodeWithText("Ensaio").performClick()
@@ -60,10 +51,11 @@ class SetlistOpensStageTest {
         assertEquals(emptyList<String>(), played)
     }
 
-    @Test fun `the card has no play button any more, only the pencil`() {
+    @Test fun `the card has no play button and no pencil, only the menu`() {
         list(SetlistRowUi("a", "Show", 5), SetlistRowUi("b", "Ensaio", 3))
         compose.onAllNodesWithContentDescription("Palco").assertCountEquals(0)
-        compose.onAllNodesWithContentDescription("Editar setlist").assertCountEquals(2)
+        compose.onAllNodesWithContentDescription("Editar setlist").assertCountEquals(0)
+        compose.onAllNodesWithContentDescription("Mais opções").assertCountEquals(2)
     }
 
     // ---- where it opens ----

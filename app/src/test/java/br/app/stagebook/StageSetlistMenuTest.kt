@@ -50,7 +50,7 @@ class StageSetlistMenuTest {
     }
 
     private val full = StageSetlist(
-        "Show", listOf(State.PLAYED, State.NOW, State.NEXT), listOf("G", "Em", ""), id = "set", anyPlayed = true, canConduct = true,
+        "Show", listOf(State.PLAYED, State.NOW, State.NEXT), listOf("G", "Em", "").map { br.app.stagebook.ui.stage.StageRowFacts(it) }, id = "set", anyPlayed = true, canConduct = true,
     )
     private val inPanel = hasAnyAncestor(hasTestTag("stage_setlist"))
     private fun menu() { compose.onNode(hasText("Show") and inPanel).assertIsDisplayed(); compose.onNodeWithContentDescription("Mais opções").performClick(); compose.waitForIdle() }

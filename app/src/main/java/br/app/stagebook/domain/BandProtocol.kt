@@ -17,9 +17,25 @@ import java.io.Writer
 object BandProtocol {
     const val VERSION = 3   // 2: "Lead the band" (Kind.CONDUCT); 3: setlist breaks, break timer, missing-songs request (user, 14/11)
 
-    /** Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). */
+    /**
+     * The `v` of a package (band package, pair inbox package): the lowest version that reads it without losing anything.
+     * It is the default, so it is not written; a package with something a version-2 app would drop (the breaks) writes
+     * [BREAKS_VERSION], and that app, which refuses a `v` above its own, says "update the app" instead of opening it.
+     */
+    const val PACKAGE_BASE = 2
+    const val BREAKS_VERSION = 3
+
+    /** The `v` to write on a package whose setlist travels as [packed] (see [SharedBreaks]). */
+    fun packageVersion(packed: ByteArray): Int = if (SharedBreaks.carries(packed)) BREAKS_VERSION else PACKAGE_BASE
+
+    /**
+     * Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). A missing
+     * [v] is 2 (the published app never wrote it), and a version above the default is written. Handshake, invite and "ok"
+     * carry [VERSION]; the Hello that rides along a setlist send carries the [packageVersion] of what it sends, so a
+     * setlist with no breaks still opens on an older app.
+     */
     @Serializable
-    data class Hello(val id: String, val name: String, val key: String, val v: Int = VERSION, val app: String = "")
+    data class Hello(val id: String, val name: String, val key: String, val v: Int = PACKAGE_BASE, val app: String = "")
 
     object Kind {
         const val JOIN = "join"
@@ -50,7 +66,7 @@ object BandProtocol {
         h.takeIf { BandCrypto.publicKey(it.key) != null && BandCrypto.idOf(it.key) == it.id && it.name.length <= MAX_NAME }
     }.getOrNull()
 
-    fun readMessage(input: BufferedReader): Message? = runCatching { json.decodeFromString<Message>(readLine(input, MAX_MESSAGE) ?: return null) }.getOrNull()
+    fun readMessage(input: BufferedReader, max: Int = MAX_MESSAGE): Message? = runCatching { json.decodeFromString<Message>(readLine(input, max) ?: return null) }.getOrNull()
 
     /**
      * One line, at most [max] characters: null at the end of the stream or past the limit (anyone on the Wi-Fi can open
@@ -69,5 +85,6 @@ object BandProtocol {
 
     const val MAX_NAME = 40
     const val MAX_HELLO = 4 * 1024
+    const val MAX_STRANGER = 16 * 1024   // someone who isn't in the band only sends a JOIN or a CODE_ACK: small
     const val MAX_MESSAGE = 20 * 1024 * 1024   // a setlist with every song, encrypted
 }

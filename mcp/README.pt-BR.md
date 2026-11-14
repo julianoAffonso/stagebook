@@ -7,7 +7,7 @@
 Deixa assistentes de IA lerem e editarem as músicas e os setlists do seu tablet com o Stagebook: "monta um setlist de
 15 músicas para sábado sem repetir artista", "passa todas as do Skank meio tom abaixo", "confere os acordes de Hazard",
 "importa esta página". É um servidor [Model Context Protocol](https://modelcontextprotocol.io) que roda no seu computador
-e conversa com o tablet pela rede local, pela mesma conexão de **Ajustes → Editar no computador**. Nada vai para a
+e conversa com o tablet pela rede local, pela mesma conexão de **Ajustes → Banda e computador → Editar no computador**. Nada vai para a
 internet e o app não muda: o que o assistente salva aparece no palco na hora.
 
 Funciona com o Claude Code, o Claude Desktop e qualquer assistente que roda servidores MCP locais (Cursor, VS Code com
@@ -18,7 +18,7 @@ Copilot, Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Assunto | Ferramentas |
 |---|---|
 | Conexão | `stagebook_connect` (acha o tablet e pede para entrar), `stagebook_status` |
-| Músicas | `list_songs` (filtros: texto, tag, tom), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
+| Músicas | `list_songs` (filtros: texto, tag, tom; cada música vem com bpm, capo e `hasTrack`), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
 | Importar | `import_song` (letra e cifra coladas em qualquer formato comum, ou o endereço de uma página) |
 | Backing tracks | `set_backing_track` (OGG, MP3 ou WAV do computador), `remove_backing_track` |
 | Setlists | `list_setlists` (filtro: nome), `setlist_order` (recentes ou A a Z, o mesmo da aba do app), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
@@ -85,7 +85,7 @@ O app do ChatGPT só se conecta a servidores remotos (pela internet), então nã
 
 ## Primeira vez
 
-1. No tablet: abra o Stagebook e ligue **Ajustes → Editar no computador**. Ele mostra o endereço
+1. No tablet: abra o Stagebook e ligue **Ajustes → Banda e computador → Editar no computador**. Ele mostra o endereço
    (ex.: `http://192.168.0.10:8090`). O computador e o tablet precisam estar no mesmo Wi-Fi.
 2. Peça ao assistente para conectar no Stagebook. Ele procura na rede (ou você passa o endereço) e o tablet mostra um
    pedido com um código. Se mais de um tablet com o Stagebook responder (uma banda no mesmo Wi-Fi), ele pergunta qual
@@ -94,7 +94,7 @@ O app do ChatGPT só se conecta a servidores remotos (pela internet), então nã
    (`~/.config/stagebook-mcp/config.json`, que só você lê); da próxima vez ele conecta sem perguntar.
 
 O editor desliga sozinho no tablet quando fica sem uso: ligue de novo quando quiser usar o assistente. A chave dura 90
-dias sem uso; **Ajustes → Editar no computador → Computadores autorizados** remove a qualquer hora.
+dias sem uso; **Ajustes → Banda e computador → Editar no computador → Computadores autorizados** remove a qualquer hora.
 
 ### Ajustes
 
@@ -106,8 +106,8 @@ dias sem uso; **Ajustes → Editar no computador → Computadores autorizados** 
 
 ## Se não conectar
 
-- **"Stagebook wasn't found" / "Couldn't reach"**: o Stagebook precisa estar aberto no tablet, com **Ajustes → Editar no
-  computador** ligado, no mesmo Wi-Fi do computador (não numa rede de convidados). Passe ao assistente o endereço que
+- **"Stagebook wasn't found" / "Couldn't reach"**: o Stagebook precisa estar aberto no tablet, com **Ajustes → Banda e computador →
+  Editar no computador** ligado, no mesmo Wi-Fi do computador (não numa rede de convidados). Passe ao assistente o endereço que
   aparece ali.
 - **No Mac, "macOS blocked the connection"**: o macOS pergunta antes de um app conversar com aparelhos da rede local.
   Abra **Ajustes do Sistema → Privacidade e Segurança → Rede Local** e ligue o app que roda o assistente (Claude,

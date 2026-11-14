@@ -63,7 +63,7 @@ class MetronomeTestButtonTest {
         // a Bluetooth speaker near the desk got the click and it looked like the USB (XR18 test, 10/11)
         compose.setContent {
             StagebookTheme {
-                SettingsScreen(SettingsUiState(loading = false, look = Look(metroSound = true, playerMode = true)), SettingsActions(), section = SettingsSection.METRONOME)
+                SettingsScreen(SettingsUiState(loading = false, look = Look(metroSound = true, playerMode = true)), SettingsActions(), section = SettingsSection.PLAYER)
             }
         }
         compose.onNodeWithText("Aparelho").assertExists()
@@ -80,7 +80,7 @@ class MetronomeTestButtonTest {
                 SettingsScreen(
                     SettingsUiState(loading = false, look = look),
                     SettingsActions(clickTesting = true, onClickTestStop = { stopped++ }, onMetronomeOut = { picked = it }),
-                    section = SettingsSection.METRONOME,
+                    section = SettingsSection.PLAYER,
                 )
             }
         }
@@ -97,7 +97,7 @@ class MetronomeTestButtonTest {
         val look = Look(metroSound = true, playerMode = true, mixer = br.app.stagebook.domain.MixerConfig(output = fresh))
         compose.setContent {
             StagebookTheme {
-                SettingsScreen(SettingsUiState(loading = false, look = look), SettingsActions(onReadInterface = { reads++ }), section = SettingsSection.METRONOME)
+                SettingsScreen(SettingsUiState(loading = false, look = look), SettingsActions(onReadInterface = { reads++ }), section = SettingsSection.PLAYER)
             }
         }
         compose.onNodeWithText("Lendo as saídas da X18/XR18…").assertExists()

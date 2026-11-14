@@ -97,14 +97,13 @@ class AutoProfileTest {
 
     @Test fun `automatic lists the chord sites and the lyrics sites`() {
         val auto = SettingsUiState(loading = false, look = Look().withProfile(SongProfile.AUTO))
-        compose.setContent { StagebookTheme { SettingsScreen(auto, SettingsActions(), section = SettingsSection.IMPORT) } }
+        compose.setContent { StagebookTheme { SettingsScreen(auto, SettingsActions(), section = SettingsSection.LIBRARY) } }
         assertEquals(1, compose.onAllNodesWithText(str(R.string.settings_chord_sites)).fetchSemanticsNodes().size)
         assertEquals(1, compose.onAllNodesWithText(str(R.string.settings_lyric_sites)).fetchSemanticsNodes().size)
-        compose.onAllNodesWithText(str(R.string.settings_import_sites)).fetchSemanticsNodes().let { assertEquals(true, it.isNotEmpty()) }
     }
 
     @Test fun `the chords profile lists only its own sites`() {
-        compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(), section = SettingsSection.IMPORT) } }
+        compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(), section = SettingsSection.LIBRARY) } }
         assertEquals(true, compose.onAllNodesWithText(str(R.string.settings_chord_sites)).fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithText(str(R.string.settings_lyric_sites)).assertDoesNotExist()
     }

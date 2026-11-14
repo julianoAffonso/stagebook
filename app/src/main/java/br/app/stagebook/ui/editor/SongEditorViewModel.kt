@@ -56,6 +56,17 @@ sealed interface EditorExit {
     data class Saved(val songId: String) : EditorExit
     data object NextImport : EditorExit
     data class SetlistReady(val setId: String) : EditorExit
+
+    /** Previous or next song of the queue: the editor opens on that song in place of this one. */
+    data class Moved(val songId: String) : EditorExit
+}
+
+/** Where this song is in the queue the editor was opened from: "3 / 12" and which arrows work. */
+@Immutable
+data class EditorPosition(val index: Int, val total: Int) {
+    val number get() = index + 1
+    val hasPrev get() = index > 0
+    val hasNext get() = index < total - 1
 }
 
 @HiltViewModel
@@ -66,6 +77,7 @@ class SongEditorViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val importQueue: ImportQueue,
     private val tracks: br.app.stagebook.data.TrackStore,
+    private val queue: br.app.stagebook.data.EditorQueue,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SongEditor>()
     private val draft = if (route.fromImport) importDraft.take() else null
@@ -113,9 +125,55 @@ class SongEditorViewModel @Inject constructor(
         savedStateHandle[KEY_TRACK_NAME] = shown
     }
 
-    // a new song left without saving: the backing track copied for it goes away
+    // a new song left without saving: the backing track copied for it goes away. The queue goes when the editor closes, but
+    // not when it only moves to the neighbouring song (that editor starts before this one is cleared)
     override fun onCleared() {
         if (route.songId == null && !finished) tracks.remove(track)
+        if (!moving) queue.clearIf(queueGeneration)
+    }
+
+    private var moving = false
+
+    // the queue as it was when this editor started: only that one is emptied when it closes (see EditorQueue.generation)
+    private val queueGeneration = queue.generation
+
+    /** Where the open song is in the queue (null: no queue, or this song isn't in it: an import, a new song). */
+    val position: StateFlow<EditorPosition?> = queue.state.map { q -> positionIn(q) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, positionIn(queue.state.value))
+
+    private fun positionIn(q: br.app.stagebook.data.EditorQueue.State?): EditorPosition? {
+        val id = route.songId ?: return null
+        if (route.fromImport || q == null) return null
+        val at = if (q.ids.getOrNull(q.index) == id) q.index else q.ids.indexOf(id)
+        return if (at < 0) null else EditorPosition(at, q.ids.size)
+    }
+
+    /** The song [step] places away (−1 previous, +1 next) that still exists; deleted ones are skipped. */
+    private fun neighbour(step: Int): Pair<Int, String>? {
+        val q = queue.state.value ?: return null
+        var at = (position.value ?: return null).index + step
+        while (at in q.ids.indices) {
+            if (repository.song(q.ids[at]) != null) return at to q.ids[at]
+            at += step
+        }
+        return null
+    }
+
+    /** Previous or next song without saving (the screen asks first when something is unsaved). */
+    fun go(step: Int) {
+        if (finished) return
+        val (at, id) = neighbour(step) ?: return
+        finished = true
+        moving = true
+        queue.moveTo(at)
+        done.trySend(EditorExit.Moved(id))
+    }
+
+    /** "Save and go on": saves this song and, only if it saved, moves to the neighbour. */
+    fun saveAndGo(step: Int) {
+        if (neighbour(step) == null) return
+        if (persistSong() == null) return
+        go(step)
     }
 
     private val done = Channel<EditorExit>(Channel.BUFFERED)
@@ -213,26 +271,32 @@ class SongEditorViewModel @Inject constructor(
 
     fun save() {
         if (finished) return
+        val id = persistSong() ?: return
+        finished = true
+        // batch importing into a setlist: the song takes its place and the queue moves on
+        val batch = importQueue.state.value
+        if (route.fromImport && batch != null) {
+            importQueue.saved(id)
+            done.trySend(if (importQueue.state.value != null) EditorExit.NextImport else EditorExit.SetlistReady(batch.setId))
+        } else {
+            done.trySend(EditorExit.Saved(id))
+        }
+    }
+
+    /** Checks and saves the song; its id, or null (with the error on the screen) when it can't be saved. */
+    private fun persistSong(): String? {
         val s = uiState
         val title = s.title.trim()
-        if (title.isEmpty()) { uiState = s.copy(error = EditorError.TITLE_EMPTY); return }
+        if (title.isEmpty()) { uiState = s.copy(error = EditorError.TITLE_EMPTY); return null }
         val other = repository.findSong(title, s.author.trim())
-        if (other != null && other.id != songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return }
+        if (other != null && other.id != songId) { uiState = s.copy(error = EditorError.TITLE_TAKEN); return null }
         // only song text is saved (the same filter as the band: size, no file disguised as text)
-        if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return }
+        if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return null }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
         val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, midi = s.midi.takeUnless { it.isEmpty() }, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
-        finished = true
-        // batch importing into a setlist: the song takes its place and the queue moves on
-        val queue = importQueue.state.value
-        if (route.fromImport && queue != null) {
-            importQueue.saved(id)
-            done.trySend(if (importQueue.state.value != null) EditorExit.NextImport else EditorExit.SetlistReady(queue.setId))
-        } else {
-            done.trySend(EditorExit.Saved(id))
-        }
+        return id
     }
 
     fun delete() {

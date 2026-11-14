@@ -26,7 +26,7 @@ fi
 if touches '^mcp/'; then
   (cd mcp && npm test) || { echo "Commit refused: MCP tests failed"; exit 1; }
 fi
-if touches '^tools/.*\.py$'; then
+if touches '^tools/.*\.(py|sh)$'; then
   for t in tools/*_test.py; do python3 -I "$t" > /dev/null 2>&1 || { echo "Commit refused: $t failed"; exit 1; }; done
 fi
 if touches '^docs/'; then

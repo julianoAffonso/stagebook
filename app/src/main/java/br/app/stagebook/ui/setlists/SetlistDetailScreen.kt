@@ -334,8 +334,10 @@ fun SetlistDetailScreen(
         ConfirmDialog(stringResource(R.string.sets_delete_confirm, uiState.name), stringResource(R.string.action_delete), onDeleteSetlist, { deleting = false })
     }
     if (removingMany) {
+        val only = selected.singleOrNull()?.let { key -> items.firstOrNull { it.key == key } }
         ConfirmDialog(
-            pluralStringResource(R.plurals.set_remove_many_confirm, selected.size, selected.size),
+            if (only != null) stringResource(R.string.set_remove_one_confirm, br.app.stagebook.ui.songs.shortName(only.title))
+            else pluralStringResource(R.plurals.set_remove_many_confirm, selected.size, selected.size),
             stringResource(R.string.set_remove),
             {
                 // from the end, so the positions of the others don't move; the repository checks each is still there

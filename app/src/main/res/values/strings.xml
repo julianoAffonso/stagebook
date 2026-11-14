@@ -45,7 +45,6 @@
 
     <!-- editor -->
     <string name="editor_new">New song</string>
-    <string name="editor_edit">Edit song</string>
     <string name="editor_imported_new">Song imported. Check it and save.</string>
     <string name="editor_imported_update">New lyrics imported. Check them and save.</string>
     <string name="import_offline_note">No internet: artist, year and BPM weren\'t filled in. Fill them in Song details.</string>
@@ -55,10 +54,8 @@
     <string name="editor_lyrics">Lyrics</string>
     <string name="editor_auto_meta">Left artist or year blank? When you save, the app fills them in from the web.</string>
     <string name="editor_delete">Delete song</string>
-    <string name="editor_chord_label">Chord:</string>
     <string name="editor_highlight">Highlighter</string>
     <string name="editor_highlight_hint">Select the phrase and tap Highlighter</string>
-    <string name="editor_sections">Section:</string>
     <string name="editor_discard_confirm">Leave without saving? What you typed or imported will be lost.</string>
     <string name="editor_discard">Leave without saving</string>
     <string name="editor_error_title_empty">Enter the song name.</string>
@@ -125,7 +122,7 @@
 
     <!-- pick songs -->
     <string name="pick_title">Songs</string>
-    <string name="pick_in_set">Already in the setlist</string>
+    <string name="pick_in_set">In setlist</string>
     <string name="pick_add_short">Add (%1$d)</string>
 
     <!-- QR -->
@@ -170,7 +167,7 @@
 
     <!-- settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_appearance">Stage look</string>
+    <string name="settings_appearance">Lyrics and chords</string>
     <string name="settings_preview_text">[Chorus]\n[G]A sample ==[D]line==\n[Em]To see how it [C]looks</string>
     <string name="settings_preview_size_text">[Chorus]\n[G]A sample ==[D]line==</string>
     <string name="settings_font_size">Lyrics size: %1$d</string>
@@ -186,6 +183,9 @@
     <string name="about_open_source_text">Stagebook is free and anyone can see the code. Use it as you like, paid gigs included, and help make it better. Just don\'t copy it to make a competing app.</string>
     <string name="about_see_code">See the code</string>
     <string name="conduct_start">Lead the band</string>
+    <string name="conduct_armed">Ready to lead</string>
+    <string name="conduct_armed_pick">Pick a setlist</string>
+    <string name="conduct_arm_hint">Pick a setlist to start leading</string>
     <string name="conduct_conducting">Leading · %1$s</string>
     <string name="conduct_following">Following %1$s</string>
     <string name="conduct_gone">%1$s disconnected 10 minutes ago</string>
@@ -211,7 +211,6 @@
     <string name="conduct_left">%1$s is leading</string>
     <string name="conduct_follow">Follow</string>
     <string name="conduct_lacks_title">What\'s missing</string>
-    <string name="conduct_lack_line">%1$s: %2$s</string>
     <plurals name="conduct_send_lacks">
         <item quantity="one">Send the %1$d it lacks</item>
         <item quantity="other">Send the %1$d it lacks</item>
@@ -283,7 +282,7 @@
     <string name="essential_alert_some_title">Some features are off</string>
     <string name="essential_alert_some_text">What\'s off:</string>
     <string name="essential_alert_relink">To turn them back on, go to</string>
-    <string name="essential_alert_route">Settings → Essential mode</string>
+    <string name="essential_alert_route">Settings → Device → Essential mode</string>
     <string name="action_never_again">Don\'t show again</string>
     <string name="settings_player_mode_help">Plays each song\'s backing track on a USB audio interface or the device\'s own output. Works with OGG, MP3 and WAV, with any number of channels.</string>
     <string name="settings_lyric_sites">Lyrics sites</string>
@@ -332,10 +331,10 @@
     <string name="editor_capo_down">Capo one fret down</string>
     <string name="editor_capo_up">Capo one fret up</string>
     <string name="stage_key_desc">Key: %1$s</string>
-    <string name="backup_save_card">Save file</string>
+    <string name="backup_save_card">Backup</string>
     <string name="backup_save_info">Saves what\'s checked to a .stagebook file. Use it as a backup, to switch devices or to send to someone.</string>
     <string name="backup_save_where">Keep it on Drive, on a computer, or send it in a message. Sending just the lyrics? Uncheck the backing tracks, they make the file big.</string>
-    <string name="backup_open_card">Open file</string>
+    <string name="backup_open_card">Restore</string>
     <string name="backup_open_info">Shows what the file has so you can choose.</string>
     <string name="backup_open_merge">Join brings in only the songs and setlists you don\'t have. Yours stay as they are.</string>
     <string name="backup_open_replace">Replace swaps your songs and setlists for the file\'s. Use it to restore a backup or move to a new device.</string>
@@ -370,15 +369,12 @@
     <string name="backup_not_backup">This file isn\'t a Stagebook backup</string>
     <string name="backup_restore_failed">Couldn\'t restore the backup</string>
     <string name="backup_restored">Backup restored</string>
-    <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band.</string>
+    <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band and computer.</string>
     <string name="editor_data_label">Song details</string>
     <string name="editor_data_untitled">Untitled song</string>
     <string name="editor_data_capo">capo %1$d</string>
-    <string name="editor_data_tempo">%1$d BPM</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
-    <string name="editor_data_open">Show song details</string>
-    <string name="editor_data_close">Hide song details</string>
     <string name="editor_capo_fret">fret %1$d</string>
     <string name="editor_capo_sounds">Shapes in %1$s. With the capo on fret %2$d, it sounds in %3$s.</string>
     <plurals name="editor_capo_sounds_nokey">
@@ -537,7 +533,7 @@
     <string name="settings_columns_help">Automatic decides for each song: it splits into 2 columns when the lyrics don\'t fit on one page and the lines are short enough or, on its side, when that takes fewer pages. The pedal turns both columns together.</string>
     <string name="settings_bold_short">bold</string>
     <string name="settings_sections_look">Section titles</string>
-    <string name="settings_normalize_card">Find chorus and verses</string>
+    <string name="settings_normalize_card">Chorus and verses</string>
     <string name="settings_normalize_help">In songs without part titles, the app finds the chorus (the verse that repeats) and the verses and adds the titles. The lyrics don\'t change, and existing titles stay as they are.</string>
     <string name="settings_pedal_command">What this button does</string>
     <string name="settings_pedal_cmd_next">Next page</string>
@@ -594,7 +590,7 @@
     <string name="settings_midi_found_none">No MIDI pedal found. Check that it\'s on, close by and in Bluetooth MIDI mode.</string>
     <string name="settings_midi_usb_about">About the USB pedal</string>
     <string name="settings_midi_location">On this Android version, location has to be on for the search to find the pedal.</string>
-    <string name="settings_library">Library and backup</string>
+    <string name="settings_library">Import and backup</string>
     <string name="library_card">Your library</string>
     <string name="settings_imported">Imported. New: %1$d · updated: %2$d</string>
     <plurals name="settings_import_confirm">
@@ -771,6 +767,12 @@
     </plurals>
     <string name="scan_missing_row">Not in your library, will be left out.</string>
     <string name="scan_which">Which one?</string>
+    <string name="scan_found_row">Found in your library</string>
+    <string name="scan_choose">Choose</string>
+    <plurals name="scan_candidates">
+        <item quantity="one">%d candidate</item>
+        <item quantity="other">%d candidates</item>
+    </plurals>
     <string name="scan_leave_out">Leave out</string>
     <string name="scan_again">Scan again</string>
     <string name="scan_fetch_again">Fetch again</string>
@@ -841,8 +843,8 @@
     <string name="share_message">Setlist \"%1$s\" on Stagebook. Tap %2$s to get it. Or go to Import → Type the 3 words and type %3$s. Good for 12 hours.</string>
     <!-- selection in the Songs tab (share several) -->
     <string name="songs_select_cancel">Exit selection</string>
-    <!-- band on the local network (Settings → Band and broadcast and join requests) -->
-    <string name="settings_band">Band and broadcast</string>
+    <!-- band on the local network (Settings → Band and computer and join requests) -->
+    <string name="settings_band">Band and computer</string>
     <plurals name="settings_band_short">
         <item quantity="one">%1$d device in the band</item>
         <item quantity="other">%1$d devices in the band</item>
@@ -850,10 +852,10 @@
     <string name="settings_band_none">No one in the band yet</string>
     <string name="band_this_device">This device</string>
     <string name="band_rename">Change name</string>
-    <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and broadcast. One taps Ask to join, the other taps Allow. Far away? Tap Invite over the internet. It stays saved until someone removes it.</string>
+    <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and computer. One taps Ask to join, the other taps Allow. Far away? Tap Invite over the internet. It stays saved until someone removes it.</string>
     <string name="band_nearby">On the network now</string>
     <string name="band_no_wifi">No Wi-Fi. To find the band, connect the devices to the same network (a phone\'s hotspot works too).</string>
-    <string name="band_searching">Searching… Open Settings → Band and broadcast on the other device too.</string>
+    <string name="band_searching">Searching… Open Settings → Band and computer on the other device too.</string>
     <string name="band_online">Connected</string>
     <string name="band_join">Ask to join</string>
     <string name="band_waiting">Waiting for the other device to allow…</string>
@@ -876,7 +878,7 @@
     <string name="band_name_title">How should the band see this device?</string>
     <string name="band_name_hint">Like Sam\'s tablet</string>
     <string name="band_request_title">%1$s wants to join the band</string>
-    <string name="band_request_text">Once allowed, they can send you setlists and songs without the 3 words, here on the network and online. You can remove them later in Settings → Band and broadcast.</string>
+    <string name="band_request_text">Once allowed, they can send you setlists and songs without the 3 words, here on the network and online. You can remove them later in Settings → Band and computer.</string>
     <string name="band_allow">Allow</string>
     <string name="band_deny">Don\'t allow</string>
     <!-- inbox: what the band sent -->
@@ -936,9 +938,11 @@
     <string name="web_not_found">Didn\'t find lyrics there.</string>
     <string name="web_no_internet">The device has no internet (or essential mode is on).</string>
     <string name="web_bad_address">Use an address that starts with http:// or https://.</string>
+    <string name="web_bad_breaks">The breaks do not fit the setlist. Nothing was saved.</string>
+    <string name="web_save_failed">The setlist was not saved. Try again.</string>
     <string name="web_band_none">Nothing from the band yet.</string>
     <string name="web_receive_title">Received from someone</string>
-    <string name="web_backup_hint">A backup from Settings → Library and backup. Pick what comes in.</string>
+    <string name="web_backup_hint">A backup from Settings → Import and backup. Pick what comes in.</string>
     <string name="web_receive_done">Done. It\'s in the library.</string>
     <string name="web_restore_needs">Pick at least one part.</string>
     <string name="not_song">This doesn\'t look like lyrics or chords. Stagebook keeps only song lyrics and chords, as text.</string>
@@ -1005,7 +1009,7 @@
     <string name="usb_route_auto_engine">The app turned this off for %1$s, because no sound came out through Android.</string>
     <string name="usb_route_saved">This switch applies only to %1$s on this device. Each interface keeps its own choice.</string>
     <string name="usb_power_warning">The USB interface is charging this device. Some interfaces fail on Stagebook\'s engine this way. If the sound fails, turn on Play on the interface through Android.</string>
-    <string name="metro_player_title">Metronome and player</string>
+    <string name="metro_player_title">Player and metronome</string>
     <string name="mixer_listen_on_stage">The mixer and equalizer are on the stage, to adjust while listening: play a song, hold play and open the mixer.</string>
     <string name="stage_mix_hint">Changes here go to the global mixer, for every song. Turn it off to change this song only.</string>
     <string name="stage_mix_own">This song has its own settings: what you change here applies only to it.</string>
@@ -1056,6 +1060,9 @@
         <item quantity="one">%1$d song added to %2$s</item>
         <item quantity="other">%1$d songs added to %2$s</item>
     </plurals>
+    <string name="songs_delete_one_confirm">Delete “%1$s”? It also leaves the setlists.</string>
+    <string name="songs_delete_one_artist_confirm">Delete “%1$s” by %2$s? It also leaves the setlists.</string>
+    <string name="set_remove_one_confirm">Take “%1$s” out of this setlist? It stays in the library.</string>
     <plurals name="songs_delete_many_confirm">
         <item quantity="one">Delete %d song? It also leaves the setlists.</item>
         <item quantity="other">Delete %d songs? They also leave the setlists.</item>
@@ -1128,4 +1135,96 @@
     <string name="settings_metronome_test_stop">Stop the test</string>
     <string name="update_installing">Installing the update. The app restarts by itself when it finishes.</string>
     <string name="update_install_failed">Error installing the update. Try again.</string>
+    <string name="editor_tab_data">Data</string>
+    <string name="editor_previous">Previous song</string>
+    <string name="editor_next">Next song</string>
+    <string name="editor_position">%1$d / %2$d</string>
+    <string name="editor_move_title">Unsaved changes</string>
+    <string name="editor_move_message">Save this song before going to another one?</string>
+    <string name="editor_move_save">Save and continue</string>
+    <string name="editor_move_discard">Discard</string>
+    <string name="editor_midi_on">Sends messages</string>
+    <string name="group_page">Turn the page</string>
+    <string name="group_chords">Chords</string>
+    <string name="group_device">Device</string>
+    <string name="group_page_summary">Turn or scroll, pedal and MIDI, screen on</string>
+    <string name="group_chords_summary">Instrument, diagram, chord sound</string>
+    <string name="group_device_summary">Essential mode, language, advanced</string>
+    <string name="settings_page_mode">Mode</string>
+    <string name="settings_during_show">During the show</string>
+    <string name="reset_zone">Danger zone</string>
+    <string name="advanced_permission_see">To change these, follow the steps in Settings → Device → Advanced.</string>
+    <string name="settings_search_label">Search Settings</string>
+    <string name="settings_search_hint">e.g. midi, screen, pedal</string>
+    <string name="settings_search_none">Nothing found in Settings.</string>
+    <!-- synonyms for the Settings search: both languages in each, so "tela" and "screen" find the same item -->
+    <string name="kw_size">tamanho grande pequeno aumentar diminuir fonte letra size big small bigger smaller zoom</string>
+    <string name="kw_font">fonte tipo de letra font typeface</string>
+    <string name="kw_bold">negrito grosso bold heavy</string>
+    <string name="kw_color">cor cores color colour colors</string>
+    <string name="kw_background">fundo cor tela escura clara background dark light theme</string>
+    <string name="kw_profile">perfil só letra com cifra automático acordes mostrar esconder profile lyrics only chords automatic show hide</string>
+    <string name="kw_sections">seção seções título refrão verso ponte intro section sections title chorus verse bridge intro</string>
+    <string name="kw_mode">virar página rolar rolagem paginar turn page scroll paging</string>
+    <string name="kw_scroll">rolagem automática velocidade rolar sozinho autoscroll scroll speed automatic</string>
+    <string name="kw_columns">colunas duas uma dividir columns two one split</string>
+    <string name="kw_pedal">pedal bluetooth botão botões página virar teclado pedal bluetooth button buttons page turner keyboard</string>
+    <string name="kw_midi">midi usb pedal bluetooth teclado controlador midi usb pedal bluetooth keyboard controller</string>
+    <string name="kw_screen">tela ligada apagar acesa dormir screen on awake sleep timeout</string>
+    <string name="kw_dnd">não perturbe silêncio notificações chamadas do not disturb silence notifications calls</string>
+    <string name="kw_track">faixa botão parar pausar volta início backing track track button stop pause start backing track</string>
+    <string name="kw_instrument">instrumento violão guitarra ukulele cavaquinho teclado instrument guitar ukulele cavaquinho keyboard</string>
+    <string name="kw_diagram">diagrama acorde tocar toque desenho diagram chord tap shape</string>
+    <string name="kw_sound">som do acorde dedilhado tocar acorde chord sound arpeggio strum play chord</string>
+    <string name="kw_list">lista de acordes início fim esconder chord list top bottom hide</string>
+    <string name="kw_metro">metrônomo contagem click andamento bpm som metronome count in click tempo bpm sound</string>
+    <string name="kw_volume">volume click som metrônomo volume click sound metronome</string>
+    <string name="kw_output">saída do som fone alto-falante interface usb canais sound output headphones speaker usb interface channels</string>
+    <string name="kw_glow">brilho borda tela luz cor metrônomo glow edge screen light color metronome</string>
+    <string name="kw_usb">usb interface de áudio android saída conserto sem som usb audio interface android output fix no sound</string>
+    <string name="kw_battery">bateria economia liberar segundo plano battery saving unrestricted background</string>
+    <string name="kw_library">biblioteca músicas setlists quantas library songs setlists how many</string>
+    <string name="kw_sites">sites importar importação cifra letra endereço sites import chord lyrics address</string>
+    <string name="kw_tags">tags etiquetas nacionais internacionais tags labels national international</string>
+    <string name="kw_normalize">refrão versos achar títulos de seção chorus verses find section titles</string>
+    <string name="kw_backup">backup salvar arquivo copiar exportar músicas ajustes backup save file copy export songs settings</string>
+    <string name="kw_restore">restaurar backup abrir arquivo importar juntar substituir restore backup open file import merge replace</string>
+    <string name="kw_share">compartilhar enviar setlist qr internet share send setlist qr internet</string>
+    <string name="kw_reset">apagar tudo formatar zerar fábrica resetar erase everything format reset factory</string>
+    <string name="kw_band">banda rede wi-fi membros nome aparelho band network wi-fi members name device</string>
+    <string name="kw_internet">internet convidar banda longe internet invite band far away</string>
+    <string name="kw_announce">avisar música tocando obs now playing transmissão tell now playing obs broadcast</string>
+    <string name="kw_computer">computador editor navegador web editar computer editor browser web edit</string>
+    <string name="kw_essential">modo essencial leve economizar lite essential mode light lite save</string>
+    <string name="kw_language">idioma língua português inglês traduzir language portuguese english translate</string>
+    <string name="kw_adb">permissão computador adb comando permission computer adb command</string>
+    <string name="kw_android">android ajustes do aparelho bateria tela animações dados móveis depuração android device settings battery screen animations mobile data debugging</string>
+    <string name="kw_help">ajuda como usar manual help how to manual</string>
+    <string name="kw_update">atualizar versão novidades update version news</string>
+    <string name="kw_privacy">privacidade dados privacy data</string>
+    <string name="kw_code">código fonte github code source github</string>
+    <string name="kw_support">apoiar doar contribuir support donate contribute</string>
+    <string name="hide_chords">Lyrics only hides the chords</string>
+    <string name="hide_extras">Only with Metronome and chord extras on</string>
+    <string name="hide_player">Only with the player on</string>
+    <string name="hide_midi">This device has no MIDI</string>
+    <string name="hide_metro_shown">Only with the metronome shown on stage</string>
+    <string name="hide_metro_sound">Only with the click sound on</string>
+    <string name="hide_metro_glow">Only with the edge glow on</string>
+    <string name="hide_sections">Only with section titles on</string>
+    <string name="hide_band">Only with the band on the network on</string>
+    <string name="hide_band_or_internet">Only with the band or the internet on</string>
+    <string name="hide_internet">Only with the internet on</string>
+    <string name="hide_scroll">Only in Scroll mode</string>
+    <string name="hide_pages">Only in Turn pages mode</string>
+    <string name="hide_sites_chords">Only with the Lyrics and chords profile</string>
+    <string name="hide_sites_lyrics">Only with the Lyrics only profile</string>
+    <string name="hide_pt">Only with the app in Portuguese</string>
+    <string name="hide_battery_free">Stagebook is already free from battery saving</string>
+    <string name="hide_essential">Turned off by essential mode</string>
+    <string name="hide_device">This device does not have this switch</string>
+    <string name="hide_has_permission">Stagebook already has the permission</string>
+    <string name="search_in_help">in the explanation</string>
+    <string name="group_band_editor_on">Editor on</string>
+    <string name="group_band_editor_off">Editor off</string>
 </resources>

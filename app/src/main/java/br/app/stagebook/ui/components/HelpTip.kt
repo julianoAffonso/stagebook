@@ -39,7 +39,7 @@ fun HelpTip(text: String, modifier: Modifier = Modifier, label: String = stringR
         positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
         tooltip = { RichTooltip { Text(text) } },
         state = state,
-        modifier = modifier,
+        modifier = modifier.settingsChrome(),
     ) {
         Row(
             Modifier.clip(MaterialTheme.shapes.small).clickable { scope.launch { state.show() } }.padding(vertical = Spacing.xs, horizontal = Spacing.xs),
@@ -62,7 +62,7 @@ fun HelpIcon(text: String, modifier: Modifier = Modifier) {
         positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
         tooltip = { RichTooltip { Text(text) } },
         state = state,
-        modifier = modifier,
+        modifier = modifier.settingsChrome(),
     ) {
         Icon(
             AppIcons.InfoOutline,

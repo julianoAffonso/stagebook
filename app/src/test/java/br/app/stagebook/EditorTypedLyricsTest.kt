@@ -2,6 +2,8 @@ package br.app.stagebook
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -58,7 +60,7 @@ class EditorTypedLyricsTest {
         val scope = CoroutineScope(Dispatchers.IO)
         repo = LibraryRepository(context, scope)
         runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
-        vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+        vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
         runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         compose.setContent {
             StagebookTheme {
@@ -68,8 +70,19 @@ class EditorTypedLyricsTest {
         compose.waitForIdle()
     }
 
-    private fun lyricsField(look: Look) = compose.onNode(hasSetTextAction() and hasText(if (look.chords) "Letra e cifra" else "Letra"))
-    private fun titleField() = compose.onNode(hasSetTextAction() and hasText("Nome da música"))
+    // the editor has two screens, one at a time: going to the one with the field is a tap on its segment
+    private fun segment(label: String) = compose.onNode(hasText(label) and hasClickAction() and !hasSetTextAction()).performClick()
+    private fun lyricsField(look: Look): androidx.compose.ui.test.SemanticsNodeInteraction {
+        val label = if (look.chords) "Letra e cifra" else "Letra"
+        segment(label)
+        compose.waitForIdle()
+        return compose.onNode(hasSetTextAction() and hasText(label))
+    }
+    private fun titleField(): androidx.compose.ui.test.SemanticsNodeInteraction {
+        segment("Dados")
+        compose.waitForIdle()
+        return compose.onNode(hasSetTextAction() and hasText("Nome da música"))
+    }
 
     private fun savedText() = repo.library.value.songs.single { it.title == "Teste" }.text
 

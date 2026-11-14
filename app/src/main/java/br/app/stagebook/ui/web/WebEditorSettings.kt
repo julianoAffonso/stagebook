@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.web
 
+import br.app.stagebook.ui.components.settingsItem
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,7 +56,7 @@ fun WebEditorDetail(on: Boolean, ui: WebEditorUi, onSwitch: (Boolean) -> Unit, o
         // card name isn't the screen's again ("Editor on the computer" twice)
         SettingsCard(stringResource(R.string.settings_web_editor_card), help = stringResource(R.string.settings_web_editor_help)) {
             // said right on the switch: it starts off every time and turns itself off when unused
-            SwitchRow(stringResource(R.string.settings_web_editor_switch), on, onSwitch, detail = stringResource(R.string.settings_web_editor_switch_detail))
+            SwitchRow(stringResource(R.string.settings_web_editor_switch), on, onSwitch, Modifier.settingsItem("web_editor"), detail = stringResource(R.string.settings_web_editor_switch_detail))
             if (on) {
                 if (ui.address.isEmpty()) {
                     br.app.stagebook.ui.components.StatusNote(stringResource(R.string.settings_web_editor_no_wifi), br.app.stagebook.ui.components.StatusTone.PROBLEM)
@@ -67,6 +68,7 @@ fun WebEditorDetail(on: Boolean, ui: WebEditorUi, onSwitch: (Boolean) -> Unit, o
             }
         }
         SettingsCard(stringResource(R.string.settings_web_editor_devices)) {
+            Column(Modifier.settingsItem("web_devices"), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             if (ui.devices.isEmpty()) {
                 Text(stringResource(R.string.settings_web_editor_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -76,6 +78,7 @@ fun WebEditorDetail(on: Boolean, ui: WebEditorUi, onSwitch: (Boolean) -> Unit, o
                     Text(d.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(start = Spacing.s), maxLines = 1)
                     IconButton(onClick = { onRemove(d.id) }) { Icon(AppIcons.Delete, stringResource(R.string.settings_web_editor_remove, d.name)) }
                 }
+            }
             }
         }
     }

@@ -43,12 +43,12 @@ class SettingsEssentialCardsTest {
     }
 
     @Test fun `the songs MIDI card is one of the extras`() {
-        settings(Look(extrasOn = false), SettingsSection.PEDAL)
+        settings(Look(extrasOn = false), SettingsSection.PAGE)
         compose.onNodeWithText("Saída MIDI").assertDoesNotExist()
     }
 
     @Test fun `with the extras on the MIDI card is there`() {
-        settings(Look(), SettingsSection.PEDAL)
+        settings(Look(), SettingsSection.PAGE)
         compose.onNodeWithText("Saída MIDI").assertExists()
     }
 
@@ -61,14 +61,20 @@ class SettingsEssentialCardsTest {
         assertEquals(PedalAction.entries.size - 1, pedalActions(playerMode = false, current = PedalAction.NEXT).size)
     }
 
-    @Test fun `Advanced keeps the player card only with the player on`() {
-        compose.setContent { StagebookTheme { AdvancedDetail(AdvancedUi(), { _, _ -> }, {}, playerMode = false) } }
+    @Test fun `the play card of the Android settings is in the player group only with the player on`() {
+        settings(Look(extrasOn = true, playerMode = false), SettingsSection.PLAYER)
         compose.onNodeWithText("Para tocar sem falhas").assertDoesNotExist()
     }
 
-    @Test fun `Advanced shows the player card with the player on`() {
-        compose.setContent { StagebookTheme { AdvancedDetail(AdvancedUi(), { _, _ -> }, {}, playerMode = true) } }
+    @Test fun `the player group shows the play card with the player on`() {
+        settings(Look(playerMode = true), SettingsSection.PLAYER)
         compose.onNodeWithText("Para tocar sem falhas").assertExists()
+    }
+
+    @Test fun `Device Advanced no longer carries the player card`() {
+        compose.setContent { StagebookTheme { AdvancedDetail(AdvancedUi(canWrite = true), { _, _ -> }) } }
+        compose.onNodeWithText("Para tocar sem falhas").assertDoesNotExist()
+        compose.onNodeWithText("Bateria do aparelho").assertExists()
     }
 
     @Test fun `the library points to the band section only when it has band content`() {
@@ -82,12 +88,12 @@ class SettingsEssentialCardsTest {
         compose.onNodeWithText("Os ajustes do arquivo substituem os daqui", substring = true).assertExists()
     }
 
-    @Test fun `a section leaves the list when all its parts are off`() {
+    @Test fun `a group leaves the list when all its cards are gone`() {
         val off = Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = false)
-        assertFalse(SettingsSection.METRONOME.shown(off))
+        assertFalse(SettingsSection.PLAYER.shown(off))
         assertFalse(SettingsSection.BAND.shown(off))
-        assertTrue(SettingsSection.METRONOME.shown(off.copy(playerMode = true)))
-        assertTrue(SettingsSection.METRONOME.shown(off.copy(extrasOn = true)))
+        assertTrue(SettingsSection.PLAYER.shown(off.copy(playerMode = true)))
+        assertTrue(SettingsSection.PLAYER.shown(off.copy(extrasOn = true)))
         assertTrue(SettingsSection.BAND.shown(off.copy(internetOn = true)))
     }
 }

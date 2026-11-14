@@ -40,7 +40,9 @@ class BandSession(private val me: Hello) {
             // different protocol versions: doesn't try to read the rest (the format may have changed); both see
             // "update"
             if (them.v != me.v) { BandProtocol.write(out, Message(Kind.VERSION)); return }
-            val msg = BandProtocol.readMessage(input) ?: return
+            // who isn't in the band only says JOIN or CODE_ACK: its line is read up to a small limit (a huge one from anyone on
+            // the Wi-Fi, times the sessions at once, filled the memory of a weak tablet before the member check)
+            val msg = BandProtocol.readMessage(input, if (isMember(them.id)) BandProtocol.MAX_MESSAGE else BandProtocol.MAX_STRANGER) ?: return
             // setlist or songs from a band member (from anyone else, not even read): kept in the inbox, without asking
             // anything
             if (msg.kind == Kind.PACKAGE) {

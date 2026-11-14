@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.setlists
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,13 +12,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -102,12 +107,17 @@ fun PickSongsScreen(
                         items(uiState.rows, key = { it.id }) { row ->
                             SongListItem(
                                 title = row.title,
-                                subtitle = if (row.inSet) stringResource(R.string.pick_in_set) else row.subtitle,
+                                subtitle = row.subtitle,
+                                // already in the setlist: faded and tagged, with everything else kept
+                                modifier = if (row.inSet) Modifier.alpha(IN_SET_ALPHA) else Modifier,
+                                titleBadge = if (row.inSet) { { InSetBadge() } } else null,
                                 onClick = { if (!row.inSet) onToggle(row.id) },
                                 inline = wide,
                                 leading = { Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet) },
                                 trailing = { SongFacts(row.songKey, row.bpm, row.capo, row.hasTrack) },
+                                titleStyle = MaterialTheme.typography.titleLarge,
                                 titleLines = 1,
+                                gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
                             )
                         }
                     }
@@ -115,6 +125,21 @@ fun PickSongsScreen(
             }
         }
     }
+}
+
+private const val IN_SET_ALPHA = 0.5f
+
+/** The tag of a song that is already in the setlist, beside its title. */
+@Composable
+private fun InSetBadge() {
+    Text(
+        stringResource(R.string.pick_in_set),
+        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(horizontal = Spacing.s, vertical = Spacing.xs),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+        maxLines = 1,
+        softWrap = false,
+    )
 }
 
 private val previewState = PickSongsUiState(

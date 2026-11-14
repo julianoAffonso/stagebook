@@ -42,13 +42,17 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     }
 }
 
+/** A setlist song's key ("" = none written), tempo and capo (0 = none) and whether it has a backing track, for the panel's row. */
+@Immutable
+data class StageRowFacts(val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false)
+
 /**
  * The setlist the stage was opened from, for the panel over the stage: its [name] and, for each song, where the show
- * is ([states], the same marks the setlist's screen shows) and its key ([keys], "" = none written).
+ * is ([states], the same marks the setlist's screen shows) and what the musician checks before it ([facts]).
  */
 @Immutable
 data class StageSetlist(
-    val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList(),
+    val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val facts: List<StageRowFacts> = emptyList(),
     /** The breaks left open, by the songs before them: their counters, running or paused. */
     val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
     val id: String = "",
@@ -127,10 +131,13 @@ class StageViewModel @Inject constructor(
     /** The setlist's menu, "Lead the band": sends it from the song on stage (each member says what's missing). */
     fun conductBand() {
         val setId = route.setId ?: return
-        val lib = repository.library.value
-        val set = lib.setlist(setId) ?: return
-        val songs = set.items.mapNotNull(lib::song).map { br.app.stagebook.domain.Conduct.Item(it.title, it.author) }
-        conduct.start(setId, set.name, songs, shownIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0)))
+        conduct.startSetlist(setId, shownIndex)
+        // leading from the middle of a break: the collector below only speaks when the break changes, so the band is
+        // told of the one already open now
+        if (breakSince.value != null) {
+            val timer = breakTimer.value
+            conduct.rest(setId, timer?.elapsed(System.currentTimeMillis()), paused = timer?.running == false)
+        }
     }
 
     /** The setlist's menu, "Clear played": no song of this setlist is marked any more. */
@@ -330,7 +337,8 @@ class StageViewModel @Inject constructor(
             if (setId != null && song != null) show.breakLeft(setId, song)
             savedStateHandle[BREAK_SINCE] = null; savedStateHandle[BREAK_SONG] = null; return }
         val setId = route.setId ?: return
-        val song = repository.library.value.setlist(setId)?.items?.getOrNull(shownIndex + 1) ?: "#${shownIndex + 1}"
+        // no song after the break (the setlist got shorter meanwhile): no break, and no counter kept under a made-up key
+        val song = repository.library.value.setlist(setId)?.items?.getOrNull(shownIndex + 1) ?: return
         val timer = show.breakEntered(setId, song)
         savedStateHandle[BREAK_SONG] = song
         savedStateHandle[BREAK_SINCE] = br.app.stagebook.domain.BreakTimer.since(timer, System.currentTimeMillis())
@@ -350,8 +358,9 @@ class StageViewModel @Inject constructor(
         reopened = true
         val setId = route.setId ?: return
         if (!route.atBreak || breakOnly || conduct.role.value is br.app.stagebook.data.BandConduct.Role.Following) return
-        val next = repository.library.value.setlist(setId)?.items?.getOrNull(index + 1) ?: return
-        if ((index + 1) in repository.library.value.setlist(setId)!!.breaks && show.breakOpen(setId, next)) setBreak(true)
+        val set = repository.library.value.setlist(setId) ?: return   // read once: it can be deleted between two reads
+        val next = set.items.getOrNull(index + 1) ?: return
+        if ((index + 1) in set.breaks && show.breakOpen(setId, next)) setBreak(true)
     }
 
     fun pauseBreak() = breakSong.value?.let { song -> route.setId?.let { show.breakPause(it, song) } }
@@ -409,7 +418,7 @@ class StageViewModel @Inject constructor(
             breaks = set?.breaks.orEmpty(),
             setlist = set?.let {
                 StageSetlist(
-                    it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> Chords.key(lib.song(id)?.text.orEmpty()) },
+                    it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> factsOf(id, lib.song(id)) },
                     br.app.stagebook.domain.BreakTimer.openAt(it.id, it.items, it.breaks, breaks, show.today()),
                     id = it.id,
                     anyPlayed = marks[it.id]?.played?.isNotEmpty() == true,
@@ -418,6 +427,17 @@ class StageViewModel @Inject constructor(
             },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
+
+    // the panel's facts, read again only when the song's text or track changed (every library change goes through here)
+    private val factsKept = HashMap<String, Pair<br.app.stagebook.data.model.Song, StageRowFacts>>()
+
+    private fun factsOf(id: String, song: br.app.stagebook.data.model.Song?): StageRowFacts {
+        if (song == null) return StageRowFacts()
+        val kept = factsKept[id]
+        if (kept != null && kept.first.text == song.text && kept.first.track == song.track) return kept.second
+        val meta = Chords.meta(song.text)
+        return StageRowFacts(meta.key, meta.tempo, meta.capo, song.track.isNotEmpty()).also { factsKept[id] = song to it }
+    }
 
     /** Chord shape picked on stage: goes into the song as a ChordPro {define} (replaces the previous one). */
     fun saveShape(songId: String, chord: String, define: String) {

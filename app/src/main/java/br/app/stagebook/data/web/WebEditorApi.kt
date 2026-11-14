@@ -20,6 +20,8 @@ class WebEditorApi(
     // opens a page out of sight on the tablet and runs a script on it (null = the import extraction)
     private val readPage: suspend (url: String, script: String?) -> String? = { _, _ -> null },
     private val receiver: () -> WebReceive? = { null },
+    // forgets the review waiting for the computer (without creating the receiver if it was never used)
+    private val clearReview: () -> Unit = {},
     private val band: () -> Band? = { null },
     private val backup: () -> br.app.stagebook.data.Backup? = { null },
     private val tracks: () -> br.app.stagebook.data.TrackStore? = { null },
@@ -87,9 +89,12 @@ class WebEditorApi(
     @Serializable
     data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList(), val breaks: List<Int> = emptyList())
 
-    /** [breaks] null (a client that doesn't know them) keeps the breaks the setlist has, as the app does when songs are replaced. */
+    /**
+     * [items] null (a client that doesn't send songs) keeps the setlist's songs and breaks; an empty list empties it.
+     * [breaks] null (a client that doesn't know them) keeps the breaks the setlist has, as the app does when songs are replaced.
+     */
     @Serializable
-    data class SetSave(val name: String = "", val items: List<String> = emptyList(), val breaks: List<Int>? = null)
+    data class SetSave(val name: String = "", val items: List<String>? = null, val breaks: List<Int>? = null)
 
     @Serializable
     data class BackupInfo(val token: String, val parts: List<String>, val songs: Int, val newer: Boolean)
@@ -336,6 +341,7 @@ class WebEditorApi(
     /** The editor turned off: a backup waiting for its parts goes away (it could be 1 GB). */
     fun clear() {
         waitingBackup.getAndSet(null)?.second?.delete()
+        clearReview()
     }
 
     // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=.
@@ -392,30 +398,29 @@ class WebEditorApi(
         val name = d.name.trim().ifEmpty { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
         if (!breaksOk(d)) return problem("bad_breaks")
         val id = repository.createSetlist(name)
-        if (d.items.isNotEmpty()) saveItems(id, d)
+        if (!d.items.isNullOrEmpty()) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }
 
     private fun setSave(id: String, req: HttpRequest): HttpResponse {
         if (repository.library.value.setlist(id) == null) return HttpResponse.status(404)
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
-        if (!breaksOk(d)) return problem("bad_breaks")
+        if (!breaksOk(d, repository.library.value.setlist(id)?.items?.size ?: 0)) return problem("bad_breaks")
         if (d.name.isNotBlank()) repository.renameSetlist(id, d.name.trim())
-        saveItems(id, d)
+        if (d.items != null || d.breaks != null) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }
 
     /** Breaks as sent are valid when they are what the app would keep: 1..n-1 of the sent songs, sorted, no repeats. */
-    private fun breaksOk(d: SetSave) = d.breaks == null || d.breaks == SetlistBreaks.normalise(d.breaks, d.items.size)
+    private fun breaksOk(d: SetSave, current: Int = 0) = d.breaks == null || d.breaks == SetlistBreaks.normalise(d.breaks, d.items?.size ?: current)
 
     /**
      * Songs the library doesn't have, and repeats, drop out; sent breaks stay before the same song or the next one that
      * is left (the app's own rule, SetlistBreaks.place). Without breaks the setlist keeps its own.
      */
     private fun saveItems(id: String, d: SetSave) {
-        if (d.breaks == null) { repository.setSetlistItems(id, d.items.filter { repository.song(it) != null }); return }
-        val placed = SetlistBreaks.place(d.items.map { it.takeIf { sid -> repository.song(sid) != null } }, d.breaks)
-        repository.setSetlistItems(id, placed.items, placed.breaks)
+        val items = d.items ?: repository.library.value.setlist(id)?.items ?: return
+        repository.setReceivedSetlist(id, items.map { it.takeIf { sid -> repository.song(sid) != null } }, d.breaks)
     }
 
     private fun ok(body: String) = HttpResponse.json(200, body)

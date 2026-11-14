@@ -1,5 +1,7 @@
 package br.app.stagebook.ui.settings
 
+import androidx.compose.ui.Modifier
+import br.app.stagebook.ui.components.settingsItem
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -80,35 +82,47 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
     )
 }
 
+/**
+ * Device → Advanced: the Android settings that are not the player's. The command that grants the permission is the last
+ * card, and only when it is missing (it used to be the first item of the page).
+ */
 @Composable
-fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit, playerMode: Boolean = true) {
+fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        if (!ui.canWrite) PermissionCard()
-        // these change the whole device and come back on every start: said before anyone wonders why
-        StatusNote(stringResource(R.string.advanced_rewrite), StatusTone.INFO)
-        // keeping the player alive on the device is the player's: off in essential mode, the card leaves
-        if (playerMode) SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
-            // freeing the app from battery saving only Android does, with the user's tap: a button, not a switch
-            StatusNote(
-                stringResource(if (ui.batteryFree) R.string.advanced_battery_free else R.string.advanced_battery_restricted),
-                if (ui.batteryFree) StatusTone.OK else StatusTone.PROBLEM,
-            ) {
-                if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, icon = AppIcons.Eco, tone = ButtonTone.Tonal)
-            }
-            Tweaks(ui, DeviceTweak.Group.PLAY, onTweak)
+        SettingsCard(stringResource(R.string.advanced_battery)) {
+            // these change the whole device and come back on every start: said before anyone wonders why
+            Text(stringResource(R.string.advanced_rewrite), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Tweaks(ui, DeviceTweak.Group.BATTERY, onTweak, except = DeviceTweak.SCREEN_TIMEOUT)   // the screen timeout sits with keeping the screen on
         }
-        SettingsCard(stringResource(R.string.advanced_battery)) { Tweaks(ui, DeviceTweak.Group.BATTERY, onTweak) }
         SettingsCard(stringResource(R.string.advanced_computer)) { Tweaks(ui, DeviceTweak.Group.COMPUTER, onTweak) }
+        if (!ui.canWrite) PermissionCard()
+    }
+}
+
+/** "For playing without failures": keeping the player alive on the device; it belongs to the player, so it lives there. */
+@Composable
+fun AdvancedPlayCard(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, onBattery: () -> Unit) {
+    SettingsCard(stringResource(R.string.advanced_play), help = stringResource(R.string.advanced_play_help)) {
+        // freeing the app from battery saving only Android does, with the user's tap: a button, not a switch
+        StatusNote(
+            stringResource(if (ui.batteryFree) R.string.advanced_battery_free else R.string.advanced_battery_restricted),
+            if (ui.batteryFree) StatusTone.OK else StatusTone.PROBLEM,
+        ) {
+            if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, modifier = Modifier.settingsItem("battery_allow"), icon = AppIcons.Eco, tone = ButtonTone.Tonal)
+        }
+        Tweaks(ui, DeviceTweak.Group.PLAY, onTweak)
+        if (!ui.canWrite) Text(stringResource(R.string.advanced_permission_see), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun Tweaks(ui: AdvancedUi, group: DeviceTweak.Group, onTweak: (DeviceTweak, Boolean) -> Unit) {
-    DeviceTweak.entries.filter { it.shown && it.group == group && it in ui.on }.forEach { t ->
+internal fun Tweaks(ui: AdvancedUi, group: DeviceTweak.Group, onTweak: (DeviceTweak, Boolean) -> Unit, only: DeviceTweak? = null, except: DeviceTweak? = null) {
+    DeviceTweak.entries.filter { it.shown && it.group == group && it in ui.on && (only == null || it == only) && it != except }.forEach { t ->
         SwitchRow(
             stringResource(t.label),
             ui.on[t] == true,
             { onTweak(t, it) },
+            Modifier.settingsItem(tweakId(t)),
             detail = stringResource(t.detail),
             enabled = ui.canWrite,   // without the permission Android refuses the change: shown, not switchable
         )
@@ -124,13 +138,13 @@ private fun PermissionCard() {
             Text(DeviceTweaks.GRANT, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
             ActionButton(stringResource(R.string.advanced_permission_copy), onClick = {
                 context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", DeviceTweaks.GRANT))
-            }, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
+            }, modifier = Modifier.settingsItem("permission"), icon = AppIcons.Copy, tone = ButtonTone.Tonal)
         }
     }
 }
 
 @get:StringRes
-private val DeviceTweak.label: Int
+internal val DeviceTweak.label: Int
     get() = when (this) {
         DeviceTweak.CHARGE_MODES -> R.string.tweak_charge
         DeviceTweak.USB_ROUTING -> R.string.tweak_usb_routing
@@ -143,7 +157,7 @@ private val DeviceTweak.label: Int
     }
 
 @get:StringRes
-private val DeviceTweak.detail: Int
+internal val DeviceTweak.detail: Int
     get() = when (this) {
         DeviceTweak.CHARGE_MODES -> R.string.tweak_charge_detail
         DeviceTweak.USB_ROUTING -> R.string.tweak_usb_routing_detail
@@ -160,8 +174,8 @@ internal val sampleAdvanced = AdvancedUi(canWrite = true, on = DeviceTweak.entri
 
 @LightPreview
 @Composable
-private fun AdvancedLightPreview() = PreviewSurface(dark = false) { AdvancedDetail(sampleAdvanced, { _, _ -> }, {}) }
+private fun AdvancedLightPreview() = PreviewSurface(dark = false) { AdvancedDetail(sampleAdvanced, { _, _ -> }) }
 
 @DarkPreview
 @Composable
-private fun AdvancedDarkPreview() = PreviewSurface(dark = true) { AdvancedDetail(sampleAdvanced.copy(canWrite = false), { _, _ -> }, {}) }
+private fun AdvancedDarkPreview() = PreviewSurface(dark = true) { AdvancedDetail(sampleAdvanced.copy(canWrite = false), { _, _ -> }) }

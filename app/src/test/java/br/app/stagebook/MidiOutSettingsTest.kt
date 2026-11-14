@@ -35,7 +35,7 @@ class MidiOutSettingsTest {
             SettingsScreen(
                 SettingsUiState(loading = false, look = look, midi = MidiState(supported = true)),
                 SettingsActions(midiOutputs = outputs, onMidiOutputsOpen = { opened++ }, onMidiOut = { chosen += it }),
-                section = SettingsSection.PEDAL,
+                section = SettingsSection.PAGE,
             )
         }
     }

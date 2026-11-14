@@ -60,6 +60,10 @@ class WebReceive(
         is SetlistCloud.Received.Invite -> Fetched.Problem("not_found")
     }
 
+    /** The editor turned off: the review waiting for the computer (text and songs received) goes away. */
+    @Synchronized
+    fun clear() = pending.clear()
+
     /** Received from the band (Import → Received from the band): the same review; once done it leaves the inbox. */
     fun fromInbox(id: String, text: String, songs: List<SetlistCloud.SharedSong>, breaks: List<Int>? = null): Review? =
         review("", SetlistCloud.Received.Ok(text, songs), id, breaks)

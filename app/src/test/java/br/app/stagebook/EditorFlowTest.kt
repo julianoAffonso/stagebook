@@ -76,12 +76,12 @@ class EditorFlowTest {
             val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "letra antiga"))
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val handle = SavedStateHandle(mapOf("songId" to id, "fromImport" to false))
-            val vm = SongEditorViewModel(repo, meta, ImportDraft(), handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+            val vm = SongEditorViewModel(repo, meta, ImportDraft(), handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
             withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             vm.onText("letra digitada e ainda não salva")
             assertTrue(vm.uiState.unsaved)
             // process killed: only the SavedStateHandle survives (Android hands it back to the new screen)
-            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
             withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
             assertEquals("letra digitada e ainda não salva", again.uiState.text)
             assertTrue(again.uiState.unsaved)
@@ -102,10 +102,10 @@ class EditorFlowTest {
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val draft = ImportDraft().apply { put(ImportDraft.Draft("Importada", "Banda", "1999", "[G]letra importada")) }
             val handle = SavedStateHandle(mapOf("fromImport" to true))
-            val vm = SongEditorViewModel(repo, meta, draft, handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+            val vm = SongEditorViewModel(repo, meta, draft, handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
             withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             // nothing typed: process killed, the draft (in memory) is gone; only the SavedStateHandle survives
-            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context))
+            val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
             withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
             assertEquals("Importada", again.uiState.title)
             assertTrue(again.uiState.text, again.uiState.text.contains("letra importada"))
@@ -123,7 +123,7 @@ class EditorFlowTest {
     fun `opened from the stage - cursor at the end of the held line and keyboard in the lyrics field`() {
         val text = "[Refrão]\nprimeira linha\nsegunda linha"
         compose.setContent {
-            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = text), {}, {}, {}, {}, {}, {}, {}, cursor = 9) }
+            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, mode = br.app.stagebook.ui.editor.EditorMode.EDIT, title = "Hazard", text = text), {}, {}, {}, {}, {}, {}, {}, cursor = 9) }
         }
         compose.waitForIdle()
         val field = compose.onNode(androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.hasText("segunda linha", substring = true))
@@ -143,9 +143,9 @@ class EditorFlowTest {
     fun `section shortcut puts the title in the lyrics at the cursor`() {
         val texts = mutableListOf<String>()
         compose.setContent {
-            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = "linha um"), {}, {}, {}, { texts += it }, {}, {}, {}, cursor = 0) }
+            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, mode = br.app.stagebook.ui.editor.EditorMode.EDIT, title = "Hazard", text = "linha um"), {}, {}, {}, { texts += it }, {}, {}, {}, cursor = 0) }
         }
-        compose.onNodeWithText("Refrão").performClick()
+        compose.onNodeWithText("Refrão").performScrollTo().performClick()
         assertEquals("linha um\n\n[Refrão]\n", texts.last())
     }
 
@@ -158,7 +158,7 @@ class EditorFlowTest {
             val repo = LibraryRepository(context, scope)
             withTimeout(5_000) { repo.loaded.first { it } }
             val tracks = br.app.stagebook.data.TrackStore(context)
-            val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks)
+            val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())
             withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             val audio = java.io.File(context.cacheDir, "minha-faixa.ogg").apply { writeBytes("OggS".toByteArray() + ByteArray(12)) }
             assertTrue(vm.attachTrack(android.net.Uri.fromFile(audio)))

@@ -110,7 +110,7 @@ class FollowGoFromEditorTest {
                     NavHost(nav, startDestination = Home) {
                         composable<Home> { Text("home") }
                         composable<SongEditor> {
-                            SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = text, unsaved = text != "letra"), {}, {}, {}, { text = it }, {}, androidx.lifecycle.compose.dropUnlessResumed { nav.popBackStack() }, {})
+                            SongEditorScreen(SongEditorUiState(loading = false, mode = br.app.stagebook.ui.editor.EditorMode.EDIT, title = "Hazard", text = text, unsaved = text != "letra"), {}, {}, {}, { text = it }, {}, androidx.lifecycle.compose.dropUnlessResumed { nav.popBackStack() }, {})
                         }
                         composable<Stage> { entry -> Text("stage ${entry.toRoute<Stage>().songId}") }
                     }
@@ -141,7 +141,7 @@ class FollowGoFromEditorTest {
         compose.onNodeWithText("Cancelar").performClick()
         compose.waitForIdle()
         compose.onAllNodesWithText("stage b").assertCountEquals(0)
-        compose.onNodeWithText("Hazard", substring = true).assertExists()
+        compose.onAllNodesWithText("Hazard", substring = true).assertCountEquals(2)   // the header and the name field: still the editor
         org.junit.Assert.assertEquals("b", gate.pending?.target)
     }
 

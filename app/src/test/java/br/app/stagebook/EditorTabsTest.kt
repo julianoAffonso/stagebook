@@ -1,6 +1,12 @@
 package br.app.stagebook
 
 import org.junit.Assert.assertEquals
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -26,34 +32,77 @@ import org.robolectric.annotation.Config
 class EditorTabsTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `new song opens with the details shown - tapping the summary collapses`() {
-        val state = SongEditorUiState(false, EditorMode.NEW, "", "", "", "")
-        compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
+    private fun edit(text: String = "{key: G}\n{capo: 2}\n[G]linha", unsaved: Boolean = false) =
+        SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", text, unsaved = unsaved)
+
+    // the segment of the selector, not the field that carries the same words as its label
+    private fun segment(label: String) = hasText(label) and hasClickAction() and !hasSetTextAction()
+
+    @Test fun `a new song opens on the details, an existing one on the lyrics`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), {}, {}, {}, {}, {}, {}, {}) } }
         compose.onNodeWithText("Nome da música").assertExists()
-        // when open, the summary doesn't show (it would repeat the title): the ▲ in the Title field collapses
-        compose.onNodeWithText("Música sem título").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Recolher os dados da música").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Música sem título").assertExists()
-        compose.onNodeWithText("Nome da música").assertDoesNotExist()
+        compose.onNode(hasSetTextAction() and hasText("Letra e cifra")).assertDoesNotExist()
     }
 
-    @Test fun `existing song opens collapsed with the summary - tapping opens the fields`() {
-        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "", "{key: G}\n{capo: 2}\n[G]linha"), {}, {}, {}, {}, {}, {}, {}) } }
+    @Test fun `an existing song opens on the lyrics, with the details one tap away`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(edit(), {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNode(hasSetTextAction() and hasText("Letra e cifra")).assertExists()
         compose.onNodeWithText("Nome da música").assertDoesNotExist()
-        // the lyrics field doesn't show {key}/{capo}: they're in the summary
+        // the {key}/{capo} lines are the details', not the lyrics field's
         compose.onNodeWithText("{key: G}", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").performClick()
+        compose.onNode(segment("Dados")).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Nome da música").assertExists()
+        compose.onNode(hasSetTextAction() and hasText("Letra e cifra")).assertDoesNotExist()
+        compose.onNode(segment("Letra e cifra")).performClick()
+        compose.waitForIdle()
+        compose.onNode(hasSetTextAction() and hasText("Letra e cifra")).assertExists()
     }
 
-    @Test fun `saving without a title opens the details with the error`() {
+    @Test fun `the header shows the name with the artist under it, and the details are not a summary line any more`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(edit(), {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Hazard").assertExists()
+        compose.onNodeWithText("Richard Marx").assertExists()
+        compose.onNodeWithText("Hazard · Richard Marx · G · capo 2").assertDoesNotExist()
+    }
+
+    @Test fun `saving without a title shows the details with the error`() {
         var state by mutableStateOf(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha"))
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Nome da música").assertDoesNotExist()
         state = state.copy(title = "", error = EditorError.TITLE_EMPTY)
         compose.waitForIdle()
         compose.onNodeWithText("Nome da música").assertExists()
+    }
+
+    @Test fun `the second segment is named for what the profile holds`() {
+        var chords by mutableStateOf(true)
+        compose.setContent { StagebookTheme { SongEditorScreen(edit(), {}, {}, {}, {}, {}, {}, {}, look = br.app.stagebook.data.model.Look(chords = chords)) } }
+        compose.onNode(segment("Letra e cifra")).assertExists()
+        chords = false
+        compose.waitForIdle()
+        compose.onNode(segment("Letra")).assertExists()
+        compose.onNode(segment("Letra e cifra")).assertDoesNotExist()
+    }
+
+    @Test fun `the delete bin stays at the top on both screens`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(edit(), {}, {}, {}, {}, {}, {}, {}) } }
+        compose.onNodeWithContentDescription("Excluir música").assertExists()
+        compose.onNode(segment("Dados")).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Excluir música").assertExists()
+        // nothing to delete at the foot of the details
+        compose.onAllNodesWithText("Excluir música").assertCountEquals(0)
+    }
+
+    // the details don't stretch on a tablet: one column no wider than 560 dp, in the middle
+    @Test fun `the details column keeps its width on a tablet`() {
+        compose.setContent { StagebookTheme { SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", ""), {}, {}, {}, {}, {}, {}, {}) } }
+        val box = compose.onNode(hasSetTextAction() and hasText("Nome da música")).fetchSemanticsNode().boundsInRoot
+        val max = with(compose.density) { 560.dp.toPx() }
+        org.junit.Assert.assertTrue("the name field is ${box.width}px, the column's limit is $max", box.width <= max + 1)
+        val screen = with(compose.density) { 1100.dp.toPx() }
+        org.junit.Assert.assertEquals("centred", screen / 2, (box.left + box.right) / 2, 2f)
     }
 
     @Test fun `open - you can type the song name in the Title field`() {
@@ -115,14 +164,14 @@ class EditorTabsTest {
     @Test fun `the attached track shows its own name`() {
         val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = "s1-123.ogg", trackName = "Hazard (backing)") } }
-        compose.onNodeWithText("Hazard", substring = true).performClick()   // opens the details
+        compose.onNode(segment("Dados")).performClick()   // the details screen
         compose.onNodeWithText("Hazard (backing)").assertExists()
     }
 
     @Test fun `a track that did not come with the song still shows its name, and says to attach it again`() {
         val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "")
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, track = "", trackName = "Hazard (backing)") } }
-        compose.onNodeWithText("Hazard", substring = true).performClick()   // opens the details
+        compose.onNode(segment("Dados")).performClick()   // the details screen
         compose.onNodeWithText("Hazard (backing)").assertExists()
         compose.onNodeWithText("O áudio não está neste aparelho. Anexe de novo.").assertExists()
         compose.onNodeWithContentDescription("Remover o backing track").assertDoesNotExist()   // nothing to remove
@@ -135,10 +184,12 @@ class EditorTabsTest {
 
     @Test fun `the lyrics field says what it holds, by profile`() {
         val state = SongEditorUiState(false, EditorMode.EDIT, "Hazard", "", "", "linha")
+        // (the selector's second segment carries the same words: the field is the one that takes text)
         var chords by androidx.compose.runtime.mutableStateOf(true)
         compose.setContent { StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, look = br.app.stagebook.data.model.Look(chords = chords)) } }
-        compose.onNodeWithText("Letra e cifra").assertExists()
+        compose.onNode(hasSetTextAction() and hasText("Letra e cifra")).assertExists()
         chords = false
-        compose.onNodeWithText("Letra").assertExists()
+        compose.waitForIdle()
+        compose.onNode(hasSetTextAction() and hasText("Letra") and !hasText("cifra")).assertExists()
     }
 }

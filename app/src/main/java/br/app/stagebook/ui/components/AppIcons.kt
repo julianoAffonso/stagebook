@@ -182,6 +182,8 @@ object AppIcons {
     val Coffee by lazy {
         icon("coffee", "M20,3H4v10c0,2.21 1.79,4 4,4h6c2.21,0 4,-1.79 4,-4v-3h2c1.11,0 2,-0.89 2,-2V5C22,3.89 21.11,3 20,3zM20,8h-2V5h2V8zM4,19h16v2H4V19z")
     }
+    // Material "smartphone": the device group in Settings
+    val Smartphone by lazy { icon("smartphone", "M17,1.01L7,1c-1.1,0 -2,0.9 -2,2v18c0,1.1 0.9,2 2,2h10c1.1,0 2,-0.9 2,-2V3c0,-1.1 -0.9,-1.99 -2,-1.99zM17,21H7v-1h10v1zM17,18H7V6h10v12zM17,4H7V3h10v1z") }
     val Eco by lazy {
         icon("eco", "M6.05,8.05c-2.73,2.73 -2.73,7.15 -0.02,9.88c1.47,-3.4 4.09,-6.24 7.36,-7.93c-2.77,2.34 -4.71,5.61 -5.39,9.32c2.6,1.23 5.8,0.78 7.95,-1.37C19.43,14.47 20,4 20,4S9.53,4.57 6.05,8.05z")
     }

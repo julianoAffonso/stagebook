@@ -53,7 +53,14 @@ import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.CenteredContent
-import br.app.stagebook.ui.components.OptionDropdown
+import br.app.stagebook.ui.components.NumberBadge
+import br.app.stagebook.ui.components.SongFacts
+import br.app.stagebook.ui.components.SongListItem
+import br.app.stagebook.ui.components.wideLists
+import br.app.stagebook.ui.components.NUMBER_COMPACT
+import br.app.stagebook.ui.theme.Sizes
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.theme.Spacing
 
@@ -324,7 +331,7 @@ private fun Review(
             verticalArrangement = Arrangement.spacedBy(Spacing.s),
             contentPadding = PaddingValues(bottom = Spacing.s),
         ) {
-            itemsIndexed(ui.rows) { i, row -> RowItem(row, { onChoose(i, it) }, { onCompare(i) }, { onWantChords(i, it) }, { onUseIncoming(i, it) }) }
+            itemsIndexed(ui.rows) { i, row -> RowItem(i + 1, row, { onChoose(i, it) }, { onCompare(i) }, { onWantChords(i, it) }, { onUseIncoming(i, it) }) }
         }
         // before the sites: ask the band on the network (only shows with a band member nearby)
         if (toImport > 0 && band > 0) {
@@ -403,28 +410,21 @@ private fun SongsReview(
         )
         LazyColumn(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.s)) {
             itemsIndexed(ui.rows) { i, row ->
-                Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    // the icon sits on the title line (centered, it floated next to the choice buttons)
-                    Row(Modifier.padding(Spacing.m), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                        val (icon, tint, note) = when {
-                            row.wantChords || (row.carried && row.lyricsOnly) -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
-                            row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
-                            row.differs -> Triple(AppIcons.Info, MaterialTheme.colorScheme.tertiary, R.string.scan_version_other)
-                            row.found -> Triple(AppIcons.Check, MaterialTheme.colorScheme.onSurfaceVariant, R.string.scan_song_have)
-                            else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
-                        }
-                        Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = tint)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text(row.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = tint)
-                            if (row.differs) {
-                                TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(i, it) }
-                                RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes)) { onCompare(i) }
-                            }
-                            if ((row.carried && row.lyricsOnly) || row.wantChords) {
-                                TwoChoices(stringResource(R.string.scan_add_lyrics), stringResource(R.string.scan_dont_add), second = row.wantChords) { onWantChords(i, it) }
-                            }
-                        }
+                val (icon, tint, note) = when {
+                    row.wantChords || (row.carried && row.lyricsOnly) -> Triple(AppIcons.Download, MaterialTheme.colorScheme.tertiary, R.string.scan_song_new_lyrics_only)
+                    row.carried -> Triple(AppIcons.Download, MaterialTheme.colorScheme.primary, R.string.scan_song_new)
+                    row.differs -> Triple(AppIcons.Info, MaterialTheme.colorScheme.tertiary, R.string.scan_version_other)
+                    row.found -> Triple(AppIcons.Check, MaterialTheme.colorScheme.onSurfaceVariant, R.string.scan_song_have)
+                    else -> Triple(AppIcons.Warning, MaterialTheme.colorScheme.error, R.string.scan_song_missing)
+                }
+                ReviewCard(i + 1, row) {
+                    StateLine(icon, tint, stringResource(note))
+                    if (row.differs) {
+                        TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(i, it) }
+                        RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes)) { onCompare(i) }
+                    }
+                    if ((row.carried && row.lyricsOnly) || row.wantChords) {
+                        TwoChoices(stringResource(R.string.scan_add_lyrics), stringResource(R.string.scan_dont_add), second = row.wantChords) { onWantChords(i, it) }
                     }
                 }
             }
@@ -498,72 +498,129 @@ private fun Fetching(ui: ScanUi.Fetching, onRetry: () -> Unit, fromLink: Boolean
     }
 }
 
+/**
+ * A song of the review: the setlist's row on top (small number, title, artist and what the song has) and, under it in the
+ * same card, what will happen to it and the controls ([state]). The facts are the library song's, when there is one.
+ */
+@Composable
+private fun ReviewCard(number: Int, row: ScanRow, state: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val mine = row.candidates.firstOrNull { it.id == row.chosen }
+    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column {
+            SongListItem(
+                title = row.title,
+                subtitle = row.artist,
+                onClick = null,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                titleStyle = MaterialTheme.typography.titleLarge,
+                inline = wideLists(),
+                gap = Spacing.s,
+                titleLines = 1,
+                leading = { NumberBadge(number, compact = true) },
+                trailing = mine?.let { { SongFacts(it.songKey, it.bpm, it.capo, it.hasTrack) } },
+            )
+            // under the title, not under the number
+            Column(Modifier.padding(start = Spacing.m + NUMBER_COMPACT + Spacing.s, end = Spacing.m, bottom = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs), content = state)
+        }
+    }
+}
+
+/** What happens to the song, in the color of how sure it is. */
+@Composable
+private fun StateLine(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: androidx.compose.ui.graphics.Color, text: String, end: (@Composable () -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Icon(icon, null, Modifier.size(20.dp), tint = tint)
+        Text(text, Modifier.weight(1f, fill = end == null), style = MaterialTheme.typography.bodyMedium, color = tint)
+        end?.invoke()
+    }
+}
+
 // a song from the QR: found (✓), uncertain (pick or leave out) or not in the library (notice)
 @Composable
 private fun RowItem(
+    number: Int,
     row: ScanRow,
     onChoose: (String?) -> Unit,
     onCompare: () -> Unit = {},
     onWantChords: (Boolean) -> Unit = {},
     onUseIncoming: (Boolean) -> Unit = {},
 ) {
-    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                val (icon, tint) = when {
-                    row.found -> AppIcons.Check to MaterialTheme.colorScheme.primary
-                    row.wantChords -> AppIcons.Public to MaterialTheme.colorScheme.tertiary
-                    row.carried && row.lyricsOnly -> AppIcons.Download to MaterialTheme.colorScheme.tertiary
-                    row.carried -> AppIcons.Download to MaterialTheme.colorScheme.primary
-                    row.candidates.isEmpty() -> AppIcons.Warning to MaterialTheme.colorScheme.error
-                    else -> AppIcons.Info to MaterialTheme.colorScheme.tertiary
-                }
-                Icon(icon, null, Modifier.size(20.dp), tint = tint)
-                Column(Modifier.weight(1f)) {
-                    Text(row.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    if (row.artist.isNotEmpty()) Text(row.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+    val scheme = MaterialTheme.colorScheme
+    ReviewCard(number, row) {
+        when {
+            // I already have another version: Keep mine | Use theirs, and what changes
+            row.found && row.differs -> {
+                StateLine(AppIcons.Info, scheme.tertiary, stringResource(R.string.scan_version_other))
+                TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(it) }
+                RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes), onCompare)
             }
-            when {
-                // I already have another version: Keep mine | Use theirs, and what changes
-                row.found && row.differs -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(stringResource(R.string.scan_version_other), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
-                    TwoChoices(stringResource(R.string.scan_keep_mine), stringResource(R.string.scan_use_theirs), second = row.useIncoming) { onUseIncoming(it) }
-                    RowAction(AppIcons.Visibility, stringResource(R.string.scan_see_changes), onCompare)
-                }
-                row.found -> Unit
-                // lyrics and chords profile: one that came with lyrics only can be refused and searched with chords on
-                // the sites. Came with lyrics only (lyrics and chords profile): both options side by side, the chosen
-                // one marked
-                row.wantChords || (row.carried && row.lyricsOnly) -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(stringResource(R.string.scan_lyrics_only_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
-                    TwoChoices(stringResource(R.string.scan_accept_lyrics), stringResource(R.string.scan_search_chords), second = row.wantChords) { onWantChords(it) }
-                }
-                row.carried -> Text(
-                    stringResource(
-                        when {
-                            row.lyricsOnly -> R.string.scan_lyrics_only_row
-                            row.fromBand -> R.string.scan_band_row
-                            else -> R.string.scan_carried_row
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary,
-                )
-                row.candidates.isEmpty() -> Text(
-                    stringResource(R.string.scan_missing_row), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error,
-                )
-                else -> OptionDropdown(
-                    stringResource(R.string.scan_which),
-                    listOf<SongRef?>(null) + row.candidates,
-                    row.candidates.firstOrNull { it.id == row.chosen },
-                    { onChoose(it?.id) },
-                    { it?.let { s -> if (s.author.isEmpty()) s.title else "${s.title} · ${s.author}" } ?: stringResource(R.string.scan_leave_out) },
-                    Modifier.fillMaxWidth(),
-                )
+            row.found -> StateLine(AppIcons.Check, scheme.primary, stringResource(R.string.scan_found_row))
+            // lyrics and chords profile: one that came with lyrics only can be refused and searched with chords on
+            // the sites. Came with lyrics only: both options side by side, the chosen one marked
+            row.wantChords || (row.carried && row.lyricsOnly) -> {
+                StateLine(if (row.wantChords) AppIcons.Public else AppIcons.Download, scheme.tertiary, stringResource(R.string.scan_lyrics_only_row))
+                TwoChoices(stringResource(R.string.scan_accept_lyrics), stringResource(R.string.scan_search_chords), second = row.wantChords) { onWantChords(it) }
+            }
+            row.carried -> StateLine(
+                AppIcons.Download, scheme.primary,
+                stringResource(
+                    when {
+                        row.lyricsOnly -> R.string.scan_lyrics_only_row
+                        row.fromBand -> R.string.scan_band_row
+                        else -> R.string.scan_carried_row
+                    },
+                ),
+            )
+            row.candidates.isEmpty() -> StateLine(AppIcons.Warning, scheme.error, stringResource(R.string.scan_missing_row))
+            else -> StateLine(AppIcons.Warning, scheme.tertiary, pluralStringResource(R.plurals.scan_candidates, row.candidates.size, row.candidates.size)) {
+                CandidatesMenu(row, onChoose)
             }
         }
     }
 }
+
+/** "Choose ▾" on the row of a song with similar ones in the library: each candidate is the setlist's row, in a menu. */
+@Composable
+private fun CandidatesMenu(row: ScanRow, onChoose: (String?) -> Unit) {
+    var open by androidx.compose.runtime.remember { mutableStateOf(false) }
+    val chosen = row.candidates.firstOrNull { it.id == row.chosen }
+    Box {
+        androidx.compose.material3.OutlinedButton(
+            onClick = { open = true },
+            shape = androidx.compose.foundation.shape.CircleShape,
+            contentPadding = PaddingValues(start = Spacing.m, end = Spacing.s),
+            modifier = Modifier.heightIn(max = Sizes.touch - Spacing.s),
+        ) {
+            Text(chosen?.title ?: stringResource(R.string.scan_choose), style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = CHOSEN_WIDTH))
+            Icon(AppIcons.ExpandMore, null, Modifier.size(18.dp))
+        }
+        br.app.stagebook.ui.components.FollowBusyWhile(open)
+        androidx.compose.material3.DropdownMenu(
+            expanded = open, onDismissRequest = { open = false },
+            containerColor = br.app.stagebook.ui.components.AppMenu.color, shadowElevation = br.app.stagebook.ui.components.AppMenu.shadow, border = br.app.stagebook.ui.components.AppMenu.border,
+        ) {
+            row.candidates.forEach { c ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = {
+                        SongListItem(
+                            title = c.title, subtitle = c.author, onClick = null, containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            gap = Spacing.s, titleLines = 1, dense = true,
+                            titleStyle = MaterialTheme.typography.titleMedium,
+                            trailing = { SongFacts(c.songKey, c.bpm, c.capo, c.hasTrack) },
+                            modifier = Modifier.widthIn(max = MENU_WIDTH),
+                        )
+                    },
+                    onClick = { onChoose(c.id); open = false },
+                    contentPadding = PaddingValues(0.dp),
+                )
+            }
+            androidx.compose.material3.DropdownMenuItem(text = { Text(stringResource(R.string.scan_leave_out)) }, onClick = { onChoose(null); open = false })
+        }
+    }
+}
+
+private val CHOSEN_WIDTH = 140.dp
+private val MENU_WIDTH = 320.dp
 
 // "See what changes": the lyrics lines leaving (mine) and coming in (theirs); my chords stay either way
 @Composable

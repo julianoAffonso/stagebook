@@ -7,7 +7,7 @@
 Lets AI assistants read and edit the songs and setlists on your Stagebook tablet: "build a 15-song setlist for Saturday
 without repeating artists", "move every Skank song down a half tone", "check the chords of Hazard", "import this page".
 It's a [Model Context Protocol](https://modelcontextprotocol.io) server that runs on your computer and talks to the
-tablet over the local network, through the same connection as **Settings → Edit on the computer**. Nothing goes to the
+tablet over the local network, through the same connection as **Settings → Band and computer → Edit on the computer**. Nothing goes to the
 internet, and the app itself doesn't change: what the assistant saves shows on the stage right away.
 
 Works with Claude Code, Claude Desktop and any assistant that runs local MCP servers (Cursor, VS Code with Copilot,
@@ -18,7 +18,7 @@ Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Area | Tools |
 |---|---|
 | Connection | `stagebook_connect` (finds the tablet and asks to come in), `stagebook_status` |
-| Songs | `list_songs` (filters: text, tag, key), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
+| Songs | `list_songs` (filters: text, tag, key; each song comes with bpm, capo and `hasTrack`), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
 | Import | `import_song` (pasted lyrics/chords in any common format, or a song page address) |
 | Backing tracks | `set_backing_track` (OGG, MP3 or WAV from this computer), `remove_backing_track` |
 | Setlists | `list_setlists` (filter: name), `setlist_order` (newest or A to Z, the same as the app's tab), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
@@ -83,7 +83,7 @@ ChatGPT's own app only connects to remote servers (over the internet), so it can
 
 ## First use
 
-1. On the tablet: open Stagebook and turn on **Settings → Edit on the computer**. It shows the address
+1. On the tablet: open Stagebook and turn on **Settings → Band and computer → Edit on the computer**. It shows the address
    (e.g. `http://192.168.0.10:8090`). The computer and the tablet must be on the same Wi-Fi.
 2. Ask the assistant to connect to Stagebook. It searches the network (or you give it the address) and the tablet shows
    a request with a code. If more than one tablet with Stagebook answers (a band on the same Wi-Fi), it asks which
@@ -92,7 +92,7 @@ ChatGPT's own app only connects to remote servers (over the internet), so it can
    (`~/.config/stagebook-mcp/config.json`, readable only by you); next time it connects without asking.
 
 The editor turns itself off on the tablet when unused: turn it on again when you want to use the assistant. The key
-lasts 90 days without use; **Settings → Edit on the computer → Authorized computers** removes it at any time.
+lasts 90 days without use; **Settings → Band and computer → Edit on the computer → Authorized computers** removes it at any time.
 
 ### Settings
 
@@ -104,8 +104,8 @@ lasts 90 days without use; **Settings → Edit on the computer → Authorized co
 
 ## If it doesn't connect
 
-- **"Stagebook wasn't found" / "Couldn't reach"**: the tablet's Stagebook must be open with **Settings → Edit on the
-  computer** on, on the same Wi-Fi as the computer (not a guest network). Pass the address shown there to the connect tool.
+- **"Stagebook wasn't found" / "Couldn't reach"**: the tablet's Stagebook must be open with **Settings → Band and computer →
+  Edit on the computer** on, on the same Wi-Fi as the computer (not a guest network). Pass the address shown there to the connect tool.
 - **On a Mac, "macOS blocked the connection"**: macOS asks before an app talks to devices on the local network. Open
   **System Settings → Privacy & Security → Local Network** and turn on the app that runs the assistant (Claude, Terminal,
   iTerm, Cursor, VS Code…), then restart that app.

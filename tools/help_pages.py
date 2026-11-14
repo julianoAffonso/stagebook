@@ -69,9 +69,10 @@ SECTIONS = [
                 [Fig(("tablet_1_musicas_filtradas", "celular_1_musicas_filtradas", "Com um filtro ligado", "With a filter on")),
                  Fig(("tablet_1_musicas_tags_abertas", "celular_1_musicas_tags_abertas", "Filtro por tags", "Filter by tags"))]),
             sub("musicas-selecionar", "Selecionar várias", "Select several",
-                ["Segure uma música para selecionar. Depois toque nas outras, ou em Selecionar todas, para adicionar a um setlist, mudar as tags, compartilhar ou apagar de uma vez."],
-                ["Hold a song to select it. Then tap the others, or Select all, to add them to a setlist, change their tags, share or delete them at once."],
-                [Fig(("jornada_musicas_1_selecao_tablet", "jornada_musicas_1_selecao", "Várias músicas selecionadas", "Several songs selected"))]),
+                ["Segure uma música para selecionar. Depois toque nas outras, ou em Selecionar todas, para adicionar a um setlist, mudar as tags, compartilhar ou apagar de uma vez. Ao apagar uma só, a pergunta mostra o nome dela; com várias, mostra quantas."],
+                ["Hold a song to select it. Then tap the others, or Select all, to add them to a setlist, change their tags, share or delete them at once. Deleting just one asks with its name; several ask with how many."],
+                [Fig(("jornada_musicas_1_selecao_tablet", "jornada_musicas_1_selecao", "Várias músicas selecionadas", "Several songs selected")),
+                 Fig(("jornada_musicas_2_apagar_tablet", "jornada_musicas_2_apagar", "Apagar uma música: a pergunta mostra o nome", "Deleting one song: the question shows its name"))]),
             sub("musicas-icones", "Ícones ao lado do título", "Icons next to the title",
                 ["- **Folha:** o modo essencial está ligado.",
                  "- **Grupo com um número:** a banda mandou algo.",
@@ -125,47 +126,48 @@ SECTIONS = [
     {
         "id": "editor", "pt": "Editor da música", "en": "Song editor",
         "text_pt": [
-            "No editor a letra fica com a tela toda. O ícone de apresentação no topo, Ver como fica no palco, mostra o resultado antes de salvar, e o lápis volta ao texto.",
+            "O editor tem duas telas, uma de cada vez, em qualquer tamanho de aparelho: Dados e Letra e cifra (Letra, no perfil só letra). Troque no seletor logo abaixo do topo (num aparelho deitado e baixo, ele sobe para a barra do título, para sobrar altura à letra). Uma música que já existe abre na Letra e cifra, e uma nova abre em Dados, onde o nome é obrigatório. O topo mostra o nome da música com o artista embaixo, Salvar e a lixeira, nas duas telas.",
+            "Quando você abre o editor pelo palco, passa de uma música para outra sem sair: as setas ‹ › com o contador, como 3 / 12, seguem a ordem de onde você veio. Pelo palco de um setlist, a ordem do setlist. Pelo palco aberto na lista de Músicas, a ordem da lista, com a busca e os filtros que estavam ligados. Nas pontas a seta fica apagada. Com texto sem salvar, o app pergunta: Salvar e continuar, Descartar ou Cancelar. No celular o contador fica na linha abaixo do nome.",
         ],
         "text_en": [
-            "In the editor the lyrics get the whole screen. The presentation icon at the top, See it on stage, shows the result before you save, and the pencil goes back to the text.",
+            "The editor has two screens, one at a time, on every device size: Data and Lyrics and chords (Lyrics, on the lyrics only profile). Switch with the selector just under the top (on a low device lying down, it moves up into the title bar, leaving the height to the lyrics). A song that already exists opens on Lyrics and chords, and a new one opens on Data, where the name is required. The top shows the song's name with the artist under it, Save and the trash can, on both screens.",
+            "When you open the editor from the stage, you move from song to song without leaving: the ‹ › arrows with the counter, like 3 / 12, follow the order of where you came from. From a setlist's stage, the setlist's order. From the stage opened on the Songs list, the list's order, with the search and filters that were on. At the ends the arrow is dimmed. With unsaved text the app asks: Save and continue, Discard or Cancel. On a phone the counter sits on the line under the name.",
         ],
         "figs": [],
         "subs": [
             sub("editor-dados", "Dados da música", "Song details",
-                ["Nome, artista, ano, BPM, tom, capotraste, tags e backing track ficam em Dados da música, no topo. Toque para abrir. Deixou artista ou ano em branco? Ao salvar, o app completa pela internet.",
+                ["Nome, artista, ano, BPM, tom, capotraste, tags, backing track e MIDI ficam na tela Dados. No tablet a coluna não estica: fica centralizada, com no máximo 560 dp. Deixou artista ou ano em branco? Ao salvar, o app completa pela internet.",
                  "Em Tags você marca as da música ou cria uma Nova tag."],
-                ["Name, artist, year, BPM, key, capo, tags and backing track are under Song details at the top. Tap to open them. Left artist or year blank? When you save, the app fills them in over the internet.",
+                ["Name, artist, year, BPM, key, capo, tags, backing track and MIDI are on the Data screen. On a tablet the column doesn't stretch: it sits in the middle, 560 dp wide at most. Left artist or year blank? When you save, the app fills them in over the internet.",
                  "In Tags you check the song's tags or create a New tag."],
-                [Fig(("tablet_4_editor_dados", "celular_4_editor", "Dados da música abertos", "Song details open")),
-                 Fig(("tablet_4_editor_tags", "celular_4_editor_tags", "Tags da música", "The song's tags"))]),
+                [Fig(("tablet_4_editor_dados", "celular_4_editor_dados", "Tela Dados", "Data screen"))]),
             sub("editor-tom", "Tom e capotraste", "Key and capo",
                 ["O − e + do tom transpõem a cifra meio tom de cada vez. O do capotraste não mexe nos diagramas, só avisa em que tom vai soar."],
                 ["The key's − and + transpose the chords a half step at a time. The capo's don't change the diagrams; they only tell you what key it will sound in."],
-                [Fig(("tablet_4_editor_capo", "celular_4_editor_capo", "Tom e capotraste", "Key and capo"))]),
+                []),
             sub("editor-acordes", "Acordes", "Chords",
-                ["Os acordes vão entre colchetes, no meio da letra: [G]Hoje eu [D]vou. Se você colar uma cifra com os acordes na linha de cima, o app converte sozinho. Os atalhos acima da letra inserem os acordes da música, e Acorde insere um novo. Um colchete com asterisco, como [*2x], é uma anotação. Ela aparece em cima da letra, junto dos acordes, mas não é acorde. No meio de uma palavra, ela vai para o fim da palavra.",
+                ["Os acordes vão entre colchetes, no meio da letra: [G]Hoje eu [D]vou. Se você colar uma cifra com os acordes na linha de cima, o app converte sozinho. Na faixa acima da letra, logo depois do Marca-texto, ficam os acordes: o + insere um acorde novo e os outros inserem os acordes da música. As partes vêm depois deles. Um colchete com asterisco, como [*2x], é uma anotação. Ela aparece em cima da letra, junto dos acordes, mas não é acorde. No meio de uma palavra, ela vai para o fim da palavra.",
                  "Eles ficam escritos como vieram do site (A7+, E7/9, E*), e o app mostra o diagrama certo para cada um.",
                  "Anotações na linha dos acordes ficam na mesma linha no palco: repetições como 2x ou (x4), barras |, rótulos como Intro: e um comentário depois de um traço, como Am G6 - Riff da intro. Um acorde seguido das casas de cada corda (B/F#  224442) aparece como os outros acordes, com as casas ao lado, e o desenho dele no violão e na guitarra usa essas casas. Ao transpor, as casas acompanham o acorde."],
-                ["Chords go in brackets, inside the lyrics: [G]Here I [D]go. If you paste a chart with the chords on the line above, the app converts it for you. The shortcuts above the lyrics insert the song's chords, and Chord inserts a new one. A bracket with an asterisk, like [*2x], is a note. It shows above the lyrics with the chords, but it isn't a chord. Inside a word, it moves to the end of the word.",
+                ["Chords go in brackets, inside the lyrics: [G]Here I [D]go. If you paste a chart with the chords on the line above, the app converts it for you. In the strip above the lyrics, right after the Highlighter, come the chords: the + inserts a new chord and the others insert the song's chords. The parts come after them. A bracket with an asterisk, like [*2x], is a note. It shows above the lyrics with the chords, but it isn't a chord. Inside a word, it moves to the end of the word.",
                  "They stay written the way the site wrote them (A7+, E7/9, E*), and the app shows the right diagram for each.",
                  "Notes on the chords line stay on that line on stage: repeats like 2x or (x4), bars |, labels like Intro: and a comment after a dash, like Am G6 - Intro riff. A chord followed by the fret of each string (B/F#  224442) shows like the other chords, with the frets beside it, and its acoustic and electric guitar diagram uses those frets. When you transpose, the frets move with the chord."],
-                [Fig(("tablet_4_editor_cifra", "celular_4_editor_cifra", "Letra com os acordes", "Lyrics with chords"))]),
+                [Fig(("tablet_4_editor_letra", "celular_4_editor_letra", "Tela Letra e cifra", "Lyrics and chords screen"))]),
             sub("editor-partes", "Partes da música", "Song parts",
-                ["Uma linha só com um nome entre colchetes vira o título de uma parte: [Refrão], [Solo de violino]. Os atalhos no topo põem as partes mais usadas."],
-                ["A line with just a name in brackets becomes a part title: [Chorus], [Violin solo]. The shortcuts at the top add the usual parts."],
-                [Fig(("tablet_4_editor_secoes", "celular_4_editor_secoes", "Atalhos das partes", "Part shortcuts"))]),
+                ["Uma linha só com um nome entre colchetes vira o título de uma parte: [Refrão], [Solo de violino]. Os atalhos da faixa de ferramentas (a última parte da faixa, numa linha só que rola de lado) põem as partes mais usadas, e o ícone de apresentação, Ver como fica no palco, mostra o resultado antes de salvar (o lápis volta ao texto)."],
+                ["A line with just a name in brackets becomes a part title: [Chorus], [Violin solo]. The shortcuts in the tool strip (its last part, one line that scrolls sideways) add the usual parts, and the presentation icon, See it on stage, shows the result before you save (the pencil goes back to the text)."],
+                []),
             sub("editor-salvar", "Salvar e excluir", "Saving and deleting",
-                ["A música precisa de um nome, e não dá para ter duas com o mesmo nome e artista. Saindo com algo sem salvar, o app pergunta antes. A lixeira, numa música já salva, exclui a música, que também sai dos setlists."],
-                ["A song needs a name, and you can't have two with the same name and artist. If you leave with something unsaved, the app asks first. The trash can, on a saved song, deletes it, and it also leaves the setlists."]),
+                ["A música precisa de um nome, e não dá para ter duas com o mesmo nome e artista. Saindo com algo sem salvar, o app pergunta antes. A lixeira, no topo das duas telas e só numa música já salva, exclui a música, que também sai dos setlists."],
+                ["A song needs a name, and you can't have two with the same name and artist. If you leave with something unsaved, the app asks first. The trash can, at the top of both screens and only on a saved song, deletes it, and it also leaves the setlists."]),
             sub("editor-marca", "Marca-texto", "Highlighter",
                 ["Para destacar uma frase, selecione-a na letra e toque em Marca-texto. Ela fica pintada no editor e no palco. A cor fica em [Visual do palco](#ajustes-letra)."],
                 ["To highlight a phrase, select it in the lyrics and tap Highlighter. It shows painted in the editor and on stage. The color is in [Stage look](#ajustes-letra)."]),
             sub("editor-midi", "MIDI da música", "Song MIDI",
-                ["A música pode mandar mensagens MIDI quando aparece no palco e quando você sai dela, para trocar o preset da pedaleira, a cena da mesa ou o timbre do teclado. Toque no ícone do teclado no alto do editor. Ele fica aceso quando a música manda alguma coisa.",
+                ["A música pode mandar mensagens MIDI quando aparece no palco e quando você sai dela, para trocar o preset da pedaleira, a cena da mesa ou o timbre do teclado. Toque em MIDI da música na tela Dados. O campo mostra Envia mensagens quando a música manda alguma coisa.",
                  "Em Ao entrar e Ao sair, adicione as mensagens: Program change (PC), Control change (CC), Nota (Note On/Off) ou Banco e programa (CC0/CC32 + PC), cada uma com o canal. Os números ficam dentro do padrão MIDI: programa de 1 a 128, controle, valor e nota de 0 a 127, banco de 0 a 16383. O MIDI é salvo com a música e vai no backup, mas não vai para a banda, porque cada músico tem o seu equipamento.",
                  "Para onde vai fica em [Saída MIDI](#ajustes-midi-saida). No modo essencial o MIDI não é enviado."],
-                ["A song can send MIDI messages when it shows on stage and when you leave it, to change your pedalboard's preset, the mixer's scene or the keyboard's sound. Tap the keyboard icon at the top of the editor. It's lit when the song sends something.",
+                ["A song can send MIDI messages when it shows on stage and when you leave it, to change your pedalboard's preset, the mixer's scene or the keyboard's sound. Tap Song MIDI on the Data screen. The field says Sends messages when the song sends something.",
                  "Under On entering and On leaving, add the messages: Program change (PC), Control change (CC), Note (Note On/Off) or Bank and program (CC0/CC32 + PC), each with its channel. The numbers stay inside the MIDI standard: program 1 to 128, controller, value and note 0 to 127, bank 0 to 16383. The MIDI is saved with the song and goes in the backup, but not to the band, since each musician has their own gear.",
                  "Where it goes is in [MIDI out](#ajustes-midi-saida). In essential mode no MIDI is sent."],
                 [Fig(("tablet_4_editor_midi", "celular_4_editor_midi", "MIDI da música", "Song MIDI"))]),
@@ -174,27 +176,28 @@ SECTIONS = [
     {
         "id": "setlists", "pt": "Setlists", "en": "Setlists",
         "text_pt": [
-            "Tocar num setlist abre o palco, onde o show parou hoje (ou na primeira música). O lápis do cartão edita o setlist. Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora. Acima da lista dá para buscar pelo nome e, em Ordem, ver os recentes primeiro ou de A a Z. Com uma busca, o total no topo mostra também quantos sobraram, e o × ao lado limpa.",
+            "Tocar num setlist abre o palco, onde o show parou hoje (ou na primeira música). O ⋮ do cartão tem Editar setlist, Compartilhar, Renomear e Apagar o setlist. Para criar um setlist, toque em Novo setlist. Sem nome, ele fica com a data e a hora. Acima da lista dá para buscar pelo nome e, em Ordem, ver os recentes primeiro ou de A a Z. Com uma busca, o total no topo mostra também quantos sobraram, e o × ao lado limpa.",
         ],
         "text_en": [
-            "Tapping a setlist opens the stage, where the show stopped today (or on the first song). The pencil on the card edits the setlist. To create a setlist, tap New setlist. With no name it takes the date and time. Above the list you can search by name and, in Order, show the newest first or A to Z. With a search on, the total at the top also shows how many are left, and the × next to it clears it.",
+            "Tapping a setlist opens the stage, where the show stopped today (or on the first song). The ⋮ on the card has Edit setlist, Share, Rename and Delete setlist. To create a setlist, tap New setlist. With no name it takes the date and time. Above the list you can search by name and, in Order, show the newest first or A to Z. With a search on, the total at the top also shows how many are left, and the × next to it clears it.",
         ],
         "figs": [Fig(("tablet_2_setlists", "celular_2_setlists", "Os setlists", "The setlists"))],
         "subs": [
             sub("setlists-dentro", "Abrir e editar o setlist", "Opening and editing a setlist",
                 ["- Tocar no cartão abre o palco direto: na música em que o show parou hoje, ou na primeira. Se você tinha deixado um intervalo aberto, ele volta com o tempo.",
-                 "- O lápis no cartão abre Editar setlist. Um setlist vazio também abre ali, porque não há o que tocar.",
+                 "- O ⋮ do cartão tem Editar setlist, Compartilhar, Renomear e Apagar o setlist (que pergunta antes). Compartilhar abre a mesma folha do ⋮ do palco. Um setlist vazio abre a edição ao tocar, porque não há o que tocar.",
                  "- Na edição, cada música mostra o artista, o tom e, embaixo do tom, o BPM, o capo e uma marca de onda de áudio quando tem backing track.",
                  "- Segure uma música para selecionar várias e tirar de uma vez.",
                  "- Músicas, Intervalo e Compartilhar ficam no alto, e o ⋮ tem Renomear e Apagar o setlist. As músicas continuam na biblioteca.",
                  "- Com o palco aberto, o ⋮ do [setlist no palco](#palco-setlist) tem Conduzir a banda, Compartilhar, Editar setlist e Limpar tocadas. Editar abre esta tela por cima do palco, e voltar leva de volta a ele."],
                 ["- Tapping the card opens the stage right away: on the song where the show stopped today, or on the first. If you had left a break open, it comes back with its time.",
-                 "- The pencil on the card opens Edit setlist. An empty setlist opens there too, since there is nothing to play.",
+                 "- The ⋮ on the card has Edit setlist, Share, Rename and Delete setlist (which asks first). Share opens the same sheet as the stage's ⋮. An empty setlist opens the edit when tapped, since there is nothing to play.",
                  "- In the edit, each song shows its artist, its key and, under the key, the BPM, the capo and an audio wave mark when it has a backing track.",
                  "- Hold a song to select several and take them out at once.",
                  "- Songs, Break and Share are at the top, and the ⋮ has Rename and Delete setlist. The songs stay in the library.",
                  "- With the stage open, the ⋮ of the [setlist on stage](#palco-setlist) has Lead the band, Share, Edit setlist and Clear played. Edit opens this screen over the stage, and back returns to it."],
-                [Fig(("tablet_3_setlist", "celular_3_setlist", "Editar setlist, com o tom, o BPM, o capo e a faixa em cada linha", "Edit setlist, with the key, BPM, capo and track on each row"))]),
+                [Fig(("jornada_setlist_1b_menu_cartao_tablet", "jornada_setlist_1b_menu_cartao", "O ⋮ do cartão", "The card's ⋮")),
+                 Fig(("tablet_3_setlist", "celular_3_setlist", "Editar setlist, com o tom, o BPM, o capo e a faixa em cada linha", "Edit setlist, with the key, BPM, capo and track on each row"))]),
             sub("setlists-show", "Onde o show está", "Where the show is",
                 ["No setlist aberto no palco, a faixa na ponta de cada música diz onde o show está.",
                  "- **Tocada:** a música ficou mais de um minuto no palco. Passar por ela rápido não conta.",
@@ -207,11 +210,11 @@ SECTIONS = [
                  "- **Next:** the one after it, even with a break in between.",
                  "The marks last for the day: opening the stage on another day starts from zero. To clear them right away, use Clear played in the ⋮ of the setlist on stage. They stay on this device only and don't go along when you share the setlist."]),
             sub("setlists-editar", "Editar o setlist", "Editing a setlist",
-                ["Toque no lápis do cartão. Cada linha tem uma alça à esquerda e um círculo com traço à direita.",
+                ["Toque no ⋮ do cartão e em Editar setlist. Cada linha tem uma alça à esquerda e um círculo com traço à direita.",
                  "- Arraste pela alça para mudar a ordem.",
                  "- O círculo com traço tira a música do setlist na hora. Tirou sem querer? Toque em Desfazer no aviso que aparece embaixo. A música continua na biblioteca.",
                  "- Pronto, o × ou o voltar do aparelho saem da edição."],
-                ["Tap the pencil on the card. Every row has a handle on the left and a circle with a dash on the right.",
+                ["Tap the ⋮ on the card and Edit setlist. Every row has a handle on the left and a circle with a dash on the right.",
                  "- Drag by the handle to change the order.",
                  "- The circle with a dash takes the song out of the setlist right away. Didn't mean to? Tap Undo on the notice at the bottom. The song stays in the library.",
                  "- Done, the × or the device's back button leave the edit."]),
@@ -219,16 +222,16 @@ SECTIONS = [
                 ["Show em mais de um bloco? Toque em Intervalo. Ele entra antes da última música. Para pôr no lugar certo, arraste na edição do setlist, como uma música. Ali o círculo com traço tira o intervalo. Um setlist pode ter vários, sempre entre duas músicas. Com menos de 2 músicas o botão fica apagado, e tocar nele diz: Precisa de pelo menos 2 músicas.",
                  "Com intervalo, cada bloco mostra o número dele e quantas músicas tem, e a numeração das músicas continua de um bloco para o outro. No palco, o intervalo aparece na hora dele: veja [Intervalo no palco](#palco-intervalo).",
                  "Os intervalos vão junto quando você manda o setlist pela banda ou pelas 3 palavras: quem recebe fica com eles entre as mesmas músicas. Se faltar uma música lá, o intervalo fica antes da próxima que a pessoa tem. Pelo QR vão só as músicas.",
-                 "Quem está com uma versão mais antiga do app recebe o setlist sem os intervalos. Um setlist recebido pelo editor no computador também vem com os intervalos, e ali dá para ver e mudar os intervalos: veja [Setlists no computador](#web-setlists)."],
+                 "Quem está com uma versão mais antiga do app não recebe o setlist com intervalos: o app avisa que veio de um Stagebook mais novo e pede para atualizar. Um setlist recebido pelo editor no computador também vem com os intervalos, e ali dá para ver e mudar os intervalos: veja [Setlists no computador](#web-setlists)."],
                 ["A show in more than one set? Tap Break. It goes in before the last song. To put it in place, drag it in the setlist's edit, like a song. There the circle with a dash removes the break. A setlist can have several, always between two songs. With fewer than 2 songs the button is dimmed, and touching it says: Needs at least 2 songs.",
                  "With a break, each set shows its number and how many songs it has, and the song numbers keep counting from one set to the next. On stage the break shows up at its time: see [Break on stage](#palco-intervalo).",
                  "Breaks go along when you send the setlist through the band or by the 3 words: the other person gets them between the same songs. If a song is missing there, the break stays before the next one they have. By QR only the songs go.",
-                 "Someone on an older version of the app gets the setlist without the breaks. A setlist received in the editor on the computer comes with its breaks too, and there you can see and change them: see [Setlists on the computer](#web-setlists)."],
+                 "Someone on an older version of the app doesn't get a setlist with breaks: the app says it came from a newer Stagebook and asks to update. A setlist received in the editor on the computer comes with its breaks too, and there you can see and change them: see [Setlists on the computer](#web-setlists)."],
                 [Fig(("tablet_3_setlist_intervalo", "celular_3_setlist_intervalo", "Um intervalo entre dois blocos, na edição do setlist", "A break between two sets, in the setlist edit"))]),
             sub("setlists-musicas", "Adicionar músicas", "Adding songs",
-                ["Dentro do setlist, toque em Músicas e marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar. Cada música mostra o artista, o tom, o BPM, o capo e a marca de backing track, como na lista de músicas. Pela aba Músicas também dá: selecione várias e use Adicionar ao setlist.",
+                ["Dentro do setlist, toque em Músicas e marque as músicas na ordem em que vão ser tocadas. A busca e as tags ajudam a achar. Cada música mostra o artista, o tom, o BPM, o capo e a marca de backing track, como na lista de músicas. Quem já está no setlist aparece esmaecido, com o selo No setlist ao lado do título. Pela aba Músicas também dá: selecione várias e use Adicionar ao setlist.",
                  "Um setlist precisa caber num QR, então tem limite de tamanho. Quando encher, o app avisa: crie outro."],
-                ["Inside the setlist, tap Songs and check the songs in the order they'll be played. Search and tags help you find them. Each song shows its artist, key, BPM, capo and backing track mark, as in the song list. You can also do it from the Songs tab: select several and use Add to setlist.",
+                ["Inside the setlist, tap Songs and check the songs in the order they'll be played. Search and tags help you find them. Each song shows its artist, key, BPM, capo and backing track mark, as in the song list. A song already in the setlist is faded, with an In setlist tag beside its title. You can also do it from the Songs tab: select several and use Add to setlist.",
                  "A setlist has to fit in a QR, so its size has a limit. When it's full the app tells you: create another."],
                 [Fig(("tablet_9_escolher_musicas", "celular_9_escolher_musicas", "Escolhendo as músicas", "Picking the songs"))]),
         ],
@@ -237,9 +240,11 @@ SECTIONS = [
         "id": "compartilhar", "pt": "Compartilhar e QR", "en": "Sharing and QR",
         "text_pt": [
             "Num setlist, ou com várias músicas selecionadas, Compartilhar oferece os caminhos abaixo. Quem recebe sempre confere antes de entrar.",
+            "Com alguém na banda, o primeiro caminho é Mandar para a banda: quem está no mesmo Wi-Fi recebe na hora, e os outros pela internet em até 12 horas. Veja [Mandar e receber](#banda-mandar).",
         ],
         "text_en": [
             "In a setlist, or with several songs selected, Share offers the ways below. Whoever receives always checks before anything comes in.",
+            "With someone in the band, the first way is Send to the band: whoever is on the same Wi-Fi gets it right away, and the others online within 12 hours. See [Sending and receiving](#banda-mandar).",
         ],
         "figs": [Fig(("jornada_compartilhar_1_folha_tablet", "jornada_compartilhar_1_folha", "Compartilhar", "Share"))],
         "subs": [
@@ -256,11 +261,11 @@ SECTIONS = [
                 [Fig(("jornada_compartilhar_2_codigo_tablet", "jornada_compartilhar_2_codigo", "As 3 palavras", "The 3 words")),
                  Fig(("jornada_compartilhar_3_receber_tablet", "jornada_compartilhar_3_receber", "Recebendo pelas 3 palavras", "Receiving with the 3 words"))]),
             sub("compartilhar-conferir", "Conferir o que chegou", "Checking what arrived",
-                ["Por QR, 3 palavras ou pela banda, a tela de conferir é a mesma. Ela mostra o que é novo, o que você já tem e o que falta. Antes de criar, o app avisa o que vai ficar de fora.",
+                ["Por QR, 3 palavras ou pela banda, a tela de conferir é a mesma. Cada música aparece como no setlist, com número, título, artista e, se você já tem a música, tom, BPM, capo e backing track. Embaixo, no mesmo cartão, o app diz o que acontece com ela e traz os controles. Se há músicas parecidas na sua biblioteca, Escolher abre a lista delas, com os mesmos dados. Antes de criar, o app avisa o que vai ficar de fora.",
                  "Se o setlist veio com [intervalos](#setlists-intervalo), a linha das músicas diz quantos ele vai ter com as músicas que entram. Pelo QR os intervalos não vêm.",
                  "Se você tem outra versão de uma música, Ver o que muda mostra a diferença, e você escolhe entre Usar a recebida e Fica a minha. Se veio só a letra, dá para aceitar ou usar Buscar com cifra.",
                  "Se já existe um setlist com o mesmo nome, você escolhe entre Substituir e Criar outro."],
-                ["By QR, 3 words or from the band, the review screen is the same. It shows what's new, what you already have and what's missing. Before creating, the app tells you what will be left out.",
+                ["By QR, 3 words or from the band, the review screen is the same. Each song looks as it does in the setlist, with number, title, artist and, if you already have it, key, BPM, capo and backing track. Below, in the same card, the app says what happens to it and has the controls. If your library has similar songs, Choose opens the list of them, with the same facts. Before creating, the app tells you what will be left out.",
                  "If the setlist came with [breaks](#setlists-intervalo), the line with the songs says how many it will have with the songs going in. Breaks don't come by QR.",
                  "If you have another version of a song, See what changes shows the difference, and you pick Use theirs or Keep mine. If only the lyrics came, you can accept them or use Find with chords.",
                  "If a setlist with the same name already exists, you pick Replace or Create another."],
@@ -302,13 +307,13 @@ SECTIONS = [
                 [Fig(("tablet_6_palco_rolar", "celular_7_palco_rolar", "No modo Rolar", "In Scroll mode"))]),
             sub("palco-setlist", "O setlist no palco", "The setlist on stage",
                 ["Abriu o palco por um setlist? Ele fica a um toque, sem sair do palco. No meio da borda esquerda há uma alça pequena, com três traços. Toque nela ou arraste para a direita: o setlist abre por cima da letra, que não sai do lugar.",
-                 "- **O que aparece:** o nome do setlist, a posição, como 3 de 5, e as músicas na ordem, com o artista, o tom e as marcas de [onde o show está](#setlists-show). Os intervalos aparecem entre elas, e o que está aberto diz o tempo (INTERVALO · 12:30), correndo ou parado com o ícone de pausa.",
+                 "- **O que aparece:** o nome do setlist, a posição, como 3 de 5, e as músicas na ordem, com o artista, o tom, o BPM, o capo e a onda de áudio do backing track, e as marcas de [onde o show está](#setlists-show). Um título comprido termina em reticências, para o artista e os dados caberem. Os intervalos aparecem entre elas, e o que está aberto diz o tempo (INTERVALO · 12:30), correndo ou parado com o ícone de pausa.",
                  "- **Trocar de música:** toque na música. O palco abre no começo dela, sem passar por intervalo.",
                  "- **O ⋮:** no alto do painel, com Conduzir a banda (só com alguém da banda adicionado), Compartilhar, Editar setlist e Limpar tocadas (só com alguma música tocada). Editar e Compartilhar abrem a tela do setlist por cima do palco, e voltar traz o palco de volta, no mesmo lugar.",
                  "- **Fechar sem trocar:** toque fora, arraste de volta para a esquerda ou use o voltar do aparelho.",
                  "Um botão do pedal também abre e fecha o setlist: veja [Botões](#ajustes-pedal-botoes). Uma música aberta pela aba Músicas não tem a alça."],
                 ["Opened the stage from a setlist? It's one tap away, without leaving the stage. At the middle of the left edge there's a small handle with three lines. Tap it or drag it to the right: the setlist opens over the lyrics, which stay in place.",
-                 "- **What you see:** the setlist's name, the position, like 3 of 5, and the songs in order, with the artist, the key and the marks of [where the show is](#setlists-show). Breaks show between them, and one that is open says its time (BREAK · 12:30), running or stopped with the pause icon.",
+                 "- **What you see:** the setlist's name, the position, like 3 of 5, and the songs in order, with the artist, the key, the BPM, the capo and the backing track's audio wave, and the marks of [where the show is](#setlists-show). A long title ends in an ellipsis, so the artist and the facts fit. Breaks show between them, and one that is open says its time (BREAK · 12:30), running or stopped with the pause icon.",
                  "- **Changing song:** tap the song. The stage opens at its start, without going through a break.",
                  "- **The ⋮:** at the top of the panel, with Lead the band (only with someone added to the band), Share, Edit setlist and Clear played (only with a song played). Edit and Share open the setlist's screen over the stage, and back brings the stage back, in the same place.",
                  "- **Closing without changing:** tap outside, drag it back to the left or use the device's back.",
@@ -362,8 +367,8 @@ SECTIONS = [
                  Fig(("tablet_6_acorde_capo", "celular_6_acorde_capo", "O capo no diagrama", "The capo on the diagram")),
                  Fig(("tablet_6_palco_teclado_capo", "celular_7_palco_teclado_capo", "Teclado numa cifra com capo", "Keyboard on a chart with a capo"))]),
             sub("palco-detalhes", "Detalhes do acorde", "Chord details",
-                ["Detalhes mostra o grau do acorde no tom da música, o campo harmônico dele e onde mais ele aparece. Com capotraste, o campo harmônico mostra o que soa, não o desenho da cifra."],
-                ["Details shows the chord's degree in the song's key, its harmonic field and where else it appears. With a capo, the harmonic field shows what sounds, not the chart's shape."],
+                ["Detalhes abre uma segunda tela na mesma janela, para não tirar a atenção do diagrama: mostra o grau do acorde no tom da música, o campo harmônico dele e onde mais ele aparece. A seta no topo volta ao desenho. Com capotraste, a tela diz qual é o desenho e como o acorde soa, e o campo harmônico mostra o que soa, não o desenho da cifra."],
+                ["Details opens a second screen in the same window, so the diagram keeps your attention: it shows the chord's degree in the song's key, its harmonic field and where else it appears. The arrow at the top goes back to the diagram. With a capo, the screen says which shape it is and how the chord sounds, and the harmonic field shows what sounds, not the chart's shape."],
                 [Fig(("tablet_6_acorde_detalhes", "celular_6_acorde_detalhes", "Detalhes do acorde", "Chord details"))]),
             sub("palco-lista", "Lista de acordes", "Chord list",
                 ["Os diagramas de todos os acordes da música podem ficar no início ou no fim do palco, crescendo para ocupar a largura da tela. Uma lista longa segue para a próxima coluna ou página, sempre no mesmo tamanho. Ligue em [Diagramas dos acordes](#ajustes-diagramas).",
@@ -393,19 +398,19 @@ SECTIONS = [
     {
         "id": "backing", "pt": "Backing track", "en": "Backing track",
         "text_pt": [
-            "Cada música pode ter um backing track, em OGG com vários canais, MP3 ou WAV. Escolha nos Dados da música. No palco, o play só aparece nas músicas que têm um. Se o áudio de uma música não veio com ela, um alerta aparece no lugar do play. Toque nele para ver o nome do áudio e anexar de novo.",
+            "Cada música pode ter um backing track, em OGG com vários canais, MP3 ou WAV. Escolha nos Dados da música, no campo com a onda de áudio, a mesma marca que aparece nas listas. No palco, o play só aparece nas músicas que têm um. Se o áudio de uma música não veio com ela, um alerta aparece no lugar do play. Toque nele para ver o nome do áudio e anexar de novo.",
         ],
         "text_en": [
-            "Each song can have a backing track, as multichannel OGG, MP3 or WAV. Pick it in Song details. On stage, play only shows on songs that have one. If a song's audio didn't come with it, an alert shows where play would be. Tap it to see the audio's name and attach it again.",
+            "Each song can have a backing track, as multichannel OGG, MP3 or WAV. Pick it in Song details, in the field with the audio wave, the same mark the lists show. On stage, play only shows on songs that have one. If a song's audio didn't come with it, an alert shows where play would be. Tap it to see the audio's name and attach it again.",
         ],
         "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
                  Fig(("tablet_11_player_usb_fora", "celular_11_player_usb_fora", "A interface saiu no meio da música", "The interface came out mid-song"))],
         "subs": [
             sub("backing-tocar", "Tocar e trocar", "Playing and changing",
-                ["Quando a música acaba, ele para e volta ao começo. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
+                ["Quando a música acaba, ele para e volta ao começo. Sem faixa, o botão do play vira a onda de áudio e toca para anexar uma. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
                  "Trocar de música com a faixa tocando não para a faixa: ela continua até você tocar em parar ou ela acabar, e o botão de parar fica em qualquer música enquanto isso. Depois o play já toca a música que está na tela.",
                  "Para a faixa não parar com a tela apagada, o Android precisa liberar o Stagebook da economia de bateria. O app pede isso numa janela, uma vez em cada aparelho: toque em Continuar e depois em Permitir."],
-                ["When the song ends it stops and goes back to the start. Hold play to change or remove the track and to open the song's mixer.",
+                ["When the song ends it stops and goes back to the start. Without a track the play button turns into the audio wave: tap it to attach one. Hold play to change or remove the track and to open the song's mixer.",
                  "Changing songs while a track plays doesn't stop it: it goes on until you tap stop or it ends, and the stop button stays on any song meanwhile. Then play plays the song on screen.",
                  "For the track not to stop with the screen off, Android has to free Stagebook from battery saving. The app asks in a window, once on each device: tap Continue and then Allow."],
                 [Fig(("jornada_faixa_4_menu_tablet", "jornada_faixa_4_menu", "Trocar ou tirar a faixa", "Change or remove the track"))]),
@@ -507,15 +512,15 @@ SECTIONS = [
             sub("banda-mandar", "Mandar e receber", "Sending and receiving",
                 ["Mandar um setlist para a banda é um toque, em Compartilhar. Quem está no mesmo Wi-Fi recebe na hora; quem não está, recebe pela internet quando abrir o app, em até 12 horas.",
                  "Quando chega algo, aparece um aviso rápido embaixo e um número no ícone da banda, ao lado do título da aba, até você conferir. Tudo fica em Recebidos da banda: Conferir abre, e a lixeira descarta. Se mais de uma pessoa mandou o mesmo setlist, abra cada versão e escolha uma.",
-                 "Todos os aparelhos da banda precisam estar na mesma versão do app para conversar. Se algum estiver diferente, o app avisa, na lista de aparelhos perto e ao pedir para entrar: atualize o app em todos."],
+                 "Todos os aparelhos da banda precisam estar na mesma versão do app para conversar. Se algum estiver diferente, o app avisa, na lista de aparelhos perto e ao pedir para entrar: atualize o app em todos. Pela internet, se o aparelho de quem recebe for mais antigo e o setlist tiver intervalos, ou se alguém pedir as músicas que faltam, o app avisa em Recebidos da banda que é preciso atualizar o app, em vez de abrir sem os intervalos ou ignorar o pedido."],
                 ["Sending a setlist to the band takes one tap, in Share. Whoever is on the same Wi-Fi gets it right away; the others get it over the internet when they open the app, within 12 hours.",
                  "When something arrives you get a short notice at the bottom and a number on the band icon next to the tab's title until you check it. It all stays in Received from the band: Check opens it, and the trash can discards it. If more than one person sent the same setlist, open each version and pick one.",
-                 "Every band device needs the same app version to talk. If one is different, the app warns you, in the nearby devices list and when asking to join: update the app on all of them."],
+                 "Every band device needs the same app version to talk. If one is different, the app warns you, in the nearby devices list and when asking to join: update the app on all of them. Over the internet, if the receiving device is older and the setlist has breaks, or someone asks for the missing songs, the app says in Received from the band that it needs updating, instead of opening it without the breaks or ignoring the request."],
                 [Fig(("jornada_banda_3_compartilhar_tablet", "jornada_banda_3_compartilhar", "Mandar para a banda", "Send to the band")),
                  Fig(("jornada_banda_4_aviso_tablet", "jornada_banda_4_aviso", "O que a banda mandou, no topo", "What the band sent, at the top")),
                  Fig(("tablet_2_recebidos_versoes", "celular_2_recebidos_versoes", "Versões do mesmo setlist", "Versions of the same setlist"))]),
             sub("banda-conduzir", "Conduzir a banda", "Leading the band",
-                ["Conduzir a banda fica no ⋮ do [setlist no palco](#palco-setlist): toque num setlist para abrir o palco, abra o painel pela alça e use o ⋮. Só aparece com alguém da banda adicionado. Ele leva a banda a partir da música que está no palco, e os aparelhos da banda com o app aberto no mesmo Wi-Fi entram sozinhos em Acompanhando, na mesma música, e seguem cada troca.",
+                ["Conduzir a banda sempre leva um setlist. Na aba Setlists, o ícone de grupo no alto arma a condução: ele acende, a faixa embaixo diz Pronto para conduzir e Cancelar, e o próximo setlist em que você tocar abre o palco e começa a conduzir, da música em que o show parou. Tocar no ícone de novo, ou em Cancelar, desarma. Fica armado até você abrir um setlist ou cancelar, também se girar a tela ou trocar de aba. O mesmo está no ⋮ do [setlist no palco](#palco-setlist), para o setlist que já está aberto. O ícone e o item só aparecem com alguém da banda adicionado e a banda ligada. Ele leva a banda a partir da música que está no palco, e os aparelhos da banda com o app aberto no mesmo Wi-Fi entram sozinhos em Acompanhando, na mesma música, e seguem cada troca.",
                  "- Quem acompanha não precisa ter o setlist, só as músicas. Se faltar uma, a faixa embaixo fica vermelha e ganha o botão Pedir. Ele pede a música à banda neste Wi-Fi. Se ninguém tiver, um aviso diz.",
                  "- No fim de cada música aparece a próxima do setlist de quem conduz.",
                  "- No [intervalo](#palco-intervalo) de quem conduz, quem acompanha vê a mesma tela, com o mesmo tempo e a música que vem a seguir, mesmo sem ter a música de antes. Ela sai quando quem conduz segue ou volta: até lá, o pedal e o toque não viram a página. Quem está com uma versão mais antiga do app fica na música de antes do intervalo.",
@@ -524,12 +529,12 @@ SECTIONS = [
                  "- Sair, na faixa embaixo, para de acompanhar: nada mais abre sozinho. Enquanto a mesma pessoa conduz, a faixa mostra quem está conduzindo e o botão Acompanhar. Ele abre a música ou o intervalo em que a banda está. Procurar a banda, de quem conduz (no celular, a lupa), também traz de volta quem saiu.",
                  "- Quem está no meio de algo não é tirado da tela: editando, escolhendo músicas, recebendo, importando, em Ajustes, com um menu ou uma janela aberta, ou com o teclado aberto. A faixa embaixo diz para onde a banda foi (“Voz foi para “Evidências””) e que a música abre quando você fechar o menu. Ir abre na hora. Ao terminar, ou ao sair de Ajustes para outra aba, o palco abre sozinho na música em que a banda está agora, sem acumular as que passaram, e Voltar leva à tela em que você estava. O intervalo também: a faixa avisa, e a tela dele abre na volta se ele ainda não acabou. No palco vale o mesmo: com a janela do metrônomo, do acorde ou da mesa aberta, a música da banda espera e abre quando você fecha. O intervalo também espera atrás da janela: a faixa diz “Voz foi para o intervalo”, e ele aparece quando você fecha, se a banda ainda estiver nele. Ir mostra na hora. No editor de uma música, Ir sai do editor: se há algo não salvo, pergunta antes “Sair sem salvar?”, e só depois abre a música da banda. Em Editar setlist é igual: a tela segura quem acompanha enquanto está aberta (o que você muda ali já fica salvo na hora), e Ir só pergunta se há um arraste ou um renomear em andamento.",
                  "- Na faixa de quem conduz, “N da banda não respondeu” conta quem está neste Wi-Fi agora e não respondeu: some quando a pessoa responde ou sai, e muda se alguém chega.",
-                 "- Quem conduz vê em Ver o que falta quem não tem cada música. Ali dá para enviar as que faltam a um aparelho, ou a todos de uma vez. Só recebe quem está acompanhando neste Wi-Fi. Quando a música chega, o aparelho sai da lista, também quando ele a pediu (Pedir) a quem conduz: a lista se atualiza em alguns segundos, sem tocar em Enviar.",
-                 "- Quem acompanha vê em Ver o que falta aqui as músicas do setlist que não estão neste aparelho, antes de a banda chegar nelas. Só aparece quando falta alguma, e a música que chega sai da lista na hora; quando a lista esvazia, a janela fecha.",
+                 "- Quem conduz vê em Ver o que falta quem não tem cada música, com as músicas em linhas como no setlist (título e artista). Ali dá para enviar as que faltam a um aparelho, ou a todos de uma vez. Só recebe quem está acompanhando neste Wi-Fi. Quando a música chega, o aparelho sai da lista, também quando ele a pediu (Pedir) a quem conduz: a lista se atualiza em alguns segundos, sem tocar em Enviar.",
+                 "- Quem acompanha vê em Ver o que falta aqui as músicas do setlist que não estão neste aparelho, antes de a banda chegar nelas, em linhas com título e artista. Só aparece quando falta alguma, e a música que chega sai da lista na hora; quando a lista esvazia, a janela fecha.",
                  "- A música que você pediu, ou que quem conduz enviou do setlist, entra direto na biblioteca durante o show. Se é a música da vez, o palco abre nela. Uma música que você já tem nunca é trocada: a que chegou espera em Recebidos da banda, como todo o resto que a banda mandar.",
                  "- Quando há mais de uma cópia, vem a que tem cifra. Se a música chegar sem cifra e seu perfil mostra cifras, a faixa avisa, com um aviso curto embaixo que espera a tela se ela estiver girando, e o botão Pedir procura uma cópia com cifra. Ela entra no lugar da que tinha acabado de chegar. Se você já mexeu nessa música, a cópia com cifra espera em Recebidos da banda, para você conferir.",
                  "- Sair do palco não encerra. Para isso, toque em Encerrar."],
-                ["Lead the band is in the ⋮ of the [setlist on stage](#palco-setlist): tap a setlist to open the stage, open the panel by its handle and use the ⋮. It only shows with someone added to the band. It leads the band from the song on stage, and band devices with the app open on the same Wi-Fi switch to Following by themselves, on the same song, and follow every change.",
+                ["Leading the band always belongs to a setlist. On the Setlists tab, the group icon at the top arms it: it lights up, the bar at the bottom says Ready to lead with Cancel, and the next setlist you tap opens the stage and starts leading, from the song where the show stopped. Tapping the icon again, or Cancel, disarms it. It stays armed until you open a setlist or cancel, also if you turn the screen or change tabs. The same is in the ⋮ of the [setlist on stage](#palco-setlist), for the setlist already open. The icon and the item only show with someone added to the band and the band on. It leads the band from the song on stage, and band devices with the app open on the same Wi-Fi switch to Following by themselves, on the same song, and follow every change.",
                  "- Followers don't need the setlist, only the songs. If one is missing, the bar at the bottom turns red and gets the Ask button. It asks the band on this Wi-Fi for the song. If nobody has it, a notice says so.",
                  "- At the end of each song they see the leader's next one.",
                  "- On the leader's [break](#palco-intervalo), followers see the same screen, with the same time and the song that comes next, even without the song before it. It goes away when the leader moves on or back: until then, the pedal and a tap turn no page. Someone on an older version of the app stays on the song before the break.",
@@ -538,12 +543,13 @@ SECTIONS = [
                  "- Leave, on the bar at the bottom, stops following: nothing else opens by itself. While the same person leads, the bar shows who is leading and the Follow button. It opens the song or the break the band is on. The leader's Look for the band (the magnifying glass on a phone) also brings back whoever left.",
                  "- Someone in the middle of something isn't pulled off the screen: editing, picking songs, receiving, importing, in Settings, with a menu or a window open, or with the keyboard open. The bar at the bottom says where the band went (“Voz went to “Evidências””) and that the song opens when you close the menu. Go opens it at once. When you finish, or leave Settings for another tab, the stage opens by itself on the song the band is on now, without piling up the ones that passed, and Back returns to the screen you were on. The break too: the bar tells them, and its screen opens when they come back if it isn't over. On stage it is the same: with the metronome, chord or mixer window open, the band's song waits and opens when you close it. The break waits behind the window too: the bar says “Voz went to the break”, and it shows when you close it, if the band is still on it. Go shows it at once. In a song's editor, Go leaves the editor: if something isn't saved, it asks “Leave without saving?” first, and only then opens the band's song. Edit setlist is the same: the screen holds a follower while it is open (what you change there is already saved), and Go only asks if a drag or a rename is under way.",
                  "- On the leader's bar, “N band members didn't answer” counts who is on this Wi-Fi now and didn't answer: it goes away when the person answers or leaves, and changes if someone arrives.",
-                 "- The leader sees in See what's missing who lacks each song. From there you can send one device the songs it lacks, or all of them at once. Only devices following on this Wi-Fi get them. When the song arrives, the device leaves the list, also when it asked the leader for it (Ask): the list updates in a few seconds, without tapping Send.",
-                 "- A follower sees in See what's missing here the songs of the setlist that aren't on this device, before the band gets to them. It only shows when one is missing, a song that arrives leaves the list at once, and when the list empties the window closes.",
+                 "- The leader sees in See what's missing who lacks each song, with the songs as rows like the setlist's (title and artist). From there you can send one device the songs it lacks, or all of them at once. Only devices following on this Wi-Fi get them. When the song arrives, the device leaves the list, also when it asked the leader for it (Ask): the list updates in a few seconds, without tapping Send.",
+                 "- A follower sees in See what's missing here the songs of the setlist that aren't on this device, before the band gets to them, as rows with the title and the artist. It only shows when one is missing, a song that arrives leaves the list at once, and when the list empties the window closes.",
                  "- A song you asked for, or one of the setlist that the leader sent, goes straight into your library during the show. If it's the current song, the stage opens on it. A song you already have is never replaced: the one that arrived waits in Received from the band, like everything else the band sends.",
                  "- When there is more than one copy, you get the one with chords. If the song comes without chords and your profile shows chords, the bar says so, with a short notice at the bottom that waits for the screen if it is turning, and the Ask button looks for a copy with chords. It takes the place of the one that had just arrived. If you have changed that song meanwhile, the copy with chords waits in Received from the band, for you to check.",
                  "- Leaving the stage doesn't end it. Tap End for that."],
-                [Fig(("banda_conduzir_faixas", "banda_conduzir_faixas_celular", "Conduzindo a banda", "Leading the band")),
+                [Fig(("jornada_setlist_1c_conduzir_armado_tablet", "jornada_setlist_1c_conduzir_armado", "Conduzir armado: escolha um setlist", "Lead armed: pick a setlist")),
+                 Fig(("banda_conduzir_faixas", "banda_conduzir_faixas_celular", "Conduzindo a banda", "Leading the band")),
                  Fig(("banda_conduzir_falta", "banda_conduzir_falta_celular", "O que falta, e enviar", "What's missing, and sending it")),
                  Fig(("tablet_6_palco_acompanhando", "celular_7_palco_acompanhando", "Acompanhando no palco", "Following on stage")),
                  Fig(("tablet_6_palco_intervalo_espera", "celular_7_palco_intervalo_espera", "O intervalo espera a janela fechar", "The break waits for the window to close"))]),
@@ -805,11 +811,11 @@ SECTIONS = [
                 ["- No aparelho, em Ajustes → Editar no computador, toque em Ligar o editor. Aparece um endereço como http://192.168.0.10:8090.",
                  "- Abra esse endereço no navegador do computador, no mesmo Wi-Fi. Rede de convidados costuma bloquear a conversa entre aparelhos.",
                  "- Toque em Pedir para entrar. O aparelho mostra um código de 4 números. Autorize só se for o mesmo da página.",
-                 "- O computador fica guardado em Computadores autorizados, e dali dá para tirá-lo a qualquer hora."],
+                 "- O computador fica guardado em Computadores autorizados, e dali dá para tirá-lo a qualquer hora. O acesso vale só enquanto o navegador está aberto: fechou o navegador, o aparelho pede para autorizar de novo."],
                 ["- On the device, in Settings → Edit on the computer, tap Turn on the editor. An address shows up, like http://192.168.0.10:8090.",
                  "- Open that address in the computer's browser, on the same Wi-Fi. Guest networks usually block devices from talking to each other.",
                  "- Tap Ask to come in. The device shows a 4-digit code. Allow it only if it matches the page.",
-                 "- The computer is kept under Authorized computers, and you can remove it from there at any time."],
+                 "- The computer is kept under Authorized computers, and you can remove it from there at any time. Access lasts only while the browser stays open: close the browser and the device asks to allow it again."],
                 [Fig(("tablet_5_ajustes_editor_web", "celular_5_ajustes_editor_web", "Ligando o editor no aparelho", "Turning on the editor on the device")),
                  Fig(("editor_web_1_pedido", None, "Pedindo para entrar", "Asking to come in"))]),
             sub("web-musicas", "Músicas", "Songs",
@@ -820,7 +826,7 @@ SECTIONS = [
                  "- As listas de músicas do computador (músicas, setlist, as para acrescentar e as recebidas) mostram o tom, o BPM, o capo e a faixa como no aparelho: título, artista e, à direita, \"G · 120 bpm · capo 2\" com a onda de áudio quando a música tem backing track. O ano e as tags ficam no formulário da música.",
                  "- Em MIDI da música ficam as mensagens Ao entrar e Ao sair, como no [editor do app](#editor-midi).",
                  "- Com a música já salva, dá para enviar a backing track em OGG, MP3 ou WAV.",
-                 "- Ctrl+S salva. Saindo com algo sem salvar, a página avisa antes."],
+                 "- Ctrl+S salva. Saindo com algo sem salvar, a página avisa antes. Se não salvar, aparece \"O setlist não foi salvo. Tente de novo.\"; salvar duas vezes seguidas não cria dois, e intervalos que não cabem no setlist recusam o salvamento sem mudar nada."],
                 ["- On the left are the search, the tag filter and the list. Click a song to open it, or New song to start one.",
                  "- You can edit name, artist, year, BPM, tags and the lyrics with chords. Separate tags with commas; the ones you already use show up as suggestions.",
                  "- The − and + buttons change the key and the capo, as in the app. The song only changes for good when you save.",
@@ -828,14 +834,14 @@ SECTIONS = [
                  "- The computer's song lists (songs, the setlist, the ones to add and the received ones) show the key, BPM, capo and backing track like the device does: title, artist and, on the right, \"G · 120 bpm · capo 2\" with the audio wave when the song has a backing track. The year and tags stay in the song's form.",
                  "- Song MIDI holds the messages On entering and On leaving, as in the [app's editor](#editor-midi).",
                  "- Once the song is saved, you can send its backing track as OGG, MP3 or WAV.",
-                 "- Ctrl+S saves. If you leave with something unsaved, the page warns you first."],
+                 "- Ctrl+S saves. If you leave with something unsaved, the page warns you first. If it does not save, you see \"The setlist was not saved. Try again.\"; saving twice in a row does not create two, and breaks that do not fit the setlist refuse the save without changing anything."],
                 [Fig(("editor_web_2_musica", None, "Editando uma música", "Editing a song"))]),
             sub("web-setlists", "Setlists", "Setlists",
                 ["- A busca acha o setlist pelo nome. O combo Ordem mostra os recentes primeiro ou de A a Z, e a escolha vale também para a aba Setlists do aparelho.",
                  "- Dentro do setlist, a busca logo abaixo acrescenta músicas e as setas mudam a posição de cada uma.",
                  "- O [intervalo](#setlists-intervalo) aparece como uma linha tracejada entre duas músicas. As setas sobem e descem o intervalo como uma música, e o × tira. Ele nunca fica no começo nem no fim da lista.",
                  "- O botão + Intervalo põe um intervalo no fim da lista, entre as duas últimas músicas, e você o move. Com menos de 2 músicas ele fica desativado. Embaixo, a linha mostra quantas músicas e quantos intervalos o setlist tem.",
-                 "- Ao mover ou tirar uma música, os intervalos ficam entre as mesmas músicas, como no aparelho."],
+                 "- Ao mover ou tirar uma música, os intervalos ficam entre as mesmas músicas, como no aparelho. Renomear o setlist no computador mantém os intervalos feitos no aparelho."],
                 ["- The search finds a setlist by name. The Order dropdown shows the newest first or A to Z, and the choice also applies to the device's Setlists tab.",
                  "- Inside a setlist, the search below adds songs and the arrows move each one.",
                  "- The [break](#setlists-intervalo) shows as a dashed line between two songs. The arrows move the break up and down like a song, and × removes it. It is never at the start or the end of the list.",
@@ -875,7 +881,7 @@ SECTIONS = [
             "### Primeira conexão",
             "- Peça ao assistente para conectar no Stagebook. Ele procura na rede, ou você passa o endereço que aparece no aparelho.",
             "- O aparelho mostra um pedido com um código. Se bater, toque em Autorizar. Da próxima vez ele entra sem perguntar.",
-            "- A autorização dura 90 dias sem uso, e Computadores autorizados remove a qualquer hora.",
+            "- A autorização não expira sozinha, e Computadores autorizados remove a qualquer hora.",
             "### O que dá para pedir",
             "- **Músicas:** \"acha as músicas em Sol\", \"passa esta meio tom abaixo\", \"coloca capo na 2\", \"confere as cifras desta\".",
             "- **Importar:** \"importa esta cifra\" colando o texto ou o endereço da página.",
@@ -888,7 +894,7 @@ SECTIONS = [
             "### Se não conectar",
             "- **Não acha o aparelho:** confira se o Stagebook está aberto, se o editor está ligado e se os dois estão no mesmo Wi-Fi. O editor desliga sozinho sem uso. Passe o endereço ao assistente.",
             "- **No Mac:** em Ajustes do Sistema → Privacidade e Segurança → Rede Local, ligue o app que roda o assistente e reabra esse app.",
-            "- **A chave não vale mais:** ela foi removida ou passou 90 dias sem uso. Conecte de novo.",
+            "- **A chave não vale mais:** ela foi removida em Computadores autorizados. Conecte de novo.",
             "- **Já tem um pedido na tela:** responda no aparelho. Depois de um Recusar, ele espera 5 minutos para aceitar outro.",
             "- **Uma parte não responde:** receber por código precisa da internet ligada, e as funções de banda precisam da banda ligada, nos Ajustes do aparelho.",
             "### Privacidade",
@@ -907,7 +913,7 @@ SECTIONS = [
             "### First connection",
             "- Ask the assistant to connect to Stagebook. It searches the network, or you give it the address shown on the device.",
             "- The device shows a request with a code. If it matches, tap Allow. Next time it comes in without asking.",
-            "- The authorization lasts 90 days unused, and Authorized computers removes it at any time.",
+            "- The authorization does not expire on its own, and Authorized computers removes it at any time.",
             "### What you can ask",
             "- **Songs:** \"find the songs in G\", \"move this one down a half tone\", \"put a capo on 2\", \"check this one's chords\".",
             "- **Importing:** \"import these chords\", pasting the text or the page address.",
@@ -920,7 +926,7 @@ SECTIONS = [
             "### If it doesn't connect",
             "- **It can't find the device:** check that Stagebook is open, the editor is on and both are on the same Wi-Fi. The editor turns off when unused. Give the assistant the address.",
             "- **On a Mac:** in System Settings → Privacy & Security → Local Network, turn on the app running the assistant and reopen that app.",
-            "- **The key no longer works:** it was removed or went 90 days unused. Connect again.",
+            "- **The key no longer works:** it was removed from Authorized computers. Connect again.",
             "- **A request is already on screen:** answer it on the device. After a Deny, it waits 5 minutes before taking another.",
             "- **One part doesn't answer:** receiving by code needs the internet on, and the band tools need the band on, in the device's Settings.",
             "### Privacy",
@@ -931,13 +937,13 @@ SECTIONS = [
     {
         "id": "atualizar", "pt": "Atualizar", "en": "Updating",
         "text_pt": [
-            "Quando sai uma versão nova, o app avisa ao abrir e mostra o que mudou. Atualizar baixa a versão e instala. Na primeira vez o Android pede uma confirmação. Daí em diante, no Android 12 ou mais novo, o app se atualiza sem pedir de novo e reinicia para terminar. No Android 11 ou mais antigo o Android pede a confirmação a cada versão. Agora não deixa para o dia seguinte. Se só fechar a janela, o aviso volta na próxima vez que abrir o app. Se você pulou versões, aparece o que mudou em cada uma. A mesma lista fica em Ajustes → Sobre → Atualizar o app. É bom que toda a banda use a mesma versão; um aparelho em outra versão aparece marcado em Ajustes → Banda e transmissão.",
+            "Quando sai uma versão nova, o app avisa ao abrir e mostra o que mudou. Atualizar baixa a versão e instala. Na primeira vez o Android pede uma confirmação. Daí em diante, no Android 12 ou mais novo, o app se atualiza sem pedir de novo e reinicia para terminar. No Android 11 ou mais antigo o Android pede a confirmação a cada versão. Agora não deixa para o dia seguinte. Se só fechar a janela, o aviso volta na próxima vez que abrir o app. Se você pulou versões, aparece o que mudou em cada uma. A mesma lista fica em Ajustes → Sobre → Atualizar o app. A banda precisa estar toda na mesma versão para trocar setlists e acompanhar; um aparelho em outra versão aparece marcado em Ajustes → Banda e transmissão.",
             "Enquanto o Android instala, o botão Instalar fica desligado. Ele volta quando o Android responde ou quando você volta para o app. Em aparelhos Samsung, o Bloqueador automático pode impedir a instalação, e ele volta a ligar sozinho depois de um tempo. Quando a versão nova termina de baixar, a janela mostra Abrir o Bloqueador automático: desligue e volte para instalar. O botão aparece também em Ajustes → Sobre → Atualizar o app.",
             "Suas músicas e ajustes ficam no aparelho. O que vai para a banda ou pela internet vai cifrado. Não tem conta, propaganda nem rastreio.",
             "Ao terminar de instalar, o Android fecha o app. Ele volta aberto na tela onde você estava. Onde o Android não deixa o app abrir sozinho, aparece a notificação Stagebook atualizado: toque nela e o app volta de onde parou.",
         ],
         "text_en": [
-            "When a new version is out, the app tells you when it opens and shows what changed. Update downloads the version and installs it. The first time Android asks you to confirm. From then on, on Android 12 or newer, the app updates without asking again and restarts to finish. On Android 11 or older, Android asks to confirm every version. Not now leaves it for the next day. If you just close the window, the notice comes back the next time you open the app. If you skipped versions, you see what changed in each one. The same list is in Settings → About → Update the app. It's best if the whole band uses the same version; a device on another one shows up marked in Settings → Band and broadcast.",
+            "When a new version is out, the app tells you when it opens and shows what changed. Update downloads the version and installs it. The first time Android asks you to confirm. From then on, on Android 12 or newer, the app updates without asking again and restarts to finish. On Android 11 or older, Android asks to confirm every version. Not now leaves it for the next day. If you just close the window, the notice comes back the next time you open the app. If you skipped versions, you see what changed in each one. The same list is in Settings → About → Update the app. The whole band needs the same version to exchange setlists and follow; a device on another one shows up marked in Settings → Band and broadcast.",
             "While Android installs, the Install button stays off. It comes back when Android answers or when you come back to the app. On Samsung devices, Auto Blocker can stop the install, and it turns itself back on after a while. When the new version finishes downloading, the window shows Open Auto Blocker: turn it off and come back to install. The button also shows in Settings → About → Update the app.",
             "Your songs and settings stay on the device. What goes to the band or over the internet is encrypted. There's no account, no ads and no tracking.",
             "When the install finishes, Android closes the app. It comes back open on the screen you were on. Where Android doesn't let the app open by itself, the notification Stagebook updated shows up: tap it and the app goes back where you were.",
@@ -1033,6 +1039,144 @@ SECTIONS = [
         ],
     },
 ]
+
+
+# ---- Settings by task (user, 14/11) -------------------------------------------------------------------------------
+# Seven groups in the order of use, then About. The topics keep their anchors (links from the other chapters still
+# work); here they are moved under their group, with the path of each option.
+def _regroup_settings():
+    chapter = next(c for c in SECTIONS if c["id"] == "ajustes")
+    by = {x["id"]: x for x in chapter["subs"]}
+
+    def put(sid, pt=None, en=None, level=None, head_pt=None, head_en=None, drop_pt=(), drop_en=()):
+        x = by[sid]
+        if pt: x["pt"] = pt
+        if en: x["en"] = en
+        if level: x["level"] = level
+        x["text_pt"] = ([head_pt] if head_pt else []) + [t for t in x["text_pt"] if t not in drop_pt]
+        x["text_en"] = ([head_en] if head_en else []) + [t for t in x["text_en"] if t not in drop_en]
+
+    def head(sid, pt, en, text_pt, text_en, figs=()):
+        by[sid] = sub(sid, pt, en, text_pt, text_en, figs)
+
+    head("ajustes-busca", "Buscar nos ajustes", "Search the settings",
+         ["No topo da lista de grupos fica o campo Buscar nos ajustes, como nos ajustes do Android. Digite o nome do item ou uma palavra parecida (o campo vazio sugere “Ex.: midi, tela, pedal”). A busca também olha o texto das explicações, e o resultado diz “na explicação” quando só ele acerta. Cada resultado mostra o item, o caminho (grupo › cartão) e uma linha de explicação. Tocar abre o grupo, rola até o cartão e o destaca por um instante. Quem está desligado agora (pelo modo essencial, pelo perfil Só letra, pelo player desligado, pela banda ou pela internet) também aparece, esmaecido e com o motivo. Tocar nele abre o lugar que liga, sem ligar nada por você. O X limpa a busca, e Voltar fecha a busca antes de sair."],
+         ["At the top of the list of groups there is the Search Settings field, as in Android's settings. Type the item's name or a similar word (the empty field suggests “e.g. midi, screen, pedal”). Search also reads the explanation texts, and the result says “in the explanation” when only that matches. Each result shows the item, the path (group › card) and a line of explanation. Tapping opens the group, scrolls to the card and highlights it for a moment. What is turned off right now (by essential mode, by the Lyrics only profile, by the player, the band or the internet being off) shows up too, dimmed and with the reason. Tapping it opens the place that turns it on, without turning anything on for you. The X clears the search, and Back closes the search before leaving."],
+         [Fig(("tablet_5_ajustes_busca", "celular_5_ajustes_busca", "A busca nos ajustes", "Searching the settings"))])
+    put("ajustes-palco", "Letra e cifra", "Lyrics and chords", 3,
+        head_pt="Ajustes → Letra e cifra. A amostra no topo da tela fica presa: ao mudar o tamanho, os acordes ou os títulos você vê o efeito sem rolar. Tudo aqui vale para todas as músicas.",
+        head_en="Settings → Lyrics and chords. The sample at the top of the screen stays in place: when you change the size, chords or titles you see the effect without scrolling. Everything here applies to all songs.",
+        drop_pt=("Tudo aqui vale para todas as músicas. A amostra no topo da tela fica presa e mostra cada mudança na hora.",),
+        drop_en=("Everything here applies to all songs. The sample at the top of the screen stays in place and shows each change right away.",))
+    head("ajustes-virar", "Virar a página", "Turn the page",
+         ["Ajustes → Virar a página. Reúne como a letra avança no palco (Modo), o Pedal e MIDI, a Saída MIDI e o que o aparelho faz Durante o show. Em português se vira a página, e o pedal mora aqui junto."],
+         ["Settings → Turn the page. It gathers how the lyrics move on stage (Mode), Pedal and MIDI, MIDI out and what the device does During the show. The pedal lives here, with the page."],
+         [Fig(("tablet_5_ajustes_virar", "celular_5_ajustes_virar", "Virar a página", "Turn the page"))])
+    put("ajustes-pagina", "Modo", "Mode", 4, head_pt="Ajustes → Virar a página → Modo.", head_en="Settings → Turn the page → Mode.")
+    put("ajustes-pedal", "Pedal e MIDI", "Pedal and MIDI", 4,
+        head_pt="Ajustes → Virar a página → Pedal e MIDI.", head_en="Settings → Turn the page → Pedal and MIDI.")
+    put("ajustes-pedal-conectar", level=4)
+    put("ajustes-pedal-botoes", level=4)
+    put("ajustes-midi-saida", "Saída MIDI", "MIDI out", 4,
+        head_pt="Ajustes → Virar a página → Saída MIDI. Some com o modo essencial.", head_en="Settings → Turn the page → MIDI out. It leaves with essential mode.")
+    put("ajustes-tela", "Durante o show", "During the show", 4,
+        head_pt="Ajustes → Virar a página → Durante o show.", head_en="Settings → Turn the page → During the show.")
+    t = by["ajustes-tela"]
+    t["text_pt"] += ["**Parar volta ao início:** com o player ligado, desligado faz o botão da faixa pausar, e a música continua de onde parou.",
+                     "**Tela apaga depois de 10 minutos:** fora do palco. Aparece aqui, junto da tela ligada, nos aparelhos que têm essa chave, e precisa da permissão do Android de Aparelho → Avançado."]
+    t["text_en"] += ["**Stop goes back to the start:** with the player on, off makes the track button pause, and the song goes on from where it stopped.",
+                     "**Screen off after 10 minutes:** outside the stage. It shows here, next to keeping the screen on, on devices that have the switch, and needs Android's permission from Device → Advanced."]
+    head("ajustes-acordes-grupo", "Acordes", "Chords",
+         ["Ajustes → Acordes. O instrumento, o diagrama ao tocar, o som e a lista de acordes. O grupo some no perfil Só letra, que não mostra acordes."],
+         ["Settings → Chords. The instrument, the diagram on tap, the sound and the chord list. The group leaves with the Lyrics only profile, which shows no chords."])
+    put("ajustes-diagramas", "Diagramas dos acordes", "Chord diagrams", 4,
+        drop_pt=("Este cartão só aparece com Letra e cifra.",), drop_en=("This card shows only with Lyrics and chords.",))
+    put("ajustes-metronomo", "Player e metrônomo", "Player and metronome", 3,
+        head_pt="Ajustes → Player e metrônomo. O nome não muda, mesmo com uma das partes desligada pelo modo essencial.",
+        head_en="Settings → Player and metronome. The name doesn't change, even with one of the parts turned off by essential mode.",
+        drop_pt=("Com o modo essencial desligando um dos dois, o item leva só o nome do que ficou ligado.",),
+        drop_en=("When essential mode turns one of them off, the item is named after the one left on.",))
+    p4 = by["ajustes-player"]
+    p4["pt"], p4["en"], p4["level"] = "Saída USB e para tocar sem falhas", "USB output and playing without failures", 4
+    p4["text_pt"] = [x for x in p4["text_pt"] if not x.startswith("- **Parar volta")]
+    p4["text_en"] = [x for x in p4["text_en"] if not x.startswith("- **Stop goes back")]
+    av = by["ajustes-avancado"]
+    i_play, i_bat = av["text_pt"].index("### Para tocar sem falhas"), av["text_pt"].index("### Bateria do aparelho")
+    j_play, j_bat = av["text_en"].index("### For playing without failures"), av["text_en"].index("### Device battery")
+    p4["text_pt"] += ["Ajustes → Player e metrônomo → Para tocar sem falhas:"] + av["text_pt"][i_play + 1:i_bat]
+    p4["text_en"] += ["Settings → Player and metronome → For playing without failures:"] + av["text_en"][j_play + 1:j_bat]
+    bat_pt = [x for x in av["text_pt"][i_bat:] if not x.startswith("- **Tela apaga")]
+    bat_en = [x for x in av["text_en"][j_bat:] if not x.startswith("- **Screen off")]
+    av["text_pt"] = ["Ajustes → Aparelho → Avançado. São ajustes do próprio Android. Para mudá-los, o Stagebook precisa de uma permissão dada uma vez por um computador com o adb. Sem ela, os ajustes aparecem mas não mudam, e o último cartão da página mostra o comando e Copiar o comando. Alguns só existem em certos aparelhos e só aparecem neles.",
+                     "Eles valem para o aparelho inteiro, não só para o Stagebook. O app grava de novo sempre que abre, porque o Android às vezes volta atrás sozinho. Por isso, mude por estas chaves: o que você mudar nos ajustes do Android volta na próxima abertura."] + bat_pt
+    av["text_en"] = ["Settings → Device → Advanced. These are Android's own settings. To change them, Stagebook needs a permission given once from a computer with adb. Without it the settings show but don't change, and the last card on the page shows the command and Copy the command. Some only exist on certain devices and only show there.",
+                     "They apply to the whole device, not just Stagebook. The app writes them again every time it opens, because Android sometimes goes back by itself. So change them with these switches: what you change in Android's settings comes back the next time it opens."] + bat_en
+    av["level"] = 4
+    put("ajustes-biblioteca", "Importar e backup", "Import and backup", 3,
+        head_pt="Ajustes → Importar e backup. Apagar tudo fica no fim, como zona de perigo.", head_en="Settings → Import and backup. Erase everything is at the end, as a danger zone.")
+    put("ajustes-sites", level=4,
+        head_pt="Ajustes → Importar e backup → Sites de cifra.", head_en="Settings → Import and backup → Chord sites.")
+    st = by["ajustes-sites"]
+    st["text_pt"] = [x.replace("Em Só letra, o item se chama Sites de letra. Em Automático ele se chama Sites de importação e mostra as duas listas, a de cifra e a de letra.", "Em Só letra, o cartão se chama Sites de letra. Em Automático há os dois cartões, Sites de cifra e Sites de letra.") for x in st["text_pt"]]
+    st["text_en"] = [x.replace("In Lyrics only, the item is called Lyrics sites. In Automatic it is called Import sites and shows both lists, chords and lyrics.", "In Lyrics only, the card is called Lyrics sites. In Automatic there are both cards, Chord sites and Lyrics sites.") for x in st["text_en"]]
+    put("ajustes-backup", level=4)
+    put("ajustes-apagar", level=4, head_pt="Ajustes → Importar e backup → Apagar tudo, a zona de perigo no fim do grupo.", head_en="Settings → Import and backup → Erase everything, the danger zone at the end of the group.")
+    put("ajustes-banda", "Banda e computador", "Band and computer", 3,
+        head_pt="Ajustes → Banda e computador. Some inteiro com o modo essencial.", head_en="Settings → Band and computer. It leaves entirely with essential mode.")
+    put("ajustes-computador", level=4, head_pt="Ajustes → Banda e computador → Editar no computador.", head_en="Settings → Band and computer → Edit on the computer.")
+    head("ajustes-aparelho", "Aparelho", "Device",
+         ["Ajustes → Aparelho. O Modo essencial, o Idioma e os ajustes do Android, que valem para o aparelho inteiro."],
+         ["Settings → Device. Essential mode, Language and Android's own settings, which apply to the whole device."])
+    put("ajustes-essencial", level=4, head_pt="Ajustes → Aparelho → Modo essencial.", head_en="Settings → Device → Essential mode.")
+    head("ajustes-idioma", "Idioma", "Language",
+         ["Ajustes → Aparelho → Idioma. Automático segue o aparelho, ou escolha português ou inglês. Para ajudar a traduzir, siga o [guia de tradução](https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.pt-BR.md)."],
+         ["Settings → Device → Language. Automatic follows the device, or pick Portuguese or English. To help translate, follow the [translation guide](https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md)."],
+         [Fig(("tablet_5_ajustes_essencial", "celular_5_ajustes_lingua", "Aparelho: modo essencial e idioma", "Device: essential mode and language"))])
+    by["ajustes-idioma"]["level"] = 4
+    so = by["ajustes-sobre"]
+    so["text_pt"] = [x for x in so["text_pt"] if not x.startswith("- **Idioma:**")]
+    so["text_en"] = [x for x in so["text_en"] if not x.startswith("- **Language:**")]
+    so["figs"] = [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_sobre", "Ajustes → Sobre: ajuda e atualizar", "Settings → About: help and updating"))]
+    order = ["ajustes-busca", "ajustes-palco", "ajustes-letra", "ajustes-acordes", "ajustes-titulos",
+             "ajustes-virar", "ajustes-pagina", "ajustes-pedal", "ajustes-pedal-conectar", "ajustes-pedal-botoes", "ajustes-midi-saida", "ajustes-tela",
+             "ajustes-acordes-grupo", "ajustes-diagramas", "ajustes-metronomo", "ajustes-player",
+             "ajustes-biblioteca", "ajustes-sites", "ajustes-backup", "ajustes-apagar", "ajustes-banda", "ajustes-computador",
+             "ajustes-aparelho", "ajustes-essencial", "ajustes-idioma", "ajustes-avancado", "ajustes-sobre"]
+    assert set(order) == set(by), set(by) ^ set(order)
+    chapter["subs"] = [by[i] for i in order]
+    chapter["text_pt"] = ["Os Ajustes têm sete grupos, na ordem em que você costuma mexer, e o Sobre à parte. Cada item vem com o caminho: Ajustes → grupo → cartão. No tablet deitado, a lista fica à esquerda e o grupo aberto à direita. Nos cartões, o ⓘ ao lado do título explica o que eles fazem. Com o modo essencial, alguns grupos, cartões e opções somem até você religar. Para achar algo sem saber onde está, use a [busca](#ajustes-busca)."]
+    chapter["text_en"] = ["Settings has seven groups, in the order you usually reach for them, and About apart. Each item comes with its path: Settings → group → card. On a tablet lying down, the list sits on the left and the open group on the right. On the cards, the ⓘ next to the title explains what they do. With essential mode, some groups, cards and options disappear until you turn them back on. To find something without knowing where it is, use the [search](#ajustes-busca)."]
+
+    pairs = [
+        ("[Visual do palco](#ajustes-letra)", "[Letra e cifra](#ajustes-palco)"), ("[Stage look](#ajustes-letra)", "[Lyrics and chords](#ajustes-palco)"),
+        ("[Visual do palco](#ajustes-pagina)", "[Virar a página](#ajustes-virar)"), ("[Stage look](#ajustes-pagina)", "[Turn the page](#ajustes-virar)"),
+        ("Banda e transmissão", "Banda e computador"), ("Band and broadcast", "Band and computer"),
+        ("Metrônomo e player", "Player e metrônomo"), ("Metronome and player", "Player and metronome"),
+        ("Ajustes → Editar no computador", "Ajustes → Banda e computador → Editar no computador"),
+        ("Settings → Edit on the computer", "Settings → Band and computer → Edit on the computer"),
+        ("Biblioteca e backup", "Importar e backup"), ("Library and backup", "Import and backup"),
+        ("[Para tocar sem falhas](#ajustes-avancado)", "[Para tocar sem falhas](#ajustes-player)"),
+        ("[For playing without failures](#ajustes-avancado)", "[For playing without failures](#ajustes-player)"),
+        ("o cartão Para tocar sem falhas em Avançado", "o cartão Para tocar sem falhas em Player e metrônomo"),
+        ("the For playing without failures card in Advanced", "the For playing without failures card in Player and metronome"),
+        ("o MIDI da música em Pedal e MIDI", "a Saída MIDI em Virar a página"), ("the song MIDI in Pedal and MIDI", "the MIDI out in Turn the page"),
+        ("Ajustes → Modo essencial", "Ajustes → Aparelho → Modo essencial"), ("Settings → Essential mode", "Settings → Device → Essential mode"),
+    ]
+
+    def fix(v):
+        if isinstance(v, str):
+            for a, b in pairs: v = v.replace(a, b)
+            return v
+        if isinstance(v, list): return [fix(x) for x in v]
+        if isinstance(v, tuple): return tuple(fix(x) for x in v)
+        if isinstance(v, dict): return {k: fix(x) for k, x in v.items()}
+        return v
+
+    SECTIONS[:] = [fix(c) for c in SECTIONS]
+
+
+_regroup_settings()
+
 
 UI = {
     "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",

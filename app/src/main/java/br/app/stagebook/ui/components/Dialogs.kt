@@ -90,6 +90,8 @@ fun QuestionDialog(
     onNo: () -> Unit,
     onOutside: () -> Unit = onNo,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    cancelLabel: String? = null,   // a third answer, "stay" (Cancel): the window then has three buttons
+    onCancel: () -> Unit = {},
 ) {
     br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
@@ -98,7 +100,12 @@ fun QuestionDialog(
         title = { Text(title) },
         text = { Text(message, style = MaterialTheme.typography.bodyLarge) },
         confirmButton = { TextButton(onClick = onYes) { Text(yesLabel) } },
-        dismissButton = { TextButton(onClick = onNo) { Text(noLabel) } },
+        dismissButton = {
+            androidx.compose.foundation.layout.Row {
+                if (cancelLabel != null) TextButton(onClick = onCancel) { Text(cancelLabel) }
+                TextButton(onClick = onNo) { Text(noLabel) }
+            }
+        },
     )
 }
 
@@ -122,7 +129,7 @@ fun InfoDialog(
         title = { Text(title) },
         text = {
             androidx.compose.foundation.layout.Column {
-                Text(message, style = MaterialTheme.typography.bodyLarge)
+                if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyLarge)
                 content?.invoke()
                 if (neverAgain != null) {
                     androidx.compose.foundation.layout.Row(

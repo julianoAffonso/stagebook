@@ -35,7 +35,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Picking songs for a setlist shows each song as the song list does: the artist alone under the name and, at the end
+ * Picking songs for a setlist shows each song as the song list does: the artist alone under the name (a song already in the setlist keeps it, tagged) and, at the end
  * of the row, the key, the tempo, the capo and the backing track mark. Checking and adding work as before.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -96,7 +96,7 @@ class PickSongsRowsTest {
             rows = listOf(
                 PickRowUi("1", "Com tudo", "Banda Fictícia", inSet = false, selected = true, songKey = "Em", bpm = 120, capo = 2, hasTrack = true),
                 PickRowUi("2", "Só o tom", "Trio Imaginário", inSet = false, selected = false, songKey = "G"),
-                PickRowUi("3", "Já escolhida", "Banda Fictícia", inSet = true, selected = false, songKey = "C"),
+                PickRowUi("3", "Já escolhida", "Cássia Eller", inSet = true, selected = false, songKey = "C", bpm = 96, capo = 1, hasTrack = true),
             ),
             selectedCount = 1,
         )
@@ -107,11 +107,17 @@ class PickSongsRowsTest {
         compose.onNodeWithText("G", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("120 bpm", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("capo 2", useUnmergedTree = true).assertIsDisplayed()
-        compose.onAllNodesWithContentDescription("Backing track", useUnmergedTree = true).assertCountEquals(1)
+        compose.onAllNodesWithContentDescription("Backing track", useUnmergedTree = true).assertCountEquals(2)   // the in-setlist row has one too
         compose.onAllNodesWithText("19", substring = true, useUnmergedTree = true).assertCountEquals(0)
-        // a song already in the setlist says so, keeps its key and can't be checked
-        compose.onNodeWithText("Já está no setlist", useUnmergedTree = true).assertIsDisplayed()
+        // a song already in the setlist is tagged beside its title, keeps its artist, key, tempo, capo and mark, and can't be checked
+        compose.onNodeWithText("No setlist", useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodesWithText("No setlist", useUnmergedTree = true).assertCountEquals(1)
+        compose.onAllNodesWithText("Já está no setlist", useUnmergedTree = true).assertCountEquals(0)
+        compose.onNodeWithText("Cássia Eller", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("C", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("96 bpm", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("capo 1", useUnmergedTree = true).assertIsDisplayed()
+        compose.onAllNodesWithContentDescription("Backing track", useUnmergedTree = true).assertCountEquals(2)
         compose.onNodeWithText("Já escolhida", useUnmergedTree = true).performClick()
         assertEquals(emptyList<String>(), toggled)
         compose.onNodeWithText("Só o tom", useUnmergedTree = true).performClick()

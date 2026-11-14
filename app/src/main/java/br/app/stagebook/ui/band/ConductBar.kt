@@ -4,6 +4,7 @@ import br.app.stagebook.ui.components.InfoDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
@@ -64,6 +65,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -74,7 +77,11 @@ import javax.inject.Inject
 sealed interface ConductUi {
     /** A following device that lacks songs: the leader can send them to it ([id]). */
     @Immutable
-    data class Lacker(val id: String, val who: String, val titles: List<String>)
+    data class Lacker(val id: String, val who: String, val titles: List<String>, val songs: List<LackSong> = titles.map { LackSong(it) })
+
+    /** A song that is missing, as the missing lists draw it: the title and, where the setlist says it, the artist. */
+    @Immutable
+    data class LackSong(val title: String, val artist: String = "")
 
     /**
      * [nowMissing]: who lacks the current song; [lacks]: all missing songs (the "See what's missing"); [lackers]: the
@@ -104,7 +111,11 @@ sealed interface ConductUi {
         val breakSince: Long? = null,
         val noChords: Boolean = false,
         val breakFrozen: Long? = null,
+        val lackSongs: List<LackSong> = lacksHere.map { LackSong(it) },   // [lacksHere] with the artists, for the list's rows
     ) : ConductUi
+
+    /** "Lead the band" armed from the Setlists list: waits, with a way to cancel, for the setlist the person taps. */
+    data object Armed : ConductUi
 
     /** Left [from], who goes on leading: one action, to follow again. */
     @Immutable
@@ -117,12 +128,13 @@ sealed interface ConductUi {
  */
 internal fun conductUi(
     role: Role, songs: List<br.app.stagebook.data.model.Song>, now: Long, bandOn: Boolean, chordless: Set<String> = emptySet(), chords: Boolean = true,
-    me: String = "", lacksHere: List<String>? = null, online: Set<String> = emptySet(),
+    me: String = "", lacksHere: List<String>? = null, online: Set<String> = emptySet(), armed: Boolean = false,
 ): ConductUi? = when {
     !bandOn -> null
+    armed && role is Role.None -> ConductUi.Armed
     role is Role.Conducting -> ConductUi.Conducting(
         role.msg.set, role.answered?.let { (online - it).size } ?: 0, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing,
-        role.lackers.map { (id, lack) -> ConductUi.Lacker(id, lack.who, lack.titles) }.sortedBy { it.who },
+        role.lackers.map { (id, lack) -> ConductUi.Lacker(id, lack.who, lack.titles, lackSongs(lack.titles, role.msg.songs)) }.sortedBy { it.who },
     )
     role is Role.Following -> followingUi(role, songs, now, chordless.takeIf { chords }.orEmpty(), me, lacksHere)
     role is Role.Left && !role.gone(now) -> ConductUi.Left(role.msg.from)
@@ -141,15 +153,16 @@ internal fun followingUi(
 ): ConductUi.Following {
     val msg = role.msg
     val lacks = lacksHere ?: Conduct.missing(msg.songs, songs)
+    val lackSongs = lackSongs(lacks, msg.songs)
     fun others(index: Int) = Conduct.missingAt(msg, index).filter { it != me }
     val next = role.breakSince?.let { msg.songs.getOrNull(msg.index + 1) }
     if (next != null) {
         val own = Conduct.find(next, songs)
-        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince, breakFrozen = role.breakFrozen)
+        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince, breakFrozen = role.breakFrozen, lackSongs = lackSongs)
     }
     return ConductUi.Following(
         msg.from, msg.songs.getOrNull(msg.index)?.title.orEmpty(), role.songId == null, role.gone(now),
-        others(msg.index), lacks,
+        others(msg.index), lacks, lackSongs = lackSongs,
         // still without chords: once the musician writes them in, the strip stops saying so
         noChords = role.songId in chordless && songs.firstOrNull { it.id == role.songId }?.let { !br.app.stagebook.domain.Chords.hasChords(it.text) } == true,
     )
@@ -167,26 +180,46 @@ internal fun BandConduct.Notice.text(resources: android.content.res.Resources): 
     is BandConduct.Notice.ChordsCame -> resources.getString(R.string.conduct_chords_came, title, from)
 }
 
+private fun ticks() = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
+
+/**
+ * [active] runs (is collected) only while [on] says true; otherwise the result is null and nothing of it is collected.
+ * The tests count how many times it starts.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun <T : Any> whileBandOn(on: kotlinx.coroutines.flow.Flow<Boolean>, active: () -> kotlinx.coroutines.flow.Flow<T?>): kotlinx.coroutines.flow.Flow<T?> =
+    on.flatMapLatest { if (it) active() else flowOf(null) }
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ConductViewModel @Inject constructor(
     private val conduct: BandConduct, repository: br.app.stagebook.data.LibraryRepository, identity: br.app.stagebook.data.DeviceIdentity,
 ) : ViewModel() {
-    // clock for "gone" (every 30 s; only while the strip is on screen)
-    private val tick = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
+    // "Band on the network" off: the strip has nothing to show and nothing here runs: the library isn't read for it, the
+    // clock doesn't tick (the strip is in every screen, and this used to wake every 30 s and rebuild the list of titles
+    // at each save of the library)
+    private val bandOn = repository.library.map { it.look.bandOn }.distinctUntilChanged()
+
+    // clock for "gone": every 30 s, only while following (or having left) a leader; otherwise just the time now
+    private val tick = conduct.role.map { it is Role.Following || it is Role.Left }.distinctUntilChanged()
+        .flatMapLatest { watching -> if (watching) ticks() else flowOf(System.currentTimeMillis()) }
 
     // the library too: on a break the strip says whether the next song is here (looked up only then)
     // following: the leader's songs that aren't here. Looked up again only when the setlist or the library's titles
-    // change, not on every save (the stage saves a song's size while it opens)
-    private val lacksHere = combine(
-        conduct.role.map { (it as? Role.Following)?.msg?.songs }.distinctUntilChanged(),
-        repository.library.map { it.songs.map { s -> s.title to s.author } }.distinctUntilChanged(),
-    ) { items, _ -> items?.let { Conduct.missing(it, repository.library.value.songs) } }.flowOn(kotlinx.coroutines.Dispatchers.Default)
+    // change, not on every save (the stage saves a song's size while it opens). Not following: the library isn't read
+    private val lacksHere = conduct.role.map { (it as? Role.Following)?.msg?.songs }.distinctUntilChanged().flatMapLatest { items ->
+        if (items == null) flowOf(null)
+        else repository.library.map { it.songs.map { s -> s.title to s.author } }.distinctUntilChanged()
+            .map { Conduct.missing(items, repository.library.value.songs) }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
 
     // who is online now, and who it's about (the strip counts who didn't answer against the people online at this moment)
     private val around = combine(conduct.chordless, lacksHere, conduct.online) { chordless, lacks, online -> Triple(chordless, lacks, online) }
 
-    val ui: StateFlow<ConductUi?> = combine(conduct.role, tick, repository.library, around) { role, now, library, (chordless, lacks, online) ->
-        conductUi(role, library.songs, now, library.look.bandOn, chordless, library.look.chords, identity.name.value, lacks, online)
+    val ui: StateFlow<ConductUi?> = whileBandOn(bandOn) {
+        combine(conduct.role, tick, repository.library, around, conduct.armed) { role, now, library, (chordless, lacks, online), armed ->
+            conductUi(role, library.songs, now, library.look.bandOn, chordless, library.look.chords, identity.name.value, lacks, online, armed)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val asking: StateFlow<Boolean> = conduct.asking
@@ -194,6 +227,7 @@ class ConductViewModel @Inject constructor(
     val notices = conduct.notices
 
     fun end() = conduct.end()
+    fun cancelArmed() = conduct.disarm()
     fun leave() = conduct.leave()
     fun follow() = conduct.follow()
     fun search() = conduct.search()
@@ -218,7 +252,7 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
     AnimatedVisibility(ui != null, modifier) {
         ui?.let {
             ConductBar(
-                it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, asking = asking, onSend = viewModel::send, sending = sending,
+                it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, onCancel = viewModel::cancelArmed, asking = asking, onSend = viewModel::send, sending = sending,
                 waiting = gate.waiting().takeIf { _ -> it is ConductUi.Following }, onGo = gate::goNow,
             )
         }
@@ -255,18 +289,18 @@ private fun Modifier.aboveNavigationBar(): Modifier {
 fun ConductBar(
     ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: () -> Unit, onFollow: () -> Unit, modifier: Modifier = Modifier,
     onAsk: () -> Unit = {}, asking: Boolean = false, onSend: (String?) -> Unit = {}, sending: Boolean = false,
-    waiting: br.app.stagebook.domain.FollowWait? = null, onGo: () -> Unit = {},
+    waiting: br.app.stagebook.domain.FollowWait? = null, onGo: () -> Unit = {}, onCancel: () -> Unit = {},
 ) {
     // the leader's song is waiting for this person to finish what they're doing: the strip says where the leader went,
     // why it hasn't opened, and offers to go now
     val waits = waiting != null && ui is ConductUi.Following
     var showLacks by rememberSaveable { mutableStateOf(false) }
     // the leader's list is who lacks what in the band; a follower's is what this device lacks
-    val hasLacks = when (ui) { is ConductUi.Conducting -> ui.lacks.isNotEmpty(); is ConductUi.Following -> ui.lacksHere.isNotEmpty(); is ConductUi.Left -> false }
+    val hasLacks = when (ui) { is ConductUi.Conducting -> ui.lacks.isNotEmpty(); is ConductUi.Following -> ui.lacksHere.isNotEmpty(); is ConductUi.Left, ConductUi.Armed -> false }
     val seeLacks = stringResource(if (ui is ConductUi.Following) R.string.conduct_see_lacks_here else R.string.conduct_see_lacks)
     // the last one arrived: the list doesn't come back open by itself when another goes missing
     LaunchedEffect(hasLacks) { if (!hasLacks) showLacks = false }
-    val nowMissing = when (ui) { is ConductUi.Conducting -> ui.nowMissing; is ConductUi.Following -> ui.nowMissing; is ConductUi.Left -> emptyList() }
+    val nowMissing = when (ui) { is ConductUi.Conducting -> ui.nowMissing; is ConductUi.Following -> ui.nowMissing; is ConductUi.Left, ConductUi.Armed -> emptyList() }
     // someone is missing a song now (or the leader is gone): the whole strip turns red, so the band sees it before
     // starting
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
@@ -311,6 +345,7 @@ fun ConductBar(
                 TextButton(onLeave) { ActionText(stringResource(R.string.conduct_leave)) }
             }
             is ConductUi.Left -> TextButton(onFollow) { ActionText(stringResource(R.string.conduct_follow)) }
+            ConductUi.Armed -> TextButton(onCancel) { ActionText(stringResource(R.string.action_cancel)) }
         }
     }
     Surface(
@@ -345,6 +380,7 @@ fun ConductBar(
                     else -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
                 }
                 is ConductUi.Left -> cutLine(R.string.conduct_left, ui.from)
+                ConductUi.Armed -> CutText(cut = stringResource(R.string.conduct_armed))
             }
             val rest = (ui as? ConductUi.Following)?.takeIf { it.breakSince != null }
             val detail = when {
@@ -363,6 +399,7 @@ fun ConductBar(
                 nowMissing.isNotEmpty() -> cutLine(R.string.conduct_missing_now, nowMissing.joinToString(", "))
                 ui is ConductUi.Conducting && ui.noAnswer > 0 -> CutText(cut = pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer))
                 lacksInText -> CutText(cut = seeLacks)
+                ui is ConductUi.Armed -> CutText(cut = stringResource(R.string.conduct_armed_pick))
                 else -> null
             }
             val leading = @Composable { Icon(if (alert) AppIcons.Warning else AppIcons.Group, null) }
@@ -398,7 +435,8 @@ fun ConductBar(
     if (showLacks && ui is ConductUi.Conducting) {
         LacksDialog(ui.lackers, sending, onSend, onDismiss = { showLacks = false })
     } else if (showLacks && ui is ConductUi.Following && ui.lacksHere.isNotEmpty()) {
-        InfoDialog(stringResource(R.string.conduct_lacks_here_title), ui.lacksHere.joinToString("\n"), onDismiss = { showLacks = false })
+        // the leader's setlist songs that aren't here, as rows: only what the leader's message says (title, artist)
+        InfoDialog(stringResource(R.string.conduct_lacks_here_title), "", onDismiss = { showLacks = false }) { LackRows(ui.lackSongs, Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) }
     }
 }
 
@@ -477,8 +515,8 @@ private const val CUT_HERE = "\u2060"   // stands for the name while the sentenc
 
 private val sampleLacks = listOf(Conduct.Lack("Baixo", listOf("Evidências", "Asa Branca")))
 internal val sampleLackers = listOf(
-    ConductUi.Lacker("b", "Baixo", listOf("Evidências", "Asa Branca")),
-    ConductUi.Lacker("g", "Guitarra", listOf("Evidências")),
+    ConductUi.Lacker("b", "Baixo", listOf("Evidências", "Asa Branca"), listOf(ConductUi.LackSong("Evidências", "Chitãozinho & Xororó"), ConductUi.LackSong("Asa Branca", "Luiz Gonzaga"))),
+    ConductUi.Lacker("g", "Guitarra", listOf("Evidências"), listOf(ConductUi.LackSong("Evidências", "Chitãozinho & Xororó"))),
 )
 
 @Composable
@@ -498,6 +536,8 @@ private fun ConductBarSamples() {
         ConductBar(ConductUi.Following("Voz", "Evidências", false, false, emptyList(), emptyList()), {}, {}, {}, {}, waiting = br.app.stagebook.domain.FollowWait.MENU)
         // left, and the leader goes on: the way back
         ConductBar(ConductUi.Left("Voz"), {}, {}, {}, {})
+        // armed from the Setlists list: waiting for the setlist to tap
+        ConductBar(ConductUi.Armed, {}, {}, {}, {})
     }
 }
 
