@@ -70,13 +70,27 @@ SAMPLE = {
 def library(lang):
     s = SAMPLE[lang]
     nat, intl, rock = s["tags"]
+    # id, title, artist, year, key, tags, bpm, capo, backing track: the rows show key, BPM, capo and the wave like the device's
     songs = [
-        ("1", "Hazard", "Richard Marx", "1991", "D", [intl]), ("2", "Malandragem", "Cássia Eller", "1994", "C", [nat, rock]),
-        ("3", "Tempo Perdido", "Legião Urbana", "1986", "Am", [nat, rock]), ("4", "Wild Horses", "The Rolling Stones", "1971", "G", [intl]),
-        ("5", "Por Enquanto", "Legião Urbana", "1985", "E", [nat]),
+        ("1", "Hazard", "Richard Marx", "1991", "D", [intl], 96, 0, False), ("2", "Malandragem", "Cássia Eller", "1994", "C", [nat, rock], 120, 2, True),
+        ("3", "Tempo Perdido", "Legião Urbana", "1986", "Am", [nat, rock], 0, 0, False), ("4", "Wild Horses", "The Rolling Stones", "1971", "G", [intl], 72, 3, False),
+        ("5", "Por Enquanto", "Legião Urbana", "1985", "E", [nat], 0, 0, True), ("6", "Sem Nada", "Banda Fictícia", "", "", [], 0, 0, False),
     ]
-    items = [{"id": i, "title": t, "author": a, "year": y, "key": k, "tags": tg} for i, t, a, y, k, tg in songs]
-    return items
+    return [{"id": i, "title": t, "author": a, "year": y, "key": k, "tags": tg, "bpm": bpm, "capo": capo, "hasTrack": track}
+            for i, t, a, y, k, tg, bpm, capo, track in songs]
+
+
+def review(lang):
+    """What the 3 words bring: one of mine, one that came along, one to choose, one left out."""
+    lib = library(lang)
+    mine = lib[1]
+    return {"token": "t", "name": SAMPLE[lang]["set"], "songsOnly": False, "rows": [
+        {"title": mine["title"], "artist": mine["author"], "status": "have", "key": mine["key"], "bpm": mine["bpm"], "capo": mine["capo"], "hasTrack": True, "candidates": []},
+        {"title": "Canção do Vento" if lang == "pt-BR" else "Wind Song", "artist": "Banda Fictícia", "status": "came", "key": "Em", "bpm": 88, "capo": 0, "hasTrack": False, "candidates": []},
+        {"title": "Tempo Perdido", "artist": "Legião Urbana", "status": "similar", "key": "", "bpm": 0, "capo": 0, "hasTrack": False,
+         "candidates": [{"id": "3", "title": "Tempo Perdido", "author": "Legião Urbana"}, {"id": "4", "title": "Tempo Perdido (ao vivo)", "author": "Legião Urbana"}]},
+        {"title": "Faixa Ausente" if lang == "pt-BR" else "Missing Song", "artist": "Trio Imaginário", "status": "missing", "key": "", "bpm": 0, "capo": 0, "hasTrack": False, "candidates": []},
+    ]}
 
 
 class Stand(BaseHTTPRequestHandler):
@@ -100,12 +114,16 @@ class Stand(BaseHTTPRequestHandler):
     def do_GET(self):
         lang, s = Stand.lang, SAMPLE[Stand.lang]
         p = self.path.split("?")[0]
+        if p == "/frame":
+            # the page in a 360 px frame: headless Chrome won't make a window narrower than ~500 px, a frame can be
+            return self.send(200, '<body style="margin:0;background:#121212"><iframe src="/" width="360" height="1500" style="border:0"></iframe>', "text/html")
         if p == "/":
             # the real page, and a few lines that drive it to the scene (the page itself doesn't change)
             drive = {
                 "musica": "await open('2');",
                 "setlist": "tab('sets'); await openSet('s1');",
                 "importar": "tab('import');",
+                "recebido": "tab('import'); showReview(" + json.dumps(review(lang), ensure_ascii=False) + ", 'words-status'); document.querySelectorAll('#view-import .blocks > div').forEach((d) => { if (!d.contains($('review'))) d.hidden = true; });",
                 "pedido": "",
             }[Stand.scene]
             js = f"<script>setTimeout(async () => {{ {drive} }}, 400);</script></body>"
@@ -130,7 +148,7 @@ class Stand(BaseHTTPRequestHandler):
 
 
 # each scene's height: the import tab is a long page, the others fit a laptop screen
-HEIGHTS = {"pedido": 600, "musica": 940, "setlist": 820, "importar": 1900}
+HEIGHTS = {"pedido": 600, "musica": 940, "setlist": 820, "importar": 1900, "recebido": 820}
 EXTRA = 120   # headless Chrome repeats the top of the page in the last rows: shot taller, then the bottom is cut
 
 
@@ -154,22 +172,32 @@ def crop_top(path, height):
     Path(path).write_bytes(out)
 
 
-def shoot(url, out, profile, height):
+def shoot(url, out, profile, height, width=1440):
     subprocess.run([CHROME, "--headless=new", f"--user-data-dir={profile}", "--no-first-run", "--disable-gpu", "--hide-scrollbars",
-                    "--force-device-scale-factor=1", f"--window-size=1440,{height + EXTRA}", "--virtual-time-budget=4000",
+                    "--force-device-scale-factor=1", f"--window-size={width},{height + EXTRA}", "--virtual-time-budget=4000",
                     f"--screenshot={out}", url], check=True, capture_output=True, timeout=60)
     crop_top(out, height)
 
 
-def main(dest):
+def main(dest, narrow=False):
     server = ThreadingHTTPServer(("127.0.0.1", 0), Stand)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://127.0.0.1:{server.server_port}/"
     with tempfile.TemporaryDirectory() as profile:
+        if narrow:
+            # a phone's width (the page is responsive): only for checking, never for the help
+            for lang in LANGS:
+                folder = Path(dest) / f"{lang}-360"
+                folder.mkdir(parents=True, exist_ok=True)
+                for scene in ("musica", "setlist", "recebido"):
+                    Stand.lang, Stand.scene = lang, scene
+                    shoot(url + "frame", str(folder / f"editor_web_{scene}_360.png"), profile, 1500, 400)
+            server.shutdown()
+            return
         for lang in LANGS:
             folder = Path(dest) / lang
             folder.mkdir(parents=True, exist_ok=True)
-            for n, scene in enumerate(["pedido", "musica", "setlist", "importar"], 1):
+            for n, scene in enumerate(["pedido", "musica", "setlist", "importar", "recebido"], 1):
                 Stand.lang, Stand.scene = lang, scene
                 shoot(url, str(folder / f"editor_web_{n}_{scene}.png"), profile, HEIGHTS[scene])
     server.shutdown()
@@ -177,4 +205,4 @@ def main(dest):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], "--narrow" in sys.argv[2:])
