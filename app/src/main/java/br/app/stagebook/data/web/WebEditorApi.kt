@@ -20,6 +20,8 @@ class WebEditorApi(
     // opens a page out of sight on the tablet and runs a script on it (null = the import extraction)
     private val readPage: suspend (url: String, script: String?) -> String? = { _, _ -> null },
     private val receiver: () -> WebReceive? = { null },
+    // forgets the review waiting for the computer (without creating the receiver if it was never used)
+    private val clearReview: () -> Unit = {},
     private val band: () -> Band? = { null },
     private val backup: () -> br.app.stagebook.data.Backup? = { null },
     private val tracks: () -> br.app.stagebook.data.TrackStore? = { null },
@@ -339,6 +341,7 @@ class WebEditorApi(
     /** The editor turned off: a backup waiting for its parts goes away (it could be 1 GB). */
     fun clear() {
         waitingBackup.getAndSet(null)?.second?.delete()
+        clearReview()
     }
 
     // the backing track from the computer (T37e): the file comes in the body, its name (for the format) in ?name=.

@@ -86,6 +86,17 @@ class WebEditorBreaksTest {
         assertEquals(emptyList<String>(), repo.library.value.setlist(id)!!.items)
     }
 
+    @Test fun `closing the editor forgets the review waiting for the computer`() {
+        val receiver = br.app.stagebook.data.web.WebReceive(repo, { throw AssertionError("not used") })
+        val review = receiver.fromInbox("in1", "STAGEBOOK1\n1\nShow\nA", emptyList())!!
+        val closing = WebEditorApi(repo, receiver = { receiver }, clearReview = receiver::clear)
+        closing.clear()
+        assertEquals(null, receiver.create(review.token, "Show", emptyMap()))
+        // and without clear() the same review is still there to create from
+        val kept = receiver.fromInbox("in2", "STAGEBOOK1\n1\nShow\nA", emptyList())!!
+        assertTrue(receiver.create(kept.token, "Show", emptyMap()) != null)
+    }
+
     @Test fun `saving with breaks replaces them, and an empty list takes them all out`() {
         val id = create(ids, "[2]")
         assertEquals(200, put(id, ids, "[1,4]"))
