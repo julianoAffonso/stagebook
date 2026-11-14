@@ -952,6 +952,7 @@
     <string name="web_connected">Conectado ao %1$s</string>
     <string name="web_saved">Salvo</string>
     <string name="web_pick">Escolha uma música na lista ou crie uma nova.</string>
+    <string name="web_break_needs_two">Precisa de pelo menos 2 músicas</string>
     <string name="web_unsaved">Tem mudanças sem salvar. Sair mesmo assim?</string>
     <string name="web_paste_title">Colar a cifra</string>
     <string name="web_paste_hint">Copie a cifra no site e cole aqui. Os acordes em cima da letra ficam no lugar certo.</string>

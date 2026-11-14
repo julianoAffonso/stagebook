@@ -70,6 +70,10 @@
   ol.items li { display: flex; align-items: center; gap: 8px; background: var(--raised); border-radius: 14px; padding: 4px 4px 4px 14px; }
   ol.items li .n { color: var(--accent); width: 24px; font-variant-numeric: tabular-nums; }
   ol.items li .t { flex: 1; min-width: 0; }
+  ol.items li.brk { background: none; padding-left: 14px; }
+  ol.items li.brk .line { flex: 1; border-top: 1px dashed var(--muted); min-width: 16px; }
+  ol.items li.brk .lbl { color: var(--muted); font-size: 12px; letter-spacing: .12em; }
+  button:disabled { opacity: .4; cursor: default; }
   .review li { cursor: default !important; }
 </style>
 </head>
@@ -150,6 +154,8 @@
           <div><label for="set-name" data-t="setName"></label><input id="set-name"></div>
           <ol class="items" id="set-items"></ol>
           <p id="set-empty" class="muted" hidden></p>
+          <div class="row" style="align-items: center"><button class="outline" id="set-break-add"></button><span id="set-break-hint" class="muted"></span></div>
+          <p id="set-summary" class="muted"></p>
           <div><label for="set-add-search" data-t="search"></label><input id="set-add-search" type="search"></div>
           <ul class="list" id="set-add" style="max-height: 30vh"></ul>
           <div class="actions">
@@ -626,7 +632,7 @@ async function openSet(id) {
 }
 
 function showSet(set) {
-  currentSet = set;
+  currentSet = { ...set, breaks: set.breaks || [] };
   $("set-name").value = set.name;
   $("set-form").hidden = false;
   $("set-pick").hidden = true;
@@ -638,23 +644,124 @@ function showSet(set) {
   loadSets();
 }
 
+// <breaks-logic>
+// The setlist's breaks, as the tablet keeps them (domain/SetlistBreaks.kt): a break is a position p, 1 <= p <= n-1,
+// "a break before the song at p". Songs and breaks are shown as one list of rows; a song moves by trading places with
+// the neighbouring song and the breaks stay between the songs they were between. The tablet decides what is kept when
+// it saves (SetlistBreaks.place); this is the same rule only for the screen, so it answers before saving. Both sides are
+// tested with the same cases (SetlistBreaksTest.kt and tools/web_breaks_test.mjs).
+const BRK = -1;
+const breakNorm = (b, size) => [...new Set((b || []).filter((p) => Number.isInteger(p) && p >= 1 && p < size))].sort((a, c) => a - c);
+function breakRows(size, b) {
+  const at = new Set(breakNorm(b, size));
+  const rows = [];
+  for (let i = 0; i < size; i++) { if (at.has(i)) rows.push(BRK); rows.push(i); }
+  return rows;
+}
+// rows back to songs and breaks: a break left at the very start goes after the first song, at the very end before the last
+function breakSplit(rows) {
+  const order = rows.filter((r) => r !== BRK);
+  const breaks = [];
+  let songs = 0;
+  for (const r of rows) if (r === BRK) breaks.push(Math.min(Math.max(songs, 1), Math.max(order.length - 1, 1))); else songs++;
+  return { order, breaks: breakNorm(breaks, order.length) };
+}
+function breakMoveRow(size, b, from, to) {
+  const rows = breakRows(size, b);
+  if (from < 0 || to < 0 || from >= rows.length || to >= rows.length) return { order: [...Array(size).keys()], breaks: breakNorm(b, size) };
+  rows.splice(to, 0, rows.splice(from, 1)[0]);
+  return breakSplit(rows);
+}
+function breakMoveSong(size, b, from, to) {
+  if (from < 0 || to < 0 || from >= size || to >= size) return { order: [...Array(size).keys()], breaks: breakNorm(b, size) };
+  const rows = breakRows(size, b);
+  return breakMoveRow(size, b, rows.indexOf(from), rows.indexOf(to));
+}
+// a new break before the last song, or the nearest free place before it; none with fewer than 2 songs
+function breakAdd(b, size) {
+  const now = breakNorm(b, size);
+  for (let p = size - 1; p >= 1; p--) if (!now.includes(p)) return breakNorm([...now, p], size);
+  return now;
+}
+// the breaks after the songs at [removed] left: each stays before the same song or the next one that stayed
+function breakAfterRemoving(b, size, removed) {
+  const left = size - [...removed].filter((i) => i >= 0 && i < size).length;
+  return breakNorm(breakNorm(b, size).map((p) => p - [...removed].filter((i) => i >= 0 && i < p).length), left);
+}
+// plurals come as three texts (0, 1, other): the app's language says which one a number takes
+const plural = (t, name, n) => fill(t[name + (n === 0 ? "0" : n === 1 ? "1" : "N")], n).replace("%d", n);
+// what the setlist shows: rows, the summary line and the state of the "+ Break" button
+function setView(set, t) {
+  const size = set.songs.length;
+  const breaks = breakNorm(set.breaks, size);
+  const rows = [];
+  set.songs.forEach((s, i) => {
+    if (breaks.includes(i)) rows.push({ kind: "break", at: i, label: t.breakLabel, up: i > 1, down: i < size - 1 });
+    rows.push({ kind: "song", index: i, n: i + 1, title: s.title ? [s.title, s.author].filter(Boolean).join(" · ") : "–", up: i > 0, down: i < size - 1 });
+  });
+  const songsText = plural(t, "songCount", size);
+  const canAdd = breakAdd(breaks, size).length > breaks.length;
+  return {
+    rows,
+    summary: breaks.length ? fill(t.setCountBreaks, songsText, plural(t, "breakCount", breaks.length)) : songsText,
+    addOff: !canAdd,
+    addTip: size < 2 ? t.breakNeedsTwo : "",
+  };
+}
+function setMoveSong(set, i, to) {
+  const m = breakMoveSong(set.songs.length, set.breaks, i, to);
+  set.songs = m.order.map((k) => set.songs[k]);
+  set.breaks = m.breaks;
+}
+function setMoveBreak(set, at, by) {
+  const size = set.songs.length;
+  const rows = breakRows(size, set.breaks);
+  const row = rows.findIndex((r, k) => r === BRK && rows.slice(0, k).filter((x) => x !== BRK).length === at);
+  const m = breakMoveRow(size, set.breaks, row, row + by);
+  set.songs = m.order.map((k) => set.songs[k]);
+  set.breaks = m.breaks;
+}
+// </breaks-logic>
+
 function drawSet() {
-  const items = currentSet.songs;
-  $("set-items").replaceChildren(...items.map((s, i) => {
+  const view = setView(currentSet, t);
+  const button = (text, off, title, onclick) => {
+    const b = document.createElement("button"); b.className = "icon"; b.textContent = text; b.disabled = off;
+    if (title) { b.title = title; b.setAttribute("aria-label", title); }
+    b.onclick = () => { onclick(); dirty = true; drawSet(); drawSetAdd(); };
+    return b;
+  };
+  $("set-items").replaceChildren(...view.rows.map((r) => {
     const el = document.createElement("li");
-    const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
-    const title = document.createElement("span"); title.className = "t"; title.textContent = s.title ? [s.title, s.author].filter(Boolean).join(" · ") : "–";
-    const up = document.createElement("button"); up.className = "icon"; up.textContent = "↑"; up.disabled = i === 0;
-    up.onclick = () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; dirty = true; drawSet(); };
-    const down = document.createElement("button"); down.className = "icon"; down.textContent = "↓"; down.disabled = i === items.length - 1;
-    down.onclick = () => { [items[i + 1], items[i]] = [items[i], items[i + 1]]; dirty = true; drawSet(); };
-    const x = document.createElement("button"); x.className = "icon"; x.textContent = "×"; x.title = t.remove;
-    x.onclick = () => { items.splice(i, 1); dirty = true; drawSet(); drawSetAdd(); };
-    el.append(n, title, up, down, x);
+    if (r.kind === "break") {
+      el.className = "brk";
+      const a = document.createElement("span"); a.className = "line";
+      const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = r.label;
+      const b = document.createElement("span"); b.className = "line";
+      el.append(a, lbl, b,
+        button("↑", !r.up, "", () => setMoveBreak(currentSet, r.at, -1)),
+        button("↓", !r.down, "", () => setMoveBreak(currentSet, r.at, 1)),
+        button("×", false, t.breakRemove, () => (currentSet.breaks = currentSet.breaks.filter((p) => p !== r.at))));
+      return el;
+    }
+    const n = document.createElement("span"); n.className = "n"; n.textContent = r.n;
+    const title = document.createElement("span"); title.className = "t"; title.textContent = r.title;
+    el.append(n, title,
+      button("↑", !r.up, "", () => setMoveSong(currentSet, r.index, r.index - 1)),
+      button("↓", !r.down, "", () => setMoveSong(currentSet, r.index, r.index + 1)),
+      button("×", false, t.remove, () => {
+        currentSet.breaks = breakAfterRemoving(currentSet.breaks, currentSet.songs.length, [r.index]);
+        currentSet.songs.splice(r.index, 1);
+      }));
     return el;
   }));
-  $("set-empty").hidden = items.length > 0;
+  $("set-empty").hidden = currentSet.songs.length > 0;
   $("set-empty").textContent = t.emptySet;
+  $("set-break-add").textContent = "+ " + t.breakAdd;
+  $("set-break-add").disabled = view.addOff;
+  $("set-break-add").title = view.addTip;
+  $("set-break-hint").textContent = view.addTip;   // visible too: a disabled button shows its title only on some browsers
+  $("set-summary").textContent = view.summary;
 }
 
 // songs to add: the library minus what's already in the setlist, filtered by the search
@@ -664,7 +771,7 @@ function drawSetAdd() {
   const q = plain($("set-add-search").value.trim());
   const shown = songs.filter((s) => !inSet.has(s.id) && (!q || s.k.includes(q))).slice(0, 50);
   $("set-add").replaceChildren(...shown.map((s) => li("+ " + s.title, s.author, () => {
-    currentSet.songs.push({ id: s.id, title: s.title, author: s.author });
+    currentSet.songs.push({ id: s.id, title: s.title, author: s.author });   // at the end: the breaks keep their places
     dirty = true;
     drawSet();
     drawSetAdd();
@@ -672,7 +779,7 @@ function drawSetAdd() {
 }
 
 async function saveSet() {
-  const body = { name: $("set-name").value, items: currentSet.songs.map((s) => s.id) };
+  const body = { name: $("set-name").value, items: currentSet.songs.map((s) => s.id), breaks: breakNorm(currentSet.breaks, currentSet.songs.length) };
   const id = currentSet.id;
   const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
   if (!r || r.status !== 200) return offline();
@@ -682,9 +789,10 @@ async function saveSet() {
   say("set-status", t.saved);
 }
 
-$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [] }); };
+$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [] }); };
 $("set-name").oninput = () => (dirty = true);
 $("set-add-search").oninput = drawSetAdd;
+$("set-break-add").onclick = () => { currentSet.breaks = breakAdd(currentSet.breaks, currentSet.songs.length); dirty = true; drawSet(); };
 $("set-save").onclick = saveSet;
 $("set-delete").onclick = async () => {
   if (!currentSet.id || !confirm(fill(t.setDeleteConfirm, currentSet.name))) return;

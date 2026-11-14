@@ -194,7 +194,7 @@ class WebEditorServer @Inject constructor(
         val localized = Languages.wrap(context)
         // the lyrics field is named by the profile, as in the app's editor ("Lyrics and chords" with chords on)
         val lyrics = if (repository.library.value.look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics
-        return WEB_STRINGS.mapValues { localized.getString(it.value) } + ("lyrics" to localized.getString(lyrics))
+        return texts(localized, lyrics)
     }
 
     companion object {
@@ -206,6 +206,18 @@ class WebEditorServer @Inject constructor(
         const val MAX_CONNECTIONS = 8
         const val IDLE_MS = 5 * 60_000L
         private const val IDLE_CHECK_MS = 30_000L
+
+        /**
+         * The page's texts in [localized]'s language. A plural comes as three texts, `<name>0`, `<name>1` and `<name>N` (with
+         * the `%d` still in it): the language says which form 0 and 1 take (Portuguese counts 0 as "one"), the page only picks.
+         */
+        fun texts(localized: android.content.Context, lyrics: Int): Map<String, String> =
+            WEB_STRINGS.mapValues { localized.getString(it.value) } + ("lyrics" to localized.getString(lyrics)) +
+                WEB_PLURALS.flatMap { (name, id) ->
+                    listOf("0" to 0, "1" to 1, "N" to 2).map { (suffix, quantity) -> name + suffix to localized.resources.getQuantityText(id, quantity).toString() }
+                }
+
+        val WEB_PLURALS = mapOf("songCount" to R.plurals.song_count, "breakCount" to R.plurals.break_count)
 
         /** Texts the page uses, by the name it knows them. */
         val WEB_STRINGS = mapOf(
@@ -277,6 +289,11 @@ class WebEditorServer @Inject constructor(
             "emptySet" to R.string.set_empty_title,
             "setDeleteConfirm" to R.string.sets_delete_confirm,
             "remove" to R.string.set_remove,
+            "breakLabel" to R.string.set_break,
+            "breakAdd" to R.string.sets_add_break,
+            "breakRemove" to R.string.set_break_remove,
+            "breakNeedsTwo" to R.string.web_break_needs_two,
+            "setCountBreaks" to R.string.set_count_with_breaks,
             "addCount" to R.string.pick_add_short,
             "track" to R.string.stage_backing_track,
             "trackNone" to R.string.editor_track_none,

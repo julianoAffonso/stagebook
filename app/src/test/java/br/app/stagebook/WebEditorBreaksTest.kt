@@ -98,4 +98,26 @@ class WebEditorBreaksTest {
         assertEquals("Show", repo.library.value.setlist(id)!!.name)
         assertEquals(1, repo.library.value.sets.size)
     }
+
+    // the page draws these (setView: label, button, hint, summary); here, that the tablet sends them in each language
+    private fun texts() = br.app.stagebook.data.web.WebEditorServer.texts(context, R.string.editor_lyrics)
+
+    @Test @Config(sdk = [35], qualifiers = "pt-rBR") fun `the page gets the break texts in Portuguese`() {
+        val t = texts()
+        assertEquals("INTERVALO", t["breakLabel"])
+        assertEquals("Intervalo", t["breakAdd"])
+        assertEquals("Precisa de pelo menos 2 músicas", t["breakNeedsTwo"])
+        assertEquals("%1\$s · %2\$s", t["setCountBreaks"])
+        assertEquals(listOf("%d música", "%d música", "%d músicas"), listOf(t["songCount0"], t["songCount1"], t["songCountN"]))
+        assertEquals(listOf("%d intervalo", "%d intervalo", "%d intervalos"), listOf(t["breakCount0"], t["breakCount1"], t["breakCountN"]))
+    }
+
+    @Test @Config(sdk = [35], qualifiers = "en") fun `the page gets the break texts in English`() {
+        val t = texts()
+        assertEquals("BREAK", t["breakLabel"])
+        assertEquals("Break", t["breakAdd"])
+        assertEquals("Needs at least 2 songs", t["breakNeedsTwo"])
+        assertEquals(listOf("%d songs", "%d song", "%d songs"), listOf(t["songCount0"], t["songCount1"], t["songCountN"]))
+        assertEquals(listOf("%d breaks", "%d break", "%d breaks"), listOf(t["breakCount0"], t["breakCount1"], t["breakCountN"]))
+    }
 }
