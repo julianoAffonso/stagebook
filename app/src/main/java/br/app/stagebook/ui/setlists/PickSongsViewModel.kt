@@ -8,7 +8,8 @@ import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.QrPayload
 import br.app.stagebook.navigation.PickSongs
-import br.app.stagebook.ui.songs.subtitle
+import br.app.stagebook.ui.songs.RowFactsReader
+import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +23,17 @@ import kotlinx.coroutines.flow.map
 import br.app.stagebook.ui.songs.typingDelay
 
 @Immutable
-data class PickRowUi(val id: String, val title: String, val subtitle: String, val inSet: Boolean, val selected: Boolean)
+data class PickRowUi(
+    val id: String,
+    val title: String,
+    val subtitle: String,   // the artist
+    val inSet: Boolean,
+    val selected: Boolean,
+    val songKey: String = "",   // the song's key ("" = none written)
+    val bpm: Int = 0,           // 0 = none
+    val capo: Int = 0,
+    val hasTrack: Boolean = false,
+)
 
 @Immutable
 data class PickSongsUiState(
@@ -46,14 +57,23 @@ class PickSongsViewModel @Inject constructor(
     // building the setlist by tag: "only Brazilian songs" (user, 01/11)
     private val chosenTags = MutableStateFlow(emptySet<String>())
 
+    // the rows' key, tempo, capo and backing track, read the same way as the song list's
+    private val facts = RowFactsReader().of(repository.library.map { it.songs })
+
     // the search, tags and filter don't change when a song is checked: only the check marks are redone (audit 01/11)
     @OptIn(FlowPreview::class)
-    private val filtered = combine(repository.library, search, query.debounce(::typingDelay), chosenTags) { lib, s, q, chosen ->
+    private val filtered = combine(repository.library, search.combine(facts, ::Pair), query.debounce(::typingDelay), chosenTags) { lib, (s, known), q, chosen ->
         val set = lib.setlist(setId)
         val all = br.app.stagebook.domain.Tags.all(lib.songs)
         val kept = br.app.stagebook.domain.Tags.stillUsed(chosen, all)
-        val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }
-            .map { PickRowUi(it.id, it.title, it.subtitle(), set?.items?.contains(it.id) == true, false) }
+        val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map {
+            val fact = known[it.id]
+            // a song the search already has and the facts don't yet: its row comes bare and is redone right after
+            PickRowUi(
+                it.id, it.title, it.artistLine(), set?.items?.contains(it.id) == true, false,
+                fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true,
+            )
+        }
         PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, tags = all, chosenTags = kept)
     }
 

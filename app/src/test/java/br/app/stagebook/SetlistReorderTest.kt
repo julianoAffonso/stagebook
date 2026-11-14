@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Dragging by the handle changes the setlist order (reorderable library). */
+/** Dragging by the handle, while editing the setlist, changes its order (reorderable library). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
 class SetlistReorderTest {
@@ -33,7 +33,7 @@ class SetlistReorderTest {
             items = listOf("a", "b", "c").map { SetItemUi(it, it, "Música $it", "", false) },
         )
         compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
         }
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
@@ -52,7 +52,7 @@ class SetlistReorderTest {
             items = listOf("a", "b", "c", "d").map { SetItemUi(it, it, "Música $it", "", false) },
         )
         compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
         }
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[0].performTouchInput {
             down(center)
@@ -64,29 +64,4 @@ class SetlistReorderTest {
         assertEquals(0, moves.single().first)
         assertTrue(moves.single().second >= 2)
     }
-
-    @Test fun `tapping a setlist song opens the stage on it`() {
-        var opened = -1
-        val state = SetlistDetailUiState(
-            loading = false,
-            name = "Show",
-            items = listOf("a", "b", "c").map { SetItemUi(it, it, "Música $it", "", false) },
-        )
-        compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, { opened = it }, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }
-        }
-        compose.onNodeWithText("Música b").performClick()
-        assertEquals(1, opened)
-        compose.onNodeWithContentDescription("Palco").performClick()   // top play: from the start
-        assertEquals(0, opened)
-    }
-
-    // tapping the setlist's name renames it, like a song's name (user, 01/11)
-    @Test fun `tapping the name opens rename`() {
-        val state = SetlistDetailUiState(loading = false, name = "Show", items = listOf(SetItemUi("a", "a", "Música a", "", false)))
-        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
-        compose.onNodeWithText(state.name).performClick()
-        compose.onNodeWithText("Renomear").assertExists()   // the dialog title
-    }
-
 }

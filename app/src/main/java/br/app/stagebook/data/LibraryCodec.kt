@@ -39,7 +39,7 @@ object LibraryCodec {
     private fun withIds(lib: Library, newId: () -> String): Library {
         return lib.copy(
             songs = lib.songs.map { if (it.id.isEmpty()) it.copy(id = newId()) else it },
-            sets = lib.sets.map { if (it.id.isEmpty()) it.copy(id = newId()) else it },
+            sets = lib.sets.map { (if (it.id.isEmpty()) it.copy(id = newId()) else it).withValidBreaks() },
         )
     }
 

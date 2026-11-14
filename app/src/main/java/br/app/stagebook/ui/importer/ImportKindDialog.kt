@@ -24,6 +24,7 @@ import br.app.stagebook.data.model.SiteKind
  */
 @Composable
 fun ImportKindDialog(onPick: (SiteKind) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.import_kind_title)) },

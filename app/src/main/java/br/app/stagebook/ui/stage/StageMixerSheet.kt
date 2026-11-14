@@ -45,6 +45,7 @@ internal fun StageMixerSheet(
     onGeneral: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     var monitoring by remember { mutableStateOf(false) }
     var backToGeneral by remember { mutableStateOf(false) }
     if (backToGeneral) {

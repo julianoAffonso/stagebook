@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.StageGate
 import br.app.stagebook.data.model.Song
+import br.app.stagebook.domain.SetlistShow.State
 import br.app.stagebook.ui.stage.StageViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,22 +67,104 @@ class StageMetaTest {
         assertEquals("Ao vivo", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().lostTrack)
     }
 
-    private fun stage(repo: LibraryRepository, id: String) = StageViewModel(repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)), StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
-        br.app.stagebook.data.BandConduct(
-            br.app.stagebook.data.BandLink(
-                context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-                StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-            ),
-            repo, br.app.stagebook.data.DeviceIdentity(context),
-        ),
-        br.app.stagebook.data.MetronomeSound(context),
-        br.app.stagebook.data.ChordPlayer(),
-        br.app.stagebook.data.StageAnnouncer(
-            br.app.stagebook.data.BandLink(
-                context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-                StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-            ),
-        ),
-        br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
-    )
+    // a setlist's break (see StageBreakTest for the screen): the stage knows where the breaks are, and the time the
+    // break started stays with the stage's saved state, so turning the device doesn't restart its counter
+    @Test fun `the stage carries the setlist's breaks and keeps when a break started`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }
+        val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
+        val vm = stage(repo, "", saved)
+        assertEquals(listOf(2), withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.breaks)
+        assertEquals(null, vm.breakSince.value)
+        vm.setBreak(true)
+        val since = vm.breakSince.value!!
+        vm.setBreak(true)   // asked twice (a fast foot): the counter doesn't start over
+        assertEquals(since, vm.breakSince.value)
+        assertEquals(since, stage(repo, "", saved).breakSince.value)   // the stage built again from what was saved
+        vm.setBreak(false)
+        assertEquals(null, vm.breakSince.value)
+    }
+
+    // the setlist over the stage (see StageSetlistPanelTest for the screen): only a stage opened from a setlist has
+    // one, with its name, each song's key and the same marks the setlist's screen shows
+    @Test fun `a stage opened from a setlist carries it, and a single song carries none`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf("{key: G}\nlinha", "linha", "{key: Em}\nlinha").mapIndexed { i, text -> repo.saveSong(Song(title = "Painel $i", text = text)) }
+        val set = repo.createSetlist("Show do painel").also { repo.addToSetlist(it, ids) }
+        val vm = stage(repo, "", SavedStateHandle(mapOf("setId" to set, "start" to 0)))
+        val opened = withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.setlist!!
+        assertEquals("Show do painel", opened.name)
+        assertEquals(listOf("G", "", "Em"), opened.keys)
+        vm.songShown(1)
+        assertEquals(listOf(State.NONE, State.NOW, State.NEXT), withTimeout(5_000) { vm.uiState.first { it.setlist?.states?.contains(State.NOW) == true } }.setlist!!.states)
+
+        val single = stage(repo, ids[0])
+        assertEquals(null, withTimeout(5_000) { single.uiState.first { it.songs.isNotEmpty() && !it.loading } }.setlist)
+    }
+
+    // back to the song to check something and on to the break again: the break goes on counting (user, 13/11)
+    @Test fun `a break keeps its start when left backward or forward and found again`() = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids) }
+        val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
+        val vm = stage(repo, "", saved)
+        withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }
+        vm.songShown(0)
+        vm.setBreak(true)
+        val since = vm.breakSince.value!!
+        vm.setBreak(false)   // back to the song before the break
+        assertEquals(null, vm.breakSince.value)
+        Thread.sleep(20)   // a new start would be a later time
+        vm.songShown(0)    // the same song shown again (the screen turned)
+        vm.setBreak(true)
+        assertEquals("the break goes on from where it started", since, vm.breakSince.value)
+        // the stage built again from what was saved, on the song before the break: still the same start
+        vm.setBreak(false)
+        val again = stage(repo, "", saved)
+        again.songShown(0)
+        again.setBreak(true)
+        assertEquals(since, again.breakSince.value)
+
+        vm.setBreak(false)   // left forward: the next song opens
+        vm.songShown(1)
+        vm.songShown(0)      // and back on the first song: the break goes on (user, 14/11; only a played next song ends it)
+        vm.setBreak(true)
+        assertEquals(since, vm.breakSince.value)
+    }
+
+    private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = testStage(context, repo, saved)
 }
+
+/** A stage with the real pieces around it (no audio plays in a test); [show] is where the setlist's marks go. */
+internal fun testStage(
+    context: android.app.Application,
+    repo: LibraryRepository,
+    saved: SavedStateHandle,
+    show: br.app.stagebook.data.SetlistShowStore = br.app.stagebook.data.SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO)),
+    bandTrust: br.app.stagebook.data.BandTrust = br.app.stagebook.data.BandTrust(context),
+    conduct: br.app.stagebook.data.BandConduct = br.app.stagebook.data.BandConduct(
+        br.app.stagebook.data.BandLink(
+            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
+            StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+        ),
+        repo, br.app.stagebook.data.DeviceIdentity(context),
+    ),
+) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
+    conduct,
+    br.app.stagebook.data.MetronomeSound(context),
+    br.app.stagebook.data.ChordPlayer(),
+    br.app.stagebook.data.StageAnnouncer(
+        br.app.stagebook.data.BandLink(
+            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
+            StageGate(), br.app.stagebook.data.BandInbox(context), repo,
+        ),
+    ),
+    br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
+    show,
+    bandTrust,
+)

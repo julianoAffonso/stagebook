@@ -51,6 +51,8 @@ object AppIcons {
         icon("search", "M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z")
     }
     val Play by lazy { icon("play", "M8,5v14l11,-7z") }
+    // "this song has a backing track", as information in a list's row: the play triangle there read as a button
+    val AudioWave by lazy { icon("graphic_eq", "M7,18h2V6H7v12zM11,22h2V2h-2v20zM3,14h2v-4H3v4zM15,18h2V6h-2v12zM19,10v4h2v-4h-2z") }
     val Back by lazy { icon("back", "M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z") }
     val Close by lazy {
         icon("close", "M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z")
@@ -110,6 +112,13 @@ object AppIcons {
         icon("capo", "M6,3h1.5v18H6zM10,3h1.5v18H10zM14,3h1.5v18H14zM18,3h1.5v18H18zM3.5,9.5h17a1.5,1.5 0,0 1,1.5 1.5v1a1.5,1.5 0,0 1,-1.5 1.5h-17a1.5,1.5 0,0 1,-1.5 -1.5v-1a1.5,1.5 0,0 1,1.5 -1.5z")
     }
     val Remove by lazy { icon("remove", "M19,13H5v-2h14v2z") }
+    // renaming: letters, where the pencil already means "edit the setlist" in the same bar (user, 13/11)
+    val Rename by lazy { icon("rename", "M2.5,4v3h5v12h3V7h5V4H2.5zM21.5,9h-9v3h3v7h3v-7h3V9z") }
+    // takes something out of a list without deleting it (a song or a break out of a setlist): the bin read as "delete
+    // the song", and × as "close" (user, 13/11)
+    val RemoveCircle by lazy {
+        icon("removecircle", "M7,11v2h10v-2L7,11zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8z")
+    }
     val ArrowUp by lazy { icon("up", "M4,12l1.41,1.41L11,7.83V20h2V7.83l5.58,5.59L20,12l-8,-8 -8,8z") }
     val ArrowDown by lazy { icon("down", "M20,12l-1.41,-1.41L13,16.17V4h-2v12.17l-5.58,-5.59L4,12l8,8 8,-8z") }
     val Visibility by lazy {
@@ -188,6 +197,7 @@ object AppIcons {
     val Stop by lazy { icon("stop", "M8,6h8c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H8c-1.1,0 -2,-0.9 -2,-2V8c0,-1.1 0.9,-2 2,-2z") }
     // two down arrows: stage auto-scroll
     val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // thick stroke (request from 29/10)
+    val Replay by lazy { icon("replay", "M12,5V1L7,6l5,5V7c3.31,0 6,2.69 6,6s-2.69,6 -6,6 -6,-2.69 -6,-6H4c0,4.42 3.58,8 8,8s8,-3.58 8,-8 -3.58,-8 -8,-8z") }
     val Pause by lazy { icon("pause", "M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z") }
     val Group by lazy {
         icon("group", "M16,11c1.66,0 2.99,-1.34 2.99,-3S17.66,5 16,5c-1.66,0 -3,1.34 -3,3s1.34,3 3,3zM8,11c1.66,0 2.99,-1.34 2.99,-3S9.66,5 8,5C6.34,5 5,6.34 5,8s1.34,3 3,3zM8,13c-2.33,0 -7,1.17 -7,3.5L1,19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5zM16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45L17,19h6v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z")

@@ -304,10 +304,13 @@ private fun Review(
     val toImport = ui.rows.count { it.chosen == null && !it.carried && it.candidates.isEmpty() }
 
     val found = ui.rows.count { it.chosen != null || it.carried }
+    val foundText = pluralStringResource(R.plurals.scan_found, ui.rows.size, found, ui.rows.size)
+    // the sender's breaks that stay with the songs going in now; nothing about breaks when none came or none stays
+    val breaks = ui.breakCount
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         OutlinedTextField(ui.name, onName, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.scan_name)) }, singleLine = true)
         Text(
-            pluralStringResource(R.plurals.scan_found, ui.rows.size, found, ui.rows.size),
+            if (breaks == 0) foundText else stringResource(R.string.set_count_with_breaks, foundText, pluralStringResource(R.plurals.break_count, breaks, breaks)),
             style = MaterialTheme.typography.titleSmall,
             // red only when a song really is missing; when only a choice is pending, the same orange as that row
             color = when {
@@ -353,6 +356,7 @@ private fun Review(
     }
     // "Create setlist" with missing songs: says what's left out and offers the right path (import), against a wrong tap
     if (confirmMissing) {
+        br.app.stagebook.ui.components.FollowBusyWhile()
         AlertDialog(
             onDismissRequest = { confirmMissing = false },
             title = { Text(pluralStringResource(R.plurals.scan_missing_title, ui.missing.size, ui.missing.size)) },
@@ -564,6 +568,7 @@ private fun RowItem(
 // "See what changes": the lyrics lines leaving (mine) and coming in (theirs); my chords stay either way
 @Composable
 private fun ChangesDialog(changes: List<SongMerge.Change>, useIncoming: Boolean, onChoose: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.scan_changes_title)) },

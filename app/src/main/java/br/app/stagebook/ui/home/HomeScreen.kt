@@ -68,14 +68,17 @@ enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SETTINGS(R.string.tab_settings, AppIcons.Tune),
 }
 
+/** Settings is in front (its tab, or its About screen opened from the rail): a band follower isn't pulled off it. */
+internal fun settingsFront(tab: HomeTab, aboutOpen: Boolean) = tab == HomeTab.SETTINGS || aboutOpen
+
 /** Songs, Setlists and Settings tabs: bottom bar on phones, wide rail on tablets (Material 3 Expressive). */
 @Composable
 fun HomeScreen(
     onOpenSong: (String) -> Unit,
     onEditSong: (String?) -> Unit,
     onImport: (query: String, kind: String) -> Unit,
-    onOpenSetlist: (String) -> Unit,
-    onPlaySetlist: (String) -> Unit,
+    onOpenSetlist: (String) -> Unit,   // the setlist's edit
+    onPlaySetlist: (setId: String, start: Int, atBreak: Boolean) -> Unit,   // its stage
     onScanSetlist: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},
@@ -140,6 +143,8 @@ fun HomeScreen(
         linked?.let { onTab(HomeTab.SETTINGS); settingsStart = it; br.app.stagebook.ui.settings.SettingsLinks.pending.value = null }
     }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
+    // the leader's song doesn't pull this person off Settings (and the screens inside it): it waits and says so on the strip
+    br.app.stagebook.ui.components.FollowHoldWhile(settingsFront(tab, aboutOpen))
     HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, onAbout = { aboutOpen = true }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"

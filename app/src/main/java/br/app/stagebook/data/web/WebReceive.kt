@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
  * Import → Type the 3 words, from the computer (T37f4): the tablet fetches what was sent over the internet and the page
  * reviews it with the app's rules. A song I have stays mine, a song that came along goes into the library, a similar
  * one is the user's choice (or left out). Creating also lets the sender into the band, as accepting in the app does.
+ * The setlist is created with the breaks the sender put in it, placed as the app's receive screen places them.
  */
 class WebReceive(
     private val repository: LibraryRepository,
@@ -27,7 +28,11 @@ class WebReceive(
 
     /** One row: "have" (mine), "came" (goes in as new), "similar" (pick one or leave out), "missing" (left out). */
     @Serializable
-    data class Row(val title: String, val artist: String, val status: String, val candidates: List<Candidate> = emptyList())
+    data class Row(
+        val title: String, val artist: String, val status: String, val candidates: List<Candidate> = emptyList(),
+        // the song's key, BPM and capo as the device's rows show them (from my song, or from the text that came along)
+        val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false,
+    )
 
     @Serializable
     data class Review(val token: String, val name: String, val songsOnly: Boolean, val rows: List<Row>)
@@ -35,6 +40,7 @@ class WebReceive(
     private class Pending(
         val code: String, val received: SetlistCloud.Received.Ok, val name: String, val found: List<String?>,
         val came: Map<Int, SetlistCloud.SharedSong>, val inbox: String,
+        val breaks: List<Int>?,   // the sender's breaks between the review's rows (null = it said nothing)
     )
 
     private val pending = mutableMapOf<String, Pending>()
@@ -46,7 +52,7 @@ class WebReceive(
     }
 
     suspend fun fetch(code: String): Fetched = when (val r = receive(code)) {
-        is SetlistCloud.Received.Ok -> review(code, r)?.let { Fetched.Ok(it) } ?: Fetched.Problem("not_found")
+        is SetlistCloud.Received.Ok -> review(code, r, breaks = r.breaks[r.text])?.let { Fetched.Ok(it) } ?: Fetched.Problem("not_found")
         SetlistCloud.Received.NotFound -> Fetched.Problem("not_found")
         SetlistCloud.Received.Offline -> Fetched.Problem("offline")
         is SetlistCloud.Received.Newer -> Fetched.Problem("newer")
@@ -55,10 +61,11 @@ class WebReceive(
     }
 
     /** Received from the band (Import → Received from the band): the same review; once done it leaves the inbox. */
-    fun fromInbox(id: String, text: String, songs: List<SetlistCloud.SharedSong>): Review? = review("", SetlistCloud.Received.Ok(text, songs), id)
+    fun fromInbox(id: String, text: String, songs: List<SetlistCloud.SharedSong>, breaks: List<Int>? = null): Review? =
+        review("", SetlistCloud.Received.Ok(text, songs), id, breaks)
 
     @Synchronized
-    private fun review(code: String, r: SetlistCloud.Received.Ok, inbox: String = ""): Review? {
+    private fun review(code: String, r: SetlistCloud.Received.Ok, inbox: String = "", breaks: List<Int>? = null): Review? {
         val parsed = QrPayload.parse(r.text) ?: return null
         val library = repository.library.value.songs
         val songsOnly = parsed.name.isEmpty()
@@ -73,15 +80,15 @@ class WebReceive(
             if (c != null) came[i] = c
             found += (m as? QrMatch.Found)?.song?.id
             when {
-                m is QrMatch.Found -> Row(e.title, e.artist, "have")
-                c != null -> Row(e.title, e.artist, "came")
+                m is QrMatch.Found -> facts(Row(e.title, e.artist, "have"), m.song.text, m.song.track.isNotEmpty())
+                c != null -> facts(Row(e.title, e.artist, "came"), c.text, false)
                 m is QrMatch.Similar -> Row(e.title, e.artist, "similar", m.candidates.map { Candidate(it.id, it.title, it.author) })
                 else -> Row(e.title, e.artist, "missing")
             }
         }
         val token = java.util.UUID.randomUUID().toString()
         pending.clear()   // one review at a time is enough for one computer
-        pending[token] = Pending(code, r, parsed.name, found, came, inbox)
+        pending[token] = Pending(code, r, parsed.name, found, came, inbox, breaks)
         return Review(token, parsed.name, songsOnly, rows)
     }
 
@@ -102,8 +109,14 @@ class WebReceive(
         if (p.inbox.isNotEmpty()) inboxDone(p.inbox)
         if (p.name.isEmpty()) return ""
         val setId = repository.createSetlist(uniqueName(name.trim().ifEmpty { p.name }))
-        repository.setSetlistItems(setId, slots.filterNotNull())
+        // a row left out hands its break to the next song that came in (never trusted as received: placed and checked there)
+        repository.setReceivedSetlist(setId, slots, p.breaks)
         return setId
+    }
+
+    private fun facts(row: Row, text: String, hasTrack: Boolean): Row {
+        val meta = Chords.meta(text)
+        return row.copy(key = meta.key, bpm = meta.tempo, capo = meta.capo, hasTrack = hasTrack)
     }
 
     private fun uniqueName(name: String): String {

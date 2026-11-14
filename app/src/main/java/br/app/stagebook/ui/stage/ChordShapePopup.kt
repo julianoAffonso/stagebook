@@ -57,6 +57,7 @@ fun ChordShapePopup(
     onPlay: (notes: List<Int>) -> Unit = {},
     extras: Boolean = true,   // essential mode (T19): no sound and no Details; the diagram and shapes stay
 ) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     // with a capo, the diagram is the chart's but the sounding note goes up (T18/T20): the sound plays the real note
     val capo = remember(songText, instrument) { Voicings.neckCapo(songText, instrument) }
     val keyboard = instrument == Instrument.KEYBOARD

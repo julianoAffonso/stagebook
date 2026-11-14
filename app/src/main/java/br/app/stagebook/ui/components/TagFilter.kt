@@ -116,6 +116,7 @@ private fun ExposedDropdownMenuBoxScope.FilterField(value: String, label: String
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExposedDropdownMenuBoxScope.FilterMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile(open)
     ExposedDropdownMenu(
         expanded = open, onDismissRequest = onDismiss, matchAnchorWidth = false,
         modifier = Modifier.widthIn(min = br.app.stagebook.ui.theme.Sizes.tagFilterNarrow, max = br.app.stagebook.ui.theme.Sizes.tagMenu),

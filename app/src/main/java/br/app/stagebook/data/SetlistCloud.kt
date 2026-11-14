@@ -43,7 +43,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     sealed interface Received {
         /** [from]: the sender (their device), to join "the band" on accepting. */
         // [others]: more setlists in the same send (several setlists shared at once, user 01/11)
-        data class Ok(val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null, val others: List<String> = emptyList()) : Received
+        // [breaks]: each setlist's breaks, by its text; a setlist that isn't there said nothing about breaks (an older app)
+        data class Ok(
+            val text: String, val songs: List<SharedSong> = emptyList(), val from: BandProtocol.Hello? = null, val others: List<String> = emptyList(),
+            val breaks: Map<String, List<Int>> = emptyMap(),
+        ) : Received
         data object NotFound : Received   // wrong code or past the 12 h
         data object Offline : Received
         /** Came from a newer Stagebook (a format this app doesn't know yet): update to receive. */
@@ -68,22 +72,18 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val lib = repository.library.value
         val set = lib.setlist(setId) ?: return null
         val packed = repository.qrPayload(setId) ?: return null
-        return packed to if (withSongs) set.items.mapNotNull(lib::song).map { it.shared() } else emptyList()
+        // the breaks go after the list (see SharedBreaks), counted over the songs the list really carries
+        val gone = set.items.indices.filter { lib.song(set.items[it]) == null }.toSet()
+        val breaks = br.app.stagebook.domain.SetlistBreaks.afterRemoving(set.breaks, set.items.size, gone)
+        return br.app.stagebook.domain.SharedBreaks.pack(packed, breaks) to if (withSongs) set.items.mapNotNull(lib::song).map { it.shared() } else emptyList()
     }
 
     /**
      * Loose songs (from the Songs tab), with no setlist: the list goes in the same format as a setlist, **with no
      * name**, which is how the receiver knows they're just songs for the library.
      */
-    fun songsPackage(songIds: List<String>): Pair<ByteArray, List<SharedSong>>? {
-        val songs = songIds.mapNotNull(repository.library.value::song)
-        if (songs.isEmpty()) return null
-        val list = (listOf(QrPayload.HEADER, songs.size.toString(), "") + songs.map { listOf(it.title, it.author).joinToString("\t") { s -> s.replace('\n', ' ').replace('\t', ' ').trim() }.trimEnd('\t') })
-            .joinToString("\n")
-        return QrPayload.pack(list) to songs.map { it.shared() }
-    }
+    fun songsPackage(songIds: List<String>): Pair<ByteArray, List<SharedSong>>? = looseSongs(songIds.mapNotNull(repository.library.value::song))
 
-    private fun br.app.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text)
 
     suspend fun send(setId: String, withSongs: Boolean): Sent? = setlistPackage(setId, withSongs)?.let { (p, s) -> sendPackage(p, s) }
 
@@ -171,7 +171,9 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** What a send's decrypted messages are: a setlist with its songs, an invite, or nothing readable. */
     internal fun read(plain: List<ByteArray>): Received {
         // only setlists and songs in plain text (BandContent): the rest is discarded
-        val lists = plain.mapNotNull { QrPayload.unpack(it) }.filter(br.app.stagebook.domain.BandContent::listOk).distinct()
+        val packs = plain.mapNotNull { p -> QrPayload.unpack(p)?.let { it to p } }.filter { br.app.stagebook.domain.BandContent.listOk(it.first) }.distinctBy { it.first }
+        val lists = packs.map { it.first }
+        val breaks = packs.mapNotNull { (list, p) -> br.app.stagebook.domain.SharedBreaks.read(p, list)?.let { list to it } }.toMap()
         val text = lists.firstOrNull()
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
             .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
@@ -190,7 +192,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
                 used = plain.mapNotNull { unpack(ACK_MARK, it) }.mapNotNull(::hello).any { it.id != identity.id && it.id != from.id },
             )
             text == null -> Received.NotFound
-            else -> Received.Ok(text, songs, from, lists.drop(1))
+            else -> Received.Ok(text, songs, from, lists.drop(1), breaks)
         }
     }
 
@@ -238,7 +240,24 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val welcome: Boolean,
         val last: String?,
         val requests: List<List<BandLink.Wanted>> = emptyList(),   // "send me these songs" (T12)
+        val breaks: Map<String, List<Int>> = emptyMap(),   // each package's breaks, by its id (not there = it said nothing)
     )
+
+    /** What a whole package from a pair's inbox holds; [text] is [NEWER] when a newer app sent it. */
+    internal class Opened(val text: String, val songs: List<SharedSong>, val breaks: List<Int>?)
+
+    /** A package for a pair's inbox, before splitting into chunks and encrypting. */
+    internal fun pairPackage(list: ByteArray, songs: List<SharedSong>): ByteArray =
+        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
+
+    internal fun openPairPackage(bytes: ByteArray): Opened? {
+        // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
+        val pkg = unpack(PAIR_MARK, bytes, MAX_PACKAGE)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return null
+        if (pkg.v > BandProtocol.VERSION) return Opened(NEWER, emptyList(), null)   // the inbox says "update"
+        val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
+        val text = QrPayload.unpack(packed) ?: return null
+        return Opened(text, pkg.songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
+    }
 
     @Serializable
     private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
@@ -252,7 +271,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
      * Sends a package (fixed [id]: the resend uses the same one) to a band device's inbox; true if every chunk went.
      */
     suspend fun sendToPair(pairKey: ByteArray, recipientId: String, list: ByteArray, songs: List<SharedSong>, id: String): Boolean = withContext(Dispatchers.IO) {
-        val whole = pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
+        val whole = pairPackage(list, songs)
         val parts = whole.toList().chunked(CHUNK).map { it.toByteArray() }
         val topic = pairTopic(pairKey, recipientId)
         parts.withIndex().all { (i, part) ->
@@ -283,22 +302,21 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val msgs = messagesWithIds(lines)
         val all = msgs.mapNotNull { (_, m) -> ShareCode.decrypt(pairKey, m)?.let { runCatching { json.decodeFromString<Chunk>(it.decodeToString()) }.getOrNull() } }
         val chunks = all.filter { it.k == "pkg" }
+        val breaks = HashMap<String, List<Int>>()
         val packages = chunks.groupBy { it.p }.entries.mapNotNull { (pid, parts) ->
             val n = parts.first().n
             val ordered = parts.distinctBy { it.i }.sortedBy { it.i }
             if (ordered.size != n) return@mapNotNull null
             val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
-            // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
-            val pkg = unpack(PAIR_MARK, bytes, MAX_PACKAGE)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return@mapNotNull null
-            if (pkg.v > BandProtocol.VERSION) return@mapNotNull Triple(pid, NEWER, emptyList())   // the inbox says "update"
-            val text = QrPayload.unpack(java.util.Base64.getDecoder().decode(pkg.list)) ?: return@mapNotNull null
-            Triple(pid, text, pkg.songs)
+            val pkg = openPairPackage(bytes) ?: return@mapNotNull null
+            pkg.breaks?.let { breaks[pid] = it }
+            Triple(pid, pkg.text, pkg.songs)
         }
         // requests for missing songs (T12)
         val requests = all.filter { it.k == "req" }.mapNotNull { c ->
             runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), String(java.util.Base64.getDecoder().decode(c.d))) }.getOrNull()
         }
-        PairFetch(packages, all.filter { it.k == "rcpt" }.map { it.p }, all.any { it.k == "welcome" }, msgs.lastOrNull()?.first ?: since, requests)
+        PairFetch(packages, all.filter { it.k == "rcpt" }.map { it.p }, all.any { it.k == "welcome" }, msgs.lastOrNull()?.first ?: since, requests, breaks)
     }
 
     /** The words' "ok", encrypted (to also deliver over the local network, when the two meet). */
@@ -328,6 +346,19 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     }.getOrNull()
 
     companion object {
+        private fun br.app.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text)
+
+        /** [songs] as loose songs: a list with no name (how the receiver knows they aren't a setlist) and their texts. */
+        fun looseSongs(songs: List<br.app.stagebook.data.model.Song>): Pair<ByteArray, List<SharedSong>>? {
+            if (songs.isEmpty()) return null
+            return QrPayload.pack(looseList(songs.map { it.title to it.author })) to songs.map { it.shared() }
+        }
+
+        /** The list of loose songs (title to artist), in the QR's format with no setlist name. */
+        fun looseList(songs: List<Pair<String, String>>): String =
+            (listOf(QrPayload.HEADER, songs.size.toString(), "") + songs.map { (title, artist) -> listOf(title, artist).joinToString("\t") { s -> s.replace('\n', ' ').replace('\t', ' ').trim() }.trimEnd('\t') })
+                .joinToString("\n")
+
         private const val SERVER = "https://ntfy.sh"
 
         /** The invite's format: 1 = the 3 words open it (still read), 2 = it also needs the secret from its link. */

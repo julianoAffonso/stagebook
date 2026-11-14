@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
@@ -43,6 +44,10 @@ fun SongListItem(
     trailing: (@Composable () -> Unit)? = null,
     inline: Boolean = false,
     onLongClick: (() -> Unit)? = null,   // hold: selection (share several), where the list supports it
+    startPadding: Dp = Spacing.m,   // more when something is drawn over the row's start edge (a setlist's state strip)
+    gap: Dp = Spacing.m,   // between the leading, the texts and the trailing; a setlist's rows keep them closer
+    titleLines: Int = 2,   // one where the row's end has more to show than the title's second line (the song list)
+    dense: Boolean = false,   // a lower row with less room around the texts, where many must fit (the setlist over the stage)
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -51,14 +56,15 @@ fun SongListItem(
     ) {
         Row(
             modifier = Modifier
-                .heightIn(min = if (inline) Sizes.touch else Sizes.row)
-                .padding(horizontal = Spacing.m, vertical = if (inline) Spacing.xs else Spacing.s),
+                .heightIn(min = if (inline) Sizes.touch else if (dense) Sizes.rowDense else Sizes.row)
+                .padding(start = startPadding, end = Spacing.m)
+                .padding(vertical = if (inline || dense) Spacing.xs else Spacing.s),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+            horizontalArrangement = Arrangement.spacedBy(gap),
         ) {
             leading?.invoke()
             if (inline) {
-                // the title has priority; whatever doesn't fit of the artist/year becomes "…"
+                // the title has priority; whatever doesn't fit of the artist becomes "…"
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (subtitle.isNotEmpty()) {
@@ -73,11 +79,11 @@ fun SongListItem(
                     }
                 }
             } else Column(Modifier.weight(1f)) {
-                Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
                 if (subtitle.isNotEmpty()) {
                     Text(
                         subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = if (dense) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -93,13 +99,19 @@ fun SongListItem(
 @Composable
 fun wideLists(): Boolean = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() } >= 600.dp
 
-/** Song number in the setlist, in the accent color with no background (fixed width: the titles line up). */
+/**
+ * Song number in the setlist, in the accent color with no background (fixed width: the titles line up). [compact]: a
+ * small number in a narrow column, which leaves the width to the title.
+ */
 @Composable
-fun NumberBadge(number: Int, modifier: Modifier = Modifier) {
-    Box(modifier.width(40.dp), contentAlignment = Alignment.Center) {
-        Text(number.toString(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+fun NumberBadge(number: Int, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, compact: Boolean = false) {
+    Box(modifier.width(if (compact) NUMBER_COMPACT else 40.dp), contentAlignment = Alignment.Center) {
+        Text(number.toString(), style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge, color = color, maxLines = 1, softWrap = false)
     }
 }
+
+/** The compact number's column. */
+internal val NUMBER_COMPACT = Spacing.l + Spacing.xs
 
 @Composable
 private fun SongListItemSample(song: SampleSong) {
