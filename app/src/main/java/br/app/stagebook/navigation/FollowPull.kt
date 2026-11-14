@@ -24,7 +24,8 @@ import br.app.stagebook.ui.components.FollowPending
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
-// screens the leader's song can take the follower away from: nothing is being typed or chosen there
+// screens the leader's song can take the follower away from: nothing is being typed or chosen there. Home's Songs and
+// Setlists tabs do; its Settings tab (and the screens inside it) waits, like the setlist when busy (FollowHoldWhile)
 internal fun NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>() || hasRoute<SetlistDetail>()
 
 internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
@@ -53,7 +54,7 @@ internal fun FollowToStage(
     val wait: FollowWait? = here?.let {
         // on the stage only our own menus and windows hold the song: the window losing focus there (split screen, the
         // shade) must not stop a follower for good
-        followBlock(it.pullsToStage(), it.hasRoute<SetlistDetail>() && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
+        followBlock(it.pullsToStage(), (it.hasRoute<SetlistDetail>() || it.hasRoute<Home>()) && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
     }
     val waitNow by rememberUpdatedState(wait)
     fun sync() { gate.pending = pendingFollow.waiting?.let { FollowPending(it, pendingFollow.reason ?: FollowWait.SCREEN) } }
