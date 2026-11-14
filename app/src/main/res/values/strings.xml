@@ -859,8 +859,8 @@
     <string name="band_join">Ask to join</string>
     <string name="band_waiting">Waiting for the other device to allow…</string>
     <string name="band_denied">Not allowed</string>
-    <string name="band_other_version">Different app version (%1$s). Update both to the same version.</string>
-    <string name="band_version_join">You\'re on different app versions. Update both and try again.</string>
+    <string name="band_other_version">Different app version (%1$s). Everyone in the band needs the latest version: update the app on every device.</string>
+    <string name="band_version_join">You\'re on different app versions. Update the app on every band device to the latest version and try again.</string>
     <string name="band_busy">They\'re on stage right now. Ask again after the show.</string>
     <string name="band_failed">Couldn\'t connect. Check that both are on the same Wi-Fi and try again.</string>
     <string name="band_members">Band</string>

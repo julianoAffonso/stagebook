@@ -889,8 +889,8 @@
     <string name="band_join">Pedir para entrar</string>
     <string name="band_waiting">Esperando o outro aparelho autorizar…</string>
     <string name="band_denied">Não autorizado</string>
-    <string name="band_other_version">Outra versão do app (%1$s). Atualizem os dois para a mesma versão.</string>
-    <string name="band_version_join">Vocês estão em versões diferentes do app. Atualizem os dois e tentem de novo.</string>
+    <string name="band_other_version">Outra versão do app (%1$s). Toda a banda precisa da versão mais nova: atualizem o app em todos os aparelhos.</string>
+    <string name="band_version_join">Vocês estão em versões diferentes do app. Atualizem o app em todos os aparelhos da banda para a versão mais nova e tentem de novo.</string>
     <string name="band_busy">Está no palco agora. Peça de novo depois do show.</string>
     <string name="band_failed">Não deu para conectar. Confira se os dois estão no mesmo Wi-Fi e tente de novo.</string>
     <string name="band_members">Banda</string>

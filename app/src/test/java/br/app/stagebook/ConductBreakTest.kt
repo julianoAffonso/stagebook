@@ -208,7 +208,7 @@ class ConductBreakTest {
             oldJson.encodeToString(OldMsg.serializer(), OldMsg(Conduct.OPEN, "Voz", "Show", songs, 1)),
             Conduct.encode(Conduct.Msg(Conduct.OPEN, "Voz", "Show", songs, 1)),
         )
-        assertEquals(2, BandProtocol.VERSION)
+        assertEquals(3, BandProtocol.VERSION)
     }
 
     @Test fun `a break that makes no sense is no break, and never an error`() {
