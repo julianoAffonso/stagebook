@@ -85,6 +85,7 @@
     <string name="sets_delete">Delete setlist</string>
     <string name="sets_add_songs">Songs</string>
     <string name="sets_add_break">Break</string>
+    <string name="sets_break_needs_two">Needs at least 2 songs</string>
     <string name="set_break">BREAK</string>
     <string name="set_break_time">BREAK · %1$s</string>
     <string name="set_break_paused">Paused</string>
