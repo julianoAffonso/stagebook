@@ -294,7 +294,8 @@ fun SetlistDetailScreen(
                                                     // the edit's handle sits at the row's very edge, in a narrow column
                                                     // (user, 13/11: the wide number and handle took the title's room)
                                                     stripRoom = false,
-                                                    beforeNumber = if (selecting) ({ androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) }) }) else ({ SetlistDragHandle(handle) }),
+                                                    beforeNumber = if (selecting) ({ androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) }) }) else ({ SetlistDragHandle() }),
+                                                    dragZone = if (selecting) null else handle,
                                                     trailing = { Row(verticalAlignment = Alignment.CenterVertically) {
                                                         SongFacts(item.songKey, item.bpm, item.capo, item.hasTrack)
                                                         // out at once, with "Undo" in the message: a confirmation for

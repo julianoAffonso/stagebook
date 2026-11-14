@@ -129,7 +129,9 @@ class SetlistShowScreenTest {
 
     @Test fun `a row draws its handle, its small number, its title and its remove button, in that order`() {
         screen()
-        val handle = handles()[1].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        // the node is the drag area, wider than the handle drawn (it covers the number's room): the drawn one is its first 32 dp
+        val zone = handles()[1].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val handle = androidx.compose.ui.geometry.Rect(zone.left, zone.top, zone.left + 32 * density, zone.bottom)
         val number = part("2")
         val title = part("Música b")
         val remove = removeButtons()[1].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
