@@ -36,6 +36,12 @@ class FollowGate {
     /** The leader's break (this stage has the song) waits behind an open window: the strip says so ([showBreak] shows it). */
     var breakHeld by mutableStateOf(false)
     var showBreak: () -> Unit = {}
+
+    /**
+     * A screen where "Go" can't just open the song on top of it (the editor, with what was typed): it leaves by itself,
+     * asking first if it must, and then runs the [go] it is given. Null = "Go" opens the song at once.
+     */
+    var leaveGuard: ((go: () -> Unit) -> Unit)? = null
 }
 
 val LocalFollowGate = staticCompositionLocalOf { FollowGate() }

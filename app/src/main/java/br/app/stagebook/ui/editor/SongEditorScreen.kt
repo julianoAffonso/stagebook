@@ -185,7 +185,17 @@ fun SongEditorScreen(
     var discarding by rememberSaveable { mutableStateOf(false) }
     // the same function on every key: the Save/Cancel buttons don't redraw while typing
     val unsaved by rememberUpdatedState(uiState.unsaved)
-    val cancel = remember(onCancel) { { if (unsaved) discarding = true else onCancel() } }
+    // "Go" on the band's strip leaves the editor like Cancel does (asking first when something wasn't saved) and then opens
+    // the song the band is on; with the text unsaved it used to open over it, without asking
+    var afterLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val leave = remember(onCancel) { { onCancel(); afterLeave?.invoke(); afterLeave = null } }
+    val cancel = remember(leave) { { if (unsaved) discarding = true else leave() } }
+    val gate = br.app.stagebook.ui.components.LocalFollowGate.current
+    androidx.compose.runtime.DisposableEffect(gate, cancel) {
+        val guard: (() -> Unit) -> Unit = { go -> afterLeave = go; cancel() }
+        gate.leaveGuard = guard
+        onDispose { if (gate.leaveGuard === guard) gate.leaveGuard = null }
+    }
     BackHandler(enabled = !uiState.loading && uiState.unsaved) { discarding = true }
     Scaffold(contentWindowInsets = ScreenInsets, modifier = modifier, containerColor = MaterialTheme.colorScheme.background) { inner ->
         Crossfade(uiState.loading, Modifier.padding(inner).imePadding(), label = "editor") { loading ->
@@ -346,8 +356,8 @@ fun SongEditorScreen(
         ConfirmDialog(
             stringResource(R.string.editor_discard_confirm),
             stringResource(R.string.editor_discard),
-            { discarding = false; onCancel() },
-            { discarding = false },
+            { discarding = false; leave() },
+            { discarding = false; afterLeave = null },
         )
     }
     if (deleting) {
