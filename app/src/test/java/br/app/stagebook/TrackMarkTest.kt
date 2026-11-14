@@ -53,4 +53,19 @@ class TrackMarkTest {
         }
         compose.onNodeWithContentDescription("Tocar o backing track").assertExists()
     }
+
+    @Test fun `the stage button without a track uses the wave, the rest keep the triangle`() {
+        assertSame(AppIcons.AudioWave, br.app.stagebook.ui.stage.playButtonIcon(hasTrack = false, away = false, playing = false, stops = true))
+        assertSame(AppIcons.Play, br.app.stagebook.ui.stage.playButtonIcon(true, false, false, true))
+        assertSame(AppIcons.Stop, br.app.stagebook.ui.stage.playButtonIcon(true, false, true, true))
+        assertSame(AppIcons.Pause, br.app.stagebook.ui.stage.playButtonIcon(true, false, true, false))
+        assertSame(AppIcons.UsbOff, br.app.stagebook.ui.stage.playButtonIcon(true, true, false, true))
+    }
+
+    @Test fun `the setlist icon is no longer used with the meaning of a track`() {
+        val base = java.io.File("src/main/java/br/app/stagebook/ui")
+        assertEquals(0, java.io.File(base, "editor/SongEditorScreen.kt").readText().split("AppIcons.QueueMusic").size - 1)
+        // the stage keeps one: the empty state, which is the setlist's
+        assertEquals(1, java.io.File(base, "stage/StageScreen.kt").readText().split("AppIcons.QueueMusic").size - 1)
+    }
 }

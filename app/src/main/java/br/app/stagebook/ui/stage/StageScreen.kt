@@ -1989,7 +1989,7 @@ private fun TrackButton(
             } else 0.85f
             Icon(
                 // playing: stop (back to the start, the default) or pause, as chosen in Settings → Player
-                when { !hasTrack -> AppIcons.QueueMusic; away -> AppIcons.UsbOff; playing && stops -> AppIcons.Stop; playing -> AppIcons.Pause; else -> AppIcons.Play },
+                playButtonIcon(hasTrack, away, playing, stops),
                 stringResource(when { !hasTrack -> R.string.stage_track_pick; away -> R.string.stage_track_usb_waiting; playing && stops -> R.string.stage_stop; playing -> R.string.stage_pause; else -> R.string.stage_play }),
                 // waiting it blinks in a translucent red (user, 09/11: the chords' yellow looked like a chord)
                 tint = when {
@@ -2003,7 +2003,7 @@ private fun TrackButton(
         br.app.stagebook.ui.components.FollowBusyWhile(menu)
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_mixer_open)) }, leadingIcon = { Icon(AppIcons.Tune, null) }, onClick = { menu = false; onMixer() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(br.app.stagebook.ui.components.TrackMarkIcon, null) }, onClick = { menu = false; onChange() })
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_remove)) }, leadingIcon = { Icon(AppIcons.Delete, null) }, onClick = { menu = false; removing = true })
         }
     }
@@ -2534,3 +2534,12 @@ private class PressQueue {
 }
 
 private const val BPM_SAVE_MS = 600L   // the song's BPM is saved this long after the last + or − on the metronome
+
+/** The play button's icon: no track invites to attach one (the audio wave, the mark of a track), the rest keep the play triangle and its siblings. */
+internal fun playButtonIcon(hasTrack: Boolean, away: Boolean, playing: Boolean, stops: Boolean) = when {
+    !hasTrack -> br.app.stagebook.ui.components.TrackMarkIcon
+    away -> AppIcons.UsbOff
+    playing && stops -> AppIcons.Stop
+    playing -> AppIcons.Pause
+    else -> AppIcons.Play
+}

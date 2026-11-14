@@ -394,19 +394,19 @@ SECTIONS = [
     {
         "id": "backing", "pt": "Backing track", "en": "Backing track",
         "text_pt": [
-            "Cada música pode ter um backing track, em OGG com vários canais, MP3 ou WAV. Escolha nos Dados da música. No palco, o play só aparece nas músicas que têm um. Se o áudio de uma música não veio com ela, um alerta aparece no lugar do play. Toque nele para ver o nome do áudio e anexar de novo.",
+            "Cada música pode ter um backing track, em OGG com vários canais, MP3 ou WAV. Escolha nos Dados da música, no campo com a onda de áudio, a mesma marca que aparece nas listas. No palco, o play só aparece nas músicas que têm um. Se o áudio de uma música não veio com ela, um alerta aparece no lugar do play. Toque nele para ver o nome do áudio e anexar de novo.",
         ],
         "text_en": [
-            "Each song can have a backing track, as multichannel OGG, MP3 or WAV. Pick it in Song details. On stage, play only shows on songs that have one. If a song's audio didn't come with it, an alert shows where play would be. Tap it to see the audio's name and attach it again.",
+            "Each song can have a backing track, as multichannel OGG, MP3 or WAV. Pick it in Song details, in the field with the audio wave, the same mark the lists show. On stage, play only shows on songs that have one. If a song's audio didn't come with it, an alert shows where play would be. Tap it to see the audio's name and attach it again.",
         ],
         "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
                  Fig(("tablet_11_player_usb_fora", "celular_11_player_usb_fora", "A interface saiu no meio da música", "The interface came out mid-song"))],
         "subs": [
             sub("backing-tocar", "Tocar e trocar", "Playing and changing",
-                ["Quando a música acaba, ele para e volta ao começo. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
+                ["Quando a música acaba, ele para e volta ao começo. Sem faixa, o botão do play vira a onda de áudio e toca para anexar uma. Segurando o play você troca ou tira a faixa e abre o mixer da música.",
                  "Trocar de música com a faixa tocando não para a faixa: ela continua até você tocar em parar ou ela acabar, e o botão de parar fica em qualquer música enquanto isso. Depois o play já toca a música que está na tela.",
                  "Para a faixa não parar com a tela apagada, o Android precisa liberar o Stagebook da economia de bateria. O app pede isso numa janela, uma vez em cada aparelho: toque em Continuar e depois em Permitir."],
-                ["When the song ends it stops and goes back to the start. Hold play to change or remove the track and to open the song's mixer.",
+                ["When the song ends it stops and goes back to the start. Without a track the play button turns into the audio wave: tap it to attach one. Hold play to change or remove the track and to open the song's mixer.",
                  "Changing songs while a track plays doesn't stop it: it goes on until you tap stop or it ends, and the stop button stays on any song meanwhile. Then play plays the song on screen.",
                  "For the track not to stop with the screen off, Android has to free Stagebook from battery saving. The app asks in a window, once on each device: tap Continue and then Allow."],
                 [Fig(("jornada_faixa_4_menu_tablet", "jornada_faixa_4_menu", "Trocar ou tirar a faixa", "Change or remove the track"))]),

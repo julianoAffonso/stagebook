@@ -392,7 +392,7 @@ private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove:
         isError = missing,
         leadingIcon = {
             if (missing) Icon(AppIcons.Warning, null, tint = MaterialTheme.colorScheme.error)
-            else Icon(AppIcons.QueueMusic, null, tint = if (has) MaterialTheme.colorScheme.primary else muted)
+            else Icon(br.app.stagebook.ui.components.TrackMarkIcon, null, tint = if (has) MaterialTheme.colorScheme.primary else muted)
         },
         trailingIcon = if (has) {
             { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
