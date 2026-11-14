@@ -13,3 +13,9 @@ test("the server reports package.json's version", () => {
 test("the command npx runs is an executable script", () => {
   assert.ok(readFileSync(new URL("../" + pkg.bin["stagebook-mcp"], import.meta.url), "utf8").startsWith("#!/usr/bin/env node\n"));
 });
+
+test("package-lock.json carries the same version as package.json", () => {
+  const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[""].version, pkg.version);
+});
