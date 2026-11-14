@@ -38,6 +38,18 @@ class EditorQueue @Inject constructor() {
         _state.value = State(window, index - from)
     }
 
+    /**
+     * The stage's pencil and long press on a line: the queue for the editor of the song at [open] among the stage's [songs]
+     * (id and whether it is missing). In a setlist: the setlist's order without the missing ones; opened from the Songs list
+     * ([fromList]): that list as it was shown; otherwise no queue. The same for every way the stage opens the editor.
+     */
+    fun openFromStage(songs: List<Pair<String, Boolean>>, open: Int, inSetlist: Boolean, fromList: Boolean, songId: String) {
+        if (inSetlist) {
+            val valid = songs.filter { !it.second && it.first.isNotEmpty() }
+            open(valid.map { it.first }, songs.take(open).count { !it.second && it.first.isNotEmpty() })
+        } else if (fromList) openFromList(songId) else clear()
+    }
+
     /** The editor moved to the song at [index] of the same queue. */
     fun moveTo(index: Int) {
         val s = _state.value ?: return

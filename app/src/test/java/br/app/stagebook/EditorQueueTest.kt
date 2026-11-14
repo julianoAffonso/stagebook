@@ -157,3 +157,30 @@ class EditorQueueTest {
         q.openFromList("zzz"); assertNull(q.state.value)
     }
 }
+
+/** What the stage fills in for the editor, for every way it opens it (pencil and long press go through the same call). */
+class EditorQueueStageTest {
+    private val songs = listOf("a" to false, "gone" to true, "b" to false, "c" to false)
+
+    @Test fun `in a setlist the order without the missing ones, at the open song`() {
+        val q = EditorQueue()
+        q.openFromStage(songs, open = 2, inSetlist = true, fromList = false, songId = "b")
+        val s = q.state.value!!
+        assertEquals(listOf("a", "b", "c"), s.ids); assertEquals(1, s.index)
+    }
+
+    @Test fun `from the Songs list with a search, that list`() {
+        val q = EditorQueue()
+        q.offerList(listOf("x", "b", "z"))
+        q.openFromStage(listOf("b" to false), open = 0, inSetlist = false, fromList = true, songId = "b")
+        val s = q.state.value!!
+        assertEquals(listOf("x", "b", "z"), s.ids); assertEquals(1, s.index)
+    }
+
+    @Test fun `from elsewhere no queue, and an old one is dropped`() {
+        val q = EditorQueue()
+        q.open(listOf("a", "b"), 0)
+        q.openFromStage(listOf("b" to false), open = 0, inSetlist = false, fromList = false, songId = "b")
+        assertNull(q.state.value)
+    }
+}

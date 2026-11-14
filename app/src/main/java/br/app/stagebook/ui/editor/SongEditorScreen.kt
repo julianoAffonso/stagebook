@@ -149,6 +149,9 @@ fun SongEditorRoute(
         onTags = viewModel::onTags,
         midiOn = look.extrasOn && hasMidi,
         onMidi = viewModel::onMidi,
+        position = viewModel.position.collectAsStateWithLifecycle().value,
+        onGo = viewModel::go,
+        onSaveGo = viewModel::saveAndGo,
     )
 }
 

@@ -283,11 +283,7 @@ fun StageRoute(
             onFit = { id, z -> viewModel.setZoom(id, screen, z) },
             onEdit = { id, cursor ->
                 // the editor's previous/next follow where the stage came from: the setlist's order, or the Songs list's
-                val shownSongs = uiState.songs
-                if (uiState.setlist != null) {
-                    val valid = shownSongs.filter { !it.missing && it.id.isNotEmpty() }
-                    editorQueue.open(valid.map { it.id }, shownSongs.take(open).count { !it.missing && it.id.isNotEmpty() })
-                } else if (fromList) editorQueue.openFromList(id) else editorQueue.clear()
+                editorQueue.openFromStage(uiState.songs.map { it.id to it.missing }, open, uiState.setlist != null, fromList, id)
                 onEditSong(id, cursor)
             },
             onHighlightWords = viewModel::highlightWords,
