@@ -17,6 +17,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
@@ -157,9 +159,11 @@ fun SongEditorRoute(
     )
 }
 
-/** Windows lower than this (dp) are "compact": the editor scrolls as a whole; the pane never gets less than [MIN_PANE_DP]. */
+/** Windows lower than this (dp) are "compact": the two screens' selector goes up to the title's bar to leave the height to the field. */
 const val COMPACT_HEIGHT_DP = 480
-const val MIN_PANE_DP = 240
+
+/** Just after the editor opens from the stage the field ignores touches and selections that did not come from the person. */
+const val OPEN_GUARD_MS = 400L
 
 @Composable
 fun SongEditorScreen(
@@ -243,7 +247,34 @@ fun SongEditorScreen(
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
             val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
             val highlightHint = stringResource(R.string.editor_highlight_hint)
+            // opened from the stage (cursor >= 0): for a moment the route's cursor wins over a touch that came through from the
+            // long press and over an IME that restarts the selection (cursor on another line, now and then, 14/11)
+            val fromStage = cursor >= 0
+            val openedAt = remember { android.os.SystemClock.uptimeMillis() }
+            val initialSel = remember { lyrics.selection }
+            var guarding by remember { mutableStateOf(fromStage) }
+            val logContext = androidx.compose.ui.platform.LocalContext.current
+            LaunchedEffect(Unit) {
+                if (fromStage) {
+                    EditorOpenLog.opened(logContext, cursor, fieldCursor, uiState.text.length)
+                    // after the focus and the first layout: the route's selection once more (the IME may have answered by now)
+                    androidx.compose.runtime.withFrameNanos { }
+                    androidx.compose.runtime.withFrameNanos { }
+                    if (guarding && lyrics.selection != initialSel) lyrics = lyrics.copy(selection = initialSel)
+                    kotlinx.coroutines.delay(OPEN_GUARD_MS)
+                    // and when the guard ends, if the person did nothing yet
+                    if (guarding && lyrics.selection != initialSel) lyrics = lyrics.copy(selection = initialSel)
+                    guarding = false
+                }
+            }
             fun edit(v: TextFieldValue) {
+                val onlySelection = v.text == shown.text && v.selection != shown.selection
+                if (fromStage) {
+                    val since = android.os.SystemClock.uptimeMillis() - openedAt
+                    if (onlySelection) EditorOpenLog.selection(logContext, since, if (guarding) "ime" else "touch", v.selection.start, v.selection.end, kept = guarding)
+                    if (guarding && onlySelection) { lyrics = shown.copy(selection = initialSel); return }
+                    if (guarding) guarding = false   // typing: the person took over
+                }
                 lyrics = v
                 if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
             }
@@ -254,36 +285,53 @@ fun SongEditorScreen(
                     onDismiss = { newChord = false },
                 )
             }
-            // a low window (a phone on its side): the top (name, steps, the two screens, the tools) doesn't fit with the
-            // keyboard up and the field was left with no height (test on the OnePlus, 14/11). Here what is under the header scrolls,
-            // the previous/next sit in the header line, and the pane has a height of its own (the room that is left, but
-            // never less than MIN_PANE_DP): the field always has room for several lines and the cursor is brought into view
+            // a low window (a phone on its side): the top (name, steps, the two screens, the tools) took the whole height with
+            // the keyboard up and the field was left with none (test on the OnePlus, 14/11). Here the selector of the two
+            // screens goes up to the title's bar, in its middle, with the steps, save and delete on the right; the tools stay
+            // right under it and the field gets the height that is left
             val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
-            val wide = wideLists() || compact
+            // the steps go in the bar only where there is room for them next to the selector
+            val wide = wideLists() || (compact && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600)
             // a tap on a neutral area (not on a button or the field: those take the touch first) takes the focus off and hides
             // the keyboard; the cursor and selection live in `lyrics`, so they are still there when the field is tapped again
             val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
             val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().pointerInput(Unit) {
-                detectTapGestures { focusManager.clearFocus(); keyboard?.hide() }
+            Column(Modifier.fillMaxSize().pointerInput(Unit) {
+                detectTapGestures { if (!guarding) { focusManager.clearFocus(); keyboard?.hide() } }
             }) {
-            val paneHeight = maxHeight.coerceAtLeast(MIN_PANE_DP.dp)
-            Column(Modifier.fillMaxSize()) {
                 // top: back, the song's name with the artist under it, previous/next, save and delete (on every screen)
-                ScreenHeader(
-                    title = uiState.title.ifBlank { stringResource(R.string.editor_new) },
-                    subtitle = uiState.author,
-                    onBack = cancel,
-                    // 16dp at the start, like the fields: the back arrow draws on the margin (at 8dp it sat off the
-                    // fields and its touch area went past the screen's edge; audit 03/11)
-                    modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.s),
-                ) {
+                val headerActions: @Composable RowScope.() -> Unit = {
                     // tablets have the room on this line; on a phone it goes on the line below
                     if (wide && position != null) EditorSteps(position, step)
                     TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary)
                     // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option); only for a saved song
                     if (uiState.canDelete) TipIcon(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, tint = MaterialTheme.colorScheme.error)
                 }
+                val tabChoice: @Composable (Modifier) -> Unit = { m ->
+                    SegmentedChoice(
+                        listOf(Choice(EditorTab.DATA, R.string.editor_tab_data), Choice(EditorTab.LYRICS, if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)),
+                        tab, { tab = it }, m,
+                    )
+                }
+                if (compact) {
+                    CompactBar(
+                        title = uiState.title.ifBlank { stringResource(R.string.editor_new) },
+                        subtitle = uiState.author,
+                        onBack = cancel,
+                        // 40 dp tall like the segments are drawn (the 48 dp touch area would make the bar taller than its icons)
+                        center = { androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalMinimumInteractiveComponentSize provides androidx.compose.ui.unit.Dp.Unspecified) { tabChoice(Modifier.widthIn(max = BAR_SELECTOR_WIDTH)) } },
+                        right = headerActions,
+                        modifier = Modifier.padding(horizontal = Spacing.m),
+                    )
+                } else ScreenHeader(
+                    title = uiState.title.ifBlank { stringResource(R.string.editor_new) },
+                    subtitle = uiState.author,
+                    onBack = cancel,
+                    // 16dp at the start, like the fields: the back arrow draws on the margin (at 8dp it sat off the
+                    // fields and its touch area went past the screen's edge; audit 03/11)
+                    modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.s),
+                    actions = headerActions,
+                )
                 if (!wide && position != null) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.m), horizontalArrangement = Arrangement.End) { EditorSteps(position, step) }
                 }
@@ -299,15 +347,9 @@ fun SongEditorScreen(
                         modifier = Modifier.padding(horizontal = Spacing.m).padding(bottom = Spacing.s),
                     )
                 }
-                val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
                 // the two screens, one at a time, the same on every size; the second is named for what the profile holds
-                Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.m), contentAlignment = Alignment.TopCenter) {
-                    SegmentedChoice(
-                        listOf(Choice(EditorTab.DATA, R.string.editor_tab_data), Choice(EditorTab.LYRICS, if (look.chords) R.string.editor_lyrics_chords else R.string.editor_lyrics)),
-                        tab, { tab = it }, Modifier.widthIn(max = DATA_MAX_WIDTH),
-                    )
-                }
-                Crossfade(tab, Modifier.then(if (compact) Modifier.height(paneHeight) else Modifier.weight(1f)).fillMaxWidth(), label = "editor tab") { current ->
+                if (!compact) Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.m), contentAlignment = Alignment.TopCenter) { tabChoice(Modifier.widthIn(max = DATA_MAX_WIDTH)) }
+                Crossfade(tab, Modifier.weight(1f).fillMaxWidth(), label = "editor tab") { current ->
                     when (current) {
                         EditorTab.DATA -> DataPane(
                             uiState, look, onTitle, onAuthor, onYear, onTempo, onTranspose, onCapo,
@@ -336,7 +378,7 @@ fun SongEditorScreen(
                                 Modifier
                                     .weight(1f)
                                     .then(if (previewing) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                                    .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                                    .padding(horizontal = Spacing.m, vertical = if (compact) 0.dp else Spacing.s),
                             ) {
                                 if (previewing) {
                                     EditorPreview(uiState.text, look)
@@ -356,16 +398,14 @@ fun SongEditorScreen(
                                         remember(faded, look.highlightColor) { HighlightLook(androidx.compose.ui.graphics.Color(look.highlightColor), faded) }
                                     },
                                     shape = MaterialTheme.shapes.small,
-                                    modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus),
+                                    modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(focus)
+                                        // the first moments after opening from the stage: touches that came through are ignored
+                                        .then(if (guarding) Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() } } } else Modifier),
                                 )
                             }
                         }
                     }
                 }
-                }
-                // the header (back, steps, save) stays; what is under it scrolls in a low window
-                if (compact) Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { body() } else body()
-            }
             }
         }
     }
@@ -412,6 +452,8 @@ private enum class EditorTab { DATA, LYRICS }
 
 /** The details screen's column is as wide as a phone's, centred on a tablet (the fields don't stretch). */
 private val DATA_MAX_WIDTH = 560.dp
+/** The selector of the two screens in the title bar of a low window: narrower, so the name and the right side fit around it. */
+private val BAR_SELECTOR_WIDTH = 280.dp
 
 /** "‹ 3 / 12 ›": the song's place in the list the editor came from, and the arrows to step through it. */
 @Composable
@@ -746,3 +788,51 @@ private fun SongEditorLightPreview() = StagebookTheme(darkTheme = false) { SongE
 private fun SongEditorDarkPreview() = StagebookTheme(darkTheme = true) { SongEditorScreen(previewState, {}, {}, {}, {}, {}, {}, {}) }
 
 private const val CHORDS_AFTER_TYPING_MS = 300L
+
+/**
+ * The title's bar in a low window: back and the song's name on the left, the selector of the two screens in the middle of
+ * the bar, the steps, save and delete on the right. The middle one keeps the bar's center unless the right side needs the
+ * room; the name takes what is left of the left side and ends in an ellipsis.
+ */
+@Composable
+private fun CompactBar(
+    title: String,
+    subtitle: String,
+    onBack: () -> Unit,
+    center: @Composable () -> Unit,
+    right: @Composable RowScope.() -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.ui.layout.Layout(
+        content = {
+            Box(Modifier.layoutId("back")) { br.app.stagebook.ui.components.BackButton(onBack) }
+            Column(Modifier.layoutId("name")) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            Box(Modifier.layoutId("center")) { center() }
+            Row(Modifier.layoutId("right"), verticalAlignment = Alignment.CenterVertically, content = right)
+        },
+        modifier = modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val gap = Spacing.s.roundToPx()
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val width = constraints.maxWidth
+        fun find(id: String) = measurables.first { it.layoutId == id }
+        val r = find("right").measure(loose)
+        val b = find("back").measure(loose)
+        // the name keeps at least a few letters (and an ellipsis); the selector takes what is left, never under the back
+        val minName = 56.dp.roundToPx()
+        val left = b.width + gap + minName + gap
+        val c = find("center").measure(loose.copy(maxWidth = (width - r.width - gap - left).coerceAtLeast(0)))
+        val centerX = ((width - c.width) / 2).coerceAtMost(width - r.width - gap - c.width).coerceAtLeast(left.coerceAtMost(width - c.width).coerceAtLeast(0))
+        val n = find("name").measure(loose.copy(maxWidth = (centerX - gap - b.width - gap).coerceAtLeast(0)))
+        val h = maxOf(b.height, n.height, c.height, r.height)
+        layout(width, h) {
+            b.placeRelative(0, (h - b.height) / 2)
+            n.placeRelative(b.width + gap, (h - n.height) / 2)
+            c.placeRelative(centerX, (h - c.height) / 2)
+            r.placeRelative(width - r.width, (h - r.height) / 2)
+        }
+    }
+}

@@ -604,10 +604,15 @@ fun StageScreen(
     var trackButton by remember { mutableStateOf<Rect?>(null) }
     // the page's lines as they are on screen (a wrapping line with chords becomes pieces): the tap index is in these
     var pageLines by remember(sourced) { mutableStateOf(sourced) }
-    fun editAt(line: Int?) {
+    val logContext = LocalContext.current
+    // [source] is the song's line (resolved when the line was held, not when the button is tapped: the stage may lay the
+    // text out again in between and the index on screen would point to another line)
+    fun editAt(line: Int?, source: Int?) {
         if (song.missing) return
         // the chord list (source -1) isn't a lyrics line: opens at the start
-        onEdit(song.id, line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }?.let { lineStart(song.text, it) } ?: -1)
+        val cursor = editCursor(song.text, source)
+        br.app.stagebook.ui.editor.EditorOpenLog.stage(logContext, line, source, cursor)
+        onEdit(song.id, cursor)
     }
     // the song's line under the finger (null: the chord list or a line the stage made, nothing to highlight)
     fun sourceLine(line: Int?): Int? = line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }
@@ -811,7 +816,7 @@ fun StageScreen(
                 if (line != null && pageLines.getOrNull(line)?.source == -1) return@GestureTargets
                 if (!song.missing && line != null) {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    editOffer = EditOffer(p, line)
+                    editOffer = EditOffer(p, line, sourceLine(line))
                 }
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
@@ -919,7 +924,7 @@ fun StageScreen(
             // only shows when there is one (T29)
             // the pencil's drawing on the margin, like the arrow's (user, 03/11)
             if (!song.missing) {
-                IconButton(onClick = { editAt(hit.firstLine()) }, modifier = Modifier.offset(x = br.app.stagebook.ui.components.HeaderIconInset)) {
+                IconButton(onClick = { hit.firstLine().let { editAt(it, sourceLine(it)) } }, modifier = Modifier.offset(x = br.app.stagebook.ui.components.HeaderIconInset)) {
                     Icon(AppIcons.Edit, stringResource(R.string.stage_edit), tint = fg.copy(alpha = 0.6f))
                 }
             }
@@ -1438,9 +1443,9 @@ fun StageScreen(
             )
             editOffer?.let { offer ->
                 // holding a line: edit it, and highlight it (or take the highlight off) right here (user, 01/11, B-28)
-                val source = sourceLine(offer.line)
+                val source = offer.source
                 EditLineButtons(
-                    onEdit = { editOffer = null; editAt(offer.line) },
+                    onEdit = { editOffer = null; editAt(offer.line, offer.source) },
                     canMark = source != null,
                     onMarker = { editOffer = null; marking = true },
                     modifier = Modifier.layout { measurable, c ->
@@ -1798,7 +1803,7 @@ private const val METRO_EARLY_NANOS = 20_000_000L
 private const val MAX_SCROLL_FRAME_NANOS = 100_000_000L
 
 /** "Edit this line" button offered where the finger held; `line` is the index in `lines`. */
-private class EditOffer(val at: Offset, val line: Int)
+private class EditOffer(val at: Offset, val line: Int, val source: Int?)
 
 /** Finds the line under the finger through the text already drawn on the page (line wraps included). */
 private class PageHit {
