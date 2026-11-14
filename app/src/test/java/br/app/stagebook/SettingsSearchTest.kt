@@ -164,6 +164,10 @@ class SettingsSearchTest {
         assertTrue(shown("Manter a tela ligada com o app aberto"))
         compose.onNode(hasSetTextAction()).performTextInput(" zzzz")
         compose.waitForIdle()
+        // the list follows the typing ~120 ms after the last key, not on each one
+        assertFalse(shown("Nada encontrado nos ajustes."))
+        compose.mainClock.advanceTimeBy(br.app.stagebook.ui.settings.SEARCH_DEBOUNCE_MS + 16)
+        compose.waitForIdle()
         compose.onNodeWithText("Nada encontrado nos ajustes.").assertExists()
     }
 

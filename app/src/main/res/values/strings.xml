@@ -1153,7 +1153,7 @@
     <string name="reset_zone">Danger zone</string>
     <string name="advanced_permission_see">To change these, follow the steps in Settings → Device → Advanced.</string>
     <string name="settings_search_label">Search Settings</string>
-    <string name="settings_search_hint">e.g. midi, screen, capo</string>
+    <string name="settings_search_hint">e.g. midi, screen, pedal</string>
     <string name="settings_search_none">Nothing found in Settings.</string>
     <!-- synonyms for the Settings search: both languages in each, so "tela" and "screen" find the same item -->
     <string name="kw_size">tamanho grande pequeno aumentar diminuir fonte letra size big small bigger smaller zoom</string>

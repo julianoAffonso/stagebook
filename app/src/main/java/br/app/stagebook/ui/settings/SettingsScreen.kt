@@ -116,6 +116,7 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -665,6 +666,8 @@ fun SettingsScreen(
 }
 
 /** The search over the settings: the text, the items that can show now, and what tapping a result does. */
+internal const val SEARCH_DEBOUNCE_MS = 120L
+
 internal class SettingsSearch(val query: String, val onQuery: (String) -> Unit, val ctx: IndexCtx, val onOpen: (SettingsHit) -> Unit)
 
 @Composable
@@ -684,7 +687,11 @@ private fun SectionList(
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 if (search != null && search.query.isNotBlank()) {
                     val resources = LocalResources.current
-                    val hits = remember(search.query, search.ctx, resources) { searchSettings(search.query, search.ctx, resources) }
+                    val index = remember(resources) { SettingsSearchIndex(resources) }
+                    // typing fast: the list follows ~120 ms after the last key, not on every one (as the song search)
+                    var shown by remember { mutableStateOf(search.query) }
+                    LaunchedEffect(search.query) { if (shown != search.query) { delay(SEARCH_DEBOUNCE_MS); shown = search.query } }
+                    val hits = remember(shown, search.ctx, index) { index.search(shown, search.ctx) }
                     if (hits.isEmpty()) Text(stringResource(R.string.settings_search_none), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(Spacing.m))
                     hits.forEach { SearchResultRow(it) { search.onOpen(it) } }
                 } else SettingsSection.entries.filter { it.shown(uiState.look) }.forEach { s ->

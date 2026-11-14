@@ -1194,7 +1194,7 @@
     <string name="reset_zone">Zona de perigo</string>
     <string name="advanced_permission_see">Para mudar, siga os passos em Ajustes → Aparelho → Avançado.</string>
     <string name="settings_search_label">Buscar nos ajustes</string>
-    <string name="settings_search_hint">Ex.: midi, tela, capo</string>
+    <string name="settings_search_hint">Ex.: midi, tela, pedal</string>
     <string name="settings_search_none">Nada encontrado nos ajustes.</string>
     <!-- synonyms for the Settings search: both languages in each, so "tela" and "screen" find the same item -->
     <string name="kw_size">tamanho grande pequeno aumentar diminuir fonte letra size big small bigger smaller zoom</string>

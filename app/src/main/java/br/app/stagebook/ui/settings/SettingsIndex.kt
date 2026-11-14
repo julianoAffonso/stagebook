@@ -231,34 +231,55 @@ private fun Resources.read(item: SettingsItem): SettingsHit {
     return SettingsHit(item, title, getString(item.card), getString(item.group.title), item.detail?.let(::getString), 0)
 }
 
+/** What a search reads of one item, normalized once per language: a keystroke only compares against it. */
+private class Entry(
+    val read: SettingsHit, val name: String, val nameWords: List<String>, val kw: String, val where: String, val help: String,
+)
+
 /**
- * The items that answer [query], hidden ones too (they come dimmed, with the reason). Case and accents don't matter
- * ([TextKey]); every word of the query has to hit, in any order, in the name (best), the synonyms, the card or group,
- * or the explanation (last). An item ranks by the worst place its words needed; ties keep the visible ones first.
+ * The settings' texts read and normalized once for a language ([Resources]); [search] then only compares and checks
+ * what is hidden. Built apart from the query so a keystroke does no string reading or normalizing.
  */
-internal fun searchSettings(query: String, ctx: IndexCtx, resources: Resources): List<SettingsHit> {
-    val words = TextKey.of(query).split(' ').filter { it.isNotEmpty() }
-    if (words.isEmpty()) return emptyList()
-    return allSettingsItems().mapNotNull { item ->
+internal class SettingsSearchIndex(private val resources: Resources) {
+    private val entries = allSettingsItems().map { item ->
         val read = resources.read(item)
         val name = TextKey.of(read.title)
-        val kw = TextKey.of(item.keywords?.let(resources::getString).orEmpty())
-        val where = TextKey.of(read.card + " " + read.groupName)
-        val help = TextKey.of(read.detail.orEmpty())
-        val nameWords = name.split(' ')
-        var score = 0
-        for (w in words) {
-            val rank = when {
-                nameWords.any { it.startsWith(w) } -> 0
-                w in name -> 0
-                w in kw -> 1
-                w in where -> 2
-                w in help -> HELP
-                else -> return@mapNotNull null
+        Entry(
+            read, name, name.split(' '), TextKey.of(item.keywords?.let(resources::getString).orEmpty()),
+            TextKey.of(read.card + " " + read.groupName), TextKey.of(read.detail.orEmpty()),
+        )
+    }
+    private val reasons = HashMap<Int, String>()
+
+    /**
+     * The items that answer [query], hidden ones too (they come dimmed, with the reason). Case and accents don't matter
+     * ([TextKey]); every word of the query has to hit, in any order, in the name (best), the synonyms, the card or group,
+     * or the explanation (last). An item ranks by the worst place its words needed; ties keep the visible ones first.
+     */
+    fun search(query: String, ctx: IndexCtx): List<SettingsHit> {
+        val words = TextKey.of(query).split(' ').filter { it.isNotEmpty() }
+        if (words.isEmpty()) return emptyList()
+        return entries.mapNotNull { e ->
+            var score = 0
+            for (w in words) {
+                val rank = when {
+                    e.nameWords.any { it.startsWith(w) } -> 0
+                    w in e.name -> 0
+                    w in e.kw -> 1
+                    w in e.where -> 2
+                    w in e.help -> HELP
+                    else -> return@mapNotNull null
+                }
+                score = maxOf(score, rank)
             }
-            score = maxOf(score, rank)
-        }
-        val hide = item.hide(ctx)
-        SettingsHit(item, read.title, read.card, read.groupName, read.detail, score, hide, hide?.let { resources.getString(it.reason) })
-    }.sortedWith(compareBy({ it.score }, { it.hide != null }))
+            val item = e.read.item
+            val hide = item.hide(ctx)
+            val r = e.read
+            SettingsHit(item, r.title, r.card, r.groupName, r.detail, score, hide, hide?.let { reasons.getOrPut(it.reason) { resources.getString(it.reason) } })
+        }.sortedWith(compareBy({ it.score }, { it.hide != null }))
+    }
 }
+
+/** One-off search (tests, callers without a cached index); the screen keeps a [SettingsSearchIndex] instead. */
+internal fun searchSettings(query: String, ctx: IndexCtx, resources: Resources): List<SettingsHit> =
+    SettingsSearchIndex(resources).search(query, ctx)
