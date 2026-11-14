@@ -92,18 +92,26 @@ class BandLink @Inject constructor(
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
         foreground = on
+        syncNetCallback()
+        _wifi.value = onWifi()
+        update()
+    }
+
+    // the Wi-Fi callback wakes the app on every network change: only in front AND with the band on (nothing to follow
+    // otherwise); also called when "Band on the network" is switched
+    @Synchronized
+    internal fun syncNetCallback() {
+        val want = foreground && repository.library.value.look.bandOn
         val cm = context.getSystemService(ConnectivityManager::class.java)
-        if (on && netCallback == null && cm != null) {
+        if (want && netCallback == null && cm != null) {
             netCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onCapabilitiesChanged(network: android.net.Network, caps: NetworkCapabilities) { _wifi.value = onWifi(); update() }
                 override fun onLost(network: android.net.Network) { _wifi.value = onWifi(); update() }
             }.also { runCatching { cm.registerDefaultNetworkCallback(it) } }
-        } else if (!on) {
+        } else if (!want) {
             netCallback?.let { runCatching { cm?.unregisterNetworkCallback(it) } }
             netCallback = null
         }
-        _wifi.value = onWifi()
-        update()
     }
 
     private var netCallback: ConnectivityManager.NetworkCallback? = null
@@ -179,7 +187,7 @@ class BandLink @Inject constructor(
     data class Wanted(val title: String, val artist: String = "")
 
     // a connection to a device on the Wi-Fi, with the usual timeout (it was written out in five places)
-    private fun dial(peer: Peer): Socket = Socket().apply { connect(InetSocketAddress(peer.host, peer.port), CONNECT_TIMEOUT_MS) }
+    private fun dial(peer: Peer): Socket = dialSocket(Socket(), peer.host, peer.port, CONNECT_TIMEOUT_MS)
 
     // pair key with a member (null if they're no longer in the band or the saved key doesn't open)
     private fun pairKeyWith(id: String): ByteArray? {
@@ -276,7 +284,7 @@ class BandLink @Inject constructor(
     private fun found(wanted: List<Wanted>): List<br.app.stagebook.data.model.Song> {
         val library = repository.library.value.songs
         return wanted.take(MAX_ASK).mapNotNull { w ->
-            (br.app.stagebook.domain.SetlistMatcher.match(QrPayload.Entry(w.title, w.artist), library) as? br.app.stagebook.domain.QrMatch.Found)?.song
+            br.app.stagebook.domain.SetlistMatcher.matchExact(QrPayload.Entry(w.title, w.artist), library)
         }
     }
 
@@ -519,6 +527,20 @@ class BandLink @Inject constructor(
     // fields: the collection runs on another thread and can call update() before the rest of the class exists
     init {
         scope.launch { stage.onStage.collect { update() } }
-        scope.launch { repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { update() } }
+        scope.launch { repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { syncNetCallback(); _wifi.value = onWifi(); update() } }
     }
+}
+
+/**
+ * Connects [socket] to a device on the Wi-Fi. A connect that fails (timeout, refused) closes the socket before the
+ * error goes up: the callers swallow it, and the descriptor stayed open until the GC (audit 14/11).
+ */
+internal fun dialSocket(socket: Socket, host: InetAddress, port: Int, timeoutMs: Int = 5_000): Socket {
+    try {
+        socket.connect(InetSocketAddress(host, port), timeoutMs)
+    } catch (e: Throwable) {
+        runCatching { socket.close() }
+        throw e
+    }
+    return socket
 }

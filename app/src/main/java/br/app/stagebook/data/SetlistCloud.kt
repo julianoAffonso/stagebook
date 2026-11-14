@@ -125,7 +125,11 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** Essential mode (T19): "Internet" off, nothing leaves from here (sends, inbox, receipts, requests, 3 words). */
     private val internetOn get() = repository.library.value.look.internetOn
 
-    private fun post(topic: String, body: String): Boolean = if (!internetOn) false else runCatching {
+    /** The tests' own network: what goes out and what comes back, with no server. */
+    internal var postHook: ((topic: String, body: String) -> Boolean)? = null
+    internal var getHook: ((url: String) -> List<String>?)? = null
+
+    private fun post(topic: String, body: String): Boolean = postHook?.invoke(topic, body) ?: if (!internetOn) false else runCatching {
         val c = URL("$SERVER/$topic").openConnection() as HttpURLConnection
         c.requestMethod = "POST"
         c.doOutput = true
@@ -298,8 +302,10 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         // an app before the request ignores a "req" chunk without a word; beside it goes an empty package marked version 3,
         // which that app shows as "sent something from a newer Stagebook, update the app". This app drops it (no list)
         val notice = Chunk("req-" + Integer.toHexString(body.hashCode()), 0, 1, java.util.Base64.getEncoder().encodeToString(updateNotice()))
-        post(topic, ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray())) &&
-            post(topic, ShareCode.encrypt(pairKey, json.encodeToString(notice).toByteArray()))
+        // what counts is the request: with it delivered, a failed notice must not make the person ask again
+        val ok = post(topic, ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray()))
+        runCatching { post(topic, ShareCode.encrypt(pairKey, json.encodeToString(notice).toByteArray())) }
+        ok
     }
 
     /** A package with nothing in it and version 3: only an older app does anything with it (says "update"). */
@@ -316,7 +322,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
             val n = parts.first().n
             val ordered = parts.distinctBy { it.i }.sortedBy { it.i }
             if (ordered.size != n) return@mapNotNull null
-            val bytes = ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) }
+            // a malformed chunk is an unreadable package, not an error that stops this member's sync and the next ones
+            val bytes = runCatching { ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) } }.getOrNull() ?: return@mapNotNull null
             val pkg = openPairPackage(bytes) ?: return@mapNotNull null
             pkg.breaks?.let { breaks[pid] = it }
             Triple(pid, pkg.text, pkg.songs)
@@ -342,7 +349,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         ShareCode.decrypt(ShareCode.keys(code).key, body)?.let { unpack(ACK_MARK, it) }?.let(::hello)
     }
 
-    private fun get(url: String): List<String>? = if (!internetOn) null else runCatching {
+    private fun get(url: String): List<String>? = getHook?.let { return it(url) } ?: if (!internetOn) null else runCatching {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = TIMEOUT_MS
         c.readTimeout = TIMEOUT_MS

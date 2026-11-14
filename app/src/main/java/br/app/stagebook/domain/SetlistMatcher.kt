@@ -20,6 +20,17 @@ object SetlistMatcher {
     private const val SIMILAR_MIN = 0.75
     private const val MAX_CANDIDATES = 3
 
+    /**
+     * Only the exact rule of [match] (same title key, the artist as tiebreaker): the song, or null. No similarity
+     * search: callers that discard "similar" (the band's alert, a request for songs) don't pay for the edit distance
+     * against the whole library for every title that has no match (audit 14/11).
+     */
+    fun matchExact(entry: QrPayload.Entry, library: List<Song>): Song? {
+        val sameTitle = TitleKeys.of(library).byKey[TextKey.of(entry.title)].orEmpty()
+        if (sameTitle.size == 1) return sameTitle[0]
+        return sameTitle.filter { sameArtist(it.author, entry.artist) }.singleOrNull().takeIf { sameTitle.size > 1 }
+    }
+
     fun match(entry: QrPayload.Entry, library: List<Song>): QrMatch {
         val kt = TextKey.of(entry.title)
         val keys = TitleKeys.of(library)   // the library's keys once, not again for every entry

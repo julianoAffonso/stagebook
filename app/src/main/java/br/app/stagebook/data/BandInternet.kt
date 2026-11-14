@@ -234,22 +234,29 @@ class BandInternet @Inject constructor(
         }
     }
 
-    // on the same Wi-Fi: sends with no receipt go directly (and leave the queue); my pending "ok" too
-    private suspend fun settleOnLan(peers: List<BandLink.Peer>) = lock.withLock {
+    // on the same Wi-Fi: sends with no receipt go directly (and leave the queue); my pending "ok" too. The lock is held
+    // only to read and to write, never while sending over the Wi-Fi (a member out of reach took up to 15 s with the
+    // lock, and every sync and "accepted" waited), and nothing is written when nothing went (this runs at every change
+    // of who is online)
+    internal suspend fun settleOnLan(peers: List<BandLink.Peer>) {
         val ids = peers.associateBy { it.id }
-        var out = outbox()
-        out = out.filterNot { o ->
-            val peer = ids[o.to] ?: return@filterNot false
-            val body = link.packageFor(o.to, java.util.Base64.getDecoder().decode(o.list), o.songs) ?: return@filterNot false
+        val (out, acc) = lock.withLock { outbox() to accepted() }
+        val sentOut = out.filter { o ->
+            val peer = ids[o.to] ?: return@filter false
+            val body = link.packageFor(o.to, java.util.Base64.getDecoder().decode(o.list), o.songs) ?: return@filter false
             link.sendTo(peer, body)
-        }
-        val acc = accepted().filterNot { a ->
-            val peer = ids[a.from] ?: return@filterNot false
-            val body = cloud.ackBody(a.code) ?: return@filterNot false
+        }.map { it.id to it.to }.toSet()
+        val sentAcc = acc.filter { a ->
+            val peer = ids[a.from] ?: return@filter false
+            val body = cloud.ackBody(a.code) ?: return@filter false
             link.sendTo(peer, body, BandProtocol.Kind.CODE_ACK)
+        }.map { it.code to it.from }.toSet()
+        if (sentOut.isEmpty() && sentAcc.isEmpty()) return
+        lock.withLock {
+            // what changed meanwhile (a send queued, a receipt) stays: only what went leaves the queue
+            if (sentOut.isNotEmpty()) saveOut(outbox().filterNot { (it.id to it.to) in sentOut })
+            if (sentAcc.isNotEmpty()) save(KEY_ACCEPTED, Accepted.serializer(), accepted().filterNot { (it.code to it.from) in sentAcc })
         }
-        saveOut(out)
-        save(KEY_ACCEPTED, Accepted.serializer(), acc)
     }
 
     /**
