@@ -268,6 +268,9 @@ fun SongEditorScreen(
                 }
             }
             fun edit(v: TextFieldValue) {
+                // the text as it was when this event came, not the last composed one: two events in the same frame (the IME
+                // batching a typed and a deleted character) both saw the old one
+                val before = lyrics.text
                 val onlySelection = v.text == shown.text && v.selection != shown.selection
                 if (fromStage) {
                     val since = android.os.SystemClock.uptimeMillis() - openedAt
@@ -276,7 +279,7 @@ fun SongEditorScreen(
                     if (guarding) guarding = false   // typing: the person took over
                 }
                 lyrics = v
-                if (v.text != fieldText) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
+                if (v.text != before) onText(Chords.withMeta(if (look.chords) v.text else LyricsView.merge(uiState.text, v.text), uiState.meta))
             }
             // new chord: goes where the lyrics cursor was
             if (newChord) {
