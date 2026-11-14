@@ -193,6 +193,36 @@ class BandAuditResilienceTest {
         } finally { trust.remove("so-offline") }
     }
 
+    // ---- an automatic sync waits for the stage to close ----
+    private fun internet(stage: br.app.stagebook.data.StageGate): BandInternet {
+        val l = BandLink(context, identity, trust, stage, BandInbox(context), repo)
+        return BandInternet(context, SetlistCloud(repo, identity), trust, identity, BandInbox(context), br.app.stagebook.data.Connectivity(context), l)
+    }
+
+    @Test fun `with the stage open the automatic sync waits, and runs once when it closes`() {
+        val stage = br.app.stagebook.data.StageGate()
+        val band = internet(stage)
+        stage.enter()
+        band.onAppOpen(); band.onAppOpen()
+        Thread.sleep(400)
+        assertEquals(0, band.syncRuns.get())
+        stage.leave()
+        await("the put-off sync ran") { band.syncRuns.get() >= 1 }
+        Thread.sleep(400)
+        assertEquals(1, band.syncRuns.get())
+    }
+
+    @Test fun `the person's own sync runs even with the stage open`() {
+        val stage = br.app.stagebook.data.StageGate()
+        val band = internet(stage)
+        stage.enter()
+        band.syncNow()
+        await("forced sync ran") { band.syncRuns.get() == 1 }
+        stage.leave()
+        Thread.sleep(400)
+        assertEquals(1, band.syncRuns.get())   // nothing was put off
+    }
+
     // ---- 5 and 6: the pair's inbox ----
     private val pairKey = ByteArray(32) { it.toByte() }
     private fun line(id: String, json: String) = """{"event":"message","id":"$id","message":"${ShareCode.encrypt(pairKey, json.toByteArray())}"}"""

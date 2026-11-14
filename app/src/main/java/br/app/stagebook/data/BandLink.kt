@@ -92,6 +92,9 @@ class BandLink @Inject constructor(
     /** Someone is in this device's band (the saved list, online or not): without it there is nobody to lead. */
     fun hasSavedMembers(): Boolean = trust.members.value.isNotEmpty()
 
+    /** The stage is open (a show): nothing automatic runs then ([BandInternet] waits for it to close). */
+    val stageOpen: StateFlow<Boolean> get() = stage.onStage
+
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
         foreground = on

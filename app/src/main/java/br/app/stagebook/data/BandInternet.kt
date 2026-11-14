@@ -65,6 +65,10 @@ class BandInternet @Inject constructor(
     private val lock = Mutex()
     private val usedLock = Any()   // the used invites: claimed from the sync and from the Wi-Fi
 
+    // declared before [init]: its coroutines already use them
+    private val syncDeferred = java.util.concurrent.atomic.AtomicBoolean(false)
+    internal val syncRuns = java.util.concurrent.atomic.AtomicInteger()   // passes that ran (the tests count them)
+
     init {
         // the words' "ok" arriving over the local network: checked against my saved sends
         link.codeAckHandler = { hello, body ->
@@ -77,6 +81,8 @@ class BandInternet @Inject constructor(
             }
         }
         // a band member showed up on the Wi-Fi: deliver whatever is pending for them (without waiting for the service)
+        // the stage closed with an automatic sync put off: it runs now, once
+        scope.launch { link.stageOpen.collect { open -> if (!open && syncDeferred.getAndSet(false)) sync(force = false) } }
         scope.launch { link.onlineMembers.collect { peers -> if (peers.isNotEmpty()) settleOnLan(peers) } }
     }
 
@@ -179,9 +185,13 @@ class BandInternet @Inject constructor(
      */
     fun syncNow() = sync(force = true)
 
+    // on stage there is no download and no lyrics swap (StageGate's rule): the automatic pass waits for the stage to close;
+    // the person's own "Sync" ([force]) goes on
     private fun sync(force: Boolean) {
+        if (!force && link.stageOpen.value) { syncDeferred.set(true); return }
         scope.launch {
             lock.withLock {
+                syncRuns.incrementAndGet()
                 val pending = outbox().isNotEmpty() || accepted().isNotEmpty()
                 if (trust.members.value.isNotEmpty() && connectivity.isOnline()) runCatching { syncInternet() }
                 if ((pending || force) && trust.members.value.isNotEmpty()) link.burst()
