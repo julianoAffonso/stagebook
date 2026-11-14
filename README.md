@@ -34,6 +34,10 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   the same app version: the app warns who isn't.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
   With a mixer, per-output routing, EQ and normalization.
+- **Settings by task:** seven groups (stage, chords, page turning, import and backup, band and computer, player and
+  metronome, device) with a **search** that also finds what is turned off and says why. Songs look the same everywhere
+  (title, artist, key, BPM, capo, track). The song editor has two screens, **Data** and **Lyrics and chords**; deleting
+  a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
 - **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager
   and it opens in the app), an **editor on the computer** (in the browser, with setlists and breaks) and an **essential
@@ -51,7 +55,7 @@ Bluetooth or speaker.
 
 Two ways to play on the interface:
 - **Through Stagebook's engine (default):** talks to the interface directly.
-- **Through Android:** Settings > Metronome and player > Play on the interface through Android. Use it only if the
+- **Through Android:** Settings > Player and metronome > Play on the interface through Android. Use it only if the
   interface connects and the sound doesn't come out or breaks up.
 
 Each interface keeps its own choice on each device: with the interface connected, the switch applies only to it. If
@@ -117,7 +121,7 @@ its gain is a simpler screen.
 Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex
 and other AI assistants read and edit your library: "build a 15-song setlist for Saturday", "move every song by this
 artist down a half tone", "check the chords of this song", "import this page". It runs on your computer and talks to the
-tablet over your Wi-Fi through **Settings → Edit on the computer**; you approve the computer once on the tablet.
+tablet over your Wi-Fi through **Settings → Band and computer → Edit on the computer**; you approve the computer once on the tablet.
 It's on npm as [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): with [Node.js](https://nodejs.org) on
 the computer, Claude Code connects with `claude mcp add stagebook -- npx -y stagebook-mcp`. Setup for each assistant:
 [mcp/README.md](mcp/README.md).
