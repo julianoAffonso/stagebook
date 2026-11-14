@@ -4,6 +4,7 @@ import br.app.stagebook.ui.components.InfoDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
@@ -255,59 +256,68 @@ fun ConductBar(
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        // on a phone two buttons don't fit next to the text: they go on a line of their own. The leader's "End" broke
-        // letter by letter and the title vanished (user, 02/11); a follower's Ask and Leave left the missing song's
-        // title two letters (two devices, 13/11). One button (Leave, Follow) stays beside the text, and on a phone
-        // "See what's missing" is a tap on the text (with an arrow): as a button it pushed both onto a third line
-        // and left the strip tall and half empty (user, 02/11)
+        // on a phone two buttons don't fit next to the text. The leader's "End" broke letter by letter and the title
+        // vanished (user, 02/11): its two go on a line of their own. A follower's Ask and Leave left the missing song's
+        // title two letters (two devices, 13/11), and on a line of their own made the strip too tall (user, 13/11):
+        // they sit beside the short first line, and the second line has the strip's width. One button (Leave, Follow)
+        // stays beside the text, and on a phone "See what's missing" is a tap on the text (with an arrow): as a button
+        // it pushed both onto a third line and left the strip tall and half empty (user, 02/11)
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
             val small = maxWidth < NARROW
-            val narrow = small && (ui is ConductUi.Conducting || canAsk)
+            val below = small && ui is ConductUi.Conducting
+            val besideTitle = small && canAsk
             val lacksInText = small && hasLacks
-            Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Icon(if (alert) AppIcons.Warning else AppIcons.Group, null)
-                    Column(
-                        Modifier.weight(1f).then(
-                            if (lacksInText) Modifier.clickable(onClickLabel = seeLacks) { showLacks = true } else Modifier,
-                        ),
-                    ) {
-                        // each line is one line, and what gets cut is the name in it (a setlist, a device, a song):
-                        // on a phone with bigger text the break's line wrapped and a long title pushed its own
-                        // sentence off (two devices, 13/11)
-                        CutLine(
-                            when (ui) {
-                                is ConductUi.Conducting -> cutLine(R.string.conduct_conducting, ui.set)
-                                is ConductUi.Following -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
-                                is ConductUi.Left -> cutLine(R.string.conduct_left, ui.from)
-                            },
-                            MaterialTheme.typography.titleSmall, "conductTitle",
-                        )
-                        val rest = (ui as? ConductUi.Following)?.takeIf { it.breakSince != null }
-                        val detail = when {
-                            // the leader's break, for a follower on any screen: its time and what comes next (or that
-                            // the next song isn't here), in place of the song. The time is never cut
-                            rest?.breakSince != null -> cutLine(
-                                R.string.conduct_break, stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
-                                br.app.stagebook.ui.components.breakClock(rest.breakSince),
-                            )
-                            ui is ConductUi.Following && ui.missingHere -> cutLine(R.string.conduct_missing_here, ui.song)
-                            ui is ConductUi.Following && ui.noChords -> cutLine(R.string.conduct_no_chords, ui.song)
-                            nowMissing.isNotEmpty() -> cutLine(R.string.conduct_missing_now, nowMissing.joinToString(", "))
-                            ui is ConductUi.Conducting && ui.noAnswer > 0 -> CutText(cut = pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer))
-                            lacksInText -> CutText(cut = seeLacks)
-                            else -> null
-                        }
-                        detail?.let {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CutLine(it, MaterialTheme.typography.bodySmall, "conductLine", Modifier.weight(1f, fill = false))
-                                if (lacksInText) Icon(AppIcons.ChevronRight, null, Modifier.size(16.dp))
-                            }
-                        }
+            val textTap = if (lacksInText) Modifier.clickable(onClickLabel = seeLacks) { showLacks = true } else Modifier
+            // each line is one line, and what gets cut is the name in it (a setlist, a device, a song): on a phone
+            // with bigger text the break's line wrapped and a long title pushed its own sentence off (two devices,
+            // 13/11)
+            val title = when (ui) {
+                is ConductUi.Conducting -> cutLine(R.string.conduct_conducting, ui.set)
+                is ConductUi.Following -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
+                is ConductUi.Left -> cutLine(R.string.conduct_left, ui.from)
+            }
+            val rest = (ui as? ConductUi.Following)?.takeIf { it.breakSince != null }
+            val detail = when {
+                // the leader's break, for a follower on any screen: its time and what comes next (or that the next
+                // song isn't here), in place of the song. The time is never cut
+                rest?.breakSince != null -> cutLine(
+                    R.string.conduct_break, stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
+                    br.app.stagebook.ui.components.breakClock(rest.breakSince),
+                )
+                ui is ConductUi.Following && ui.missingHere -> cutLine(R.string.conduct_missing_here, ui.song)
+                ui is ConductUi.Following && ui.noChords -> cutLine(R.string.conduct_no_chords, ui.song)
+                nowMissing.isNotEmpty() -> cutLine(R.string.conduct_missing_now, nowMissing.joinToString(", "))
+                ui is ConductUi.Conducting && ui.noAnswer > 0 -> CutText(cut = pluralStringResource(R.plurals.conduct_no_answer, ui.noAnswer, ui.noAnswer))
+                lacksInText -> CutText(cut = seeLacks)
+                else -> null
+            }
+            val leading = @Composable { Icon(if (alert) AppIcons.Warning else AppIcons.Group, null) }
+            val titleLine = @Composable { CutLine(title, MaterialTheme.typography.titleSmall, "conductTitle") }
+            val detailLine = @Composable {
+                if (detail != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CutLine(detail, MaterialTheme.typography.bodySmall, "conductLine", Modifier.weight(1f, fill = false))
+                        if (lacksInText) Icon(AppIcons.ChevronRight, null, Modifier.size(16.dp))
                     }
-                    if (!narrow) Buttons(lacksButton = !lacksInText)
                 }
-                if (narrow) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Buttons(lacksButton = !lacksInText) }
+            }
+            if (besideTitle) {
+                ActionsBesideTitle(
+                    leading, titleLine, { Row { Buttons(lacksButton = !lacksInText) } }, detailLine,
+                    Modifier.then(textTap).padding(horizontal = Spacing.m),
+                )
+            } else {
+                Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        leading()
+                        Column(Modifier.weight(1f).then(textTap)) {
+                            titleLine()
+                            detailLine()
+                        }
+                        if (!below) Buttons(lacksButton = !lacksInText)
+                    }
+                    if (below) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Buttons(lacksButton = !lacksInText) }
+                }
             }
         }
     }
@@ -316,6 +326,44 @@ fun ConductBar(
         LacksDialog(ui.lackers, sending, onSend, onDismiss = { showLacks = false })
     } else if (showLacks && ui is ConductUi.Following && ui.lacksHere.isNotEmpty()) {
         InfoDialog(stringResource(R.string.conduct_lacks_here_title), ui.lacksHere.joinToString("\n"), onDismiss = { showLacks = false })
+    }
+}
+
+/**
+ * The strip with [actions] beside its first line only: [detail] goes under them with the whole width from where
+ * [title] starts, so a song's title fits. The actions keep their touch height, centred on the first line, over the
+ * strip's top padding and the top of the second line, which sits right under the first as in the other strips.
+ */
+@Composable
+private fun ActionsBesideTitle(
+    leading: @Composable () -> Unit, title: @Composable () -> Unit, actions: @Composable () -> Unit, detail: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.ui.layout.Layout(
+        // the actions last: on top of the second line, where their touch area reaches it
+        { Box { leading() }; Box { title() }; Box { detail() }; Box { actions() } }, modifier,
+    ) { (leadingBox, titleBox, detailBox, actionsBox), constraints ->
+        val width = constraints.maxWidth
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val gap = Spacing.s.roundToPx()
+        val edge = Spacing.xs.roundToPx()
+        val icon = leadingBox.measure(loose)
+        val buttons = actionsBox.measure(loose)
+        val textStart = icon.width + gap
+        // the actions are whole: the first line is what gives way
+        val first = titleBox.measure(loose.copy(maxWidth = (width - textStart - gap - buttons.width).coerceAtLeast(0)))
+        val second = detailBox.measure(loose.copy(maxWidth = (width - textStart).coerceAtLeast(0)))
+        // the actions' touch height is centred on the first line, whatever is taller than it (them, the icon)
+        val top = maxOf(edge, (buttons.height - first.height) / 2, (icon.height - first.height) / 2)
+        // under the text, the room a strip with one action leaves: its text centred beside the action
+        val bottom = edge + ((buttons.height - first.height - second.height) / 2).coerceAtLeast(0)
+        layout(width, top + first.height + second.height + bottom) {
+            icon.placeRelative(0, top + (first.height - icon.height) / 2)
+            first.placeRelative(textStart, top)
+            // right under the first line, as where the two are one column
+            second.placeRelative(textStart, top + first.height)
+            buttons.placeRelative(width - buttons.width, top + (first.height - buttons.height) / 2)
+        }
     }
 }
 

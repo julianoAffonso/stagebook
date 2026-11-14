@@ -10,10 +10,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.band.ConductBar
 import br.app.stagebook.ui.band.ConductUi
+import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -66,7 +68,12 @@ class ConductStripOneLineTest {
         }
     }
 
+    private var shown = false
+
     private fun show() {
+        // content is set once per test; after that the states redraw it
+        if (shown) return compose.waitForIdle()
+        shown = true
         // roomy: the same strip with width to spare, to learn how wide a text is when nothing cuts it
         compose.setContent {
             StagebookTheme { ConductBar(ui, {}, {}, {}, {}, if (roomy) Modifier.requiredWidth(ROOMY) else Modifier, asking = asking) }
@@ -80,33 +87,102 @@ class ConductStripOneLineTest {
     private fun action(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot()
     private fun stripHeight() = compose.onRoot().getUnclippedBoundsInRoot().bottom
 
-    /** The strip's two actions are under its text, and the missing song's title is drawn whole. */
-    private fun actionsBelowAndTitleWhole(ask: String) {
+    private val edge = 16.dp   // the strip's side padding
+    private val textStart = edge + 24.dp + 8.dp   // after the icon and its gap
+
+    /** A follower's two actions are beside the first line, and the missing song's title is whole under them. */
+    private fun actionsBesideTitleAndSongWhole(ask: String, song: String) {
+        roomy = false
+        ui = following(song, missingHere = true)
         show()
+        val first = bounds("conductTitleStart")
         val line = bounds("conductLineStart")
-        listOf(ask, "Sair").forEach { assertTrue("\"$it\" is under the text", action(it).top >= line.bottom) }
+        listOf(ask, "Sair").forEach {
+            val centre = (action(it).top + action(it).bottom) / 2
+            assertTrue("\"$it\" is centred on the first line: $centre in ${first.top}..${first.bottom}", centre > first.top && centre < first.bottom)
+            // what a finger reaches, wider than what is drawn
+            val touch = compose.onNodeWithText(it).fetchSemanticsNode().touchBoundsInRoot
+            assertTrue("\"$it\" is a whole touch target: ${touch.height} px", touch.height >= with(compose.density) { Sizes.touch.toPx() } - 1f)
+            assertTrue("and all of it is on the strip", touch.top >= 0f)
+            assertTrue("\"$it\" is inside the strip", action(it).top >= 0.dp && action(it).bottom <= stripHeight())
+        }
         assertTrue("the actions end at the strip's end", action("Sair").right > 300.dp)
+        assertEquals("the second line starts under the first", first.left.value, line.left.value, PIXEL)
+        assertEquals("and right under it", first.bottom.value, line.top.value, PIXEL)
+        compose.onNodeWithText("Você não tem \"$song\"").assertExists()
         val title = width("conductLineCut")
         roomy = true
         compose.waitForIdle()
-        assertEquals("the title isn't cut", width("conductLineCut"), title, PIXEL)
+        assertEquals("\"$song\" isn't cut", width("conductLineCut"), title, PIXEL)
     }
 
-    @Test fun `on a phone Ask and Leave go under the text and the missing song's title is whole`() {
-        ui = following("Teste F um", missingHere = true)
-        actionsBelowAndTitleWhole("Pedir")
+    @Test fun `on a phone Ask and Leave sit beside the first line and the missing song's title is whole`() {
+        actionsBesideTitleAndSongWhole("Pedir", "Teste F um")
+        actionsBesideTitleAndSongWhole("Pedir", "Garota de Ipanema")
     }
 
-    @Test fun `while asking the actions are under the text and the title is whole too`() {
-        ui = following("Teste F um", missingHere = true)
+    @Test fun `while asking the actions sit beside the first line and the title is whole too`() {
         asking = true
-        actionsBelowAndTitleWhole("Pedindo…")
+        actionsBesideTitleAndSongWhole("Pedindo…", "Teste F um")
+        actionsBesideTitleAndSongWhole("Pedindo…", "Garota de Ipanema")
     }
 
-    @Test fun `a song that came without chords has Ask and Leave under the text`() {
+    @Test fun `the second line has the strip's width, from where the first line starts`() {
+        ui = following(longTitle, missingHere = true)
+        show()
+        assertEquals(textStart.value, bounds("conductLineStart").left.value, PIXEL)
+        // cut only at the strip's end padding: the closing quote and the arrow-less line end there
+        assertEquals((360.dp - edge).value, bounds("conductLineEnd").right.value, 1f)
+        assertTrue("under the actions", bounds("conductLineEnd").right > action("Pedir").left)
+    }
+
+    @Test fun `a song that came without chords has Ask and Leave beside the first line`() {
         ui = following("Teste F um", noChords = true)
         show()
-        assertTrue(action("Pedir").top >= bounds("conductLineEnd").bottom)
+        assertTrue(action("Pedir").top < bounds("conductTitleStart").top && action("Pedir").bottom > bounds("conductTitleStart").bottom)
+        compose.onNodeWithText("Teste F um chegou sem cifra").assertExists()
+    }
+
+    @Test fun `a follower's strip with two actions is lower than the leader's and close to one with one action`() {
+        ui = following("Teste F um", rest = since)
+        show()
+        val oneAction = stripHeight()
+        ui = ConductUi.Conducting("Show", 0, listOf("Baixo"), emptyList())
+        compose.waitForIdle()
+        val leader = stripHeight()
+        listOf(following("Teste F um", missingHere = true), following("Teste F um", noChords = true), following("Teste F um", missingHere = true, rest = since)).forEach {
+            ui = it
+            compose.waitForIdle()
+            val height = stripHeight()
+            assertTrue("lower than the leader's ($leader): $height", height < leader - 8.dp)
+            assertTrue("no blank row over one action ($oneAction): $height", height <= oneAction + 16.dp)
+            assertTrue("about 64dp: $height", height <= 68.dp)
+        }
+    }
+
+    @Test fun `a long leader's name is cut on the first line and Ask and Leave keep their text`() {
+        sameStrip(following("Ré", missingHere = true, from = "Voz"), following("Ré", missingHere = true, from = longName), "Pedir", "Sair")
+        val name = bounds("conductTitleCut")
+        assertTrue("the name ends before the actions", name.right <= action("Pedir").left)
+        roomy = true
+        compose.waitForIdle()
+        assertTrue("and is cut", width("conductTitleCut") > (name.right - name.left).value + 20f)
+    }
+
+    @Test fun `Ask and Leave beside the first line are tapped`() {
+        var asks = 0
+        var leaves = 0
+        compose.setContent { StagebookTheme { ConductBar(following("Teste F um", missingHere = true), {}, { leaves++ }, {}, {}, onAsk = { asks++ }) } }
+        compose.onNodeWithText("Pedir").performClick()
+        compose.onNodeWithText("Sair").performClick()
+        assertEquals(1 to 1, asks to leaves)
+    }
+
+    @Test fun `the leader's two actions stay under the text`() {
+        ui = ConductUi.Conducting("Show", 0, listOf("Baixo"), emptyList())
+        show()
+        listOf("Procurar a banda", "Encerrar").forEach { assertTrue("\"$it\" is under the text", action(it).top >= bounds("conductLineStart").bottom) }
+        assertTrue(action("Encerrar").right > 300.dp)
     }
 
     @Test fun `with one action the strip is as tall as it was, the action beside the text`() {
@@ -119,10 +195,6 @@ class ConductStripOneLineTest {
         compose.waitForIdle()
         assertEquals(oneLine, stripHeight())
         assertTrue(action("Sair").top < bounds("conductLineStart").bottom)
-        // and two actions make it taller
-        ui = following("Teste F um", missingHere = true)
-        compose.waitForIdle()
-        assertTrue(stripHeight() > oneLine)
     }
 
     @Test @Config(qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi")
