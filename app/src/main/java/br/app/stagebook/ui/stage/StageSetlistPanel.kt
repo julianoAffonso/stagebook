@@ -167,9 +167,10 @@ private fun SetlistPanelContent(setlist: StageSetlist, songs: List<StageSong>, b
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
         )
         LazyColumn(Modifier.fillMaxWidth().weight(1f), list, verticalArrangement = Arrangement.spacedBy(Spacing.xs), contentPadding = PaddingValues(bottom = Spacing.m)) {
-            itemsIndexed(rows, key = { i, _ -> i }) { _, row ->
+            itemsIndexed(rows, key = { i, _ -> i }) { at, row ->
                 // lower rows than the setlist screen's: on stage the list is for finding a song, and more of them must show (user, 13/11)
-                if (row == SetlistBreaks.BREAK) SetlistBreakRow(handle = null, onRemove = null, dense = true)
+                // an open break says its time here too, as on the setlist's screen (running, or paused with the icon)
+                if (row == SetlistBreaks.BREAK) SetlistBreakRow(handle = null, onRemove = null, dense = true, timer = setlist.openBreaks[rows.take(at).count { it != SetlistBreaks.BREAK }])
                 else {
                     val song = songs[row]
                     val key = setlist.keys.getOrNull(row).orEmpty()

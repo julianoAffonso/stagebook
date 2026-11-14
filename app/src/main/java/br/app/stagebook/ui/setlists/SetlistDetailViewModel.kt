@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.update
 import br.app.stagebook.data.BandInternet
 import br.app.stagebook.data.BandTrust
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.channels.Channel
 import br.app.stagebook.data.BandLink
@@ -116,7 +117,7 @@ class SetlistDetailViewModel @Inject constructor(
     /** Sends the setlist (with the songs, if [withSongs]) to everyone in the band on the network now. */
     fun sendBand(withSongs: Boolean) = share.sendBand { setlistCloud.setlistPackage(setId, withSongs) }
 
-    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks, show.breaks) { loaded, lib, marks, breaks ->
+    val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks, show.breaks, conduct.role) { loaded, lib, marks, breaks, role ->
         val set = lib.setlist(setId)
         val seen = HashMap<String, Int>()
         val states = SetlistShow.states(set?.items.orEmpty(), marks[setId])
@@ -136,9 +137,23 @@ class SetlistDetailViewModel @Inject constructor(
             },
             breaks = set?.breaks.orEmpty(),
             anyPlayed = marks[setId]?.played?.isNotEmpty() == true,
-            openBreaks = set?.let { br.app.stagebook.domain.BreakTimer.openAt(setId, it.items, it.breaks, breaks, show.today()) }.orEmpty(),
+            // following the band the leader's break counts (its time, until it ends), not what this device had open itself
+            openBreaks = set?.let {
+                val following = role as? br.app.stagebook.data.BandConduct.Role.Following
+                if (following == null) br.app.stagebook.domain.BreakTimer.openAt(setId, it.items, it.breaks, breaks, show.today())
+                else following.breakTimer?.let { timer ->
+                    br.app.stagebook.domain.BreakTimer.followedAt(it.items.map { id -> lib.song(id)?.let { s -> s.title to s.author } }, it.breaks, following.msg, timer)
+                }.orEmpty()
+            }.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
+
+    // this device follows the band: its own open breaks of this setlist are over (the leader's is the one shown)
+    init {
+        viewModelScope.launch {
+            conduct.role.map { it is br.app.stagebook.data.BandConduct.Role.Following }.distinctUntilChanged().collect { if (it) show.closeBreaks(setId) }
+        }
+    }
 
     private val _qr = MutableStateFlow<QrUi?>(null)
     val qr: StateFlow<QrUi?> = _qr.asStateFlow()

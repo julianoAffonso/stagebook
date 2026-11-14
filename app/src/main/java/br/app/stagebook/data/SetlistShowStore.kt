@@ -97,6 +97,10 @@ class SetlistShowStore @Inject constructor(
         replaceBreaks { all -> all[key]?.let { all + (key to change(it, now())) } ?: all }
     }
 
+    /** The setlist's breaks aren't open any more: this device follows the band, whose break is the one that counts. */
+    fun closeBreaks(setId: String) =
+        replaceBreaks { all -> all.mapValues { (k, t) -> if (k.startsWith("$setId|") && t.open) t.copy(open = false) else t } }
+
     /** "Clear played": the setlist as if no song had been on stage. */
     fun clear(setId: String) {
         change(setId) { Marks() }

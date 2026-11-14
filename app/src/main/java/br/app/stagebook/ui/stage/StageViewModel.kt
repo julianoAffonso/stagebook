@@ -47,7 +47,11 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
  * is ([states], the same marks the setlist's screen shows) and its key ([keys], "" = none written).
  */
 @Immutable
-data class StageSetlist(val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList())
+data class StageSetlist(
+    val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList(),
+    /** The breaks left open, by the songs before them: their counters, running or paused. */
+    val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
+)
 
 /**
  * The leader's break on a follower's stage: [since] when it started (this device's clock), [next] the song that comes
@@ -361,7 +365,7 @@ class StageViewModel @Inject constructor(
     /** Opened by following, without the leader's song: this stage is the leader's break and nothing else. */
     val breakOnly: Boolean = route.leaderBreak
 
-    val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library, conduct.role, show.marks) { loaded, lib, role, marks ->
+    val uiState: StateFlow<StageUiState> = combine(repository.loaded, repository.library, conduct.role, show.marks, show.breaks) { loaded, lib, role, marks, breaks ->
         val set = route.setId?.let(lib::setlist)
         val ids = set?.items ?: listOfNotNull(route.songId)
         // following, the "Next:" at the end of the song comes from the leader's setlist, which the message carries
@@ -386,7 +390,10 @@ class StageViewModel @Inject constructor(
             look = lib.look,
             breaks = set?.breaks.orEmpty(),
             setlist = set?.let {
-                StageSetlist(it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> Chords.key(lib.song(id)?.text.orEmpty()) })
+                StageSetlist(
+                    it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> Chords.key(lib.song(id)?.text.orEmpty()) },
+                    br.app.stagebook.domain.BreakTimer.openAt(it.id, it.items, it.breaks, breaks, show.today()),
+                )
             },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
