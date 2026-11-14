@@ -1,6 +1,8 @@
 package br.app.stagebook.data
 
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -316,8 +318,14 @@ class BandConduct @Inject constructor(
         data class ChordsCame(val title: String, val from: String) : Notice
     }
 
-    private val _notices = MutableSharedFlow<Notice>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    val notices: SharedFlow<Notice> = _notices
+    // a notice waits for the screen when nobody is collecting at that instant (the screen being redrawn: the device
+    // turned, the text size changed): a shared flow dropped it, and "arrived without chords" never showed (two devices,
+    // 13/11). One that waits too long isn't news any more and is dropped
+    private val pendingNotices = kotlinx.coroutines.channels.Channel<Pair<Long, Notice>>(8, BufferOverflow.DROP_OLDEST)
+    val notices: kotlinx.coroutines.flow.Flow<Notice> = pendingNotices.receiveAsFlow()
+        .mapNotNull { (at, notice) -> notice.takeIf { clock() - at <= NOTICE_MS } }
+
+    private fun notify(notice: Notice) { pendingNotices.trySend(clock() to notice) }
 
     private val _sending = MutableStateFlow(false)
     /** Leading: the missing songs are going out. */
@@ -358,7 +366,7 @@ class BandConduct @Inject constructor(
                     val songs = now.msg.songs.filter { it.title in lack.titles }.mapNotNull { Conduct.find(it, library) }.distinctBy { it.id }
                     songs.isNotEmpty() && sendSongs(id, songs)
                 }
-                _notices.tryEmit(
+                notify(
                     when {
                         reached.isEmpty() -> Notice.NotSent
                         memberIds?.size == 1 -> Notice.Sent(reached.values.first().who)
@@ -392,18 +400,18 @@ class BandConduct @Inject constructor(
                     .filter { !forChords || br.app.stagebook.domain.Chords.hasChords(it.song.text) }
                     .maxByOrNull { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 }
                 when {
-                    got == null -> _notices.tryEmit(Notice.Nobody(forChords))
+                    got == null -> notify(Notice.Nobody(forChords))
                     own == null && enter(got.song, got.fromName) -> Unit
                     // the copy that had just come without chords, untouched since: the one with chords takes its place
                     // (user, 13/11: a guitarist shouldn't have to leave the stage to accept it)
-                    own != null && replaceChordless(own, got.song) -> _notices.tryEmit(Notice.ChordsCame(got.song.title, got.fromName))
+                    own != null && replaceChordless(own, got.song) -> notify(Notice.ChordsCame(got.song.title, got.fromName))
                     else -> {
                         // a song with this title and artist is here (or following ended meanwhile): reviewed like the rest
                         link.keep(got.fromId, got.fromName, listOf(got.song))
                         if (own != null) {
                             _chordless.update { it - own.id }
                             chordlessText.remove(own.id)
-                            _notices.tryEmit(Notice.ChordsKept(got.song.title, got.fromName))
+                            notify(Notice.ChordsKept(got.song.title, got.fromName))
                         }
                     }
                 }
@@ -463,7 +471,7 @@ class BandConduct @Inject constructor(
         }
         val current = (_role.value as? Role.Following)?.item?.let { Conduct.isFor(it, song.title, song.author) } == true
         songArrived()
-        if (noChords) _notices.tryEmit(Notice.NoChords(song.title)) else if (!current) _notices.tryEmit(Notice.Arrived(song.title, fromName))
+        if (noChords) notify(Notice.NoChords(song.title)) else if (!current) notify(Notice.Arrived(song.title, fromName))
         return true
     }
 
@@ -501,5 +509,6 @@ class BandConduct @Inject constructor(
         const val SEARCH_SENDS = 3
         const val SEARCH_EVERY_MS = 5_000L
         const val GONE_MS = 10 * 60_000L
+        const val NOTICE_MS = 30_000L   // a notice not shown by then is dropped
     }
 }
