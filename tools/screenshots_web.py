@@ -42,6 +42,13 @@ def page_strings(lang):
     texts = app_strings(LANGS[lang])
     out = {k: texts.get(v, "") for k, v in names.items()}
     out["lyrics"] = texts.get("editor_lyrics_chords", out.get("lyrics", ""))
+    # plurals come as three texts (0, 1, other), as WebEditorServer.texts sends them; Portuguese counts 0 as "one"
+    xml = LANGS[lang].read_text(encoding="utf-8")
+    for name, res in (("songCount", "song_count"), ("breakCount", "break_count")):
+        forms = dict(re.findall(r'<item quantity="(\w+)">(.*?)</item>', re.search(rf'<plurals name="{res}">(.*?)</plurals>', xml, re.S).group(1)))
+        other = forms["other"]
+        out[name + "0"] = forms["one"] if lang == "pt-BR" else other
+        out[name + "1"], out[name + "N"] = forms["one"], other
     return out
 
 
@@ -116,7 +123,7 @@ class Stand(BaseHTTPRequestHandler):
         if p == "/api/sets":
             return self.send(200, json.dumps([{"id": "s1", "name": s["set"], "count": 4}, {"id": "s2", "name": "18/10/2026 20:30", "count": 6}], ensure_ascii=False))
         if p.startswith("/api/sets/"):
-            return self.send(200, json.dumps({"id": "s1", "name": s["set"], "songs": library(lang)[:4]}, ensure_ascii=False))
+            return self.send(200, json.dumps({"id": "s1", "name": s["set"], "songs": library(lang)[:4], "breaks": [2]}, ensure_ascii=False))
         if p == "/api/band":
             return self.send(200, json.dumps([{"id": "b1", "from": s["from"], "name": s["set"], "count": 12, "updated": False}], ensure_ascii=False))
         return self.send(404, "{}")

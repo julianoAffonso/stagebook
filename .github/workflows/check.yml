@@ -51,6 +51,8 @@ jobs:
           fetch-depth: 0   # the version comes from the commit count
       # first, it takes a second: a change to the app says what's new for the update window
       - run: python3 -I tools/release_notes_test.py
+      # the editor page's setlist breaks (node comes with the runner)
+      - run: python3 -I tools/web_breaks_test.py
       - if: github.event_name == 'pull_request'
         run: python3 -I tools/release_notes.py check "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78  # v6.2.0
