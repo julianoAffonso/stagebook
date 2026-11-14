@@ -62,13 +62,13 @@ fun SelectionTopBar(
 /** An icon button whose name shows when held (Material tooltip), like the action icons in Google's apps. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TipIcon(label: String, icon: ImageVector, onClick: () -> Unit, tint: Color = androidx.compose.material3.LocalContentColor.current) {
+fun TipIcon(label: String, icon: ImageVector, onClick: () -> Unit, tint: Color = androidx.compose.material3.LocalContentColor.current, enabled: Boolean = true) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
         tooltip = { PlainTooltip { Text(label) } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick) { Icon(icon, contentDescription = label, tint = tint) }
+        IconButton(onClick = onClick, enabled = enabled) { Icon(icon, contentDescription = label, tint = tint) }
     }
 }
 

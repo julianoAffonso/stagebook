@@ -45,7 +45,6 @@
 
     <!-- editor -->
     <string name="editor_new">New song</string>
-    <string name="editor_edit">Edit song</string>
     <string name="editor_imported_new">Song imported. Check it and save.</string>
     <string name="editor_imported_update">New lyrics imported. Check them and save.</string>
     <string name="import_offline_note">No internet: artist, year and BPM weren\'t filled in. Fill them in Song details.</string>
@@ -55,10 +54,8 @@
     <string name="editor_lyrics">Lyrics</string>
     <string name="editor_auto_meta">Left artist or year blank? When you save, the app fills them in from the web.</string>
     <string name="editor_delete">Delete song</string>
-    <string name="editor_chord_label">Chord:</string>
     <string name="editor_highlight">Highlighter</string>
     <string name="editor_highlight_hint">Select the phrase and tap Highlighter</string>
-    <string name="editor_sections">Section:</string>
     <string name="editor_discard_confirm">Leave without saving? What you typed or imported will be lost.</string>
     <string name="editor_discard">Leave without saving</string>
     <string name="editor_error_title_empty">Enter the song name.</string>
@@ -373,14 +370,9 @@
     <string name="backup_restore_failed">Couldn\'t restore the backup</string>
     <string name="backup_restored">Backup restored</string>
     <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band.</string>
-    <string name="editor_data_label">Song details</string>
-    <string name="editor_data_untitled">Untitled song</string>
     <string name="editor_data_capo">capo %1$d</string>
-    <string name="editor_data_tempo">%1$d BPM</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
-    <string name="editor_data_open">Show song details</string>
-    <string name="editor_data_close">Hide song details</string>
     <string name="editor_capo_fret">fret %1$d</string>
     <string name="editor_capo_sounds">Shapes in %1$s. With the capo on fret %2$d, it sounds in %3$s.</string>
     <plurals name="editor_capo_sounds_nokey">
@@ -1136,4 +1128,13 @@
     <string name="settings_metronome_test_stop">Stop the test</string>
     <string name="update_installing">Installing the update. The app restarts by itself when it finishes.</string>
     <string name="update_install_failed">Error installing the update. Try again.</string>
+    <string name="editor_tab_data">Data</string>
+    <string name="editor_previous">Previous song</string>
+    <string name="editor_next">Next song</string>
+    <string name="editor_position">%1$d / %2$d</string>
+    <string name="editor_move_title">Unsaved changes</string>
+    <string name="editor_move_message">Save this song before going to another one?</string>
+    <string name="editor_move_save">Save and continue</string>
+    <string name="editor_move_discard">Discard</string>
+    <string name="editor_midi_on">Sends messages</string>
 </resources>

@@ -123,7 +123,7 @@ class EditorFlowTest {
     fun `opened from the stage - cursor at the end of the held line and keyboard in the lyrics field`() {
         val text = "[Refrão]\nprimeira linha\nsegunda linha"
         compose.setContent {
-            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = text), {}, {}, {}, {}, {}, {}, {}, cursor = 9) }
+            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, mode = br.app.stagebook.ui.editor.EditorMode.EDIT, title = "Hazard", text = text), {}, {}, {}, {}, {}, {}, {}, cursor = 9) }
         }
         compose.waitForIdle()
         val field = compose.onNode(androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.hasText("segunda linha", substring = true))
@@ -143,9 +143,9 @@ class EditorFlowTest {
     fun `section shortcut puts the title in the lyrics at the cursor`() {
         val texts = mutableListOf<String>()
         compose.setContent {
-            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = "linha um"), {}, {}, {}, { texts += it }, {}, {}, {}, cursor = 0) }
+            StagebookTheme { SongEditorScreen(SongEditorUiState(loading = false, mode = br.app.stagebook.ui.editor.EditorMode.EDIT, title = "Hazard", text = "linha um"), {}, {}, {}, { texts += it }, {}, {}, {}, cursor = 0) }
         }
-        compose.onNodeWithText("Refrão").performClick()
+        compose.onNodeWithText("Refrão").performScrollTo().performClick()
         assertEquals("linha um\n\n[Refrão]\n", texts.last())
     }
 

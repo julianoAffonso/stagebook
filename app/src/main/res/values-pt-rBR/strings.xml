@@ -48,7 +48,6 @@
 
     <!-- editor -->
     <string name="editor_new">Nova música</string>
-    <string name="editor_edit">Editar música</string>
     <string name="editor_imported_new">Música importada. Confira e salve.</string>
     <string name="editor_imported_update">Letra nova importada. Confira e salve.</string>
     <string name="import_offline_note">Sem internet: artista, ano e BPM não foram completados. Preencha em Dados da música.</string>
@@ -58,10 +57,8 @@
     <string name="editor_lyrics">Letra</string>
     <string name="editor_auto_meta">Deixou artista ou ano em branco? Ao salvar, o app completa sozinho pela internet.</string>
     <string name="editor_delete">Excluir música</string>
-    <string name="editor_chord_label">Acorde:</string>
     <string name="editor_highlight">Marca-texto</string>
     <string name="editor_highlight_hint">Selecione a frase e toque em Marca-texto</string>
-    <string name="editor_sections">Seção:</string>
     <string name="editor_discard_confirm">Sair sem salvar? O que você digitou ou importou vai se perder.</string>
     <string name="editor_discard">Sair sem salvar</string>
     <string name="editor_error_title_empty">Coloque o nome da música.</string>
@@ -383,14 +380,9 @@
     <string name="backup_restore_failed">Não deu para restaurar o backup</string>
     <string name="backup_restored">Backup restaurado</string>
     <string name="backup_band_again">Este aparelho é novo para a banda. Autorize a banda de novo em Ajustes → Banda.</string>
-    <string name="editor_data_label">Dados da música</string>
-    <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>
-    <string name="editor_data_tempo">%1$d BPM</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
-    <string name="editor_data_open">Mostrar os dados da música</string>
-    <string name="editor_data_close">Recolher os dados da música</string>
     <string name="editor_capo_fret">%1$dª casa</string>
     <string name="editor_capo_sounds">Diagramas de %1$s. Com capo na %2$dª casa, soa em %3$s.</string>
     <plurals name="editor_capo_sounds_nokey">
@@ -1177,4 +1169,13 @@
     <string name="settings_metronome_test_stop">Parar o teste</string>
     <string name="update_installing">Instalando a atualização. O app reinicia sozinho ao terminar.</string>
     <string name="update_install_failed">Erro ao instalar a atualização. Tente novamente.</string>
+    <string name="editor_tab_data">Dados</string>
+    <string name="editor_previous">Música anterior</string>
+    <string name="editor_next">Próxima música</string>
+    <string name="editor_position">%1$d / %2$d</string>
+    <string name="editor_move_title">Alterações não salvas</string>
+    <string name="editor_move_message">Salvar esta música antes de ir para outra?</string>
+    <string name="editor_move_save">Salvar e continuar</string>
+    <string name="editor_move_discard">Descartar</string>
+    <string name="editor_midi_on">Envia mensagens</string>
 </resources>

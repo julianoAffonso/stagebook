@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
@@ -92,9 +93,10 @@ class EssentialModeTest {
                 )
             }
         }
-        compose.onAllNodesWithContentDescription("MIDI da música").assertCountEquals(0)
+        // a field on the details screen (a new song opens there)
+        compose.onAllNodesWithText("MIDI da música").assertCountEquals(0)
         extras = true
-        compose.onAllNodesWithContentDescription("MIDI da música").assertCountEquals(1)
+        compose.onAllNodesWithText("MIDI da música").assertCountEquals(1)
     }
 
     @Test fun `band on the network off ends Lead the band and does not come back`() = runBlocking {
