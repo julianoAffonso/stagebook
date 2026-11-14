@@ -83,7 +83,7 @@ internal fun FollowToStage(
         followingSong.collect { now -> if (pendingFollow.waiting != null && pendingFollow.waiting != now) { pendingFollow.moved(now); sync() } }
     }
     SideEffect {
-        gate.go = { pendingFollow.take()?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }; sync() }
+        gate.go = { pendingFollow.take()?.let(nav::openFollowStage); sync() }
     }
 }
 

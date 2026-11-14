@@ -18,6 +18,7 @@ import br.app.stagebook.navigation.FollowToStage
 import br.app.stagebook.navigation.Home
 import br.app.stagebook.navigation.SongEditor
 import br.app.stagebook.navigation.Stage
+import br.app.stagebook.ui.band.goNow
 import br.app.stagebook.ui.components.FollowGate
 import br.app.stagebook.ui.components.LocalFollowGate
 import br.app.stagebook.ui.editor.SongEditorScreen
@@ -87,6 +88,17 @@ class FollowStageEntryTest {
         band("b")
         compose.onNodeWithText("stage a").assertExists()
         compose.runOnIdle { gate.menus-- }
+        compose.waitForIdle()
+        compose.onNodeWithText("stage b").assertExists()
+        compose.onAllNodesWithText("stage a").assertCountEquals(0)
+    }
+
+    @Test fun `Go from the editor opens the band's song, not the stage underneath`() {
+        start()
+        compose.runOnIdle { nav.navigate(SongEditor(songId = "a")) }
+        compose.waitForIdle()
+        band("b")
+        compose.runOnIdle { gate.goNow() }
         compose.waitForIdle()
         compose.onNodeWithText("stage b").assertExists()
         compose.onAllNodesWithText("stage a").assertCountEquals(0)
