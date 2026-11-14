@@ -45,7 +45,14 @@ class SetlistsViewModel @Inject constructor(
     bandLink: br.app.stagebook.data.BandLink,
     bandTrust: br.app.stagebook.data.BandTrust,
     bandInternet: br.app.stagebook.data.BandInternet,
+    private val show: br.app.stagebook.data.SetlistShowStore,
 ) : ViewModel() {
+    /** Where tapping the setlist opens its stage: the song where the show stopped today, or the first. */
+    fun resume(id: String): br.app.stagebook.domain.StageStart {
+        val set = repository.library.value.setlist(id) ?: return br.app.stagebook.domain.StageStart(0, false)
+        return br.app.stagebook.domain.SetlistResume.at(id, set.items, set.breaks, show.marks.value[id], show.breaks.value, show.today())
+    }
+
     // sharing several setlists at once (user, 01/11): the same sheet, code and band send as inside a setlist
     private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
     val cloud: StateFlow<br.app.stagebook.ui.share.CloudUi?> = share.cloud
