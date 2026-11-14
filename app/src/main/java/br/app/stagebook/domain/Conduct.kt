@@ -11,7 +11,8 @@ import kotlinx.serialization.json.Json
  * song starts and someone has no lyrics. Travels encrypted as [BandProtocol.Kind.CONDUCT].
  *
  * The leader's break (a setlist's break on its stage) goes in the same [OPEN] message, as [Msg.breakMs]: an app that
- * doesn't know the field reads the message as before and stays on the song before the break.
+ * doesn't know the field reads the message as before and stays on the song before the break. Pausing, resuming and
+ * zeroing it send the message again, with [Msg.breakPaused], so the followers' counters do the same.
  */
 object Conduct {
     const val CHECK = "check"   // this is the setlist: what are you missing?
@@ -36,12 +37,18 @@ object Conduct {
         // the leader is on the break after song [index], for this long when the message left (-1 = no break). How long,
         // not since when: two devices' clocks never agree. Left out of the message when there is no break
         val breakMs: Long = -1,
+        // the leader's break is paused: [breakMs] is then what it had counted, standing still. Left out when it runs (an
+        // app that doesn't know the field keeps counting by itself, as before)
+        val breakPaused: Boolean = false,
     ) {
         /**
          * How long the leader's break has lasted, or null when there's none. Only what makes sense counts: a break
          * comes after the song on stage and before another one of the setlist, and doesn't last days.
          */
         val rest: Long? get() = breakMs.takeIf { type == OPEN && it in 0..MAX_BREAK_MS && index >= 0 && index + 1 < songs.size }
+
+        /** The break stands still at [rest]: the leader paused it. */
+        val restPaused: Boolean get() = breakPaused && rest != null
     }
 
     private val json = Json { ignoreUnknownKeys = true }
