@@ -51,7 +51,9 @@ internal fun FollowToStage(
     val keyboard = WindowInsets.isImeVisible
     val here = entry?.destination
     val wait: FollowWait? = here?.let {
-        followBlock(it.pullsToStage(), it.hasRoute<SetlistDetail>() && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || !focused, keyboard)
+        // on the stage only our own menus and windows hold the song: the window losing focus there (split screen, the
+        // shade) must not stop a follower for good
+        followBlock(it.pullsToStage(), it.hasRoute<SetlistDetail>() && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
     }
     val waitNow by rememberUpdatedState(wait)
     fun sync() { gate.pending = pendingFollow.waiting?.let { FollowPending(it, pendingFollow.reason ?: FollowWait.SCREEN) } }
