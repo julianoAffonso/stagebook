@@ -1580,12 +1580,12 @@ class ScreenshotTest {
     private val scanReview = br.app.stagebook.ui.setlists.ScanUi.Review(
         s("Show de sábado"),
         listOf(
-            br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"))), "1"),
-            br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "", false, listOf(
-                br.app.stagebook.ui.setlists.SongRef("2", s("Noite Clara"), "Banda A"), br.app.stagebook.ui.setlists.SongRef("3", s("Noite Clara"), "Banda B"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), s("Banda Fictícia"), true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"), "G", 72, 2, true)), "1"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "Banda A", false, listOf(
+                br.app.stagebook.ui.setlists.SongRef("2", s("Noite Clara"), "Banda A", "Em", 96), br.app.stagebook.ui.setlists.SongRef("3", s("Noite Clara"), "Banda B", "A", 110, 0, true),
             ), null),
-            br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada Longa"), "Banda C")), "4"),
-            br.app.stagebook.ui.setlists.ScanRow(s("Música que não tenho"), "", false, emptyList(), null),
+            br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "Banda C", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada Longa"), "Banda C", "D", 84)), "4"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Música que não tenho"), "Banda D", false, emptyList(), null),
         ),
     )
 
@@ -1807,7 +1807,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun scanAskBandPhone() = shoot("jornada_banda_5_pedir") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows + br.app.stagebook.ui.setlists.ScanRow(s("Outra que faltava"), "", false, emptyList(), null, carried = true, fromBand = true)),
+            scanReview.copy(rows = scanReview.rows + br.app.stagebook.ui.setlists.ScanRow(s("Outra que faltava"), "Banda F", false, emptyList(), null, carried = true, fromBand = true)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, band = 2,
         )
     }
@@ -1818,10 +1818,10 @@ class ScreenshotTest {
             scanReview.copy(
                 name = "", songsOnly = true,
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, emptyList(), "1", differs = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "", true, emptyList(), "4", differs = true, useIncoming = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "", true, emptyList(), "2"),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "", false, emptyList(), null, carried = true, fromBand = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "Banda Fictícia", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), "Banda Fictícia", "G", 72, 2, true)), "1", differs = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "Banda C", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada longa"), "Banda C", "D", 84)), "4", differs = true, useIncoming = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "Banda A", true, listOf(br.app.stagebook.ui.setlists.SongRef("2", s("Noite clara"), "Banda A", "Em", 96)), "2"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "Banda E", false, emptyList(), null, carried = true, fromBand = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
@@ -1833,10 +1833,10 @@ class ScreenshotTest {
             scanReview.copy(
                 name = "", songsOnly = true,
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, emptyList(), "1", differs = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "", true, emptyList(), "4", differs = true, useIncoming = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "", true, emptyList(), "2"),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "", false, emptyList(), null, carried = true, fromBand = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "Banda Fictícia", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), "Banda Fictícia", "G", 72, 2, true)), "1", differs = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "Banda C", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada longa"), "Banda C", "D", 84)), "4", differs = true, useIncoming = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "Banda A", true, listOf(br.app.stagebook.ui.setlists.SongRef("2", s("Noite clara"), "Banda A", "Em", 96)), "2"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "Banda E", false, emptyList(), null, carried = true, fromBand = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
@@ -1848,9 +1848,9 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
             scanReview.copy(
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "", true, emptyList(), "1"),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de exemplo"), "", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Outra canção"), "", false, emptyList(), null, wantChords = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "Banda Fictícia", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), "Banda Fictícia", "G", 72, 2, true)), "1"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de exemplo"), "Banda G", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Outra canção"), "Banda H", false, emptyList(), null, wantChords = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),

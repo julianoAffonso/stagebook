@@ -493,8 +493,8 @@ private const val CUT_HERE = "\u2060"   // stands for the name while the sentenc
 
 private val sampleLacks = listOf(Conduct.Lack("Baixo", listOf("Evidências", "Asa Branca")))
 internal val sampleLackers = listOf(
-    ConductUi.Lacker("b", "Baixo", listOf("Evidências", "Asa Branca")),
-    ConductUi.Lacker("g", "Guitarra", listOf("Evidências")),
+    ConductUi.Lacker("b", "Baixo", listOf("Evidências", "Asa Branca"), listOf(ConductUi.LackSong("Evidências", "Chitãozinho & Xororó"), ConductUi.LackSong("Asa Branca", "Luiz Gonzaga"))),
+    ConductUi.Lacker("g", "Guitarra", listOf("Evidências"), listOf(ConductUi.LackSong("Evidências", "Chitãozinho & Xororó"))),
 )
 
 @Composable
