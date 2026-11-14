@@ -191,4 +191,19 @@ class ChordsTest {
         assertEquals("F#", Chords.spell(6, "Dm"))
         assertEquals(null, Chords.spell(5, "C#m"))   // E# → the caller uses the key's sharps (F)
     }
+
+    @Test
+    fun `meta reads key, tempo and capo like the three separate readers`() {
+        val texts = listOf(
+            "", "[G]só letra", "{key: G}\n{capo: 2}\n{tempo: 120}\n[G]a", "{KEY: Am}\n{Tempo: 90 bpm}\nx",
+            "{capo: 15}\n{tempo: 10}\n{key: C}", "{capo: x}\n{tempo: 999}", "{key: D}\n{key: E}\n{capo: 1}\n{capo: 3}\n{tempo: 80}\n{tempo: 60}",
+            "linha\n{tempo: 140}\n[C]b\n{capo: 5}",
+        )
+        for (t in texts) {
+            val m = Chords.meta(t)
+            assertEquals(t, Chords.key(t), m.key)
+            assertEquals(t, Chords.tempo(t), m.tempo)
+            assertEquals(t, Chords.capo(t), m.capo)
+        }
+    }
 }
