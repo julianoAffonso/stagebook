@@ -1,8 +1,10 @@
 package br.app.stagebook
 
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -37,6 +39,7 @@ class ConductStripOneLineTest {
 
     private var ui by mutableStateOf<ConductUi>(ConductUi.Left("Voz"))
     private var asking by mutableStateOf(false)
+    private var roomy by mutableStateOf(false)
     private val longTitle = "Mustang Sally na versão comprida do ensaio de sábado"
     private val longName = "Tablet do tecladista da banda de sábado"
     private val since = System.currentTimeMillis() - 12_300
@@ -50,8 +53,7 @@ class ConductStripOneLineTest {
     private fun sameStrip(short: ConductUi, long: ConductUi, vararg actions: String, busy: Boolean = false) {
         asking = busy
         ui = short
-        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}, asking = asking) } }
-        compose.waitForIdle()
+        show()
         val height = compose.onRoot().getUnclippedBoundsInRoot().bottom
         val sizes = actions.associateWith(::size)
         ui = long
@@ -62,6 +64,76 @@ class ConductStripOneLineTest {
             val right = compose.onNodeWithText(action).getUnclippedBoundsInRoot().right
             assertTrue("\"$action\" stays on screen: $right", right <= 360.dp)
         }
+    }
+
+    private fun show() {
+        // roomy: the same strip with width to spare, to learn how wide a text is when nothing cuts it
+        compose.setContent {
+            StagebookTheme { ConductBar(ui, {}, {}, {}, {}, if (roomy) Modifier.requiredWidth(ROOMY) else Modifier, asking = asking) }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
+    // a width in dp, to compare within a pixel: the same text at another place differs by a rounding
+    private fun width(tag: String) = bounds(tag).let { (it.right - it.left).value }
+    private fun action(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot()
+    private fun stripHeight() = compose.onRoot().getUnclippedBoundsInRoot().bottom
+
+    /** The strip's two actions are under its text, and the missing song's title is drawn whole. */
+    private fun actionsBelowAndTitleWhole(ask: String) {
+        show()
+        val line = bounds("conductLineStart")
+        listOf(ask, "Sair").forEach { assertTrue("\"$it\" is under the text", action(it).top >= line.bottom) }
+        assertTrue("the actions end at the strip's end", action("Sair").right > 300.dp)
+        val title = width("conductLineCut")
+        roomy = true
+        compose.waitForIdle()
+        assertEquals("the title isn't cut", width("conductLineCut"), title, PIXEL)
+    }
+
+    @Test fun `on a phone Ask and Leave go under the text and the missing song's title is whole`() {
+        ui = following("Teste F um", missingHere = true)
+        actionsBelowAndTitleWhole("Pedir")
+    }
+
+    @Test fun `while asking the actions are under the text and the title is whole too`() {
+        ui = following("Teste F um", missingHere = true)
+        asking = true
+        actionsBelowAndTitleWhole("Pedindo…")
+    }
+
+    @Test fun `a song that came without chords has Ask and Leave under the text`() {
+        ui = following("Teste F um", noChords = true)
+        show()
+        assertTrue(action("Pedir").top >= bounds("conductLineEnd").bottom)
+    }
+
+    @Test fun `with one action the strip is as tall as it was, the action beside the text`() {
+        ui = ConductUi.Left("Voz")
+        show()
+        val oneLine = stripHeight()
+        assertTrue(action("Acompanhar").top < bounds("conductTitleEnd").bottom)
+        // two lines of text and Leave: no taller than the strip with one line
+        ui = following("Teste F um", rest = since)
+        compose.waitForIdle()
+        assertEquals(oneLine, stripHeight())
+        assertTrue(action("Sair").top < bounds("conductLineStart").bottom)
+        // and two actions make it taller
+        ui = following("Teste F um", missingHere = true)
+        compose.waitForIdle()
+        assertTrue(stripHeight() > oneLine)
+    }
+
+    @Test @Config(qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi")
+    fun `on a wide screen two actions stay beside the text`() {
+        ui = ConductUi.Left("Voz")
+        show()
+        val oneLine = stripHeight()
+        ui = following("Teste F um", missingHere = true)
+        compose.waitForIdle()
+        assertEquals(oneLine, stripHeight())
+        listOf("Pedir", "Sair").forEach { assertTrue(action(it).top < bounds("conductLineStart").bottom) }
     }
 
     private fun following(song: String, missingHere: Boolean = false, noChords: Boolean = false, rest: Long? = null, from: String = "Hi10 XPro", gone: Boolean = false) =
@@ -93,11 +165,10 @@ class ConductStripOneLineTest {
     @Test fun `a long title that came without chords is cut and the line still says so`() {
         sameStrip(following("Ré", noChords = true), following(longTitle, noChords = true), "Pedir", "Sair")
         // what happened to it stays whole, after the cut title
-        val end = compose.onNodeWithTag("conductLineEnd", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val end = width("conductLineEnd")
         ui = following("Ré", noChords = true)
         compose.waitForIdle()
-        val roomy = compose.onNodeWithTag("conductLineEnd", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertEquals(roomy.right - roomy.left, end.right - end.left)
+        assertEquals(width("conductLineEnd"), end, PIXEL)
     }
 
     @Test fun `a long leader's name is cut beside Leave, Follow and when it is gone`() {
@@ -114,4 +185,9 @@ class ConductStripOneLineTest {
         ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda", 0, listOf("Baixo", "Guitarra", "Teclado", "Bateria", "Sopros", "Vocal de apoio"), emptyList()),
         "Procurar a banda", "Encerrar",
     )
+
+    private companion object {
+        val ROOMY = 1000.dp   // wide enough for the actions beside the text and every title whole
+        const val PIXEL = 0.34f   // one pixel at xxhdpi, in dp
+    }
 }

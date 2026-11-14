@@ -224,6 +224,8 @@ fun ConductBar(
     // someone is missing a song now (or the leader is gone): the whole strip turns red, so the band sees it before
     // starting
     val alert = nowMissing.isNotEmpty() || (ui is ConductUi.Following && (ui.gone || ui.missingHere))
+    // the song isn't here, or came without chords: ask the band on this Wi-Fi
+    val canAsk = ui is ConductUi.Following && (ui.missingHere || ui.noChords)
     @Composable
     fun Buttons(lacksButton: Boolean) {
         if (lacksButton && hasLacks) TextButton({ showLacks = true }) { ActionText(seeLacks) }
@@ -239,8 +241,8 @@ fun ConductBar(
                 TextButton(onEnd) { ActionText(stringResource(R.string.conduct_end)) }
             }
             is ConductUi.Following -> {
-                // the song isn't here, or came without chords: ask the band on this Wi-Fi. Busy while the answer comes
-                if (ui.missingHere || ui.noChords) {
+                // busy while the answer comes
+                if (canAsk) {
                     TextButton(onAsk, enabled = !asking) { ActionText(stringResource(if (asking) R.string.conduct_asking else R.string.conduct_ask)) }
                 }
                 TextButton(onLeave) { ActionText(stringResource(R.string.conduct_leave)) }
@@ -253,13 +255,14 @@ fun ConductBar(
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        // on a phone the leader's two buttons don't fit next to the text ("End" broke letter by letter and the title
-        // vanished; user, 02/11): they go on a line of their own. The follower's Leave stays beside the text, and on a
-        // phone "See what's missing" is a tap on the text (with an arrow): as a button it pushed both onto a third line
+        // on a phone two buttons don't fit next to the text: they go on a line of their own. The leader's "End" broke
+        // letter by letter and the title vanished (user, 02/11); a follower's Ask and Leave left the missing song's
+        // title two letters (two devices, 13/11). One button (Leave, Follow) stays beside the text, and on a phone
+        // "See what's missing" is a tap on the text (with an arrow): as a button it pushed both onto a third line
         // and left the strip tall and half empty (user, 02/11)
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
             val small = maxWidth < NARROW
-            val narrow = small && ui is ConductUi.Conducting
+            val narrow = small && (ui is ConductUi.Conducting || canAsk)
             val lacksInText = small && hasLacks
             Column(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -340,7 +343,7 @@ private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, ta
     // read and found as the one sentence it is
     Row(modifier.semantics { this.text = androidx.compose.ui.text.AnnotatedString(text.whole) }) {
         if (text.start.isNotEmpty()) Text(text.start, Modifier.clearAndSetSemantics { testTag = tag + "Start" }, style = style, maxLines = 1, softWrap = false)
-        Text(text.cut, Modifier.weight(1f, fill = false).clearAndSetSemantics {}, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text.cut, Modifier.weight(1f, fill = false).clearAndSetSemantics { testTag = tag + "Cut" }, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (text.end.isNotEmpty()) Text(text.end, Modifier.clearAndSetSemantics { testTag = tag + "End" }, style = style, maxLines = 1, softWrap = false)
     }
 }
