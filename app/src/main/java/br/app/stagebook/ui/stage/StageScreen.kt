@@ -1482,7 +1482,10 @@ fun StageScreen(
                     textAlign = TextAlign.End,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    // "Next: …" is a touch target too: the same as a tap on the right side of the lyrics (break or song)
+                    modifier = Modifier.weight(1f).then(
+                        if (breakNext || nextTitle != null) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button) { next() } else Modifier,
+                    ),
                 )
             }
         }
