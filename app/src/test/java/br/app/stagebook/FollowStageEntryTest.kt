@@ -34,6 +34,8 @@ import org.robolectric.annotation.Config
 
 /** Like the stage's view model: the song is read from the route once, when the view model is made. */
 class RouteOnceViewModel(handle: SavedStateHandle) : ViewModel() {
+    init { made++ }
+    companion object { var made = 0 }
     val songId = handle.toRoute<Stage>().songId
 }
 
@@ -102,5 +104,19 @@ class FollowStageEntryTest {
         compose.waitForIdle()
         compose.onNodeWithText("stage b").assertExists()
         compose.onAllNodesWithText("stage a").assertCountEquals(0)
+    }
+
+    @Test fun `the leader's break over the song in the editor waits with Go, and Go keeps the stage that is there`() {
+        start()
+        compose.runOnIdle { nav.navigate(SongEditor(songId = "a")) }
+        compose.waitForIdle()
+        val made = RouteOnceViewModel.made
+        band("a")   // what BandConduct tells when the break begins over this same song
+        org.junit.Assert.assertEquals("a", gate.pending?.target)
+        compose.runOnIdle { gate.goNow() }
+        compose.waitForIdle()
+        compose.onNodeWithText("stage a").assertExists()
+        org.junit.Assert.assertEquals("the stage was not opened again", made, RouteOnceViewModel.made)
+        org.junit.Assert.assertNull(gate.pending)
     }
 }

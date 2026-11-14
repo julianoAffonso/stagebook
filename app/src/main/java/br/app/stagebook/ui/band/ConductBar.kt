@@ -231,7 +231,8 @@ internal fun br.app.stagebook.ui.components.FollowGate.waiting(): br.app.stagebo
 
 /** "Go": opens what waits, the song or the break. */
 internal fun br.app.stagebook.ui.components.FollowGate.goNow() {
-    if (pending == null) showBreak() else leaveGuard?.invoke(go) ?: go()
+    if (breakHeld) showBreak()
+    if (pending != null) leaveGuard?.invoke(go) ?: go()
 }
 
 /**

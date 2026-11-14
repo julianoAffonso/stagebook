@@ -346,7 +346,10 @@ class BandConduct internal constructor(
         // a song, or a break after a song that isn't here: the stage opens once for it, not again on each sign of life
         val was = before as? Role.Following
         val stage = now.stage
-        if (stage != null && (was?.stage != stage || was.msg.index != msg.index)) _openSong.tryEmit(stage)
+        // the break starting over the song this device already has is told too: a screen that holds the follower (the
+        // editor) then says the leader went to the break, with "Go"; where the stage is open it asks for nothing
+        val breakStarted = was != null && was.breakSince == null && now.breakSince != null
+        if (stage != null && (was?.stage != stage || was.msg.index != msg.index || breakStarted)) _openSong.tryEmit(stage)
         return Conduct.lackFor(identity.name.value, msg, repository.library.value.songs)
     }
 
