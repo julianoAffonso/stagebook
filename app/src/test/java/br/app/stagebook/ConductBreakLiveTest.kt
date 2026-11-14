@@ -151,6 +151,15 @@ class ConductBreakLiveTest {
         assertEquals(0L, p.following().breakTimer!!.elapsed(p.followerClock + 60_000))
     }
 
+    @Test fun `leading from the middle of a break tells the band about the break`() {
+        val p = Pair2()
+        p.vm.songShown(0)
+        p.vm.setBreak(true)   // not leading yet: nobody to tell
+        p.vm.conductBand()
+        // what goes out says there is a break (the message itself, not the follower's reading of it)
+        runBlocking { withTimeout(10_000) { while (p.sent.none { it.type == Conduct.OPEN && it.breakMs >= 0 }) delay(10) } }
+    }
+
     @Test fun `the break told again, as the keep-alive does, stays paused`() {
         val p = Pair2().onBreak()
         p.told { p.vm.pauseBreak() }

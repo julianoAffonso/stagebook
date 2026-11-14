@@ -132,6 +132,12 @@ class StageViewModel @Inject constructor(
     fun conductBand() {
         val setId = route.setId ?: return
         conduct.startSetlist(setId, shownIndex)
+        // leading from the middle of a break: the collector below only speaks when the break changes, so the band is
+        // told of the one already open now
+        if (breakSince.value != null) {
+            val timer = breakTimer.value
+            conduct.rest(setId, timer?.elapsed(System.currentTimeMillis()), paused = timer?.running == false)
+        }
     }
 
     /** The setlist's menu, "Clear played": no song of this setlist is marked any more. */
