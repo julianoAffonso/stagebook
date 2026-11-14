@@ -325,11 +325,6 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun importPhone() = shoot("celular_10_importar") { ImportScreen(ImportUiState(), "Hazard", {}, {}, {}) }
 
-    @Test @Config(qualifiers = PHONE)
-    fun editorPhone() = shoot("celular_4_editor") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.IMPORTED_NEW, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {})
-    }
-
     // the song's MIDI (user, 07/11): a preset on entering, back on leaving
     // the window's content on its own: inside a Dialog the capture never got idle (the window is fine on the device)
     @Test
@@ -395,74 +390,39 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("$SHOTS_DIR/tablet_5_ajustes_midi_saida.png")
     }
 
-    /** Editing the lyrics: the section shortcut strip shows at the top. */
-    @Test @Config(qualifiers = PHONE)
-    fun editorChordsPhone() = shoot("celular_4_editor_cifra") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
-    }
-
-    @Test fun editorChordsTablet() = shoot("tablet_4_editor_cifra") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
-    }
-
     // lyrics only profile: the editor shows no chords
     @Test @Config(qualifiers = PHONE)
     fun editorLyricsOnlyPhone() = shoot("celular_4_editor_so_letra") {
         SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(chords = false))
     }
 
-    // T18: with a capo, the editor states the shape and the sounding key
-    @Test fun editorCapoTablet() = shoot("tablet_4_editor_capo") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
-    }
+    // the editor, two screens one at a time on every size (phone, tablet upright and lying down): Letra and Dados
+    private val editorSong get() = SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "1999", chordSong, tags = listOf(s("Nacional"), "Rock"))
 
-    // on a phone the summary cuts the capo off: the details open, with the key and capo − + and the note under them
-    @Test @Config(qualifiers = PHONE)
-    fun editorCapoPhone() {
-        compose.setContent {
-            StagebookTheme {
-                SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "", chordSong), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
-            }
-        }
-        compose.onNodeWithText(s("Canção de teste"), substring = true).performClick()
-        compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_4_editor_capo.png")
-    }
-
-    // T27: song details open (new song)
-    // new song with the player on: the backing track is in the details too
-    @Test fun editorDataTablet() = shoot("tablet_4_editor_dados") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.NEW, "", "", "", chordSong), {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = "")
-    }
-
-    // the editor of a saved song: details open with the tags, and the ⋮ with Delete (user, 01/11)
-    private fun editorOpen(name: String, open: () -> Unit) {
+    // data: taps the Dados segment first. With the player on the backing track is a field too; the song has a capo, so the
+    // note under key and capo shows
+    private fun editorShot(name: String, data: Boolean) {
         compose.setContent {
             StagebookTheme {
                 SongEditorScreen(
-                    SongEditorUiState(false, EditorMode.EDIT, s("Canção de teste"), s("Banda Fictícia"), "1999", chordSong, tags = listOf(s("Nacional"), "Rock")),
-                    {}, {}, {}, {}, {}, {}, {}, look = Look(playerMode = true), track = s("faixa.ogg"), trackName = s("Canção de teste (playback)"),
+                    editorSong, {}, {}, {}, {}, {}, {}, {}, cursor = if (data) -1 else 0, look = Look(playerMode = true),
+                    track = s("faixa.ogg"), trackName = s("Canção de teste (playback)"),
+                    position = br.app.stagebook.ui.editor.EditorPosition(2, 12), midiOn = data,
                 )
             }
         }
-        open()
+        if (data) compose.onNode(androidx.compose.ui.test.hasText(str(R.string.editor_tab_data)) and androidx.compose.ui.test.hasClickAction() and !androidx.compose.ui.test.hasSetTextAction()).performClick()
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
-    @Test fun editorTagsTablet() = editorOpen("tablet_4_editor_tags") { compose.onNodeWithText(s("Canção de teste"), substring = true).performClick() }
+    @Test @Config(qualifiers = PHONE) fun editorLyricsPhone() = editorShot("celular_4_editor_letra", false)
+    @Test fun editorLyricsTablet() = editorShot("tablet_4_editor_letra", false)
+    @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorLyricsTabletPortrait() = editorShot("tablet_em_pe_4_editor_letra", false)
 
-    @Test @Config(qualifiers = PHONE)
-    fun editorTagsPhone() = editorOpen("celular_4_editor_tags") { compose.onNodeWithText(s("Canção de teste"), substring = true).performClick() }
-
-    @Test fun editorSectionsTablet() = shoot("tablet_4_editor_secoes") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
-    }
-
-    @Test @Config(qualifiers = PHONE)
-    fun editorSectionsPhone() = shoot("celular_4_editor_secoes") {
-        SongEditorScreen(SongEditorUiState(false, EditorMode.EDIT, "Hazard", "Richard Marx", "1991", lyrics), {}, {}, {}, {}, {}, {}, {}, cursor = 0)
-    }
+    @Test @Config(qualifiers = PHONE) fun editorDataPhone() = editorShot("celular_4_editor_dados", true)
+    @Test fun editorDataTablet() = editorShot("tablet_4_editor_dados", true)
+    @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorDataTabletPortrait() = editorShot("tablet_em_pe_4_editor_dados", true)
 
     /** Diagram of the chord tapped on stage (another window), on each instrument. */
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
