@@ -89,6 +89,9 @@ class BandLink @Inject constructor(
     private var serverJob: Job? = null
     private var multicast: WifiManager.MulticastLock? = null
 
+    /** Someone is in this device's band (the saved list, online or not): without it there is nobody to lead. */
+    fun hasSavedMembers(): Boolean = trust.members.value.isNotEmpty()
+
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
         foreground = on

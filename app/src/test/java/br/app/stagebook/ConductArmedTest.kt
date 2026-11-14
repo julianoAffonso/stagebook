@@ -238,6 +238,7 @@ class ConductArmedTest {
     }
 
     @Test fun `an empty setlist does not start leading and stays armed`() {
+        member()
         val empty = repo.createSetlist("Vazio")
         assertFalse(conduct.startIfArmed(empty, 0))
         conduct.arm()
@@ -247,6 +248,7 @@ class ConductArmedTest {
     }
 
     @Test fun `it starts from the song where the show stopped`() {
+        member()
         conduct.arm()
         assertTrue(conduct.startIfArmed(setId, 2))
         assertEquals(2, (conduct.role.value as Role.Conducting).msg.index)
@@ -260,6 +262,7 @@ class ConductArmedTest {
     }
 
     @Test fun `the stage panel's lead keeps its action`() {
+        member()
         assertTrue(conduct.startSetlist(setId, 1))
         assertEquals(1, (conduct.role.value as Role.Conducting).msg.index)
     }

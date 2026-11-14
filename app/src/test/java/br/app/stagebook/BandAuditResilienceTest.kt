@@ -55,6 +55,7 @@ class BandAuditResilienceTest {
     private val conduct = BandConduct(link, repo, identity).also { it.deliver = { m -> sent += m; emptyMap() } }
 
     @After fun clean() {
+        trust.remove("sem-membro")
         conduct.end()
         repo.library.value.sets.forEach { repo.deleteSetlist(it.id) }
         repo.library.value.songs.forEach { repo.deleteSong(it.id) }
@@ -94,6 +95,7 @@ class BandAuditResilienceTest {
 
     // ---- 2: armed, then the band off ----
     @Test fun `armed and then the band off, nothing stays armed and tapping a setlist does not lead`() {
+        trust.add("sem-membro", "Baixo", "key")
         val setId = repo.createSetlist("Show").also { id -> repo.addToSetlist(id, listOf("A", "B").map { repo.saveSong(Song(title = it, author = "x", text = it)) }) }
         conduct.arm()
         assertTrue(conduct.armed.value)
@@ -140,12 +142,15 @@ class BandAuditResilienceTest {
         val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
         val callbacks = { shadowOf(cm).networkCallbacks.size }
         bandOff()
+        Thread.sleep(300)   // the link's own collector sees the band off before it goes on again (a state flow conflates)
         link.setForeground(true)
         assertEquals("registered with the band off", 0, callbacks())
         repo.updateLook { it.copy(bandOn = true) }
         await("registered once the band is on") { callbacks() == 1 }
+        Thread.sleep(300)
         repo.updateLook { it.copy(bandOn = false) }
         await("unregistered when it goes off") { callbacks() == 0 }
+        Thread.sleep(300)
         repo.updateLook { it.copy(bandOn = true) }
         await("registered again") { callbacks() == 1 }
         link.setForeground(false)
@@ -171,6 +176,21 @@ class BandAuditResilienceTest {
         band.settleOnLan(listOf(BandLink.Peer("x", "X", java.net.InetAddress.getLoopbackAddress(), 1)))
         assertFalse("the queue was rewritten", out.exists())
         assertFalse("accepted was rewritten", prefs.contains("accepted"))
+    }
+
+    // ---- band without members ----
+    @Test fun `with nobody saved in the band it neither arms nor leads, with members all offline it does as before`() {
+        val setId = repo.createSetlist("Show").also { id -> repo.addToSetlist(id, listOf(repo.saveSong(Song(title = "A", author = "x", text = "a")))) }
+        conduct.arm()
+        assertFalse(conduct.armed.value)
+        assertFalse(conduct.startSetlist(setId, 0))
+        assertEquals(Role.None, conduct.role.value)
+        trust.add("so-offline", "Baixo", "key")   // saved, and not on the network
+        try {
+            conduct.arm()
+            assertTrue(conduct.armed.value)
+            assertTrue(conduct.startIfArmed(setId, 0))
+        } finally { trust.remove("so-offline") }
     }
 
     // ---- 5 and 6: the pair's inbox ----

@@ -196,7 +196,7 @@ class BandConduct internal constructor(
      * False = nothing started: the setlist is gone or has no song here.
      */
     fun startSetlist(setId: String, index: Int): Boolean {
-        if (!bandOn()) return false   // band off: nothing to lead (an armed button left behind doesn't lead either)
+        if (!bandOn() || !link.hasSavedMembers()) return false   // band off or nobody in it: nothing to lead (an armed button left behind doesn't lead either)
         val lib = repository.library.value
         val set = lib.setlist(setId) ?: return false
         val songs = set.items.mapNotNull(lib::song).map { Conduct.Item(it.title, it.author) }
@@ -213,7 +213,7 @@ class BandConduct internal constructor(
     val armed: StateFlow<Boolean> = _armed.asStateFlow()
 
     /** Arms it (only while this device is neither leading nor following). */
-    fun arm() { if (bandOn() && _role.value is Role.None) _armed.value = true }
+    fun arm() { if (bandOn() && link.hasSavedMembers() && _role.value is Role.None) _armed.value = true }
 
     fun disarm() { _armed.value = false }
 
