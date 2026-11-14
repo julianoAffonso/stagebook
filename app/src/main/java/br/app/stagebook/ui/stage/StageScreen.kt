@@ -1966,6 +1966,7 @@ private fun TrackButton(
                 },
             )
         }
+        br.app.stagebook.ui.components.FollowBusyWhile(menu)
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_mixer_open)) }, leadingIcon = { Icon(AppIcons.Tune, null) }, onClick = { menu = false; onMixer() })
             DropdownMenuItem(text = { Text(stringResource(R.string.stage_track_change)) }, leadingIcon = { Icon(AppIcons.QueueMusic, null) }, onClick = { menu = false; onChange() })
@@ -1985,6 +1986,8 @@ private fun MetronomeDialog(
     onPlay: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
+    br.app.stagebook.ui.components.FollowBusyWhile()
     val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
     androidx.compose.ui.window.Popup(
         popupPositionProvider = AboveAnchor(gap),
@@ -2030,6 +2033,8 @@ private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.Pop
 /** Auto-scroll (small window right above the icon): speed from 1 to 10 and play/pause, which closes the window. */
 @Composable
 private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLevel: (Int) -> Unit, onDismiss: () -> Unit) {
+    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
+    br.app.stagebook.ui.components.FollowBusyWhile()
     val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
     androidx.compose.ui.window.Popup(
         popupPositionProvider = AboveAnchor(gap),
@@ -2072,6 +2077,8 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
  */
 @Composable
 private fun KeyCapoDialog(text: String, showCapo: Boolean, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, onDismiss: () -> Unit) {
+    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
+    br.app.stagebook.ui.components.FollowBusyWhile()
     val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
     val key = remember(text) { Chords.key(text).ifEmpty { Chords.detectKey(text) } }
@@ -2384,6 +2391,8 @@ private fun StageClock(
 /** The show's length, half an hour at a time, and a restart of its counter: a small window over the clock. */
 @Composable
 internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
+    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
+    br.app.stagebook.ui.components.FollowBusyWhile()
     val density = LocalDensity.current
     val gap = with(density) { Spacing.s.roundToPx() }
     // the length gets the room of its widest value, so − and + stay put as "1h" turns into "1h30" (S26, 07/11)

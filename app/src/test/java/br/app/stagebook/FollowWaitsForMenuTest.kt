@@ -176,8 +176,9 @@ class FollowWaitsForMenuTest {
         assertEquals(FollowWait.SCREEN, followBlock(true, true, false, false, false))
         assertEquals(FollowWait.MENU, followBlock(true, false, false, true, true))
         assertEquals(FollowWait.KEYBOARD, followBlock(true, false, false, false, true))
-        // the stage itself always follows
-        assertNull(followBlock(true, false, true, true, true))
+        // the stage follows, unless a menu or window of its own is open (the keyboard never holds it)
+        assertNull(followBlock(true, false, true, false, true))
+        assertEquals(FollowWait.MENU, followBlock(true, false, true, true, false))
     }
 
     @Test fun `a waiting song with no time limit stays until it is still the band's`() {
