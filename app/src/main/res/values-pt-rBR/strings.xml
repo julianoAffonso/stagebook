@@ -222,7 +222,6 @@
     <string name="conduct_left">%1$s está conduzindo</string>
     <string name="conduct_follow">Acompanhar</string>
     <string name="conduct_lacks_title">O que falta</string>
-    <string name="conduct_lack_line">%1$s: %2$s</string>
     <plurals name="conduct_send_lacks">
         <item quantity="one">Enviar %1$d que falta</item>
         <item quantity="many">Enviar as %1$d que faltam</item>

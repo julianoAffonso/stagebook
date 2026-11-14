@@ -214,7 +214,6 @@
     <string name="conduct_left">%1$s is leading</string>
     <string name="conduct_follow">Follow</string>
     <string name="conduct_lacks_title">What\'s missing</string>
-    <string name="conduct_lack_line">%1$s: %2$s</string>
     <plurals name="conduct_send_lacks">
         <item quantity="one">Send the %1$d it lacks</item>
         <item quantity="other">Send the %1$d it lacks</item>

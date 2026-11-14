@@ -71,8 +71,11 @@ class ConductMissingStripTest {
         }
         compose.onNodeWithText("Ver o que falta").performClick()
         compose.onNodeWithText("O que falta").assertExists()
-        compose.onNodeWithText("Baixo: Evidências, Asa Branca").assertExists()
-        compose.onNodeWithText("Guitarra: Evidências").assertExists()
+        // each device's name, with its songs as rows under it
+        compose.onNodeWithText("Baixo").assertExists()
+        compose.onNodeWithText("Guitarra").assertExists()
+        compose.onNodeWithText("Asa Branca").assertExists()
+        compose.onAllNodesWithText("Evidências").assertCountEquals(2)
         compose.onNodeWithText("Enviar as 2 que faltam").performClick()
         compose.onNodeWithText("Enviar a que falta").performClick()
         compose.onNodeWithText("Enviar a todos").performClick()
@@ -98,7 +101,9 @@ class ConductMissingStripTest {
         compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("Voz", "Música", false, false, listOf("Baixo"), listOf("Evidências", "Asa Branca")), {}, {}, {}, {}) } }
         compose.onNodeWithText("Voz", substring = true).performClick()
         compose.onNodeWithText("Faltam neste aparelho").assertExists()
-        compose.onNodeWithText("Evidências\nAsa Branca").assertExists()
+        // one row per song, not one text with line breaks
+        compose.onNodeWithText("Evidências").assertExists()
+        compose.onNodeWithText("Asa Branca").assertExists()
         compose.onAllNodesWithText("Enviar a todos").assertCountEquals(0)
     }
 

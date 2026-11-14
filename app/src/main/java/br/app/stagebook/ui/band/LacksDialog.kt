@@ -30,7 +30,8 @@ fun LacksDialog(lackers: List<ConductUi.Lacker>, sending: Boolean, onSend: (Stri
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (lackers.isEmpty()) Text(stringResource(R.string.conduct_lacks_none), style = MaterialTheme.typography.bodyLarge)
                 lackers.forEach { lacker ->
-                    Text(stringResource(R.string.conduct_lack_line, lacker.who, lacker.titles.joinToString(", ")), style = MaterialTheme.typography.bodyLarge)
+                    Text(lacker.who, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    LackRows(lacker.songs)
                     TextButton({ onSend(lacker.id) }, enabled = !sending) {
                         // a single song has its own sentence, with no number
                         val count = lacker.titles.size
@@ -42,6 +43,28 @@ fun LacksDialog(lackers: List<ConductUi.Lacker>, sending: Boolean, onSend: (Stri
         confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.action_close)) } },
         dismissButton = if (lackers.isEmpty()) null else ({ TextButton({ onSend(null) }, enabled = !sending) { Text(stringResource(R.string.conduct_send_all)) } }),
     )
+}
+
+/** The artist of each missing title, from the leader's setlist, which is what both ends know about a song that isn't here. */
+internal fun lackSongs(titles: List<String>, items: List<br.app.stagebook.domain.Conduct.Item>) =
+    titles.map { t -> ConductUi.LackSong(t, items.firstOrNull { it.title == t }?.artist.orEmpty()) }
+
+/**
+ * Missing songs as the setlist's rows, with no number and none of the facts: the song isn't here, so the key, the tempo
+ * and the capo aren't known (the leader's message carries only the title and the artist).
+ */
+@Composable
+internal fun LackRows(songs: List<ConductUi.LackSong>, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.xs)) {
+        songs.forEach { s ->
+            br.app.stagebook.ui.components.SongListItem(
+                title = s.title, subtitle = s.artist, onClick = null,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                gap = br.app.stagebook.ui.theme.Spacing.s, titleLines = 1, dense = true,
+                titleStyle = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
 }
 
 @LightPreview

@@ -100,10 +100,11 @@ class LacksListFollowsLibraryTest {
         screen(); following()
         compose.onNodeWithText("Voz", substring = true).performClick()
         compose.onNodeWithText("Faltam neste aparelho").assertExists()
-        compose.waitUntil(5_000) { inWindow("Primeira\nSegunda\nTerceira") > 0 }
+        compose.waitUntil(5_000) { inWindow("Primeira") > 0 && inWindow("Segunda") > 0 && inWindow("Terceira") > 0 }
         arrives("Primeira")
         compose.waitUntil(5_000) { inWindow("Primeira") == 0 }
-        compose.onNodeWithText("Segunda\nTerceira").assertExists()
+        compose.onNodeWithText("Segunda").assertExists()
+        compose.onNodeWithText("Terceira").assertExists()
         arrives("Segunda"); arrives("Terceira")
         compose.waitUntil(5_000) { inWindow("Faltam neste aparelho") == 0 }
     }
@@ -148,10 +149,11 @@ class LacksListFollowsLibraryTest {
         )
         compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}) } }
         compose.onNodeWithText("Ver o que falta", substring = true).performClick()
-        compose.onNodeWithText("F: Primeira, Segunda", substring = true).assertExists()
+        compose.onNodeWithText("Primeira").assertExists()
+        compose.onNodeWithText("Segunda").assertExists()
         ui = ConductUi.Conducting("Show", 0, emptyList(), listOf(Conduct.Lack("F", listOf("Segunda"))), listOf(ConductUi.Lacker("f", "F", listOf("Segunda"))))
         compose.waitForIdle()
-        compose.onNodeWithText("F: Segunda", substring = true).assertExists()
+        compose.onNodeWithText("Segunda").assertExists()
         compose.onAllNodesWithText("Primeira", substring = true).assertCountEquals(0)
         ui = ConductUi.Conducting("Show", 0, emptyList(), emptyList(), emptyList())
         compose.waitForIdle()

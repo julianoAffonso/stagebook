@@ -122,7 +122,7 @@ fun InfoDialog(
         title = { Text(title) },
         text = {
             androidx.compose.foundation.layout.Column {
-                Text(message, style = MaterialTheme.typography.bodyLarge)
+                if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyLarge)
                 content?.invoke()
                 if (neverAgain != null) {
                     androidx.compose.foundation.layout.Row(

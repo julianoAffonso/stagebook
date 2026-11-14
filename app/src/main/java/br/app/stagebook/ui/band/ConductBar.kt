@@ -4,6 +4,7 @@ import br.app.stagebook.ui.components.InfoDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
@@ -74,7 +75,11 @@ import javax.inject.Inject
 sealed interface ConductUi {
     /** A following device that lacks songs: the leader can send them to it ([id]). */
     @Immutable
-    data class Lacker(val id: String, val who: String, val titles: List<String>)
+    data class Lacker(val id: String, val who: String, val titles: List<String>, val songs: List<LackSong> = titles.map { LackSong(it) })
+
+    /** A song that is missing, as the missing lists draw it: the title and, where the setlist says it, the artist. */
+    @Immutable
+    data class LackSong(val title: String, val artist: String = "")
 
     /**
      * [nowMissing]: who lacks the current song; [lacks]: all missing songs (the "See what's missing"); [lackers]: the
@@ -104,6 +109,7 @@ sealed interface ConductUi {
         val breakSince: Long? = null,
         val noChords: Boolean = false,
         val breakFrozen: Long? = null,
+        val lackSongs: List<LackSong> = lacksHere.map { LackSong(it) },   // [lacksHere] with the artists, for the list's rows
     ) : ConductUi
 
     /** "Lead the band" armed from the Setlists list: waits, with a way to cancel, for the setlist the person taps. */
@@ -126,7 +132,7 @@ internal fun conductUi(
     armed && role is Role.None -> ConductUi.Armed
     role is Role.Conducting -> ConductUi.Conducting(
         role.msg.set, role.answered?.let { (online - it).size } ?: 0, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing,
-        role.lackers.map { (id, lack) -> ConductUi.Lacker(id, lack.who, lack.titles) }.sortedBy { it.who },
+        role.lackers.map { (id, lack) -> ConductUi.Lacker(id, lack.who, lack.titles, lackSongs(lack.titles, role.msg.songs)) }.sortedBy { it.who },
     )
     role is Role.Following -> followingUi(role, songs, now, chordless.takeIf { chords }.orEmpty(), me, lacksHere)
     role is Role.Left && !role.gone(now) -> ConductUi.Left(role.msg.from)
@@ -145,15 +151,16 @@ internal fun followingUi(
 ): ConductUi.Following {
     val msg = role.msg
     val lacks = lacksHere ?: Conduct.missing(msg.songs, songs)
+    val lackSongs = lackSongs(lacks, msg.songs)
     fun others(index: Int) = Conduct.missingAt(msg, index).filter { it != me }
     val next = role.breakSince?.let { msg.songs.getOrNull(msg.index + 1) }
     if (next != null) {
         val own = Conduct.find(next, songs)
-        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince, breakFrozen = role.breakFrozen)
+        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince, breakFrozen = role.breakFrozen, lackSongs = lackSongs)
     }
     return ConductUi.Following(
         msg.from, msg.songs.getOrNull(msg.index)?.title.orEmpty(), role.songId == null, role.gone(now),
-        others(msg.index), lacks,
+        others(msg.index), lacks, lackSongs = lackSongs,
         // still without chords: once the musician writes them in, the strip stops saying so
         noChords = role.songId in chordless && songs.firstOrNull { it.id == role.songId }?.let { !br.app.stagebook.domain.Chords.hasChords(it.text) } == true,
     )
@@ -406,7 +413,8 @@ fun ConductBar(
     if (showLacks && ui is ConductUi.Conducting) {
         LacksDialog(ui.lackers, sending, onSend, onDismiss = { showLacks = false })
     } else if (showLacks && ui is ConductUi.Following && ui.lacksHere.isNotEmpty()) {
-        InfoDialog(stringResource(R.string.conduct_lacks_here_title), ui.lacksHere.joinToString("\n"), onDismiss = { showLacks = false })
+        // the leader's setlist songs that aren't here, as rows: only what the leader's message says (title, artist)
+        InfoDialog(stringResource(R.string.conduct_lacks_here_title), "", onDismiss = { showLacks = false }) { LackRows(ui.lackSongs, Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) }
     }
 }
 
