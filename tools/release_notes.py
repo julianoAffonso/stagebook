@@ -12,6 +12,7 @@ says so with a line "Release-Note-Replaces: <commit>": that commit's notes leave
   build RANGE --code N --name X --previous FILE --out FILE
                 for the Release workflow: writes stagebook-version.json with this version's notes on top of the last
                 ones (someone who skipped versions sees what they missed). A version without notes isn't published.
+                With --body FILE, also writes the release's description: the same sentences, English then Portuguese.
 """
 import argparse
 import json
@@ -105,6 +106,13 @@ def with_history(code, name, notes, previous):
     return {"versionCode": code, "versionName": name, "notes": [version, *older][:MAX_VERSIONS]}
 
 
+def body(notes):
+    """The release's description on GitHub: what people will notice, in English and then in Portuguese."""
+    def line(text):
+        return "- " + (text if text.endswith((".", "!", "?")) else text + ".")
+    return "\n".join([line(en) for en, _ in notes] + [line(pt) for _, pt in notes]) + "\n"
+
+
 def check(args):
     notes = notes_in(args.commits, strict=True)
     if not notes and app_changed(args.commits) and not marked_internal(args.commits):
@@ -124,6 +132,9 @@ def build(args):
         previous = json.load(f)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(with_history(args.code, args.name, notes, previous), f, ensure_ascii=False)
+    if args.body:
+        with open(args.body, "w", encoding="utf-8") as f:
+            f.write(body(notes))
     print(f"{len(notes)} release notes")
 
 
@@ -139,6 +150,7 @@ def main():
     p.add_argument("--name", required=True)
     p.add_argument("--previous", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--body")
     p.set_defaults(run=build)
     args = parser.parse_args()
     try:
