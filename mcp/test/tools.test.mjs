@@ -93,6 +93,35 @@ test("setlists: create, read, update keeps what wasn't passed", async () => {
   assert.equal(tablet.sets.get(id).name, "Sunday night");
 });
 
+test("setlists: breaks are read, created, replaced and kept", async () => {
+  const id = (await call("create_setlist", { name: "Two sets", song_ids: ["s1", "s1", "s1"], breaks: [2] })).json.created;
+  assert.deepEqual(tablet.sets.get(id).breaks, [2]);
+  assert.deepEqual((await call("get_setlist", { id })).json.breaks, [2]);
+  // without breaks: the existing ones stay, and they are not sent
+  await call("update_setlist", { id, name: "Renamed" });
+  assert.deepEqual(tablet.sets.get(id).breaks, [2]);
+  await call("update_setlist", { id, breaks: [1, 2] });
+  assert.deepEqual(tablet.sets.get(id).breaks, [1, 2]);
+  await call("update_setlist", { id, breaks: [] });
+  assert.deepEqual(tablet.sets.get(id).breaks, []);
+  // created without breaks: none
+  const plain = (await call("create_setlist", { name: "Plain", song_ids: ["s1", "s1"] })).json.created;
+  assert.deepEqual(tablet.sets.get(plain).breaks, []);
+});
+
+test("setlists: breaks that don't fit are refused with a clear message", async () => {
+  const id = (await call("create_setlist", { name: "Short", song_ids: ["s1", "s1", "s1"], breaks: [1] })).json.created;
+  for (const bad of [[0], [3], [1.5], [-1], [2, 1], [1, 1]]) {
+    const r = await call("update_setlist", { id, breaks: bad });
+    assert.equal(r.error, true, JSON.stringify(bad));
+    assert.match(r.body, /[Bb]reak/);
+  }
+  // checked against the new songs when they come with it
+  assert.equal((await call("update_setlist", { id, song_ids: ["s1", "s1"], breaks: [2] })).error, true);
+  assert.equal((await call("create_setlist", { name: "Lone", song_ids: ["s1"], breaks: [1] })).error, true);
+  assert.deepEqual(tablet.sets.get(id).breaks, [1]);
+});
+
 test("backing track upload sends the file with its name", async () => {
   const f = join(dir, "faixa.ogg");
   writeFileSync(f, Buffer.alloc(1024, 1));

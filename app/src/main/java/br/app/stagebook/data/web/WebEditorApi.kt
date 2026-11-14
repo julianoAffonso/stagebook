@@ -3,6 +3,7 @@ package br.app.stagebook.data.web
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.model.Song
 import br.app.stagebook.domain.Chords
+import br.app.stagebook.domain.SetlistBreaks
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -75,12 +76,16 @@ class WebEditorApi(
     @Serializable
     data class SetsOrder(val abc: Boolean)
 
-    /** A setlist with its songs in order; a song deleted from the library comes with an empty title. */
+    /**
+     * A setlist with its songs in order; a song deleted from the library comes with an empty title. [breaks] are the
+     * positions of its breaks: 1..n-1, a break before the song at that place (0-based), as in the app.
+     */
     @Serializable
-    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList())
+    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList(), val breaks: List<Int> = emptyList())
 
+    /** [breaks] null (a client that doesn't know them) keeps the breaks the setlist has, as the app does when songs are replaced. */
     @Serializable
-    data class SetSave(val name: String = "", val items: List<String> = emptyList())
+    data class SetSave(val name: String = "", val items: List<String> = emptyList(), val breaks: List<Int>? = null)
 
     @Serializable
     data class BackupInfo(val token: String, val parts: List<String>, val songs: Int, val newer: Boolean)
@@ -356,6 +361,7 @@ class WebEditorApi(
     private fun setData(set: br.app.stagebook.data.model.Setlist) = SetData(
         set.id, set.name,
         set.items.map { id -> repository.song(id)?.let { SongItem(it.id, it.title, it.author, it.year, Chords.key(it.text)) } ?: SongItem(id, "", "", "", "") },
+        SetlistBreaks.normalise(set.breaks, set.items.size),
     )
 
     /** The setlists in the order the tab shows them, newest first or A to Z. */
@@ -374,17 +380,32 @@ class WebEditorApi(
     private fun setCreate(req: HttpRequest): HttpResponse {
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         val name = d.name.trim().ifEmpty { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
+        if (!breaksOk(d)) return problem("bad_breaks")
         val id = repository.createSetlist(name)
-        if (d.items.isNotEmpty()) repository.setSetlistItems(id, d.items.filter { repository.song(it) != null })
+        if (d.items.isNotEmpty()) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }
 
     private fun setSave(id: String, req: HttpRequest): HttpResponse {
         if (repository.library.value.setlist(id) == null) return HttpResponse.status(404)
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        if (!breaksOk(d)) return problem("bad_breaks")
         if (d.name.isNotBlank()) repository.renameSetlist(id, d.name.trim())
-        repository.setSetlistItems(id, d.items.filter { repository.song(it) != null })
+        saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
+    }
+
+    /** Breaks as sent are valid when they are what the app would keep: 1..n-1 of the sent songs, sorted, no repeats. */
+    private fun breaksOk(d: SetSave) = d.breaks == null || d.breaks == SetlistBreaks.normalise(d.breaks, d.items.size)
+
+    /**
+     * Songs the library doesn't have, and repeats, drop out; sent breaks stay before the same song or the next one that
+     * is left (the app's own rule, SetlistBreaks.place). Without breaks the setlist keeps its own.
+     */
+    private fun saveItems(id: String, d: SetSave) {
+        if (d.breaks == null) { repository.setSetlistItems(id, d.items.filter { repository.song(it) != null }); return }
+        val placed = SetlistBreaks.place(d.items.map { it.takeIf { sid -> repository.song(sid) != null } }, d.breaks)
+        repository.setSetlistItems(id, placed.items, placed.breaks)
     }
 
     private fun ok(body: String) = HttpResponse.json(200, body)

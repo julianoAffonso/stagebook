@@ -69,13 +69,14 @@ class FollowWaitsForMenuTest {
     private val gate = FollowGate()
     private val songs = MutableSharedFlow<String>(extraBufferCapacity = 4)
     private val following = MutableStateFlow<String?>("b")
+    private val menuOpen = androidx.compose.runtime.mutableStateOf(false)   // outside the composition: lint wants it remembered
 
     private fun start(home: @androidx.compose.runtime.Composable () -> Unit = { Text("home") }) {
         compose.setContent {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, songs, following, gate, androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) })
+                    FollowToStage(nav, songs, following, gate, menuOpen)
                     NavHost(nav, startDestination = Home) {
                         composable<Home> { home() }
                         composable<SongEditor> { Text("editor") }
