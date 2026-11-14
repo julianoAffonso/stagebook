@@ -90,4 +90,19 @@ class LibraryRepositoryTest {
         assertTrue(disk.songs.size >= 30)
         assertTrue(Library().songs.isEmpty())
     }
+
+    @Test
+    fun `undo remove keeps the breaks added after the removal`() {
+        val r = repo()
+        val ids = listOf("A", "B", "C", "D").map { r.saveSong(Song(title = it, text = "x")) }
+        val set = r.createSetlist("Show")
+        r.addToSetlist(set, ids)
+        val before = r.library.value.setlist(set)!!
+        r.removeItem(set, 1, ids[1])
+        r.addBreak(set)   // a break before the last song, after the removal
+        r.restoreItem(set, 1, before)
+        val now = r.library.value.setlist(set)!!
+        assertEquals(ids, now.items)
+        assertEquals(listOf(3), now.breaks)   // still before D
+    }
 }
