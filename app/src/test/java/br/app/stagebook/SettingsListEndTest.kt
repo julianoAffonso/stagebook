@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
@@ -35,7 +36,7 @@ class SettingsListEndTest {
         compose.waitForIdle()
         // the last item (its whole card answers for its title) and the list it scrolls in
         val item = compose.onNodeWithText(context.getString(R.string.settings_about)).getUnclippedBoundsInRoot()
-        val list = compose.onNode(hasScrollAction()).getUnclippedBoundsInRoot()
+        val list = compose.onNode(hasScrollAction() and !hasSetTextAction()).getUnclippedBoundsInRoot()
         val under = list.bottom - item.bottom
         assertTrue("room under the last item: $under", under >= ROOM)
     }

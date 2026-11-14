@@ -1037,6 +1037,144 @@ SECTIONS = [
     },
 ]
 
+
+# ---- Settings by task (user, 14/11) -------------------------------------------------------------------------------
+# Seven groups in the order of use, then About. The topics keep their anchors (links from the other chapters still
+# work); here they are moved under their group, with the path of each option.
+def _regroup_settings():
+    chapter = next(c for c in SECTIONS if c["id"] == "ajustes")
+    by = {x["id"]: x for x in chapter["subs"]}
+
+    def put(sid, pt=None, en=None, level=None, head_pt=None, head_en=None, drop_pt=(), drop_en=()):
+        x = by[sid]
+        if pt: x["pt"] = pt
+        if en: x["en"] = en
+        if level: x["level"] = level
+        x["text_pt"] = ([head_pt] if head_pt else []) + [t for t in x["text_pt"] if t not in drop_pt]
+        x["text_en"] = ([head_en] if head_en else []) + [t for t in x["text_en"] if t not in drop_en]
+
+    def head(sid, pt, en, text_pt, text_en, figs=()):
+        by[sid] = sub(sid, pt, en, text_pt, text_en, figs)
+
+    head("ajustes-busca", "Buscar nos ajustes", "Search the settings",
+         ["No topo da lista de grupos fica o campo Buscar nos ajustes, como nos ajustes do Android. Digite o nome do item ou uma palavra parecida (MIDI, tela, capo, backup, idioma). A busca também olha o texto das explicações, e o resultado diz “na explicação” quando só ele acerta. Cada resultado mostra o item, o caminho (grupo › cartão) e uma linha de explicação. Tocar abre o grupo, rola até o cartão e o destaca por um instante. Quem está desligado agora (pelo modo essencial, pelo perfil Só letra, pelo player desligado, pela banda ou pela internet) também aparece, esmaecido e com o motivo. Tocar nele abre o lugar que liga, sem ligar nada por você. O X limpa a busca, e Voltar fecha a busca antes de sair."],
+         ["At the top of the list of groups there is the Search Settings field, as in Android's settings. Type the item's name or a similar word (MIDI, screen, capo, backup, language). Search also reads the explanation texts, and the result says “in the explanation” when only that matches. Each result shows the item, the path (group › card) and a line of explanation. Tapping opens the group, scrolls to the card and highlights it for a moment. What is turned off right now (by essential mode, by the Lyrics only profile, by the player, the band or the internet being off) shows up too, dimmed and with the reason. Tapping it opens the place that turns it on, without turning anything on for you. The X clears the search, and Back closes the search before leaving."],
+         [Fig(("tablet_5_ajustes_busca", "celular_5_ajustes_busca", "A busca nos ajustes", "Searching the settings"))])
+    put("ajustes-palco", "Letra e cifra", "Lyrics and chords", 3,
+        head_pt="Ajustes → Letra e cifra. A amostra no topo da tela fica presa: ao mudar o tamanho, os acordes ou os títulos você vê o efeito sem rolar. Tudo aqui vale para todas as músicas.",
+        head_en="Settings → Lyrics and chords. The sample at the top of the screen stays in place: when you change the size, chords or titles you see the effect without scrolling. Everything here applies to all songs.",
+        drop_pt=("Tudo aqui vale para todas as músicas. A amostra no topo da tela fica presa e mostra cada mudança na hora.",),
+        drop_en=("Everything here applies to all songs. The sample at the top of the screen stays in place and shows each change right away.",))
+    head("ajustes-virar", "Virar a página", "Turn the page",
+         ["Ajustes → Virar a página. Reúne como a letra avança no palco (Modo), o Pedal e MIDI, a Saída MIDI e o que o aparelho faz Durante o show. Em português se vira a página, e o pedal mora aqui junto."],
+         ["Settings → Turn the page. It gathers how the lyrics move on stage (Mode), Pedal and MIDI, MIDI out and what the device does During the show. The pedal lives here, with the page."],
+         [Fig(("tablet_5_ajustes_virar", "celular_5_ajustes_virar", "Virar a página", "Turn the page"))])
+    put("ajustes-pagina", "Modo", "Mode", 4, head_pt="Ajustes → Virar a página → Modo.", head_en="Settings → Turn the page → Mode.")
+    put("ajustes-pedal", "Pedal e MIDI", "Pedal and MIDI", 4,
+        head_pt="Ajustes → Virar a página → Pedal e MIDI.", head_en="Settings → Turn the page → Pedal and MIDI.")
+    put("ajustes-pedal-conectar", level=4)
+    put("ajustes-pedal-botoes", level=4)
+    put("ajustes-midi-saida", "Saída MIDI", "MIDI out", 4,
+        head_pt="Ajustes → Virar a página → Saída MIDI. Some com o modo essencial.", head_en="Settings → Turn the page → MIDI out. It leaves with essential mode.")
+    put("ajustes-tela", "Durante o show", "During the show", 4,
+        head_pt="Ajustes → Virar a página → Durante o show.", head_en="Settings → Turn the page → During the show.")
+    t = by["ajustes-tela"]
+    t["text_pt"] += ["**Parar volta ao início:** com o player ligado, desligado faz o botão da faixa pausar, e a música continua de onde parou.",
+                     "**Tela apaga depois de 10 minutos:** fora do palco. Aparece aqui, junto da tela ligada, nos aparelhos que têm essa chave, e precisa da permissão do Android de Aparelho → Avançado."]
+    t["text_en"] += ["**Stop goes back to the start:** with the player on, off makes the track button pause, and the song goes on from where it stopped.",
+                     "**Screen off after 10 minutes:** outside the stage. It shows here, next to keeping the screen on, on devices that have the switch, and needs Android's permission from Device → Advanced."]
+    head("ajustes-acordes-grupo", "Acordes", "Chords",
+         ["Ajustes → Acordes. O instrumento, o diagrama ao tocar, o som e a lista de acordes. O grupo some no perfil Só letra, que não mostra acordes."],
+         ["Settings → Chords. The instrument, the diagram on tap, the sound and the chord list. The group leaves with the Lyrics only profile, which shows no chords."])
+    put("ajustes-diagramas", "Diagramas dos acordes", "Chord diagrams", 4,
+        drop_pt=("Este cartão só aparece com Letra e cifra.",), drop_en=("This card shows only with Lyrics and chords.",))
+    put("ajustes-metronomo", "Player e metrônomo", "Player and metronome", 3,
+        head_pt="Ajustes → Player e metrônomo. O nome não muda, mesmo com uma das partes desligada pelo modo essencial.",
+        head_en="Settings → Player and metronome. The name doesn't change, even with one of the parts turned off by essential mode.",
+        drop_pt=("Com o modo essencial desligando um dos dois, o item leva só o nome do que ficou ligado.",),
+        drop_en=("When essential mode turns one of them off, the item is named after the one left on.",))
+    p4 = by["ajustes-player"]
+    p4["pt"], p4["en"], p4["level"] = "Saída USB e para tocar sem falhas", "USB output and playing without failures", 4
+    p4["text_pt"] = [x for x in p4["text_pt"] if not x.startswith("- **Parar volta")]
+    p4["text_en"] = [x for x in p4["text_en"] if not x.startswith("- **Stop goes back")]
+    av = by["ajustes-avancado"]
+    i_play, i_bat = av["text_pt"].index("### Para tocar sem falhas"), av["text_pt"].index("### Bateria do aparelho")
+    j_play, j_bat = av["text_en"].index("### For playing without failures"), av["text_en"].index("### Device battery")
+    p4["text_pt"] += ["Ajustes → Player e metrônomo → Para tocar sem falhas:"] + av["text_pt"][i_play + 1:i_bat]
+    p4["text_en"] += ["Settings → Player and metronome → For playing without failures:"] + av["text_en"][j_play + 1:j_bat]
+    bat_pt = [x for x in av["text_pt"][i_bat:] if not x.startswith("- **Tela apaga")]
+    bat_en = [x for x in av["text_en"][j_bat:] if not x.startswith("- **Screen off")]
+    av["text_pt"] = ["Ajustes → Aparelho → Avançado. São ajustes do próprio Android. Para mudá-los, o Stagebook precisa de uma permissão dada uma vez por um computador com o adb. Sem ela, os ajustes aparecem mas não mudam, e o último cartão da página mostra o comando e Copiar o comando. Alguns só existem em certos aparelhos e só aparecem neles.",
+                     "Eles valem para o aparelho inteiro, não só para o Stagebook. O app grava de novo sempre que abre, porque o Android às vezes volta atrás sozinho. Por isso, mude por estas chaves: o que você mudar nos ajustes do Android volta na próxima abertura."] + bat_pt
+    av["text_en"] = ["Settings → Device → Advanced. These are Android's own settings. To change them, Stagebook needs a permission given once from a computer with adb. Without it the settings show but don't change, and the last card on the page shows the command and Copy the command. Some only exist on certain devices and only show there.",
+                     "They apply to the whole device, not just Stagebook. The app writes them again every time it opens, because Android sometimes goes back by itself. So change them with these switches: what you change in Android's settings comes back the next time it opens."] + bat_en
+    av["level"] = 4
+    put("ajustes-biblioteca", "Importar e backup", "Import and backup", 3,
+        head_pt="Ajustes → Importar e backup. Apagar tudo fica no fim, como zona de perigo.", head_en="Settings → Import and backup. Erase everything is at the end, as a danger zone.")
+    put("ajustes-sites", level=4,
+        head_pt="Ajustes → Importar e backup → Sites de cifra.", head_en="Settings → Import and backup → Chord sites.")
+    st = by["ajustes-sites"]
+    st["text_pt"] = [x.replace("Em Só letra, o item se chama Sites de letra. Em Automático ele se chama Sites de importação e mostra as duas listas, a de cifra e a de letra.", "Em Só letra, o cartão se chama Sites de letra. Em Automático há os dois cartões, Sites de cifra e Sites de letra.") for x in st["text_pt"]]
+    st["text_en"] = [x.replace("In Lyrics only, the item is called Lyrics sites. In Automatic it is called Import sites and shows both lists, chords and lyrics.", "In Lyrics only, the card is called Lyrics sites. In Automatic there are both cards, Chord sites and Lyrics sites.") for x in st["text_en"]]
+    put("ajustes-backup", level=4)
+    put("ajustes-apagar", level=4, head_pt="Ajustes → Importar e backup → Apagar tudo, a zona de perigo no fim do grupo.", head_en="Settings → Import and backup → Erase everything, the danger zone at the end of the group.")
+    put("ajustes-banda", "Banda e computador", "Band and computer", 3,
+        head_pt="Ajustes → Banda e computador. Some inteiro com o modo essencial.", head_en="Settings → Band and computer. It leaves entirely with essential mode.")
+    put("ajustes-computador", level=4, head_pt="Ajustes → Banda e computador → Editar no computador.", head_en="Settings → Band and computer → Edit on the computer.")
+    head("ajustes-aparelho", "Aparelho", "Device",
+         ["Ajustes → Aparelho. O Modo essencial, o Idioma e os ajustes do Android, que valem para o aparelho inteiro."],
+         ["Settings → Device. Essential mode, Language and Android's own settings, which apply to the whole device."])
+    put("ajustes-essencial", level=4, head_pt="Ajustes → Aparelho → Modo essencial.", head_en="Settings → Device → Essential mode.")
+    head("ajustes-idioma", "Idioma", "Language",
+         ["Ajustes → Aparelho → Idioma. Automático segue o aparelho, ou escolha português ou inglês. Para ajudar a traduzir, siga o [guia de tradução](https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.pt-BR.md)."],
+         ["Settings → Device → Language. Automatic follows the device, or pick Portuguese or English. To help translate, follow the [translation guide](https://github.com/julianoAffonso/stagebook/blob/main/docs/TRANSLATING.md)."],
+         [Fig(("tablet_5_ajustes_essencial", "celular_5_ajustes_lingua", "Aparelho: modo essencial e idioma", "Device: essential mode and language"))])
+    by["ajustes-idioma"]["level"] = 4
+    so = by["ajustes-sobre"]
+    so["text_pt"] = [x for x in so["text_pt"] if not x.startswith("- **Idioma:**")]
+    so["text_en"] = [x for x in so["text_en"] if not x.startswith("- **Language:**")]
+    so["figs"] = [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_sobre", "Ajustes → Sobre: ajuda e atualizar", "Settings → About: help and updating"))]
+    order = ["ajustes-busca", "ajustes-palco", "ajustes-letra", "ajustes-acordes", "ajustes-titulos",
+             "ajustes-virar", "ajustes-pagina", "ajustes-pedal", "ajustes-pedal-conectar", "ajustes-pedal-botoes", "ajustes-midi-saida", "ajustes-tela",
+             "ajustes-acordes-grupo", "ajustes-diagramas", "ajustes-metronomo", "ajustes-player",
+             "ajustes-biblioteca", "ajustes-sites", "ajustes-backup", "ajustes-apagar", "ajustes-banda", "ajustes-computador",
+             "ajustes-aparelho", "ajustes-essencial", "ajustes-idioma", "ajustes-avancado", "ajustes-sobre"]
+    assert set(order) == set(by), set(by) ^ set(order)
+    chapter["subs"] = [by[i] for i in order]
+    chapter["text_pt"] = ["Os Ajustes têm sete grupos, na ordem em que você costuma mexer, e o Sobre à parte. Cada item vem com o caminho: Ajustes → grupo → cartão. No tablet deitado, a lista fica à esquerda e o grupo aberto à direita. Nos cartões, o ⓘ ao lado do título explica o que eles fazem. Com o modo essencial, alguns grupos, cartões e opções somem até você religar. Para achar algo sem saber onde está, use a [busca](#ajustes-busca)."]
+    chapter["text_en"] = ["Settings has seven groups, in the order you usually reach for them, and About apart. Each item comes with its path: Settings → group → card. On a tablet lying down, the list sits on the left and the open group on the right. On the cards, the ⓘ next to the title explains what they do. With essential mode, some groups, cards and options disappear until you turn them back on. To find something without knowing where it is, use the [search](#ajustes-busca)."]
+
+    pairs = [
+        ("[Visual do palco](#ajustes-letra)", "[Letra e cifra](#ajustes-palco)"), ("[Stage look](#ajustes-letra)", "[Lyrics and chords](#ajustes-palco)"),
+        ("[Visual do palco](#ajustes-pagina)", "[Virar a página](#ajustes-virar)"), ("[Stage look](#ajustes-pagina)", "[Turn the page](#ajustes-virar)"),
+        ("Banda e transmissão", "Banda e computador"), ("Band and broadcast", "Band and computer"),
+        ("Metrônomo e player", "Player e metrônomo"), ("Metronome and player", "Player and metronome"),
+        ("Ajustes → Editar no computador", "Ajustes → Banda e computador → Editar no computador"),
+        ("Settings → Edit on the computer", "Settings → Band and computer → Edit on the computer"),
+        ("Biblioteca e backup", "Importar e backup"), ("Library and backup", "Import and backup"),
+        ("[Para tocar sem falhas](#ajustes-avancado)", "[Para tocar sem falhas](#ajustes-player)"),
+        ("[For playing without failures](#ajustes-avancado)", "[For playing without failures](#ajustes-player)"),
+        ("o cartão Para tocar sem falhas em Avançado", "o cartão Para tocar sem falhas em Player e metrônomo"),
+        ("the For playing without failures card in Advanced", "the For playing without failures card in Player and metronome"),
+        ("o MIDI da música em Pedal e MIDI", "a Saída MIDI em Virar a página"), ("the song MIDI in Pedal and MIDI", "the MIDI out in Turn the page"),
+        ("Ajustes → Modo essencial", "Ajustes → Aparelho → Modo essencial"), ("Settings → Essential mode", "Settings → Device → Essential mode"),
+    ]
+
+    def fix(v):
+        if isinstance(v, str):
+            for a, b in pairs: v = v.replace(a, b)
+            return v
+        if isinstance(v, list): return [fix(x) for x in v]
+        if isinstance(v, tuple): return tuple(fix(x) for x in v)
+        if isinstance(v, dict): return {k: fix(x) for k, x in v.items()}
+        return v
+
+    SECTIONS[:] = [fix(c) for c in SECTIONS]
+
+
+_regroup_settings()
+
+
 UI = {
     "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",
               "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR",

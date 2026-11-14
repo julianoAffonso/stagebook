@@ -58,6 +58,7 @@ import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
 import br.app.stagebook.ui.theme.StagebookTheme
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertTrue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -962,6 +963,43 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneList() = shoot("celular_5_ajustes") { HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it) } }
+
+    // Turn the page (user, 14/11): the mode, then the pedal and MIDI card (the MIDI output and the show are below)
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneTurnPage() = shoot("celular_5_ajustes_virar") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PAGE) }
+    }
+
+    @Test fun settingsTabletTurnPage() = shoot("tablet_5_ajustes_virar") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.PAGE) }
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneAbout() = shoot("celular_5_ajustes_sobre") {
+        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.ABOUT) }
+    }
+
+    // the search (user, 14/11): "midi" over the list of groups, with the path of each result
+    private fun shootSearch(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    HomeScaffold(HomeTab.SETTINGS, {}) {
+                        // the extras off: the songs' MIDI output is not on screen, and the search still finds it, dimmed, with the reason
+                        SettingsScreen(settings.copy(look = settings.look.copy(extrasOn = false), midi = br.app.stagebook.data.MidiState(supported = true)), SettingsActions(), it)
+                    }
+                }
+            }
+        }
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction()).performTextInput(str(R.string.kw_midi).substringBefore(' '))
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhoneSearch() = shootSearch("celular_5_ajustes_busca")
+
+    @Test fun settingsTabletSearch() = shootSearch("tablet_5_ajustes_busca")
 
     // T37: editor on the computer on, with the address and one authorized computer
     @Test @Config(qualifiers = PHONE)

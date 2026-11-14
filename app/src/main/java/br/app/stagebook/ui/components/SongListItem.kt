@@ -47,6 +47,7 @@ fun SongListItem(
     startPadding: Dp = Spacing.m,   // more when something is drawn over the row's start edge (a setlist's state strip)
     gap: Dp = Spacing.m,   // between the leading, the texts and the trailing; a setlist's rows keep them closer
     titleLines: Int = 2,   // one where the row's end has more to show than the title's second line (the song list)
+    subtitleLines: Int = 1,   // two where a long summary must not be cut (the settings groups)
     dense: Boolean = false,   // a lower row with less room around the texts, where many must fit (the setlist over the stage)
     titleBadge: (@Composable () -> Unit)? = null,   // a small tag beside the title ("In setlist"); the title gives it room
 ) {
@@ -93,7 +94,7 @@ fun SongListItem(
                         subtitle,
                         style = if (dense) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = subtitleLines,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

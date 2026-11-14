@@ -1,5 +1,7 @@
 package br.app.stagebook.ui.settings
 
+import androidx.compose.ui.Modifier
+import br.app.stagebook.ui.components.settingsItem
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -106,7 +108,7 @@ fun AdvancedPlayCard(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit, on
             stringResource(if (ui.batteryFree) R.string.advanced_battery_free else R.string.advanced_battery_restricted),
             if (ui.batteryFree) StatusTone.OK else StatusTone.PROBLEM,
         ) {
-            if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, icon = AppIcons.Eco, tone = ButtonTone.Tonal)
+            if (!ui.batteryFree) ActionButton(stringResource(R.string.advanced_battery_allow), onClick = onBattery, modifier = Modifier.settingsItem("battery_allow"), icon = AppIcons.Eco, tone = ButtonTone.Tonal)
         }
         Tweaks(ui, DeviceTweak.Group.PLAY, onTweak)
         if (!ui.canWrite) Text(stringResource(R.string.advanced_permission_see), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -120,6 +122,7 @@ internal fun Tweaks(ui: AdvancedUi, group: DeviceTweak.Group, onTweak: (DeviceTw
             stringResource(t.label),
             ui.on[t] == true,
             { onTweak(t, it) },
+            Modifier.settingsItem(tweakId(t)),
             detail = stringResource(t.detail),
             enabled = ui.canWrite,   // without the permission Android refuses the change: shown, not switchable
         )
@@ -135,13 +138,13 @@ private fun PermissionCard() {
             Text(DeviceTweaks.GRANT, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
             ActionButton(stringResource(R.string.advanced_permission_copy), onClick = {
                 context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Stagebook", DeviceTweaks.GRANT))
-            }, icon = AppIcons.Copy, tone = ButtonTone.Tonal)
+            }, modifier = Modifier.settingsItem("permission"), icon = AppIcons.Copy, tone = ButtonTone.Tonal)
         }
     }
 }
 
 @get:StringRes
-private val DeviceTweak.label: Int
+internal val DeviceTweak.label: Int
     get() = when (this) {
         DeviceTweak.CHARGE_MODES -> R.string.tweak_charge
         DeviceTweak.USB_ROUTING -> R.string.tweak_usb_routing
@@ -154,7 +157,7 @@ private val DeviceTweak.label: Int
     }
 
 @get:StringRes
-private val DeviceTweak.detail: Int
+internal val DeviceTweak.detail: Int
     get() = when (this) {
         DeviceTweak.CHARGE_MODES -> R.string.tweak_charge_detail
         DeviceTweak.USB_ROUTING -> R.string.tweak_usb_routing_detail

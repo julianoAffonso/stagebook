@@ -68,7 +68,7 @@ class SettingsGroupsTest {
         group()
         listOf(
             "Tamanho da letra: ${Look().fontSp.toInt()}", "Virar ou rolar, pedal e MIDI, tela ligada", "Instrumento, diagrama, som do acorde", "No palco · Player ligado",
-            "3 músicas · 1 setlist", "Editor: Desligado", "Modo essencial, idioma, avançado",
+            "3 músicas · 1 setlist", "Editor desligado", "Modo essencial, idioma, avançado",
         ).forEach { compose.onNodeWithText(it, substring = true).assertExists() }
     }
 
@@ -189,3 +189,45 @@ class SettingsGroupNamesNarrowTest {
         assertTrue("cut or broken: $bad", bad.isEmpty())
     }
 }
+
+/** The one-line summaries under the group names: none is cut at 360 dp with the text at 1.15, in either language. */
+abstract class SettingsSummariesWhole {
+    @get:Rule val compose = createComposeRule()
+
+    private val states = listOf(
+        "default" to SettingsUiState(loading = false, songCount = 142, setCount = 12, version = "0.1.1234"),
+        "essential" to SettingsUiState(loading = false, look = Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = false), songCount = 1, setCount = 1),
+        "editor on, player on" to SettingsUiState(loading = false, look = Look(webEditorOn = true, playerMode = true, bold = true, fontSp = 100f), songCount = 142, setCount = 12),
+        "lyrics only" to SettingsUiState(loading = false, look = Look().copy(chords = false, bold = true), songCount = 142, setCount = 12),
+        "player alone" to SettingsUiState(loading = false, look = Look(bandOn = false, internetOn = false, extrasOn = false, playerMode = true)),
+        "update available" to SettingsUiState(loading = false, version = "0.1.1234", update = br.app.stagebook.ui.settings.UpdateState.Available("0.1.1300", emptyList())),
+    )
+
+    @Test fun `no summary is cut`() {
+        RuntimeEnvironment.setFontScale(1.15f)
+        var current by androidx.compose.runtime.mutableStateOf(states.first().second)
+        compose.setContent { StagebookTheme { SettingsScreen(current, SettingsActions()) } }
+        val cut = mutableListOf<String>()
+        for ((name, state) in states) {
+            current = state
+            compose.waitForIdle()
+            compose.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true).fetchSemanticsNodes().forEach { node ->
+                val out = mutableListOf<TextLayoutResult>()
+                node.config.getOrNull(SemanticsActions.GetTextLayoutResult)!!.action!!(out)
+                val l = out.first()
+                if ((0 until l.lineCount).any { l.isLineEllipsized(it) }) cut += "$name: ${l.layoutInput.text.text}"
+            }
+        }
+        assertTrue("cut: $cut", cut.isEmpty())
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h900dp-port-xxhdpi", application = android.app.Application::class)
+class SettingsSummariesWholePt : SettingsSummariesWhole()
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35], qualifiers = "en-rUS-w360dp-h900dp-port-xxhdpi", application = android.app.Application::class)
+class SettingsSummariesWholeEn : SettingsSummariesWhole()
