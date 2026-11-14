@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
@@ -233,6 +235,22 @@ internal fun br.app.stagebook.ui.components.FollowGate.goNow() {
     if (pending == null) showBreak() else leaveGuard?.invoke(go) ?: go()
 }
 
+/**
+ * The app hides Android's navigation bar, and a window of ours (a popup, a menu, a dialog) brings it back over the
+ * strip: with the bar hidden the window insets say 0, so the strip sat right behind it and a tap on "Ask" landed on
+ * "Recents" (device test v0.1.1134). While one is open the strip is drawn above the size the bar has when it shows.
+ * It is only an offset: the layout doesn't change, so the stage doesn't reflow (nor change pages) under the window.
+ * Where the bar already takes its room from the insets there is nothing left to lift.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun Modifier.aboveNavigationBar(): Modifier {
+    if (br.app.stagebook.ui.components.LocalFollowGate.current.menus <= 0) return this
+    val whenShown = WindowInsets.navigationBarsIgnoringVisibility
+    val now = WindowInsets.navigationBars
+    return offset { androidx.compose.ui.unit.IntOffset(0, -(whenShown.getBottom(this) - now.getBottom(this)).coerceAtLeast(0)) }
+}
+
 @Composable
 fun ConductBar(
     ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: () -> Unit, onFollow: () -> Unit, modifier: Modifier = Modifier,
@@ -296,7 +314,7 @@ fun ConductBar(
     Surface(
         color = if (alert) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().aboveNavigationBar(),
     ) {
         // on a phone two text buttons don't fit next to the text. The leader's "End" broke letter by letter and the
         // title vanished (user, 02/11): its two went on a line of their own, which made the strip the tallest (user,
