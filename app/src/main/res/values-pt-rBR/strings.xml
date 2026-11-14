@@ -1094,6 +1094,9 @@
         <item quantity="many">%1$d músicas adicionadas em %2$s</item>
         <item quantity="other">%1$d músicas adicionadas em %2$s</item>
     </plurals>
+    <string name="songs_delete_one_confirm">Apagar “%1$s”? Ela sai também dos setlists.</string>
+    <string name="songs_delete_one_artist_confirm">Apagar “%1$s”, de %2$s? Ela sai também dos setlists.</string>
+    <string name="set_remove_one_confirm">Tirar “%1$s” deste setlist? Ela continua na biblioteca.</string>
     <plurals name="songs_delete_many_confirm">
         <item quantity="one">Apagar %d música? Ela sai também dos setlists.</item>
         <item quantity="many">Apagar %d músicas? Elas saem também dos setlists.</item>

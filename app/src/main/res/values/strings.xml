@@ -1058,6 +1058,9 @@
         <item quantity="one">%1$d song added to %2$s</item>
         <item quantity="other">%1$d songs added to %2$s</item>
     </plurals>
+    <string name="songs_delete_one_confirm">Delete “%1$s”? It also leaves the setlists.</string>
+    <string name="songs_delete_one_artist_confirm">Delete “%1$s” by %2$s? It also leaves the setlists.</string>
+    <string name="set_remove_one_confirm">Take “%1$s” out of this setlist? It stays in the library.</string>
     <plurals name="songs_delete_many_confirm">
         <item quantity="one">Delete %d song? It also leaves the setlists.</item>
         <item quantity="other">Delete %d songs? They also leave the setlists.</item>

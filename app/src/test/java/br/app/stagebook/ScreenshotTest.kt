@@ -1686,6 +1686,20 @@ class ScreenshotTest {
         }
     }
 
+    // one song selected and Delete tapped: the question names the song
+    private fun deleteOne(name: String) = journey(name, {
+        HomeScaffold(HomeTab.SONGS, {}) {
+            br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, initialSelection = songs.songs.take(1).map { s -> s.id })
+        }
+    }) {
+        compose.onNodeWithContentDescription(str(R.string.action_delete)).performClick()
+    }
+
+    @Test @Config(qualifiers = PHONE)
+    fun songsDeleteOnePhone() = deleteOne("jornada_musicas_2_apagar")
+
+    @Test fun songsDeleteOneTablet() = deleteOne("jornada_musicas_2_apagar_tablet")
+
     // the Import menu open on the Songs tab: sites, QR and code
     @Test @Config(qualifiers = PHONE)
     fun importMenuPhone() {

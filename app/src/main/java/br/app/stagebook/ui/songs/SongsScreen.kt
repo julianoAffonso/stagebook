@@ -122,6 +122,9 @@ fun SongsRoute(
     )
 }
 
+/** A name for a question in a dialog: a very long one is cut with an ellipsis so the dialog stays readable. */
+internal fun shortName(name: String, max: Int = 40): String = name.trim().let { if (it.length > max) it.take(max - 1).trimEnd() + "…" else it }
+
 @Composable
 fun SongsScreen(
     uiState: SongsUiState,
@@ -305,8 +308,14 @@ fun SongsScreen(
         TagsDialog(options, initial, { add, remove -> onSetTags(ids, add, remove); selected = emptyList() }, { tagging = null })
     }
     if (deletingMany) {
+        // one song: its name (and artist), so no one deletes the wrong one; several: the count. The selection can hold
+        // songs the search hides, so the name comes from the rows and falls back to the count.
+        val only = selected.singleOrNull()?.let { id -> uiState.songs.firstOrNull { it.id == id } }
         ConfirmDialog(
-            pluralStringResource(R.plurals.songs_delete_many_confirm, selected.size, selected.size),
+            if (only != null) {
+                if (only.subtitle.isBlank()) stringResource(R.string.songs_delete_one_confirm, shortName(only.title))
+                else stringResource(R.string.songs_delete_one_artist_confirm, shortName(only.title), shortName(only.subtitle))
+            } else pluralStringResource(R.plurals.songs_delete_many_confirm, selected.size, selected.size),
             stringResource(R.string.action_delete),
             { onDeleteMany(selected); selected = emptyList() },
             { deletingMany = false },

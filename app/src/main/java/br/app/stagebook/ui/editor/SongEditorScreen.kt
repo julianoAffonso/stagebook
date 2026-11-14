@@ -439,7 +439,7 @@ fun SongEditorScreen(
     }
     if (deleting) {
         ConfirmDialog(
-            stringResource(R.string.songs_delete_confirm, uiState.title),
+            stringResource(R.string.songs_delete_confirm, br.app.stagebook.ui.songs.shortName(uiState.title)),
             stringResource(R.string.action_delete),
             onDelete,
             { deleting = false },
