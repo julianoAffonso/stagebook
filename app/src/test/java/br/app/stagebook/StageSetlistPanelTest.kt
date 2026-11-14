@@ -60,7 +60,7 @@ class StageSetlistPanelTest {
         StageSong("Quarta", "", "Uma linha da quarta", false, id = "s4"),
     )
     // the first played, the second on stage, the third next; a break before the third
-    private val setlist = StageSetlist("Show de sábado", listOf(State.PLAYED, State.NOW, State.NEXT, State.NONE), listOf("G", "Em", "", "A"))
+    private val setlist = StageSetlist("Show de sábado", listOf(State.PLAYED, State.NOW, State.NEXT, State.NONE), listOf("G", "Em", "", "A").map { br.app.stagebook.ui.stage.StageRowFacts(it) })
     private var song by mutableIntStateOf(1)
     private var page by mutableIntStateOf(0)
     private var since by mutableStateOf<Long?>(null)

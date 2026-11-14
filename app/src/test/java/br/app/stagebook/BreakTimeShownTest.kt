@@ -69,7 +69,7 @@ class BreakTimeInPanelTest {
     private val inPanel = hasAnyAncestor(hasTestTag("stage_setlist"))
 
     private fun show(open: Map<Int, BreakTimer.Timer>) {
-        val setlist = StageSetlist("Show", listOf(State.NOW, State.NEXT, State.NONE), listOf("G", "G", "G"), open)
+        val setlist = StageSetlist("Show", listOf(State.NOW, State.NEXT, State.NONE), listOf("G", "G", "G").map { br.app.stagebook.ui.stage.StageRowFacts(it) }, open)
         compose.setContent {
             StagebookTheme { StageScreen(StageUiState(loading = false, songs = songs, live = true, breaks = listOf(2), setlist = setlist), 0, 0, { _, _ -> }, onBack = {}) }
         }

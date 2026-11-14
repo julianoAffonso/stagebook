@@ -92,12 +92,16 @@ class StageMetaTest {
     @Test fun `a stage opened from a setlist carries it, and a single song carries none`() = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
-        val ids = listOf("{key: G}\nlinha", "linha", "{key: Em}\nlinha").mapIndexed { i, text -> repo.saveSong(Song(title = "Painel $i", text = text)) }
+        val ids = listOf("{key: G}\n{tempo: 120}\n{capo: 2}\nlinha", "linha", "{key: Em}\nlinha").mapIndexed { i, text -> repo.saveSong(Song(title = "Painel $i", text = text, track = if (i == 0) "a.ogg" else "")) }
         val set = repo.createSetlist("Show do painel").also { repo.addToSetlist(it, ids) }
         val vm = stage(repo, "", SavedStateHandle(mapOf("setId" to set, "start" to 0)))
         val opened = withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.setlist!!
         assertEquals("Show do painel", opened.name)
-        assertEquals(listOf("G", "", "Em"), opened.keys)
+        assertEquals(listOf("G", "", "Em"), opened.facts.map { it.key })
+        // the tempo, the capo and the backing track come to the panel's rows too
+        assertEquals(listOf(120, 0, 0), opened.facts.map { it.bpm })
+        assertEquals(listOf(2, 0, 0), opened.facts.map { it.capo })
+        assertEquals(listOf(true, false, false), opened.facts.map { it.hasTrack })
         vm.songShown(1)
         assertEquals(listOf(State.NONE, State.NOW, State.NEXT), withTimeout(5_000) { vm.uiState.first { it.setlist?.states?.contains(State.NOW) == true } }.setlist!!.states)
 

@@ -42,13 +42,17 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     }
 }
 
+/** A setlist song's key ("" = none written), tempo and capo (0 = none) and whether it has a backing track, for the panel's row. */
+@Immutable
+data class StageRowFacts(val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false)
+
 /**
  * The setlist the stage was opened from, for the panel over the stage: its [name] and, for each song, where the show
- * is ([states], the same marks the setlist's screen shows) and its key ([keys], "" = none written).
+ * is ([states], the same marks the setlist's screen shows) and what the musician checks before it ([facts]).
  */
 @Immutable
 data class StageSetlist(
-    val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val keys: List<String> = emptyList(),
+    val name: String, val states: List<br.app.stagebook.domain.SetlistShow.State> = emptyList(), val facts: List<StageRowFacts> = emptyList(),
     /** The breaks left open, by the songs before them: their counters, running or paused. */
     val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
     val id: String = "",
@@ -406,7 +410,7 @@ class StageViewModel @Inject constructor(
             breaks = set?.breaks.orEmpty(),
             setlist = set?.let {
                 StageSetlist(
-                    it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> Chords.key(lib.song(id)?.text.orEmpty()) },
+                    it.name, br.app.stagebook.domain.SetlistShow.states(it.items, marks[it.id]), it.items.map { id -> factsOf(id, lib.song(id)) },
                     br.app.stagebook.domain.BreakTimer.openAt(it.id, it.items, it.breaks, breaks, show.today()),
                     id = it.id,
                     anyPlayed = marks[it.id]?.played?.isNotEmpty() == true,
@@ -415,6 +419,17 @@ class StageViewModel @Inject constructor(
             },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StageUiState())
+
+    // the panel's facts, read again only when the song's text or track changed (every library change goes through here)
+    private val factsKept = HashMap<String, Pair<br.app.stagebook.data.model.Song, StageRowFacts>>()
+
+    private fun factsOf(id: String, song: br.app.stagebook.data.model.Song?): StageRowFacts {
+        if (song == null) return StageRowFacts()
+        val kept = factsKept[id]
+        if (kept != null && kept.first.text == song.text && kept.first.track == song.track) return kept.second
+        val meta = Chords.meta(song.text)
+        return StageRowFacts(meta.key, meta.tempo, meta.capo, song.track.isNotEmpty()).also { factsKept[id] = song to it }
+    }
 
     /** Chord shape picked on stage: goes into the song as a ChordPro {define} (replaces the previous one). */
     fun saveShape(songId: String, chord: String, define: String) {

@@ -1212,7 +1212,7 @@ class ScreenshotTest {
     // opened from a setlist: the handle of the setlist over the stage shows at the left edge
     private val stageInSet = stage.copy(
         live = true,
-        setlist = br.app.stagebook.ui.stage.StageSetlist(s("Show de sábado"), listOf(SetlistShow.State.NOW, SetlistShow.State.NEXT), listOf("A", "G")),
+        setlist = br.app.stagebook.ui.stage.StageSetlist(s("Show de sábado"), listOf(SetlistShow.State.NOW, SetlistShow.State.NEXT), listOf(br.app.stagebook.ui.stage.StageRowFacts("A", 96), br.app.stagebook.ui.stage.StageRowFacts("G", 112, 2, true))),
     )
 
     // T13: scroll mode, at the 2nd step (the lyrics scrolled to the 1st line that didn't fit)
@@ -1337,7 +1337,7 @@ class ScreenshotTest {
             live = true,
             breaks = listOf(3),
             setlist = br.app.stagebook.ui.stage.StageSetlist(
-                set.name, setShow.items.map { it.state }, set.items.map { it.songKey },
+                set.name, setShow.items.map { it.state }, set.items.map { br.app.stagebook.ui.stage.StageRowFacts(it.songKey, it.bpm, it.capo, it.hasTrack) },
                 mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true)),   // the break left open, stopped at 12:30
                 id = "1", anyPlayed = true, canConduct = true,
             ),

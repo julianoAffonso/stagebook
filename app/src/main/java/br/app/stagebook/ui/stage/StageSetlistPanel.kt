@@ -58,7 +58,7 @@ import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.SetlistBreakRow
-import br.app.stagebook.ui.components.SongKeyBadge
+import br.app.stagebook.ui.components.SongFacts
 import br.app.stagebook.ui.components.SetlistSongRow
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
@@ -201,7 +201,7 @@ private fun SetlistPanelContent(
                 if (row == SetlistBreaks.BREAK) SetlistBreakRow(handle = null, onRemove = null, dense = true, timer = setlist.openBreaks[rows.take(at).count { it != SetlistBreaks.BREAK }])
                 else {
                     val song = songs[row]
-                    val key = setlist.keys.getOrNull(row).orEmpty()
+                    val facts = setlist.facts.getOrNull(row) ?: StageRowFacts()
                     SetlistSongRow(
                         number = row + 1,
                         title = if (song.missing) stringResource(R.string.set_item_missing) else song.title,
@@ -210,7 +210,7 @@ private fun SetlistPanelContent(
                         onClick = { onSong(row) },
                         titleStyle = MaterialTheme.typography.titleMedium,
                         dense = true,
-                        trailing = if (key.isEmpty()) null else ({ SongKeyBadge(key) }),
+                        trailing = { SongFacts(facts.key, facts.bpm, facts.capo, facts.hasTrack) },
                     )
                 }
             }
