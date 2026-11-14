@@ -242,7 +242,9 @@ fun SongEditorScreen(
                 if (cursor < 0) cursor
                 else uiState.text.take(cursor.coerceAtMost(uiState.text.length)).let { Chords.hideMeta(if (look.chords) it else LyricsView.view(it)).length }
             }
-            var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
+            // saveable: the Activity is recreated by the dark theme, the language, the font size or a killed process, and the
+            // selection came back to the stage's line (or the top)
+            var lyrics by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
             // the text always comes from the state; the selection and cursor live here (so they survive the other screen)
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
             val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
@@ -252,7 +254,8 @@ fun SongEditorScreen(
             val fromStage = cursor >= 0
             val openedAt = remember { android.os.SystemClock.uptimeMillis() }
             val initialSel = remember { lyrics.selection }
-            var guarding by remember { mutableStateOf(fromStage) }
+            // saveable: after a recreation the 400 ms guard does not shut the touches out again
+            var guarding by rememberSaveable { mutableStateOf(fromStage) }
             val logContext = androidx.compose.ui.platform.LocalContext.current
             LaunchedEffect(Unit) {
                 if (fromStage) {
