@@ -34,6 +34,15 @@ class ConductSearchTest {
         compose.onNodeWithContentDescription("Procurar a banda").assertExists()
     }
 
+    // the endless spinner redrew the whole screen every frame: 43 to 50% of the app for 30 s on the OnePlus (v0.1.1134)
+    @Test fun `searching shows no endless animation, and still says searching`() {
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Conducting("Teste", 0, emptyList(), emptyList()), {}, {}, {}, {}) } }
+        compose.onNodeWithContentDescription("Procurar a banda").performClick()
+        compose.onNodeWithContentDescription("Procurando…").assertIsNotEnabled()
+        val spinners = compose.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo, androidx.compose.ui.semantics.ProgressBarRangeInfo.Indeterminate))
+        assertEquals(0, spinners.fetchSemanticsNodes().size)
+    }
+
     // on a phone the follower's only button stays on the text's line: alone underneath, it left the strip twice as tall (02/11)
     @Test fun `on a phone the follower's Leave sits beside the text`() {
         compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("nxtpaper", "Música", false, false, emptyList(), emptyList()), {}, {}, {}, {}) } }

@@ -221,7 +221,7 @@ class ConductStripOneLineTest {
         assertEquals(1 to 1, searches to ends)
     }
 
-    @Test fun `while searching a spinner takes the icon's place and a second tap sends nothing`() {
+    @Test fun `while searching a still icon takes the search icon's place and a second tap sends nothing`() {
         var searches = 0
         compose.setContent { StagebookTheme { ConductBar(conducting, {}, {}, { searches++ }, {}) } }
         val place = iconBounds("Procurar a banda")
