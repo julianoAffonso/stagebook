@@ -102,6 +102,7 @@ sealed interface ConductUi {
         val lacksHere: List<String>,
         val breakSince: Long? = null,
         val noChords: Boolean = false,
+        val breakFrozen: Long? = null,
     ) : ConductUi
 
     /** Left [from], who goes on leading: one action, to follow again. */
@@ -143,7 +144,7 @@ internal fun followingUi(
     val next = role.breakSince?.let { msg.songs.getOrNull(msg.index + 1) }
     if (next != null) {
         val own = Conduct.find(next, songs)
-        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince)
+        return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince, breakFrozen = role.breakFrozen)
     }
     return ConductUi.Following(
         msg.from, msg.songs.getOrNull(msg.index)?.title.orEmpty(), role.songId == null, role.gone(now),
@@ -333,7 +334,7 @@ fun ConductBar(
                 // song isn't here), in place of the song. The time is never cut
                 rest?.breakSince != null -> cutLine(
                     R.string.conduct_break, stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
-                    br.app.stagebook.ui.components.breakClock(rest.breakSince),
+                    br.app.stagebook.ui.components.breakClock(br.app.stagebook.domain.BreakTimer.mirrored(rest.breakSince, rest.breakFrozen)),
                 )
                 ui is ConductUi.Following && ui.missingHere -> cutLine(R.string.conduct_missing_here, ui.song)
                 ui is ConductUi.Following && ui.noChords -> cutLine(R.string.conduct_no_chords, ui.song)

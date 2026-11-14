@@ -365,7 +365,7 @@ internal fun LeaderBreakStage(uiState: StageUiState, onBack: (() -> Unit)?, modi
     }
     Box(modifier.fillMaxSize().background(Color(look.bg))) {
         uiState.followBreak?.let { rest ->
-            StageBreak(timer = br.app.stagebook.domain.BreakTimer.Timer(startedAt = rest.since), next = rest.next, nextKey = rest.key, bg = Color(look.bg), fg = Color(look.fg), vertical = false, onNext = {}, onPrevious = {})
+            StageBreak(timer = rest.timer, next = rest.next, nextKey = rest.key, bg = Color(look.bg), fg = Color(look.fg), vertical = false, onNext = {}, onPrevious = {})
         }
     }
 }
@@ -1536,7 +1536,7 @@ fun StageScreen(
     // it (a tap here does nothing); leaving the stage, or the band, works as on any song
     uiState.followBreak?.takeIf { !onBreakNow }?.let { rest ->
         StageBreak(
-            timer = br.app.stagebook.domain.BreakTimer.Timer(startedAt = rest.since),
+            timer = rest.timer,
             next = rest.next,
             nextKey = rest.key,
             bg = Color(look.bg),

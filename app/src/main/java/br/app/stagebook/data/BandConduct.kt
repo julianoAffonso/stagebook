@@ -64,7 +64,12 @@ class BandConduct internal constructor(
         data class Following(
             val fromId: String, val msg: Conduct.Msg, val songId: String?, val at: Long = System.currentTimeMillis(),
             val breakSince: Long? = null,
+            /** The leader paused the break: what it had counted (null = it runs). [breakSince] is then only a mark that there is one. */
+            val breakFrozen: Long? = null,
         ) : Role {
+            /** The break's counter as the leader has it (null = no break). */
+            val breakTimer: br.app.stagebook.domain.BreakTimer.Timer? get() = breakSince?.let { br.app.stagebook.domain.BreakTimer.mirrored(it, breakFrozen) }
+
             /** No news for more than [GONE_MS]: the leader is gone (battery, app closed, off the Wi-Fi). */
             fun gone(now: Long = System.currentTimeMillis()) = now - at > GONE_MS
 
@@ -84,7 +89,7 @@ class BandConduct internal constructor(
          * leader is now.
          */
         @Immutable
-        data class Left(val fromId: String, val msg: Conduct.Msg, val at: Long = System.currentTimeMillis(), val breakSince: Long? = null) : Role {
+        data class Left(val fromId: String, val msg: Conduct.Msg, val at: Long = System.currentTimeMillis(), val breakSince: Long? = null, val breakFrozen: Long? = null) : Role {
             /** No news for more than [GONE_MS]: nobody to follow again. */
             fun gone(now: Long = System.currentTimeMillis()) = now - at > GONE_MS
         }
@@ -120,10 +125,14 @@ class BandConduct internal constructor(
     // leading: the break on this stage, when it started (null = none). Kept apart from the message: each one that
     // leaves, the keep-alive and a resend to who just arrived too, says how long the break has lasted by then
     @Volatile private var breakStart: Long? = null
+    // paused: what it had counted (breakStart is then null, and a break is on while either is set)
+    @Volatile private var breakFrozen: Long? = null
     private val moves = java.util.concurrent.atomic.AtomicInteger()   // song changes and breaks, to tell a newer one came
 
     private fun stamped(msg: Conduct.Msg): Conduct.Msg {
-        val start = breakStart?.takeIf { msg.type == Conduct.OPEN } ?: return msg
+        if (msg.type != Conduct.OPEN) return msg
+        breakFrozen?.let { return msg.copy(breakMs = it.coerceIn(0L, Conduct.MAX_BREAK_MS), breakPaused = true) }
+        val start = breakStart ?: return msg
         return msg.copy(breakMs = (clock() - start).coerceIn(0L, Conduct.MAX_BREAK_MS))
     }
 
@@ -164,7 +173,7 @@ class BandConduct internal constructor(
      */
     fun start(setId: String, set: String, songs: List<Conduct.Item>, index: Int = 0) {
         searchedAt = -1
-        breakStart = null
+        breakStart = null; breakFrozen = null
         val msg = Conduct.Msg(Conduct.CHECK, from = identity.name.value, set = set, songs = songs, index = index)
         _role.value = Role.Conducting(setId, msg)
         link.burst(evenOnStage = true)
@@ -175,26 +184,37 @@ class BandConduct internal constructor(
     fun open(setId: String, index: Int) {
         val now = _role.value as? Role.Conducting ?: return
         if (now.setId != setId || (now.msg.index == index && now.msg.type == Conduct.OPEN)) return
-        breakStart = null   // another song on stage: the break, if there was one, is over
+        breakStart = null; breakFrozen = null   // another song on stage: the break, if there was one, is over
         moves.incrementAndGet()
         scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, index = index)) }
     }
 
     /**
-     * The leader's stage of setlist [setId] is on the break after the song on stage, for [elapsedMs] now, or left it
-     * (null): the followers' stages show the break, or go back to the song. Nothing happens when not leading.
+     * The leader's stage of setlist [setId] is on the break after the song on stage, for [elapsedMs] now ([paused]: it
+     * stands still there), or left it (null): the followers' stages show the break, or go back to the song. Pausing,
+     * resuming and zeroing it tell the band again at once, so their counters do the same. Nothing happens when not
+     * leading, or when nothing changed.
      */
-    fun rest(setId: String, elapsedMs: Long?) {
+    fun rest(setId: String, elapsedMs: Long?, paused: Boolean = false) {
         val now = _role.value as? Role.Conducting ?: return
         if (now.setId != setId) return
-        val start = elapsedMs?.let { clock() - it.coerceAtLeast(0L) }
-        if ((start == null) == (breakStart == null)) return
+        val frozen = elapsedMs?.takeIf { paused }?.coerceAtLeast(0L)
+        val start = elapsedMs?.takeUnless { paused }?.let { clock() - it.coerceAtLeast(0L) }
+        val on = elapsedMs != null
+        val wasOn = breakStart != null || breakFrozen != null
+        if (!on && !wasOn) return
+        // the same break, told again by the screen: a running one keeps its start (the clock read twice differs by
+        // milliseconds), a paused one its time
+        if (on && wasOn && frozen == breakFrozen && (start == null) == (breakStart == null) &&
+            (start == null || kotlin.math.abs(start - breakStart!!) <= SAME_REST_MS)
+        ) return
         breakStart = start
+        breakFrozen = frozen
         val move = moves.incrementAndGet()
         scope.launch {
             // leaving forward, the next song's message follows at once and already says there's no break; sent now,
             // this one could arrive after it and take the band back a song. It only goes if nothing else did
-            if (start == null) {
+            if (!on) {
                 kotlinx.coroutines.delay(LEFT_BREAK_MS)
                 if (moves.get() != move) return@launch
             }
@@ -227,7 +247,7 @@ class BandConduct internal constructor(
     fun end() {
         val now = (_role.value as? Role.Conducting)?.msg ?: return
         _role.value = Role.None
-        breakStart = null
+        breakStart = null; breakFrozen = null
         scope.launch { deliver(now.copy(type = Conduct.END, missing = emptyList())) }
     }
 
@@ -236,7 +256,7 @@ class BandConduct internal constructor(
      * starting again or calling the band brings it back.
      */
     fun leave() {
-        _role.update { if (it is Role.Following) Role.Left(it.fromId, it.msg, it.at, it.breakSince) else it }
+        _role.update { if (it is Role.Following) Role.Left(it.fromId, it.msg, it.at, it.breakSince, it.breakFrozen) else it }
     }
 
     /** Who left follows again: the leader's current song opens, or its break, as on a device that has just arrived. */
@@ -244,7 +264,7 @@ class BandConduct internal constructor(
         if (!repository.library.value.look.bandOn) return
         while (true) {
             val left = _role.value as? Role.Left ?: return
-            val now = Role.Following(left.fromId, left.msg, songHere(left.msg)?.id, left.at, left.breakSince)
+            val now = Role.Following(left.fromId, left.msg, songHere(left.msg)?.id, left.at, left.breakSince, left.breakFrozen)
             if (!_role.compareAndSet(left, now)) continue   // news from the leader meanwhile: follow that
             now.stage?.let(_openSong::tryEmit)
             return
@@ -291,18 +311,19 @@ class BandConduct internal constructor(
         if (before is Role.Conducting) return null
         // left this leader: what it says only keeps "follow again" up to date. The setlist sent again is the call back
         if (before is Role.Left && before.fromId == from.id && msg.type != Conduct.CHECK) {
-            _role.compareAndSet(before, Role.Left(from.id, msg, breakSince = breakSince(msg, before.breakSince.takeIf { before.msg.index == msg.index })))
+            _role.compareAndSet(before, Role.Left(from.id, msg, breakSince = breakSince(msg, before.breakSince.takeIf { before.msg.index == msg.index && before.breakFrozen == null }), breakFrozen = frozenOf(msg)))
             return null
         }
         val song = songHere(msg)
         val known = when (before) {
-            is Role.Following -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { it.msg to it.breakSince }
-            is Role.Left -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { it.msg to it.breakSince }
+            is Role.Following -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { Triple(it.msg, it.breakSince, it.breakFrozen) }
+            is Role.Left -> before.takeIf { it.fromId == from.id && it.msg.index == msg.index }?.let { Triple(it.msg, it.breakSince, it.breakFrozen) }
             else -> null
         }
         // the call says nothing about the break: the one already known stays until the song that follows it says
-        val since = if (msg.type == Conduct.CHECK && known?.first?.songs == msg.songs) known.second else breakSince(msg, known?.second)
-        val now = Role.Following(from.id, msg, song?.id, breakSince = since)
+        val kept = msg.type == Conduct.CHECK && known?.first?.songs == msg.songs
+        val since = if (kept) known?.second else breakSince(msg, known?.takeIf { it.third == null }?.second)
+        val now = Role.Following(from.id, msg, song?.id, breakSince = since, breakFrozen = if (kept) known?.third else frozenOf(msg))
         _role.value = now
         // a song, or a break after a song that isn't here: the stage opens once for it, not again on each sign of life
         val was = before as? Role.Following
@@ -501,6 +522,8 @@ class BandConduct internal constructor(
     // the leader says how long its break has lasted; here that becomes when it started on this device's clock. The same
     // break told again (keep-alive, a resend) keeps the earliest start ([known]): the message's trip only ever makes it
     // look later
+    private fun frozenOf(msg: Conduct.Msg): Long? = msg.rest?.takeIf { msg.restPaused }
+
     private fun breakSince(msg: Conduct.Msg, known: Long?): Long? {
         val since = clock() - (msg.rest ?: return null)
         if (known == null) return since
@@ -515,6 +538,7 @@ class BandConduct internal constructor(
         const val BREAK_ONLY = ""
         const val LEFT_BREAK_MS = 300L
         const val SAME_BREAK_MS = 2_000L
+        const val SAME_REST_MS = 100L   // the leader's screen telling the same running break again
         const val ALIVE_MS = 3 * 60_000L
         const val SEARCH_SENDS = 3
         const val SEARCH_EVERY_MS = 5_000L

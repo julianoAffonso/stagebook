@@ -54,7 +54,10 @@ data class StageSetlist(val name: String, val states: List<br.app.stagebook.doma
  * after it and that song's [key] here ("" = none written, or the song isn't on this device).
  */
 @Immutable
-data class FollowBreak(val since: Long, val next: String, val key: String = "")
+data class FollowBreak(val since: Long, val next: String, val key: String = "", val frozen: Long? = null) {
+    /** The counter as the leader has it: running, or standing still when the leader paused it. */
+    val timer: br.app.stagebook.domain.BreakTimer.Timer get() = br.app.stagebook.domain.BreakTimer.mirrored(since, frozen)
+}
 
 /**
  * The break a follower's stage shows: the next song is the one the leader announced, with the title and key of this
@@ -64,7 +67,7 @@ internal fun followBreak(role: br.app.stagebook.data.BandConduct.Role.Following,
     val since = role.breakSince ?: return null
     val item = role.msg.songs.getOrNull(role.msg.index + 1) ?: return null
     val own = br.app.stagebook.domain.Conduct.find(item, songs)
-    return FollowBreak(since, own?.title ?: item.title, own?.let { Chords.key(it.text) }.orEmpty())
+    return FollowBreak(since, own?.title ?: item.title, own?.let { Chords.key(it.text) }.orEmpty(), role.breakFrozen)
 }
 
 /**
@@ -346,7 +349,7 @@ class StageViewModel @Inject constructor(
             // the strip counts from the time it is told: a reset or a resume sends the new one
             viewModelScope.launch {
                 combine(breakSince, breakTimer) { since, timer -> if (since == null) null else timer }.collect { timer ->
-                    conduct.rest(setId, timer?.elapsed(System.currentTimeMillis()))
+                    conduct.rest(setId, timer?.elapsed(System.currentTimeMillis()), paused = timer?.running == false)
                 }
             }
         }

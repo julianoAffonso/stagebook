@@ -40,6 +40,9 @@ object BreakTimer {
     fun openAt(setId: String, items: List<String>, breaks: List<Int>, all: Map<String, Timer>, day: String): Map<Int, Timer> =
         breaks.mapNotNull { p -> items.getOrNull(p)?.let { all[key(setId, it)] }?.takeIf { it.open && it.day == day }?.let { p to it } }.toMap()
 
+    /** The leader's counter as a follower draws it: standing still at [frozen] when paused, else running since [since]. */
+    fun mirrored(since: Long, frozen: Long?): Timer = if (frozen != null) Timer(accumulated = frozen) else Timer(startedAt = since)
+
     /** The start a running counter would have to show [timer]'s time: what the band's strip counts from. */
     fun since(timer: Timer, now: Long): Long = now - timer.elapsed(now)
 }
