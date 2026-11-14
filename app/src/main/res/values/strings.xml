@@ -125,7 +125,7 @@
 
     <!-- pick songs -->
     <string name="pick_title">Songs</string>
-    <string name="pick_in_set">Already in the setlist</string>
+    <string name="pick_in_set">In setlist</string>
     <string name="pick_add_short">Add (%1$d)</string>
 
     <!-- QR -->

@@ -48,6 +48,7 @@ fun SongListItem(
     gap: Dp = Spacing.m,   // between the leading, the texts and the trailing; a setlist's rows keep them closer
     titleLines: Int = 2,   // one where the row's end has more to show than the title's second line (the song list)
     dense: Boolean = false,   // a lower row with less room around the texts, where many must fit (the setlist over the stage)
+    titleBadge: (@Composable () -> Unit)? = null,   // a small tag beside the title ("In setlist"); the title gives it room
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -66,7 +67,10 @@ fun SongListItem(
             if (inline) {
                 // the title has priority; whatever doesn't fit of the artist becomes "…"
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        // with a badge the title has to leave it room
+                        modifier = if (titleBadge != null) Modifier.weight(1f, fill = false) else Modifier)
+                    titleBadge?.invoke()
                     if (subtitle.isNotEmpty()) {
                         Text(
                             subtitle,
@@ -79,7 +83,11 @@ fun SongListItem(
                     }
                 }
             } else Column(Modifier.weight(1f)) {
-                Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
+                if (titleBadge == null) Text(title, style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
+                else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(title, Modifier.weight(1f, fill = false), style = titleStyle, color = MaterialTheme.colorScheme.onSurface, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
+                    titleBadge()
+                }
                 if (subtitle.isNotEmpty()) {
                     Text(
                         subtitle,

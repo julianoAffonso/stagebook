@@ -130,7 +130,7 @@
 
     <!-- escolher músicas -->
     <string name="pick_title">Músicas</string>
-    <string name="pick_in_set">Já está no setlist</string>
+    <string name="pick_in_set">No setlist</string>
     <string name="pick_add_short">Adicionar (%1$d)</string>
 
     <!-- QR -->
