@@ -48,7 +48,7 @@ class DeviceIdentity @Inject constructor(@ApplicationContext private val context
         _name.value = n
     }
 
-    fun hello() = BandProtocol.Hello(id, _name.value, publicKey, app = appVersion)
+    fun hello(v: Int = BandProtocol.VERSION) = BandProtocol.Hello(id, _name.value, publicKey, v, appVersion)
 
     /** The app version (shown to the band when versions differ). */
     val appVersion: String by lazy {

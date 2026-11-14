@@ -136,4 +136,46 @@ class InboxVersionTest {
         compose.setContent { StagebookTheme { Text(itemText(newerItem())) } }
         compose.onNodeWithText("Ana mandou algo de um Stagebook mais novo. Atualize o app para conferir.").assertIsDisplayed()
     }
+
+    // ---- the Hello (3 words, invite, "ok") and the request for missing songs ----
+
+    /** What the published app reads of a Hello: its rule copied (`from.v > 2` says newer; no v = 2). */
+    @Serializable private data class OldHello(val id: String, val v: Int = 2)
+    private fun oldHelloNewer(json: String) = Json { ignoreUnknownKeys = true }.decodeFromString<OldHello>(json).v > 2
+    private fun helloOf(messages: List<ByteArray>) = SetlistCloud.unpack(byteArrayOf('I'.code.toByte(), '1'.code.toByte()), messages.first())!!
+
+    @Test fun `an invite from this app carries v 3 and the published app says update`() {
+        val cloud = SetlistCloud(repo(), identity)
+        assertTrue(oldHelloNewer(helloOf(cloud.invite(identity.hello()))))
+        assertTrue(oldHelloNewer(json.encodeToString(BandProtocol.Hello.serializer(), identity.hello())))   // handshake and "ok"
+    }
+
+    @Test fun `the Hello riding a setlist send follows the package rule - 3 only with breaks`() {
+        val repo = repo()
+        val cloud = SetlistCloud(repo, identity)
+        val with = cloud.setlistPackage(repo.show(true), false)!!.first
+        val without = cloud.setlistPackage(repo.show(false), false)!!.first
+        val hello = { lists: List<ByteArray> -> json.encodeToString(BandProtocol.Hello.serializer(), identity.hello(lists.maxOf(BandProtocol::packageVersion))) }
+        assertTrue(oldHelloNewer(hello(listOf(with))))
+        assertFalse(oldHelloNewer(hello(listOf(without))))
+        assertFalse(oldHelloNewer(hello(listOf(without, without))))
+        assertTrue(oldHelloNewer(hello(listOf(without, with))))
+    }
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Test fun `this app reads a Hello with no v as 2 and with v as written`() {
+        assertEquals(2, json.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""").v)
+        assertEquals(3, json.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k","v":3}""").v)
+        assertEquals(3, json.decodeFromString<BandProtocol.Hello>(json.encodeToString(BandProtocol.Hello.serializer(), identity.hello())).v)
+    }
+
+    @Test fun `the request for missing songs rides with a notice the published app shows as update, and this app drops`() {
+        val repo = repo(); val cloud = SetlistCloud(repo, identity)
+        val notice = cloud.updateNotice()
+        // the published app: unpack the package, v > 2 -> NEWER item in the inbox ("Update the app to check it")
+        assertTrue(oldAppSaysUpdate(SetlistCloud.unpack(byteArrayOf('P'.code.toByte(), '1'.code.toByte()), notice, SetlistCloud.MAX_PACKAGE)!!))
+        // this app: nothing to open
+        assertNull(cloud.openPairPackage(notice))
+    }
 }

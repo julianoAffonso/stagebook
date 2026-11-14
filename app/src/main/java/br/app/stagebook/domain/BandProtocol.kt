@@ -28,9 +28,14 @@ object BandProtocol {
     /** The `v` to write on a package whose setlist travels as [packed] (see [SharedBreaks]). */
     fun packageVersion(packed: ByteArray): Int = if (SharedBreaks.carries(packed)) BREAKS_VERSION else PACKAGE_BASE
 
-    /** Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). */
+    /**
+     * Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). A missing
+     * [v] is 2 (the published app never wrote it), and a version above the default is written. Handshake, invite and "ok"
+     * carry [VERSION]; the Hello that rides along a setlist send carries the [packageVersion] of what it sends, so a
+     * setlist with no breaks still opens on an older app.
+     */
     @Serializable
-    data class Hello(val id: String, val name: String, val key: String, val v: Int = VERSION, val app: String = "")
+    data class Hello(val id: String, val name: String, val key: String, val v: Int = PACKAGE_BASE, val app: String = "")
 
     object Kind {
         const val JOIN = "join"

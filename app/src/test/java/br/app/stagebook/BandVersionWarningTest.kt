@@ -6,6 +6,7 @@ import br.app.stagebook.data.BandSession
 import br.app.stagebook.domain.BandCrypto
 import br.app.stagebook.domain.BandProtocol
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,7 +30,7 @@ class BandVersionWarningTest {
         val keys = BandCrypto.newKeyPair()
         val pub = BandCrypto.encode(keys.public)
         val id = BandCrypto.idOf(pub)
-        val hello = BandProtocol.Hello(id, name, pub)
+        val hello = BandProtocol.Hello(id, name, pub, BandProtocol.VERSION)
         val trusted = mutableListOf<BandProtocol.Hello>()
     }
 
@@ -73,10 +74,11 @@ class BandVersionWarningTest {
         assertEquals(BandSession.JoinResult.ACCEPTED, join(BandProtocol.VERSION).first)
     }
 
-    @Test fun `a message with no version is read as the current one, the stored inbox does not change`() {
-        // an old Hello without "v" takes the default: it is not a mismatch of its own
-        val h = BandProtocol.Hello("i", "n", "k")
-        assertEquals(BandProtocol.VERSION, h.v)
+    @Test fun `a Hello with no version is read as 2, because the published app never wrote it`() {
+        val h = Json { ignoreUnknownKeys = true }.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""")
+        assertEquals(2, h.v)
+        // a mismatch with this app (3), so a published app on the network gets "version" instead of being taken for current
+        assertTrue(h.v != BandProtocol.VERSION)
     }
 
     @Test fun `the warning tells to update the app on every band device - both texts, both languages`() {

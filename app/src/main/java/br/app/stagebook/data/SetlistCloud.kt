@@ -106,7 +106,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         var sent = 0
         var skipped = 0
         // the sender goes along (encrypted): whoever accepts saves this device as "band"
-        if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello()))))) return@withContext null
+        if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello(lists.maxOfOrNull(BandProtocol::packageVersion) ?: BandProtocol.PACKAGE_BASE)))))) return@withContext null
         for (song in songs) {
             val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song)))
             when {
@@ -254,6 +254,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
         val pkg = unpack(PAIR_MARK, bytes, MAX_PACKAGE)?.let { runCatching { json.decodeFromString<Pack>(it) }.getOrNull() } ?: return null
         if (pkg.v > BandProtocol.VERSION) return Opened(NEWER, emptyList(), null)   // the inbox says "update"
+        if (pkg.list.isEmpty()) return null   // the "update" notice that rides with a request: nothing to open
         val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
         val text = QrPayload.unpack(packed) ?: return null
         return Opened(text, pkg.songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
@@ -293,8 +294,16 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     /** Asks the pair for the missing songs (T12): goes to their inbox and they answer with a songs package. */
     suspend fun requestFromPair(pairKey: ByteArray, recipientId: String, wanted: List<BandLink.Wanted>) = withContext(Dispatchers.IO) {
         val body = java.util.Base64.getEncoder().encodeToString(json.encodeToString(kotlinx.serialization.builtins.ListSerializer(BandLink.Wanted.serializer()), wanted.take(MAX_REQUEST)).toByteArray())
-        post(pairTopic(pairKey, recipientId), ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray()))
+        val topic = pairTopic(pairKey, recipientId)
+        // an app before the request ignores a "req" chunk without a word; beside it goes an empty package marked version 3,
+        // which that app shows as "sent something from a newer Stagebook, update the app". This app drops it (no list)
+        val notice = Chunk("req-" + Integer.toHexString(body.hashCode()), 0, 1, java.util.Base64.getEncoder().encodeToString(updateNotice()))
+        post(topic, ShareCode.encrypt(pairKey, json.encodeToString(Chunk("", k = "req", d = body)).toByteArray())) &&
+            post(topic, ShareCode.encrypt(pairKey, json.encodeToString(notice).toByteArray()))
     }
+
+    /** A package with nothing in it and version 3: only an older app does anything with it (says "update"). */
+    internal fun updateNotice(): ByteArray = pack(PAIR_MARK, json.encodeToString(Pack("", emptyList(), BandProtocol.BREAKS_VERSION)))
 
     /** What arrived in my inbox from a pair, since [since] (null = the last 12 h); null with no internet. */
     suspend fun fetchPair(pairKey: ByteArray, since: String?): PairFetch? = withContext(Dispatchers.IO) {
