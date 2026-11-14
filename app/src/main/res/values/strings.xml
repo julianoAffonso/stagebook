@@ -921,6 +921,7 @@
     <string name="web_connected">Connected to %1$s</string>
     <string name="web_saved">Saved</string>
     <string name="web_pick">Pick a song from the list or create a new one.</string>
+    <string name="web_break_needs_two">Needs at least 2 songs</string>
     <string name="web_unsaved">There are unsaved changes. Leave anyway?</string>
     <string name="web_paste_title">Paste the chords</string>
     <string name="web_paste_hint">Copy the chords on the site and paste them here. Chords above the lyrics land in the right place.</string>

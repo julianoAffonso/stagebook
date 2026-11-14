@@ -272,11 +272,12 @@ class LibraryRepository @Inject constructor(
 
     /**
      * Replaces the setlist's songs (the QR scanned over a setlist with the same name, the editor on the computer). A
-     * break stays before the same song when it's still there.
+     * break stays before the same song when it's still there, unless the caller says where they go ([breaks]: positions
+     * in the new list, already placed by the caller; the editor on the computer shows and moves them).
      */
-    fun setSetlistItems(setId: String, songIds: List<String>) = updateSet(setId) { s ->
+    fun setSetlistItems(setId: String, songIds: List<String>, breaks: List<Int>? = null) = updateSet(setId) { s ->
         val items = songIds.distinct()
-        s.copy(items = items, breaks = SetlistBreaks.afterReplacing(s.breaks, s.items, items))
+        s.copy(items = items, breaks = breaks?.let { SetlistBreaks.normalise(it, items.size) } ?: SetlistBreaks.afterReplacing(s.breaks, s.items, items))
     }
 
     /**

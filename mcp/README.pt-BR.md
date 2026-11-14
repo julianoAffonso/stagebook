@@ -25,6 +25,11 @@ Copilot, Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Receber | `receive_by_code` (as 3 palavras), `receive_create`, `band_inbox`, `band_sync`, `open_band_item` |
 | Backup | `restore_backup` (ver o que um arquivo `.stagebook` tem, juntar o que falta ou substituir a biblioteca) |
 
+Os **intervalos** de um setlist vêm em `get_setlist` como `"breaks": [2]`: as posições onde o show para (1 = antes da
+segunda música). `create_setlist` e `update_setlist` aceitam uma lista `breaks` opcional (inteiros de 1 até o número de
+músicas menos 1, em ordem crescente, sem repetir; uma posição que não cabe é recusada com o motivo). `create_setlist` sem
+`breaks` não cria intervalos; `update_setlist` sem `breaks` mantém os que já existem antes das mesmas músicas; `[]` tira todos.
+
 Tem também **recursos** (`stagebook://songs`, `stagebook://setlists`, `stagebook://songs/{id}` em ChordPro) e **roteiros
 prontos** (`build_setlist`, `fix_chords`, `transpose_for_singer`).
 
