@@ -1318,7 +1318,10 @@ class ScreenshotTest {
             songs = set.items.mapIndexed { i, it -> StageSong(it.title, it.subtitle, if (i == 2) stage.songs[0].text else "", false, artist = it.subtitle) },
             live = true,
             breaks = listOf(3),
-            setlist = br.app.stagebook.ui.stage.StageSetlist(set.name, setShow.items.map { it.state }, set.items.map { it.songKey }),
+            setlist = br.app.stagebook.ui.stage.StageSetlist(
+                set.name, setShow.items.map { it.state }, set.items.map { it.songKey },
+                mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true)),   // the break left open, stopped at 12:30
+            ),
         )
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { StageScreen(show, 2, 0, { _, _ -> }, onBack = {}) } } }
         compose.onNodeWithContentDescription(str(R.string.stage_setlist_open)).performClick()

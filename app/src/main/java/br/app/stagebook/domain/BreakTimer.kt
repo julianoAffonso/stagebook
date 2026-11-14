@@ -43,6 +43,20 @@ object BreakTimer {
     /** The leader's counter as a follower draws it: standing still at [frozen] when paused, else running since [since]. */
     fun mirrored(since: Long, frozen: Long?): Timer = if (frozen != null) Timer(accumulated = frozen) else Timer(startedAt = since)
 
+    /**
+     * The leader's break on this device's copy of the setlist, by position (the songs before it): the break after the
+     * song the leader is on ([msg]'s current one), or failing that the one before the song that follows it. What the
+     * setlist's rows show while following, so the time is the leader's ([timer]) and ends when the leader's does. [items]
+     * are this setlist's songs (title and artist, null = not on this device).
+     */
+    fun followedAt(items: List<Pair<String, String>?>, breaks: List<Int>, msg: Conduct.Msg, timer: Timer): Map<Int, Timer> {
+        fun at(item: Conduct.Item?, shift: Int): Int? = item?.let { it ->
+            breaks.firstOrNull { p -> p >= 1 && p < items.size && items[p + shift]?.let { (title, artist) -> Conduct.isFor(it, title, artist) } == true }
+        }
+        val p = at(msg.songs.getOrNull(msg.index), -1) ?: at(msg.songs.getOrNull(msg.index + 1), 0) ?: return emptyMap()
+        return mapOf(p to timer)
+    }
+
     /** The start a running counter would have to show [timer]'s time: what the band's strip counts from. */
     fun since(timer: Timer, now: Long): Long = now - timer.elapsed(now)
 }
