@@ -56,7 +56,7 @@ class FollowGoFromEditorTest {
                     NavHost(nav, startDestination = Home) {
                         composable<Home> { Text("home") }
                         composable<SongEditor> {
-                            SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = "letra", unsaved = unsaved), {}, {}, {}, {}, {}, { nav.popBackStack() }, {})
+                            SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = "letra", unsaved = unsaved), {}, {}, {}, {}, {}, androidx.lifecycle.compose.dropUnlessResumed { nav.popBackStack() }, {})
                         }
                         composable<Stage> { entry -> Text("stage ${entry.toRoute<Stage>().songId}") }
                     }

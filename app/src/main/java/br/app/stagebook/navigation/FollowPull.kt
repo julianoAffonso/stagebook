@@ -70,9 +70,9 @@ internal fun FollowToStage(
         pendingFollow.release(wait, followingSong.value)?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }
         sync()
     }
-    // the leader went elsewhere, or the person left: nothing waits any more
+    // the leader went elsewhere: what waits becomes where the band is now (nothing, if it isn't on anything here any more)
     LaunchedEffect(followingSong) {
-        followingSong.collect { now -> if (pendingFollow.waiting != null && pendingFollow.waiting != now) { pendingFollow.clear(); sync() } }
+        followingSong.collect { now -> if (pendingFollow.waiting != null && pendingFollow.waiting != now) { pendingFollow.moved(now); sync() } }
     }
     SideEffect {
         gate.go = { pendingFollow.take()?.let { nav.navigate(stageFor(it)) { launchSingleTop = true } }; sync() }

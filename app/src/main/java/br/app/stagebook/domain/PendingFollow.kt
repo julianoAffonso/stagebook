@@ -48,11 +48,23 @@ class PendingFollow {
 
     fun arrive(target: String, pulls: Boolean): String? = arrive(target, if (pulls) null else FollowWait.SCREEN)
 
-    /** Now blocked by [block] or not (null): what waited, when it's still what the leader is on ([now]). */
+    /**
+     * Now blocked by [block] or not (null): what the leader is on now ([now]), when something waited. It is [now], not
+     * what had been kept: the leader may have moved on without a new arrival (one dropped, two close together), and
+     * the stage never stays on the old song with the notice gone (device test v0.1.1134). Null = the leader isn't on
+     * anything this device can show any more.
+     */
     fun release(block: FollowWait?, now: String?): String? {
-        val target = waiting ?: return null
+        waiting ?: return null
         if (block != null) { reason = block; return null }
-        return take()?.takeIf { it == now }
+        take()
+        return now
+    }
+
+    /** The leader is on [now] (null = nothing to show): what waits becomes it, or stops waiting when there is nothing. */
+    fun moved(now: String?) {
+        if (waiting == null) return
+        if (now == null) clear() else waiting = now
     }
 
     fun release(pulls: Boolean, now: String?): String? = release(if (pulls) null else FollowWait.SCREEN, now)

@@ -122,6 +122,19 @@ class StageFollowWaitsTest {
         compose.onAllNodesWithText("Letra da segunda", substring = true).assertCountEquals(0)
     }
 
+    @Test fun `the band moved on without telling, closing the window opens where it is now and the notice doesn't just go`() {
+        stage()
+        openMetronome()
+        leader("b")
+        assertEquals("b", gate.pending?.target)
+        following.value = "c"   // no new arrival: only the state moved
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Fechar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Letra da terceira", substring = true).assertExists()
+        assertNull(gate.pending)
+    }
+
     @Test fun `Go opens the song at once, with the window still open`() {
         stage()
         openMetronome()
