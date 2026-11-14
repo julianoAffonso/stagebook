@@ -173,6 +173,7 @@ object Tablature {
         val lines = text.split('\n')
         val flags = tabLines(text)
         val hadTab = flags.any { it }
+        val around = tabCompanions(lines, flags)
         val out = ArrayList<String?>(lines.size)
         var inTab = false
         // chords after a blank line inside the tab part: they may be the first lyrics line's chords, kept if lyrics follow
@@ -183,7 +184,7 @@ object Tablature {
         var droppedIn = 0
         fun closePart() { if (titleAt >= 0 && keptIn == 0 && droppedIn > 0) out[titleAt] = null }
         for ((i, line) in lines.withIndex()) {
-            if (flags[i] || isStart(line) || isEnd(line)) { droppedIn++; continue }
+            if (flags[i] || isStart(line) || isEnd(line) || i in around) { droppedIn++; continue }
             val trimmed = line.trim()
             val title = PART_TITLE.matchEntire(trimmed)?.groupValues?.get(1)?.trim()?.takeIf { !Chords.isChord(it) }
             if (title != null) {
@@ -215,6 +216,29 @@ object Tablature {
         return out.filterNotNull().joinToString("\n").replace(BLANK_LINES, "\n\n")
     }
 
+    /**
+     * What sits glued to a run of tab lines whatever the part title is ("[Dedilhado - Pré-Refrão]", not only "[Tab - …]"):
+     * the marks line right under it (arrows, "~"), the chords line right above it and the caption above that
+     * ("Parte 1 de 3 - 2x"). Nothing separated by a blank line, and never a line of lyrics.
+     */
+    private fun tabCompanions(lines: List<String>, flags: List<Boolean>): Set<Int> {
+        val out = HashSet<Int>()
+        var i = 0
+        while (i < lines.size) {
+            if (!flags[i]) { i++; continue }
+            var end = i
+            while (end < lines.size && flags[end]) end++
+            lines.getOrNull(end)?.let { below ->
+                if (below.isNotBlank() && below.none { it.isLetterOrDigit() }) out += end
+            }
+            var top = i
+            if (i > 0 && lines[i - 1].isNotBlank() && Chords.isChordLine(lines[i - 1])) { top = i - 1; out += top }
+            if (top > 0 && !flags[top - 1] && TAB_CAPTION.containsMatchIn(lines[top - 1]) && !isStart(lines[top - 1])) out += top - 1
+            i = end
+        }
+        return out
+    }
+
     // what a tab part has besides the strings: "Parte 1 de 2", "(3x)", "Riff", "(Guitarra Base)", a line of marks ("  ~")
     private fun isTabPiece(line: String): Boolean =
         TAB_PIECE.matches(line) || (line.startsWith("(") && line.endsWith(")")) || line.none(Char::isLetter)
@@ -223,5 +247,6 @@ object Tablature {
     private val TAB_PART = Regex("""^(tab|tabs|tablatura|tablature)\b""", RegexOption.IGNORE_CASE)
     private val TAB_PREFIX = Regex("""^(tab|tabs|tablatura|tablature)\s*[-:]?\s*""", RegexOption.IGNORE_CASE)
     private val TAB_PIECE = Regex("""(parte|part)\s+\d+\s+(de|of)\s+\d+|\(?\d+x\)?|riff""", RegexOption.IGNORE_CASE)
+    private val TAB_CAPTION = Regex("""(parte|part)\s+\d+\s+(de|of)\s+\d+|\(?\b\d+x\)?|riff""", RegexOption.IGNORE_CASE)
     private val RIFF_CUE = Regex("""\([^()]*\briff\b[^()]*\)""", RegexOption.IGNORE_CASE)
 }

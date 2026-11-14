@@ -136,4 +136,26 @@ class TablatureTest {
         // a tab part with no title of its own above it keeps its title
         assertTrue(out, "[Tab - Solo]\n{start_of_tab}" in out)
     }
+
+    @Test fun `without the tab, a fingerstyle part with no Tab in its title leaves no captions, chords or arrows (user, 14-11)`() {
+        val tab = listOf("E|-3--3----2h3p2------3------|", "B|-3----3--3-----3----3------|", "G|-0-------2-------2--0------|",
+            "D|-2-------0----------2------|", "A|-3------------------2------|", "E|--------------------0------|")
+        val page = (listOf("[Intro]", "C9  D  Em7", "", "[Dedilhado - Pré-Refrão]", "",
+            "Parte 1 de 3 - 2x", "   C9      D         Em7") + tab + listOf("   ↓       ↓          ↓", "",
+            "Parte 2 de 3", "   C9    D         G") + tab + listOf("   ↓     ↓         ↓", "",
+            "Parte 3 de 3", "   Em7    D") + tab + listOf("   ↓     ↓", "",
+            "[Primeira Parte]", "C9      D", "Uma linha inventada de exemplo", "Em7", "Outra linha da letra aqui")).joinToString("\n")
+        val out = Tablature.strip(page)
+        assertTrue(out, "E|" !in out && "↓" !in out && "Parte 1 de 3" !in out && "Parte 2 de 3" !in out && "Parte 3 de 3" !in out && "2x" !in out && "Dedilhado" !in out)
+        assertTrue(out, "   C9      D         Em7" !in out && "   Em7    D" !in out)
+        assertTrue(out, "[Intro]\nC9  D  Em7" in out)
+        assertTrue(out, "[Primeira Parte]\nC9      D\nUma linha inventada de exemplo\nEm7\nOutra linha da letra aqui" in out)
+    }
+
+    @Test fun `a tab under a title with no Tab in the middle of lyrics keeps the lyrics line before and after it`() {
+        val page = listOf("[Verso]", "C9      D", "Linha inventada antes da tab", "E|-3--3----2-----|", "B|-3----3--3-----|", "G|-0-------2-----|",
+            "Linha inventada depois da tab", "Em7", "Mais uma linha cantada").joinToString("\n")
+        val out = Tablature.strip(page)
+        assertEquals("[Verso]\nC9      D\nLinha inventada antes da tab\nLinha inventada depois da tab\nEm7\nMais uma linha cantada", out)
+    }
 }
