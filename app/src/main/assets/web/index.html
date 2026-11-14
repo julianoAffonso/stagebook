@@ -267,7 +267,7 @@ const li = (title, sub, onclick) => {
   if (onclick) el.onclick = onclick;
   return el;
 };
-const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad, not_song: t.notSong, search_page: t.searchPage });
+const problems = () => ({ not_found: t.notFound, unreadable: t.unreadable, offline: t.noInternet, bad_address: t.badAddress, newer: t.newer, format: t.trackBad, not_song: t.notSong, search_page: t.searchPage, bad_breaks: t.badBreaks });
 
 let songs = [], sets = [];
 let current = null;   // the song open in the form ({id:""} = new)
@@ -668,6 +668,7 @@ function showSet(set) {
   $("set-delete").hidden = !set.id;
   say("set-status", "");
   dirty = false;
+  breaksTouched = false;
   drawSet();
   drawSetAdd();
   loadSets();
@@ -812,7 +813,7 @@ function drawSet() {
   const button = (text, off, title, onclick) => {
     const b = document.createElement("button"); b.className = "icon"; b.textContent = text; b.disabled = off;
     if (title) { b.title = title; b.setAttribute("aria-label", title); }
-    b.onclick = () => { onclick(); dirty = true; drawSet(); drawSetAdd(); };
+    b.onclick = () => { onclick(); breaksTouched = true; dirty = true; drawSet(); drawSetAdd(); };
     return b;
   };
   $("set-items").replaceChildren(...view.rows.map((r) => {
@@ -870,14 +871,31 @@ async function runOnce(run, busy) {
   busy(true);
   try { return await run(); } finally { saving = false; busy(false); }
 }
+// The breaks go only when this page changed them (or the songs they sit between): a page opened before the musician
+// put a break on the tablet would erase it by sending its old list. Without the field, the tablet keeps its own.
+function setBody(name, set, breaksTouched) {
+  const body = { name, items: set.songs.map((s) => s.id) };
+  if (breaksTouched) body.breaks = breakNorm(set.breaks, set.songs.length);
+  return body;
+}
+// what to tell about an answer that wasn't 200: the tablet refused the breaks (409), or it was some other error
+function saveProblem(status, error, texts, known) {
+  return status === 409 ? (known[error] || texts.saveFailed) : texts.saveFailed;
+}
 // </save-logic>
+
+let breaksTouched = false;   // set by the buttons that move or take out songs and breaks; showSet() clears it
 
 async function saveSet() {
   return runOnce(async () => {
-    const body = { name: $("set-name").value, items: currentSet.songs.map((s) => s.id), breaks: breakNorm(currentSet.breaks, currentSet.songs.length) };
+    const body = setBody($("set-name").value, currentSet, breaksTouched);
     const id = currentSet.id;
     const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
-    if (!r || r.status !== 200) return offline();
+    if (!r) return offline();
+    if (r.status !== 200) {
+      const data = await r.json().catch(() => ({}));
+      return say("set-status", saveProblem(r.status, data.error, t, problems()), "error");
+    }
     const saved = (await r.json()).id;
     dirty = false;
     await openSet(saved);
@@ -888,7 +906,7 @@ async function saveSet() {
 $("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [] }); };
 $("set-name").oninput = () => (dirty = true);
 $("set-add-search").oninput = drawSetAdd;
-$("set-break-add").onclick = () => { currentSet.breaks = breakAdd(currentSet.breaks, currentSet.songs.length); dirty = true; drawSet(); };
+$("set-break-add").onclick = () => { breaksTouched = true; currentSet.breaks = breakAdd(currentSet.breaks, currentSet.songs.length); dirty = true; drawSet(); };
 $("set-save").onclick = saveSet;
 $("set-delete").onclick = async () => {
   if (!currentSet.id || !confirm(fill(t.setDeleteConfirm, currentSet.name))) return;

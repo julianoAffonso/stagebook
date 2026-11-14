@@ -358,6 +358,8 @@ class WebEditorServer @Inject constructor(
             "notFound" to R.string.web_not_found,
             "noInternet" to R.string.web_no_internet,
             "badAddress" to R.string.web_bad_address,
+            "badBreaks" to R.string.web_bad_breaks,
+            "saveFailed" to R.string.web_save_failed,
         )
     }
 }

@@ -971,6 +971,8 @@
     <string name="web_not_found">Não achei letra aí.</string>
     <string name="web_no_internet">O aparelho está sem internet (ou no Modo essencial).</string>
     <string name="web_bad_address">Use um endereço que comece com http:// ou https://.</string>
+    <string name="web_bad_breaks">Os intervalos não cabem no setlist. Nada foi salvo.</string>
+    <string name="web_save_failed">O setlist não foi salvo. Tente de novo.</string>
     <string name="web_band_none">Nada da banda ainda.</string>
     <string name="web_receive_title">Recebido de alguém</string>
     <string name="web_backup_hint">Um backup de Ajustes → Importar e backup. Escolha o que entra.</string>
