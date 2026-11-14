@@ -20,6 +20,9 @@ object SetlistMatcher {
     private const val SIMILAR_MIN = 0.75
     private const val MAX_CANDIDATES = 3
 
+    /** Edit-distance comparisons made so far (the tests check the exact lookup makes none). */
+    internal val similarityCalls = java.util.concurrent.atomic.AtomicInteger()
+
     /**
      * Only the exact rule of [match] (same title key, the artist as tiebreaker): the song, or null. No similarity
      * search: callers that discard "similar" (the band's alert, a request for songs) don't pay for the edit distance
@@ -54,6 +57,7 @@ object SetlistMatcher {
 
     /** 1 = equal; by edit distance (letters swapped, missing or extra). */
     fun similarity(a: String, b: String): Double {
+        similarityCalls.incrementAndGet()
         if (a == b) return 1.0
         if (a.isEmpty() || b.isEmpty()) return 0.0
         var prev = IntArray(b.length + 1) { it }

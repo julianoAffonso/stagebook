@@ -128,6 +128,17 @@ class BandAuditPlainTest {
         assertNull(SetlistMatcher.matchExact(QrPayload.Entry("Faroeste Cabocllo", ""), lib))
     }
 
+    @Test fun `the exact lookup, and the band's find, make no similarity comparison`() {
+        val lib = (1..50).map { Song(id = "$it", title = "Música número $it", author = "x", text = "") }
+        val before = SetlistMatcher.similarityCalls.get()
+        assertNull(SetlistMatcher.matchExact(QrPayload.Entry("Nada parecido", ""), lib))
+        assertNull(br.app.stagebook.domain.Conduct.find(br.app.stagebook.domain.Conduct.Item("Outra coisa"), lib))
+        assertEquals(listOf("Outra coisa"), br.app.stagebook.domain.Conduct.missing(listOf(br.app.stagebook.domain.Conduct.Item("Outra coisa")), lib))
+        assertEquals(before, SetlistMatcher.similarityCalls.get())
+        SetlistMatcher.match(QrPayload.Entry("Nada parecido", ""), lib)   // the full rule does compare
+        assertTrue(SetlistMatcher.similarityCalls.get() > before)
+    }
+
     // ---- 9a: the strip runs only with the band on ----
     @Test fun `what the strip collects is not collected while the band is off`() = runBlocking {
         val on = MutableStateFlow(false)
