@@ -76,8 +76,11 @@ class SetlistShowStore @Inject constructor(
     /** The break before [songId] is on screen: its counter starts running the first time, and goes on after that. */
     fun breakEntered(setId: String, songId: String): Timer {
         val key = BreakTimer.key(setId, songId)
-        replaceBreaks { all -> all[key]?.let { all + (key to it.copy(open = true)) } ?: (all + (key to BreakTimer.started(today(), now()))) }
-        return _breaks.value.getValue(key)
+        // the counter is worked out inside the update and handed back from it: reading the flow afterwards could meet a
+        // prune that took the key out in between
+        var entered = BreakTimer.started(today(), now())
+        replaceBreaks { all -> BreakTimer.entered(all, key, today(), now()).also { entered = it.getValue(key) } }
+        return entered
     }
 
     /** The break before [songId] was left (forward or back to the song): a stage opened later doesn't show it. */
@@ -109,8 +112,9 @@ class SetlistShowStore @Inject constructor(
 
     private fun prune(sets: List<Setlist>) {
         val items = sets.associate { it.id to it.items.toSet() }
+        val byId = sets.associateBy { it.id }
         replace { all -> all.mapNotNull { (id, marks) -> items[id]?.let { id to SetlistShow.pruned(marks, it) } }.filterNot { it.second.empty }.toMap() }
-        replaceBreaks { all -> all.filterKeys { k -> items[k.substringBefore('|')]?.contains(k.substringAfter('|')) == true } }
+        replaceBreaks { all -> BreakTimer.pruned(all, byId) }
     }
 
     private fun change(setId: String, change: (Marks) -> Marks) = replace { all ->

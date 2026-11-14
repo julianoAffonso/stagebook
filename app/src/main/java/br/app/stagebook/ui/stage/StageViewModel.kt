@@ -331,7 +331,8 @@ class StageViewModel @Inject constructor(
             if (setId != null && song != null) show.breakLeft(setId, song)
             savedStateHandle[BREAK_SINCE] = null; savedStateHandle[BREAK_SONG] = null; return }
         val setId = route.setId ?: return
-        val song = repository.library.value.setlist(setId)?.items?.getOrNull(shownIndex + 1) ?: "#${shownIndex + 1}"
+        // no song after the break (the setlist got shorter meanwhile): no break, and no counter kept under a made-up key
+        val song = repository.library.value.setlist(setId)?.items?.getOrNull(shownIndex + 1) ?: return
         val timer = show.breakEntered(setId, song)
         savedStateHandle[BREAK_SONG] = song
         savedStateHandle[BREAK_SINCE] = br.app.stagebook.domain.BreakTimer.since(timer, System.currentTimeMillis())
@@ -351,8 +352,9 @@ class StageViewModel @Inject constructor(
         reopened = true
         val setId = route.setId ?: return
         if (!route.atBreak || breakOnly || conduct.role.value is br.app.stagebook.data.BandConduct.Role.Following) return
-        val next = repository.library.value.setlist(setId)?.items?.getOrNull(index + 1) ?: return
-        if ((index + 1) in repository.library.value.setlist(setId)!!.breaks && show.breakOpen(setId, next)) setBreak(true)
+        val set = repository.library.value.setlist(setId) ?: return   // read once: it can be deleted between two reads
+        val next = set.items.getOrNull(index + 1) ?: return
+        if ((index + 1) in set.breaks && show.breakOpen(setId, next)) setBreak(true)
     }
 
     fun pauseBreak() = breakSong.value?.let { song -> route.setId?.let { show.breakPause(it, song) } }
