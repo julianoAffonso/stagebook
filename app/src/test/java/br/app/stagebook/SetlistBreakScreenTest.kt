@@ -95,6 +95,30 @@ class SetlistBreakScreenTest {
         compose.onNodeWithText("Intervalo").assertIsNotEnabled()
     }
 
+    // the first touch on the off button used to meet nothing (user test, 14/11): it says why, to the eye and to the screen reader
+    @Test fun `with a single song the Break button says why it is off and a touch leaves nothing added`() {
+        var added = 0
+        val message = br.app.stagebook.ui.components.AppMessage(
+            androidx.compose.material3.SnackbarHostState(), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+        )
+        compose.setContent {
+            StagebookTheme {
+                androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalAppMessage provides message) {
+                    SetlistDetailScreen(state(1, emptyList()), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, onAddBreak = { added++ }, onRemoveBreak = {})
+                }
+            }
+        }
+        compose.onNodeWithContentDescription("Intervalo. Precisa de pelo menos 2 músicas").assertIsNotEnabled().performClick()
+        compose.waitForIdle()
+        assertEquals("Precisa de pelo menos 2 músicas", message.host.currentSnackbarData?.visuals?.message)
+        assertEquals(0, added)
+    }
+
+    @Test fun `with two songs the Break button has no hint`() {
+        show(state(2, emptyList()))
+        compose.onNodeWithContentDescription("Intervalo. Precisa de pelo menos 2 músicas").assertDoesNotExist()
+    }
+
     @Test fun `tapping a song after the break opens the stage on that song`() {
         var opened = -1
         show(state(5, listOf(3)), onPlay = { opened = it })

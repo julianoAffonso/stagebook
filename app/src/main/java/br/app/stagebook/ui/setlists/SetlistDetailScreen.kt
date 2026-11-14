@@ -388,7 +388,8 @@ private fun SetActions(hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () ->
         // all secondary: side by side at the start (stretched, Share floated in the middle)
         ActionButton(stringResource(R.string.sets_add_songs), onAddSongs, icon = AppIcons.Add, tone = ButtonTone.Tonal)
         // a break sits between two songs: with fewer than two there's no place for it
-        ActionButton(stringResource(R.string.sets_add_break), onAddBreak, icon = AppIcons.Add, tone = ButtonTone.Tonal, enabled = canBreak)
+        ActionButton(stringResource(R.string.sets_add_break), onAddBreak, icon = AppIcons.Add, tone = ButtonTone.Tonal, enabled = canBreak,
+            disabledHint = stringResource(R.string.sets_break_needs_two))
         ActionButton(stringResource(R.string.share_title), onShare, icon = AppIcons.Share, tone = ButtonTone.Tonal, enabled = hasSongs)
     }
 }

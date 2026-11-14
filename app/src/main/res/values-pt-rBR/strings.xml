@@ -88,6 +88,7 @@
     <string name="sets_delete">Apagar o setlist</string>
     <string name="sets_add_songs">Músicas</string>
     <string name="sets_add_break">Intervalo</string>
+    <string name="sets_break_needs_two">Precisa de pelo menos 2 músicas</string>
     <string name="set_break">INTERVALO</string>
     <string name="set_break_time">INTERVALO · %1$s</string>
     <string name="set_break_paused">Pausado</string>

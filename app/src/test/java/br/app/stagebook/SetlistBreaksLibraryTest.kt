@@ -65,6 +65,16 @@ class SetlistBreaksLibraryTest {
         assertEquals(emptyList<Int>(), r.set(s).breaks)
     }
 
+    // the Break button is off with fewer than two songs; even a call that gets through leaves the setlist as it was
+    @Test fun `a break asked for in a setlist of one song leaves nothing`() {
+        val r = repo()
+        val s = r.createSetlist("Show")
+        r.addToSetlist(s, r.songs("A"))
+        val before = r.set(s)
+        r.addBreak(s)
+        assertEquals(before, r.set(s))
+    }
+
     @Test fun `dragging a song past the break keeps the songs and moves it to the other block`() {
         val r = repo()
         val (s, ids) = r.show()
