@@ -167,7 +167,7 @@
 
     <!-- settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_appearance">Stage look</string>
+    <string name="settings_appearance">Lyrics and chords</string>
     <string name="settings_preview_text">[Chorus]\n[G]A sample ==[D]line==\n[Em]To see how it [C]looks</string>
     <string name="settings_preview_size_text">[Chorus]\n[G]A sample ==[D]line==</string>
     <string name="settings_font_size">Lyrics size: %1$d</string>
@@ -282,7 +282,7 @@
     <string name="essential_alert_some_title">Some features are off</string>
     <string name="essential_alert_some_text">What\'s off:</string>
     <string name="essential_alert_relink">To turn them back on, go to</string>
-    <string name="essential_alert_route">Settings → Essential mode</string>
+    <string name="essential_alert_route">Settings → Device → Essential mode</string>
     <string name="action_never_again">Don\'t show again</string>
     <string name="settings_player_mode_help">Plays each song\'s backing track on a USB audio interface or the device\'s own output. Works with OGG, MP3 and WAV, with any number of channels.</string>
     <string name="settings_lyric_sites">Lyrics sites</string>
@@ -331,10 +331,10 @@
     <string name="editor_capo_down">Capo one fret down</string>
     <string name="editor_capo_up">Capo one fret up</string>
     <string name="stage_key_desc">Key: %1$s</string>
-    <string name="backup_save_card">Save file</string>
+    <string name="backup_save_card">Backup</string>
     <string name="backup_save_info">Saves what\'s checked to a .stagebook file. Use it as a backup, to switch devices or to send to someone.</string>
     <string name="backup_save_where">Keep it on Drive, on a computer, or send it in a message. Sending just the lyrics? Uncheck the backing tracks, they make the file big.</string>
-    <string name="backup_open_card">Open file</string>
+    <string name="backup_open_card">Restore</string>
     <string name="backup_open_info">Shows what the file has so you can choose.</string>
     <string name="backup_open_merge">Join brings in only the songs and setlists you don\'t have. Yours stay as they are.</string>
     <string name="backup_open_replace">Replace swaps your songs and setlists for the file\'s. Use it to restore a backup or move to a new device.</string>
@@ -369,7 +369,9 @@
     <string name="backup_not_backup">This file isn\'t a Stagebook backup</string>
     <string name="backup_restore_failed">Couldn\'t restore the backup</string>
     <string name="backup_restored">Backup restored</string>
-    <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band.</string>
+    <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band and computer.</string>
+    <string name="editor_data_label">Song details</string>
+    <string name="editor_data_untitled">Untitled song</string>
     <string name="editor_data_capo">capo %1$d</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
@@ -531,7 +533,7 @@
     <string name="settings_columns_help">Automatic decides for each song: it splits into 2 columns when the lyrics don\'t fit on one page and the lines are short enough or, on its side, when that takes fewer pages. The pedal turns both columns together.</string>
     <string name="settings_bold_short">bold</string>
     <string name="settings_sections_look">Section titles</string>
-    <string name="settings_normalize_card">Find chorus and verses</string>
+    <string name="settings_normalize_card">Chorus and verses</string>
     <string name="settings_normalize_help">In songs without part titles, the app finds the chorus (the verse that repeats) and the verses and adds the titles. The lyrics don\'t change, and existing titles stay as they are.</string>
     <string name="settings_pedal_command">What this button does</string>
     <string name="settings_pedal_cmd_next">Next page</string>
@@ -588,7 +590,7 @@
     <string name="settings_midi_found_none">No MIDI pedal found. Check that it\'s on, close by and in Bluetooth MIDI mode.</string>
     <string name="settings_midi_usb_about">About the USB pedal</string>
     <string name="settings_midi_location">On this Android version, location has to be on for the search to find the pedal.</string>
-    <string name="settings_library">Library and backup</string>
+    <string name="settings_library">Import and backup</string>
     <string name="library_card">Your library</string>
     <string name="settings_imported">Imported. New: %1$d · updated: %2$d</string>
     <plurals name="settings_import_confirm">
@@ -841,8 +843,8 @@
     <string name="share_message">Setlist \"%1$s\" on Stagebook. Tap %2$s to get it. Or go to Import → Type the 3 words and type %3$s. Good for 12 hours.</string>
     <!-- selection in the Songs tab (share several) -->
     <string name="songs_select_cancel">Exit selection</string>
-    <!-- band on the local network (Settings → Band and broadcast and join requests) -->
-    <string name="settings_band">Band and broadcast</string>
+    <!-- band on the local network (Settings → Band and computer and join requests) -->
+    <string name="settings_band">Band and computer</string>
     <plurals name="settings_band_short">
         <item quantity="one">%1$d device in the band</item>
         <item quantity="other">%1$d devices in the band</item>
@@ -850,10 +852,10 @@
     <string name="settings_band_none">No one in the band yet</string>
     <string name="band_this_device">This device</string>
     <string name="band_rename">Change name</string>
-    <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and broadcast. One taps Ask to join, the other taps Allow. Far away? Tap Invite over the internet. It stays saved until someone removes it.</string>
+    <string name="band_help">This is the name the band sees. To add someone, both of you get on the same Wi-Fi and open Settings → Band and computer. One taps Ask to join, the other taps Allow. Far away? Tap Invite over the internet. It stays saved until someone removes it.</string>
     <string name="band_nearby">On the network now</string>
     <string name="band_no_wifi">No Wi-Fi. To find the band, connect the devices to the same network (a phone\'s hotspot works too).</string>
-    <string name="band_searching">Searching… Open Settings → Band and broadcast on the other device too.</string>
+    <string name="band_searching">Searching… Open Settings → Band and computer on the other device too.</string>
     <string name="band_online">Connected</string>
     <string name="band_join">Ask to join</string>
     <string name="band_waiting">Waiting for the other device to allow…</string>
@@ -876,7 +878,7 @@
     <string name="band_name_title">How should the band see this device?</string>
     <string name="band_name_hint">Like Sam\'s tablet</string>
     <string name="band_request_title">%1$s wants to join the band</string>
-    <string name="band_request_text">Once allowed, they can send you setlists and songs without the 3 words, here on the network and online. You can remove them later in Settings → Band and broadcast.</string>
+    <string name="band_request_text">Once allowed, they can send you setlists and songs without the 3 words, here on the network and online. You can remove them later in Settings → Band and computer.</string>
     <string name="band_allow">Allow</string>
     <string name="band_deny">Don\'t allow</string>
     <!-- inbox: what the band sent -->
@@ -938,7 +940,7 @@
     <string name="web_bad_address">Use an address that starts with http:// or https://.</string>
     <string name="web_band_none">Nothing from the band yet.</string>
     <string name="web_receive_title">Received from someone</string>
-    <string name="web_backup_hint">A backup from Settings → Library and backup. Pick what comes in.</string>
+    <string name="web_backup_hint">A backup from Settings → Import and backup. Pick what comes in.</string>
     <string name="web_receive_done">Done. It\'s in the library.</string>
     <string name="web_restore_needs">Pick at least one part.</string>
     <string name="not_song">This doesn\'t look like lyrics or chords. Stagebook keeps only song lyrics and chords, as text.</string>
@@ -1005,7 +1007,7 @@
     <string name="usb_route_auto_engine">The app turned this off for %1$s, because no sound came out through Android.</string>
     <string name="usb_route_saved">This switch applies only to %1$s on this device. Each interface keeps its own choice.</string>
     <string name="usb_power_warning">The USB interface is charging this device. Some interfaces fail on Stagebook\'s engine this way. If the sound fails, turn on Play on the interface through Android.</string>
-    <string name="metro_player_title">Metronome and player</string>
+    <string name="metro_player_title">Player and metronome</string>
     <string name="mixer_listen_on_stage">The mixer and equalizer are on the stage, to adjust while listening: play a song, hold play and open the mixer.</string>
     <string name="stage_mix_hint">Changes here go to the global mixer, for every song. Turn it off to change this song only.</string>
     <string name="stage_mix_own">This song has its own settings: what you change here applies only to it.</string>
@@ -1137,4 +1139,15 @@
     <string name="editor_move_save">Save and continue</string>
     <string name="editor_move_discard">Discard</string>
     <string name="editor_midi_on">Sends messages</string>
+    <string name="group_page">Turn the page</string>
+    <string name="group_chords">Chords</string>
+    <string name="group_device">Device</string>
+    <string name="group_page_summary">Turn or scroll, pedal and MIDI, screen on</string>
+    <string name="group_chords_summary">Instrument, diagram, chord sound</string>
+    <string name="group_device_summary">Essential mode, language, advanced</string>
+    <string name="group_band_editor">Editor: %1$s</string>
+    <string name="settings_page_mode">Mode</string>
+    <string name="settings_during_show">During the show</string>
+    <string name="reset_zone">Danger zone</string>
+    <string name="advanced_permission_see">To change these, follow the steps in Settings → Device → Advanced.</string>
 </resources>

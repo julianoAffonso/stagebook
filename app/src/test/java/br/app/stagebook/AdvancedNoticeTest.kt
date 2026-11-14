@@ -20,7 +20,7 @@ class AdvancedNoticeTest {
     private val notice = "o Stagebook grava de novo sempre que abre"
 
     private fun screen(canWrite: Boolean) = compose.setContent {
-        StagebookTheme { AdvancedDetail(AdvancedUi(canWrite = canWrite), { _, _ -> }, {}) }
+        StagebookTheme { AdvancedDetail(AdvancedUi(canWrite = canWrite), { _, _ -> }) }
     }
 
     @Test fun `with the permission it warns`() {

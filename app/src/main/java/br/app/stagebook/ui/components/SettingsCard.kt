@@ -19,11 +19,11 @@ import br.app.stagebook.ui.theme.Spacing
  * next to the title (user's request, 29/10: a "How it works" repeated on every card was tiring).
  */
 @Composable
-fun SettingsCard(title: String, modifier: Modifier = Modifier, help: String? = null, content: @Composable ColumnScope.() -> Unit) {
+fun SettingsCard(title: String, modifier: Modifier = Modifier, help: String? = null, danger: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     Surface(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(title, style = MaterialTheme.typography.titleMedium, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                 if (help != null) HelpIcon(help)
             }
             content()

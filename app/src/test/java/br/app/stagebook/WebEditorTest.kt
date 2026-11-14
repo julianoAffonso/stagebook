@@ -136,8 +136,8 @@ class WebEditorTest {
 
     @Test fun `essential mode hides the editor section`() {
         val essential = br.app.stagebook.data.model.Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false)
-        assertEquals(false, SettingsSection.WEB_EDITOR.shown(essential))
-        assertEquals(true, SettingsSection.WEB_EDITOR.shown(br.app.stagebook.data.model.Look()))
+        assertEquals(false, SettingsSection.BAND.shown(essential))
+        assertEquals(true, SettingsSection.BAND.shown(br.app.stagebook.data.model.Look()))
     }
 
     @Test fun `with no access for 5 minutes the editor is idle, only an approved computer keeps it on`() {

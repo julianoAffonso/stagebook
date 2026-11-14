@@ -137,7 +137,7 @@ fun HomeScreen(
         }
         picked = t
     }
-    val openEssential = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.ESSENTIAL }
+    val openEssential = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.DEVICE }
     // a link from another screen (or another section): Settings opens right on it
     val linked by br.app.stagebook.ui.settings.SettingsLinks.pending.collectAsStateWithLifecycle()
     LaunchedEffect(linked) {

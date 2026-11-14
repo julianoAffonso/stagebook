@@ -2051,7 +2051,7 @@ private fun MetronomeDialog(
                 }
                 br.app.stagebook.ui.components.SettingsLinkText(
                     stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
-                    br.app.stagebook.ui.settings.SettingsSection.METRONOME, style = MaterialTheme.typography.bodySmall,
+                    br.app.stagebook.ui.settings.SettingsSection.PLAYER, style = MaterialTheme.typography.bodySmall,
                 )
                 IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
                     Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)

@@ -321,7 +321,7 @@ private fun QueueBar(q: ImportQueue.State, site: String, exhausted: Boolean, onS
             if (exhausted) br.app.stagebook.ui.components.StatusBox(br.app.stagebook.ui.components.StatusTone.PROBLEM) {
                 br.app.stagebook.ui.components.SettingsLinkText(
                     stringResource(R.string.queue_none), stringResource(R.string.queue_sites_link),
-                    br.app.stagebook.ui.settings.SettingsSection.IMPORT, style = MaterialTheme.typography.bodyMedium,
+                    br.app.stagebook.ui.settings.SettingsSection.LIBRARY, style = MaterialTheme.typography.bodyMedium,
                     color = androidx.compose.material3.LocalContentColor.current,
                 )
             } else Text(

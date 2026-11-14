@@ -29,7 +29,7 @@ class UsbOutputSettingsTest {
     private val res = ApplicationProvider.getApplicationContext<android.content.Context>().resources
 
     private fun show(usb: UsbOutputUi, look: Look = Look(playerMode = true)) = compose.setContent {
-        StagebookTheme { SettingsScreen(SettingsUiState(false, look), SettingsActions(usb = usb), section = SettingsSection.METRONOME) }
+        StagebookTheme { SettingsScreen(SettingsUiState(false, look), SettingsActions(usb = usb), section = SettingsSection.PLAYER) }
     }
 
     private fun count(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().size

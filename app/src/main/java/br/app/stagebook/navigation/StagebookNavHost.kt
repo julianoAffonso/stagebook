@@ -179,7 +179,7 @@ fun StagebookNavHost(
     LaunchedEffect(resume) {
         val where = resume ?: return@LaunchedEffect
         if (where.startsWith(br.app.stagebook.domain.ResumePoint.SETTINGS)) {
-            val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.valueOf(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
+            val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.fromSaved(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
             if (section != null) openSettings(section)
         } else if (where != br.app.stagebook.data.ResumeAfterUpdate.HOME && !where.contains("Home")) {
             runCatching { nav.navigate(where) }
