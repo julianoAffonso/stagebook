@@ -41,7 +41,7 @@ import org.robolectric.annotation.Config
 class SetlistShowScreenTest {
     @get:Rule val compose = createComposeRule()
 
-    // a b c | d, the break before d; a played, b on stage, c next
+    // a b c | d, the break before d; a played, b on stage, c next (the stage says it: the edit doesn't)
     private val show = SetlistDetailUiState(
         loading = false,
         name = "Show",
@@ -56,13 +56,12 @@ class SetlistShowScreenTest {
     )
     private var state by mutableStateOf(show)
     private var before: SetlistDetailUiState? = null
-    private var opened = -1
     private var deleted = 0
-    private var cleared = 0
+    private var left = 0
     private var removedBreaks = 0
     private val density = 1.5f   // hdpi
 
-    private fun show(initial: SetlistDetailUiState = show) {
+    private fun screen(initial: SetlistDetailUiState = show, openShare: Boolean = false) {
         state = initial
         compose.setContent {
             StagebookTheme {
@@ -70,7 +69,7 @@ class SetlistShowScreenTest {
                 val message: AppMessage = rememberAppMessage()
                 CompositionLocalProvider(LocalAppMessage provides message) {
                     SetlistDetailScreen(
-                        state, null, {}, {}, { opened = it }, {}, {}, {}, { _, _ -> },
+                        state, null, { left++ }, {}, {}, {}, {}, { _, _ -> },
                         onRemove = { index, _ ->
                             before = state
                             state = state.copy(
@@ -81,7 +80,7 @@ class SetlistShowScreenTest {
                         onDeleteSetlist = { deleted++ },
                         onRemoveBreak = { removedBreaks++ },
                         onUndoRemove = { before?.let { state = it } },
-                        onClearPlayed = { cleared++ },
+                        openShare = openShare,
                     )
                     SnackbarHost(message.host)
                 }
@@ -94,54 +93,42 @@ class SetlistShowScreenTest {
     private fun removeButtons() = compose.onAllNodesWithContentDescription("Tirar deste setlist")
     /** Where one text of a row is drawn (the row's texts are read together, so each one is looked up on its own). */
     private fun part(text: String) = compose.onNodeWithText(text, useUnmergedTree = true).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-    private fun edit() { compose.onNodeWithContentDescription("Editar setlist").performClick(); compose.waitForIdle() }
 
-    // ---- the show ----
-    @Test fun `the show has no handle and no remove button, on songs or on the break`() {
-        show()
-        handles().assertCountEquals(0)
-        removeButtons().assertCountEquals(0)
-        compose.onNodeWithText("INTERVALO").assertExists()
-        compose.onNodeWithContentDescription("Tirar o intervalo").assertDoesNotExist()
-        compose.onNodeWithText("Compartilhar").assertExists()
+    // ---- the edit is the whole screen ----
+    @Test fun `the screen is the edit, with a handle and a remove button on every row`() {
+        screen()
+        compose.onNodeWithText("Editar setlist").assertIsDisplayed()   // the title
+        handles().assertCountEquals(5)        // four songs and the break
+        removeButtons().assertCountEquals(4)
+        compose.onNodeWithContentDescription("Tirar o intervalo").assertExists()
+        compose.onNodeWithText("Show · 4 músicas · 1 intervalo").assertExists()   // which setlist, under the title
+        // nothing that belongs to the show: no marks, no stage button, no clear played
+        listOf("TOCADA", "AGORA", "PRÓX.").forEach { compose.onNodeWithText(it).assertDoesNotExist() }
+        compose.onNodeWithContentDescription("Palco").assertDoesNotExist()
     }
 
-    @Test fun `each song shows its key, tempo and capo, and a play mark with a backing track`() {
-        show()
+    @Test fun `each song keeps showing its key, tempo, capo and backing track`() {
+        screen()
         compose.onNodeWithText("G").assertExists()
         compose.onNodeWithText("Em").assertExists()
         compose.onNodeWithText("A").assertExists()
         compose.onNodeWithText("96 bpm").assertExists()
         compose.onNodeWithText("120 bpm").assertExists()
         compose.onNodeWithText("capo 2").assertExists()
-        // only what the song has: one capo, one backing track, and nothing for the song with no key or tempo
         compose.onAllNodesWithText("capo", substring = true).assertCountEquals(1)
         compose.onAllNodesWithText("bpm", substring = true).assertCountEquals(2)
         compose.onAllNodesWithContentDescription("Backing track").assertCountEquals(1)
     }
 
-    @Test fun `played, now and next are written on their rows`() {
-        show()
-        compose.onNodeWithText("TOCADA").assertExists()
-        compose.onNodeWithText("AGORA").assertExists()
-        compose.onNodeWithText("PRÓX.").assertExists()
+    @Test fun `Songs, Break and Share are on the screen`() {
+        screen()
+        compose.onNodeWithText("Músicas").assertIsDisplayed()
+        compose.onNodeWithText("Intervalo").assertIsDisplayed()
+        compose.onNodeWithText("Compartilhar").assertIsDisplayed()
     }
 
-    // the number and the title share the row, the number first and small, right after the state strip
-    @Test fun `in the show a row draws its small number and then its title, with no handle`() {
-        show()
-        val number = part("2")
-        val title = part("Música b")
-        val strip = part("AGORA")
-        assertTrue("strip, number, title: $strip $number $title", strip.right <= number.left && number.right <= title.left)
-        assertTrue("the number's column is narrow: ${title.left - strip.right}", title.left - strip.right <= 48 * density)
-        assertTrue("centered on the title's line", kotlin.math.abs(number.center.y - title.center.y) <= 2 * density)
-        compose.onNodeWithText("Em").assertIsDisplayed()
-    }
-
-    @Test fun `in the edit a row draws its handle, its small number, its title and its remove button, in that order`() {
-        show()
-        edit()
+    @Test fun `a row draws its handle, its small number, its title and its remove button, in that order`() {
+        screen()
         val handle = handles()[1].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val number = part("2")
         val title = part("Música b")
@@ -155,38 +142,29 @@ class SetlistShowScreenTest {
         assertEquals(handle.left, breakHandle.left, 1f)
     }
 
-    @Test fun `only the states the songs have are written`() {
-        show(show.copy(items = show.items.map { it.copy(state = if (it.key == "d") State.NOW else State.NONE) }))
-        compose.onNodeWithText("AGORA").assertExists()   // the last song on stage: no next
-        compose.onNodeWithText("PRÓX.").assertDoesNotExist()
-        compose.onNodeWithText("TOCADA").assertDoesNotExist()
-    }
-
-    @Test fun `tapping a song still opens the stage on it, and holding one still selects`() {
-        show()
+    @Test fun `a tap on a song opens nothing, and holding one still selects`() {
+        screen()
         compose.onNodeWithText("Música d").performClick()
-        assertEquals(3, opened)
+        compose.onNodeWithText("Editar setlist").assertIsDisplayed()
         compose.onNodeWithText("Música b").performTouchInput { longClick() }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Selecionar todas").assertExists()
-        compose.onNodeWithContentDescription("Editar setlist").assertDoesNotExist()
     }
 
     // ---- the top bar and its menu ----
-    @Test fun `the top bar has the pencil, the stage and the menu, and no trash`() {
-        show()
-        compose.onNodeWithContentDescription("Editar setlist").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Palco").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Mais opções").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Apagar o setlist").assertDoesNotExist()
-        compose.onNodeWithText("Apagar o setlist").assertDoesNotExist()
+    @Test fun `Done leaves, and so does the x`() {
+        screen()
+        compose.onNodeWithText("Pronto").performClick()
+        assertEquals(1, left)
+        compose.onNodeWithContentDescription("Fechar").performClick()
+        assertEquals(2, left)
     }
 
-    @Test fun `the menu has rename, clear played and delete, and delete still asks`() {
-        show()
+    @Test fun `the menu has rename and delete only, and delete still asks`() {
+        screen()
         compose.onNodeWithContentDescription("Mais opções").performClick()
         compose.onNodeWithText("Renomear").assertIsDisplayed()
-        compose.onNodeWithText("Limpar tocadas").assertIsDisplayed()
+        compose.onNodeWithText("Limpar tocadas").assertDoesNotExist()
         compose.onNodeWithText("Apagar o setlist").assertIsDisplayed().performClick()
         compose.waitForIdle()
         assertEquals("not before the answer", 0, deleted)
@@ -195,19 +173,8 @@ class SetlistShowScreenTest {
         assertEquals(1, deleted)
     }
 
-    @Test fun `clear played is only in the menu with a song played, and clears`() {
-        show(show.copy(anyPlayed = false))
-        compose.onNodeWithContentDescription("Mais opções").performClick()
-        compose.onNodeWithText("Renomear").assertIsDisplayed()
-        compose.onNodeWithText("Limpar tocadas").assertDoesNotExist()
-        compose.runOnUiThread { state = show }
-        compose.waitForIdle()
-        compose.onNodeWithText("Limpar tocadas").performClick()
-        assertEquals(1, cleared)
-    }
-
-    @Test fun `rename in the menu opens the same window as tapping the name`() {
-        show()
+    @Test fun `rename in the menu opens the window`() {
+        screen()
         compose.onNodeWithContentDescription("Mais opções").performClick()
         compose.onNodeWithText("Renomear").performClick()
         compose.waitForIdle()
@@ -215,43 +182,22 @@ class SetlistShowScreenTest {
         compose.onNodeWithText("Cancelar").assertIsDisplayed()
     }
 
-    // ---- the edit ----
-    @Test fun `the pencil shows a handle and a remove button on every row and hides the show's marks`() {
-        show()
-        edit()
-        compose.onNodeWithText("Editar setlist").assertIsDisplayed()   // the title
-        handles().assertCountEquals(5)        // four songs and the break
-        removeButtons().assertCountEquals(4)
-        compose.onNodeWithContentDescription("Tirar o intervalo").assertExists()
-        listOf("G", "Em", "A", "120 bpm", "capo 2", "TOCADA", "AGORA", "PRÓX.").forEach { compose.onNodeWithText(it).assertDoesNotExist() }
-        compose.onAllNodesWithContentDescription("Backing track").assertCountEquals(0)
-        // nothing but the list to work on: no Songs, Break or Share, no stage and no menu
-        compose.onNodeWithText("Compartilhar").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Palco").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Mais opções").assertDoesNotExist()
-        compose.onNodeWithText("Música b").performClick()
-        assertEquals("a tap while editing opens nothing", -1, opened)
+    @Test fun `from the stage's menu the Share sheet is already open`() {
+        screen(openShare = true)
+        compose.onNodeWithText("QR sem internet").assertIsDisplayed()
     }
 
-    @Test fun `Done leaves the edit, and so does the x`() {
-        show()
-        edit()
-        compose.onNodeWithText("Pronto").performClick()
+    @Test fun `without it the Share sheet waits for the button`() {
+        screen()
+        compose.onNodeWithText("QR sem internet").assertDoesNotExist()
+        compose.onNodeWithText("Compartilhar").performClick()
         compose.waitForIdle()
-        handles().assertCountEquals(0)
-        compose.onNodeWithText("Em").assertExists()
-        compose.onNodeWithText("AGORA").assertExists()
-        compose.onNodeWithText("Show").assertExists()
-        edit()
-        compose.onNodeWithContentDescription("Fechar").performClick()
-        compose.waitForIdle()
-        handles().assertCountEquals(0)
-        compose.onNodeWithText("Compartilhar").assertExists()
+        compose.onNodeWithText("QR sem internet").assertIsDisplayed()
     }
 
+    // ---- taking songs out ----
     @Test fun `removing a song asks nothing, says it left and Undo puts it back with the break in place`() {
-        show()
-        edit()
+        screen()
         removeButtons()[1].performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Música b").assertDoesNotExist()
@@ -264,12 +210,11 @@ class SetlistShowScreenTest {
         assertEquals(listOf("a", "b", "c", "d"), state.items.map { it.key })
         assertEquals(listOf(3), state.breaks)
         compose.onNodeWithText("Música b").assertExists()
-        handles().assertCountEquals(5)   // still editing
+        handles().assertCountEquals(5)
     }
 
     @Test fun `removing the break shows no message`() {
-        show()
-        edit()
+        screen()
         compose.onNodeWithContentDescription("Tirar o intervalo").performClick()
         compose.waitForIdle()
         assertEquals(1, removedBreaks)

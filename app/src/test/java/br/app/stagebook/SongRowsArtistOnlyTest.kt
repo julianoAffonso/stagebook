@@ -163,17 +163,13 @@ class SongRowsArtistOnlyTest {
         assertEquals(emptyList<Any>(), few.groups)
     }
 
-    @Test fun `a setlist's rows draw the artist alone, in the show and in the edit`() {
+    @Test fun `a setlist's rows draw the artist alone`() {
         val (_, state) = built({ p -> p.detail.uiState.first { !it.loading && it.items.size == 3 } })
         assertEquals(listOf("Banda Fictícia", "Trio Imaginário", ""), state.items.map { it.subtitle })
-        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
+        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
         compose.onNodeWithText("Banda Fictícia", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("Trio Imaginário", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("120 bpm").assertIsDisplayed()
-        noYear()
-        compose.onNodeWithContentDescription("Editar setlist").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Banda Fictícia", useUnmergedTree = true).assertIsDisplayed()
         noYear()
     }
 

@@ -77,8 +77,8 @@ fun HomeScreen(
     onOpenSong: (String) -> Unit,
     onEditSong: (String?) -> Unit,
     onImport: (query: String, kind: String) -> Unit,
-    onOpenSetlist: (String) -> Unit,
-    onPlaySetlist: (String) -> Unit,
+    onOpenSetlist: (String) -> Unit,   // the setlist's edit
+    onPlaySetlist: (setId: String, start: Int, atBreak: Boolean) -> Unit,   // its stage
     onScanSetlist: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},

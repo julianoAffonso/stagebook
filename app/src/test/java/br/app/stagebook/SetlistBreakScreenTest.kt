@@ -39,12 +39,11 @@ class SetlistBreakScreenTest {
 
     private fun show(
         state: SetlistDetailUiState,
-        onPlay: (Int) -> Unit = {},
         onMove: (Int, Int) -> Unit = { _, _ -> },
         onAddBreak: () -> Unit = {},
         onRemoveBreak: (Int) -> Unit = {},
     ) = compose.setContent {
-        StagebookTheme { SetlistDetailScreen(state, null, {}, {}, onPlay, {}, {}, {}, onMove, { _, _ -> }, {}, onAddBreak = onAddBreak, onRemoveBreak = onRemoveBreak) }
+        StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, onMove, { _, _ -> }, {}, onAddBreak = onAddBreak, onRemoveBreak = onRemoveBreak) }
     }
 
     @Test fun `the break shows between the songs, with a header on each block and the count under the name`() {
@@ -77,8 +76,6 @@ class SetlistBreakScreenTest {
     @Test fun `the x on the break takes it out`() {
         val removed = mutableListOf<Int>()
         show(state(5, listOf(3)), onRemoveBreak = { removed += it })
-        compose.onNodeWithContentDescription("Tirar o intervalo").assertDoesNotExist()   // only while editing
-        compose.onNodeWithContentDescription("Editar setlist").performClick()
         compose.onNodeWithContentDescription("Tirar o intervalo").performClick()
         assertEquals(listOf(3), removed)
     }
@@ -104,7 +101,7 @@ class SetlistBreakScreenTest {
         compose.setContent {
             StagebookTheme {
                 androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalAppMessage provides message) {
-                    SetlistDetailScreen(state(1, emptyList()), null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, onAddBreak = { added++ }, onRemoveBreak = {})
+                    SetlistDetailScreen(state(1, emptyList()), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, onAddBreak = { added++ }, onRemoveBreak = {})
                 }
             }
         }
@@ -119,17 +116,9 @@ class SetlistBreakScreenTest {
         compose.onNodeWithContentDescription("Intervalo. Precisa de pelo menos 2 músicas").assertDoesNotExist()
     }
 
-    @Test fun `tapping a song after the break opens the stage on that song`() {
-        var opened = -1
-        show(state(5, listOf(3)), onPlay = { opened = it })
-        compose.onNodeWithText("Música d").performClick()
-        assertEquals(3, opened)
-    }
-
     @Test fun `the break is dragged by its handle like a song`() {
         val moves = mutableListOf<Pair<Int, Int>>()
         show(state(5, listOf(3)), onMove = { f, t -> moves += f to t })
-        compose.onNodeWithContentDescription("Editar setlist").performClick()   // the handles only show while editing
         // rows: a b c | d e, so the 4th handle is the break's
         compose.onAllNodesWithContentDescription("Arrastar para mudar a ordem")[3].performTouchInput {
             down(center)

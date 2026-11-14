@@ -177,6 +177,8 @@ private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itsel
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
     onBack: (() -> Unit)? = null,
+    onEditSetlist: (setId: String) -> Unit = {},
+    onShareSetlist: (setId: String) -> Unit = {},
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -280,6 +282,12 @@ fun StageRoute(
             onEdit = onEditSong,
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
+            setlistActions = SetlistActions(
+                onConduct = viewModel::conductBand,
+                onShare = { uiState.setlist?.id?.let(onShareSetlist) },
+                onEdit = { uiState.setlist?.id?.let(onEditSetlist) },
+                onClearPlayed = viewModel::clearPlayed,
+            ),
             onSaveShape = viewModel::saveShape,
             note = playerNote,
             playing = playerUi.playing || playerUi.waiting,
@@ -411,6 +419,7 @@ fun StageScreen(
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     note: String = "",
     onBack: (() -> Unit)? = null,
+    setlistActions: SetlistActions = SetlistActions(),
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
     onTranspose: (songId: String, semitones: Int) -> Unit = { _, _ -> },
@@ -1558,6 +1567,7 @@ fun StageScreen(
             fg = fg,
             bg = Color(look.bg),
             onSong = ::jumpTo,
+            actions = setlistActions,
         )
     }
     if (keyboardHint > 0) {
