@@ -18,7 +18,7 @@ Copilot, Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Assunto | Ferramentas |
 |---|---|
 | Conexão | `stagebook_connect` (acha o tablet e pede para entrar), `stagebook_status` |
-| Músicas | `list_songs` (filtros: texto, tag, tom), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
+| Músicas | `list_songs` (filtros: texto, tag, tom; cada música vem com bpm, capo e `hasTrack`), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
 | Importar | `import_song` (letra e cifra coladas em qualquer formato comum, ou o endereço de uma página) |
 | Backing tracks | `set_backing_track` (OGG, MP3 ou WAV do computador), `remove_backing_track` |
 | Setlists | `list_setlists` (filtro: nome), `setlist_order` (recentes ou A a Z, o mesmo da aba do app), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |

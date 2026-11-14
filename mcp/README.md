@@ -18,7 +18,7 @@ Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Area | Tools |
 |---|---|
 | Connection | `stagebook_connect` (finds the tablet and asks to come in), `stagebook_status` |
-| Songs | `list_songs` (filters: text, tag, key), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
+| Songs | `list_songs` (filters: text, tag, key; each song comes with bpm, capo and `hasTrack`), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
 | Import | `import_song` (pasted lyrics/chords in any common format, or a song page address) |
 | Backing tracks | `set_backing_track` (OGG, MP3 or WAV from this computer), `remove_backing_track` |
 | Setlists | `list_setlists` (filter: name), `setlist_order` (newest or A to Z, the same as the app's tab), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
