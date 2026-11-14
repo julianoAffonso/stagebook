@@ -156,6 +156,24 @@ class EditorQueueTest {
         assertEquals(1, q.state.value!!.index)
         q.openFromList("zzz"); assertNull(q.state.value)
     }
+
+    private fun SongEditorViewModel.close() {
+        SongEditorViewModel::class.java.getDeclaredMethod("onCleared").apply { isAccessible = true }.invoke(this)
+    }
+
+    @Test fun `an editor closing after the next one opened leaves the new queue alone`() {
+        val r = rig()
+        r.queue.open(r.ids, 1)
+        val first = r.editor(1)
+        // the pencil again before the first editor's exit animation ended: the queue is filled again, then the old one is cleared
+        r.queue.open(r.ids, 2)
+        val second = r.editor(2)
+        first.close()
+        assertEquals(2, r.queue.state.value!!.index)
+        assertEquals(3, second.position.value!!.index + 1)
+        second.close()
+        assertNull("the editor that is still the latest empties it", r.queue.state.value)
+    }
 }
 
 /** What the stage fills in for the editor, for every way it opens it (pencil and long press go through the same call). */

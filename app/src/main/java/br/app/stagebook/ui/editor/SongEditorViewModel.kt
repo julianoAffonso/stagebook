@@ -129,10 +129,13 @@ class SongEditorViewModel @Inject constructor(
     // not when it only moves to the neighbouring song (that editor starts before this one is cleared)
     override fun onCleared() {
         if (route.songId == null && !finished) tracks.remove(track)
-        if (!moving) queue.clear()
+        if (!moving) queue.clearIf(queueGeneration)
     }
 
     private var moving = false
+
+    // the queue as it was when this editor started: only that one is emptied when it closes (see EditorQueue.generation)
+    private val queueGeneration = queue.generation
 
     /** Where the open song is in the queue (null: no queue, or this song isn't in it: an import, a new song). */
     val position: StateFlow<EditorPosition?> = queue.state.map { q -> positionIn(q) }

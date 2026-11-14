@@ -20,6 +20,14 @@ class EditorQueue @Inject constructor() {
     private val _state = MutableStateFlow<State?>(null)
     val state: StateFlow<State?> = _state
 
+    /**
+     * Counts every [open] and [clear]. An editor notes it when it starts and empties the queue on closing only if it is still
+     * the same ([clearIf]): the exit animation of one editor ends after the next one opened, and it used to empty the queue
+     * that next editor had just been given (no "3 / 12", no arrows).
+     */
+    @Volatile var generation = 0
+        private set
+
     // the order the Songs list showed when a song was opened from it (the stage that opens the editor reads it)
     @Volatile private var offered: List<String> = emptyList()
 
@@ -31,6 +39,7 @@ class EditorQueue @Inject constructor() {
 
     /** The setlist's (or list's) order, with the open song at [index] (out of range or blank ids: no queue). */
     fun open(ids: List<String>, index: Int) {
+        generation++
         if (index !in ids.indices || ids.size < 2) { clear(); return }
         // a very long list keeps a window around the open song
         val from = (index - MAX / 2).coerceAtLeast(0)
@@ -56,7 +65,10 @@ class EditorQueue @Inject constructor() {
         if (index in s.ids.indices) _state.value = s.copy(index = index)
     }
 
-    fun clear() { _state.value = null }
+    fun clear() { generation++; _state.value = null }
+
+    /** [clear], unless something opened (or cleared) the queue after [seen] was read from [generation]. */
+    fun clearIf(seen: Int) { if (generation == seen) clear() }
 
     companion object {
         const val MAX = 2000
