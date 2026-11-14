@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -258,7 +260,13 @@ fun SongEditorScreen(
             // never less than MIN_PANE_DP): the field always has room for several lines and the cursor is brought into view
             val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
             val wide = wideLists() || compact
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            // a tap on a neutral area (not on a button or the field: those take the touch first) takes the focus off and hides
+            // the keyboard; the cursor and selection live in `lyrics`, so they are still there when the field is tapped again
+            val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+            val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().pointerInput(Unit) {
+                detectTapGestures { focusManager.clearFocus(); keyboard?.hide() }
+            }) {
             val paneHeight = maxHeight.coerceAtLeast(MIN_PANE_DP.dp)
             Column(Modifier.fillMaxSize()) {
                 // top: back, the song's name with the artist under it, previous/next, save and delete (on every screen)
