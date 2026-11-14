@@ -2,12 +2,15 @@ package br.app.stagebook
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -93,6 +96,42 @@ class FollowGoFromEditorTest {
         compose.runOnIdle { nav.popBackStack() }
         compose.waitForIdle()
         compose.onAllNodesWithText("Hazard").assertCountEquals(0)
+    }
+
+    @Test fun `typing in the editor, Go, leaving without saving opens the band's song, not the stage underneath`() {
+        // the editor as it is used: the text is typed into it (so it becomes unsaved), and the stack has the old stage
+        // under it (device test v0.1.1134: after "Leave without saving" the stage of the song before showed)
+        var text by androidx.compose.runtime.mutableStateOf("letra")
+        compose.setContent {
+            StagebookTheme {
+                CompositionLocalProvider(LocalFollowGate provides gate) {
+                    nav = rememberNavController()
+                    FollowToStage(nav, songs, following, gate, androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) })
+                    NavHost(nav, startDestination = Home) {
+                        composable<Home> { Text("home") }
+                        composable<SongEditor> {
+                            SongEditorScreen(SongEditorUiState(loading = false, title = "Hazard", text = text, unsaved = text != "letra"), {}, {}, {}, { text = it }, {}, androidx.lifecycle.compose.dropUnlessResumed { nav.popBackStack() }, {})
+                        }
+                        composable<Stage> { entry -> Text("stage ${entry.toRoute<Stage>().songId}") }
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { nav.navigate(Stage(songId = "a")) }
+        compose.waitForIdle()
+        compose.runOnIdle { nav.navigate(SongEditor(songId = "a")) }
+        compose.waitForIdle()
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.hasText("letra")).performTextInput(" mais")
+        compose.waitForIdle()
+        band("b")
+        go()
+        compose.onNodeWithText("Sair sem salvar?", substring = true).assertExists()
+        compose.onNodeWithText("Sair sem salvar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("stage b").assertExists()
+        compose.onAllNodesWithText("stage a").assertCountEquals(0)
+        assertNull(gate.pending)
     }
 
     @Test fun `Go with something typed and the question dismissed stays in the editor, still waiting`() {
