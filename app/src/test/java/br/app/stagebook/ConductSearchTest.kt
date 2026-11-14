@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.unit.dp
@@ -26,11 +27,11 @@ class ConductSearchTest {
     @Test fun `the search button says searching and waits, then comes back`() {
         var searches = 0
         compose.setContent { StagebookTheme { ConductBar(ConductUi.Conducting("Teste", 0, emptyList(), emptyList()), {}, {}, { searches++ }, {}) } }
-        compose.onNodeWithText("Procurar a banda").performClick()
-        compose.onNodeWithText("Procurando…").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Procurar a banda").performClick()
+        compose.onNodeWithContentDescription("Procurando…").assertIsNotEnabled()
         assertEquals(1, searches)
         compose.mainClock.advanceTimeBy(31_000)
-        compose.onNodeWithText("Procurar a banda").assertExists()
+        compose.onNodeWithContentDescription("Procurar a banda").assertExists()
     }
 
     // on a phone the follower's only button stays on the text's line: alone underneath, it left the strip twice as tall (02/11)

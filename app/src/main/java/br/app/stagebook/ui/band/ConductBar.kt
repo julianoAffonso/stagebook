@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.text
@@ -49,6 +53,8 @@ import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.PreviewSurface
+import br.app.stagebook.ui.components.TipIcon
+import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -228,7 +234,7 @@ fun ConductBar(
     // the song isn't here, or came without chords: ask the band on this Wi-Fi
     val canAsk = ui is ConductUi.Following && (ui.missingHere || ui.noChords)
     @Composable
-    fun Buttons(lacksButton: Boolean) {
+    fun Buttons(lacksButton: Boolean, compact: Boolean) {
         if (lacksButton && hasLacks) TextButton({ showLacks = true }) { ActionText(seeLacks) }
         when (ui) {
             is ConductUi.Conducting -> {
@@ -236,8 +242,22 @@ fun ConductBar(
                 // nothing seems to happen
                 var searching by remember { mutableStateOf(false) }
                 LaunchedEffect(searching) { if (searching) { kotlinx.coroutines.delay(SEARCH_MS); searching = false } }
-                TextButton({ searching = true; onSearch() }, enabled = !searching) {
-                    ActionText(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
+                if (compact) {
+                    // on a phone the search is an icon (the strip has room for it and "End" beside the title); the
+                    // spinner takes its place meanwhile, disabled, so a second tap sends nothing
+                    val accent = MaterialTheme.colorScheme.primary
+                    if (searching) {
+                        val name = stringResource(R.string.conduct_searching)
+                        IconButton({}, Modifier.semantics { contentDescription = name }, enabled = false) {
+                            CircularProgressIndicator(Modifier.size(Sizes.icon), color = accent, strokeWidth = Sizes.progressStroke)
+                        }
+                    } else {
+                        TipIcon(stringResource(R.string.conduct_search), AppIcons.Search, { searching = true; onSearch() }, tint = accent)
+                    }
+                } else {
+                    TextButton({ searching = true; onSearch() }, enabled = !searching) {
+                        ActionText(stringResource(if (searching) R.string.conduct_searching else R.string.conduct_search))
+                    }
                 }
                 TextButton(onEnd) { ActionText(stringResource(R.string.conduct_end)) }
             }
@@ -256,16 +276,20 @@ fun ConductBar(
         contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        // on a phone two buttons don't fit next to the text. The leader's "End" broke letter by letter and the title
-        // vanished (user, 02/11): its two go on a line of their own. A follower's Ask and Leave left the missing song's
+        // on a phone two text buttons don't fit next to the text. The leader's "End" broke letter by letter and the
+        // title vanished (user, 02/11): its two went on a line of their own, which made the strip the tallest (user,
+        // 13/11), so "Look for the band" became an icon and both sit beside the first line. A follower's Ask and Leave left the missing song's
         // title two letters (two devices, 13/11), and on a line of their own made the strip too tall (user, 13/11):
         // they sit beside the short first line, and the second line has the strip's width. One button (Leave, Follow)
         // stays beside the text, and on a phone "See what's missing" is a tap on the text (with an arrow): as a button
         // it pushed both onto a third line and left the strip tall and half empty (user, 02/11)
-        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
+        // every strip has the same least height, and a one-line one keeps its text in the middle of it
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            Modifier.windowInsetsPadding(WindowInsets.navigationBars).heightIn(min = Sizes.strip), contentAlignment = Alignment.Center,
+        ) {
             val small = maxWidth < NARROW
-            val below = small && ui is ConductUi.Conducting
-            val besideTitle = small && canAsk
+            // the leader's two actions are an icon and "End" on a phone: they fit beside the title like a follower's
+            val besideTitle = small && (canAsk || ui is ConductUi.Conducting)
             val lacksInText = small && hasLacks
             val textTap = if (lacksInText) Modifier.clickable(onClickLabel = seeLacks) { showLacks = true } else Modifier
             // each line is one line, and what gets cut is the name in it (a setlist, a device, a song): on a phone
@@ -303,7 +327,7 @@ fun ConductBar(
             }
             if (besideTitle) {
                 ActionsBesideTitle(
-                    leading, titleLine, { Row { Buttons(lacksButton = !lacksInText) } }, detailLine,
+                    leading, titleLine, { Row { Buttons(lacksButton = !lacksInText, compact = true) } }, detailLine,
                     Modifier.then(textTap).padding(horizontal = Spacing.m),
                 )
             } else {
@@ -314,9 +338,8 @@ fun ConductBar(
                             titleLine()
                             detailLine()
                         }
-                        if (!below) Buttons(lacksButton = !lacksInText)
+                        Buttons(lacksButton = !lacksInText, compact = false)
                     }
-                    if (below) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Buttons(lacksButton = !lacksInText) }
                 }
             }
         }

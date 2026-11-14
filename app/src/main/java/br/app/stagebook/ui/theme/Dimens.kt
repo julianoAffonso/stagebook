@@ -24,6 +24,8 @@ object Sizes {
     val breakDense = 32.dp      // the break between them there: it isn't tapped
     val swipeTrigger = 56.dp    // row opened by dragging: only the icon button (24) + margin (16) on each side
     val swatch = 48.dp
+    val strip = 60.dp           // least height of the band's strip, in every state: they all look equally tall
+    val progressStroke = 2.dp   // a small circular progress indicator (the strip's search)
     val artistField = 200.dp    // artist or band (tablet): names are short; longer ones scroll inside the field
     val yearField = 96.dp       // song year: always 4 digits
     val tempoField = 88.dp      // BPM: up to 3 digits

@@ -5,7 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -143,7 +148,7 @@ class ConductStripOneLineTest {
         compose.onNodeWithText("Teste F um chegou sem cifra").assertExists()
     }
 
-    @Test fun `a follower's strip with two actions is lower than the leader's and close to one with one action`() {
+    @Test fun `a follower's strip with two actions is as tall as the leader's and close to one with one action`() {
         ui = following("Teste F um", rest = since)
         show()
         val oneAction = stripHeight()
@@ -154,7 +159,7 @@ class ConductStripOneLineTest {
             ui = it
             compose.waitForIdle()
             val height = stripHeight()
-            assertTrue("lower than the leader's ($leader): $height", height < leader - 8.dp)
+            assertTrue("about the leader's ($leader): $height", height <= leader + 4.dp)
             assertTrue("no blank row over one action ($oneAction): $height", height <= oneAction + 16.dp)
             assertTrue("about 64dp: $height", height <= 68.dp)
         }
@@ -178,11 +183,117 @@ class ConductStripOneLineTest {
         assertEquals(1 to 1, asks to leaves)
     }
 
-    @Test fun `the leader's two actions stay under the text`() {
-        ui = ConductUi.Conducting("Show", 0, listOf("Baixo"), emptyList())
+    // the drawn text itself, not the button around it
+    private fun text(text: String) = compose.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot()
+    private fun icon(description: String) = compose.onNodeWithContentDescription(description)
+    private fun iconBounds(description: String) = icon(description).getUnclippedBoundsInRoot()
+    private val conducting = ConductUi.Conducting("Show", 1, emptyList(), emptyList())
+
+    @Test fun `on a phone the leader's search is an icon and End is a text, both beside the first line`() {
+        ui = conducting
         show()
-        listOf("Procurar a banda", "Encerrar").forEach { assertTrue("\"$it\" is under the text", action(it).top >= bounds("conductLineStart").bottom) }
-        assertTrue(action("Encerrar").right > 300.dp)
+        // "Look for the band" is no longer a written action
+        compose.onAllNodesWithText("Procurar a banda").assertCountEquals(0)
+        val first = bounds("conductTitleStart")
+        val search = iconBounds("Procurar a banda")
+        val touch = icon("Procurar a banda").fetchSemanticsNode().touchBoundsInRoot
+        val least = with(compose.density) { Sizes.touch.toPx() } - 1f
+        assertTrue("the icon is a touch target: ${touch.width} x ${touch.height} px", touch.width >= least && touch.height >= least)
+        assertEquals("the icon is centred on the first line", (first.top.value + first.bottom.value) / 2, (search.top.value + search.bottom.value) / 2, 2f)
+        // "End" whole, on one line, beside the first line
+        val end = text("Encerrar")
+        assertEquals("the text is centred on the first line", (first.top.value + first.bottom.value) / 2, (end.top.value + end.bottom.value) / 2, 2f)
+        assertTrue("one line: ${end.bottom - end.top}", end.bottom - end.top < 24.dp)
+        assertTrue("it is the last, on the strip's end: ${end.right}", end.right > 300.dp && end.right <= 360.dp)
+        assertTrue("the icon is before it: ${search.right} <= ${end.left}", search.right <= end.left + 1.dp)
+        // the detail line is under the title, with the width of the strip
+        assertEquals(textStart.value, bounds("conductLineCut").left.value, PIXEL)
+        assertTrue("the detail is under the first line", bounds("conductLineCut").top >= first.bottom - 1.dp)
+    }
+
+    @Test fun `the leader's icon searches and End ends`() {
+        var searches = 0
+        var ends = 0
+        compose.setContent { StagebookTheme { ConductBar(conducting, { ends++ }, {}, { searches++ }, {}) } }
+        icon("Procurar a banda").performClick()
+        assertEquals(1 to 0, searches to ends)
+        compose.onNodeWithText("Encerrar").performClick()
+        assertEquals(1 to 1, searches to ends)
+    }
+
+    @Test fun `while searching a spinner takes the icon's place and a second tap sends nothing`() {
+        var searches = 0
+        compose.setContent { StagebookTheme { ConductBar(conducting, {}, {}, { searches++ }, {}) } }
+        val place = iconBounds("Procurar a banda")
+        icon("Procurar a banda").performClick()
+        compose.onAllNodesWithContentDescription("Procurar a banda").assertCountEquals(0)
+        val spinner = icon("Procurando…")
+        spinner.assertIsNotEnabled()
+        val bounds = spinner.getUnclippedBoundsInRoot()
+        assertEquals("same place", place.left.value, bounds.left.value, 1f)
+        assertEquals("same size", (place.right - place.left).value, (bounds.right - bounds.left).value, 1f)
+        spinner.performClick()
+        assertEquals(1, searches)
+    }
+
+    @Test fun `a long setlist name is cut on the first line and the icon and End stay whole`() {
+        ui = ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda e mais um pouco", 1, emptyList(), emptyList())
+        show()
+        val name = bounds("conductTitleCut")
+        val search = iconBounds("Procurar a banda")
+        val end = text("Encerrar")
+        assertTrue("the name ends before the icon: ${name.right} <= ${search.left}", name.right <= search.left + 1.dp)
+        assertTrue("End is whole and on screen", end.right <= 360.dp && end.bottom - end.top < 24.dp)
+        roomy = true
+        compose.waitForIdle()
+        assertTrue("and the name is cut", width("conductTitleCut") > (name.right - name.left).value + 20f)
+        roomy = false
+    }
+
+    private val lacker = listOf(ConductUi.Lacker("b", "Baixo", listOf("Ré")))
+    private val lacks = listOf(br.app.stagebook.domain.Conduct.Lack("Baixo", listOf("Ré")))
+
+    /** Every state of the band's strip, for a leader and for a follower. */
+    private fun everyState() = listOf(
+        "conducting" to ConductUi.Conducting("Show", 0, emptyList(), emptyList()),
+        "conducting, one did not answer" to conducting,
+        "conducting, a song missing" to ConductUi.Conducting("Show", 0, listOf("Baixo"), lacks, lacker),
+        "conducting, lacks to see" to ConductUi.Conducting("Show", 0, emptyList(), lacks, lacker),
+        "following" to following("Teste F um"),
+        "following, lacks to see" to ConductUi.Following("Voz", "Teste F um", false, false, emptyList(), listOf("Ré")),
+        "following, song missing here" to following("Teste F um", missingHere = true),
+        "following, song missing in the band" to ConductUi.Following("Voz", "Teste F um", false, false, listOf("Baixo"), emptyList()),
+        "following, no chords" to following("Teste F um", noChords = true),
+        "break" to following("Teste F um", rest = since),
+        "break, next missing here" to following("Teste F um", missingHere = true, rest = since),
+        "gone" to following("", gone = true),
+        "left" to ConductUi.Left("Voz"),
+    )
+
+    @Test fun `every strip has the same height, between 60 and 64dp`() {
+        everyState().forEach { (name, state) ->
+            ui = state
+            show()
+            val height = stripHeight()
+            println("STRIP_HEIGHT $name = ${height.value}")
+            assertTrue("$name: $height is at least ${Sizes.strip}", height >= Sizes.strip)
+            assertTrue("$name: $height is at most 64dp", height <= 64.dp)
+        }
+    }
+
+    @Test @Config(qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi")
+    fun `on a wide screen the leader keeps its text actions beside the text and the strip is not lower than 60dp`() {
+        ui = conducting
+        show()
+        compose.onNodeWithText("Procurar a banda").assertExists()
+        compose.onAllNodesWithContentDescription("Procurar a banda").assertCountEquals(0)
+        listOf("Procurar a banda", "Encerrar").forEach { assertTrue("\"$it\" is beside the text", action(it).top < bounds("conductLineCut").bottom) }
+        assertTrue("the strip is at least ${Sizes.strip}: ${stripHeight()}", stripHeight() >= Sizes.strip)
+        everyState().forEach { (name, state) ->
+            ui = state
+            compose.waitForIdle()
+            assertTrue("$name: ${stripHeight()}", stripHeight() >= Sizes.strip)
+        }
     }
 
     @Test fun `with one action the strip is as tall as it was, the action beside the text`() {
@@ -193,7 +304,7 @@ class ConductStripOneLineTest {
         // two lines of text and Leave: no taller than the strip with one line
         ui = following("Teste F um", rest = since)
         compose.waitForIdle()
-        assertEquals(oneLine, stripHeight())
+        assertTrue("same height: $oneLine and ${stripHeight()}", stripHeight() <= oneLine + 4.dp)
         assertTrue(action("Sair").top < bounds("conductLineStart").bottom)
     }
 
@@ -204,7 +315,7 @@ class ConductStripOneLineTest {
         val oneLine = stripHeight()
         ui = following("Teste F um", missingHere = true)
         compose.waitForIdle()
-        assertEquals(oneLine, stripHeight())
+        assertEquals(oneLine.value, stripHeight().value, 4f)
         listOf("Pedir", "Sair").forEach { assertTrue(action(it).top < bounds("conductLineStart").bottom) }
     }
 
@@ -255,7 +366,7 @@ class ConductStripOneLineTest {
     @Test fun `the leader's strip keeps its lines with a long setlist name and many names`() = sameStrip(
         ConductUi.Conducting("Show", 0, listOf("Baixo"), emptyList()),
         ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda", 0, listOf("Baixo", "Guitarra", "Teclado", "Bateria", "Sopros", "Vocal de apoio"), emptyList()),
-        "Procurar a banda", "Encerrar",
+        "Encerrar",
     )
 
     private companion object {
