@@ -32,6 +32,7 @@ import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.ScreenInsets
 import br.app.stagebook.ui.components.SearchField
+import br.app.stagebook.ui.components.SongFacts
 import br.app.stagebook.ui.components.SongListItem
 import br.app.stagebook.ui.components.wideLists
 import br.app.stagebook.ui.theme.StagebookTheme
@@ -105,6 +106,8 @@ fun PickSongsScreen(
                                 onClick = { if (!row.inSet) onToggle(row.id) },
                                 inline = wide,
                                 leading = { Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet) },
+                                trailing = { SongFacts(row.songKey, row.bpm, row.capo, row.hasTrack) },
+                                titleLines = 1,
                             )
                         }
                     }
@@ -117,9 +120,9 @@ fun PickSongsScreen(
 private val previewState = PickSongsUiState(
     setName = "Show de sábado",
     rows = listOf(
-        PickRowUi("1", "Hazard", "Richard Marx · 1991", inSet = true, selected = false),
-        PickRowUi("2", "Malandragem", "Cássia Eller · 1994", inSet = false, selected = true),
-        PickRowUi("3", "Tempo Perdido", "Legião Urbana · 1986", inSet = false, selected = false),
+        PickRowUi("1", "Hazard", "Richard Marx", inSet = true, selected = false, songKey = "Em", bpm = 120, capo = 2, hasTrack = true),
+        PickRowUi("2", "Malandragem", "Cássia Eller", inSet = false, selected = true, songKey = "G"),
+        PickRowUi("3", "Tempo Perdido", "Legião Urbana", inSet = false, selected = false, songKey = "C", bpm = 118),
     ),
     selectedCount = 1,
 )

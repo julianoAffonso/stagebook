@@ -84,6 +84,35 @@
     <string name="sets_rename">Rename</string>
     <string name="sets_delete">Delete setlist</string>
     <string name="sets_add_songs">Songs</string>
+    <string name="sets_add_break">Break</string>
+    <string name="sets_break_needs_two">Needs at least 2 songs</string>
+    <string name="set_break">BREAK</string>
+    <string name="set_break_time">BREAK · %1$s</string>
+    <string name="set_break_paused">Paused</string>
+    <string name="set_break_remove">Remove break</string>
+    <string name="set_edit">Edit setlist</string>
+    <string name="action_done">Done</string>
+    <string name="action_undo">Undo</string>
+    <string name="set_clear_played">Clear played</string>
+    <string name="set_remove_song">Remove from this setlist</string>
+    <string name="set_song_left">%1$s left this setlist</string>
+    <string name="set_state_played">PLAYED</string>
+    <string name="set_state_now">NOW</string>
+    <string name="set_state_next">NEXT</string>
+    <string name="set_bpm">%1$d bpm</string>
+    <string name="set_count_with_breaks">%1$s · %2$s</string>
+    <plurals name="break_count">
+        <item quantity="one">%d break</item>
+        <item quantity="other">%d breaks</item>
+    </plurals>
+    <plurals name="set_block">
+        <item quantity="one">SET %1$d · %2$d song</item>
+        <item quantity="other">SET %1$d · %2$d songs</item>
+    </plurals>
+    <string name="stage_break_next">Up next: %1$s</string>
+    <string name="stage_break_pause">Pause the break</string>
+    <string name="stage_break_resume">Resume the break</string>
+    <string name="stage_break_reset">Reset the break to zero</string>
     <string name="qr_limit_title">Setlist full</string>
     <string name="qr_limit_message">This setlist is full. To go on, create another one.</string>
     <string name="qr_limit_batch_title">They don\'t all fit</string>
@@ -124,6 +153,8 @@
     <string name="stage_exit">Leave</string>
     <string name="stage_position">%1$d of %2$d</string>
     <string name="stage_next">Next: %1$s</string>
+    <string name="stage_setlist_open">Open the setlist</string>
+    <string name="stage_setlist_close">Close the setlist</string>
     <string name="stage_end">End of setlist</string>
     <string name="stage_edit">Edit the lyrics on this page</string>
     <string name="stage_edit_line">Edit this line</string>
@@ -134,7 +165,6 @@
     <string name="stage_zoom_scope">Lyrics and chords only</string>
     <string name="stage_zoom_reset">100%</string>
     <string name="set_remove">Remove</string>
-    <string name="set_tap_to_play">%1$s · tap one to open the stage</string>
     <string name="stage_empty_title">Nothing to play</string>
     <string name="stage_empty_message">This setlist was deleted or is empty. Go back and pick another.</string>
 
@@ -161,16 +191,44 @@
     <string name="conduct_gone">%1$s disconnected 10 minutes ago</string>
     <string name="conduct_missing_here">You don\'t have \"%1$s\"</string>
     <string name="conduct_missing_now">Missing this song: %1$s</string>
+    <string name="conduct_break">Break · %1$s · %2$s</string>
     <plurals name="conduct_no_answer">
         <item quantity="one">%1$d band member didn\'t answer</item>
         <item quantity="other">%1$d band members didn\'t answer</item>
     </plurals>
     <string name="conduct_see_lacks">See what\'s missing</string>
+    <string name="conduct_see_lacks_here">See what\'s missing here</string>
+    <string name="conduct_lacks_here_title">Missing on this device</string>
     <string name="conduct_search">Look for the band</string>
     <string name="conduct_end">End</string>
     <string name="conduct_leave">Leave</string>
+    <string name="conduct_go">Go</string>
+    <string name="conduct_went_to">%1$s went to “%2$s”</string>
+    <string name="conduct_went_break">%1$s went to the break</string>
+    <string name="conduct_wait_menu">Opens when you close the menu</string>
+    <string name="conduct_wait_keyboard">Opens when you close the keyboard</string>
+    <string name="conduct_wait_screen">Opens when you finish here</string>
+    <string name="conduct_left">%1$s is leading</string>
+    <string name="conduct_follow">Follow</string>
     <string name="conduct_lacks_title">What\'s missing</string>
     <string name="conduct_lack_line">%1$s: %2$s</string>
+    <plurals name="conduct_send_lacks">
+        <item quantity="one">Send the %1$d it lacks</item>
+        <item quantity="other">Send the %1$d it lacks</item>
+    </plurals>
+    <string name="conduct_send_one">Send the one it lacks</string>
+    <string name="conduct_send_all">Send to all</string>
+    <string name="conduct_sent_to">Sent to %1$s</string>
+    <string name="conduct_not_sent">Couldn\'t send. Check the Wi-Fi and try again.</string>
+    <string name="conduct_lacks_none">Nobody is missing a song.</string>
+    <string name="conduct_ask">Ask</string>
+    <string name="conduct_asking">Asking…</string>
+    <string name="conduct_nobody_has">Nobody on this Wi-Fi has this song</string>
+    <string name="conduct_nobody_has_chords">Nobody on this Wi-Fi has this song with chords</string>
+    <string name="conduct_no_chords">%1$s came without chords</string>
+    <string name="conduct_arrived">%1$s arrived from %2$s</string>
+    <string name="conduct_chords_kept">%1$s with chords arrived from %2$s. Check it in Received from the band.</string>
+    <string name="conduct_chords_came">%1$s now has chords, from %2$s</string>
     <string name="about_support">Support Stagebook</string>
     <string name="about_support_text">Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about buying me a coffee? Any amount helps keep the app going and bring new features.</string>
     <string name="about_donate">Buy me a coffee</string>
@@ -487,6 +545,7 @@
     <string name="settings_pedal_cmd_next_song">Next song</string>
     <string name="settings_pedal_cmd_previous_song">Previous song</string>
     <string name="settings_pedal_cmd_play_pause">Play/pause backing track</string>
+    <string name="settings_pedal_cmd_setlist">Open the setlist</string>
     <string name="settings_pedal_cmd_none">Nothing</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_help">Want Stagebook in your language? Help translate it: the steps are in the %1$s.</string>
@@ -495,6 +554,8 @@
     <string name="language_en" translatable="false">English</string>
     <string name="pedal_key_code">Key %1$d</string>
     <string name="settings_pedal_key_reset">Reset %1$s to default</string>
+    <string name="settings_pedal_key_forget">Forget this button</string>
+    <string name="settings_pedal_key_forget_ask">Forget this button? It comes back when you press it again.</string>
     <string name="midi_cc">MIDI CC %1$d (channel %2$d)</string>
     <string name="midi_cc_value">MIDI CC %1$d = %2$d (channel %3$d)</string>
     <string name="midi_note">MIDI note %1$d (channel %2$d)</string>
@@ -797,8 +858,8 @@
     <string name="band_join">Ask to join</string>
     <string name="band_waiting">Waiting for the other device to allow…</string>
     <string name="band_denied">Not allowed</string>
-    <string name="band_other_version">Different app version (%1$s). Update both to the same version.</string>
-    <string name="band_version_join">You\'re on different app versions. Update both and try again.</string>
+    <string name="band_other_version">Different app version (%1$s). Everyone in the band needs the latest version: update the app on every device.</string>
+    <string name="band_version_join">You\'re on different app versions. Update the app on every band device to the latest version and try again.</string>
     <string name="band_busy">They\'re on stage right now. Ask again after the show.</string>
     <string name="band_failed">Couldn\'t connect. Check that both are on the same Wi-Fi and try again.</string>
     <string name="band_members">Band</string>
@@ -859,6 +920,7 @@
     <string name="web_connected">Connected to %1$s</string>
     <string name="web_saved">Saved</string>
     <string name="web_pick">Pick a song from the list or create a new one.</string>
+    <string name="web_break_needs_two">Needs at least 2 songs</string>
     <string name="web_unsaved">There are unsaved changes. Leave anyway?</string>
     <string name="web_paste_title">Paste the chords</string>
     <string name="web_paste_hint">Copy the chords on the site and paste them here. Chords above the lyrics land in the right place.</string>

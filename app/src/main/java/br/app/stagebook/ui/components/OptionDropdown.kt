@@ -51,6 +51,7 @@ fun <T> OptionDropdown(
             colors = ExposedDropdownMenuDefaults.textFieldColors(),
             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
+        br.app.stagebook.ui.components.FollowBusyWhile(open)
         ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             options.forEach { o ->
                 DropdownMenuItem(

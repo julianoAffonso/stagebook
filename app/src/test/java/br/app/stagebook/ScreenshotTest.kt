@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import br.app.stagebook.ui.theme.Spacing
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.geometry.Offset
@@ -35,6 +36,7 @@ import br.app.stagebook.ui.editor.SongEditorScreen
 import br.app.stagebook.ui.editor.SongEditorUiState
 import br.app.stagebook.ui.home.HomeScaffold
 import br.app.stagebook.ui.home.HomeTab
+import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.ui.setlists.SetItemUi
 import br.app.stagebook.ui.setlists.SetlistDetailScreen
 import br.app.stagebook.ui.setlists.SetlistDetailUiState
@@ -49,6 +51,8 @@ import br.app.stagebook.ui.settings.SettingsUiState
 import br.app.stagebook.ui.songs.SongRowUi
 import br.app.stagebook.ui.songs.SongsScreen
 import br.app.stagebook.ui.songs.SongsUiState
+import br.app.stagebook.ui.band.goNow
+import br.app.stagebook.ui.band.waiting
 import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
@@ -88,11 +92,11 @@ class ScreenshotTest {
     private val songs = SongsUiState(
         loading = false,
         songs = listOf(
-            SongRowUi("1", "Hazard", "Richard Marx · 1991"),
-            SongRowUi("2", "Malandragem", "Cássia Eller · 1994"),
-            SongRowUi("3", "Tempo Perdido", "Legião Urbana · 1986"),
-            SongRowUi("4", "Wild Horses", "The Rolling Stones · 1971"),
-            SongRowUi("5", "Por Enquanto", "Legião Urbana · 1985"),
+            SongRowUi("1", "Hazard", "Richard Marx", songKey = "A", bpm = 76),
+            SongRowUi("2", "Malandragem", "Cássia Eller", songKey = "G", bpm = 96, capo = 2),
+            SongRowUi("3", "Tempo Perdido", "Legião Urbana", songKey = "C", bpm = 118, hasTrack = true),
+            SongRowUi("4", "Wild Horses", "The Rolling Stones", songKey = "G", bpm = 70),
+            SongRowUi("5", "Por Enquanto", "Legião Urbana", songKey = "D"),
         ),
         total = 5,
         tags = listOf(s("Internacional"), s("Nacional")),
@@ -100,7 +104,12 @@ class ScreenshotTest {
     private val set = SetlistDetailUiState(
         loading = false,
         name = s("Show de sábado"),
-        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false) },
+        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false, it.songKey, it.bpm, it.capo, it.hasTrack) },
+    )
+    // mid show: two songs played, the third on stage and the fourth next
+    private val setShow = set.copy(
+        items = set.items.mapIndexed { i, it -> it.copy(state = listOf(SetlistShow.State.PLAYED, SetlistShow.State.PLAYED, SetlistShow.State.NOW, SetlistShow.State.NEXT).getOrElse(i) { SetlistShow.State.NONE }) },
+        anyPlayed = true,
     )
     private val lyrics = s("[Verse 1]\nPrimeira linha da letra de exemplo\nSegunda linha ==um pouco mais comprida== que a outra\nTerceira linha\n\n" +
         "[Chorus]\nO refrão aparece aqui\nE repete mais uma vez\n\n[Verse 2]\nMais uma estrofe\nCom outra linha\nE a última")
@@ -146,6 +155,44 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun homeSongsPhone() = shoot("celular_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
 
+    // a library long enough for the A to Z index (made-up songs): grouped as the view model groups them
+    private val manySongs = run {
+        val english = SHOTS_LANG?.startsWith("en") == true
+        val artists = if (english) listOf("The Made-Ups", "Imaginary Trio", "Nobody's Band", "Pretend Duo", "") else listOf("Banda Fictícia", "Trio Imaginário", "Os Inventados", "Duo de Mentira", "")
+        val keys = listOf("G", "Em", "C", "A", "D", "F#m", "")
+        val titles = if (english) listOf(
+            "7 Days of Rain", "Above the Hills", "All the Way Back", "Autumn Window", "Back Porch Light", "Blue Sunflower", "Bridge by the Mill",
+            "Calm Breeze", "Corner Dance", "Cold Lighthouse", "Dirt Road", "Down the Bend", "Early Tide", "Élan of Summer",
+            "Far Horizon", "Field of Paper", "Garden Gate", "High Noon Sun", "Island Song", "June Moonlight", "Long Way Round",
+            "Market Night", "Morning Clear", "North Wind", "Open Window", "Paper Boat", "Quiet River", "Sand Between", "Small Hours",
+            "Song of the Wind", "Too Late Not", "Under the Bridge", "Village Square", "Winter Flower", "Yard at Home", "Zigzag Bee",
+        ) else listOf(
+            "7 Dias de Chuva", "Água de Março Não", "Alvorada na Serra", "Aquarela do Sul", "Baile da Esquina", "Barco de Papel", "Brisa Mansa",
+            "Caminho de Volta", "Canção do Vento", "Céu de Brigadeiro", "Dança das Folhas", "Depois da Curva", "Estrada de Terra", "Élan de Verão",
+            "Farol Apagado", "Flor de Inverno", "Girassol Azul", "Horizonte Perto", "Ilha Pequena", "Janela Aberta", "Luar de Agosto",
+            "Madrugada Clara", "Maré Cheia", "Noite de Feira", "Outro Lugar", "Pé na Areia", "Ponte Velha", "Quintal de Casa", "Rio Sem Pressa",
+            "Sol de Domingo", "Tarde Demais Não", "Um Dia Qualquer", "Vento Norte", "Xote da Praça", "Zunido de Abelha",
+        )
+        val rows = br.app.stagebook.domain.TextKey.sorted(titles) { it }.mapIndexed { i, title ->
+            SongRowUi("m$i", title, artists[i % artists.size], songKey = keys[i % keys.size], bpm = if (i % 4 == 3) 0 else 72 + i * 3, capo = if (i % 5 == 1) 2 else 0, hasTrack = i % 3 == 0)
+        }
+        val grouped = br.app.stagebook.domain.SongGroups.group(rows) { br.app.stagebook.domain.SongGroups.letter(it.title) }
+        songs.copy(songs = grouped.rows, total = rows.size, groups = grouped.groups.map { br.app.stagebook.ui.songs.SongGroupUi(it.letter, it.first) })
+    }
+
+    // the list taken to the letter C by its index, which is on screen as while the list is scrolled
+    private fun shootSongsIndex(name: String) {
+        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(manySongs, "", {}, {}, {}, {}, it, indexPinned = true) } } } }
+        compose.onNodeWithTag("letter_index_C", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun homeSongsIndexTablet() = shootSongsIndex("tablet_1_musicas_indice")
+
+    @Test @Config(qualifiers = PHONE)
+    fun homeSongsIndexPhone() = shootSongsIndex("celular_1_musicas_indice")
+
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {
         HomeScaffold(HomeTab.SETLISTS, {}) {
             SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
@@ -159,13 +206,39 @@ class ScreenshotTest {
         }
     }
 
+    // the setlist's own screen is the edit (the pencil on its card): a handle and a remove button on every row, with the
+    // key, tempo, capo and backing track kept on each; where the show is lives on the stage's panel
     @Test fun setlistDetailTablet() = shoot("tablet_3_setlist") {
-        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistDetailPhone() = shoot("celular_3_setlist") {
-        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+    }
+
+    // a break in the setlist: its row between the songs, the two blocks and the count under the name
+    @Test fun setlistBreakTablet() = shoot("tablet_3_setlist_intervalo") { SetlistBreak() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun setlistBreakPhone() = shoot("celular_3_setlist_intervalo") { SetlistBreak() }
+
+    @Composable
+    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+
+    // the break on stage, twelve and a half minutes in, with the song that comes next
+    @Test fun stageBreakTablet() = shoot("tablet_6_palco_intervalo") { StageBreak() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageBreakPhone() = shoot("celular_7_palco_intervalo") { StageBreak() }
+
+    @Composable
+    private fun StageBreak() {
+        val since = androidx.compose.runtime.remember { System.currentTimeMillis() - 750_000L }
+        StageScreen(
+            stage.copy(songs = listOf(stage.songs[0], StageSong("Malandragem", s("Cássia Eller · 1994"), "{key: G}\n$lyrics", false)), live = true, breaks = listOf(1)),
+            0, 0, { _, _ -> }, onBack = {}, breakSince = since,
+        )
     }
 
     // setlist journey (user, 01/11): list, select, inside, select songs, add songs with the tag filter, add from Songs
@@ -194,9 +267,9 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription(str(R.string.share_title)).performClick()
     }
 
-    @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
+    @Test fun setlistJourney3Inside() = journey("jornada_setlist_3_dentro", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) })
 
-    @Test fun setlistJourney4SelectSongs() = journey("jornada_setlist_4_selecionar_musicas", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }) {
+    @Test fun setlistJourney4SelectSongs() = journey("jornada_setlist_4_selecionar_musicas", { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }) {
         compose.onNodeWithText("Wild Horses").performTouchInput { longClick() }
     }
 
@@ -204,7 +277,7 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.filter { it.id != "1" && it.id != "4" }.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = false, selected = it.id == "2") },
+                rows = songs.songs.filter { it.id != "1" && it.id != "4" }.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = false, selected = it.id == "2", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
                 selectedCount = 1,
                 tags = listOf(s("Internacional"), s("Nacional")),
                 chosenTags = setOf(s("Nacional")),
@@ -788,7 +861,7 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
+                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
                 selectedCount = 2,
                 tags = listOf(s("Internacional"), s("Nacional")),
                 chosenTags = setOf(s("Nacional")),
@@ -802,7 +875,7 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3") },
+                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
                 selectedCount = 2,
             ),
             "", {}, {}, {}, {},
@@ -831,17 +904,61 @@ class ScreenshotTest {
         androidx.compose.foundation.layout.Column {
             androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
             br.app.stagebook.ui.band.ConductBar(
-                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")),
-                    listOf(br.app.stagebook.domain.Conduct.Lack(s("Baixo"), listOf("Garota de Ipanema")))),
-                {}, {}, {},
+                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")), emptyList()),
+                {}, {}, {}, {},
             )
         }
+    }
+
+    // the leader went to the break while a window is open: the break waits behind it, the strip says so
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun conductBreakHeld() = conductBreakHeldShot("tablet_6_palco_intervalo_espera")
+
+    @Test @Config(qualifiers = PHONE)
+    fun conductBreakHeldPhone() = conductBreakHeldShot("celular_7_palco_intervalo_espera")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun conductBreakHeldShot(name: String) {
+        val gate = br.app.stagebook.ui.components.FollowGate()
+        var rest by androidx.compose.runtime.mutableStateOf<br.app.stagebook.ui.stage.FollowBreak?>(null)
+        compose.setContent {
+            StagebookTheme {
+                androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalFollowGate provides gate) {
+                    androidx.compose.foundation.layout.Column {
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage.copy(followBreak = rest), 0, 0, { _, _ -> }, onBack = {}) }
+                        br.app.stagebook.ui.band.ConductBar(
+                            br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), breakSince = rest?.since),
+                            {}, {}, {}, {}, waiting = gate.waiting(), onGo = gate::goNow,
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
+        compose.waitForIdle()
+        rest = br.app.stagebook.ui.stage.FollowBreak(System.currentTimeMillis() - 90_000, s("Garota de Ipanema"), "G")
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     @Test fun conductBar() = shoot("banda_conduzir_faixas") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }
 
     @Test @Config(qualifiers = PHONE)
     fun conductBarPhone() = shoot("banda_conduzir_faixas_celular") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }
+
+    // the leader's "What's missing", with what it sends
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun conductLacks() {
+        compose.setContent { StagebookTheme { br.app.stagebook.ui.band.LacksDialog(br.app.stagebook.ui.band.sampleLackers, false, {}, {}) } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/banda_conduzir_falta.png")
+    }
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test @Config(qualifiers = PHONE)
+    fun conductLacksPhone() {
+        compose.setContent { StagebookTheme { br.app.stagebook.ui.band.LacksDialog(br.app.stagebook.ui.band.sampleLackers, false, {}, {}) } }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/banda_conduzir_falta_celular.png")
+    }
 
     @Test fun settingsUpdateTablet() = shoot("tablet_5_ajustes_atualizar") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
@@ -1067,6 +1184,12 @@ class ScreenshotTest {
         look = Look(fontSp = 34f),
     )
 
+    // opened from a setlist: the handle of the setlist over the stage shows at the left edge
+    private val stageInSet = stage.copy(
+        live = true,
+        setlist = br.app.stagebook.ui.stage.StageSetlist(s("Show de sábado"), listOf(SetlistShow.State.NOW, SetlistShow.State.NEXT), listOf("A", "G")),
+    )
+
     // T13: scroll mode, at the 2nd step (the lyrics scrolled to the 1st line that didn't fit)
     @Test fun stageScrollTablet() = shoot("tablet_6_palco_rolar") {
         StageScreen(stage.copy(look = stage.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)), 0, 1, { _, _ -> }, onBack = {})
@@ -1169,7 +1292,37 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong(s("Com tablatura"), s("Banda Fictícia"), tabSong, false))), 0, 0, { _, _ -> }, onBack = {})
     }
 
-    @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
+    @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stageInSet, 0, 0, { _, _ -> }, onBack = {}) }
+
+    // the setlist over the stage: the panel open on the third song, two played, with the break after it
+    @Test fun stageSetlistTablet() = shootStageSetlist("tablet_6_palco_setlist")
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageSetlistPhone() = shootStageSetlist("celular_7_palco_setlist")
+
+    // the same panel with its ⋮ open: lead the band, share, edit and clear played
+    @Test fun stageSetlistMenuTablet() = shootStageSetlist("tablet_6_palco_setlist_menu", menu = true)
+
+    @Test @Config(qualifiers = PHONE)
+    fun stageSetlistMenuPhone() = shootStageSetlist("celular_7_palco_setlist_menu", menu = true)
+
+    private fun shootStageSetlist(name: String, menu: Boolean = false) {
+        val show = stage.copy(
+            songs = set.items.mapIndexed { i, it -> StageSong(it.title, it.subtitle, if (i == 2) stage.songs[0].text else "", false, artist = it.subtitle) },
+            live = true,
+            breaks = listOf(3),
+            setlist = br.app.stagebook.ui.stage.StageSetlist(
+                set.name, setShow.items.map { it.state }, set.items.map { it.songKey },
+                mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true)),   // the break left open, stopped at 12:30
+                id = "1", anyPlayed = true, canConduct = true,
+            ),
+        )
+        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { StageScreen(show, 2, 0, { _, _ -> }, onBack = {}) } } }
+        compose.onNodeWithContentDescription(str(R.string.stage_setlist_open)).performClick()
+        if (menu) compose.onNodeWithContentDescription(str(R.string.action_more)).performClick()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
+    }
 
     // made-up chart (no real lyrics): chords above, a chords-only line, a ChordPro section and a comment
     private val chordSong = s("""
@@ -1484,14 +1637,14 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun receiveCodeReviewPhone() = shoot("jornada_compartilhar_3_receber") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }, breaks = listOf(2)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
         )
     }
 
     @Test fun receiveCodeReviewTablet() = shoot("jornada_compartilhar_3_receber_tablet") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }),
+            scanReview.copy(rows = scanReview.rows.mapIndexed { i, r -> if (i == 3) r.copy(carried = true) else r }, breaks = listOf(2)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, byCode = true,
         )
     }
@@ -1871,7 +2024,7 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
-    fun stagePhone() = shoot("celular_7_palco") { StageScreen(stage, 0, 1, { _, _ -> }, onBack = {}) }
+    fun stagePhone() = shoot("celular_7_palco") { StageScreen(stageInSet, 0, 1, { _, _ -> }, onBack = {}) }
 
     // a long section title that wraps on a phone: one pill per drawn line (audit 03/11)
     @Test @Config(qualifiers = PHONE)

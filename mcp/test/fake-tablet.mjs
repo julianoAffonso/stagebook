@@ -28,7 +28,7 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
       return send(200, {}, { "Set-Cookie": `stagebook_key=${KEY}; Path=/; HttpOnly` });
     }
     if (req.headers.cookie !== `stagebook_key=${KEY}`) return send(401);
-    const item = (s) => ({ id: s.id, title: s.title, author: s.author, year: s.year, key: s.key, tags: s.tags });
+    const item = (s) => ({ id: s.id, title: s.title, author: s.author, year: s.year, key: s.key, tags: s.tags, bpm: Number(s.tempo) || 0, capo: s.capo || 0, hasTrack: !!s.track });
     const m = url.pathname.match(/^\/api\/songs\/([^/]+)(\/track)?$/);
     if (url.pathname === "/api/session") return send(200, { name: "AI assistant", app: "TCL" });
     if (url.pathname === "/api/songs" && req.method === "GET") return send(200, [...songs.values()].map(item));
@@ -52,12 +52,12 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
     if (url.pathname === "/api/capo") { const d = JSON.parse(body); return send(200, { text: d.text, meta: { key: d.meta.key, capo: d.capo } }); }
     if (url.pathname === "/api/sets-order") { if (req.method === "PUT") setsAbc = JSON.parse(body).abc; return send(200, { abc: setsAbc }); }
     if (url.pathname === "/api/sets" && req.method === "GET") return send(200, [...sets.values()].map((t) => ({ id: t.id, name: t.name, count: t.items.length })));
-    if (url.pathname === "/api/sets" && req.method === "POST") { const d = JSON.parse(body); const id = "t" + (sets.size + 1); sets.set(id, { id, name: d.name || "data", items: d.items }); return send(200, { id }); }
+    if (url.pathname === "/api/sets" && req.method === "POST") { const d = JSON.parse(body); const id = "t" + (sets.size + 1); sets.set(id, { id, name: d.name || "data", items: d.items, breaks: d.breaks ?? [] }); return send(200, { id }); }
     const t = url.pathname.match(/^\/api\/sets\/([^/]+)$/);
     if (t) {
       const set = sets.get(t[1]); if (!set) return send(404);
-      if (req.method === "GET") return send(200, { id: set.id, name: set.name, songs: set.items.map((i) => item(songs.get(i))) });
-      if (req.method === "PUT") { const d = JSON.parse(body); set.name = d.name; set.items = d.items; return send(200, {}); }
+      if (req.method === "GET") return send(200, { id: set.id, name: set.name, songs: set.items.map((i) => item(songs.get(i))), breaks: set.breaks ?? [] });
+      if (req.method === "PUT") { const d = JSON.parse(body); set.name = d.name; set.items = d.items; if (d.breaks) set.breaks = d.breaks; return send(200, {}); }
     }
     if (url.pathname === "/api/backup/inspect" && req.method === "POST") return send(200, { token: "b1", songs: 2, sets: 1, tracks: 0, settings: true });
     if (url.pathname === "/api/backup/restore" && req.method === "POST") { restores.push(JSON.parse(body)); return send(200, { skipped: 0 }); }

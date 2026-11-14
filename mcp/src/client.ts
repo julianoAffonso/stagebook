@@ -227,6 +227,7 @@ export function problemText(code: string): string {
     bad_address: "The address must start with http:// or https://.",
     unreadable: "Couldn't read that page or file.",
     not_found: "Not found.",
+    bad_breaks: "The breaks don't fit the setlist: positions from 1 to the number of songs minus 1, ascending, no repeats.",
     search_page: "That's a search page, not a song page: pass the song's own address.",
     expired: "That expired: start again.",
     format: "That file isn't an audio format Stagebook plays (OGG, MP3 or WAV).",

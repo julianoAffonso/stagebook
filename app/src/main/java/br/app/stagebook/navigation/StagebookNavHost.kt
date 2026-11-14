@@ -58,9 +58,6 @@ internal fun NavController.showSaved(songId: String) {
     else navigate(Stage(songId = songId)) { popUpTo<SongEditor> { inclusive = true } }
 }
 
-// screens the leader's song can take the follower away from: nothing is being typed or chosen there
-private fun androidx.navigation.NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>() || hasRoute<SetlistDetail>()
-
 /**
  * [updateOffer]: new app version; shows on top of any screen, never on stage. [receiveCodes]: codes of receive links
  * (tapped in a message or copied by the site) that open the receive screen. [openedFiles]: `.stagebook` files tapped
@@ -120,46 +117,11 @@ fun StagebookNavHost(
     LaunchedEffect(hold) {
         hold.collect { place -> if (!place.holds) pendingLink.release(openCode())?.let(::openReceive) }
     }
-    // The leader changed songs: the follower's stage opens on it (replacing the open stage, without stacking). While
-    // editing, picking songs, receiving or importing, it doesn't pull the person off the screen: the "Following" strip
-    // shows the current song. Just looking at a setlist does pull (the S26 sat on the setlist while the band played, 02/11)
-    // A song asked for while on one of those screens waits and opens on coming back to a screen that pulls, if it's
-    // still the leader's current song: before, coming back showed nothing until the next song (hotspot test, 02/11)
-    var pendingFollow by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    // the leader changed songs: the follower's stage opens on it, or waits while the person is mid-action (FollowPull.kt)
     // the setlist screen busy (renaming, sharing, deleting, selecting, dragging): the song waits for it
     val followHold = remember { androidx.compose.runtime.mutableStateOf(false) }
-    fun pulls(dest: androidx.navigation.NavDestination) = dest.pullsToStage() && !(dest.hasRoute<SetlistDetail>() && followHold.value)
-    LaunchedEffect(followSongs) {
-        followSongs.collect { id ->
-            val here = nav.currentBackStackEntry?.destination ?: return@collect
-            if (pulls(here)) {
-                pendingFollow = null
-                nav.navigate(Stage(songId = id)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
-            } else {
-                pendingFollow = id
-            }
-        }
-    }
-    LaunchedEffect(nav) {
-        nav.currentBackStackEntryFlow.collect { entry ->
-            val id = pendingFollow ?: return@collect
-            if (pulls(entry.destination)) {
-                pendingFollow = null
-                if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
-            }
-        }
-    }
-    // the setlist screen done with what it was doing: a song that waited for it opens now
-    LaunchedEffect(nav) {
-        androidx.compose.runtime.snapshotFlow { followHold.value }.collect { busy ->
-            val id = pendingFollow ?: return@collect
-            val here = nav.currentBackStackEntry?.destination ?: return@collect
-            if (!busy && here.hasRoute<SetlistDetail>()) {
-                pendingFollow = null
-                if (followingSong.value == id) nav.navigate(Stage(songId = id)) { launchSingleTop = true }
-            }
-        }
-    }
+    val followGate = remember { br.app.stagebook.ui.components.FollowGate() }
+    FollowToStage(nav, followSongs, followingSong, followGate, followHold)
     val appContext = androidx.compose.ui.platform.LocalContext.current
     // asks the system only when the install is at hand: the button shows there and nowhere else in this window
     val installing = updateOffer is UpdateOffer.Ready
@@ -173,7 +135,7 @@ fun StagebookNavHost(
     val openSettings: (br.app.stagebook.ui.settings.SettingsSection) -> Unit = remember(nav) {
         { section ->
             br.app.stagebook.ui.settings.SettingsLinks.pending.value = section
-            nav.popBackStack<Home>(inclusive = false)
+            nav.openSettingsFrom()
         }
     }
     // a .stagebook file tapped outside the app: Open file with its parts, as if picked there. On the stage it waits
@@ -224,9 +186,8 @@ fun StagebookNavHost(
         }
     }
     val messageLift = remember { br.app.stagebook.ui.components.MessageLift() }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold) {
-    androidx.compose.foundation.layout.Column {
-    Box(Modifier.weight(1f)) {
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalMessageLift provides messageLift, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
+    BandStripLayout(screens = {
     NavHost(
         modifier = Modifier.fillMaxSize(),
         navController = nav,
@@ -240,7 +201,7 @@ fun StagebookNavHost(
                 onEditSong = { entry.ifResumed { nav.navigate(SongEditor(songId = it)) } },
                 onImport = { query, kind -> entry.ifResumed { nav.navigate(Importer(query, kind = kind)) } },
                 onOpenSetlist = { entry.ifResumed { nav.navigate(SetlistDetail(it)) } },
-                onPlaySetlist = { entry.ifResumed { nav.navigate(Stage(setId = it)) } },
+                onPlaySetlist = { id, start, atBreak -> entry.ifResumed { nav.navigate(Stage(setId = id, start = start, atBreak = atBreak)) } },
                 onScanSetlist = { entry.ifResumed { nav.navigate(ScanSetlist()) } },
                 onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
                 onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
@@ -258,8 +219,8 @@ fun StagebookNavHost(
         composable<SetlistDetail> { entry ->
             SetlistDetailRoute(
                 onBack = dropUnlessResumed { nav.popBackStack() },
-                onPlay = { setId, start -> entry.ifResumed { nav.navigate(Stage(setId = setId, start = start)) } },
                 onAddSongs = { entry.ifResumed { nav.navigate(PickSongs(it)) } },
+                openShare = remember { entry.toRoute<SetlistDetail>().share },
             )
         }
         composable<ScanSetlist> {
@@ -276,6 +237,9 @@ fun StagebookNavHost(
             StageRoute(
                 onEditSong = { id, cursor -> entry.ifResumed { nav.navigate(SongEditor(songId = id, cursor = cursor)) } },
                 onBack = dropUnlessResumed { nav.popBackStack() },
+                // the setlist's own screen is only the edit now; it opens over the stage, and back comes back to it
+                onEditSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id)) } },
+                onShareSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id, share = true)) } },
             )
         }
         composable<Importer> { entry ->
@@ -293,9 +257,7 @@ fun StagebookNavHost(
     // over any screen, the stage included: this device's USB can't carry the interface just opened
     val hostWarning by br.app.stagebook.player.StagePlayer.hostWarning.collectAsStateWithLifecycle()
     hostWarning?.let { br.app.stagebook.ui.components.HostWarningDialog(it, br.app.stagebook.player.StagePlayer::dismissHostWarning) }
-    }
-    br.app.stagebook.ui.band.ConductRoute()
-    }
+    }, strip = { br.app.stagebook.ui.band.ConductRoute() })
     }
 }
 

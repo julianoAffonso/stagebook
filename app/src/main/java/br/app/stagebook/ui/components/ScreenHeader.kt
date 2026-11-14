@@ -54,6 +54,7 @@ fun ScreenHeader(
     titleClickLabel: String? = null,
     onClearFilter: (() -> Unit)? = null,   // a filter is on: an × after the subtitle turns it off
     iconActions: Boolean = true,   // the actions are icon buttons: their drawings go out to the margin
+    closes: Boolean = false,   // [onBack] leaves a mode of the screen (editing): an ✕ instead of the arrow
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val wide = wideLists()
@@ -67,7 +68,7 @@ fun ScreenHeader(
         ) {
             // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
             // arrow came out black on the dark background (user, 02/11)
-            if (onBack != null) BackButton(onBack)
+            if (onBack != null) BackButton(onBack, closes = closes)
             Text(
                 title,
                 // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones a

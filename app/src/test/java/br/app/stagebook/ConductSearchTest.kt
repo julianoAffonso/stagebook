@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.unit.dp
@@ -25,17 +26,26 @@ class ConductSearchTest {
 
     @Test fun `the search button says searching and waits, then comes back`() {
         var searches = 0
-        compose.setContent { StagebookTheme { ConductBar(ConductUi.Conducting("Teste", 0, emptyList(), emptyList()), {}, {}, { searches++ }) } }
-        compose.onNodeWithText("Procurar a banda").performClick()
-        compose.onNodeWithText("Procurando…").assertIsNotEnabled()
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Conducting("Teste", 0, emptyList(), emptyList()), {}, {}, { searches++ }, {}) } }
+        compose.onNodeWithContentDescription("Procurar a banda").performClick()
+        compose.onNodeWithContentDescription("Procurando…").assertIsNotEnabled()
         assertEquals(1, searches)
         compose.mainClock.advanceTimeBy(31_000)
-        compose.onNodeWithText("Procurar a banda").assertExists()
+        compose.onNodeWithContentDescription("Procurar a banda").assertExists()
+    }
+
+    // the endless spinner redrew the whole screen every frame: 43 to 50% of the app for 30 s on the OnePlus (v0.1.1134)
+    @Test fun `searching shows no endless animation, and still says searching`() {
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Conducting("Teste", 0, emptyList(), emptyList()), {}, {}, {}, {}) } }
+        compose.onNodeWithContentDescription("Procurar a banda").performClick()
+        compose.onNodeWithContentDescription("Procurando…").assertIsNotEnabled()
+        val spinners = compose.onAllNodes(androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo, androidx.compose.ui.semantics.ProgressBarRangeInfo.Indeterminate))
+        assertEquals(0, spinners.fetchSemanticsNodes().size)
     }
 
     // on a phone the follower's only button stays on the text's line: alone underneath, it left the strip twice as tall (02/11)
     @Test fun `on a phone the follower's Leave sits beside the text`() {
-        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("nxtpaper", "Música", false, false, emptyList(), emptyList()), {}, {}, {}) } }
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("nxtpaper", "Música", false, false, emptyList(), emptyList()), {}, {}, {}, {}) } }
         val text = compose.onNodeWithText("nxtpaper", substring = true).getUnclippedBoundsInRoot()
         val leave = compose.onNodeWithText("Sair").getUnclippedBoundsInRoot()
         val gap = ((leave.top + leave.bottom) / 2 - (text.top + text.bottom) / 2)
@@ -44,12 +54,11 @@ class ConductSearchTest {
 
     // with a missing song the follower's strip stays two lines: "See what's missing" is a tap on the text (02/11)
     @Test fun `on a phone a follower with missing songs keeps Leave beside the text and opens the list from it`() {
-        val lacks = listOf(br.app.stagebook.domain.Conduct.Lack("Hi10 XPro", listOf("Música")))
-        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("nxtpaper", "Música", false, false, listOf("Hi10 XPro"), lacks), {}, {}, {}) } }
+        compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("nxtpaper", "Música", false, false, listOf("Hi10 XPro"), listOf("Outra")), {}, {}, {}, {}) } }
         val text = compose.onNodeWithText("nxtpaper", substring = true).getUnclippedBoundsInRoot()
         val leave = compose.onNodeWithText("Sair").getUnclippedBoundsInRoot()
         assertTrue("Sair abaixo do texto: ${leave.top} > ${text.bottom}", leave.top < text.bottom + 24.dp)
         compose.onNodeWithText("nxtpaper", substring = true).performClick()
-        compose.onNodeWithText("O que falta").assertExists()
+        compose.onNodeWithText("Faltam neste aparelho").assertExists()
     }
 }

@@ -36,6 +36,7 @@ class AndroidBackupRulesTest {
         "lingua" to true,
         "advanced" to false, "band" to false, "band_net" to false, "identity" to false, "norm" to false,
         "player" to false, "receive_links" to false, "resume_after_update" to false, "stage_quiet" to false,
+        "setlist_show" to false,   // what was played tonight on this device: no use on another one
         "usb_delivery" to false, "usb_no_input" to false, "usb_queue" to false, "usb_route" to false, "versao_nova" to false, "web_editor" to false,
     )
 

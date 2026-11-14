@@ -49,6 +49,7 @@ import br.app.stagebook.ui.theme.StagebookTheme
  */
 @Composable
 fun MidiDialog(midi: SongMidi, onDone: (SongMidi) -> Unit, onDismiss: () -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) { MidiPanel(midi, onDone, onDismiss) }
 }
 

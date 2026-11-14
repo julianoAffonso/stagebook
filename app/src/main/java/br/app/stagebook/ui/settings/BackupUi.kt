@@ -47,6 +47,7 @@ fun BackupPartsDialog(
     var chosen by rememberSaveable { mutableStateOf(available.map { it.name }.toSet()) }
     // songs in the file: add to the ones here (default, safe) or replace
     var replace by rememberSaveable { mutableStateOf(false) }
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },

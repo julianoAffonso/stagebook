@@ -22,9 +22,12 @@ class ImportQueue @Inject constructor(private val repository: LibraryRepository)
     @Immutable
     data class Item(val title: String, val artist: String, val slot: Int)
 
-    /** [slots]: the setlist in QR order (id or null = missing); [site]: which site in the list the search is on. */
+    /**
+     * [slots]: the setlist in QR order (id or null = missing); [site]: which site in the list the search is on;
+     * [breaks]: the breaks the sender put between those songs (null = it said nothing: the QR, an older app).
+     */
     @Immutable
-    data class State(val setId: String, val setName: String, val slots: List<String?>, val pending: List<Item>, val total: Int, val site: Int = 0) {
+    data class State(val setId: String, val setName: String, val slots: List<String?>, val pending: List<Item>, val total: Int, val site: Int = 0, val breaks: List<Int>? = null) {
         val current: Item? get() = pending.firstOrNull()
         val position: Int get() = total - pending.size + 1
     }
@@ -32,8 +35,8 @@ class ImportQueue @Inject constructor(private val repository: LibraryRepository)
     private val _state = MutableStateFlow<State?>(null)
     val state: StateFlow<State?> = _state
 
-    fun start(setId: String, setName: String, slots: List<String?>, missing: List<Item>) {
-        _state.value = if (missing.isEmpty()) null else State(setId, setName, slots, missing, missing.size)
+    fun start(setId: String, setName: String, slots: List<String?>, missing: List<Item>, breaks: List<Int>? = null) {
+        _state.value = if (missing.isEmpty()) null else State(setId, setName, slots, missing, missing.size, breaks = breaks)
     }
 
     /** The current profile's sites (chords or lyrics only), in the user's order. */
@@ -56,7 +59,8 @@ class ImportQueue @Inject constructor(private val repository: LibraryRepository)
         val s = _state.value ?: return
         val item = s.current ?: return
         val slots = s.slots.toMutableList().also { it[item.slot] = songId }
-        repository.setSetlistItems(s.setId, slots.filterNotNull())
+        // the sender's breaks are placed again: one that waited before the next song goes back before this one
+        repository.setReceivedSetlist(s.setId, slots, s.breaks)
         advance(s.copy(slots = slots))
     }
 

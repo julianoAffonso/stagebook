@@ -24,6 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -51,6 +59,7 @@ fun ActionButton(
     tone: ButtonTone = ButtonTone.Primary,
     enabled: Boolean = true,
     minHeight: Dp = Sizes.button,
+    disabledHint: String? = null,   // why it's off: read by screen readers and shown as a short message when touched
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -58,7 +67,18 @@ fun ActionButton(
     val corner by animateIntAsState(if (pressed) 30 else 50, label = "corner")
     // like Google's apps: in a row, the secondary sits at the start and the main action at the end (Cancel … OK); a
     // stretched button never leaves the text floating in the middle
-    Box(modifier, contentAlignment = if (tone == ButtonTone.Primary) Alignment.CenterEnd else Alignment.CenterStart) {
+    val message = LocalAppMessage.current
+    // a disabled button takes no touch: a layer over it answers, so the first touch isn't met with nothing
+    val explain = !enabled && disabledHint != null
+    val describe = if (explain) {
+        Modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$text. $disabledHint"
+            disabled()
+            role = Role.Button
+            onClick { message.show(disabledHint!!); true }
+        }
+    } else Modifier
+    Box(modifier.then(describe), contentAlignment = if (tone == ButtonTone.Primary) Alignment.CenterEnd else Alignment.CenterStart) {
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -77,6 +97,7 @@ fun ActionButton(
         // with large system text the label wraps to two lines instead of losing its end ("Nova mú…", device test B-20)
         Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
+    if (explain) Box(Modifier.matchParentSize().pointerInput(disabledHint) { detectTapGestures { message.show(disabledHint!!) } })
     }
 }
 

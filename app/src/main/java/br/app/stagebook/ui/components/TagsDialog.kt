@@ -51,6 +51,7 @@ fun TagsDialog(
         state[same ?: t] = ToggleableState.On
         typed = ""
     }
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.tags_title)) },

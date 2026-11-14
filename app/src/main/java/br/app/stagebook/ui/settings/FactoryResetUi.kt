@@ -33,6 +33,7 @@ import br.app.stagebook.ui.theme.Spacing
 @Composable
 fun FactoryResetDialog(onBackupFirst: () -> Unit, onReset: () -> Unit, onDismiss: () -> Unit, code: String = rememberSaveable { ResetCode.generate() }) {
     var typed by rememberSaveable { mutableStateOf("") }
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.reset_title)) },

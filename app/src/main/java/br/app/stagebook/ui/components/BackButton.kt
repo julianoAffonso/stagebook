@@ -28,10 +28,16 @@ val HeaderIconInset = (Sizes.touch - 24.dp) / 2
  * button after the margin pushed the title far right on every screen).
  */
 @Composable
-fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.onSurface) {
+fun BackButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    closes: Boolean = false,   // an ✕ in the arrow's place: it leaves a mode of the screen, not the screen
+) {
     Box(modifier.width(BackButtonWidth)) {
         IconButton(onClick = onClick, modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true).offset(x = -HeaderIconInset)) {
-            Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back), tint = tint)
+            if (closes) Icon(AppIcons.Close, contentDescription = stringResource(R.string.action_close), tint = tint)
+            else Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back), tint = tint)
         }
     }
 }

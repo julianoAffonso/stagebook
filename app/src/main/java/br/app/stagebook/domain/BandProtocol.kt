@@ -15,7 +15,7 @@ import java.io.Writer
  * with the pair key; the receiver answers [Kind.OK].
  */
 object BandProtocol {
-    const val VERSION = 2   // 2: "Quem conduz" (Kind.CONDUCT)
+    const val VERSION = 3   // 2: "Lead the band" (Kind.CONDUCT); 3: setlist breaks, break timer, missing-songs request (user, 14/11)
 
     /** Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). */
     @Serializable
