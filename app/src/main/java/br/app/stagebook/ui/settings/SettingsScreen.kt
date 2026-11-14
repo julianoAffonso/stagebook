@@ -117,6 +117,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -602,15 +603,18 @@ fun SettingsScreen(
     // the search: its text survives a rotation; what a result opened flashes once (the focus is cleared after)
     var query by rememberSaveable { mutableStateOf("") }
     val resources = LocalResources.current
-    var focus by remember { mutableStateOf<br.app.stagebook.ui.components.SettingsFocus?>(null) }
-    LaunchedEffect(focus) { if (focus != null) { kotlinx.coroutines.delay(2500); focus = null } }
+    // a State handed down (not its value): the screen never reads it while composing, only the item that flashes does
+    val focus = remember { mutableStateOf<br.app.stagebook.ui.components.SettingsFocus?>(null) }
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { focus.value }.collectLatest { if (it != null) { delay(2500); focus.value = null } }
+    }
     val search = SettingsSearch(
         query, { query = it },
         IndexCtx(uiState.look, uiState.midi.supported, actions.advanced, br.app.stagebook.ui.components.nationalTagsShown()),
     ) { hit ->
         // a hidden item opens the place that turns it on (never changes the setting itself); a visible one, its own place
         val target = hit.hide?.opens?.let(::settingsItemById) ?: hit.item
-        focus = br.app.stagebook.ui.components.SettingsFocus(resources.getString(target.card), (focus?.nonce ?: 0) + 1, target.id)
+        focus.value = br.app.stagebook.ui.components.SettingsFocus(resources.getString(target.card), (focus.value?.nonce ?: 0) + 1, target.id)
         onSection(target.group)
     }
     // the system's Back closes the search before it leaves the list

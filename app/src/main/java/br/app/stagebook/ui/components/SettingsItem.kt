@@ -32,7 +32,7 @@ const val SETTINGS_CHROME = "-"
  */
 @Composable
 fun Modifier.settingsItem(id: String): Modifier {
-    val focus = LocalSettingsFocus.current
+    val focus = LocalSettingsFocus.current.value
     val mine = focus?.takeIf { it.item == id }
     val bring = remember { BringIntoViewRequester() }
     var flash by remember { mutableStateOf(false) }
