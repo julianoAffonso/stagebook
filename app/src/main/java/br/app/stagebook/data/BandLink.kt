@@ -280,12 +280,16 @@ class BandLink @Inject constructor(
         }
     }
 
+    /** A band member asked for songs and was answered ([BandConduct]: the leader hears the one it leads is getting them). */
+    @Volatile var askedHandler: ((fromId: String, wanted: List<Wanted>) -> Unit)? = null
+
     // a band member asked: answer with the ones here (same rule as the QR: title, with the artist as tiebreaker)
     private fun answer(from: BandProtocol.Hello, body: String): String? {
         val key = pairKeyWith(from.id) ?: return null
         val plain = ShareCode.decrypt(key, body) ?: return null
         val wanted = runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), plain.decodeToString()) }.getOrNull() ?: return null
         val found = found(wanted).map { SetlistCloud.SharedSong(it.title, it.author, it.year, it.text) }
+        if (found.isNotEmpty()) askedHandler?.invoke(from.id, wanted)
         return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
     }
 

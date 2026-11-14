@@ -139,6 +139,7 @@ class BandConduct internal constructor(
     init {
         link.conductHandler = ::onMessage
         link.showIntake = ::intake
+        link.askedHandler = ::onAsked
         // essential mode (T19): "Band on the network" off ends Lead the band (leading or following) and the strip goes
         // away
         scope.launch {
@@ -299,6 +300,23 @@ class BandConduct internal constructor(
         if (withLacks.missing != msg.missing && newest.isNewest(ticket)) deliver(stamped(withLacks))
         // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)
         if (noAnswer > 0 && searchedAt != msg.index) { searchedAt = msg.index; link.burst(evenOnStage = true) }
+    }
+
+    /** How long after answering a follower's request the leader asks the band again what is missing (the song is arriving). */
+    internal var askedRefreshMs = ASKED_REFRESH_MS
+
+    // leading: a follower that lacks songs asked this device for them and got them: a moment later everyone says again
+    // what's missing, so its name leaves the list without anyone tapping "Send" (device test v0.1.1123: it stayed
+    // there until then)
+    private fun onAsked(fromId: String, wanted: List<BandLink.Wanted>) {
+        val now = _role.value as? Role.Conducting ?: return
+        val lack = now.lackers[fromId] ?: return
+        if (wanted.none { w -> lack.titles.any { it == w.title } }) return
+        scope.launch {
+            kotlinx.coroutines.delay(askedRefreshMs)
+            val still = _role.value as? Role.Conducting ?: return@launch
+            send(still.setId, still.msg.copy(type = Conduct.OPEN))
+        }
     }
 
     // follower: arrives over the network (another thread); answers what's missing here
@@ -540,6 +558,7 @@ class BandConduct internal constructor(
         const val SAME_BREAK_MS = 2_000L
         const val SAME_REST_MS = 100L   // the leader's screen telling the same running break again
         const val ALIVE_MS = 3 * 60_000L
+        const val ASKED_REFRESH_MS = 2_500L
         const val SEARCH_SENDS = 3
         const val SEARCH_EVERY_MS = 5_000L
         const val GONE_MS = 10 * 60_000L
