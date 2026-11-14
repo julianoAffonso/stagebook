@@ -30,7 +30,7 @@ object Sizes {
     val yearField = 96.dp       // song year: always 4 digits
     val tempoField = 88.dp      // BPM: up to 3 digits
     val tagFilter = 240.dp      // tag filter beside the search (tablet)
-    val tagFilterNarrow = 144.dp   // and on phones
+    val tagFilterNarrow = 168.dp   // and on phones ("Recentes" with the text 15% bigger needs it)
     val tagMenu = 320.dp        // its open list, wider than the field on phones
     val fontPreview = 160.dp    // fixed box for the lyrics size preview (doesn't push the screen)
     val fontPreviewWide = 300.dp   // the same box on a wide screen (tablet): the sample stays near its real size
