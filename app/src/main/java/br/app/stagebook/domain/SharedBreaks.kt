@@ -36,6 +36,12 @@ object SharedBreaks {
         return SetlistBreaks.normalise(body.split(',').mapNotNull { it.toIntOrNull() }, songs)
     }
 
+    /** Does the package [packed] carry at least one break (what an app before the breaks would silently drop)? */
+    fun carries(packed: ByteArray): Boolean {
+        val text = QrPayload.unpack(packed) ?: return false
+        return read(packed, text)?.isNotEmpty() == true
+    }
+
     // the bytes after the end of the compressed text; null if it isn't a package
     private fun tail(packed: ByteArray): ByteArray? {
         if (packed.size <= 2) return null

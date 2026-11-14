@@ -52,7 +52,7 @@ class BandLink @Inject constructor(
 ) {
     /** What goes in a band package: the list (in QR format, in Base64) and the songs. */
     @kotlinx.serialization.Serializable
-    private data class Package(val list: String, val songs: List<SetlistCloud.SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
+    private data class Package(val list: String, val songs: List<SetlistCloud.SharedSong> = emptyList(), val v: Int = BandProtocol.PACKAGE_BASE)
 
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
     /** A device with Stagebook on the same network. */
@@ -140,7 +140,7 @@ class BandLink @Inject constructor(
     }
 
     internal fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray =
-        json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs)).toByteArray()
+        json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs, BandProtocol.packageVersion(list))).toByteArray()
 
     /**
      * Searches for the band briefly (on app open with something pending: sends with no receipt, an unconfirmed "ok"),
@@ -326,6 +326,7 @@ class BandLink @Inject constructor(
 
     internal fun openPackage(plain: ByteArray): Opened? {
         val pkg = runCatching { json.decodeFromString(Package.serializer(), plain.decodeToString()) }.getOrNull() ?: return null
+        if (pkg.v > BandProtocol.VERSION) return null   // a newer format: not guessed (the network already says "update" in the Hello)
         val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
         val text = QrPayload.unpack(packed) ?: return null
         if (QrPayload.parse(text) == null) return null

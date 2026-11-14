@@ -127,7 +127,8 @@ class SetlistBreaksShareTest {
         val old = json.parseToJsonElement(wire.decodeToString()).jsonObject
         assertEquals(setOf("list", "songs", "v"), old.keys + "v")   // no new key in the package
         assertEquals(got.text, QrPayload.unpack(java.util.Base64.getDecoder().decode(old["list"]!!.jsonPrimitive.content)))
-        assertEquals(BandProtocol.VERSION, old["v"]?.jsonPrimitive?.int ?: BandProtocol.VERSION)
+        // the package carries breaks: "v":3 goes in (see InboxVersionTest), the network refuses another version in the Hello
+        assertEquals(BandProtocol.BREAKS_VERSION, old["v"]?.jsonPrimitive?.int)
     }
 
     @Test fun `through a pair's inbox the breaks arrive, and an older app reads the same package`() {
@@ -140,7 +141,9 @@ class SetlistBreaksShareTest {
         assertEquals(listOf(2, 4), got.breaks)
         // the reading as it was before the breaks (SetlistCloud.fetchPair)
         val old = json.parseToJsonElement(SetlistCloud.unpack(byteArrayOf('P'.code.toByte(), '1'.code.toByte()), wire, SetlistCloud.MAX_PACKAGE)!!).jsonObject
-        assertNull(old["v"])   // "v" is a default and never goes in the package: an app on version 2 reads it as its own, with no warning
+        // with breaks "v" is 3 (not the default 2, so it IS written): an app on version 2 refuses it and says "update", instead of
+        // opening it with no breaks (14/11: it used to read the missing "v" as its own). Without breaks: InboxVersionTest
+        assertEquals(BandProtocol.BREAKS_VERSION, old["v"]?.jsonPrimitive?.int)
         assertEquals(got.text, QrPayload.unpack(java.util.Base64.getDecoder().decode(old["list"]!!.jsonPrimitive.content)))
     }
 

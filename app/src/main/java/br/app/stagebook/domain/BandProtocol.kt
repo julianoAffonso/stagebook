@@ -17,6 +17,17 @@ import java.io.Writer
 object BandProtocol {
     const val VERSION = 3   // 2: "Lead the band" (Kind.CONDUCT); 3: setlist breaks, break timer, missing-songs request (user, 14/11)
 
+    /**
+     * The `v` of a package (band package, pair inbox package): the lowest version that reads it without losing anything.
+     * It is the default, so it is not written; a package with something a version-2 app would drop (the breaks) writes
+     * [BREAKS_VERSION], and that app, which refuses a `v` above its own, says "update the app" instead of opening it.
+     */
+    const val PACKAGE_BASE = 2
+    const val BREAKS_VERSION = 3
+
+    /** The `v` to write on a package whose setlist travels as [packed] (see [SharedBreaks]). */
+    fun packageVersion(packed: ByteArray): Int = if (SharedBreaks.carries(packed)) BREAKS_VERSION else PACKAGE_BASE
+
     /** Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). */
     @Serializable
     data class Hello(val id: String, val name: String, val key: String, val v: Int = VERSION, val app: String = "")

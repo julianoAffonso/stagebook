@@ -248,7 +248,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     /** A package for a pair's inbox, before splitting into chunks and encrypting. */
     internal fun pairPackage(list: ByteArray, songs: List<SharedSong>): ByteArray =
-        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs)))
+        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs, BandProtocol.packageVersion(list))))
 
     internal fun openPairPackage(bytes: ByteArray): Opened? {
         // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
@@ -260,7 +260,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     }
 
     @Serializable
-    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.VERSION)
+    private data class Pack(val list: String, val songs: List<SharedSong> = emptyList(), val v: Int = BandProtocol.PACKAGE_BASE)
 
     /** [recipientId]'s inbox channel for the pair: derived from the pair key (only the two know which it is). */
     fun pairTopic(pairKey: ByteArray, recipientId: String): String =
