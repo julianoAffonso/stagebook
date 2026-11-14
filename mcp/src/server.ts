@@ -69,6 +69,16 @@ export async function localFile(path: string, max: number): Promise<Uint8Array> 
   return readFile(full);
 }
 
+const BREAKS = z.array(z.number()).describe("Interval positions: integers from 1 to the number of songs minus 1, ascending, no repeats (1 = before the second song).");
+
+/** Breaks the setlist can have: the app's rule, said here in words before the tablet is asked. */
+export function checkBreaks(breaks: number[] | undefined, songs: number): void {
+  if (!breaks) return;
+  const bad = breaks.find((p) => !Number.isInteger(p) || p < 1 || p > songs - 1);
+  if (bad !== undefined) throw new StagebookError(`Break position ${bad} doesn't fit: a break goes before the second song up to before the last (1 to ${Math.max(songs - 1, 0)} for ${songs} songs).`);
+  if (breaks.some((p, i) => i > 0 && p <= breaks[i - 1])) throw new StagebookError("Break positions must be in ascending order, with no repeats.");
+}
+
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 export function buildServer(client: StagebookClient): McpServer {
@@ -361,7 +371,7 @@ export function buildServer(client: StagebookClient): McpServer {
     "get_setlist",
     {
       title: "Get a setlist",
-      description: "A setlist with its songs in order (a song deleted from the library shows with an empty title).",
+      description: "A setlist with its songs in order (a song deleted from the library shows with an empty title) and its breaks: \"breaks\" are the positions where the show stops for an interval, 1 = before the second song.",
       inputSchema: { id: z.string() },
       annotations: { readOnlyHint: true },
     },
@@ -372,29 +382,34 @@ export function buildServer(client: StagebookClient): McpServer {
     "create_setlist",
     {
       title: "Create a setlist",
-      description: "Creates a setlist with these songs, in this order (song ids from list_songs). Without a name it's named after the date and time.",
-      inputSchema: { name: z.string().optional(), song_ids: z.array(z.string()).optional() },
+      description: "Creates a setlist with these songs, in this order (song ids from list_songs). Without a name it's named after the date and time. Optional breaks: the positions of the intervals (1 = before the second song, up to the number of songs minus 1, in order, no repeats); without it there are none.",
+      inputSchema: { name: z.string().optional(), song_ids: z.array(z.string()).optional(), breaks: BREAKS.optional() },
     },
-    safe(async ({ name, song_ids }: { name?: string; song_ids?: string[] }) => text({ created: (await client.send("POST", "/api/sets", { name: name ?? "", items: song_ids ?? [] }))?.id })),
+    safe(async ({ name, song_ids, breaks }: { name?: string; song_ids?: string[]; breaks?: number[] }) => {
+      const items = song_ids ?? [];
+      checkBreaks(breaks, items.length);
+      return text({ created: (await client.send("POST", "/api/sets", { name: name ?? "", items, ...(breaks ? { breaks } : {}) }))?.id });
+    }),
   );
 
   server.registerTool(
     "update_setlist",
     {
       title: "Update a setlist",
-      description: "Renames a setlist and/or replaces its songs (the full list, in order). Omitted fields stay. Emptying it (song_ids []) needs confirm=true.",
+      description: "Renames a setlist and/or replaces its songs (the full list, in order) and/or its breaks (the full list of interval positions: 1 = before the second song, up to the number of songs minus 1, in order, no repeats; [] takes them all out). Omitted fields stay: without breaks, the existing ones stay before the same songs. Emptying it (song_ids []) needs confirm=true.",
       inputSchema: {
-        id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional(),
+        id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional(), breaks: BREAKS.optional(),
         confirm: z.boolean().optional().describe("Required true to leave the setlist with no songs."),
       },
     },
-    safe(async ({ id, name, song_ids, confirm }: { id: string; name?: string; song_ids?: string[]; confirm?: boolean }) => {
+    safe(async ({ id, name, song_ids, breaks, confirm }: { id: string; name?: string; song_ids?: string[]; breaks?: number[]; confirm?: boolean }) => {
       const cur = await client.get(`/api/sets/${encodeURIComponent(id)}`);
+      checkBreaks(breaks, (song_ids ?? cur.songs).length);
       // an empty list takes every song out: like deleting, it asks first (audit 03/11)
       if (song_ids?.length === 0 && cur.songs.length > 0 && !confirm) {
         throw new StagebookError(`This takes all ${cur.songs.length} songs out of "${cur.name}": ask the person and pass confirm=true.`);
       }
-      await client.send("PUT", `/api/sets/${encodeURIComponent(id)}`, { name: name ?? cur.name, items: song_ids ?? cur.songs.map((s: SongItem) => s.id) });
+      await client.send("PUT", `/api/sets/${encodeURIComponent(id)}`, { name: name ?? cur.name, items: song_ids ?? cur.songs.map((s: SongItem) => s.id), ...(breaks ? { breaks } : {}) });
       return text({ updated: id });
     }),
   );
