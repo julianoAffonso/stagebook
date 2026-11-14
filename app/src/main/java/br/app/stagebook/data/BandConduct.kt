@@ -34,11 +34,16 @@ import javax.inject.Singleton
  * follower's library ([enter]); everything else the band sends keeps waiting in the inbox.
  */
 @Singleton
-class BandConduct @Inject constructor(
+class BandConduct internal constructor(
     private val link: BandLink,
     private val repository: LibraryRepository,
     private val identity: DeviceIdentity,
+    /** The band members on the network now: the link's own in the app, a fake the tests move around. */
+    private val onlineMembers: StateFlow<List<BandLink.Peer>>,
 ) {
+    @Inject constructor(link: BandLink, repository: LibraryRepository, identity: DeviceIdentity) :
+        this(link, repository, identity, link.onlineMembers)
+
     sealed interface Role {
         data object None : Role
 
@@ -89,7 +94,7 @@ class BandConduct @Inject constructor(
     val role: StateFlow<Role> = _role.asStateFlow()
 
     /** The ids of the band members online now: what "didn't answer" is counted against. */
-    val online: kotlinx.coroutines.flow.Flow<Set<String>> by lazy { link.onlineMembers.map { peers -> peers.map { it.id }.toSet() }.distinctUntilChanged() }
+    val online: kotlinx.coroutines.flow.Flow<Set<String>> by lazy { onlineMembers.map { peers -> peers.map { it.id }.toSet() }.distinctUntilChanged() }
 
     private val _openSong = MutableSharedFlow<String>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Follower: the song to open on stage now, or [BREAK_ONLY]. */
@@ -144,7 +149,7 @@ class BandConduct @Inject constructor(
         // needed
         scope.launch {
             var before = emptySet<String>()
-            link.onlineMembers.collect { peers ->
+            onlineMembers.collect { peers ->
                 val ids = peers.map { it.id }.toSet()
                 val conducting = _role.value as? Role.Conducting
                 if (conducting != null && (ids - before).isNotEmpty()) send(conducting.setId, conducting.msg.copy(type = Conduct.OPEN))
@@ -260,7 +265,7 @@ class BandConduct @Inject constructor(
         _role.updateAndGet { if (it is Role.Conducting) Role.Conducting(setId, msg, answered = it.answered.takeIf { _ -> it.setId == setId }, lackers = if (it.setId == setId) it.lackers else emptyMap()) else it } is Role.Conducting
 
     private suspend fun send(setId: String, msg: Conduct.Msg) {
-        val members = link.onlineMembers.value.size
+        val members = onlineMembers.value.size
         if (_role.value !is Role.Conducting) return   // ended before sending: doesn't turn back on
         val ticket = newest.ticket()
         if (!keepLeading(setId, msg)) return
