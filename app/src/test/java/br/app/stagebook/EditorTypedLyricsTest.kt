@@ -33,6 +33,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -71,7 +72,7 @@ class EditorTypedLyricsTest {
     }
 
     // the editor has two screens, one at a time: going to the one with the field is a tap on its segment
-    private fun segment(label: String) = compose.onNode(hasText(label) and hasClickAction() and !hasSetTextAction()).performClick()
+    private fun segment(label: String) = compose.onNode(hasText(label) and hasClickAction() and !hasSetTextAction()).performScrollTo().performClick()   // in a low window the tabs scroll away with the typing
     private fun lyricsField(look: Look): androidx.compose.ui.test.SemanticsNodeInteraction {
         val label = if (look.chords) "Letra e cifra" else "Letra"
         segment(label)

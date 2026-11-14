@@ -155,6 +155,10 @@ fun SongEditorRoute(
     )
 }
 
+/** Windows lower than this (dp) are "compact": the editor scrolls as a whole; the pane never gets less than [MIN_PANE_DP]. */
+const val COMPACT_HEIGHT_DP = 480
+const val MIN_PANE_DP = 240
+
 @Composable
 fun SongEditorScreen(
     uiState: SongEditorUiState,
@@ -248,7 +252,14 @@ fun SongEditorScreen(
                     onDismiss = { newChord = false },
                 )
             }
-            val wide = wideLists()
+            // a low window (a phone on its side): the top (name, steps, the two screens, the tools) doesn't fit with the
+            // keyboard up and the field was left with no height (test on the OnePlus, 14/11). Here what is under the header scrolls,
+            // the previous/next sit in the header line, and the pane has a height of its own (the room that is left, but
+            // never less than MIN_PANE_DP): the field always has room for several lines and the cursor is brought into view
+            val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
+            val wide = wideLists() || compact
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            val paneHeight = maxHeight.coerceAtLeast(MIN_PANE_DP.dp)
             Column(Modifier.fillMaxSize()) {
                 // top: back, the song's name with the artist under it, previous/next, save and delete (on every screen)
                 ScreenHeader(
@@ -280,6 +291,7 @@ fun SongEditorScreen(
                         modifier = Modifier.padding(horizontal = Spacing.m).padding(bottom = Spacing.s),
                     )
                 }
+                val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
                 // the two screens, one at a time, the same on every size; the second is named for what the profile holds
                 Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.m), contentAlignment = Alignment.TopCenter) {
                     SegmentedChoice(
@@ -287,7 +299,7 @@ fun SongEditorScreen(
                         tab, { tab = it }, Modifier.widthIn(max = DATA_MAX_WIDTH),
                     )
                 }
-                Crossfade(tab, Modifier.weight(1f).fillMaxWidth(), label = "editor tab") { current ->
+                Crossfade(tab, Modifier.then(if (compact) Modifier.height(paneHeight) else Modifier.weight(1f)).fillMaxWidth(), label = "editor tab") { current ->
                     when (current) {
                         EditorTab.DATA -> DataPane(
                             uiState, look, onTitle, onAuthor, onYear, onTempo, onTranspose, onCapo,
@@ -342,6 +354,10 @@ fun SongEditorScreen(
                         }
                     }
                 }
+                }
+                // the header (back, steps, save) stays; what is under it scrolls in a low window
+                if (compact) Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { body() } else body()
+            }
             }
         }
     }
