@@ -33,6 +33,7 @@ fun AppUpdateDialog(
     onAutoBlocker: (() -> Unit)? = null,   // a Samsung with Auto Blocker, which may stop the install
 ) {
     val downloading = offer is UpdateOffer.Downloading
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         // downloading: tapping outside doesn't close it (the download goes on and the notice comes back ready).
         // Only the "Not now" button puts the version off: a stray tap outside would hide it until tomorrow

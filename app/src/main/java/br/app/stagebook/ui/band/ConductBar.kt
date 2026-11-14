@@ -209,9 +209,13 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
     LaunchedEffect(viewModel, message, resources) {
         viewModel.notices.collect { message.show(it.text(resources), long = it is BandConduct.Notice.ChordsKept) }
     }
+    val gate = br.app.stagebook.ui.components.LocalFollowGate.current
     AnimatedVisibility(ui != null, modifier) {
         ui?.let {
-            ConductBar(it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, asking = asking, onSend = viewModel::send, sending = sending)
+            ConductBar(
+                it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, asking = asking, onSend = viewModel::send, sending = sending,
+                waiting = gate.pending?.reason.takeIf { _ -> it is ConductUi.Following }, onGo = { gate.go() },
+            )
         }
     }
 }
@@ -220,7 +224,11 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
 fun ConductBar(
     ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: () -> Unit, onFollow: () -> Unit, modifier: Modifier = Modifier,
     onAsk: () -> Unit = {}, asking: Boolean = false, onSend: (String?) -> Unit = {}, sending: Boolean = false,
+    waiting: br.app.stagebook.domain.FollowWait? = null, onGo: () -> Unit = {},
 ) {
+    // the leader's song is waiting for this person to finish what they're doing: the strip says where the leader went,
+    // why it hasn't opened, and offers to go now
+    val waits = waiting != null && ui is ConductUi.Following
     var showLacks by rememberSaveable { mutableStateOf(false) }
     // the leader's list is who lacks what in the band; a follower's is what this device lacks
     val hasLacks = when (ui) { is ConductUi.Conducting -> ui.lacks.isNotEmpty(); is ConductUi.Following -> ui.lacksHere.isNotEmpty(); is ConductUi.Left -> false }
@@ -262,8 +270,9 @@ fun ConductBar(
                 TextButton(onEnd) { ActionText(stringResource(R.string.conduct_end)) }
             }
             is ConductUi.Following -> {
+                if (waits) TextButton(onGo) { ActionText(stringResource(R.string.conduct_go)) }
                 // busy while the answer comes
-                if (canAsk) {
+                if (canAsk && !waits) {
                     TextButton(onAsk, enabled = !asking) { ActionText(stringResource(if (asking) R.string.conduct_asking else R.string.conduct_ask)) }
                 }
                 TextButton(onLeave) { ActionText(stringResource(R.string.conduct_leave)) }
@@ -289,7 +298,7 @@ fun ConductBar(
         ) {
             val small = maxWidth < NARROW
             // the leader's two actions are an icon and "End" on a phone: they fit beside the title like a follower's
-            val besideTitle = small && (canAsk || ui is ConductUi.Conducting)
+            val besideTitle = small && (canAsk || waits || ui is ConductUi.Conducting)
             val lacksInText = small && hasLacks
             val textTap = if (lacksInText) Modifier.clickable(onClickLabel = seeLacks) { showLacks = true } else Modifier
             // each line is one line, and what gets cut is the name in it (a setlist, a device, a song): on a phone
@@ -297,12 +306,20 @@ fun ConductBar(
             // 13/11)
             val title = when (ui) {
                 is ConductUi.Conducting -> cutLine(R.string.conduct_conducting, ui.set)
-                is ConductUi.Following -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
+                is ConductUi.Following -> when {
+                    waits && ui.breakSince != null -> cutLine(R.string.conduct_went_break, ui.from)
+                    waits -> cutLine(R.string.conduct_went_to, ui.song, ui.from)
+                    else -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
+                }
                 is ConductUi.Left -> cutLine(R.string.conduct_left, ui.from)
             }
             val rest = (ui as? ConductUi.Following)?.takeIf { it.breakSince != null }
             val detail = when {
-                // the leader's break, for a follower on any screen: its time and what comes next (or that the next
+                waits -> CutText(cut = stringResource(when (waiting) {
+                    br.app.stagebook.domain.FollowWait.MENU -> R.string.conduct_wait_menu
+                    br.app.stagebook.domain.FollowWait.KEYBOARD -> R.string.conduct_wait_keyboard
+                    else -> R.string.conduct_wait_screen
+                }))                // the leader's break, for a follower on any screen: its time and what comes next (or that the next
                 // song isn't here), in place of the song. The time is never cut
                 rest?.breakSince != null -> cutLine(
                     R.string.conduct_break, stringResource(if (rest.missingHere) R.string.conduct_missing_here else R.string.stage_break_next, rest.song),
@@ -444,6 +461,8 @@ private fun ConductBarSamples() {
         // the leader's break, two minutes in, with the song that comes next
         val since = remember { System.currentTimeMillis() - 125_000L }
         ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), since), {}, {}, {}, {})
+        // the leader's song waits for a menu to close, then for the person to finish elsewhere
+        ConductBar(ConductUi.Following("Voz", "Evidências", false, false, emptyList(), emptyList()), {}, {}, {}, {}, waiting = br.app.stagebook.domain.FollowWait.MENU)
         // left, and the leader goes on: the way back
         ConductBar(ConductUi.Left("Voz"), {}, {}, {}, {})
     }

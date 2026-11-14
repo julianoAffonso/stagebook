@@ -633,6 +633,7 @@ private fun EditorPreview(text: String, look: Look) {
 private fun ChordDialog(onDone: (String) -> Unit, onDismiss: () -> Unit) {
     var value by rememberSaveable { mutableStateOf("") }
     val ok = Chords.isChord(value)
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.editor_chord_new)) },

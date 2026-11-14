@@ -79,6 +79,7 @@ fun ImportButton(
     var typing by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
         ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+        br.app.stagebook.ui.components.FollowBusyWhile(open)
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             onSync?.let { sync ->
                 DropdownMenuItem(
@@ -218,6 +219,7 @@ fun ShareSheet(
         onSearch(true)
         onDispose { onSearch(false) }
     }
+    br.app.stagebook.ui.components.FollowBusyWhile()
     ModalBottomSheet(onDismissRequest = onDismiss) {
         ShareOptions(songs, online, onQr, onInternet, Modifier.padding(bottom = Spacing.l), band, onBand, internetOn, limits ?: ShareLimits(lists = 1, songs = songs, setlists = onQr != null))
     }
@@ -304,6 +306,7 @@ private fun ShareOption(icon: ImageVector, title: String, hint: String, enabled:
 // sending, the ready code (with "Send in a message") or the error
 @Composable
 fun CloudDialog(cloud: CloudUi, onDismiss: () -> Unit, onShareCode: (CloudUi.Sent) -> Unit, onCopyCode: (String) -> Unit) {
+    br.app.stagebook.ui.components.FollowBusyWhile()
     AlertDialog(
         onDismissRequest = { if (cloud != CloudUi.Sending) onDismiss() },
         title = {
