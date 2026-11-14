@@ -246,6 +246,7 @@ fun SongsScreen(
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 inline = wide,
                                 titleLines = 1,
+                                gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
                                 // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete
                                 // in the editor (user, 01/11: the row's own pencil was one too many)
                             )

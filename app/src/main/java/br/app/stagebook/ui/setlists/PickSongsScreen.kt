@@ -107,7 +107,9 @@ fun PickSongsScreen(
                                 inline = wide,
                                 leading = { Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet) },
                                 trailing = { SongFacts(row.songKey, row.bpm, row.capo, row.hasTrack) },
+                                titleStyle = MaterialTheme.typography.titleLarge,
                                 titleLines = 1,
+                                gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
                             )
                         }
                     }
