@@ -119,6 +119,11 @@ class History(unittest.TestCase):
         codes = [v["versionCode"] for v in notes.with_history(733, "0.1.733", [("One", "Um")], previous)["notes"]]
         self.assertEqual([733, 729], codes)
 
+    # v0.1.1086 and v0.1.1090 went out described by commit titles, and were rewritten by hand
+    def test_the_description_says_the_notes_in_english_then_portuguese(self):
+        text = notes.body([("One thing", "Uma coisa"), ("Another one.", "Outra.")])
+        self.assertEqual("- One thing.\n- Another one.\n- Uma coisa.\n- Outra.\n", text)
+
     def test_the_file_of_an_old_release_has_no_notes(self):
         self.assertEqual(1, len(notes.with_history(733, "0.1.733", [("One", "Um")], {"versionCode": 729})["notes"]))
 
