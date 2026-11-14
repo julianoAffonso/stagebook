@@ -43,11 +43,13 @@ class BandConduct @Inject constructor(
         data object None : Role
 
         /**
-         * [noAnswer]: band members online who didn't answer (another version, outside the app). [lackers]: the devices
-         * following that lack songs, by id (the message only carries their names).
+         * [answered]: the ids of who answered the last message (null = no answer yet to count against). Who is online and didn't answer (another version, outside
+         * the app) is worked out against who is online NOW, not when the message went (a number kept at send time stayed
+         * on the strip after the person answered, left or the leader searched again). [lackers]: the devices following
+         * that lack songs, by id (the message only carries their names).
          */
         @Immutable
-        data class Conducting(val setId: String, val msg: Conduct.Msg, val noAnswer: Int = 0, val lackers: Map<String, Conduct.Lack> = emptyMap()) : Role
+        data class Conducting(val setId: String, val msg: Conduct.Msg, val answered: Set<String>? = null, val lackers: Map<String, Conduct.Lack> = emptyMap()) : Role
 
         /**
          * [songId]: the current song here (null = missing here); [at]: last news from the leader (device clock);
@@ -85,6 +87,9 @@ class BandConduct @Inject constructor(
 
     private val _role = MutableStateFlow<Role>(Role.None)
     val role: StateFlow<Role> = _role.asStateFlow()
+
+    /** The ids of the band members online now: what "didn't answer" is counted against. */
+    val online: kotlinx.coroutines.flow.Flow<Set<String>> by lazy { link.onlineMembers.map { peers -> peers.map { it.id }.toSet() }.distinctUntilChanged() }
 
     private val _openSong = MutableSharedFlow<String>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Follower: the song to open on stage now, or [BREAK_ONLY]. */
@@ -252,7 +257,7 @@ class BandConduct @Inject constructor(
 
     // a message leaving: who lacks what stays as known until the answers say otherwise
     private fun keepLeading(setId: String, msg: Conduct.Msg): Boolean =
-        _role.updateAndGet { if (it is Role.Conducting) Role.Conducting(setId, msg, lackers = if (it.setId == setId) it.lackers else emptyMap()) else it } is Role.Conducting
+        _role.updateAndGet { if (it is Role.Conducting) Role.Conducting(setId, msg, answered = it.answered.takeIf { _ -> it.setId == setId }, lackers = if (it.setId == setId) it.lackers else emptyMap()) else it } is Role.Conducting
 
     private suspend fun send(setId: String, msg: Conduct.Msg) {
         val members = link.onlineMembers.value.size
@@ -264,7 +269,7 @@ class BandConduct @Inject constructor(
         if (!newest.isNewest(ticket)) return   // a newer song went out meanwhile: this late answer would bring back the old one
         val withLacks = msg.copy(missing = Conduct.lacks(replies.values))
         val noAnswer = (members - replies.size).coerceAtLeast(0)
-        if (!keepLeading(Role.Conducting(setId, withLacks, noAnswer, replies.filterValues { it.titles.isNotEmpty() }))) return
+        if (!keepLeading(Role.Conducting(setId, withLacks, replies.keys, replies.filterValues { it.titles.isNotEmpty() }))) return
         // the missing songs changed: send again so everyone sees the same alert
         if (withLacks.missing != msg.missing && newest.isNewest(ticket)) deliver(stamped(withLacks))
         // someone didn't get it: one short search per song (they may have changed address on the Wi-Fi)
