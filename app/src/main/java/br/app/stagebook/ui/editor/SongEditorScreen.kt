@@ -223,7 +223,12 @@ fun SongEditorScreen(
             // back from the saved text
             val fieldText = remember(uiState.text, look.chords) { Chords.hideMeta(if (look.chords) uiState.text else LyricsView.view(uiState.text)) }
             // the cursor coming from the stage is in the saved text: subtract the hidden lines before it
-            val fieldCursor = remember { if (cursor < 0) cursor else Chords.hideMeta(uiState.text.take(cursor.coerceAtMost(uiState.text.length))).length }
+            // (lyrics only profile: the chord lines and the chords inside the lines are not in the field either, so the same
+            // view is applied to the text before the cursor; otherwise the cursor fell past the end and went to the top)
+            val fieldCursor = remember {
+                if (cursor < 0) cursor
+                else uiState.text.take(cursor.coerceAtMost(uiState.text.length)).let { Chords.hideMeta(if (look.chords) it else LyricsView.view(it)).length }
+            }
             var lyrics by remember { mutableStateOf(TextFieldValue(fieldText, TextRange(lineEnd(fieldText, fieldCursor)))) }
             // the text always comes from the state; the selection and cursor live here (so they survive the other screen)
             val shown = if (lyrics.text == fieldText) lyrics else lyrics.copy(text = fieldText)
@@ -433,6 +438,9 @@ private fun DataPane(
     }
 }
 
+@Composable
+private fun ToolDivider() = androidx.compose.material3.VerticalDivider(Modifier.height(24.dp).padding(horizontal = Spacing.xs))
+
 /** The song's MIDI (on entering and leaving the stage) as a field like the others: "None" in grey or "On" in the accent. */
 @Composable
 private fun MidiField(empty: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
@@ -611,39 +619,37 @@ private fun ToolStrip(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (!previewing) {
-            SectionBar(onSection, onHighlight)
-            // lyrics only profile: no chords in the editor (the saved lyrics don't change)
-            if (chords) ChordBar(usedChords, onChord, onNewChord)
+            // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off. Its
+            // own button with the marker icon, apart from the shortcuts (the user couldn't find it among them, B-28)
+            TipIcon(stringResource(R.string.editor_highlight), AppIcons.Highlighter, onHighlight, tint = MaterialTheme.colorScheme.primary)
+            // chords before the sections (user's order); lyrics only profile: no chords in the editor
+            if (chords) {
+                ToolDivider()
+                ChordBar(usedChords, onChord, onNewChord)
+            }
+            ToolDivider()
+            SectionBar(onSection)
         }
     }
 }
 
+/** Section shortcuts: each tap puts the section title in the lyrics at the cursor. */
 @Composable
-private fun RowScope.SectionBar(onPick: (Sections.Kind) -> Unit, onHighlight: () -> Unit) {
-    run {
-        // highlight the selected phrase (or the word at the cursor) on stage; tapping inside a highlight takes it off. Its own
-        // button with the marker icon, apart from the section shortcuts (the user couldn't find it among them, B-28)
-        androidx.compose.material3.AssistChip(
-            onClick = onHighlight,
-            label = { Text(stringResource(R.string.editor_highlight), style = MaterialTheme.typography.titleSmall) },
-            leadingIcon = { androidx.compose.material3.Icon(AppIcons.Highlighter, null, Modifier.size(18.dp)) },
-        )
-        androidx.compose.material3.VerticalDivider(Modifier.height(24.dp).padding(horizontal = Spacing.xs))
-        val names = rememberSectionNames(true)
-        SECTION_SHORTCUTS.forEach { kind ->
-            SuggestionChip(onClick = { onPick(kind) }, label = { Text(names.label(Sections.Header(kind, "", "", kind.pt)), style = MaterialTheme.typography.titleSmall) })
-        }
+private fun RowScope.SectionBar(onPick: (Sections.Kind) -> Unit) {
+    val names = rememberSectionNames(true)
+    SECTION_SHORTCUTS.forEach { kind ->
+        SuggestionChip(onClick = { onPick(kind) }, label = { Text(names.label(Sections.Header(kind, "", "", kind.pt)), style = MaterialTheme.typography.titleSmall) })
     }
 }
 
-/** Chord shortcuts: the ones the song already uses and "+" for a new one; each tap puts `[chord]` at the cursor. */
+/**
+ * Chord shortcuts: "+" for a new chord first (so it is in view without scrolling) and then the ones the song already
+ * uses; each tap puts `[chord]` at the cursor.
+ */
 @Composable
 private fun RowScope.ChordBar(chords: List<String>, onPick: (String) -> Unit, onNew: () -> Unit) {
-    run {
-        androidx.compose.material3.VerticalDivider(Modifier.height(24.dp).padding(horizontal = Spacing.xs))
-        chords.forEach { c -> SuggestionChip(onClick = { onPick(c) }, label = { Text(c, style = MaterialTheme.typography.titleSmall) }) }
-        SuggestionChip(onClick = onNew, icon = { Icon(AppIcons.Add, null) }, label = { Text(stringResource(R.string.editor_chord_new), style = MaterialTheme.typography.titleSmall) })
-    }
+    TipIcon(stringResource(R.string.editor_chord_new), AppIcons.Add, onNew, tint = MaterialTheme.colorScheme.primary)
+    chords.forEach { c -> SuggestionChip(onClick = { onPick(c) }, label = { Text(c, style = MaterialTheme.typography.titleSmall) }) }
 }
 
 /** The song as it looks on stage, with the look chosen in settings (just to check). */

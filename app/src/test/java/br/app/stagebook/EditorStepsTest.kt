@@ -124,26 +124,44 @@ class EditorStepsTest {
         return out.first().lineCount
     }
 
+    private fun node(label: String, description: Boolean = false) =
+        (if (description) compose.onAllNodes(androidx.compose.ui.test.hasContentDescription(label), useUnmergedTree = true)
+        else compose.onAllNodesWithText(label, useUnmergedTree = true))
+            .fetchSemanticsNodes().first { it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.EditableText) == null }
+
     @Test fun `the tools are one line on a 360 dp phone with bigger text, nothing cut`() {
         show(null)
         compose.waitForIdle()
-        val labels = listOf("Marca-texto", "Verso", "Refrão", "G", "D", "Am", "Acorde")
-        val bounds = labels.map { l -> compose.onAllNodesWithText(l, useUnmergedTree = true).fetchSemanticsNodes().first { it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.EditableText) == null }.let { n -> n.positionInRoot.y + n.size.height / 2f to n.size.height } }
-        // every button sits on the same line: the same top and height (a second line would put some lower)
-        val first = bounds.first()
-        bounds.forEach { b -> assertEquals("same line", first.first, b.first, 2f) }
-        labels.forEach { assertEquals("\"$it\" in one line", 1, lines(it)) }
-        // the strip's start is in view: the highlighter is within the screen's width
-        val node = compose.onAllNodesWithText("Marca-texto", useUnmergedTree = true).fetchSemanticsNodes().first()
+        val items = listOf(node("Marca-texto", true), node("Acorde", true), node("G"), node("D"), node("Am"), node("Verso"), node("Refrão"))
+        // every button sits on the same line (a second line would put some lower)
+        val first = items.first()
+        items.forEach { n -> assertEquals("same line", first.positionInRoot.y + first.size.height / 2f, n.positionInRoot.y + n.size.height / 2f, 3f) }
+        listOf("G", "D", "Am", "Verso", "Refrão").forEach { assertEquals("\"$it\" in one line", 1, lines(it)) }
+    }
+
+    // user's order: preview, highlighter, chords (with the new-chord button), then the sections; the chords are in view without scrolling
+    @Test fun `chords come before the sections, and are in view without scrolling`() {
+        show(null)
+        compose.waitForIdle()
         val screen = 360f * compose.density.density
-        assertTrue("highlighter at ${node.positionInRoot.x} of $screen", node.positionInRoot.x >= 0f && node.positionInRoot.x + node.size.width <= screen)
+        val preview = node("Ver como fica no palco", true)
+        val highlight = node("Marca-texto", true)
+        val add = node("Acorde", true)
+        val g = node("G"); val d = node("D")
+        val verse = node("Verso")
+        assertTrue(preview.positionInRoot.x < highlight.positionInRoot.x && highlight.positionInRoot.x < add.positionInRoot.x)
+        assertTrue(add.positionInRoot.x < g.positionInRoot.x && g.positionInRoot.x < d.positionInRoot.x && d.positionInRoot.x < verse.positionInRoot.x)
+        listOf(add, g, d).forEach { n ->
+            assertTrue("at ${n.positionInRoot.x}..${n.positionInRoot.x + n.size.width} of $screen", n.positionInRoot.x >= 0f && n.positionInRoot.x + n.size.width <= screen)
+        }
     }
 
     @Test fun `the strip stays on the lyrics screen, not on the details`() {
         show(null)
-        compose.onNodeWithText("Marca-texto").assertExists()
+        compose.onNodeWithContentDescription("Marca-texto").assertExists()
         compose.onNode(androidx.compose.ui.test.hasText("Dados") and androidx.compose.ui.test.hasClickAction()).performClick()
         compose.waitForIdle()
-        compose.onAllNodesWithText("Marca-texto").assertCountEquals(0)
+        compose.onAllNodesWithText("Verso").assertCountEquals(0)
+        compose.onNodeWithContentDescription("Marca-texto").assertDoesNotExist()
     }
 }
