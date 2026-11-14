@@ -51,6 +51,8 @@ import br.app.stagebook.ui.settings.SettingsUiState
 import br.app.stagebook.ui.songs.SongRowUi
 import br.app.stagebook.ui.songs.SongsScreen
 import br.app.stagebook.ui.songs.SongsUiState
+import br.app.stagebook.ui.band.goNow
+import br.app.stagebook.ui.band.waiting
 import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
@@ -919,6 +921,37 @@ class ScreenshotTest {
                 {}, {}, {}, {},
             )
         }
+    }
+
+    // the leader went to the break while a window is open: the break waits behind it, the strip says so
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    @Test fun conductBreakHeld() = conductBreakHeldShot("tablet_6_palco_intervalo_espera")
+
+    @Test @Config(qualifiers = PHONE)
+    fun conductBreakHeldPhone() = conductBreakHeldShot("celular_7_palco_intervalo_espera")
+
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun conductBreakHeldShot(name: String) {
+        val gate = br.app.stagebook.ui.components.FollowGate()
+        var rest by androidx.compose.runtime.mutableStateOf<br.app.stagebook.ui.stage.FollowBreak?>(null)
+        compose.setContent {
+            StagebookTheme {
+                androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalFollowGate provides gate) {
+                    androidx.compose.foundation.layout.Column {
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage.copy(followBreak = rest), 0, 0, { _, _ -> }, onBack = {}) }
+                        br.app.stagebook.ui.band.ConductBar(
+                            br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), breakSince = rest?.since),
+                            {}, {}, {}, {}, waiting = gate.waiting(), onGo = gate::goNow,
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
+        compose.waitForIdle()
+        rest = br.app.stagebook.ui.stage.FollowBreak(System.currentTimeMillis() - 90_000, s("Garota de Ipanema"), "G")
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     @Test fun conductBar() = shoot("banda_conduzir_faixas") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }

@@ -24,13 +24,18 @@ data class FollowPending(val target: String, val reason: FollowWait)
 
 /**
  * Between the app's menus and windows and the follower's navigation: [menus] counts those open now ([FollowBusyWhile]),
- * [pending] is the song waiting (the strip tells it) and [go] opens it at once.
+ * [pending] is the song waiting (the strip tells it) and [go] opens it at once. [breakHeld] is the same for the break
+ * shown over the stage the follower is already on (drawn by state, not by navigation, so the stage holds it).
  */
 @Stable
 class FollowGate {
     var menus by mutableIntStateOf(0)
     var pending by mutableStateOf<FollowPending?>(null)
     var go: () -> Unit = {}
+
+    /** The leader's break (this stage has the song) waits behind an open window: the strip says so ([showBreak] shows it). */
+    var breakHeld by mutableStateOf(false)
+    var showBreak: () -> Unit = {}
 }
 
 val LocalFollowGate = staticCompositionLocalOf { FollowGate() }
