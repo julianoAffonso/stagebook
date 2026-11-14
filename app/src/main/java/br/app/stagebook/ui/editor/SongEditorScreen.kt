@@ -99,6 +99,7 @@ fun SongEditorRoute(
     onNextImport: () -> Unit = onDone,
     onSetlistReady: (String) -> Unit = { onDone() },
     onSaved: (String) -> Unit = { onDone() },
+    onMoved: (String) -> Unit = {},
 ) {
     LaunchedEffect(viewModel) {
         viewModel.onDone.collect { e ->
@@ -107,6 +108,7 @@ fun SongEditorRoute(
                 is EditorExit.Saved -> onSaved(e.songId)
                 EditorExit.NextImport -> onNextImport()
                 is EditorExit.SetlistReady -> onSetlistReady(e.setId)
+                is EditorExit.Moved -> onMoved(e.songId)
             }
         }
     }

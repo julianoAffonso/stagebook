@@ -80,6 +80,7 @@ fun SongsRoute(
     onSync: (() -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
     val online by viewModel.online.collectAsStateWithLifecycle()
     val localNet by viewModel.localNet.collectAsStateWithLifecycle()
     val internetOn by viewModel.internetOn.collectAsStateWithLifecycle()
@@ -99,7 +100,8 @@ fun SongsRoute(
         // the automatic profile has no kind of its own: the musician says what this one is, to open on the right site
         onImport = { if (viewModel.asksKind()) askKind = true else onImport(query, "") },
         // found what they were looking for: coming back from the stage the whole list shows
-        onOpen = { query = ""; onOpenSong(it) },
+        // the editor opened from this song steps through the list as it is now (search and filters on)
+        onOpen = { editorQueue.offerList(uiState.songs.map { s -> s.id }); query = ""; onOpenSong(it) },
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
         onShareSongs = viewModel::shareSongs,
         onDismissCloud = viewModel::dismissCloud,

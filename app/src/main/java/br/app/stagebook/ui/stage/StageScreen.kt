@@ -176,12 +176,14 @@ private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itsel
 @Composable
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
+    fromList: Boolean = false,   // opened from the Songs list: the editor steps through that list
     onBack: (() -> Unit)? = null,
     onEditSetlist: (setId: String) -> Unit = {},
     onShareSetlist: (setId: String) -> Unit = {},
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
     // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
     if (viewModel.breakOnly) {
         KeepScreenOn()
@@ -279,7 +281,15 @@ fun StageRoute(
             // 1 is no zoom: this screen goes back to automatic
             onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
             onFit = { id, z -> viewModel.setZoom(id, screen, z) },
-            onEdit = onEditSong,
+            onEdit = { id, cursor ->
+                // the editor's previous/next follow where the stage came from: the setlist's order, or the Songs list's
+                val shownSongs = uiState.songs
+                if (uiState.setlist != null) {
+                    val valid = shownSongs.filter { !it.missing && it.id.isNotEmpty() }
+                    editorQueue.open(valid.map { it.id }, shownSongs.take(open).count { !it.missing && it.id.isNotEmpty() })
+                } else if (fromList) editorQueue.openFromList(id) else editorQueue.clear()
+                onEditSong(id, cursor)
+            },
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             setlistActions = SetlistActions(

@@ -49,6 +49,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var repository: LibraryRepository
+    @Inject lateinit var editorQueue: br.app.stagebook.data.EditorQueue
     @Inject lateinit var updateOffer: AppUpdateOffer
     @Inject lateinit var updater: AppUpdater
     @Inject lateinit var midi: MidiPedal
@@ -141,7 +142,7 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume) }
+                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
