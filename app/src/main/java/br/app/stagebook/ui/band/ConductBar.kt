@@ -115,11 +115,11 @@ sealed interface ConductUi {
  */
 internal fun conductUi(
     role: Role, songs: List<br.app.stagebook.data.model.Song>, now: Long, bandOn: Boolean, chordless: Set<String> = emptySet(), chords: Boolean = true,
-    me: String = "", lacksHere: List<String>? = null,
+    me: String = "", lacksHere: List<String>? = null, online: Set<String> = emptySet(),
 ): ConductUi? = when {
     !bandOn -> null
     role is Role.Conducting -> ConductUi.Conducting(
-        role.msg.set, role.noAnswer, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing,
+        role.msg.set, role.answered?.let { (online - it).size } ?: 0, Conduct.missingAt(role.msg, role.msg.index), role.msg.missing,
         role.lackers.map { (id, lack) -> ConductUi.Lacker(id, lack.who, lack.titles) }.sortedBy { it.who },
     )
     role is Role.Following -> followingUi(role, songs, now, chordless.takeIf { chords }.orEmpty(), me, lacksHere)
@@ -180,8 +180,11 @@ class ConductViewModel @Inject constructor(
         repository.library.map { it.songs.map { s -> s.title to s.author } }.distinctUntilChanged(),
     ) { items, _ -> items?.let { Conduct.missing(it, repository.library.value.songs) } }.flowOn(kotlinx.coroutines.Dispatchers.Default)
 
-    val ui: StateFlow<ConductUi?> = combine(conduct.role, tick, repository.library, conduct.chordless, lacksHere) { role, now, library, chordless, lacks ->
-        conductUi(role, library.songs, now, library.look.bandOn, chordless, library.look.chords, identity.name.value, lacks)
+    // who is online now, and who it's about (the strip counts who didn't answer against the people online at this moment)
+    private val around = combine(conduct.chordless, lacksHere, conduct.online) { chordless, lacks, online -> Triple(chordless, lacks, online) }
+
+    val ui: StateFlow<ConductUi?> = combine(conduct.role, tick, repository.library, around) { role, now, library, (chordless, lacks, online) ->
+        conductUi(role, library.songs, now, library.look.bandOn, chordless, library.look.chords, identity.name.value, lacks, online)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val asking: StateFlow<Boolean> = conduct.asking
