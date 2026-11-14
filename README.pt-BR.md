@@ -35,6 +35,11 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   da mesma versão do app: o app avisa quem não está.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
+- **Ajustes por tarefa:** sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
+  metrônomo, aparelho) com uma **busca** que também acha o que está desligado e diz por quê. A música tem a mesma linha
+  em todo lugar (título, artista, tom, BPM, capo, faixa). O editor de música tem duas telas, **Dados** e **Letra e
+  cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
+  outra versão.
 - **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume
   ([formato](docs/now-playing.pt-BR.md)), backup num arquivo `.stagebook` (toque num deles numa conversa, num download
   ou no gerenciador de arquivos e ele abre no app), um **editor no computador** (no navegador, com setlists e
@@ -52,7 +57,7 @@ alto-falante do aparelho.
 
 Dois jeitos de tocar na interface:
 - **Pelo motor do Stagebook (padrão):** fala direto com a interface.
-- **Pelo Android:** Ajustes > Metrônomo e player > Tocar pela interface através do Android. Use só se a interface
+- **Pelo Android:** Ajustes > Player e metrônomo > Tocar pela interface através do Android. Use só se a interface
   conecta e o som não sai ou sai picotado.
 
 Cada interface guarda a sua escolha em cada aparelho: com a interface conectada, a chave vale só para ela. Se o som
@@ -118,7 +123,7 @@ números: o ganho dele é a tela mais simples.
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
 Gemini CLI, o Codex e outros assistentes de IA lerem e editarem a sua biblioteca: "monta um setlist de 15 músicas para
 sábado", "passa as músicas deste artista meio tom abaixo", "confere os acordes desta música", "importa esta página". Ele
-roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Editar no computador**; você autoriza o
+roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Banda e computador → Editar no computador**; você autoriza o
 computador uma vez no tablet. Está no npm como [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): com o [Node.js](https://nodejs.org) no
 computador, o Claude Code se liga com `claude mcp add stagebook -- npx -y stagebook-mcp`. Configuração de cada
 assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).

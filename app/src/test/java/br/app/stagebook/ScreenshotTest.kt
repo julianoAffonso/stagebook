@@ -783,7 +783,7 @@ class ScreenshotTest {
 
     private val notes = listOf(
         br.app.stagebook.data.VersionNotes(
-            733, "0.1.733",
+            1210, "0.1.1210",
             en = listOf("The capo shows on the chord diagram, in a fret of its own.", "Saving a song opens it on stage."),
             pt = listOf("O capo aparece no desenho do acorde, numa casa própria.", "Salvar uma música agora abre ela no palco."),
         ),
@@ -801,7 +801,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
-                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.733 (abc1234)", skippedNotes), {}, {}, {}, {})
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.1210 (abc1234)", skippedNotes), {}, {}, {}, {})
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_8_versao_nova.png")
@@ -813,7 +813,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
-                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.733 (abc1234)", notes), {}, {}, {}, {})
+                br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.1210 (abc1234)", notes), {}, {}, {}, {})
             }
         }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_8_versao_nova.png")
@@ -949,7 +949,7 @@ class ScreenshotTest {
     @Test fun settingsUpdateTablet() = shoot("tablet_5_ajustes_atualizar") {
         HomeScaffold(HomeTab.SETTINGS, {}) {
             SettingsScreen(
-                settings.copy(update = br.app.stagebook.ui.settings.UpdateState.Available("0.1.733 (abc1234)", notes)),
+                settings.copy(update = br.app.stagebook.ui.settings.UpdateState.Available("0.1.1210 (abc1234)", notes)),
                 SettingsActions(),
                 it,
                 section = br.app.stagebook.ui.settings.SettingsSection.ABOUT,
@@ -958,7 +958,7 @@ class ScreenshotTest {
     }
 
     private val settings = SettingsUiState(
-        false, Look(pedalName = "PageFlip Firefly", pedalKeys = mapOf(android.view.KeyEvent.KEYCODE_PAGE_UP to PedalAction.PREVIOUS_SONG, br.app.stagebook.domain.MidiCode.of(0xB0, 64) to PedalAction.NEXT)), 42, 3, PedalKeyUi("PAGE_DOWN", PedalAction.NEXT, "PageFlip Firefly", android.view.KeyEvent.KEYCODE_PAGE_DOWN), "0.2.8", pedalConnected = true,
+        false, Look(pedalName = "PageFlip Firefly", pedalKeys = mapOf(android.view.KeyEvent.KEYCODE_PAGE_UP to PedalAction.PREVIOUS_SONG, br.app.stagebook.domain.MidiCode.of(0xB0, 64) to PedalAction.NEXT)), 42, 3, PedalKeyUi("PAGE_DOWN", PedalAction.NEXT, "PageFlip Firefly", android.view.KeyEvent.KEYCODE_PAGE_DOWN), "0.1.1200", pedalConnected = true,
     )
 
     @Test @Config(qualifiers = PHONE)
@@ -976,7 +976,12 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneAbout() = shoot("celular_5_ajustes_sobre") {
-        HomeScaffold(HomeTab.SETTINGS, {}) { SettingsScreen(settings, SettingsActions(), it, section = SettingsSection.ABOUT) }
+        HomeScaffold(HomeTab.SETTINGS, {}) {
+            SettingsScreen(
+                settings.copy(update = br.app.stagebook.ui.settings.UpdateState.Available("0.1.1210 (abc1234)", notes)),
+                SettingsActions(), it, section = SettingsSection.ABOUT,
+            )
+        }
     }
 
     // the search (user, 14/11): "midi" over the list of groups, with the path of each result
@@ -1610,7 +1615,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun shareSheetPhone() = shoot("jornada_compartilhar_1_folha") {
         androidx.compose.foundation.layout.Column {
-            br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {})
+            br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {}, band = 2)
             androidx.compose.material3.HorizontalDivider(androidx.compose.ui.Modifier.padding(vertical = br.app.stagebook.ui.theme.Spacing.l))
             br.app.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {})
         }
@@ -1618,7 +1623,7 @@ class ScreenshotTest {
 
     @Test fun shareSheetTablet() = shoot("jornada_compartilhar_1_folha_tablet") {
         androidx.compose.foundation.layout.Column(Modifier.width(640.dp)) {
-            br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {})
+            br.app.stagebook.ui.share.ShareOptions(12, online = true, onQr = {}, onInternet = {}, band = 2)
             androidx.compose.material3.HorizontalDivider(androidx.compose.ui.Modifier.padding(vertical = br.app.stagebook.ui.theme.Spacing.l))
             br.app.stagebook.ui.share.ShareOptions(12, online = false, onQr = {}, onInternet = {})
         }
