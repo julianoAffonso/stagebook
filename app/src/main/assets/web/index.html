@@ -44,6 +44,7 @@
   .side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; max-height: calc(100vh - 32px); }
   ul.list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
   ul.list li { padding: 10px 14px; border-radius: 16px; cursor: pointer; }
+  ul.list li.srow { display: grid; }
   ul.list li:hover { background: var(--raised); }
   ul.list li.on { background: var(--selected); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -73,6 +74,32 @@
   ol.items li.brk { background: none; padding-left: 14px; }
   ol.items li.brk .line { flex: 1; border-top: 1px dashed var(--muted); min-width: 16px; }
   ol.items li.brk .lbl { color: var(--muted); font-size: 12px; letter-spacing: .12em; }
+  /* the device's song row (ui/components/SongListItem.kt + SongFacts.kt): title over artist, the facts at the end */
+  .srow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "ttl facts" "art facts"; column-gap: 8px; align-items: center; }
+  .srow.num { grid-template-columns: 24px minmax(0, 1fr) auto auto; grid-template-areas: "n ttl facts ctl" "n art facts ctl"; }
+  .srow .n { grid-area: n; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .srow .ttl, .srow .art { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srow .ttl { grid-area: ttl; line-height: 1.3; }
+  .srow .art { grid-area: art; font-size: 13px; line-height: 1.3; color: var(--muted); min-height: 1.3em; }
+  .srow .more { grid-area: more; margin-top: 4px; }
+  .srow .more .sub { line-height: 1.3; }
+  .srow .ctl { grid-area: ctl; display: flex; }
+  .facts { grid-area: facts; justify-self: end; align-self: center; display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; color: var(--muted); }
+  .facts .key { color: var(--accent); font-weight: 600; }
+  .wave { width: 16px; height: 16px; fill: var(--accent); flex: none; vertical-align: middle; }
+  /* a narrow list (a phone, or the side column): the facts move down beside the artist, the title gets the whole width */
+  ul.list, ol.items { container-type: inline-size; }
+  @container (max-width: 480px) {
+    .srow { grid-template-areas: "ttl ttl" "art facts"; }
+    /* a setlist row has the arrows and the ×: title and artist beside them, the facts on a line of their own under */
+    .srow.num { grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: "n ttl ctl" "n art ctl" "n facts facts"; row-gap: 2px; }
+    .srow.num .facts { justify-self: start; }
+    .srow .ctl button.icon { width: 32px; height: 32px; line-height: 32px; }
+  }
+  ol.items li.srow { display: grid; padding-right: 4px; }
+  /* the review's state and choice under the row */
+  .srow.num.withmore { grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: "n ttl facts" "n art facts" "n more more"; align-items: start; padding: 8px 14px; row-gap: 2px; }
+  @container (max-width: 480px) { .srow.num.withmore { grid-template-areas: "n ttl ttl" "n art facts" "n more more"; } .srow.num.withmore .facts { justify-self: end; } }
   button:disabled { opacity: .4; cursor: default; }
   .review li { cursor: default !important; }
 </style>
@@ -124,7 +151,7 @@
           </details>
           <!-- backing track: only for a saved song (the file is named after it) -->
           <div class="track" id="track-row" hidden>
-            <span data-t="track"></span><span id="track-name" class="muted"></span>
+            <span id="track-icon"></span><span data-t="track"></span><span id="track-name" class="muted"></span>
             <button class="outline" id="track-pick"></button><button class="text" id="track-remove"></button>
             <input id="track-file" type="file" accept=".ogg,.mp3,.wav,audio/*" hidden>
           </div>
@@ -382,9 +409,10 @@ function drawList() {
   const tag = $("tag-filter").value.toLowerCase();
   const shown = songs.filter((s) => (!q || s.k.includes(q)) && (!tag || (s.tags || []).some((tg) => tg.toLowerCase() === tag)));
   $("songs").replaceChildren(...shown.slice(0, MAX_ROWS).map((s) => {
-    const el = li(s.title, [s.author, s.year, s.key, (s.tags || []).join(", ")].filter(Boolean).join(" · "), () => open(s.id));
+    // the year and the tags stay in the song's form: the device's list doesn't show them either
+    const el = songRow(s, { onclick: () => open(s.id) });
     el.dataset.id = s.id;
-    if (current && current.id === s.id) el.className = "on";
+    if (current && current.id === s.id) el.classList.add("on");
     return el;
   }));
   showCount("list", shown.length, q || tag);
@@ -433,6 +461,7 @@ function drawTrack() {
   const has = !!(current && current.track);
   const lost = !has && !!(current && current.trackName);
   $("track-row").hidden = !(current && current.id);
+  $("track-icon").replaceChildren(waveIcon(t.track));
   // the track's own name, as the app keeps it; an old track without one shows its file
   $("track-name").textContent = has ? current.trackName || current.track.replace(/^[^-]+(-[^-]+){4}-\d+/, "").replace(/^\./, "") || "✓"
     // the audio didn't come with the song (a backup without the tracks): the name stays, to know which one to send
@@ -644,6 +673,61 @@ function showSet(set) {
   loadSets();
 }
 
+// <rows-logic>
+// What a song row shows at its end, the device's rule (ui/songs/RowFacts.kt read by ui/components/SongFacts.kt): the key,
+// then the tempo, then the capo, then the audio wave of a backing track; only what the song has. The tempo and the capo
+// arrive already held to the app's ranges (Chords.meta), so here 0 means none. Texts are the app's own ("120 bpm", "capo 2").
+// Tested without a browser by tools/web_rows_test.mjs.
+function rowFacts(s, t) {
+  const key = s.key || "";
+  const parts = [key, s.bpm > 0 ? fill(t.factBpm, s.bpm) : "", s.capo > 0 ? fill(t.factCapo, s.capo) : ""].filter(Boolean);
+  const hasTrack = !!s.hasTrack;
+  const text = parts.join(" · ");
+  return { key, parts, text, hasTrack, label: [text, hasTrack ? t.track : ""].filter(Boolean).join(" · ") };
+}
+// the row's accessible name: title, artist and the facts (the wave is named by the app's own "Backing track")
+const rowLabel = (s, t) => [s.title || "–", s.author || s.artist, rowFacts(s, t).label].filter(Boolean).join(", ");
+// </rows-logic>
+
+// the app's audio wave (AppIcons.AudioWave, "graphic_eq"), same path, in the page's colors
+const WAVE_PATH = "M7,18h2V6H7v12zM11,22h2V2h-2v20zM3,14h2v-4H3v4zM15,18h2V6h-2v12zM19,10v4h2v-4h-2z";
+function waveIcon(label) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "wave");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label);
+  const title = document.createElementNS(ns, "title"); title.textContent = label;
+  const path = document.createElementNS(ns, "path"); path.setAttribute("d", WAVE_PATH);
+  svg.append(title, path);
+  return svg;
+}
+// one song row, the same in every list: [number] title over artist, the facts at the end; `extra` goes after them
+function songRow(s, { n, onclick, extra, more } = {}) {
+  const el = document.createElement("li");
+  el.className = "srow" + (n ? " num" : "") + (more ? " withmore" : "");
+  if (n) { const num = document.createElement("span"); num.className = "n"; num.textContent = n; el.append(num); }
+  const ttl = document.createElement("div"); ttl.className = "ttl"; ttl.textContent = s.title || "–"; ttl.title = ttl.textContent;
+  const art = document.createElement("div"); art.className = "art"; art.textContent = s.author || s.artist || "";
+  el.append(ttl, art);
+  const f = rowFacts(s, t);
+  if (f.label) {
+    const facts = document.createElement("div"); facts.className = "facts";
+    f.parts.forEach((p, i) => {
+      const part = document.createElement("span");
+      if (i === 0 && f.key) part.className = "key";
+      part.textContent = i > 0 ? "· " + p : p;
+      facts.append(part);
+    });
+    if (f.hasTrack) facts.append(waveIcon(t.track));
+    el.append(facts);
+  }
+  if (extra) el.append(extra);
+  if (more) el.append(more);
+  el.setAttribute("aria-label", rowLabel(s, t));
+  if (onclick) el.onclick = onclick;
+  return el;
+}
+
 // <breaks-logic>
 // The setlist's breaks, as the tablet keeps them (domain/SetlistBreaks.kt): a break is a position p, 1 <= p <= n-1,
 // "a break before the song at p". Songs and breaks are shown as one list of rows; a song moves by trading places with
@@ -697,7 +781,7 @@ function setView(set, t) {
   const rows = [];
   set.songs.forEach((s, i) => {
     if (breaks.includes(i)) rows.push({ kind: "break", at: i, label: t.breakLabel, up: i > 1, down: i < size - 1 });
-    rows.push({ kind: "song", index: i, n: i + 1, title: s.title ? [s.title, s.author].filter(Boolean).join(" · ") : "–", up: i > 0, down: i < size - 1 });
+    rows.push({ kind: "song", index: i, n: i + 1, song: s, up: i > 0, down: i < size - 1 });
   });
   const songsText = plural(t, "songCount", size);
   const canAdd = breakAdd(breaks, size).length > breaks.length;
@@ -732,8 +816,8 @@ function drawSet() {
     return b;
   };
   $("set-items").replaceChildren(...view.rows.map((r) => {
-    const el = document.createElement("li");
     if (r.kind === "break") {
+      const el = document.createElement("li");
       el.className = "brk";
       const a = document.createElement("span"); a.className = "line";
       const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = r.label;
@@ -744,16 +828,15 @@ function drawSet() {
         button("×", false, t.breakRemove, () => (currentSet.breaks = currentSet.breaks.filter((p) => p !== r.at))));
       return el;
     }
-    const n = document.createElement("span"); n.className = "n"; n.textContent = r.n;
-    const title = document.createElement("span"); title.className = "t"; title.textContent = r.title;
-    el.append(n, title,
+    const ctl = document.createElement("div"); ctl.className = "ctl";
+    ctl.append(
       button("↑", !r.up, "", () => setMoveSong(currentSet, r.index, r.index - 1)),
       button("↓", !r.down, "", () => setMoveSong(currentSet, r.index, r.index + 1)),
       button("×", false, t.remove, () => {
         currentSet.breaks = breakAfterRemoving(currentSet.breaks, currentSet.songs.length, [r.index]);
         currentSet.songs.splice(r.index, 1);
       }));
-    return el;
+    return songRow(r.song, { n: r.n, extra: ctl });
   }));
   $("set-empty").hidden = currentSet.songs.length > 0;
   $("set-empty").textContent = t.emptySet;
@@ -770,12 +853,12 @@ function drawSetAdd() {
   const inSet = new Set(currentSet.songs.map((s) => s.id));
   const q = plain($("set-add-search").value.trim());
   const shown = songs.filter((s) => !inSet.has(s.id) && (!q || s.k.includes(q))).slice(0, 50);
-  $("set-add").replaceChildren(...shown.map((s) => li("+ " + s.title, s.author, () => {
-    currentSet.songs.push({ id: s.id, title: s.title, author: s.author });   // at the end: the breaks keep their places
+  $("set-add").replaceChildren(...shown.map((s) => songRow({ ...s, title: "+ " + s.title }, { onclick: () => {
+    currentSet.songs.push(s);   // at the end: the breaks keep their places, and the row keeps its facts
     dirty = true;
     drawSet();
     drawSetAdd();
-  })));
+  } })));
 }
 
 async function saveSet() {
@@ -887,22 +970,18 @@ function showReview(data, statusId) {
   $("review-name").value = data.name;
   $("review-name").parentElement.hidden = data.songsOnly;
   $("review-rows").replaceChildren(...data.rows.map((row, i) => {
-    const el = document.createElement("li");
-    const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
-    const body = document.createElement("span"); body.className = "t";
-    const title = document.createElement("div"); title.textContent = [row.title, row.artist].filter(Boolean).join(" · ");
+    const more = document.createElement("div"); more.className = "more";
     const sub = document.createElement("div"); sub.className = "sub";
     sub.textContent = { have: t.rowHave, came: t.rowCame, missing: t.rowMissing, similar: t.which }[row.status];
     if (row.status === "came") sub.className = "sub ok";
     if (row.status === "missing") sub.className = "sub error";
-    body.append(title, sub);
+    more.append(sub);
     if (row.status === "similar") {
       const sel = document.createElement("select"); sel.dataset.row = i; sel.id = "choice-" + i;
       sel.append(new Option(t.leaveOut, ""), ...row.candidates.map((c) => new Option([c.title, c.author].filter(Boolean).join(" · "), c.id)));
-      body.append(sel);
+      more.append(sel);
     }
-    el.append(n, body);
-    return el;
+    return songRow(row, { n: i + 1, more });
   }));
   say(statusId, "");
 }

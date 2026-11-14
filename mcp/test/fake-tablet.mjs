@@ -28,7 +28,7 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
       return send(200, {}, { "Set-Cookie": `stagebook_key=${KEY}; Path=/; HttpOnly` });
     }
     if (req.headers.cookie !== `stagebook_key=${KEY}`) return send(401);
-    const item = (s) => ({ id: s.id, title: s.title, author: s.author, year: s.year, key: s.key, tags: s.tags });
+    const item = (s) => ({ id: s.id, title: s.title, author: s.author, year: s.year, key: s.key, tags: s.tags, bpm: Number(s.tempo) || 0, capo: s.capo || 0, hasTrack: !!s.track });
     const m = url.pathname.match(/^\/api\/songs\/([^/]+)(\/track)?$/);
     if (url.pathname === "/api/session") return send(200, { name: "AI assistant", app: "TCL" });
     if (url.pathname === "/api/songs" && req.method === "GET") return send(200, [...songs.values()].map(item));
