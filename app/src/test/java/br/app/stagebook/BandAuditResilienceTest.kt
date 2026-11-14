@@ -62,12 +62,15 @@ class BandAuditResilienceTest {
         repo.updateLook { it.copy(bandOn = true) }
     }
 
-    private fun await(what: String, ms: Long = 5_000, cond: () -> Boolean) {
+    private fun await(what: String, ms: Long = 5_000, cond: () -> Boolean) = await(what, ms, { "" }, cond)
+    private fun await(what: String, ms: Long, diag: () -> String, cond: () -> Boolean) {
         val end = System.currentTimeMillis() + ms
-        while (!cond()) { check(System.currentTimeMillis() < end) { "timeout: $what" }; Thread.sleep(10) }
+        while (!cond()) { check(System.currentTimeMillis() < end) { "timeout: $what ${diag()}" }; Thread.sleep(10) }
     }
 
     private fun conducting() = conduct.role.value as Role.Conducting
+    // the band off, and the link's collector has dealt with it (it is the one that would act when the band comes back)
+    private fun bandOffSeen() { bandOff(); await("the link saw the band off", 20_000) { link.seenOn == false } }
     private fun bandOff() { repo.updateLook { it.copy(bandOn = false) }; runBlocking { withTimeout(15_000) { repo.library.first { !it.look.bandOn } } } }
 
     // ---- 1: "Look for the band" sends the song as it is after the (slow) call ----
@@ -137,23 +140,40 @@ class BandAuditResilienceTest {
         assertTrue("went back to following: ${conduct.role.value}", conduct.role.value is Role.Left)
     }
 
-    // ---- 9b: the Wi-Fi callback only with the band on ----
+    // ---- 9b: the Wi-Fi callback only with the band on, worked out from the state now ----
     @Test fun `the network callback is registered only in front and with the band on`() {
         val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
         val callbacks = { shadowOf(cm).networkCallbacks.size }
-        bandOff()
-        Thread.sleep(300)   // the link's own collector sees the band off before it goes on again (a state flow conflates)
+        bandOffSeen()
         link.setForeground(true)
         assertEquals("registered with the band off", 0, callbacks())
         repo.updateLook { it.copy(bandOn = true) }
-        await("registered once the band is on") { callbacks() == 1 }
-        Thread.sleep(300)
+        await("registered once the band is on", 20_000, { "callbacks=${callbacks()}" }) { callbacks() == 1 }
         repo.updateLook { it.copy(bandOn = false) }
-        await("unregistered when it goes off") { callbacks() == 0 }
-        Thread.sleep(300)
+        await("unregistered when it goes off", 20_000) { callbacks() == 0 }
         repo.updateLook { it.copy(bandOn = true) }
-        await("registered again") { callbacks() == 1 }
+        await("registered again", 20_000) { callbacks() == 1 }
         link.setForeground(false)
+        assertEquals(0, callbacks())
+    }
+
+    @Test fun `off and on again at once ends with exactly one callback, and off with none`() {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+        val callbacks = { shadowOf(cm).networkCallbacks.size }
+        link.setForeground(true)
+        await("registered", 20_000) { callbacks() == 1 }
+        repeat(20) {   // too quick for the link's collector to see each state
+            repo.updateLook { it.copy(bandOn = false) }
+            repo.updateLook { it.copy(bandOn = true) }
+        }
+        await("the library is on again", 20_000) { repo.library.value.look.bandOn }
+        await("exactly one", 20_000) { link.syncNetCallback(); callbacks() == 1 }
+        repeat(3) { link.syncNetCallback() }   // reconciling again changes nothing
+        assertEquals(1, callbacks())
+        bandOff()
+        link.syncNetCallback()   // whatever the collector has seen: the state now is off
+        assertEquals(0, callbacks())
+        link.syncNetCallback()
         assertEquals(0, callbacks())
     }
 

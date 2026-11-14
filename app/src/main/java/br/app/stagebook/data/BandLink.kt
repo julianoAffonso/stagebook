@@ -82,7 +82,7 @@ class BandLink @Inject constructor(
     /** Announced on the network (the server waiting). Searching for the others is separate and shorter. */
     val running: StateFlow<Boolean> = _running
 
-    private var foreground = false
+    @Volatile private var foreground = false   // written by the UI thread, read by the collector's
     private var searchUsers = 0   // open screens that need to find the others (Settings → Band, Share sheet)
     private val screenOpen get() = searchUsers > 0
     private var server: ServerSocket? = null
@@ -104,22 +104,30 @@ class BandLink @Inject constructor(
     }
 
     // the Wi-Fi callback wakes the app on every network change: only in front AND with the band on (nothing to follow
-    // otherwise); also called when "Band on the network" is switched
+    // otherwise). Always worked out from the state NOW and idempotent (register only if not registered, unregister only
+    // if registered), so a switch off and on too quick for the collector to see both, a state flow conflates, still
+    // ends right. True = it registered or unregistered now.
     @Synchronized
-    internal fun syncNetCallback() {
+    internal fun syncNetCallback(): Boolean {
         val want = foreground && repository.library.value.look.bandOn
+        if (want == (netCallback != null)) return false
         val cm = context.getSystemService(ConnectivityManager::class.java)
-        if (want && netCallback == null && cm != null) {
+        if (want) {
+            if (cm == null) return false
             netCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onCapabilitiesChanged(network: android.net.Network, caps: NetworkCapabilities) { _wifi.value = onWifi(); update() }
                 override fun onLost(network: android.net.Network) { _wifi.value = onWifi(); update() }
             }.also { runCatching { cm.registerDefaultNetworkCallback(it) } }
-        } else if (!want) {
+        } else {
             netCallback?.let { runCatching { cm?.unregisterNetworkCallback(it) } }
             netCallback = null
         }
+        return true
     }
 
+    /** The band switch the collector has dealt with last (the tests wait for it to have seen a change). */
+    @Volatile internal var seenOn: Boolean? = null
+    @Volatile internal var collectError: Throwable? = null   // the last error of the band switch's collector (tests)
     private var netCallback: ConnectivityManager.NetworkCallback? = null
 
     private val _wifi = MutableStateFlow(false)
@@ -349,6 +357,7 @@ class BandLink @Inject constructor(
 
     @Synchronized
     fun update() {
+        syncNetCallback()   // from the state now: a change of the band switch the collector never saw (a state flow conflates) is caught here
         // essential mode (T19): "Band on the network" off, nothing announces, searches or answers
         val want = repository.library.value.look.bandOn && foreground && onWifi() && (screenOpen || trust.members.value.isNotEmpty())
         if (want && !_running.value) start() else if (!want && _running.value) stop()
@@ -533,7 +542,23 @@ class BandLink @Inject constructor(
     // fields: the collection runs on another thread and can call update() before the rest of the class exists
     init {
         scope.launch { stage.onStage.collect { update() } }
-        scope.launch { repository.library.map { it.look.bandOn }.distinctUntilChanged().collect { syncNetCallback(); _wifi.value = onWifi(); update() } }
+        scope.launch {
+            // the callback is reconciled on every emission (cheap, and the state read is the current one); the rest only
+            // when the switch changed or the callback did
+            var last: Boolean? = null
+            repository.library.map { it.look.bandOn }.collect { on ->
+                // an error in one pass must not end the collector: the next change would find nobody listening
+                try {
+                    val changed = syncNetCallback()
+                    if (changed || on != last) { last = on; _wifi.value = onWifi(); update() }
+                    seenOn = on
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    collectError = e
+                    Log.w(TAG, "band switch: $e")
+                }
+            }
+        }
     }
 }
 
