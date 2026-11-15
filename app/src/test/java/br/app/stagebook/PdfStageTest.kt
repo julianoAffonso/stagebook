@@ -165,19 +165,25 @@ class PdfStageTest {
         assertTrue("$whole -> $zoomed", zoomed <= whole * 4.01f)
     }
 
-    @Test fun `with the page enlarged one finger moves it, at its size it does not`() {
+    @Test fun `with the page enlarged one finger does not move it, two fingers do`() {
         showOpen(FakeSource(7))
-        val left0 = page().getBoundsInRoot().left
-        page().performTouchInput { down(center); moveBy(Offset(-120f, 0f)); moveBy(Offset(-120f, 0f)); up() }
-        compose.waitForIdle()
-        assertEquals("at its size a drag is the stage's: the page stays", left0.value, page().getBoundsInRoot().left.value, 1f)
         pinch(out = true)
         compose.waitForIdle()
         val before = page().getBoundsInRoot().left
+        // a scroll with one finger is the stage's (the page stays): that is what made it walk by accident
         page().performTouchInput { down(center); moveBy(Offset(-120f, 0f)); moveBy(Offset(-120f, 0f)); up() }
         compose.waitForIdle()
-        val after = page().getBoundsInRoot().left
-        assertTrue("moved: $before -> $after", after < before)
+        assertEquals("one finger: the page stays", before.value, page().getBoundsInRoot().left.value, 0.5f)
+        // two fingers together, moving left: the page goes with them
+        page().performTouchInput {
+            val c = center
+            down(0, Offset(c.x - 20f, c.y)); down(1, Offset(c.x + 20f, c.y))
+            // both fingers in one event, so the distance between them (the zoom) does not change on the way
+            repeat(2) { updatePointerBy(0, Offset(-120f, 0f)); updatePointerBy(1, Offset(-120f, 0f)); move() }
+            up(0); up(1)
+        }
+        compose.waitForIdle()
+        assertTrue("two fingers moved it: $before -> ${page().getBoundsInRoot().left}", page().getBoundsInRoot().left < before)
     }
 
     @Test fun `a touch with a small wobble on an enlarged page does not move it`() {

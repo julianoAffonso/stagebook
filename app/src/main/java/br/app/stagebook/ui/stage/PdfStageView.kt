@@ -91,7 +91,7 @@ internal val InvertFilter = ColorFilter.colorMatrix(
 /**
  * The page [page] of an open PDF, whole on the screen, as large as it fits and centred. [onPageCount] says how many pages
  * there are, which is what the stage turns through (the pedal, the tap and the swipe are the stage's own). Two fingers
- * zoom and move the page; enlarged, one finger moves it. With [marking] on, one finger draws the highlighter: [marks] of
+ * zoom and move the page; one finger never moves it (it turns the page, or draws when marking). With [marking] on, one finger draws the highlighter: [marks] of
  * this page are drawn over it in [markColor], and a stroke made comes out through [onStroke] when the finger lifts.
  */
 @Composable
@@ -176,7 +176,6 @@ fun PdfStageView(
                         .pointerInput(pages, at, marking) {
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = false)
-                                var travelled = Offset.Zero
                                 var pinching = false
                                 val stroke = ArrayList<PdfPoint>()
                                 if (marking) {
@@ -199,12 +198,6 @@ fun PdfStageView(
                                             change.consume()
                                         }
                                         live = stroke.toList()
-                                    } else if (!pinching && scale > 1f) {
-                                        travelled += pan
-                                        if (travelled.getDistance() > viewConfiguration.touchSlop) {
-                                            offset = moved(pan)
-                                            event.changes.forEach { it.consume() }
-                                        }
                                     }
                                 } while (event.changes.any { it.pressed })
                                 if (marking && !pinching && stroke.isNotEmpty()) onStrokeNow(at, stroke.toList())
