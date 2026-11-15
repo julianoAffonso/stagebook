@@ -42,10 +42,32 @@ data class Song(
     val tags: List<String> = emptyList(),
     // MIDI sent when the song shows on stage and when it leaves (user, 07/11); goes in the backup, not to the band
     val midi: br.app.stagebook.domain.SongMidi? = null,
+    // the song is a PDF: the file copied into the app (generated name in filesDir/pdfs), its original name to show, and
+    // the highlighter strokes drawn over its pages. Like the track: this device, the backup and (the file only) the band;
+    // never the QR or the text export. The text stays as it is, hidden, and returns when the PDF goes
+    val pdf: String = "",
+    val pdfName: String = "",
+    val pdfMarks: List<PdfMark> = emptyList(),
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
+
+    /** The PDF didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
+    val pdfLost: Boolean get() = pdf.isEmpty() && pdfName.isNotEmpty()
+
+    /** The same song with no trace of a PDF (what the QR, the text export and a received song never carry). */
+    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty()) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList())
 }
+
+/** One point of a highlighter stroke, relative to the page: 0 (left, top) to 1 (right, bottom), valid on any screen size. */
+@Immutable
+@Serializable
+data class PdfPoint(val x: Float, val y: Float)
+
+/** A highlighter stroke over a PDF page ([page] counts from 0); [width] is relative to the page's width. */
+@Immutable
+@Serializable
+data class PdfMark(val page: Int, val points: List<PdfPoint> = emptyList(), val width: Float = 0.02f)
 
 /** A song that just lost its audio, for the window that says so: the song and the audio's own name. */
 @Immutable
@@ -313,5 +335,11 @@ data class Library(
     fun withoutMissingTracks(exists: (String) -> Boolean): Library {
         if (songs.none { it.track.isNotEmpty() && !exists(it.track) }) return this
         return copy(songs = songs.map { if (it.track.isNotEmpty() && !exists(it.track)) it.copy(track = "") else it })
+    }
+
+    /** Like [withoutMissingTracks] for the PDFs: the link goes, the original name stays ("PDF lost"). Same library when nothing is missing. */
+    fun withoutMissingPdfs(exists: (String) -> Boolean): Library {
+        if (songs.none { it.pdf.isNotEmpty() && !exists(it.pdf) }) return this
+        return copy(songs = songs.map { if (it.pdf.isNotEmpty() && !exists(it.pdf)) it.copy(pdf = "") else it })
     }
 }

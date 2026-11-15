@@ -61,6 +61,7 @@ class LibraryRepository @Inject constructor(
     }
 
     private val file = File(context.filesDir, "stagebook.json")
+    private val pdfDir = File(context.filesDir, "pdfs")
     private val backup = File(context.filesDir, "stagebook.json.bak")   // the version saved before the current one
     private val _library = MutableStateFlow(Library())
     val library: StateFlow<Library> = _library.asStateFlow()
@@ -96,7 +97,7 @@ class LibraryRepository @Inject constructor(
             // a song pointing to a track that isn't here (the songs came with Android's copy, the tracks never do)
             // would look ready and fail on stage: the link goes, the track's name stays
             val tracks = File(context.filesDir, "tracks")
-            val clean = read.withoutMissingTracks { File(tracks, it).exists() }
+            val clean = read.withoutMissingTracks { File(tracks, it).exists() }.withoutMissingPdfs { File(pdfDir, it).exists() }
             _library.value = clean
             if (clean !== read) {
                 val linked = read.songs.filter { it.track.isNotEmpty() }.mapTo(HashSet()) { it.id }
@@ -211,6 +212,8 @@ class LibraryRepository @Inject constructor(
     /** Deletes several songs (a selection) in one save, and takes them out of the setlists. */
     fun deleteSongs(ids: Collection<String>) {
         val set = ids.toSet()
+        // a deleted song's PDF goes with it (the startup sweep catches what a crash left)
+        _library.value.songs.filter { it.id in set && it.pdf.isNotEmpty() }.forEach { File(pdfDir, it.pdf).delete() }
         mutate { lib -> lib.copy(songs = lib.songs.filterNot { it.id in set }, sets = lib.sets.map { s -> s.withoutSongs(set) }) }
     }
 

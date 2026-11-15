@@ -31,8 +31,8 @@ import javax.inject.Singleton
 /**
  * Backup (Settings → Library): a `.stagebook` file (a zip inside) with the chosen parts (all checked by default; the
  * user unchecks what they don't want).
- * [Part.LIBRARY]: songs and setlists, with each song's zoom. [Part.TRACKS]: the backing track files, linked to the
- * songs. [Part.SETTINGS]: stage look and settings, pedals, player and USB audio interface profiles, band and language.
+ * [Part.LIBRARY]: songs and setlists, with each song's zoom. [Part.TRACKS]: the backing track files and the PDF files,
+ * linked to the songs (the PDF's highlighter strokes are in the library; a song without its file says "PDF lost"). [Part.SETTINGS]: stage look and settings, pedals, player and USB audio interface profiles, band and language.
  * The device identity (key kept in the Keystore) doesn't go: on another device, the band sees a new device.
  */
 @Singleton
@@ -43,6 +43,8 @@ class Backup @Inject constructor(
     // the band in memory: restoring its prefs without telling it, the next change saved the old list over them (audit
     // 01/11). Optional only for tests
     private val trust: BandTrust? = null,
+    // the PDF files (rides on the tracks' option); the default only so tests that don't care build it by hand
+    private val pdfs: PdfStore = PdfStore(context),
 ) {
     enum class Part { LIBRARY, TRACKS, SETTINGS }
 
@@ -70,12 +72,16 @@ class Backup @Inject constructor(
             if (Part.LIBRARY in parts) {
                 // without the tracks, chosen on purpose, the song carries neither the file nor its name: nothing to
                 // attach again on the other side (user, 10/11)
-                val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.copy(track = "", trackName = "") }
+                val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.withoutPdf().copy(track = "", trackName = "") }
                 put(SONGS, json.encodeToString(Songs.serializer(), Songs(songs, lib.sets)).toByteArray())
                 if (Part.TRACKS in parts) {
                     lib.songs.map { it.track }.filter { it.isNotEmpty() }.distinct().forEach { name ->
                         val f = tracks.file(name)
                         if (f.isFile) { zip.putNextEntry(ZipEntry(TRACKS_DIR + name)); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
+                    }
+                    lib.songs.map { it.pdf }.filter { it.isNotEmpty() }.distinct().forEach { name ->
+                        val f = pdfs.file(name)
+                        if (f.isFile) { zip.putNextEntry(ZipEntry(PDFS_DIR + name)); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
                     }
                 }
             }
@@ -132,6 +138,7 @@ class Backup @Inject constructor(
         // each track goes straight to a .part file next to the others, never all of them in memory (a backup with 30
         // tracks of 15 MB used to need ~450 MB of heap and closed the app on the Fire; audit 30/10)
         val partFiles = mutableMapOf<String, java.io.File>()
+        val pdfParts = mutableMapOf<String, java.io.File>()
         val ok = runCatching {
             var songs: Songs? = null
             var settings: JsonObject? = null
@@ -148,12 +155,17 @@ class Backup @Inject constructor(
                             val name = e.name.removePrefix(TRACKS_DIR).substringAfterLast('/')
                             if (name.isNotEmpty() && !name.startsWith(".")) streamTrack(zip, name)?.let { partFiles[name] = it }
                         }
+                        e.name.startsWith(PDFS_DIR) && Part.TRACKS in parts -> {
+                            val name = e.name.removePrefix(PDFS_DIR).substringAfterLast('/')
+                            if (name.isNotEmpty() && !name.startsWith(".")) streamPdf(zip, name)?.let { pdfParts[name] = it }
+                        }
                     }
                 }
             }
             if (Part.LIBRARY in parts) songs?.let { s ->
                 // the tracks take their place only now, each one swapped in by a rename
                 partFiles.forEach { (name, part) -> tracks.file(name).delete(); part.renameTo(tracks.file(name)) }
+                pdfParts.forEach { (name, part) -> pdfs.file(name).delete(); part.renameTo(pdfs.file(name)) }
                 val keepTracks = Part.TRACKS in parts
                 // the same filter as the band: a "song" that isn't song text stays out (user's request of 30/10)
                 val allowed = s.songs.filter { br.app.stagebook.domain.BandContent.songOk(it.title, it.author, it.year, it.text) }
@@ -162,10 +174,16 @@ class Backup @Inject constructor(
                 // again (user, 10/11). A track that should have come and didn't keeps its name, for the alert.
                 val dropNames = !keepTracks && Part.TRACKS in savedParts
                 val songs = allowed.map {
-                    when {
+                    val withTrack = when {
                         keepTracks && it.track in partFiles -> it
                         dropNames -> it.copy(track = "", trackName = "")
                         else -> it.copy(track = "")
+                    }
+                    // the same for the PDF (it rides on the tracks' option); a PDF that should have come keeps its name: "PDF lost"
+                    when {
+                        keepTracks && withTrack.pdf in pdfParts -> withTrack
+                        dropNames -> withTrack.withoutPdf()
+                        else -> withTrack.copy(pdf = "")
                     }
                 }
                 val here = repository.library.value.songs.mapTo(HashSet()) { it.id }
@@ -175,6 +193,7 @@ class Backup @Inject constructor(
                 lost = repository.lostAudio.value
                 // the replaced library's tracks don't stay on the disk
                 tracks.sweep(repository.library.value.songs.mapTo(HashSet()) { it.track })
+                pdfs.sweep(repository.library.value.songs.mapTo(HashSet()) { it.pdf })
             }
             if (Part.SETTINGS in parts) settings?.let { st ->
                 st["look"]?.let { repository.updateLook { _ -> json.decodeFromJsonElement(Look.serializer(), st["look"]!!) } }
@@ -184,6 +203,7 @@ class Backup @Inject constructor(
             }
             true
         }.getOrDefault(false)
+        pdfParts.values.forEach { it.delete() }
         partFiles.values.forEach { it.delete() }   // what wasn't used (or a failed restore) leaves nothing behind
         ok
     }
@@ -195,6 +215,14 @@ class Backup @Inject constructor(
     private fun streamTrack(zip: ZipInputStream, name: String): java.io.File? {
         val part = java.io.File(tracks.file(name).parentFile, "$name.part")
         val good = runCatching { TrackStore.copyAudio(zip, part) != null }.getOrDefault(false)
+        if (!good) part.delete()
+        return part.takeIf { good }
+    }
+
+    /** One PDF of the backup to `<name>.part` in the PDFs folder: only a real PDF (its first bytes) of a sane size, as one picked by hand. */
+    private fun streamPdf(zip: ZipInputStream, name: String): java.io.File? {
+        val part = java.io.File(pdfs.file(name).parentFile, "$name.part")
+        val good = runCatching { PdfStore.copyPdf(zip, part) }.getOrDefault(false)
         if (!good) part.delete()
         return part.takeIf { good }
     }
@@ -241,6 +269,7 @@ class Backup @Inject constructor(
         private const val SONGS = "biblioteca.json"
         private const val SETTINGS = "ajustes.json"
         private const val TRACKS_DIR = "faixas/"
+        private const val PDFS_DIR = "pdfs/"
         // settings that go in the backup besides the Look (which holds the USB interface profiles): track loudness
         // measures, band (who's in it) and language. Left out: the identity (Keystore), the inbox and the internet
         // queue (temporary), and "player", which only says the battery question was asked: freeing the app from
