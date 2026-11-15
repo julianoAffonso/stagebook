@@ -126,15 +126,16 @@ fun ImportButton(
     }
 }
 
-/** Shows how many band devices got the send (or that nobody got it). */
+/** Shows how many band devices got the send (or that nobody got it); [onShown] runs right after the message is shown. */
 @Composable
-fun BandResultMessage(results: kotlinx.coroutines.flow.Flow<Int>) {
+fun BandResultMessage(results: kotlinx.coroutines.flow.Flow<Int>, onShown: () -> Unit = {}) {
     val message = LocalAppMessage.current
     val resources = androidx.compose.ui.platform.LocalResources.current
     androidx.compose.runtime.LaunchedEffect(results) {
         results.collect { n ->
             val msg = if (n > 0) resources.getQuantityString(R.plurals.share_band_sent, n, n) else resources.getString(R.string.share_band_failed)
             message.show(msg, long = true)
+            onShown()
         }
     }
 }
