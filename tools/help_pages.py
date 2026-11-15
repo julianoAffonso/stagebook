@@ -620,6 +620,12 @@ SECTIONS = [
                  "- **Title size, Titles font and Section title color:** how they look.",
                  "- **Section names in the app's language:** Chorus, Refrão and other forms all show the same way. The saved lyrics don't change."],
                 [Fig(("tablet_5_ajustes_secoes", "celular_5_ajustes_letra_secoes", "Títulos de seção", "Section titles"))], level=4),
+            sub("ajustes-pdf", "PDF", "PDF",
+                ["Uma música em PDF mostra as páginas no palco no lugar da letra.",
+                 "- **Inverter as cores do PDF:** vira o branco do papel em preto, para um palco escuro. É o mesmo botão que fica ao lado do relógio no palco."],
+                ["A song that is a PDF shows its pages on stage in place of the lyrics.",
+                 "- **Invert the PDF's colors:** turns the paper's white into black, for a dark stage. It is the same button next to the clock on stage."],
+                level=4),
             sub("ajustes-pagina", "Página", "Page",
                 ["- **Como avançar na tela:** Virar página mostra uma página por vez, em uma ou duas colunas. Rolar mostra a letra numa coluna só.",
                  "- **Dividir em colunas:** só em Virar página. Automático divide em 2 colunas quando a letra não cabe numa página e as frases são curtas. Também dá para escolher Nunca ou Sempre. O pedal vira as duas colunas juntas.",
@@ -1164,7 +1170,7 @@ def _regroup_settings():
     so["text_pt"] = [x for x in so["text_pt"] if not x.startswith("- **Idioma:**")]
     so["text_en"] = [x for x in so["text_en"] if not x.startswith("- **Language:**")]
     so["figs"] = [Fig(("tablet_5_ajustes_atualizar", "celular_5_ajustes_sobre", "Ajustes → Sobre: ajuda e atualizar", "Settings → About: help and updating"))]
-    order = ["ajustes-busca", "ajustes-palco", "ajustes-letra", "ajustes-acordes", "ajustes-titulos",
+    order = ["ajustes-busca", "ajustes-palco", "ajustes-letra", "ajustes-acordes", "ajustes-titulos", "ajustes-pdf",
              "ajustes-virar", "ajustes-pagina", "ajustes-pedal", "ajustes-pedal-conectar", "ajustes-pedal-botoes", "ajustes-midi-saida", "ajustes-tela",
              "ajustes-acordes-grupo", "ajustes-diagramas", "ajustes-metronomo", "ajustes-player",
              "ajustes-biblioteca", "ajustes-sites", "ajustes-backup", "ajustes-apagar", "ajustes-banda", "ajustes-computador",

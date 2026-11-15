@@ -10,7 +10,6 @@
     <string name="action_delete">Apagar</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Salvar</string>
-    <string name="action_stage">Palco</string>
 
     <!-- abas -->
     <string name="tab_songs">Músicas</string>
@@ -306,8 +305,6 @@
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
     <string name="essential_extras">Metrônomo e extras dos acordes</string>
     <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing e MIDI das músicas</string>
-    <string name="essential_on_short">Ligado</string>
-    <string name="essential_off_short">Desligado</string>
     <string name="essential_banner">Modo essencial ligado</string>
     <string name="essential_alert_title">Modo essencial ligado</string>
     <string name="essential_alert_text">Ficam a letra, a cifra, os diagramas dos acordes e o pedal. O que está desligado:</string>
@@ -403,8 +400,6 @@
     <string name="backup_restore_failed">Não deu para restaurar o backup</string>
     <string name="backup_restored">Backup restaurado</string>
     <string name="backup_band_again">Este aparelho é novo para a banda. Autorize a banda de novo em Ajustes → Banda e computador.</string>
-    <string name="editor_data_label">Dados da música</string>
-    <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
@@ -495,7 +490,6 @@
     <string name="import_kind_title">O que você quer importar?</string>
     <string name="import_kind_lyrics">Letra</string>
     <string name="import_kind_chords">Cifra</string>
-    <string name="settings_import_sites">Sites de importação</string>
     <string name="settings_chords_show_help">Letra e cifra: os acordes aparecem em cima da letra. Só letra: o palco mostra só a letra, mesmo nas músicas com cifra. Automático: como letra e cifra, e o importador pergunta se a música entra como letra ou cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
@@ -533,13 +527,11 @@
         <item quantity="many">%d músicas ajustadas.</item>
         <item quantity="other">%d músicas ajustadas.</item>
     </plurals>
-    <string name="settings_screen">Tela</string>
     <string name="settings_keep_screen_on">Manter a tela ligada com o app aberto</string>
     <string name="settings_keep_screen_on_help">Para o show. O tablet não apaga enquanto o Stagebook estiver na frente. Fora do app, apaga normalmente. O palco fica sempre aceso.</string>
     <string name="settings_stage_dnd">Não perturbe no palco</string>
     <string name="settings_stage_dnd_detail">Contatos favoritos ainda podem ligar</string>
     <string name="settings_stage_dnd_missing">O Android ainda não autorizou</string>
-    <string name="settings_stage_dnd_help">Com o palco aberto, as notificações não aparecem e o telefone não toca. Contatos favoritos e quem ligar duas vezes seguidas ainda passam. Ao sair do palco, tudo volta como estava. O Android pede autorização uma vez.</string>
     <string name="stage_dnd_ask">Para nenhuma notificação atrapalhar a música, o Stagebook pode ligar o Não perturbe com o palco aberto. O Android vai abrir uma lista. Ligue o Stagebook nela.</string>
     <string name="stage_clock_time">Hora</string>
     <string name="stage_clock_elapsed">Tempo de show</string>
@@ -552,9 +544,6 @@
     <string name="stage_dnd_allow">Autorizar</string>
     <string name="stage_dnd_later">Agora não</string>
     <string name="settings_pedal">Pedal e MIDI</string>
-    <string name="settings_pedal_none_short">Nenhum pedal reconhecido ainda</string>
-    <string name="settings_pedal_connected_short">conectado</string>
-    <string name="settings_pedal_disconnected_short">desconectado</string>
     <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
     <string name="settings_columns">Dividir em colunas</string>
     <string name="settings_stage_mode">Como avançar na tela</string>
@@ -562,13 +551,14 @@
     <string name="settings_stage_mode_scroll">Rolar</string>
     <string name="settings_stage_mode_help">Virar página mostra uma página por vez, em uma ou duas colunas. Rolar mostra a letra numa coluna só, e cada toque ou pedal leva até a primeira linha que não cabia. Essa linha acende por um instante.</string>
     <string name="settings_columns_auto">Automático</string>
-    <string name="settings_columns_one_short">1 coluna</string>
-    <string name="settings_columns_two_short">2 colunas</string>
     <string name="settings_columns_never">Nunca</string>
     <string name="settings_columns_always">Sempre</string>
     <string name="stage_zoom_auto">Automático</string>
     <string name="settings_columns_help">Automático decide para cada música: divide em 2 colunas quando a letra não cabe numa página e as frases são curtas ou, deitado, quando dá menos páginas. O pedal vira as duas colunas juntas.</string>
     <string name="settings_bold_short">negrito</string>
+    <string name="settings_pdf_card">PDF</string>
+    <string name="settings_pdf_invert">Inverter as cores do PDF</string>
+    <string name="settings_pdf_invert_help">Vira o branco do papel em preto numa música em PDF, para um palco escuro. É também o botão ao lado do relógio no palco.</string>
     <string name="settings_sections_look">Títulos de seção</string>
     <string name="settings_normalize_card">Refrão e versos</string>
     <string name="settings_normalize_help">Nas músicas sem títulos de parte, o app acha o refrão (a estrofe que se repete) e os versos e põe os títulos. A letra não muda, e os títulos que já existem ficam como estão.</string>
@@ -982,7 +972,6 @@
     </plurals>
     <string name="scan_from">Enviado por %1$s</string>
     <!-- editor on the computer (T37); the web_ texts are the page's -->
-    <string name="settings_web_editor">Editar no computador</string>
     <string name="settings_web_editor_card">No navegador</string>
     <string name="settings_web_editor_switch">Ligar o editor</string>
     <string name="settings_web_editor_help">Edite músicas e setlists no navegador do computador, no mesmo Wi-Fi. Começa desligado toda vez que o app abre e desliga sozinho depois de 5 minutos sem uso no computador, ou ao fechar o app.</string>
@@ -992,8 +981,6 @@
     <string name="settings_web_editor_devices">Computadores autorizados</string>
     <string name="settings_web_editor_none">Nenhum ainda. Na primeira vez, o Stagebook pergunta antes de deixar o computador entrar.</string>
     <string name="settings_web_editor_remove">Tirar %1$s</string>
-    <string name="settings_web_editor_on_short">Ligado</string>
-    <string name="settings_web_editor_off_short">Desligado</string>
     <string name="web_request_title">%1$s quer editar</string>
     <string name="web_request_text">Um computador nesta rede quer abrir o editor. Autorize só se for seu. Na próxima vez não pergunta.</string>
     <string name="web_request_code">Endereço %1$s · código %2$s. Autorize só se o computador mostrar o mesmo código.</string>
@@ -1039,8 +1026,6 @@
     </plurals>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
     <!-- Settings → Advanced (31/10) -->
-    <string name="settings_advanced">Avançado</string>
-    <string name="settings_advanced_short">Para tocar sem falhas</string>
     <string name="advanced_play">Para tocar sem falhas</string>
     <string name="advanced_play_help">Ajustes do Android que já derrubaram a interface de áudio ou pararam o app no palco. Vêm ligados; desligue um só se souber por quê. Alguns só existem em certos tablets e só aparecem neles.</string>
     <string name="advanced_rewrite">Com a permissão, estes ajustes valem para o aparelho inteiro, e o Stagebook grava de novo sempre que abre. Mude por aqui: o que você mudar nos ajustes do Android volta.</string>
@@ -1070,14 +1055,11 @@
     <string name="tweak_debugging_detail">Para testar pelo computador com o adb, sem abrir os ajustes do Android. Vem desligado.</string>
     <string name="stage_mixer_open">Abrir o mixer</string>
     <string name="stage_stop">Parar o backing track e voltar ao início</string>
-    <string name="settings_track_button">Botão da faixa no palco</string>
     <string name="settings_track_stops">Parar volta ao início</string>
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
     <string name="eq_no_channel">Nenhum canal passa pelo equalizador. No mixer, toque num canal e ligue \"Equalizador ligado\".</string>
     <string name="usb_record_why">Para o Android lembrar da interface USB e não pedir permissão toda vez que o cabo voltar, permita o acesso ao áudio. O Stagebook não grava nada: a entrada da interface só acerta o relógio.</string>
     <string name="usb_record_allow">Permitir</string>
-    <string name="player_title">Player</string>
-    <string name="player_on_alone">Ligado</string>
     <string name="metro_out">Saída do som</string>
     <string name="metro_out_device">Aparelho</string>
     <string name="metro_out_reading">Lendo as saídas da %s…</string>
@@ -1168,7 +1150,6 @@
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
     <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional: Nacional é o idioma do app. Depois dá para corrigir no editor de cada música ou selecionando várias na lista.</string>
-    <string name="editor_auto_meta_short">Em branco: o app completa</string>
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
     <string name="editor_track_missing">O áudio não está neste aparelho. Anexe de novo.</string>
@@ -1190,7 +1171,6 @@
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
     <string name="share_band_limit">Muitos setlists de uma vez. Mande em mais de uma vez.</string>
     <string name="settings_lyrics_card">Letra</string>
-    <string name="settings_page_card">Página</string>
     <string name="metro_summary_shown">No palco</string>
     <string name="metro_summary_hidden">Escondido do palco</string>
     <string name="settings_font_lyrics">Fonte da letra</string>
@@ -1261,6 +1241,7 @@
     <string name="kw_color">cor cores color colour colors</string>
     <string name="kw_background">fundo cor tela escura clara background dark light theme</string>
     <string name="kw_profile">perfil só letra com cifra automático acordes mostrar esconder profile lyrics only chords automatic show hide</string>
+    <string name="kw_pdf">pdf partitura papel inverter cores escuro sheet paper invert colors dark</string>
     <string name="kw_sections">seção seções título refrão verso ponte intro section sections title chorus verse bridge intro</string>
     <string name="kw_mode">virar página rolar rolagem paginar turn page scroll paging</string>
     <string name="kw_scroll">rolagem automática velocidade rolar sozinho autoscroll scroll speed automatic</string>

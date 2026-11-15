@@ -14,6 +14,9 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 **Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
 
 ## O que ele faz
+- **Menu lateral:** a biblioteca fica num menu que abre pelo primeiro botão do palco (87% da largura do celular, ou fixo
+  ao lado do palco no tablet), com três abas: Músicas, Setlists e Ajustes. O + traz coisas de fora (uma música nova, PDFs,
+  sites, QR, as 3 palavras); o botão de lista com marcas liga as caixas de seleção. O app abre no palco onde você parou.
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. No modo Rolar, toque na metade de baixo ou arraste para cima para seguir, na de cima ou
   arraste para baixo para voltar. Cada botão do pedal pode fazer outra coisa.
@@ -22,8 +25,9 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   escolhe letra e cifra, só letra ou automático (o importador então pergunta se a música é letra ou cifra).
   Anotações na linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam
   ao transpor. Toque num acorde, na letra ou na lista de acordes, para ver o diagrama dele.
-- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Tocar num
-  setlist abre o palco onde o show parou; o ⋮ do cartão edita, compartilha, renomeia ou apaga. Ponha um **intervalo**
+- **Setlists:** monte o show dentro do menu e arraste para mudar a ordem; cada setlist tem uma **data**, e a lista fica
+  agrupada por mês (ou de A a Z). Tocar num setlist abre as músicas dele, e tocar numa música a toca; o ⋮ do cartão toca,
+  compartilha, edita o nome e a data ou apaga. Ponha um **intervalo**
   entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O painel do setlist no
   palco mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
   está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi (os intervalos
@@ -33,6 +37,11 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   a banda está. Quem conduz vê o **O que falta**, quem não tem cada música, e pode enviá-las; quem acompanha pode
   **Pedir** uma música pela faixa, e prefere a cópia com cifra quando o perfil mostra cifras. Todos da banda precisam
   da mesma versão do app: o app avisa quem não está.
+- **Músicas em PDF:** anexe um PDF a uma música (ou escolha PDFs no menu +, ou abra um com o Stagebook): as páginas
+  aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos, marque com o dedo e inverta
+  as cores para um palco escuro. Os PDFs vão para a banda no mesmo Wi-Fi (até 8 MB cada) e pela internet quando cabem
+  nas mensagens de 4 KB que o servidor gratuito aceita (o envio diz o motivo quando não cabem). PDF nunca é lido como
+  texto.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
 - **Ajustes por tarefa:** sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
@@ -143,7 +152,7 @@ O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa d
 **Por que fora da Play Store?** O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com
 direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza
 direto por estes releases, o que a loja não permite. Assim as versões saem sem esperar revisão, e o código fica aberto
-para quem quiser conferir.
+para quem quiser conferir. PDF é seu: o app não baixa partitura de lugar nenhum, só abre os arquivos que você anexa.
 
 ## Apoie
 O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café no

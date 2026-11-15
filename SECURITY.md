@@ -24,6 +24,6 @@ Tell us what you found, the app version, the device and Android version, and the
 
 ## Scope
 
-The Android app, the web editor it serves on the local network, the band sharing (local network, QR codes and internet links), the `.stagebook` files and backups, the MCP server in this repository, and the GitHub workflows.
+The Android app, the web editor it serves on the local network, the band sharing (local network, QR codes and internet links), including the PDFs that travel with a song (checked before they are kept: a real PDF header, at most 8 MB and 300 pages, no password, a name the app generates, and only from someone already in the band), the `.stagebook` files and backups, the MCP server in this repository, and the GitHub workflows.
 
 Out of scope: problems in Android itself, in a phone maker's software or in a USB audio interface's firmware.

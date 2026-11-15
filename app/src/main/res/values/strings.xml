@@ -10,7 +10,6 @@
     <string name="action_delete">Delete</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Save</string>
-    <string name="action_stage">Stage</string>
 
     <!-- tabs -->
     <string name="tab_songs">Songs</string>
@@ -297,8 +296,6 @@
     <string name="essential_player_detail">Backing tracks, USB audio interface and mixer</string>
     <string name="essential_extras">Metronome and chord extras</string>
     <string name="essential_extras_detail">Chord sound and details, metronome, Now Playing and song MIDI</string>
-    <string name="essential_on_short">On</string>
-    <string name="essential_off_short">Off</string>
     <string name="essential_banner">Essential mode on</string>
     <string name="essential_alert_title">Essential mode on</string>
     <string name="essential_alert_text">Lyrics, chords, chord diagrams and the pedal stay on. What\'s off:</string>
@@ -393,8 +390,6 @@
     <string name="backup_restore_failed">Couldn\'t restore the backup</string>
     <string name="backup_restored">Backup restored</string>
     <string name="backup_band_again">This device is new to the band. Approve the band again in Settings → Band and computer.</string>
-    <string name="editor_data_label">Song details</string>
-    <string name="editor_data_untitled">Untitled song</string>
     <string name="editor_data_capo">capo %1$d</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
@@ -483,7 +478,6 @@
     <string name="import_kind_title">What do you want to import?</string>
     <string name="import_kind_lyrics">Lyrics</string>
     <string name="import_kind_chords">Chords</string>
-    <string name="settings_import_sites">Import sites</string>
     <string name="settings_chords_show_help">Lyrics and chords: the chords show above the lyrics. Lyrics only: the stage shows just the lyrics, even in songs with chords. Automatic: like lyrics and chords, and the importer asks whether a song comes in as lyrics or chords.</string>
     <string name="settings_chords_size">Chord size: %1$d%% of the lyrics</string>
     <string name="settings_chords_color">Chord color</string>
@@ -519,13 +513,11 @@
         <item quantity="one">%d song updated.</item>
         <item quantity="other">%d songs updated.</item>
     </plurals>
-    <string name="settings_screen">Screen</string>
     <string name="settings_keep_screen_on">Keep the screen on while the app is open</string>
     <string name="settings_keep_screen_on_help">For the gig. The tablet won\'t go dark while Stagebook is in front. Outside the app it goes dark as usual. The stage always stays lit.</string>
     <string name="settings_stage_dnd">Do not disturb on stage</string>
     <string name="settings_stage_dnd_detail">Starred contacts can still call</string>
     <string name="settings_stage_dnd_missing">Android hasn\'t allowed it yet</string>
-    <string name="settings_stage_dnd_help">While the stage is open, notifications don\'t pop up and the phone doesn\'t ring. Starred contacts and someone calling twice in a row still get through. When you leave the stage, everything goes back as it was. Android asks for permission once.</string>
     <string name="stage_dnd_ask">So no notification gets in the way of a song, Stagebook can turn on Do not disturb while the stage is open. Android will open a list. Turn on Stagebook there.</string>
     <string name="stage_clock_time">Time</string>
     <string name="stage_clock_elapsed">Show time</string>
@@ -538,9 +530,6 @@
     <string name="stage_dnd_allow">Allow</string>
     <string name="stage_dnd_later">Not now</string>
     <string name="settings_pedal">Pedal and MIDI</string>
-    <string name="settings_pedal_none_short">No pedal found yet</string>
-    <string name="settings_pedal_connected_short">connected</string>
-    <string name="settings_pedal_disconnected_short">disconnected</string>
     <string name="settings_font_help">Applies to every song. On stage, pinching changes only the open song.</string>
     <string name="settings_columns">Split into columns</string>
     <string name="settings_stage_mode">Moving on screen</string>
@@ -548,13 +537,14 @@
     <string name="settings_stage_mode_scroll">Scroll</string>
     <string name="settings_stage_mode_help">Turn pages shows one page at a time, in one or two columns. Scroll shows the lyrics in one column, and each tap or pedal press moves to the first line that didn\'t fit. That line lights up for a moment.</string>
     <string name="settings_columns_auto">Automatic</string>
-    <string name="settings_columns_one_short">1 column</string>
-    <string name="settings_columns_two_short">2 columns</string>
     <string name="settings_columns_never">Never</string>
     <string name="settings_columns_always">Always</string>
     <string name="stage_zoom_auto">Automatic</string>
     <string name="settings_columns_help">Automatic decides for each song: it splits into 2 columns when the lyrics don\'t fit on one page and the lines are short enough or, on its side, when that takes fewer pages. The pedal turns both columns together.</string>
     <string name="settings_bold_short">bold</string>
+    <string name="settings_pdf_card">PDF</string>
+    <string name="settings_pdf_invert">Invert the PDF\'s colors</string>
+    <string name="settings_pdf_invert_help">Turns the white of the paper into black on a PDF song, for a dark stage. It is also the button next to the clock on the stage.</string>
     <string name="settings_sections_look">Section titles</string>
     <string name="settings_normalize_card">Chorus and verses</string>
     <string name="settings_normalize_help">In songs without part titles, the app finds the chorus (the verse that repeats) and the verses and adds the titles. The lyrics don\'t change, and existing titles stay as they are.</string>
@@ -946,7 +936,6 @@
     </plurals>
     <string name="scan_from">Sent by %1$s</string>
     <!-- editor on the computer (T37); the web_ texts are the page's -->
-    <string name="settings_web_editor">Edit on the computer</string>
     <string name="settings_web_editor_card">In the browser</string>
     <string name="settings_web_editor_switch">Turn on the editor</string>
     <string name="settings_web_editor_help">Edit songs and setlists on the computer\'s browser, on the same Wi-Fi. It starts off every time the app opens and turns itself off after 5 minutes without use on the computer, or when the app closes.</string>
@@ -956,8 +945,6 @@
     <string name="settings_web_editor_devices">Authorized computers</string>
     <string name="settings_web_editor_none">None yet. The first time, Stagebook asks before letting a computer in.</string>
     <string name="settings_web_editor_remove">Remove %1$s</string>
-    <string name="settings_web_editor_on_short">On</string>
-    <string name="settings_web_editor_off_short">Off</string>
     <string name="web_request_title">%1$s wants to edit</string>
     <string name="web_request_text">A computer on this network wants to open the editor. Allow only if it\'s yours. Next time it won\'t ask.</string>
     <string name="web_request_code">Address %1$s · code %2$s. Allow only if the computer shows the same code.</string>
@@ -1002,8 +989,6 @@
     </plurals>
     <string name="web_offline">Can\'t reach Stagebook. Is the app open, with the editor on?</string>
     <!-- Settings → Advanced (31/10) -->
-    <string name="settings_advanced">Advanced</string>
-    <string name="settings_advanced_short">For playing without failures</string>
     <string name="advanced_play">For playing without failures</string>
     <string name="advanced_play_help">Android settings that made the audio interface drop or the app stop on stage. They start on; turn one off only if you know why. Some only exist on certain tablets and appear only on them.</string>
     <string name="advanced_rewrite">With the permission, these settings apply to the whole device, and Stagebook writes them again every time it opens. Change them here: what you change in Android\'s settings comes back.</string>
@@ -1033,14 +1018,11 @@
     <string name="tweak_debugging_detail">For testing from a computer with adb, without opening Android\'s settings. Starts off.</string>
     <string name="stage_mixer_open">Open the mixer</string>
     <string name="stage_stop">Stop the backing track and go back to the start</string>
-    <string name="settings_track_button">Track button on stage</string>
     <string name="settings_track_stops">Stop goes back to the start</string>
     <string name="settings_track_stops_detail">Off, the button pauses and the song goes on from where it stopped.</string>
     <string name="eq_no_channel">No channel goes through the equalizer. In the mixer, tap a channel and turn on \"Equalizer on\".</string>
     <string name="usb_record_why">So Android remembers the USB interface and doesn\'t ask for permission every time the cable comes back, allow audio access. Stagebook records nothing: the interface\'s input only keeps the clock.</string>
     <string name="usb_record_allow">Allow</string>
-    <string name="player_title">Player</string>
-    <string name="player_on_alone">On</string>
     <string name="metro_out">Sound output</string>
     <string name="metro_out_device">Device</string>
     <string name="metro_out_reading">Reading the outputs of %s…</string>
@@ -1126,7 +1108,6 @@
         <item quantity="other">Take %d songs out of this setlist? They stay in the library.</item>
     </plurals>
     <string name="tags_auto_info">Tags, by the lyrics language, the songs that have neither Local nor International yet: Local is the app\'s language. You can fix them later in each song\'s editor or by selecting several in the list.</string>
-    <string name="editor_auto_meta_short">Blank: the app fills it in</string>
     <string name="editor_track_empty">None</string>
     <string name="editor_track_unnamed">Audio attached</string>
     <string name="editor_track_missing">The audio isn\'t on this device. Attach it again.</string>
@@ -1147,7 +1128,6 @@
     <string name="share_internet_limit_titles">Too much to send over the internet at once. Turn off “Bring the songs” or send fewer setlists.</string>
     <string name="share_band_limit">Too many setlists at once. Send them in more than one go.</string>
     <string name="settings_lyrics_card">Lyrics</string>
-    <string name="settings_page_card">Page</string>
     <string name="metro_summary_shown">On stage</string>
     <string name="metro_summary_hidden">Hidden from the stage</string>
     <string name="settings_font_lyrics">Lyrics font</string>
@@ -1217,6 +1197,7 @@
     <string name="kw_color">cor cores color colour colors</string>
     <string name="kw_background">fundo cor tela escura clara background dark light theme</string>
     <string name="kw_profile">perfil só letra com cifra automático acordes mostrar esconder profile lyrics only chords automatic show hide</string>
+    <string name="kw_pdf">pdf partitura papel inverter cores escuro sheet paper invert colors dark</string>
     <string name="kw_sections">seção seções título refrão verso ponte intro section sections title chorus verse bridge intro</string>
     <string name="kw_mode">virar página rolar rolagem paginar turn page scroll paging</string>
     <string name="kw_scroll">rolagem automática velocidade rolar sozinho autoscroll scroll speed automatic</string>
