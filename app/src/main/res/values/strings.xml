@@ -46,7 +46,9 @@
     <!-- editor -->
     <string name="editor_new">New song</string>
     <string name="editor_imported_new">Song imported. Check it and save.</string>
-    <string name="editor_imported_update">New lyrics imported. Check them and save.</string>
+    <string name="editor_imported_update">This song is already in your library. Saving replaces its text with the one imported.</string>
+    <string name="editor_replace_confirm">Replace the text of “%1$s” with the imported one? The saved text will be lost.</string>
+    <string name="editor_replace">Replace</string>
     <string name="import_offline_note">No internet: artist, year and BPM weren\'t filled in. Fill them in Song details.</string>
     <string name="editor_title">Song name</string>
     <string name="editor_author">Artist</string>
