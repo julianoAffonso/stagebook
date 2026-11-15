@@ -1272,4 +1272,9 @@
     <string name="search_in_help">na explicação</string>
     <string name="group_band_editor_on">Editor ligado</string>
     <string name="group_band_editor_off">Editor desligado</string>
+    <string name="pdf_refused_not_pdf">Este arquivo não é um PDF.</string>
+    <string name="pdf_refused_too_big">Este PDF é grande demais. O limite é %1$d MB.</string>
+    <string name="pdf_refused_password">Este PDF tem senha. Salve uma cópia sem senha e tente de novo.</string>
+    <string name="pdf_refused_too_many_pages">Este PDF tem páginas demais. O limite é %1$d.</string>
+    <string name="pdf_refused_unreadable">Não foi possível abrir este PDF. Ele pode estar danificado.</string>
 </resources>

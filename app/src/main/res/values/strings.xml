@@ -1231,4 +1231,9 @@
     <string name="search_in_help">in the explanation</string>
     <string name="group_band_editor_on">Editor on</string>
     <string name="group_band_editor_off">Editor off</string>
+    <string name="pdf_refused_not_pdf">This isn\'t a PDF file.</string>
+    <string name="pdf_refused_too_big">This PDF is too big. The limit is %1$d MB.</string>
+    <string name="pdf_refused_password">This PDF has a password. Save a copy without one and try again.</string>
+    <string name="pdf_refused_too_many_pages">This PDF has too many pages. The limit is %1$d.</string>
+    <string name="pdf_refused_unreadable">This PDF couldn\'t be opened. It may be damaged.</string>
 </resources>

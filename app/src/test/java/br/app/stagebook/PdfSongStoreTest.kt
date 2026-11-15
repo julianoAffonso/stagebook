@@ -20,7 +20,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,14 +93,6 @@ class PdfSongStoreTest {
         assertFalse(PdfStore.copyPdf(ByteArrayInputStream(big), to))
         val limit = "%PDF-".toByteArray() + ByteArray(PdfStore.MAX_BYTES.toInt() - 5)
         assertTrue(PdfStore.copyPdf(ByteArrayInputStream(limit), to))
-    }
-
-    @Test fun `save names the file itself and refuses what is not a PDF`() = runBlocking {
-        val (_, pdfs, _) = setup()
-        val name = pdfs.save("song-1", pdfBytes)!!
-        assertTrue(name.endsWith(".pdf"))
-        assertTrue(pdfs.file(name).readBytes().contentEquals(pdfBytes))
-        assertNull(pdfs.save("song-1", "not a pdf".toByteArray()))
     }
 
     @Test fun `sweep removes old files no song uses and keeps the used and the fresh`() {

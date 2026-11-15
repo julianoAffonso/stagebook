@@ -7,7 +7,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,29 +22,51 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
 
     fun file(name: String): File = File(dir, name)
 
-    /** Copies the chosen PDF; returns the saved name, or null if it isn't a PDF, passes [MAX_BYTES] or can't be read. */
-    suspend fun copy(songId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
-        val tmp = File(dir, "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.part")
+    /**
+     * Copies the chosen PDF and checks it with [inspector]: [PdfAttach.Saved] with the generated name, or the reason it was
+     * refused (and nothing is left on the disk). A file that can't be read at all is "unreadable", never a crash.
+     */
+    suspend fun attach(songId: String, uri: Uri, inspector: PdfInspector): PdfAttach = withContext(Dispatchers.IO) {
+        val tmp = newFile(songId, "part")
         try {
-            val input = context.contentResolver.openInputStream(uri) ?: return@withContext null
-            if (!input.use { copyPdf(it, tmp) }) throw IOException("not a PDF or too big")
-            val name = tmp.name.removeSuffix(".part") + ".pdf"
-            if (!tmp.renameTo(File(dir, name))) throw IOException("rename failed")
-            name
+            val input = context.contentResolver.openInputStream(uri) ?: return@withContext PdfAttach.Refused(PdfProblem.UNREADABLE)
+            input.use { copyReason(it, tmp) }?.let { tmp.delete(); return@withContext PdfAttach.Refused(it) }
+            finish(tmp, inspector)
         } catch (e: Exception) {
             // a revoked permission or a provider that throws is "this file won't do", never a crash
             if (e is kotlinx.coroutines.CancellationException) throw e
             tmp.delete()
-            null
+            PdfAttach.Refused(PdfProblem.UNREADABLE)
         }
     }
 
-    /** Saves bytes that came by the band into a new generated name; null when they aren't a PDF or are too big. */
-    suspend fun save(songId: String, bytes: ByteArray): String? = withContext(Dispatchers.IO) {
-        if (!looksLikePdf(bytes) || bytes.size > MAX_BYTES) return@withContext null
-        val name = "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.pdf"
-        runCatching { File(dir, name).writeBytes(bytes); name }.getOrNull()
+    /** Saves the bytes that came by the band under a new generated name, after the same check; refused leaves nothing. */
+    suspend fun saveChecked(songId: String, bytes: ByteArray, inspector: PdfInspector): PdfAttach = withContext(Dispatchers.IO) {
+        if (!looksLikePdf(bytes)) return@withContext PdfAttach.Refused(PdfProblem.NOT_PDF)
+        if (bytes.size > MAX_BYTES) return@withContext PdfAttach.Refused(PdfProblem.TOO_BIG)
+        val tmp = newFile(songId, "part")
+        try {
+            tmp.writeBytes(bytes)
+            finish(tmp, inspector)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            tmp.delete()
+            PdfAttach.Refused(PdfProblem.UNREADABLE)
+        }
     }
+
+    // checks the half copy; only a good one gets its final name
+    private fun finish(tmp: File, inspector: PdfInspector): PdfAttach = when (val v = inspector.check(tmp)) {
+        is PdfCheck.Refused -> { tmp.delete(); PdfAttach.Refused(v.problem) }
+        is PdfCheck.Ok -> {
+            val name = tmp.name.removeSuffix(".part") + ".pdf"
+            if (tmp.renameTo(File(dir, name))) PdfAttach.Saved(name, v.pages, v.bytes) else { tmp.delete(); PdfAttach.Refused(PdfProblem.UNREADABLE) }
+        }
+    }
+
+    // the time plus a random bit: two PDFs chosen in the same millisecond never get the same name
+    private fun newFile(songId: String, ext: String) =
+        File(dir, "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.$ext")
 
     fun remove(name: String) { if (name.isNotEmpty()) File(dir, name).delete() }
 
@@ -70,10 +91,11 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         fun looksLikePdf(head: ByteArray): Boolean = head.size >= MAGIC.size && MAGIC.indices.all { head[it] == MAGIC[it] }
 
         /**
-         * Copies [input] into [to] in chunks (without closing [input]); false when it doesn't start with `%PDF-` or passes
-         * [MAX_BYTES] (the caller deletes [to]). A PDF picked by hand and one from a backup are checked the same way.
+         * Copies [input] into [to] in chunks (without closing [input]); the reason it isn't good, or null: it doesn't start
+         * with `%PDF-` or passes [MAX_BYTES] (the caller deletes [to]). A PDF picked by hand and one from a backup are
+         * checked the same way.
          */
-        internal fun copyPdf(input: InputStream, to: File): Boolean {
+        internal fun copyReason(input: InputStream, to: File): PdfProblem? {
             val head = ByteArray(MAGIC.size)
             var size = 0L
             to.outputStream().use { out ->
@@ -83,11 +105,13 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
                     if (n < 0) break
                     if (size < head.size) System.arraycopy(buf, 0, head, size.toInt(), minOf(n.toLong(), head.size - size).toInt())
                     size += n
-                    if (size > MAX_BYTES) return false
+                    if (size > MAX_BYTES) return PdfProblem.TOO_BIG
                     out.write(buf, 0, n)
                 }
             }
-            return size >= head.size && looksLikePdf(head)
+            return if (size >= head.size && looksLikePdf(head)) null else PdfProblem.NOT_PDF
         }
+
+        internal fun copyPdf(input: InputStream, to: File): Boolean = copyReason(input, to) == null
     }
 }
