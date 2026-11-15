@@ -49,7 +49,9 @@
     <!-- editor -->
     <string name="editor_new">Nova música</string>
     <string name="editor_imported_new">Música importada. Confira e salve.</string>
-    <string name="editor_imported_update">Letra nova importada. Confira e salve.</string>
+    <string name="editor_imported_update">Esta música já está na sua biblioteca. Salvar troca o texto dela pelo importado.</string>
+    <string name="editor_replace_confirm">Trocar o texto de “%1$s” pelo importado? O texto salvo será perdido.</string>
+    <string name="editor_replace">Trocar</string>
     <string name="import_offline_note">Sem internet: artista, ano e BPM não foram completados. Preencha em Dados da música.</string>
     <string name="editor_title">Nome da música</string>
     <string name="editor_author">Artista</string>
