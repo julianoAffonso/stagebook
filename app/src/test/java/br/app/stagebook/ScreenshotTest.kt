@@ -421,6 +421,21 @@ class ScreenshotTest {
     @Test fun editorLyricsTablet() = editorShot("tablet_4_editor_letra", false)
     @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorLyricsTabletPortrait() = editorShot("tablet_em_pe_4_editor_letra", false)
 
+    // an import over a song already in the library: the note says so, and Save asks before replacing its text
+    private fun editorImportExisting(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(editorSong.copy(mode = EditorMode.IMPORTED_UPDATE, unsaved = true), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(playerMode = true))
+            }
+        }
+        compose.onNodeWithContentDescription(str(R.string.action_save)).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test @Config(qualifiers = PHONE) fun editorImportExistingPhone() = editorImportExisting("celular_4_editor_importar_existente")
+    @Test fun editorImportExistingTablet() = editorImportExisting("tablet_4_editor_importar_existente")
+
     @Test @Config(qualifiers = PHONE) fun editorDataPhone() = editorShot("celular_4_editor_dados", true)
     @Test fun editorDataTablet() = editorShot("tablet_4_editor_dados", true)
     @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorDataTabletPortrait() = editorShot("tablet_em_pe_4_editor_dados", true)
