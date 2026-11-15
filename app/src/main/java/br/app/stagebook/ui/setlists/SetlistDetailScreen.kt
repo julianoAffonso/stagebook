@@ -427,7 +427,7 @@ fun SetlistDetailScreen(
 
 /**
  * The setlist's own actions as icons in one line at the bottom, as the Songs tab has them: looking, Edit and Share; editing,
- * Songs and Break. The floppy (Save, off until something changed) and the ⋮ with what is rarely used close the line.
+ * Songs and Break (no Share: it waits for Save). The floppy (Save, off until something changed) and the ⋮ with what is rarely used close the line.
  */
 @Composable
 private fun SetActions(
@@ -447,9 +447,10 @@ private fun SetActions(
             }
         } else {
             IconButton(onClick = onEdit) { Icon(AppIcons.Edit, stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.onSurface) }
-        }
-        IconButton(onClick = onShare, enabled = hasSongs) {
-            Icon(AppIcons.Share, stringResource(R.string.share_title), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (hasSongs) 1f else 0.38f))
+            // sharing is for the finished setlist: not while it is half edited (what Discard undoes would have gone out)
+            IconButton(onClick = onShare, enabled = hasSongs) {
+                Icon(AppIcons.Share, stringResource(R.string.share_title), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (hasSongs) 1f else 0.38f))
+            }
         }
         androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
         if (editing) br.app.stagebook.ui.components.TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary, enabled = canSave)

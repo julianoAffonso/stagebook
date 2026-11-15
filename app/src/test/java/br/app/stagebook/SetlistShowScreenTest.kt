@@ -124,11 +124,18 @@ class SetlistShowScreenTest {
         compose.onAllNodesWithContentDescription("Backing track").assertCountEquals(1)
     }
 
-    @Test fun `Songs, Break and Share are on the screen`() {
+    @Test fun `editing has Songs and Break and no Share, looking has Share and no Songs or Break`() {
         screen()
         compose.onNodeWithContentDescription("Músicas").assertIsDisplayed()
         compose.onNodeWithContentDescription("Intervalo").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Compartilhar").assertDoesNotExist()
+    }
+
+    @Test fun `looking shows Share, and not Songs or Break`() {
+        screen(editing = false)
         compose.onNodeWithContentDescription("Compartilhar").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Músicas").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Intervalo").assertDoesNotExist()
     }
 
     @Test fun `a row draws its handle, its small number, its title and its remove button, in that order`() {
@@ -238,8 +245,8 @@ class SetlistShowScreenTest {
         assertEquals(1, left)
     }
 
-    @Test fun `closing the sheet opened from the edit's own Share button stays in the edit`() {
-        screen()
+    @Test fun `closing the sheet opened from the setlist's own Share button stays on the setlist`() {
+        screen(editing = false)
         compose.onNodeWithContentDescription("Compartilhar").performClick()
         compose.waitForIdle()
         androidx.test.espresso.Espresso.pressBack()
@@ -248,7 +255,7 @@ class SetlistShowScreenTest {
     }
 
     @Test fun `without it the Share sheet waits for the button`() {
-        screen()
+        screen(editing = false)
         compose.onNodeWithText("QR sem internet").assertDoesNotExist()
         compose.onNodeWithContentDescription("Compartilhar").performClick()
         compose.waitForIdle()
