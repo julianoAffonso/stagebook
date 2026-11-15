@@ -918,6 +918,20 @@
     <string name="band_deny">Não autorizar</string>
     <!-- caixa de entrada: o que a banda mandou -->
     <string name="inbox_setlist">%1$s enviou o setlist \"%2$s\"</string>
+    <string name="editor_pdf_label">PDF</string>
+    <string name="editor_pdf_empty">Nenhum. Toque para anexar</string>
+    <string name="editor_pdf_attach">Anexar PDF</string>
+    <string name="editor_pdf_replace">Trocar PDF</string>
+    <string name="editor_pdf_remove">Remover PDF</string>
+    <string name="editor_pdf_missing">O PDF não está neste aparelho. Anexe de novo.</string>
+    <string name="editor_pdf_note">Esta música é um PDF. Não dá para editar o PDF; no palco você pode marcá-lo com o marca-texto.</string>
+    <string name="editor_pdf_ask_lyrics">Esta música já tem letra. Ela fica guardada e volta se você remover o PDF.</string>
+    <string name="editor_pdf_remove_confirm">Remover o PDF desta música? O arquivo é apagado deste aparelho e a letra volta.</string>
+    <plurals name="editor_pdf_facts">
+        <item quantity="one">%1$d página · %2$s</item>
+        <item quantity="many">%1$d páginas · %2$s</item>
+        <item quantity="other">%1$d páginas · %2$s</item>
+    </plurals>
     <plurals name="inbox_pdf_refused">
         <item quantity="one">\"%1$s\" chegou sem o PDF. %3$s</item>
         <item quantity="many">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>

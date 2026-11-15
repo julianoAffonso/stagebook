@@ -417,6 +417,24 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
+    // a song that is a PDF: the card takes the place of the lyrics field
+    private fun editorPdf(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(
+                    editorSong, {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(playerMode = true),
+                    pdf = br.app.stagebook.ui.editor.EditorPdf(s("Canção de teste - cifra.pdf"), pages = 3, bytes = 412_000),
+                    position = br.app.stagebook.ui.editor.EditorPosition(2, 12),
+                )
+            }
+        }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test @Config(qualifiers = PHONE) fun editorPdfPhone() = editorPdf("celular_4_editor_pdf")
+    @Test fun editorPdfTablet() = editorPdf("tablet_4_editor_pdf")
+
     @Test @Config(qualifiers = PHONE) fun editorLyricsPhone() = editorShot("celular_4_editor_letra", false)
     @Test fun editorLyricsTablet() = editorShot("tablet_4_editor_letra", false)
     @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorLyricsTabletPortrait() = editorShot("tablet_em_pe_4_editor_letra", false)

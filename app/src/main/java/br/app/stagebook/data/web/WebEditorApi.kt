@@ -25,6 +25,9 @@ class WebEditorApi(
     private val band: () -> Band? = { null },
     private val backup: () -> br.app.stagebook.data.Backup? = { null },
     private val tracks: () -> br.app.stagebook.data.TrackStore? = { null },
+    // the songs' PDFs: the file copied into the app and checked as in the app's editor (null = this editor can't take one)
+    private val pdfs: () -> br.app.stagebook.data.PdfStore? = { null },
+    private val inspector: br.app.stagebook.data.PdfInspector = br.app.stagebook.data.PdfInspector(),
     private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir")) },
 ) {
     /** The band, for Import → Sync with the band / Received from the band. */
@@ -47,6 +50,12 @@ class WebEditorApi(
         val text: String = "",
         val track: String = "",   // the backing track file ("" = none); read only, changed by its own calls
         val trackName: String = "",   // the track's own name, as the app shows it
+        // the song is a PDF: its file (read only, changed by its own calls), its own name, pages and size for the card. The
+        // lyrics stay in [text], hidden by the page, and come back when the PDF goes (as in the app)
+        val pdf: String = "",
+        val pdfName: String = "",
+        val pdfPages: Int = 0,
+        val pdfBytes: Long = 0L,
         // key and capo live in the song's details, not in the lyrics, as in the app (user, 01/11): the page shows and
         // sends them apart, and the app puts them back in the text with its own rule
         val key: String = "",
@@ -106,6 +115,10 @@ class WebEditorApi(
     // the stored file and the name the page shows right away (without it the page showed a piece of the file name)
     private data class TrackSet(val track: String, val trackName: String = "")
 
+    /** What the page keeps after sending a PDF: the file, its name, pages and size. */
+    @Serializable
+    private data class PdfSet(val pdf: String, val pdfName: String, val pdfPages: Int, val pdfBytes: Long)
+
     @Serializable
     private data class RestoreDone(val skipped: Int, val bandAgain: Boolean = false, val lost: List<br.app.stagebook.data.model.LostAudio> = emptyList())
 
@@ -160,6 +173,11 @@ class WebEditorApi(
             }
             parts == listOf("backup", "inspect") && req.method == "POST" -> backupInspect(req)
             parts == listOf("backup", "restore") && req.method == "POST" -> backupRestore(req)
+            parts.size == 3 && parts[0] == "songs" && parts[2] == "pdf" -> when (req.method) {
+                "PUT" -> pdfPut(parts[1], req)
+                "DELETE" -> pdfDelete(parts[1])
+                else -> HttpResponse.status(405)
+            }
             parts.size == 3 && parts[0] == "songs" && parts[2] == "track" -> when (req.method) {
                 "PUT" -> trackPut(parts[1], req)
                 "DELETE" -> trackDelete(parts[1])
@@ -186,7 +204,13 @@ class WebEditorApi(
     private fun data(s: Song): SongData {
         val meta = Chords.meta(s.text)
         // the app's own lines (hidden chords, picked shapes) stay out of the page, as in the app's editor
-        return SongData(s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi())
+        // a PDF's pages and size for the card (read here, once per song opened: the renderer is opened and closed at once)
+        val file = s.pdf.takeIf { it.isNotEmpty() }?.let { pdfs()?.file(it) }?.takeIf { it.isFile }
+        val pages = file?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
+        return SongData(
+            s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
+            s.pdf, s.pdfName, pages, file?.length() ?: 0L, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi(),
+        )
     }
 
     // the page's lyrics with the key and capo it keeps apart, in the app's way (the BPM goes in on its own)
@@ -363,6 +387,39 @@ class WebEditorApi(
         } finally {
             named.delete()
         }
+    }
+
+    // the PDF from the computer: the file comes in the body, its name in ?name=. The same check as the app's editor (header,
+    // 8 MB, readable, no password, 300 pages); a refused one says why and nothing is kept. One at a time, like the track
+    @Synchronized
+    private fun pdfPut(id: String, req: HttpRequest): HttpResponse {
+        val store = pdfs() ?: return HttpResponse.status(404)
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        val upload = req.file ?: return HttpResponse.status(400)
+        val named = java.io.File(workDir(), "pdf-${java.util.UUID.randomUUID()}.pdf")
+        if (!upload.renameTo(named)) return problem("unreadable")
+        try {
+            val saved = when (val r = kotlinx.coroutines.runBlocking { store.attach(id, android.net.Uri.fromFile(named), inspector) }) {
+                is br.app.stagebook.data.PdfAttach.Refused -> return problem("pdf_" + r.problem.name.lowercase())
+                is br.app.stagebook.data.PdfAttach.Saved -> r
+            }
+            val shown = req.query["name"].orEmpty().substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim()
+                .take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
+            // a new PDF has other pages: the old one's highlighter marks go
+            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList()) }
+            if (song.pdf != saved.name) store.remove(song.pdf)
+            return ok(json.encodeToString(PdfSet(saved.name, shown, saved.pages, saved.bytes)))
+        } finally {
+            named.delete()
+        }
+    }
+
+    private fun pdfDelete(id: String): HttpResponse {
+        val store = pdfs() ?: return HttpResponse.status(404)
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList()) }
+        store.remove(song.pdf)
+        return HttpResponse.status(204)
     }
 
     private fun trackDelete(id: String): HttpResponse {
