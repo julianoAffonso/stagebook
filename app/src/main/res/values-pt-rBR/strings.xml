@@ -48,6 +48,9 @@
     <string name="song_is_pdf">PDF</string>
     <string name="stage_pdf_unreadable">Não consigo abrir este PDF. Ele pode ter sido movido ou estar danificado: anexe de novo no editor da música.</string>
     <string name="stage_pdf_page">Página %1$d de %2$d do PDF</string>
+    <string name="stage_pdf_marker_hint">Passe o dedo na página para marcar. Dois dedos ampliam.</string>
+    <string name="stage_pdf_undo">Desfazer</string>
+    <string name="stage_pdf_clear">Limpar página</string>
     <string name="stage_pdf_invert">Inverter as cores do PDF</string>
     <string name="songs_new">Nova música</string>
     <string name="songs_empty_title">Nenhuma música ainda</string>

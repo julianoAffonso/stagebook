@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.getBoundsInRoot
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.swipeLeft
 import br.app.stagebook.data.PdfPages
 import br.app.stagebook.data.PdfSource
 import br.app.stagebook.data.model.Look
+import br.app.stagebook.data.model.PdfPoint
 import br.app.stagebook.ui.stage.PdfOpen
 import br.app.stagebook.ui.stage.PdfStageView
 import br.app.stagebook.ui.stage.StageScreen
@@ -159,5 +161,78 @@ class PdfStageTest {
         compose.waitForIdle()
         val after = page().getBoundsInRoot().left
         assertTrue("moved: $before -> $after", after < before)
+    }
+
+    // ---- highlighter ----
+
+    private fun showMarking(source: FakeSource, marking: Boolean, strokes: MutableList<Pair<Int, List<PdfPoint>>>) {
+        var count = 0
+        compose.setContent {
+            StagebookTheme {
+                PdfStageView(
+                    PdfOpen.Ready(PdfPages(source)), 0, invert = false, onPageCount = { count = it },
+                    marking = marking, onStroke = { page, points -> strokes += page to points },
+                )
+            }
+        }
+        compose.waitUntil(5_000) { count > 0 }
+        compose.waitForIdle()
+    }
+
+    @Test fun `with the highlighter on a finger drawn across the page makes a stroke in the page's own coordinates`() {
+        val strokes = mutableListOf<Pair<Int, List<PdfPoint>>>()
+        showMarking(FakeSource(7), marking = true, strokes = strokes)
+        page().performTouchInput { down(center); moveBy(Offset(-100f, 0f)); moveBy(Offset(-100f, 30f)); up() }
+        compose.waitForIdle()
+        assertEquals(1, strokes.size)
+        val (pageNo, points) = strokes[0]
+        assertEquals(0, pageNo)
+        assertTrue("points=$points", points.size >= 2 && points.all { it.x in 0f..1f && it.y in 0f..1f })
+        assertTrue("it went left across the page", points.last().x < points.first().x)
+    }
+
+    @Test fun `without the highlighter a finger makes no stroke`() {
+        val strokes = mutableListOf<Pair<Int, List<PdfPoint>>>()
+        showMarking(FakeSource(7), marking = false, strokes = strokes)
+        page().performTouchInput { down(center); moveBy(Offset(-100f, 0f)); moveBy(Offset(-100f, 30f)); up() }
+        compose.waitForIdle()
+        assertTrue(strokes.isEmpty())
+    }
+
+    @Test fun `with the highlighter on two fingers still zoom and make no stroke`() {
+        val strokes = mutableListOf<Pair<Int, List<PdfPoint>>>()
+        showMarking(FakeSource(7), marking = true, strokes = strokes)
+        val whole = page().getBoundsInRoot().width
+        pinch(out = true)
+        compose.waitForIdle()
+        assertTrue(page().getBoundsInRoot().width > whole * 1.2f)
+        assertTrue("a zoom is not a stroke: $strokes", strokes.isEmpty())
+    }
+
+    @Test fun `on the stage the highlighter button shows the bar with undo, clear and done, and they act on the page on screen`() {
+        val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", pdf = "p.pdf")), look = Look())
+        val asked = mutableListOf<String>()
+        compose.setContent {
+            StagebookTheme {
+                StageScreen(
+                    state, 0, 0, { _, _ -> }, pdfFile = { java.io.File("/no/such/$it") },
+                    onPdfUndo = { id, page -> asked += "undo:$id:$page" }, onPdfClear = { id, page -> asked += "clear:$id:$page" },
+                )
+            }
+        }
+        compose.onNodeWithContentDescription("Marca-texto").performClick()
+        compose.onNodeWithText("Desfazer").performClick()
+        compose.onNodeWithText("Limpar página").performClick()
+        assertEquals(listOf("undo:p:0", "clear:p:0"), asked)
+        compose.onNodeWithText("Pronto").performClick()
+        compose.onAllNodesWithText("Limpar página").assertCountEquals(0)
+    }
+
+    @Test fun `a PDF song with a backing track still has its play button on stage`() {
+        val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", track = "t.ogg", pdf = "p.pdf")), look = Look(playerMode = true))
+        var played = 0
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, pdfFile = { java.io.File("/no/such/$it") }, onTogglePlay = { played++ }) } }
+        compose.onNodeWithContentDescription("Tocar o backing track").performClick()
+        assertEquals(1, played)
     }
 }

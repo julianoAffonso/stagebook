@@ -294,6 +294,9 @@ fun StageRoute(
             onMenu = br.app.stagebook.ui.drawer.LocalDrawer.current?.takeIf { !it.pinned }?.open,
             pdfFile = pdfStore::file,
             onPdfInvert = viewModel::setPdfInvert,
+            onPdfStroke = viewModel::addPdfStroke,
+            onPdfUndo = viewModel::undoPdfStroke,
+            onPdfClear = viewModel::clearPdfPage,
             leadingButton = br.app.stagebook.ui.drawer.LocalDrawer.current?.pinned != true,
             setlistActions = SetlistActions(
                 onConduct = viewModel::conductBand,
@@ -434,6 +437,9 @@ fun StageScreen(
     onBack: (() -> Unit)? = null,
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
     onPdfInvert: (Boolean) -> Unit = {},
+    onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },
+    onPdfUndo: (songId: String, page: Int) -> Unit = { _, _ -> },
+    onPdfClear: (songId: String, page: Int) -> Unit = { _, _ -> },
     onMenu: (() -> Unit)? = null,   // the library drawer: the header's first button opens it instead of leaving
     leadingButton: Boolean = true,   // false: the drawer is pinned beside the stage, nothing to open or leave by
     setlistActions: SetlistActions = SetlistActions(),
@@ -833,7 +839,7 @@ fun StageScreen(
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
             chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
-            marking = marking,
+            marking = marking && song.pdf.isEmpty(),   // the words of lyrics; a PDF has its own highlighter
             pdf = song.pdf.isNotEmpty(),
             vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
             mark = { from, to ->
@@ -1061,10 +1067,73 @@ fun StageScreen(
                     }
                 },
         ) {
+            // what sits over the page of any song: the track's play button and mixer, and the player's short note. The PDF
+            // branch below draws the same ones over its pages
+            val trackOverlays: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {
+                if (look.playerMode && !song.missing && song.lostTrack.isNotEmpty() && !playing) {
+                    LostTrackButton(
+                        name = song.lostTrack,
+                        bg = Color(look.bg),
+                        onPick = { onPickTrack(song.id) },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
+                    )
+                } else if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
+                    TrackButton(
+                        hasTrack = song.track.isNotEmpty() || playing,
+                        playing = playing,
+                        away = usbAway,
+                        awayColor = MaterialTheme.colorScheme.error,
+                        stops = look.trackStops,
+                        fg = fg,
+                        bg = Color(look.bg),
+                        onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
+                        onChange = { onPickTrack(song.id) },
+                        onRemove = { onRemoveTrack(song.id) },
+                        // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button
+                        // less over the lyrics)
+                        onMixer = { mixerOpen = true },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
+                    )
+                }
+                // the song's own mix over the global one, or the global mixer itself (user, 31/10 and 01/11)
+                if (mixerOpen) StageMixerSheet(
+                    look.mixer.forSong(song.mix),
+                    own = song.mix != null,
+                    onMixer = { if (song.mix != null) onSongMix(song.id, it) else onGlobalMix(it) },
+                    onOwn = { onSongMix(song.id, look.mixer) },
+                    onGeneral = { onSongMix(song.id, null) },
+                    onDismiss = { mixerOpen = false },
+                )
+                // the look and time of the app's messages, centred above the footer: the metronome and the pages stay free
+                if (note.isNotEmpty()) {
+                    Text(
+                        note,
+                        Modifier.align(Alignment.BottomCenter)
+                            .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
+                            .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
             if (song.pdf.isNotEmpty()) {
                 val open by rememberPdfOpen(pdfFile(song.pdf))
-                PdfStageView(open, current, look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index })
+                Box(Modifier.fillMaxSize()) {
+                    PdfStageView(
+                        open, current, look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
+                        marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
+                        onStroke = { page, points -> onPdfStroke(song.id, page, points) },
+                    )
+                    trackOverlays()
+                    // the highlighter's bar: what to do, undo, clear the page, and the way out
+                    if (marking) PdfMarkerBar(
+                        onUndo = { onPdfUndo(song.id, current) }, onClear = { onPdfClear(song.id, current) }, onDone = { marking = false },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
                 return@BoxWithConstraints
             }
             val width = constraints.maxWidth
@@ -1405,54 +1474,8 @@ fun StageScreen(
             // A track playing goes on when the song changes, so the button stays (to stop it) on any song meanwhile
             // a song whose audio didn't come (Android's own copy, a file whose track was lost) shows an alert there instead, never over a
             // track that is playing
-            if (look.playerMode && !song.missing && song.lostTrack.isNotEmpty() && !playing) {
-                LostTrackButton(
-                    name = song.lostTrack,
-                    bg = Color(look.bg),
-                    onPick = { onPickTrack(song.id) },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
-                )
-            } else if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
-                TrackButton(
-                    hasTrack = song.track.isNotEmpty() || playing,
-                    playing = playing,
-                    away = usbAway,
-                    awayColor = MaterialTheme.colorScheme.error,
-                    stops = look.trackStops,
-                    fg = fg,
-                    bg = Color(look.bg),
-                    onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
-                    onChange = { onPickTrack(song.id) },
-                    onRemove = { onRemoveTrack(song.id) },
-                    // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button
-                    // less over the lyrics)
-                    onMixer = { mixerOpen = true },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
-                )
-            }
-            // the song's own mix over the global one, or the global mixer itself (user, 31/10 and 01/11)
-            if (mixerOpen) StageMixerSheet(
-                look.mixer.forSong(song.mix),
-                own = song.mix != null,
-                onMixer = { if (song.mix != null) onSongMix(song.id, it) else onGlobalMix(it) },
-                onOwn = { onSongMix(song.id, look.mixer) },
-                onGeneral = { onSongMix(song.id, null) },
-                onDismiss = { mixerOpen = false },
-            )
+            trackOverlays()
             if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter))
-            // the look and time of the app's messages, centred above the footer: the metronome and the pages stay free
-            if (note.isNotEmpty()) {
-                Text(
-                    note,
-                    Modifier.align(Alignment.BottomCenter)
-                        .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
-                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.inverseOnSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
@@ -1537,7 +1560,13 @@ fun StageScreen(
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
             }
-            // a PDF: its colours turned over for a dark stage (lit while turned)
+            // a PDF: the highlighter, and its colours turned over for a dark stage (each lit while on)
+            if (song.pdf.isNotEmpty()) IconButton(onClick = { marking = !marking }) {
+                Icon(
+                    AppIcons.Highlighter, stringResource(R.string.stage_marker),
+                    tint = if (marking) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.7f),
+                )
+            }
             if (song.pdf.isNotEmpty()) IconButton(onClick = { onPdfInvert(!look.pdfInvert) }) {
                 Icon(
                     AppIcons.InvertColors, stringResource(R.string.stage_pdf_invert),
@@ -2281,6 +2310,24 @@ private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier) {
             Icon(AppIcons.Highlighter, null)
             Text(stringResource(R.string.stage_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
             androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
+        }
+    }
+}
+
+/** While the highlighter is on over a PDF page: what to do, undo the last stroke, clear the page, and the way out. */
+@Composable
+private fun PdfMarkerBar(onUndo: () -> Unit, onClear: () -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, shape = MaterialTheme.shapes.medium, shadowElevation = 6.dp, modifier = modifier.padding(Spacing.m)) {
+        Column(Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.xs, bottom = Spacing.xs)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Icon(AppIcons.Highlighter, null)
+                Text(stringResource(R.string.stage_pdf_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
+            }
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                androidx.compose.material3.TextButton(onUndo) { Text(stringResource(R.string.stage_pdf_undo)) }
+                androidx.compose.material3.TextButton(onClear) { Text(stringResource(R.string.stage_pdf_clear)) }
+                androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
+            }
         }
     }
 }
