@@ -109,4 +109,12 @@ class FollowOtherSongTest {
         stageOn("b")
         assertNull(gate.pending)
     }
+
+    @Test fun `a stage already on the song the band says does not get a notice`() {
+        following.value = null
+        start(); stageOn("a")
+        band("a")
+        compose.onNodeWithText("stage a").assertExists()
+        assertNull(gate.pending)
+    }
 }
