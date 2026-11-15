@@ -53,6 +53,18 @@
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   .row > div { flex: 1; min-width: 120px; }
   .grow { flex: 3 !important; }
+  /* the PDF card: the first page, the invert switch, and the crop window (the frame's handles sit outside the page, not cut by it) */
+  #pdf-preview { display: block; max-width: 100%; max-height: 320px; margin: 8px auto; border-radius: 8px; background: #fff; }
+  .switch { display: flex; align-items: center; gap: 12px; margin: 8px 0; cursor: pointer; }
+  .switch input { width: 20px; height: 20px; flex: none; }
+  dialog#crop-dialog { background: var(--surface); color: var(--text); border: 0; border-radius: 28px; padding: 24px; width: min(94vw, 760px); }
+  dialog#crop-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  #crop-wrap { position: relative; padding: 12px; touch-action: none; user-select: none; width: fit-content; max-width: 100%; margin: 8px auto; }
+  #crop-stage { position: relative; overflow: hidden; line-height: 0; }
+  #crop-img { display: block; max-width: 100%; max-height: 56vh; background: #fff; }
+  #crop-frame { position: absolute; border: 2px solid var(--accent); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55); }
+  #crop-handles { position: absolute; inset: 12px; pointer-events: none; }
+  #crop-handles i { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent); }
   .stepper { display: flex; align-items: center; gap: 4px; }
   .stepper b { min-width: 72px; text-align: center; font-weight: 600; }
   textarea { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; resize: vertical; line-height: 1.6; }
@@ -164,8 +176,27 @@
           <div class="card" id="pdf-card" hidden>
             <div class="row"><span id="pdf-card-icon"></span><b id="pdf-card-name" class="grow"></b></div>
             <div id="pdf-card-facts" class="muted"></div>
+            <img id="pdf-preview" alt="" hidden>
             <p id="pdf-note"></p>
+            <label class="switch"><input type="checkbox" id="pdf-invert"><span data-t="pdfInvert"></span></label>
+            <button class="outline" type="button" id="pdf-crop"></button>
           </div>
+          <dialog id="crop-dialog">
+            <h3 data-t="cropTitle"></h3>
+            <p class="muted" data-t="cropHint"></p>
+            <div id="crop-wrap">
+              <div id="crop-stage"><img id="crop-img" alt="" draggable="false"><div id="crop-frame"></div></div>
+              <div id="crop-handles"></div>
+            </div>
+            <div class="row" id="crop-pages" style="justify-content:center;align-items:center">
+              <button class="outline" type="button" id="crop-prev">‹</button><b id="crop-page-n"></b><button class="outline" type="button" id="crop-next">›</button>
+            </div>
+            <div class="row" id="crop-scope" style="margin:8px 0">
+              <label class="switch"><input type="radio" name="crop-scope" value="all" checked><span data-t="cropAll"></span></label>
+              <label class="switch"><input type="radio" name="crop-scope" value="page"><span data-t="cropPage"></span></label>
+            </div>
+            <div class="actions"><button class="text" type="button" id="crop-none"></button><span class="grow"></span><button class="text" type="button" id="crop-cancel"></button><button type="button" id="crop-save"></button></div>
+          </dialog>
           <div id="lyrics-block"><div class="row"><label for="f-text" data-t="lyrics" class="grow"></label><button class="outline" id="highlight" type="button"></button></div><textarea id="f-text" spellcheck="false"></textarea></div>
           <div class="actions">
             <button class="text" id="delete"></button>
@@ -502,6 +533,15 @@ function drawPdf() {
   const n = current && current.pdfPages || 0;
   $("pdf-card-facts").textContent = lost ? t.pdfMissing : n ? fill(t["pdfFacts" + (n === 0 ? "0" : n === 1 ? "1" : "N")], n, pdfSize(current.pdfBytes || 0)) : "";
   $("pdf-note").textContent = t.pdfNote;
+  // the first page as it will look on the stage (turned over if the colours are), the invert switch and the trim
+  const preview = $("pdf-preview");
+  preview.hidden = !has;
+  if (has) loadPdfPage(0).then((url) => { if (url) { preview.src = url; preview.alt = t.pdfPreview; } else preview.hidden = true; });
+  preview.style.filter = current && current.pdfInvert ? "invert(1)" : "";
+  $("pdf-invert").checked = !!(current && current.pdfInvert);
+  $("pdf-invert").parentElement.hidden = !has;
+  $("pdf-crop").textContent = t.pdfCrop;
+  $("pdf-crop").hidden = !has;
 }
 
 function drawTrack() {
@@ -656,6 +696,90 @@ async function sendPdf(file) {
   say("status", t.saved);
 }
 
+// a page of the PDF as an image (the tablet draws it; the request carries the header the API wants, so it comes as a blob)
+const pdfPages = new Map();
+async function loadPdfPage(n) {
+  if (!current || !current.id || !current.pdf) return "";
+  const key = `${current.id}:${current.pdf}:${n}`;
+  if (pdfPages.has(key)) return pdfPages.get(key);
+  const r = await fetch(`/api/songs/${encodeURIComponent(current.id)}/pdf-page?n=${n}`, { headers: { "X-Stagebook": "1" }, credentials: "same-origin" }).catch(() => null);
+  if (!r || r.status !== 200) return "";
+  const url = URL.createObjectURL(await r.blob());
+  if (pdfPages.size > 12) { URL.revokeObjectURL(pdfPages.values().next().value); pdfPages.delete(pdfPages.keys().next().value); }
+  pdfPages.set(key, url);
+  return url;
+}
+// the colours and the trims go to the tablet at once (the file is saved already, as for the track)
+async function sendPdfView(body) {
+  const r = await api(`/api/songs/${encodeURIComponent(current.id)}/pdf-view`, { method: "PUT", body: JSON.stringify(body) }).catch(() => null);
+  if (!r || r.status !== 200) return offline();
+  const v = await r.json();
+  current.pdfInvert = v.invert; current.pdfCrops = v.crops;
+  drawPdf();
+}
+$("pdf-invert").onchange = () => sendPdfView({ invert: $("pdf-invert").checked });
+
+// the crop window: the page with a frame, for every page or for this one
+let cropPage = 0, cropRect = null;
+const cropAll = () => document.querySelector("input[name=crop-scope]:checked").value === "all";
+const cropScope = () => (cropAll() ? CROP_ALL : cropPage);
+function drawCrop() {
+  const c = cropRect, f = $("crop-frame");
+  f.style.left = `${c.left * 100}%`; f.style.top = `${c.top * 100}%`; f.style.width = `${(c.right - c.left) * 100}%`; f.style.height = `${(c.bottom - c.top) * 100}%`;
+  const pts = [[c.left, c.top], [c.right, c.top], [c.left, c.bottom], [c.right, c.bottom], [(c.left + c.right) / 2, c.top], [(c.left + c.right) / 2, c.bottom], [c.left, (c.top + c.bottom) / 2], [c.right, (c.top + c.bottom) / 2]];
+  $("crop-handles").replaceChildren(...pts.map(([x, y]) => Object.assign(document.createElement("i"), { style: `left:${x * 100}%;top:${y * 100}%` })));
+}
+function loadCropRect() {
+  const own = (current.pdfCrops || []).find((c) => c.page === cropScope());
+  cropRect = own ? { ...own } : { page: cropScope(), left: 0, top: 0, right: 1, bottom: 1 };
+  drawCrop();
+}
+async function showCropPage() {
+  const n = current.pdfPages || 1;
+  $("crop-pages").hidden = n <= 1; $("crop-scope").hidden = n <= 1;
+  $("crop-page-n").textContent = `${cropPage + 1} / ${n}`;
+  $("crop-prev").disabled = cropPage <= 0; $("crop-next").disabled = cropPage >= n - 1;
+  $("crop-img").style.filter = current.pdfInvert ? "invert(1)" : "";
+  const url = await loadPdfPage(cropPage);
+  if (url) $("crop-img").src = url;
+}
+$("pdf-crop").onclick = async () => {
+  cropPage = 0;
+  // this page only when it has a trim of its own, as in the app
+  document.querySelector(`input[name=crop-scope][value=${(current.pdfCrops || []).some((c) => c.page === 0) ? "page" : "all"}]`).checked = true;
+  $("crop-none").textContent = t.cropNone; $("crop-cancel").textContent = t.cancel; $("crop-save").textContent = t.save;
+  $("crop-prev").setAttribute("aria-label", t.cropPrev); $("crop-next").setAttribute("aria-label", t.cropNext);
+  loadCropRect();
+  $("crop-dialog").showModal();
+  await showCropPage();
+};
+$("crop-prev").onclick = () => { cropPage -= 1; loadCropRect(); showCropPage(); };
+$("crop-next").onclick = () => { cropPage += 1; loadCropRect(); showCropPage(); };
+document.querySelectorAll("input[name=crop-scope]").forEach((el) => (el.onchange = loadCropRect));
+$("crop-cancel").onclick = () => $("crop-dialog").close();
+$("crop-none").onclick = () => { sendPdfView({ crops: cropClear(current.pdfCrops || [], cropScope()) }); $("crop-dialog").close(); };
+$("crop-save").onclick = () => { sendPdfView({ crops: cropSet(current.pdfCrops || [], { ...cropRect, page: cropScope() }) }); $("crop-dialog").close(); };
+// the frame is dragged by the edge nearest the pointer, or by its inside (from where the pointer went down)
+(() => {
+  const wrap = $("crop-wrap");
+  let grab = 0, last = null, rect = null;
+  wrap.onpointerdown = (e) => {
+    rect = $("crop-stage").getBoundingClientRect();
+    grab = cropGrab(e.clientX - rect.left, e.clientY - rect.top, cropRect, rect.width, rect.height, 24);
+    if (!grab) return;
+    last = [e.clientX, e.clientY];
+    wrap.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  wrap.onpointermove = (e) => {
+    if (!grab) return;
+    cropRect = cropMove(cropRect, grab, (e.clientX - last[0]) / rect.width, (e.clientY - last[1]) / rect.height);
+    last = [e.clientX, e.clientY];
+    drawCrop();
+  };
+  wrap.onpointerup = wrap.onpointercancel = () => { grab = 0; };
+})();
+
 // the list redraws a moment after typing stops, not on every letter
 let searchTimer = 0;
 $("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { drawList(); $("songs").scrollTop = 0; }, 150); };
@@ -664,8 +788,18 @@ $("tag-filter").onchange = () => { drawList(); $("songs").scrollTop = 0; };
 $("list-clear").onclick = () => { $("search").value = ""; $("tag-filter").value = ""; drawList(); $("songs").scrollTop = 0; };
 $("save").onclick = save;
 $("delete").onclick = removeSong;
-$("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
-$("key-up").onclick = () => changeText("/api/transpose", { semitones: 1 });
+// a PDF song has no chords to move: the key is only written down, a step at a time (C when there was none), and the hidden
+// lyrics are left alone, as in the app
+async function stepKey(semitones) {
+  if (!(current.pdf || current.pdfName)) return changeText("/api/transpose", { semitones });
+  const r = await post("/api/key-step", { key: current.key || "", semitones });
+  if (!r || r.status !== 200) return offline();
+  current.key = (await r.json()).key;
+  dirty = true;
+  drawKeyCapo();
+}
+$("key-down").onclick = () => stepKey(-1);
+$("key-up").onclick = () => stepKey(1);
 $("capo-down").onclick = () => changeText("/api/capo", { capo: (current.capo || 0) - 1 });
 $("capo-up").onclick = () => changeText("/api/capo", { capo: (current.capo || 0) + 1 });
 // a song that already has lyrics asks first: they stay saved and come back when the PDF goes
@@ -746,6 +880,39 @@ function showSet(set) {
   drawSetAdd();
   loadSets();
 }
+
+// <crop-logic>
+// The trim of a PDF page, the app's rule (domain/PdfCrops.kt, ui/editor/PdfCropDialog.kt): fractions of the page, 0 left/top to
+// 1 right/bottom; [page] counts from 0 and -1 is the trim for every page without its own. Tested by tools/web_crop_test.mjs.
+const CROP_ALL = -1, CROP_MIN = 0.1;
+const cropWhole = (c) => c.left <= 0 && c.top <= 0 && c.right >= 1 && c.bottom >= 1;
+const cropFor = (crops, page) => (crops.find((c) => c.page === page) || crops.find((c) => c.page === CROP_ALL) || null);
+function cropValid(c) {
+  const left = Math.min(Math.max(c.left, 0), 1 - CROP_MIN), top = Math.min(Math.max(c.top, 0), 1 - CROP_MIN);
+  return { page: c.page, left, top, right: Math.min(Math.max(c.right, left + CROP_MIN), 1), bottom: Math.min(Math.max(c.bottom, top + CROP_MIN), 1) };
+}
+function cropSet(crops, c) { const rest = crops.filter((x) => x.page !== c.page), v = cropValid(c); return cropWhole(v) ? rest : [...rest, v]; }
+const cropClear = (crops, page) => crops.filter((c) => c.page !== page);
+// which edges a touch at (x, y) in a box of w x h is on: 1 left, 2 top, 4 right, 8 bottom (a corner is two); the inside is all (15)
+function cropGrab(x, y, c, w, h, slop) {
+  let g = (Math.abs(x - c.left * w) < slop ? 1 : 0) | (Math.abs(y - c.top * h) < slop ? 2 : 0) | (Math.abs(x - c.right * w) < slop ? 4 : 0) | (Math.abs(y - c.bottom * h) < slop ? 8 : 0);
+  if (!g && x >= c.left * w && x <= c.right * w && y >= c.top * h && y <= c.bottom * h) g = 15;
+  return g;
+}
+// the frame after a drag of (dx, dy) as fractions: an edge moves alone, the inside moves the whole frame, always on the page
+function cropMove(c, grab, dx, dy) {
+  let { left: l, top: t, right: r, bottom: b } = c;
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  if (grab === 15) { const mx = clamp(dx, -l, 1 - r), my = clamp(dy, -t, 1 - b); l += mx; r += mx; t += my; b += my; }
+  else {
+    if (grab & 1) l = clamp(l + dx, 0, r - CROP_MIN);
+    if (grab & 4) r = clamp(r + dx, l + CROP_MIN, 1);
+    if (grab & 2) t = clamp(t + dy, 0, b - CROP_MIN);
+    if (grab & 8) b = clamp(b + dy, t + CROP_MIN, 1);
+  }
+  return { page: c.page, left: l, top: t, right: r, bottom: b };
+}
+// </crop-logic>
 
 // <rows-logic>
 // What a song row shows at its end, the device's rule (ui/songs/RowFacts.kt read by ui/components/SongFacts.kt): the key,
