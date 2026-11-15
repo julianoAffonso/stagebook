@@ -222,6 +222,8 @@ fun Song.claimOldZoom(screen: String): Song =
 @Serializable
 data class Look(
     val fontSp: Float = 30f,
+    // a PDF on the stage with its colours turned over (white paper becomes black)
+    val pdfInvert: Boolean = false,
     // the library drawer stays open beside the stage (the pin on its top row; only where the screen is wide enough)
     val drawerPinned: Boolean = false,
     val fg: Int = 0xFFFFFFFF.toInt(),

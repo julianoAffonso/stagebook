@@ -185,6 +185,8 @@ fun StageRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val pdfStore = remember(appContext) { br.app.stagebook.data.PdfStore(appContext) }
     // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
     if (viewModel.breakOnly) {
         KeepScreenOn()
@@ -290,6 +292,8 @@ fun StageRoute(
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
             onMenu = br.app.stagebook.ui.drawer.LocalDrawer.current?.takeIf { !it.pinned }?.open,
+            pdfFile = pdfStore::file,
+            onPdfInvert = viewModel::setPdfInvert,
             leadingButton = br.app.stagebook.ui.drawer.LocalDrawer.current?.pinned != true,
             setlistActions = SetlistActions(
                 onConduct = viewModel::conductBand,
@@ -428,6 +432,8 @@ fun StageScreen(
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     note: String = "",
     onBack: (() -> Unit)? = null,
+    pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
+    onPdfInvert: (Boolean) -> Unit = {},
     onMenu: (() -> Unit)? = null,   // the library drawer: the header's first button opens it instead of leaving
     leadingButton: Boolean = true,   // false: the drawer is pinned beside the stage, nothing to open or leave by
     setlistActions: SetlistActions = SetlistActions(),
@@ -1053,6 +1059,12 @@ fun StageScreen(
                     }
                 },
         ) {
+            // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
+            if (song.pdf.isNotEmpty()) {
+                val open by rememberPdfOpen(pdfFile(song.pdf))
+                PdfStageView(open, current, look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index })
+                return@BoxWithConstraints
+            }
             val width = constraints.maxWidth
             val height = constraints.maxHeight
             val gutter = with(LocalDensity.current) { Spacing.xxl.roundToPx() }
@@ -1522,6 +1534,13 @@ fun StageScreen(
                     }
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
+            }
+            // a PDF: its colours turned over for a dark stage (lit while turned)
+            if (song.pdf.isNotEmpty()) IconButton(onClick = { onPdfInvert(!look.pdfInvert) }) {
+                Icon(
+                    AppIcons.InvertColors, stringResource(R.string.stage_pdf_invert),
+                    tint = if (look.pdfInvert) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.7f),
+                )
             }
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))

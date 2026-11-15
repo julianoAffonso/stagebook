@@ -34,6 +34,7 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     val zooms: Map<String, br.app.stagebook.data.model.ScreenZoom> = emptyMap(),
     val fit: br.app.stagebook.data.model.ScreenZoom? = null,   // the calculated zoom saved for this screen
     val artist: String = "",   // for the setlist's panel, whose rows leave the year out ([meta] is the header's: artist and year)
+    val pdf: String = "",   // the name of the song's PDF file ("" = it is lyrics and chords): the stage draws its pages
 ) {
     /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
     fun onScreen(screen: String): StageSong {
@@ -214,6 +215,8 @@ class StageViewModel @Inject constructor(
             br.app.stagebook.domain.ClickPath.Way.DEVICE -> { br.app.stagebook.player.StagePlayer.usbClickOff(); metronome.start(bpm, skip, volume) }
         }
     }
+
+    fun setPdfInvert(on: Boolean) = repository.updateLook { it.copy(pdfInvert = on) }
 
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
@@ -417,7 +420,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.pdf.orEmpty())
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),

@@ -46,6 +46,9 @@
     <string name="search_hint">Música, artista</string>
     <string name="songs_search">Buscar música ou artista</string>
     <string name="song_is_pdf">PDF</string>
+    <string name="stage_pdf_unreadable">Não consigo abrir este PDF. Ele pode ter sido movido ou estar danificado: anexe de novo no editor da música.</string>
+    <string name="stage_pdf_page">Página %1$d de %2$d do PDF</string>
+    <string name="stage_pdf_invert">Inverter as cores do PDF</string>
     <string name="songs_new">Nova música</string>
     <string name="songs_empty_title">Nenhuma música ainda</string>
     <string name="songs_empty_message">Toque em + embaixo para criar ou trazer músicas, ou traga a biblioteca em Ajustes.</string>
