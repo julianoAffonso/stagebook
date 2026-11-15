@@ -133,13 +133,13 @@ class FollowRealStageWindowTest {
         assertNull(gate.pending)
     }
 
-    @Test fun `window open, the band goes to the break, closing the window shows it`() {
+    @Test fun `the band goes to the break over a stage with the song - it never covers the stage, window open or not`() {
         begin()
         openMetronome()
         leaderBreak()
-        assertEquals(true, gate.breakHeld)
+        assertFalse(gate.breakHeld)
         closeWindow()
-        compose.onNodeWithText("INTERVALO").assertExists()
+        compose.onAllNodesWithText("INTERVALO").assertCountEquals(0)
         assertFalse(gate.breakHeld)
     }
 

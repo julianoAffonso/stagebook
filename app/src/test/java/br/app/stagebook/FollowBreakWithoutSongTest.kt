@@ -234,16 +234,18 @@ class FollowBreakWithoutSongTest {
         assertNull(over.followBreak)
     }
 
-    @Test fun `a stage of the follower's own song shows no break alone, and a song's stage is never over that way`() = onStage {
+    @Test fun `a stage of the follower's own song is not covered by the break, and is never over that way`() = onStage {
         val (b, ids) = band("Primeira")
         val stage = testStage(context, b.repo, SavedStateHandle(mapOf("songId" to ids.getValue("Primeira"), "start" to 0)), conduct = b.follower)
         assertFalse(stage.breakOnly)
         b.started()
         b.told { b.leader.rest("s1", 0) }
-        val shown = withTimeout(10_000) { stage.uiState.first { !it.loading && it.followBreak != null } }
+        // the strip tells the break; the stage keeps its song and nothing covers it
+        val shown = withTimeout(10_000) { stage.uiState.first { !it.loading } }
+        assertNull(shown.followBreak)
         assertFalse(shown.breakOver)
         b.told { b.leader.end() }
-        assertFalse(withTimeout(10_000) { stage.uiState.first { it.followBreak == null } }.breakOver)
+        assertFalse(withTimeout(10_000) { stage.uiState.first { !it.loading } }.breakOver)
     }
 
     // ---- a follower who is editing, picking songs, receiving or importing isn't taken off that screen ----
