@@ -51,6 +51,15 @@ class LibraryRepository @Inject constructor(
     @ApplicationContext context: Context,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
+    private val pickPrefs = context.getSharedPreferences("setlist_pick", Context.MODE_PRIVATE)
+
+    /** The tags last chosen in "Add songs" of this setlist, so the next time it opens with the same filter. */
+    fun pickedTags(setId: String): Set<String> = pickPrefs.getStringSet(setId, null).orEmpty().toSet()
+
+    fun setPickedTags(setId: String, tags: Set<String>) {
+        pickPrefs.edit().apply { if (tags.isEmpty()) remove(setId) else putStringSet(setId, tags) }.apply()
+    }
+
     private val file = File(context.filesDir, "stagebook.json")
     private val backup = File(context.filesDir, "stagebook.json.bak")   // the version saved before the current one
     private val _library = MutableStateFlow(Library())
@@ -220,7 +229,10 @@ class LibraryRepository @Inject constructor(
 
     fun renameSetlist(id: String, name: String) = updateSet(id) { it.copy(name = name) }
 
-    fun deleteSetlist(id: String) = mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id == id }) }
+    fun deleteSetlist(id: String) {
+        setPickedTags(id, emptySet())
+        mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id == id }) }
+    }
 
     /** The song at [from] goes to [to] (positions among the songs); the breaks stay between the same songs. */
     fun moveItem(setId: String, from: Int, to: Int) = updateSet(setId) { s ->

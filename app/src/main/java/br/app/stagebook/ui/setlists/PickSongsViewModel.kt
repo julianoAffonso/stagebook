@@ -55,7 +55,7 @@ class PickSongsViewModel @Inject constructor(
     // order they were checked = order they go into the setlist
     private val selected = savedStateHandle.getStateFlow(KEY_SELECTED, ArrayList<String>())
     // building the setlist by tag: "only Brazilian songs" (user, 01/11)
-    private val chosenTags = MutableStateFlow(emptySet<String>())
+    private val chosenTags = MutableStateFlow(repository.pickedTags(setId))
 
     // the rows' key, tempo, capo and backing track, read the same way as the song list's
     private val facts = RowFactsReader().of(repository.library.map { it.songs })
@@ -84,7 +84,7 @@ class PickSongsViewModel @Inject constructor(
 
     fun onQueryChange(q: String) { query.value = q }
 
-    fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }
+    fun onTagsChange(tags: Set<String>) { chosenTags.value = tags; repository.setPickedTags(setId, tags) }
 
     private val _limit = MutableStateFlow(false)
     /** The checked song would go over what the QR can hold: it didn't go in, and the notice asks for a new setlist. */

@@ -32,7 +32,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -45,7 +47,8 @@ import br.app.stagebook.ui.theme.Spacing
 /**
  * A song of a setlist, on the setlist's screen and on the panel over the stage: where the show is on a strip at the
  * start edge (played, now, next), a small number and the title, which gets all the room left. [beforeNumber] is the
- * edit's drag handle or a selection's checkbox; without [stripRoom] it starts at the row's very edge.
+ * edit's drag handle or a selection's checkbox; without [stripRoom] it starts at the row's very edge. [dragZone], while
+ * editing, is the drag of the list: it takes a bigger area than the handle drawn, over the row's start.
  */
 @Composable
 fun SetlistSongRow(
@@ -61,6 +64,7 @@ fun SetlistSongRow(
     stripRoom: Boolean = true,
     dense: Boolean = false,
     beforeNumber: (@Composable () -> Unit)? = null,
+    dragZone: Modifier? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Box(modifier.clip(MaterialTheme.shapes.medium).alpha(if (state == SetlistShow.State.PLAYED) PLAYED_ALPHA else 1f)) {
@@ -92,6 +96,7 @@ fun SetlistSongRow(
             trailing = trailing,
         )
         if (state != SetlistShow.State.NONE) StateStrip(state, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
+        if (dragZone != null) SetlistDragZone(dragZone, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
     }
 }
 
@@ -129,16 +134,28 @@ private fun Modifier.vertical(): Modifier = layout { measurable, constraints ->
 }.rotate(-90f)
 
 /**
- * The handle a row is dragged by while editing a setlist ([drag] comes from the list): a narrow column at the row's
- * very edge, as tall as a touch target, so the title keeps the width.
+ * The handle drawn while editing a setlist: a narrow column at the row's very edge, so the title keeps the width. It
+ * only draws; the touch is the [SetlistDragZone] over it.
  */
 @Composable
-fun SetlistDragHandle(drag: Modifier, modifier: Modifier = Modifier) {
-    // its own element for a screen reader, as a button would be, not one more word of the row
-    Box(modifier.then(drag).size(width = DRAG_HANDLE, height = Sizes.touch).semantics(mergeDescendants = true) {}, contentAlignment = Alignment.Center) {
-        Icon(AppIcons.DragHandle, stringResource(R.string.set_reorder), Modifier.size(DRAG_ICON), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+fun SetlistDragHandle(modifier: Modifier = Modifier) {
+    Box(modifier.size(width = DRAG_HANDLE, height = Sizes.touch), contentAlignment = Alignment.Center) {
+        Icon(AppIcons.DragHandle, null, Modifier.size(DRAG_ICON), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+/**
+ * What a row is dragged by ([drag] comes from the list): invisible, as tall as the whole row and wider than the
+ * handle drawn (the finger missed the 32 dp one), over the number's room, which nothing taps while editing; the title
+ * is past it. Its own element for a screen reader, as a button would be, not one more word of the row.
+ */
+@Composable
+fun SetlistDragZone(drag: Modifier, modifier: Modifier = Modifier) {
+    val label = stringResource(R.string.set_reorder)
+    Box(modifier.width(DRAG_ZONE).fillMaxHeight().then(drag).testTag(DRAG_ZONE_TAG).semantics { contentDescription = label })
+}
+
+const val DRAG_ZONE_TAG = "set_drag_zone"
 
 /**
  * A break between two songs: a dashed outline. While editing, dragged by its [handle] like a song (in line with the
@@ -152,8 +169,9 @@ fun SetlistBreakRow(
 ) {
     val color = MaterialTheme.colorScheme.primary
     val shape = MaterialTheme.shapes.medium
+    Box(modifier.fillMaxWidth()) {
     Row(
-        modifier
+        Modifier
             .fillMaxWidth()
             .drawBehind {
                 val dash = Spacing.s.toPx()
@@ -168,7 +186,7 @@ fun SetlistBreakRow(
             .padding(start = if (handle != null) 0.dp else Spacing.m, end = Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (handle != null) SetlistDragHandle(handle)
+        if (handle != null) SetlistDragHandle()
         // with the handle, the word starts where the songs' titles do
         Text(
             if (timer != null) stringResource(R.string.set_break_time, br.app.stagebook.ui.components.breakClock(timer)) else stringResource(R.string.set_break),
@@ -181,6 +199,8 @@ fun SetlistBreakRow(
             Icon(AppIcons.RemoveCircle, stringResource(R.string.set_break_remove), tint = MaterialTheme.colorScheme.error)
         }
     }
+    if (handle != null) SetlistDragZone(handle, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
+    }
 }
 
 private val STATE_STRIP = Spacing.l
@@ -190,6 +210,7 @@ private const val NEXT_TINT = 0.16f
 private val BREAK_OUTLINE = 2.dp
 private val DRAG_HANDLE = Spacing.xl
 private val DRAG_ICON = 20.dp
+private val DRAG_ZONE = 56.dp
 
 @Composable
 private fun SetlistRowsSample() {
@@ -198,7 +219,7 @@ private fun SetlistRowsSample() {
         SetlistSongRow(2, "Hazard", "Richard Marx", SetlistShow.State.NOW, {}, trailing = { SongFacts("Em", 120, 0, true) })
         SetlistBreakRow(null, null)
         SetlistSongRow(3, "Tempo Perdido", "Legião Urbana", SetlistShow.State.NEXT, {})
-        SetlistSongRow(4, "Wild Horses", "The Rolling Stones", SetlistShow.State.NONE, {}, stripRoom = false, beforeNumber = { SetlistDragHandle(Modifier) })
+        SetlistSongRow(4, "Wild Horses", "The Rolling Stones", SetlistShow.State.NONE, {}, stripRoom = false, beforeNumber = { SetlistDragHandle() }, dragZone = Modifier)
         SetlistBreakRow(Modifier, {})
     }
 }
