@@ -37,6 +37,7 @@ fun KeyCapoControls(
     modifier: Modifier = Modifier,
     showCapo: Boolean = true,
     meta: SongMeta = remember(text) { Chords.meta(text) },
+    informational: Boolean = false,   // a PDF song: no chords to move, the key is only written down, so the steps are always on
 ) {
     // reading every chord of the song waits for a pause in typing (the saved key and capo come from [meta] right away;
     // audit 01/11)
@@ -57,8 +58,8 @@ fun KeyCapoControls(
             upLabel = stringResource(R.string.editor_transpose_up),
             onDown = { onTranspose(-1) },
             onUp = { onTranspose(1) },
-            downEnabled = hasChords,
-            upEnabled = hasChords,
+            downEnabled = hasChords || informational,
+            upEnabled = hasChords || informational,
         )
     }
     // keyboard doesn't use a capo (user's request, 29/10): no controls (the song's capo stays saved)

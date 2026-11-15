@@ -358,7 +358,16 @@ class SongEditorViewModel @Inject constructor(
      * Moves [semitones] half steps up or down: rewrites the chords and the saved key (chords above the lyrics become
      * ChordPro first).
      */
-    fun transpose(semitones: Int) = update(text = Chords.transposeSong(uiState.text, semitones))
+    fun transpose(semitones: Int) {
+        // a PDF song has no chords to move (its text is hidden and left as it is): the key is only written down, a step at a
+        // time, starting from C when none was (user, 15/11)
+        if (pdfInfo != null) {
+            val key = uiState.meta.key
+            update(text = Chords.setDirective(uiState.text, "key", if (key.isEmpty()) "C" else Chords.transposeKey(key, semitones)))
+            return
+        }
+        update(text = Chords.transposeSong(uiState.text, semitones))
+    }
 
     /** Capo: the chord diagrams stay the same (the sounding key changes). 0 removes the directive. */
     fun setCapo(capo: Int) = update(text = Chords.withCapo(uiState.text, capo))

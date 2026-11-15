@@ -3,6 +3,7 @@ package br.app.stagebook
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -188,6 +189,33 @@ class PdfEditorTest {
         }
     }
 
+    @Test fun `on a PDF song the key is written down a step at a time, and the hidden text is left alone`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, _) = open { it.saveSong(Song(title = "Chart", text = "{key: G}\n[G]letra [D]aqui", pdf = "p.pdf", pdfName = "p.pdf")) }
+            val chords = "[G]letra [D]aqui"
+            vm.transpose(1)
+            assertEquals(br.app.stagebook.domain.Chords.transposeKey("G", 1), vm.uiState.meta.key)
+            assertTrue("the chords were not moved", vm.uiState.text.contains(chords))
+            vm.transpose(-2)
+            assertEquals(br.app.stagebook.domain.Chords.transposeKey(br.app.stagebook.domain.Chords.transposeKey("G", 1), -2), vm.uiState.meta.key)
+            assertTrue(vm.uiState.text.contains(chords))
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `on a PDF song with no key the first step writes C`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, _, _) = open { it.saveSong(Song(title = "Chart", text = "só letra", pdf = "p.pdf", pdfName = "p.pdf")) }
+            vm.transpose(1)
+            assertEquals("C", vm.uiState.meta.key)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a refused PDF changes nothing and says why`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
@@ -285,6 +313,31 @@ class PdfEditorTest {
         assertEquals("right moved: $crop", 0.7f, crop.right, 0.05f)
         assertEquals(0f, crop.top, 0.001f)
         assertEquals(1f, crop.bottom, 0.001f)
+    }
+
+    @Test fun `after choosing This page only the frame still drags and saves for that page`() {
+        var set: br.app.stagebook.data.model.PdfCrop? = null
+        screen(saved, EditorPdf("a.pdf", pages = 3, bytes = 1_000), onSetCrop = { set = it })
+        compose.onNodeWithText("Recortar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Só esta página").performClick()
+        compose.waitForIdle()
+        val frame = compose.onNodeWithTag("pdf_crop_frame")
+        frame.performTouchInput { down(Offset(1f, height / 2f)); moveBy(Offset(width * 0.25f, 0f)); up() }
+        frame.performTouchInput { down(Offset(width / 2f, 1f)); moveBy(Offset(0f, height * 0.2f)); up() }
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
+        val crop = set!!
+        assertEquals(0, crop.page)
+        assertEquals("left: $crop", 0.25f, crop.left, 0.05f)
+        assertEquals("top: $crop", 0.2f, crop.top, 0.05f)
+    }
+
+    @Test fun `on a PDF song the key steps are on even with no chords to move`() {
+        screen(saved.copy(text = "só letra"), EditorPdf("a.pdf", pages = 1, bytes = 1_000))
+        compose.onNodeWithText("Dados").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Subir meio tom").assertIsEnabled()
     }
 
     @Test fun `a PDF whose file is gone has no Crop button`() {

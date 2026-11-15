@@ -558,7 +558,7 @@ private fun DataPane(
             }
             // key and capo (chords profile; keyboard has no capo, as before)
             if (look.chords) {
-                KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD, meta = uiState.meta)
+                KeyCapoControls(uiState.text, onTranspose, onCapo, showCapo = look.instrument != br.app.stagebook.data.model.Instrument.KEYBOARD, meta = uiState.meta, informational = pdf != null)
             }
             // tags and backing track side by side, as fields like the others; the track only with the player on (user, 30/10)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {

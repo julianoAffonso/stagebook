@@ -247,6 +247,8 @@ class PdfStageTest {
             }
         }
         compose.waitUntil(5_000) { count > 0 }
+        // the count comes before the first bitmap: wait for the page itself
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
     }
 
