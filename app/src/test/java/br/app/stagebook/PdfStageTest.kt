@@ -193,6 +193,17 @@ class PdfStageTest {
         assertTrue("moved: $before -> $after", after < before)
     }
 
+    @Test fun `a touch with a small wobble on an enlarged page does not move it`() {
+        showOpen(FakeSource(7))
+        pinch(out = true)
+        compose.waitForIdle()
+        val before = page().getBoundsInRoot().left
+        // 14 px at xxhdpi is well under a thumb's width: a tap by accident
+        page().performTouchInput { down(center); moveBy(Offset(-14f, 0f)); up() }
+        compose.waitForIdle()
+        assertEquals("the page stays", before.value, page().getBoundsInRoot().left.value, 0.5f)
+    }
+
     // ---- highlighter ----
 
     private fun showMarking(source: FakeSource, marking: Boolean, strokes: MutableList<Pair<Int, List<PdfPoint>>>) {
