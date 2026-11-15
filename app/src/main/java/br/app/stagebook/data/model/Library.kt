@@ -200,6 +200,8 @@ fun Song.claimOldZoom(screen: String): Song =
 @Serializable
 data class Look(
     val fontSp: Float = 30f,
+    // the library drawer stays open beside the stage (the pin on its top row; only where the screen is wide enough)
+    val drawerPinned: Boolean = false,
     val fg: Int = 0xFFFFFFFF.toInt(),
     val bg: Int = 0xFF000000.toInt(),
     val bold: Boolean = false,

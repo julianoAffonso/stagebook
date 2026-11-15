@@ -2,8 +2,6 @@ package br.app.stagebook.ui.home
 
 import br.app.stagebook.ui.settings.SettingsSection
 import br.app.stagebook.ui.components.LocalAppMessage
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Badge
 import androidx.compose.foundation.layout.Column
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -14,48 +12,27 @@ import br.app.stagebook.ui.components.LocalHomeStatus
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.ShortNavigationBarItemDefaults
-import androidx.compose.material3.WideNavigationRail
-import androidx.compose.ui.layout.layout
-import androidx.compose.material3.WideNavigationRailDefaults
-import androidx.compose.material3.WideNavigationRailItem
-import androidx.compose.material3.WideNavigationRailItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.movableContentOf
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import br.app.stagebook.R
 import br.app.stagebook.ui.components.AppIcons
-import br.app.stagebook.ui.components.ScreenInsets
 import br.app.stagebook.ui.setlists.SetlistsRoute
 import br.app.stagebook.ui.songs.SongsRoute
-import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -81,6 +58,8 @@ fun HomeScreen(
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},
     onShareSetlist: (String) -> Unit = {},
+    pinned: Boolean = false,   // the drawer is pinned beside the stage: the pin shows in its top row
+    onPin: (() -> Unit)? = null,
     onOpenSettings: (section: br.app.stagebook.ui.settings.SettingsSection?, alone: Boolean) -> Unit = { _, _ -> },   // alone: only that section, as About from the logo
     inboxVm: InboxViewModel = hiltViewModel(),
     homeVm: HomeViewModel = hiltViewModel(),
@@ -124,7 +103,7 @@ fun HomeScreen(
     val onTab: (HomeTab) -> Unit = { t -> if (t == HomeTab.SETTINGS) onOpenSettings(null, false) else picked = t }
     val openEssential = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.DEVICE, false) }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, onAbout = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.ABOUT, true) }) { m ->
+    br.app.stagebook.ui.drawer.DrawerFrame(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, pinned = pinned, onPin = onPin, onAbout = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.ABOUT, true) }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
@@ -173,136 +152,6 @@ fun HomeScreen(
         InboxDialog(inbox, onOpen = { listOpen = false; onOpenReceived(it) }, onDiscard = inboxVm::discard, onDismiss = { listOpen = false })
     }
 }
-
-/**
- * Tab frame, stateless, in Google's current pattern (Material 3 Expressive): on tablets the rail, with the app's logo
- * on top ([onAbout] when tapped); on phones the bottom bar. The content gets the Modifier with the remaining space.
- */
-@Composable
-fun HomeScaffold(
-    tab: HomeTab, onTabChange: (HomeTab) -> Unit, badges: Map<HomeTab, Int> = emptyMap(), onAbout: () -> Unit = {},
-    version: String = "",
-    content: @Composable (Modifier) -> Unit,
-) {
-    // number of band news on the tab icon (like new email)
-    val badged: @Composable (HomeTab) -> Unit = { t ->
-        val n = badges[t] ?: 0
-        if (n > 0) BadgedBox(badge = { Badge { Text(n.toString()) } }) { Icon(t.icon, contentDescription = null) }
-        else Icon(t.icon, contentDescription = null)
-    }
-    // one content for both layouts: a phone turned sideways moves from the bottom bar to the rail, and the tab's state
-    // (selection, search, scroll) goes along instead of starting over (device test B-01)
-    val currentContent by rememberUpdatedState(content)
-    val shared = remember { movableContentOf<Modifier> { m -> currentContent(m) } }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (maxWidth >= Sizes.railBreakpoint) {
-            Scaffold(contentWindowInsets = ScreenInsets, containerColor = MaterialTheme.colorScheme.background) { inner ->
-                Row(Modifier.padding(inner)) {
-                    // fixed rail with icon and name, the app's logo on top and the tabs right after it (user, 03/11: no
-                    // menu button, opening it only moved the same names beside their icons; centred tabs looked lost)
-                    WideNavigationRail(
-                        // the rail's own top space (44 dp) left the logo well below the screen's title: moved up so
-                        // the logo starts with it (user, 03/11)
-                        modifier = Modifier.layout { m, c ->
-                            val up = (RailTopSpace - Spacing.s).roundToPx()
-                            val p = m.measure(c.copy(minHeight = c.minHeight + up, maxHeight = if (c.hasBoundedHeight) c.maxHeight + up else c.maxHeight))
-                            layout(p.width, p.height - up) { p.place(0, -up) }
-                        },
-                        colors = WideNavigationRailDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-                        header = {
-                            // the launcher icon as the home screen shows it: its pages on black, in a rounded square,
-                            // centred over the tabs' icons (the collapsed rail is 96 dp wide)
-                            // and the name below it; tapping them opens About (user, 03/11), announced as a button (audit 03/11)
-                            androidx.compose.foundation.layout.Column(
-                                Modifier.width(96.dp).clip(MaterialTheme.shapes.medium)
-                                    .clickable(onClickLabel = stringResource(R.string.settings_about), role = androidx.compose.ui.semantics.Role.Button, onClick = onAbout)
-                                    .padding(vertical = Spacing.xs),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                androidx.compose.foundation.Image(
-                                    androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground),
-                                    contentDescription = null,
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                    modifier = Modifier.size(Sizes.railLogo).clip(MaterialTheme.shapes.medium)
-                                        .graphicsLayer { scaleX = 1.4f; scaleY = 1.4f },
-                                )
-                                Text(
-                                    stringResource(R.string.app_name),
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.padding(top = Spacing.s),
-                                )
-                                // the installed version, small and quiet (user, 03/11)
-                                if (version.isNotEmpty()) {
-                                    Text(
-                                        version,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                    ) {
-                        HomeTab.entries.forEach { t ->
-                            WideNavigationRailItem(
-                                selected = tab == t,
-                                onClick = { onTabChange(t) },
-                                icon = { badged(t) },
-                                label = { Text(stringResource(t.label)) },
-                                railExpanded = false,
-                                colors = railColors(),
-                            )
-                        }
-                    }
-                    shared(Modifier.weight(1f))
-                }
-            }
-        } else {
-            Scaffold(
-                contentWindowInsets = ScreenInsets,
-                containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
-                    val lift = br.app.stagebook.ui.components.LocalMessageLift.current
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    androidx.compose.runtime.DisposableEffect(lift) { onDispose { lift.bottom = 0.dp } }
-                    ShortNavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        // the app's message shows above the tabs, not over them (B-29)
-                        modifier = Modifier.onSizeChanged { lift.bottom = with(density) { it.height.toDp() } },
-                    ) {
-                        HomeTab.entries.forEach { t ->
-                            ShortNavigationBarItem(
-                                selected = tab == t,
-                                onClick = { onTabChange(t) },
-                                icon = { badged(t) },
-                                label = { Text(stringResource(t.label), maxLines = 1) },
-                                colors = barColors(),
-                            )
-                        }
-                    }
-                },
-            ) { inner -> Box(Modifier.padding(inner)) { shared(Modifier.fillMaxSize()) } }
-        }
-    }
-}
-
-/** Top space the Material wide rail keeps above its header (collapsed rail token). */
-private val RailTopSpace = 44.dp
-
-// selected tab shows only icon and name in the accent color, no background pill (simple icons across the app)
-@Composable
-private fun railColors() = WideNavigationRailItemDefaults.colors(
-    selectedIndicatorColor = Color.Transparent,
-    selectedIconColor = MaterialTheme.colorScheme.primary,
-    selectedTextColor = MaterialTheme.colorScheme.primary,
-)
-
-@Composable
-private fun barColors() = ShortNavigationBarItemDefaults.colors(
-    selectedIndicatorColor = Color.Transparent,
-    selectedIconColor = MaterialTheme.colorScheme.primary,
-    selectedTextColor = MaterialTheme.colorScheme.primary,
-)
 
 /** Alert on open: what is off, as a list, and the link that goes straight to Settings → Essential mode. */
 @Composable

@@ -34,7 +34,7 @@ import br.app.stagebook.ui.importer.ImportScreen
 import br.app.stagebook.ui.importer.ImportUiState
 import br.app.stagebook.ui.editor.SongEditorScreen
 import br.app.stagebook.ui.editor.SongEditorUiState
-import br.app.stagebook.ui.home.HomeScaffold
+import br.app.stagebook.ui.drawer.DrawerFrame
 import br.app.stagebook.ui.home.HomeTab
 import br.app.stagebook.domain.SetlistShow
 import br.app.stagebook.ui.setlists.SetItemUi
@@ -69,6 +69,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.background
 
 /**
  * Screenshots to check the look without a device: `./gradlew recordRoborazziDebug` saves to
@@ -120,6 +123,17 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
+    /** The library drawer as the person sees it: [content] in its frame, over the dimmed stage (87% of a phone's width, at most 420 dp). */
+    @Composable
+    private fun DrawerShot(tab: HomeTab, badges: Map<HomeTab, Int> = emptyMap(), content: @Composable (Modifier) -> Unit) {
+        val width = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.87f).dp.coerceAtMost(420.dp)
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f))) {
+            Surface(Modifier.width(width).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                DrawerFrame(tab, {}, badges = badges, version = "0.1.1234", content = content)
+            }
+        }
+    }
+
     /** Settings is a page of its own (no tabs under it): the screen fills the page. */
     @Composable
     private fun SettingsPage(content: @Composable (Modifier) -> Unit) = content(Modifier.fillMaxSize())
@@ -127,12 +141,12 @@ class ScreenshotTest {
     @Composable
     private fun Songs(modifier: Modifier = Modifier) = SongsScreen(songs, "", {}, {}, {}, {}, modifier)
 
-    @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { HomeScaffold(HomeTab.SONGS, {}, version = "0.1.674") { Songs(it) } }
+    @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { DrawerShot(HomeTab.SONGS) { Songs(it) } }
 
     // no internet: Import unavailable, with the crossed cloud and the notice
     @Test @Config(qualifiers = PHONE)
     fun homeSongsOfflinePhone() = shoot("celular_1_musicas_sem_internet") {
-        HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(songs, "", {}, {}, {}, {}, it, online = false) }
+        DrawerShot(HomeTab.SONGS) { SongsScreen(songs, "", {}, {}, {}, {}, it, online = false) }
     }
 
     @Test @Config(qualifiers = PHONE)
@@ -146,19 +160,19 @@ class ScreenshotTest {
 
     @Test @Config(qualifiers = PHONE)
     fun homeSongsFilteredPhone() = shoot("celular_1_musicas_filtradas") {
-        HomeScaffold(HomeTab.SONGS, {}) {
+        DrawerShot(HomeTab.SONGS) {
             SongsScreen(songs.copy(songs = songs.songs.take(2), chosenTags = setOf(s("Nacional")), tags = listOf(s("Internacional"), s("Nacional"))), "", {}, {}, {}, {}, it)
         }
     }
 
     @Test fun homeSongsFilteredTablet() = shoot("tablet_1_musicas_filtradas") {
-        HomeScaffold(HomeTab.SONGS, {}) {
+        DrawerShot(HomeTab.SONGS) {
             SongsScreen(songs.copy(songs = songs.songs.take(2), chosenTags = setOf(s("Nacional")), tags = listOf(s("Internacional"), s("Nacional"))), "", {}, {}, {}, {}, it)
         }
     }
 
     @Test @Config(qualifiers = PHONE)
-    fun homeSongsPhone() = shoot("celular_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+    fun homeSongsPhone() = shoot("celular_1_musicas") { DrawerShot(HomeTab.SONGS) { Songs(it) } }
 
     // a library long enough for the A to Z index (made-up songs): grouped as the view model groups them
     private val manySongs = run {
@@ -187,7 +201,7 @@ class ScreenshotTest {
 
     // the list taken to the letter C by its index, which is on screen as while the list is scrolled
     private fun shootSongsIndex(name: String) {
-        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { SongsScreen(manySongs, "", {}, {}, {}, {}, it, indexPinned = true) } } } }
+        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { SongsScreen(manySongs, "", {}, {}, {}, {}, it, indexPinned = true) } } } }
         compose.onNodeWithTag("letter_index_C", useUnmergedTree = true).performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
@@ -199,14 +213,14 @@ class ScreenshotTest {
     fun homeSongsIndexPhone() = shootSongsIndex("celular_1_musicas_indice")
 
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {
-        HomeScaffold(HomeTab.SETLISTS, {}) {
+        DrawerShot(HomeTab.SETLISTS) {
             SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
         }
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistsPhone() = shoot("celular_2_setlists") {
-        HomeScaffold(HomeTab.SETLISTS, {}) {
+        DrawerShot(HomeTab.SETLISTS) {
             SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
         }
     }
@@ -256,10 +270,10 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
-    @Test fun setlistJourney1List() = journey("jornada_setlist_1_lista", { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } })
+    @Test fun setlistJourney1List() = journey("jornada_setlist_1_lista", { DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it) } })
 
     // V19: the card's ⋮ with Edit, Share, Rename and Delete (no pencil, no Lead the band)
-    private fun cardMenu(name: String) = journey(name, { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
+    private fun cardMenu(name: String) = journey(name, { DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
         compose.onAllNodesWithContentDescription(str(R.string.action_more))[1].performClick()
     }
 
@@ -272,7 +286,7 @@ class ScreenshotTest {
     private fun armed(name: String) = journey(name, {
         androidx.compose.foundation.layout.Column {
             Box(Modifier.weight(1f)) {
-                HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it, conduct = br.app.stagebook.ui.setlists.ConductButtonUi(shown = true, armed = true)) }
+                DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it, conduct = br.app.stagebook.ui.setlists.ConductButtonUi(shown = true, armed = true)) }
             }
             br.app.stagebook.ui.band.ConductBar(br.app.stagebook.ui.band.ConductUi.Armed, {}, {}, {}, {})
         }
@@ -283,13 +297,13 @@ class ScreenshotTest {
 
     @Test fun setlistJourney1cArmedTablet() = armed("jornada_setlist_1c_conduzir_armado_tablet")
 
-    @Test fun setlistJourney2Select() = journey("jornada_setlist_2_selecionar", { HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
+    @Test fun setlistJourney2Select() = journey("jornada_setlist_2_selecionar", { DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
         compose.onNodeWithText("Casamento").performClick()
     }
 
     @Test fun setlistJourney2bShare() = journey("jornada_setlist_2b_compartilhar_varios", {
-        HomeScaffold(HomeTab.SETLISTS, {}) { SetlistsScreen(sets, {}, {}, {}, {}, it, online = true, band = 2, songsIn = { ids -> ids.size * 20 }) }
+        DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it, online = true, band = 2, songsIn = { ids -> ids.size * 20 }) }
     }) {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
         compose.onNodeWithText("Casamento").performClick()
@@ -317,7 +331,7 @@ class ScreenshotTest {
     })
 
     @Test fun setlistJourney6FromSongs() = journey("jornada_setlist_6_das_musicas", {
-        HomeScaffold(HomeTab.SONGS, {}) {
+        DrawerShot(HomeTab.SONGS) {
             SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", s("Show de sábado")), br.app.stagebook.ui.songs.SetPick("3", "Casamento"))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
         }
     }) {
@@ -730,7 +744,7 @@ class ScreenshotTest {
 
     // T03: the app in English (the base), to check the translation
     @Test @Config(qualifiers = "en-w1280dp-h800dp-land-hdpi")
-    fun englishSongsTablet() = shoot("ingles_1_musicas") { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+    fun englishSongsTablet() = shoot("ingles_1_musicas") { DrawerShot(HomeTab.SONGS) { Songs(it) } }
 
     @Test @Config(qualifiers = "en-w1280dp-h800dp-land-hdpi")
     fun englishSettingsTablet() = shoot("ingles_2_ajustes_essencial") {
@@ -738,25 +752,25 @@ class ScreenshotTest {
     }
 
     @Test fun essentialAlertTablet() = shoot("tablet_1_aviso_essencial") {
-        HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+        DrawerShot(HomeTab.SONGS) { Songs(it) }
         br.app.stagebook.ui.home.EssentialAlert(Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false), {}, {})
     }
 
     @Test @Config(qualifiers = PHONE)
     fun essentialAlertPhone() = shoot("celular_1_aviso_essencial") {
-        HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+        DrawerShot(HomeTab.SONGS) { Songs(it) }
         br.app.stagebook.ui.home.EssentialAlert(Look(bandOn = false, internetOn = false, playerMode = false, extrasOn = false), {}, {})
     }
 
     @Test fun someOffAlertTablet() = shoot("tablet_1_aviso_desligadas") {
-        HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+        DrawerShot(HomeTab.SONGS) { Songs(it) }
         br.app.stagebook.ui.home.EssentialAlert(Look(bandOn = false, extrasOn = false), {}, {})
     }
 
     @Test fun essentialBannerTablet() = shoot("tablet_1_musicas_essencial") {
         // the leaf next to the title instead of a strip (user, 01/11)
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 0, {}, {})) {
-            HomeScaffold(HomeTab.SONGS, {}) { Songs(it) }
+            DrawerShot(HomeTab.SONGS) { Songs(it) }
         }
     }
 
@@ -819,7 +833,7 @@ class ScreenshotTest {
     fun updateOfferPhone() {
         compose.setContent {
             StagebookTheme {
-                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { Songs(it) } }
                 br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.1210 (abc1234)", skippedNotes), {}, {}, {}, {})
             }
         }
@@ -831,7 +845,7 @@ class ScreenshotTest {
     @Test fun updateOfferTablet() {
         compose.setContent {
             StagebookTheme {
-                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { Songs(it) } }
                 br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Available("0.1.1210 (abc1234)", notes), {}, {}, {}, {})
             }
         }
@@ -843,7 +857,7 @@ class ScreenshotTest {
     @Test fun updateReadyAutoBlockerTablet() {
         compose.setContent {
             StagebookTheme {
-                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { Songs(it) } }
                 br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Ready(java.io.File("update.apk")), {}, {}, {}, {}, onAutoBlocker = {})
             }
         }
@@ -855,7 +869,7 @@ class ScreenshotTest {
     fun updateReadyAutoBlockerPhone() {
         compose.setContent {
             StagebookTheme {
-                Surface(color = MaterialTheme.colorScheme.background) { HomeScaffold(HomeTab.SONGS, {}) { Songs(it) } }
+                Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { Songs(it) } }
                 br.app.stagebook.ui.AppUpdateDialog(br.app.stagebook.data.UpdateOffer.Ready(java.io.File("update.apk")), {}, {}, {}, {}, onAutoBlocker = {})
             }
         }
@@ -1668,20 +1682,20 @@ class ScreenshotTest {
     // ---- loose songs: selection on the Songs tab and the receiver ----
     @Test @Config(qualifiers = PHONE)
     fun songsSelectPhone() = shoot("jornada_musicas_1_selecao") {
-        HomeScaffold(HomeTab.SONGS, {}) {
+        DrawerShot(HomeTab.SONGS) {
             br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
         }
     }
 
     @Test fun songsSelectTablet() = shoot("jornada_musicas_1_selecao_tablet") {
-        HomeScaffold(HomeTab.SONGS, {}) {
+        DrawerShot(HomeTab.SONGS) {
             br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, initialSelection = songs.songs.take(2).map { s -> s.id })
         }
     }
 
     // one song selected and Delete tapped: the question names the song
     private fun deleteOne(name: String) = journey(name, {
-        HomeScaffold(HomeTab.SONGS, {}) {
+        DrawerShot(HomeTab.SONGS) {
             br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, initialSelection = songs.songs.take(1).map { s -> s.id })
         }
     }) {
@@ -1699,7 +1713,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScaffold(HomeTab.SONGS, {}) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
+                    DrawerShot(HomeTab.SONGS) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
                 }
             }
         }
@@ -1712,7 +1726,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScaffold(HomeTab.SONGS, {}) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
+                    DrawerShot(HomeTab.SONGS) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
                 }
             }
         }
@@ -1794,7 +1808,7 @@ class ScreenshotTest {
     fun inboxBannerPhone() = shoot("jornada_banda_4_aviso") {
         // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
-            HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
+            DrawerShot(HomeTab.SETLISTS, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
                 SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
             }
         }
@@ -1802,7 +1816,7 @@ class ScreenshotTest {
 
     @Test fun inboxBannerTablet() = shoot("jornada_banda_4_aviso_tablet") {
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
-            HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
+            DrawerShot(HomeTab.SETLISTS, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
                 SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
             }
         }
@@ -2032,7 +2046,7 @@ class ScreenshotTest {
 
     // Fire in portrait
     @Test @Config(qualifiers = TABLET_PORTRAIT)
-    fun homeSongsTabletPortrait() = shoot("tablet_em_pe_1_musicas") { HomeScaffold(HomeTab.SONGS, {}, version = "0.1.674") { Songs(it) } }
+    fun homeSongsTabletPortrait() = shoot("tablet_em_pe_1_musicas") { DrawerShot(HomeTab.SONGS) { Songs(it) } }
 
     @Test @Config(qualifiers = TABLET_PORTRAIT)
     fun stageTabletPortrait() = shoot("tablet_em_pe_6_palco") { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }

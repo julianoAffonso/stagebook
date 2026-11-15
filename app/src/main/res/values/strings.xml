@@ -15,6 +15,11 @@
     <!-- tabs -->
     <string name="tab_songs">Songs</string>
     <string name="tab_setlists">Setlists</string>
+    <string name="base_title">Pick a song</string>
+    <string name="base_text">Open the menu to choose a song or a setlist, or to bring new ones in.</string>
+    <string name="drawer_open">Open the menu</string>
+    <string name="drawer_pin">Keep the menu open</string>
+    <string name="drawer_unpin">Let the menu close</string>
     <string name="tab_settings">Settings</string>
 
     <plurals name="settings_pedal_reset">

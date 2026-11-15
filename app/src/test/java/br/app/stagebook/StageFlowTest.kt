@@ -42,6 +42,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 
 /** Turning pages and songs on stage the way the pedal does, including mid-animation. */
 @RunWith(RobolectricTestRunner::class)
@@ -264,6 +265,26 @@ class StageFlowTest {
         compose.onNodeWithContentDescription("Voltar").performClick()
         compose.waitForIdle()
         assertEquals(1, back)
+    }
+
+    // the library drawer (user, 15/11): the header's first button opens it, in a show too, and asks nothing
+    @Test fun `with the drawer the first button opens it without asking and does not leave`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f), live = true)
+        var back = 0
+        var menu = 0
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = { back++ }, onMenu = { menu++ }) } }
+        compose.onNodeWithContentDescription("Abrir o menu").performClick()
+        compose.waitForIdle()
+        assertEquals(1, menu)
+        assertEquals(0, back)
+        assertEquals("the arrow is gone: the menu took its place", 0, compose.onAllNodesWithContentDescription("Voltar").fetchSemanticsNodes().size)
+    }
+
+    @Test fun `with the drawer pinned beside the stage the header has no first button`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = {}, leadingButton = false) } }
+        assertEquals(0, compose.onAllNodesWithContentDescription("Voltar").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithContentDescription("Abrir o menu").fetchSemanticsNodes().size)
     }
 
     @Test fun `dragging left goes to the next page`() {

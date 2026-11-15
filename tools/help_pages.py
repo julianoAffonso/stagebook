@@ -44,11 +44,11 @@ SECTIONS = [
     {
         "id": "musicas", "pt": "Músicas", "en": "Songs",
         "text_pt": [
-            "A aba Músicas é a sua biblioteca. Tocando numa música, ela abre no palco. Nova música começa uma em branco, e Importar traz de outros lugares.",
+            "O menu é a sua biblioteca: toque no primeiro botão do alto do palco (as três barras) e ele abre por cima, ocupando quase toda a largura, com três abas embaixo: Músicas, Setlists e Ajustes. Ajustes abre uma página à parte. No tablet, o alfinete do alto fixa o menu ao lado do palco. Tocar fora do menu, ou no voltar do Android, fecha. A aba Músicas é a lista. Tocando numa música, ela abre no palco. Nova música começa uma em branco, e Importar traz de outros lugares.",
             "Cada música mostra o nome e, embaixo, o artista. Na ponta da linha fica o tom e, embaixo dele, o BPM, o capo e uma marca de onda de áudio quando tem backing track. Só aparece o que a música tem. Um nome comprido fica numa linha só.",
         ],
         "text_en": [
-            "The Songs tab is your library. Tap a song and it opens on stage. New song starts a blank one, and Import brings them from elsewhere.",
+            "The menu is your library: tap the first button at the top of the stage (the three bars) and it opens over it, taking most of the width, with three tabs at the bottom: Songs, Setlists and Settings. Settings opens a page of its own. On a tablet, the pin at the top keeps the menu open beside the stage. Tapping outside the menu, or Android's back, closes it. The Songs tab is the list. Tap a song and it opens on stage. New song starts a blank one, and Import brings them from elsewhere.",
             "Each song shows its name and, under it, the artist. At the end of the row is the key and, under it, the BPM, the capo and an audio wave mark when it has a backing track. Only what the song has shows. A long name stays on one line.",
         ],
         "figs": [Fig(("tablet_1_musicas", "celular_1_musicas", "A lista de músicas", "The song list"))],
@@ -287,11 +287,11 @@ SECTIONS = [
         "id": "palco", "pt": "Palco", "en": "Stage",
         "text_pt": [
             "No palco a letra aparece grande, com a cifra e as partes. Num setlist, o topo mostra a posição, como 2 de 12, e o fim da música mostra a próxima. Enquanto o palco está aberto, nada aparece por cima: o que a banda mandar fica esperando.",
-            "Ao abrir o app, ele já volta ao palco onde você parou: a última música, ou o último setlist, na música em que o show estava. Se aquela música ou setlist foi apagada, o app abre nas listas, como antes. Voltar do palco leva às listas.",
+            "Ao abrir o app, ele já volta ao palco onde você parou: a última música, ou o último setlist, na música em que o show estava. Se aquela música ou setlist foi apagada, o app abre sem palco, com o menu aberto. O primeiro botão do alto do palco abre o menu (veja Músicas); o voltar do Android, com o menu fechado, sai do app, e antes pergunta se você está num show.",
         ],
         "text_en": [
             "On stage the lyrics show large, with the chords and parts. In a setlist, the top shows the position, like 2 of 12, and the end of the song shows the next one. While the stage is open nothing pops up over it: whatever the band sends waits.",
-            "When you open the app, it goes back to the stage where you left off: the last song, or the last setlist, on the song the show was on. If that song or setlist was deleted, the app opens on the lists, as before. Back from the stage goes to the lists.",
+            "When you open the app, it goes back to the stage where you left off: the last song, or the last setlist, on the song the show was on. If that song or setlist was deleted, the app opens with no stage and the menu open. The first button at the top of the stage opens the menu (see Songs); Android's back, with the menu closed, leaves the app, asking first if you are in a show.",
         ],
         "figs": [Fig(("tablet_6_palco", "celular_7_palco", "O palco", "The stage")),
                  Fig(("tablet_6_palco_cifra", "celular_7_palco_cifra", "Com a cifra", "With chords"))],

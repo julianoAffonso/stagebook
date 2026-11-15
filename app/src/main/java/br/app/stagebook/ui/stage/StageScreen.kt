@@ -176,6 +176,7 @@ private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itsel
 @Composable
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
+    onEmptied: (() -> Unit)? = null,   // the library lost every song under the stage: where to go (default: [onBack])
     fromList: Boolean = false,   // opened from the Songs list: the editor steps through that list
     onBack: (() -> Unit)? = null,
     onEditSetlist: (setId: String) -> Unit = {},
@@ -265,7 +266,7 @@ fun StageRoute(
         )
     }
     val playerNote = rememberPlayerNote(playerUi.message, viewModel::playerNoticeFresh)
-    val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
+    val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { (onEmptied ?: onBack)?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
         val config = androidx.compose.ui.platform.LocalConfiguration.current
         val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp, uiState.look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL)
@@ -288,6 +289,8 @@ fun StageRoute(
             },
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
+            onMenu = br.app.stagebook.ui.drawer.LocalDrawer.current?.takeIf { !it.pinned }?.open,
+            leadingButton = br.app.stagebook.ui.drawer.LocalDrawer.current?.pinned != true,
             setlistActions = SetlistActions(
                 onConduct = viewModel::conductBand,
                 onShare = { uiState.setlist?.id?.let(onShareSetlist) },
@@ -425,6 +428,8 @@ fun StageScreen(
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     note: String = "",
     onBack: (() -> Unit)? = null,
+    onMenu: (() -> Unit)? = null,   // the library drawer: the header's first button opens it instead of leaving
+    leadingButton: Boolean = true,   // false: the drawer is pinned beside the stage, nothing to open or leave by
     setlistActions: SetlistActions = SetlistActions(),
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
@@ -886,7 +891,10 @@ fun StageScreen(
         Row(Modifier.fillMaxWidth().offset(x = Spacing.m - Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
-            if (onBack != null) {
+            if (!leadingButton) {
+            } else if (onMenu != null) {
+                br.app.stagebook.ui.components.BackButton(onMenu, tint = fg.copy(alpha = 0.6f), menu = true)
+            } else if (onBack != null) {
                 br.app.stagebook.ui.components.BackButton({ leave() }, tint = fg.copy(alpha = 0.6f))
             }
             // the texts on one baseline among themselves, the group centred on the arrow's line (with the arrow in the
