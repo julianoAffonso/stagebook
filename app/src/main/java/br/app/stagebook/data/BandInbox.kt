@@ -38,6 +38,8 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         /** Setlist name; empty = loose songs. */
         val setName: String get() = text.split('\n').getOrNull(2).orEmpty()
         val songCount: Int get() = text.split('\n').getOrNull(1)?.trim()?.toIntOrNull() ?: songs.size
+        /** The songs that came without the PDF they were sent with, because it didn't pass the check ([SetlistCloud.SharedSong.pdfProblem]). */
+        val pdfRefused: List<SetlistCloud.SharedSong> get() = songs.filter { it.pdfProblem.isNotEmpty() }
         /** Came from a newer Stagebook: it can only be reviewed after updating. */
         val newer: Boolean get() = text == SetlistCloud.NEWER
     }

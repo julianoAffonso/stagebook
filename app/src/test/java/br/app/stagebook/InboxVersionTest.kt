@@ -167,7 +167,7 @@ class InboxVersionTest {
     @Test fun `this app reads a Hello with no v as 2 and with v as written`() {
         assertEquals(2, json.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""").v)
         assertEquals(3, json.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k","v":3}""").v)
-        assertEquals(3, json.decodeFromString<BandProtocol.Hello>(json.encodeToString(BandProtocol.Hello.serializer(), identity.hello())).v)
+        assertEquals(BandProtocol.VERSION, json.decodeFromString<BandProtocol.Hello>(json.encodeToString(BandProtocol.Hello.serializer(), identity.hello())).v)
     }
 
     @Test fun `the request for missing songs rides with a notice the published app shows as update, and this app drops`() {

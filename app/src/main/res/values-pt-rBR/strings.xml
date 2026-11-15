@@ -918,6 +918,11 @@
     <string name="band_deny">Não autorizar</string>
     <!-- caixa de entrada: o que a banda mandou -->
     <string name="inbox_setlist">%1$s enviou o setlist \"%2$s\"</string>
+    <plurals name="inbox_pdf_refused">
+        <item quantity="one">\"%1$s\" chegou sem o PDF. %3$s</item>
+        <item quantity="many">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>
+        <item quantity="other">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>
+    </plurals>
     <plurals name="inbox_songs">
         <item quantity="one">%1$s enviou %2$d música</item>
         <item quantity="many">%1$s enviou %2$d músicas</item>

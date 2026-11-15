@@ -193,7 +193,6 @@ class Backup @Inject constructor(
                 lost = repository.lostAudio.value
                 // the replaced library's tracks don't stay on the disk
                 tracks.sweep(repository.library.value.songs.mapTo(HashSet()) { it.track })
-                pdfs.sweep(repository.library.value.songs.mapTo(HashSet()) { it.pdf })
             }
             if (Part.SETTINGS in parts) settings?.let { st ->
                 st["look"]?.let { repository.updateLook { _ -> json.decodeFromJsonElement(Look.serializer(), st["look"]!!) } }

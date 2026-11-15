@@ -15,7 +15,9 @@ import java.io.Writer
  * with the pair key; the receiver answers [Kind.OK].
  */
 object BandProtocol {
-    const val VERSION = 3   // 2: "Lead the band" (Kind.CONDUCT); 3: setlist breaks, break timer, missing-songs request (user, 14/11)
+    // 2: "Lead the band" (Kind.CONDUCT); 3: setlist breaks, break timer, missing-songs request (user, 14/11); 4: a song's
+    // PDF travels in the band package (SharedSong.pdf, 15/11)
+    const val VERSION = 4
 
     /**
      * The `v` of a package (band package, pair inbox package): the lowest version that reads it without losing anything.
@@ -24,9 +26,12 @@ object BandProtocol {
      */
     const val PACKAGE_BASE = 2
     const val BREAKS_VERSION = 3
+    /** A package with a PDF inside: a version-3 app drops the PDF and the key it doesn't know, so it says "update the app" instead. */
+    const val PDF_VERSION = 4
 
     /** The `v` to write on a package whose setlist travels as [packed] (see [SharedBreaks]). */
-    fun packageVersion(packed: ByteArray): Int = if (SharedBreaks.carries(packed)) BREAKS_VERSION else PACKAGE_BASE
+    fun packageVersion(packed: ByteArray, carriesPdf: Boolean = false): Int =
+        if (carriesPdf) PDF_VERSION else if (SharedBreaks.carries(packed)) BREAKS_VERSION else PACKAGE_BASE
 
     /**
      * Who the device is: id, name, public key, the protocol version ([v]) and the app's ([app], for the screen). A missing

@@ -41,15 +41,18 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
     }
 
     /** Saves the bytes that came by the band under a new generated name, after the same check; refused leaves nothing. */
-    suspend fun saveChecked(songId: String, bytes: ByteArray, inspector: PdfInspector): PdfAttach = withContext(Dispatchers.IO) {
-        if (!looksLikePdf(bytes)) return@withContext PdfAttach.Refused(PdfProblem.NOT_PDF)
-        if (bytes.size > MAX_BYTES) return@withContext PdfAttach.Refused(PdfProblem.TOO_BIG)
+    suspend fun saveChecked(songId: String, bytes: ByteArray, inspector: PdfInspector): PdfAttach =
+        withContext(Dispatchers.IO) { saveCheckedNow(songId, bytes, inspector) }
+
+    /** [saveChecked] for a caller already off the main thread (the band's session thread). */
+    fun saveCheckedNow(songId: String, bytes: ByteArray, inspector: PdfInspector): PdfAttach {
+        if (!looksLikePdf(bytes)) return PdfAttach.Refused(PdfProblem.NOT_PDF)
+        if (bytes.size > MAX_BYTES) return PdfAttach.Refused(PdfProblem.TOO_BIG)
         val tmp = newFile(songId, "part")
-        try {
+        return try {
             tmp.writeBytes(bytes)
             finish(tmp, inspector)
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
             tmp.delete()
             PdfAttach.Refused(PdfProblem.UNREADABLE)
         }
@@ -83,7 +86,7 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
     }.getOrNull().orEmpty().ifEmpty { uri.lastPathSegment.orEmpty() }.substringAfterLast('/')
 
     companion object {
-        const val MAX_BYTES = 8L * 1024 * 1024
+        const val MAX_BYTES = br.app.stagebook.domain.BandContent.MAX_PDF_BYTES
         const val SWEEP_AGE_MS = 24L * 60 * 60 * 1000
         val MIME = arrayOf("application/pdf")
         private val MAGIC = "%PDF-".toByteArray(Charsets.US_ASCII)

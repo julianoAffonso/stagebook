@@ -891,6 +891,10 @@
         <item quantity="one">%1$s sent %2$d song</item>
         <item quantity="other">%1$s sent %2$d songs</item>
     </plurals>
+    <plurals name="inbox_pdf_refused">
+        <item quantity="one">\"%1$s\" came without its PDF. %3$s</item>
+        <item quantity="other">%2$d songs came without their PDF. For \"%1$s\": %3$s</item>
+    </plurals>
     <string name="inbox_newer">%1$s sent something from a newer Stagebook. Update the app to check it.</string>
     <string name="inbox_open">Check</string>
     <string name="inbox_title">Received from the band</string>

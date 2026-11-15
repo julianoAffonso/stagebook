@@ -221,7 +221,7 @@ class ConductBreakLiveTest {
 
     @Test fun `the pause field came with the raised protocol version (3), and a message that makes no sense is no break`() {
         // the field is only added and ignored by whoever doesn't know it, so devices on the same version keep talking
-        assertEquals(3, BandProtocol.VERSION)
+        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
         // a message that makes no sense: paused with no break is no break
         assertNull(Conduct.Msg(Conduct.OPEN, songs = listOf(Conduct.Item("A"), Conduct.Item("B")), index = 0, breakMs = -1, breakPaused = true).rest)
         assertFalse(Conduct.Msg(Conduct.OPEN, songs = listOf(Conduct.Item("A"), Conduct.Item("B")), index = 0, breakMs = -1, breakPaused = true).restPaused)

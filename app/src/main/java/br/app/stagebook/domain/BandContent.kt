@@ -19,6 +19,17 @@ object BandContent {
     const val MAX_INTERNET_MESSAGES = 60
     const val MAX_BAND_SETS = 30
 
+    /** A song's PDF: at most this many bytes, on the network and on disk (the same limit as the file picked in the editor). */
+    const val MAX_PDF_NAME = 120   // a PDF's name that came with a song, to show
+    const val MAX_PDF_BYTES = 8L * 1024 * 1024
+
+    /**
+     * The PDFs' bytes that fit in one band package. The package is one line of at most [BandProtocol.MAX_MESSAGE] (20 MB)
+     * characters, and a PDF is written twice over in base64 (inside the package's JSON, then when the package is
+     * encrypted): 16/9 of its size. A MB is kept for the texts. About 10.7 MB of PDFs go in one package.
+     */
+    const val PDF_PACKAGE_BYTES = (BandProtocol.MAX_MESSAGE - 1024 * 1024) / 16 * 9L
+
     /** Does a send by code fit? [lists]: setlists (loose songs are one list); [songs]: songs carried along. */
     fun internetFits(lists: Int, songs: Int): Boolean = 1 + lists + songs <= MAX_INTERNET_MESSAGES && songs <= MAX_SONGS
 

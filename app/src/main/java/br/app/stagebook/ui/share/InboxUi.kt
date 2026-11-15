@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.app.stagebook.R
 import br.app.stagebook.data.BandInbox
+import br.app.stagebook.data.text
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.LightPreview
@@ -57,10 +58,16 @@ class InboxViewModel @Inject constructor(
 
 /** "Ana sent the setlist Saturday show": what arrived, in one line (the list and the short message on the tabs). */
 @Composable
-fun itemText(item: BandInbox.Item) =
-    if (item.newer) stringResource(R.string.inbox_newer, item.fromName)
+fun itemText(item: BandInbox.Item): String {
+    val line = if (item.newer) stringResource(R.string.inbox_newer, item.fromName)
     else if (item.setName.isEmpty()) pluralStringResource(R.plurals.inbox_songs, item.songCount, item.fromName, item.songCount)
     else stringResource(R.string.inbox_setlist, item.fromName, item.setName)
+    // a PDF that didn't pass the check was left out: the song came without it, and the line says which and why
+    val refused = item.pdfRefused
+    if (refused.isEmpty()) return line
+    val why = refused.first().problem?.text(androidx.compose.ui.platform.LocalContext.current).orEmpty()
+    return line + " " + pluralStringResource(R.plurals.inbox_pdf_refused, refused.size, refused.first().title, refused.size, why)
+}
 
 /** "Received from the band": everything not reviewed yet; tapping opens the review, the trash can discards. */
 @Composable

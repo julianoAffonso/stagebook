@@ -303,7 +303,7 @@ class ConductMissingSongsTest {
     @Test fun `the messages are the ones the published app reads`() {
         val b = Band()
         val json = Json { ignoreUnknownKeys = true }
-        assertEquals("the version was raised for the new fields", 3, BandProtocol.VERSION)
+        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
         // what the leader sends: a band package as before, with a list that has no name (loose songs)
         val (packed, shared) = SetlistCloud.looseSongs(b.leaderRepo.library.value.songs)!!
         val wire = json.parseToJsonElement(b.leaderLink.packageBytes(packed, shared).decodeToString()).jsonObject

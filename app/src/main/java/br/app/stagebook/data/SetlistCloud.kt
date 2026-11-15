@@ -32,9 +32,23 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
      * profile).
      */
     @Serializable
-    data class SharedSong(val title: String, val author: String = "", val year: String = "", val text: String = "") {
+    data class SharedSong(
+        val title: String, val author: String = "", val year: String = "", val text: String = "",
+        // the song's PDF. [pdf]: its bytes in base64, only on the wire between band devices (never kept, never in the
+        // inbox); [pdfName]: its own name, to show. [pdfFile]: the file in THIS device's PdfStore: on the sender, what to
+        // read at send time; on the receiver, what was checked and saved. The wire never carries it (see [forWire]).
+        // [pdfProblem]: a [PdfProblem] name, when what came was left out; the inbox says why
+        val pdf: String = "", val pdfName: String = "", val pdfFile: String = "", val pdfProblem: String = "",
+    ) {
         /** Only lyrics/chords in plain text and song-sized (see [br.app.stagebook.domain.BandContent]). */
         fun allowed() = br.app.stagebook.domain.BandContent.songOk(title, author, year, text)
+
+        /** The same song with nothing about a PDF (what the internet and the QR carry, for now). */
+        fun forWire(): SharedSong = if (pdf.isEmpty() && pdfName.isEmpty() && pdfFile.isEmpty() && pdfProblem.isEmpty()) this
+        else copy(pdf = "", pdfName = "", pdfFile = "", pdfProblem = "")
+
+        /** Which problem [pdfProblem] names, if any. */
+        val problem: br.app.stagebook.data.PdfProblem? get() = br.app.stagebook.data.PdfProblem.entries.firstOrNull { it.name == pdfProblem }
     }
 
     /** [skipped]: songs too big for one message (rare), which didn't go. [from]: the band name it went with (for the link). */
@@ -108,7 +122,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         // the sender goes along (encrypted): whoever accepts saves this device as "band"
         if (!post(keys.topic, ShareCode.encrypt(keys.key, pack(ID_MARK, json.encodeToString(identity.hello(lists.maxOfOrNull(BandProtocol::packageVersion) ?: BandProtocol.PACKAGE_BASE)))))) return@withContext null
         for (song in songs) {
-            val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song)))
+            val body = ShareCode.encrypt(keys.key, pack(SONG_MARK, json.encodeToString(song.forWire())))
             when {
                 body.length > MAX_MESSAGE -> skipped++
                 post(keys.topic, body) -> sent++
@@ -180,7 +194,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         val breaks = packs.mapNotNull { (list, p) -> br.app.stagebook.domain.SharedBreaks.read(p, list)?.let { list to it } }.toMap()
         val text = lists.firstOrNull()
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
-            .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
+            .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS).map { it.forWire() }   // the internet carries no PDF yet
         val from = plain.firstNotNullOfOrNull { unpack(ID_MARK, it) }?.let(::hello)
         val inviteBodies = plain.mapNotNull { unpack(INVITE_MARK, it) }
         val invite = inviteBodies.isNotEmpty()
@@ -252,7 +266,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
 
     /** A package for a pair's inbox, before splitting into chunks and encrypting. */
     internal fun pairPackage(list: ByteArray, songs: List<SharedSong>): ByteArray =
-        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs, BandProtocol.packageVersion(list))))
+        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs.map { it.forWire() }, BandProtocol.packageVersion(list))))
 
     internal fun openPairPackage(bytes: ByteArray): Opened? {
         // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
@@ -261,7 +275,7 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
         if (pkg.list.isEmpty()) return null   // the "update" notice that rides with a request: nothing to open
         val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
         val text = QrPayload.unpack(packed) ?: return null
-        return Opened(text, pkg.songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
+        return Opened(text, pkg.songs.map { it.forWire() }, br.app.stagebook.domain.SharedBreaks.read(packed, text))
     }
 
     @Serializable
@@ -362,7 +376,8 @@ class SetlistCloud @Inject constructor(private val repository: LibraryRepository
     }.getOrNull()
 
     companion object {
-        private fun br.app.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text)
+        // the PDF goes as its file's name: the bytes are read only when a package leaves for the band (BandLink)
+        private fun br.app.stagebook.data.model.Song.shared() = SharedSong(title, author, year, text, pdfName = if (pdf.isEmpty()) "" else pdfName, pdfFile = pdf)
 
         /** [songs] as loose songs: a list with no name (how the receiver knows they aren't a setlist) and their texts. */
         fun looseSongs(songs: List<br.app.stagebook.data.model.Song>): Pair<ByteArray, List<SharedSong>>? {
