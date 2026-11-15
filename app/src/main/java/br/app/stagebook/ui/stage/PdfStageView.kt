@@ -105,6 +105,8 @@ fun PdfStageView(
     marking: Boolean = false,
     markColor: Color = Color(0xFFFFEB3B),
     onStroke: (page: Int, points: List<PdfPoint>) -> Unit = { _, _ -> },
+    view: br.app.stagebook.domain.PdfView = br.app.stagebook.domain.PdfView(),
+    onView: (br.app.stagebook.domain.PdfView) -> Unit = {},
 ) {
     when (open) {
         PdfOpen.Loading -> Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
@@ -120,9 +122,9 @@ fun PdfStageView(
                 val widthPx = constraints.maxWidth
                 val heightPx = constraints.maxHeight
                 val density = LocalDensity.current
-                // the zoom and where the page was moved to: back to the whole page on every page (turning is not zoomed)
-                var scale by remember(pages, at) { mutableFloatStateOf(1f) }
-                var offset by remember(pages, at) { mutableStateOf(Offset.Zero) }
+                // the zoom and where the page was moved to: kept with the song, and every page opens as the last one was left
+                var scale by remember(pages) { mutableFloatStateOf(view.scale.coerceAtLeast(1f)) }
+                var offset by remember(pages) { mutableStateOf(Offset(view.panX * widthPx, view.panY * heightPx)) }
                 // the stroke under the finger, before it is kept
                 var live by remember(pages, at) { mutableStateOf(emptyList<PdfPoint>()) }
                 // the page's size on the screen: as large as it fits, drawn once and kept while the zoom changes the sharpness
@@ -208,6 +210,7 @@ fun PdfStageView(
                                 if (marking && !pinching && stroke.isNotEmpty()) onStrokeNow(at, stroke.toList())
                                 live = emptyList()
                                 if (scale < 1.02f) { scale = 1f; offset = Offset.Zero }
+                                onView(br.app.stagebook.domain.PdfView(scale, offset.x / widthPx, offset.y / heightPx))
                             }
                         },
                     Alignment.Center,

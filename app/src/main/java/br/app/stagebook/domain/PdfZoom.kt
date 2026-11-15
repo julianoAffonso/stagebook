@@ -11,6 +11,9 @@ import kotlin.math.sqrt
  * The page is drawn at the width it takes on the screen times a whole number (its [bucket]), so it stays sharp when
  * enlarged, but never past [MAX_PIXELS]: a weak tablet has no room for a page of 100 MB.
  */
+/** How a PDF song is shown on the stage, kept with the song: the zoom and where the page was moved to (shares of the box's size). */
+data class PdfView(val scale: Float = 1f, val panX: Float = 0f, val panY: Float = 0f)
+
 object PdfZoom {
     const val MAX_SCALE = 4f
     /** The most pixels a drawn page may have (about 24 MB as a bitmap). */

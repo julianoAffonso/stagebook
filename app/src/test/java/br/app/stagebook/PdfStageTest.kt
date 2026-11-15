@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.assertCountEquals
@@ -142,6 +143,31 @@ class PdfStageTest {
         pinch(out = false)
         compose.waitForIdle()
         assertEquals(whole.value, page().getBoundsInRoot().width.value, 1f)
+    }
+
+    @Test fun `the zoom made is handed back to be kept`() {
+        var kept: br.app.stagebook.domain.PdfView? = null
+        var count = 0
+        compose.setContent {
+            StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(FakeSource(7))), 0, invert = false, onPageCount = { count = it }, onView = { kept = it }) }
+        }
+        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        pinch(out = true)
+        compose.waitForIdle()
+        assertTrue("the zoom was handed back: $kept", (kept?.scale ?: 1f) > 1.2f)
+    }
+
+    @Test fun `a page opens with the zoom saved for the song`() {
+        var count = 0
+        compose.setContent {
+            StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(FakeSource(7))), 0, invert = false, onPageCount = { count = it }, view = br.app.stagebook.domain.PdfView(2f, 0f, 0f)) }
+        }
+        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        val box = compose.onRoot().getBoundsInRoot().width
+        assertTrue("enlarged past the box: ${page().getBoundsInRoot().width} in $box", page().getBoundsInRoot().width > box * 1.2f)
     }
 
     @Test fun `the page never goes past the zoom its pixels allow`() {

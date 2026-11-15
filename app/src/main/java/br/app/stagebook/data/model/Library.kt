@@ -48,6 +48,10 @@ data class Song(
     val pdf: String = "",
     val pdfName: String = "",
     val pdfMarks: List<PdfMark> = emptyList(),
+    // the zoom and the move of the PDF on the stage, kept as the person left them (every page opens as the last one was)
+    val pdfScale: Float = 1f,
+    val pdfPanX: Float = 0f,
+    val pdfPanY: Float = 0f,
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()

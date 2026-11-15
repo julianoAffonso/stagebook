@@ -297,6 +297,7 @@ fun StageRoute(
             pdfFile = pdfStore::file,
             onPdfInvert = viewModel::setPdfInvert,
             onDrawerHandle = viewModel::setDrawerHandle,
+            onPdfView = viewModel::setPdfView,
             onPdfStroke = viewModel::addPdfStroke,
             onPdfUndo = viewModel::undoPdfStroke,
             onPdfClear = viewModel::clearPdfPage,
@@ -435,6 +436,7 @@ fun StageScreen(
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
     onPdfInvert: (Boolean) -> Unit = {},
     onDrawerHandle: (Float) -> Unit = {},
+    onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
     onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },
     onPdfUndo: (songId: String, page: Int) -> Unit = { _, _ -> },
     onPdfClear: (songId: String, page: Int) -> Unit = { _, _ -> },
@@ -1102,6 +1104,8 @@ fun StageScreen(
                         open, current, look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
                         marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
                         onStroke = { page, points -> onPdfStroke(song.id, page, points) },
+                        view = song.pdfView,
+                        onView = { onPdfView(song.id, it) },
                     )
                     trackOverlays()
                     // the highlighter's bar: what to do, undo, clear the page, and the way out

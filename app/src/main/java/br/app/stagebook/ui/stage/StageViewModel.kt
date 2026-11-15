@@ -36,6 +36,7 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     val artist: String = "",   // for the setlist's panel, whose rows leave the year out ([meta] is the header's: artist and year)
     val pdf: String = "",   // the name of the song's PDF file ("" = it is lyrics and chords): the stage draws its pages
     val pdfMarks: List<br.app.stagebook.data.model.PdfMark> = emptyList(),   // the highlighter strokes on its pages
+    val pdfView: br.app.stagebook.domain.PdfView = br.app.stagebook.domain.PdfView(),   // its zoom and place, as the person left them
 ) {
     /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
     fun onScreen(screen: String): StageSong {
@@ -220,6 +221,10 @@ class StageViewModel @Inject constructor(
     /** A highlighter stroke made on a page of the song's PDF. */
     fun addPdfStroke(songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) =
         repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.add(it.pdfMarks, page, points)) }
+
+    /** The PDF's zoom and place on the stage, kept with the song. */
+    fun setPdfView(songId: String, view: br.app.stagebook.domain.PdfView) =
+        repository.updateSong(songId) { it.copy(pdfScale = view.scale, pdfPanX = view.panX, pdfPanY = view.panY) }
 
     /** The last stroke made on [page] goes. */
     fun undoPdfStroke(songId: String, page: Int) =
@@ -436,7 +441,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty(), pdfView = s?.let { br.app.stagebook.domain.PdfView(it.pdfScale, it.pdfPanX, it.pdfPanY) } ?: br.app.stagebook.domain.PdfView())
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),
