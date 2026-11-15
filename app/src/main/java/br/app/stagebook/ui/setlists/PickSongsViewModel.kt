@@ -39,6 +39,7 @@ data class PickSongsUiState(
     val setName: String = "",
     val rows: List<PickRowUi> = emptyList(),
     val selectedCount: Int = 0,
+    val inSetCount: Int = 0,   // the songs the setlist already has: the numbers of the ones chosen go on from there
     val tags: List<String> = emptyList(),
     val chosenTags: Set<String> = emptySet(),
 )
@@ -73,11 +74,11 @@ class PickSongsViewModel @Inject constructor(
                 fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true,
             )
         }
-        PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, tags = all, chosenTags = kept)
+        PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, inSetCount = set?.items?.size ?: 0, tags = all, chosenTags = kept)
     }
 
     val uiState: StateFlow<PickSongsUiState> = combine(filtered, selected) { f, sel ->
-        val place = HashMap<String, Int>(sel.size * 2).also { m -> sel.forEachIndexed { i, id -> m[id] = i + 1 } }
+        val place = HashMap<String, Int>(sel.size * 2).also { m -> sel.forEachIndexed { i, id -> m[id] = f.inSetCount + i + 1 } }
         f.copy(rows = f.rows.map { r -> place[r.id]?.let { r.copy(selected = true, order = it) } ?: r }, selectedCount = sel.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PickSongsUiState())
 

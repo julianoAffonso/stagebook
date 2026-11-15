@@ -80,6 +80,11 @@ class PickSongsRowsTest {
                 assertEquals(true, vm.toggle(ids[0]))
                 val picked = state { it.selectedCount == 2 }
                 assertEquals(listOf("Primeira", "Segunda"), picked.rows.filter { it.selected }.map { it.title }.sorted())
+                // the numbers go on from the songs the setlist already has (one): the first chosen is the 2nd, the next the 3rd
+                assertEquals(1, picked.inSetCount)
+                assertEquals(2, picked.rows.first { it.title == "Segunda" }.order)
+                assertEquals(3, picked.rows.first { it.title == "Primeira" }.order)
+                assertEquals(0, picked.rows.first { it.title == "Terceira" }.order)
                 vm.confirm()
                 assertEquals(listOf(ids[2], ids[1], ids[0]), repo.library.value.setlist(set)!!.items)
                 job.cancel()
