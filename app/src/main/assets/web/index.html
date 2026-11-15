@@ -179,6 +179,7 @@
         <p id="set-pick" class="muted"></p>
         <div id="set-form" class="stack" hidden>
           <div><label for="set-name" data-t="setName"></label><input id="set-name"></div>
+          <div><label for="set-date" data-t="setDate"></label><input id="set-date" type="date"></div>
           <ol class="items" id="set-items"></ol>
           <p id="set-empty" class="muted" hidden></p>
           <div class="row" style="align-items: center"><button class="outline" id="set-break-add"></button><span id="set-break-hint" class="muted"></span></div>
@@ -663,6 +664,7 @@ async function openSet(id) {
 function showSet(set) {
   currentSet = { ...set, breaks: set.breaks || [] };
   $("set-name").value = set.name;
+  $("set-date").value = set.date || "";
   $("set-form").hidden = false;
   $("set-pick").hidden = true;
   $("set-delete").hidden = !set.id;
@@ -873,8 +875,9 @@ async function runOnce(run, busy) {
 }
 // The breaks go only when this page changed them (or the songs they sit between): a page opened before the musician
 // put a break on the tablet would erase it by sending its old list. Without the field, the tablet keeps its own.
-function setBody(name, set, breaksTouched) {
+function setBody(name, set, breaksTouched, date) {
   const body = { name, items: set.songs.map((s) => s.id) };
+  if (date !== undefined) body.date = date;   // "" takes the day off; left out keeps the tablet's
   if (breaksTouched) body.breaks = breakNorm(set.breaks, set.songs.length);
   return body;
 }
@@ -888,7 +891,7 @@ let breaksTouched = false;   // set by the buttons that move or take out songs a
 
 async function saveSet() {
   return runOnce(async () => {
-    const body = setBody($("set-name").value, currentSet, breaksTouched);
+    const body = setBody($("set-name").value, currentSet, breaksTouched, $("set-date").value);
     const id = currentSet.id;
     const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
     if (!r) return offline();
@@ -903,8 +906,9 @@ async function saveSet() {
   }, (on) => ($("set-save").disabled = on));
 }
 
-$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [] }); };
+$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [], date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) }); };
 $("set-name").oninput = () => (dirty = true);
+$("set-date").oninput = () => (dirty = true);
 $("set-add-search").oninput = drawSetAdd;
 $("set-break-add").onclick = () => { breaksTouched = true; currentSet.breaks = breakAdd(currentSet.breaks, currentSet.songs.length); dirty = true; drawSet(); };
 $("set-save").onclick = saveSet;

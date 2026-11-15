@@ -61,12 +61,18 @@ data class Setlist(
     // breaks: each is "before the song at this position" (1 to items.size - 1), sorted; see SetlistBreaks. An older
     // app version doesn't know the key and reads the setlist without them
     val breaks: List<Int> = emptyList(),
+    // the show's day, "yyyy-MM-dd" ("" = none: a setlist from before this existed). Local to this library: it doesn't travel
+    // with the setlist (band, QR, code), a received one takes the day it arrived
+    val date: String = "",
 ) {
     /** The same setlist with only the breaks that fit its songs (a file edited by hand, or saved by another version). */
     fun withValidBreaks(): Setlist = br.app.stagebook.domain.SetlistBreaks.normalise(breaks, items.size).let { if (it === breaks) this else copy(breaks = it) }
 
     companion object {
         /** A new setlist with no name given: the date and time ("01/11/2026 21:30"). */
+        /** Today as the setlist's date: "2026-11-15". */
+        fun today(): String = java.time.LocalDate.now().toString()
+
         fun defaultName(): String = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date())
     }
 }

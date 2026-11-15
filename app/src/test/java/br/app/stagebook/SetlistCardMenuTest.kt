@@ -57,7 +57,7 @@ class SetlistCardMenuTest {
 
     @Test fun `the menu has Edit, Share, Rename and Delete in this order, and no Lead the band`() {
         screen(); open()
-        val names = listOf("Editar setlist", "Compartilhar", "Renomear", "Apagar o setlist")
+        val names = listOf("Editar setlist", "Compartilhar", "Editar nome e data", "Apagar o setlist")
         val tops = names.map { compose.onNodeWithText(it).getUnclippedBoundsInRoot().top }
         assertEquals(tops.sorted(), tops)
         assertEquals(4, tops.toSet().size)
@@ -89,7 +89,7 @@ class SetlistCardMenuTest {
         var actions = emptyList<MenuAction>()
         compose.setContent { StagebookTheme { actions = setlistCardActions({}, {}, { renamed++ }, {}) } }
         compose.waitForIdle()
-        assertEquals(listOf("Editar setlist", "Compartilhar", "Renomear", "Apagar o setlist"), actions.map { it.label })
+        assertEquals(listOf("Editar setlist", "Compartilhar", "Editar nome e data", "Apagar o setlist"), actions.map { it.label })
         actions[2].onClick()
         assertEquals(1, renamed)
     }

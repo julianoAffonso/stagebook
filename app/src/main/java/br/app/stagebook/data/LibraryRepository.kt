@@ -218,9 +218,9 @@ class LibraryRepository @Inject constructor(
     fun deleteSong(id: String) = deleteSongs(listOf(id))
 
     // ---- setlists ----
-    fun createSetlist(name: String): String {
+    fun createSetlist(name: String, date: String = Setlist.today()): String {
         val id = newId()
-        mutate { it.copy(sets = listOf(Setlist(id = id, name = name)) + it.sets) }
+        mutate { it.copy(sets = listOf(Setlist(id = id, name = name, date = date)) + it.sets) }
         return id
     }
 
@@ -228,6 +228,12 @@ class LibraryRepository @Inject constructor(
         mutate { lib -> lib.copy(sets = lib.sets.map { if (it.id == id) change(it) else it }) }
 
     fun renameSetlist(id: String, name: String) = updateSet(id) { it.copy(name = name) }
+
+    /** The setlist's show day ("yyyy-MM-dd", "" = none); anything else that isn't a date is left out. */
+    fun setSetlistDate(id: String, date: String) {
+        val clean = date.takeIf { it.isEmpty() || runCatching { java.time.LocalDate.parse(it) }.isSuccess } ?: return
+        updateSet(id) { it.copy(date = clean) }
+    }
 
     fun deleteSetlist(id: String) {
         setPickedTags(id, emptySet())

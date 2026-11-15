@@ -196,14 +196,14 @@ class ScreenshotTest {
 
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {
         HomeScaffold(HomeTab.SETLISTS, {}) {
-            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
         }
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistsPhone() = shoot("celular_2_setlists") {
         HomeScaffold(HomeTab.SETLISTS, {}) {
-            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
         }
     }
 
@@ -243,7 +243,7 @@ class ScreenshotTest {
     }
 
     // setlist journey (user, 01/11): list, select, inside, select songs, add songs with the tag filter, add from Songs
-    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6), SetlistRowUi("3", "Casamento", 22)))
+    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"), SetlistRowUi("3", "Casamento", 22, "2026-10-03")))
 
     private fun journey(name: String, content: @Composable () -> Unit, then: () -> Unit = {}) {
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
@@ -1791,7 +1791,7 @@ class ScreenshotTest {
         // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
-                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
             }
         }
     }
@@ -1799,7 +1799,7 @@ class ScreenshotTest {
     @Test fun inboxBannerTablet() = shoot("jornada_banda_4_aviso_tablet") {
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             HomeScaffold(HomeTab.SETLISTS, {}, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
-                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15), SetlistRowUi("2", "18/10/2026 20:30", 6))), {}, {}, {}, {}, it)
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
             }
         }
     }

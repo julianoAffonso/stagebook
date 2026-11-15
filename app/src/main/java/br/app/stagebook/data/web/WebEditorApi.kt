@@ -4,6 +4,7 @@ import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.model.Song
 import br.app.stagebook.domain.Chords
 import br.app.stagebook.domain.SetlistBreaks
+import br.app.stagebook.domain.byShowDay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -76,7 +77,7 @@ class WebEditorApi(
     private data class Created(val setlist: String)
 
     @Serializable
-    data class SetItem(val id: String, val name: String, val count: Int)
+    data class SetItem(val id: String, val name: String, val count: Int, val date: String = "")
 
     /** The Setlists tab's order, the same choice on the tablet, in the browser and for the assistants. */
     @Serializable
@@ -87,14 +88,14 @@ class WebEditorApi(
      * positions of its breaks: 1..n-1, a break before the song at that place (0-based), as in the app.
      */
     @Serializable
-    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList(), val breaks: List<Int> = emptyList())
+    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList(), val breaks: List<Int> = emptyList(), val date: String = "")
 
     /**
      * [items] null (a client that doesn't send songs) keeps the setlist's songs and breaks; an empty list empties it.
      * [breaks] null (a client that doesn't know them) keeps the breaks the setlist has, as the app does when songs are replaced.
      */
     @Serializable
-    data class SetSave(val name: String = "", val items: List<String>? = null, val breaks: List<Int>? = null)
+    data class SetSave(val name: String = "", val items: List<String>? = null, val breaks: List<Int>? = null, val date: String? = null)
 
     @Serializable
     data class BackupInfo(val token: String, val parts: List<String>, val songs: Int, val newer: Boolean)
@@ -378,13 +379,14 @@ class WebEditorApi(
         set.id, set.name,
         set.items.map { id -> repository.song(id)?.let(::item) ?: SongItem(id, "", "", "", "") },
         SetlistBreaks.normalise(set.breaks, set.items.size),
+        set.date,
     )
 
     /** The setlists in the order the tab shows them, newest first or A to Z. */
     private fun setRows(): List<SetItem> {
         val lib = repository.library.value
-        val rows = lib.sets.map { SetItem(it.id, it.name, it.items.size) }
-        return if (lib.look.setsAbc) br.app.stagebook.domain.TextKey.sorted(rows) { it.name } else rows
+        val rows = lib.sets.map { SetItem(it.id, it.name, it.items.size, it.date) }
+        return if (lib.look.setsAbc) br.app.stagebook.domain.TextKey.sorted(rows) { it.name } else rows.byShowDay { it.date }
     }
 
     private fun setsOrder(req: HttpRequest): HttpResponse {
@@ -397,7 +399,7 @@ class WebEditorApi(
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         val name = d.name.trim().ifEmpty { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
         if (!breaksOk(d)) return problem("bad_breaks")
-        val id = repository.createSetlist(name)
+        val id = repository.createSetlist(name, d.date?.takeIf { it.isEmpty() || runCatching { java.time.LocalDate.parse(it) }.isSuccess } ?: br.app.stagebook.data.model.Setlist.today())
         if (!d.items.isNullOrEmpty()) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }
@@ -407,6 +409,7 @@ class WebEditorApi(
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         if (!breaksOk(d, repository.library.value.setlist(id)?.items?.size ?: 0)) return problem("bad_breaks")
         if (d.name.isNotBlank()) repository.renameSetlist(id, d.name.trim())
+        d.date?.let { repository.setSetlistDate(id, it) }
         if (d.items != null || d.breaks != null) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }

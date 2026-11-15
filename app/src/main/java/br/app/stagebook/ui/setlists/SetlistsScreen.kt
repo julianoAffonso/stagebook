@@ -82,6 +82,8 @@ fun SetlistsRoute(
         uiState = uiState,
         // double tap on OK created two setlists: after the first one the screen is already leaving
         onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name)) } },
+        onCreateAt = { name, date -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name, date)) } },
+        onEdit = viewModel::edit,
         // found what they were looking for: coming back the whole list shows, as in Songs
         onOpen = { query = ""; onOpen(it) },
         // tapping a setlist opens its stage where the show stopped (an empty one has nothing to play: the edit)
@@ -145,6 +147,9 @@ fun SetlistsScreen(
     onSortAbc: (Boolean) -> Unit = {},
     query: String = "",
     onQueryChange: (String) -> Unit = {},
+    // the new-setlist window also asks for the day, the edit window for name and day (the defaults keep a caller without a day working)
+    onCreateAt: (name: String, date: String) -> Unit = { name, _ -> onCreate(name) },
+    onEdit: (id: String, name: String, date: String) -> Unit = { id, name, _ -> onRename(id, name) },
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
@@ -207,16 +212,30 @@ fun SetlistsScreen(
             val topBefore = atTop   // read while composing the change, before the list is measured with the new items
             androidx.compose.runtime.LaunchedEffect(firstId) { if (topBefore) listState.scrollToItem(0) }
             br.app.stagebook.ui.components.ScrollToTopOn("${uiState.abc}|${uiState.query}", listState)
+            val locale: java.util.Locale = androidx.compose.ui.platform.LocalConfiguration.current.locales.get(0)
             Crossfade(targetState = uiState.loading, label = "sets") { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.total == 0 -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
                     uiState.sets.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.sets_not_found), "")
                     else -> LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.l)) {
-                        items(uiState.sets, key = { it.id }) { set ->
+                        // newest first: one heading per month (and "No date" for the old ones); in A to Z, no headings
+                        val groups = if (uiState.abc) listOf("-" to uiState.sets) else setlistMonths(uiState.sets)
+                        groups.forEach { (month, rows) ->
+                        if (!uiState.abc) item(key = "month-$month") {
+                            Text(
+                                if (month.isEmpty()) stringResource(R.string.sets_no_date) else monthTitle(month, locale),
+                                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = Spacing.s).animateItem(),
+                            )
+                        }
+                        items(rows, key = { it.id }) { set ->
                             SongListItem(
                                 title = set.name,
-                                subtitle = br.app.stagebook.ui.components.songCountText(set.count),
+                                subtitle = listOfNotNull(
+                                    br.app.stagebook.ui.components.songCountText(set.count),
+                                    dayText(set.date, locale),
+                                ).joinToString(" · "),
                                 onClick = { if (selecting) toggle(set.id) else if (set.count > 0) onPlay(set.id) else onOpen(set.id) },
                                 onLongClick = { toggle(set.id) },
                                 leading = if (selecting) { { androidx.compose.material3.Checkbox(set.id in selected, { toggle(set.id) }) } } else null,
@@ -230,27 +249,30 @@ fun SetlistsScreen(
                                 },
                             )
                         }
+                        }
                     }
                 }
             }
         }
     }
     if (creating) {
-        TextInputDialog(
+        SetlistEditDialog(
             title = stringResource(R.string.sets_new),
-            initial = "",
-            placeholder = stringResource(R.string.sets_name_hint),
-            onConfirm = onCreate,
+            name = "",
+            date = br.app.stagebook.data.model.Setlist.today(),
+            namePlaceholder = stringResource(R.string.sets_name_hint),
+            onConfirm = onCreateAt,
             onDismiss = { creating = false },
         )
     }
     renamingId?.let { id ->
         val set = uiState.sets.firstOrNull { it.id == id }
-        if (set != null) TextInputDialog(
-            title = stringResource(R.string.sets_rename),
-            initial = set.name,
-            placeholder = stringResource(R.string.sets_name),
-            onConfirm = { renamingId = null; onRename(id, it) },
+        if (set != null) SetlistEditDialog(
+            title = stringResource(R.string.sets_edit_title),
+            name = set.name,
+            date = set.date,
+            namePlaceholder = stringResource(R.string.sets_name),
+            onConfirm = { name, date -> renamingId = null; onEdit(id, name, date) },
             onDismiss = { renamingId = null },
         )
     }
@@ -293,7 +315,7 @@ fun SetlistsScreen(
 internal fun setlistCardActions(onEdit: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
     MenuAction(stringResource(R.string.set_edit), AppIcons.Edit, onEdit),
     MenuAction(stringResource(R.string.share_title), AppIcons.Share, onShare),
-    MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, onRename),
+    MenuAction(stringResource(R.string.sets_edit), AppIcons.Rename, onRename),
     MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, onDelete, danger = true),
 )
 

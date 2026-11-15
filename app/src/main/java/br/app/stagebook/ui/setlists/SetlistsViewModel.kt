@@ -7,6 +7,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.app.stagebook.data.Connectivity
+import br.app.stagebook.domain.byShowDay
 import br.app.stagebook.data.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import br.app.stagebook.domain.QrPayload
@@ -19,7 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @Immutable
-data class SetlistRowUi(val id: String, val name: String, val count: Int)
+data class SetlistRowUi(val id: String, val name: String, val count: Int, val date: String = "")
 
 @Immutable
 data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false, val total: Int = sets.size, val query: String = "")
@@ -39,7 +40,16 @@ internal fun conductButton(bandOn: Boolean, role: br.app.stagebook.data.BandCond
  * key, as tags and songs are sorted (a Collator here was a second way of doing it; audit 03/11).
  */
 fun setlistOrder(sets: List<SetlistRowUi>, abc: Boolean): List<SetlistRowUi> =
-    if (abc) br.app.stagebook.domain.TextKey.sorted(sets) { it.name } else sets
+    if (abc) br.app.stagebook.domain.TextKey.sorted(sets) { it.name }
+    // by show day, newest first, the ones with no day last; the stored order (newest created first) breaks ties
+    else sets.byShowDay { it.date }
+
+/** The month a date falls in ("2026-11"), "" when the setlist has no date. */
+fun monthOf(date: String): String = if (date.length >= 7) date.substring(0, 7) else ""
+
+/** The list in month groups, in the order given: one group per run of the same month, "" = no date. */
+fun setlistMonths(sets: List<SetlistRowUi>): List<Pair<String, List<SetlistRowUi>>> =
+    sets.groupBy { monthOf(it.date) }.toList()
 
 /** The setlists whose name has the search, ignoring case and accents as the song search does. */
 fun setlistSearch(sets: List<SetlistRowUi>, query: String): List<SetlistRowUi> {
@@ -113,13 +123,19 @@ class SetlistsViewModel @Inject constructor(
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library, query.debounce(::typingDelay)) { loaded, lib, q ->
-        val rows = setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size) }, lib.look.setsAbc)
+        val rows = setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size, it.date) }, lib.look.setsAbc)
         SetlistsUiState(!loaded, setlistSearch(rows, q), lib.look.setsAbc, lib.sets.size, q)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistsUiState())
 
     /** Empty name = current date and time. Returns the id to open the new setlist. */
-    fun create(name: String): String =
-        repository.createSetlist(name.ifBlank { br.app.stagebook.data.model.Setlist.defaultName() })
+    fun create(name: String, date: String = br.app.stagebook.data.model.Setlist.today()): String =
+        repository.createSetlist(name.ifBlank { br.app.stagebook.data.model.Setlist.defaultName() }, date)
+
+    /** Name and show day from the edit window. */
+    fun edit(id: String, name: String, date: String) {
+        rename(id, name)
+        repository.setSetlistDate(id, date)
+    }
 
     fun delete(id: String) = repository.deleteSetlist(id)
 

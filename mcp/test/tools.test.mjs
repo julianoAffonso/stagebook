@@ -97,6 +97,19 @@ test("setlists: create, read, update keeps what wasn't passed", async () => {
   assert.equal(tablet.sets.get(id).name, "Sunday night");
 });
 
+test("setlists: the show date is created, read, changed, taken off and kept when not passed", async () => {
+  const id = (await call("create_setlist", { name: "Dated", song_ids: ["s1"], date: "2026-12-24" })).json.created;
+  assert.equal((await call("get_setlist", { id })).json.date, "2026-12-24");
+  await call("update_setlist", { id, name: "Dated again" });
+  assert.equal(tablet.sets.get(id).date, "2026-12-24");
+  await call("update_setlist", { id, date: "2027-01-02" });
+  assert.equal(tablet.sets.get(id).date, "2027-01-02");
+  await call("update_setlist", { id, date: "" });
+  assert.equal(tablet.sets.get(id).date, "");
+  const bad = await mcp.callTool({ name: "update_setlist", arguments: { id, date: "tomorrow" } });
+  assert.equal(bad.isError, true);
+});
+
 test("setlists: breaks are read, created, replaced and kept", async () => {
   const id = (await call("create_setlist", { name: "Two sets", song_ids: ["s1", "s1", "s1"], breaks: [2] })).json.created;
   assert.deepEqual(tablet.sets.get(id).breaks, [2]);

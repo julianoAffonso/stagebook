@@ -285,6 +285,8 @@ class WebEditorServer @Inject constructor(
             "newSet" to R.string.sets_new,
             "setName" to R.string.sets_name,
             "setNameHint" to R.string.sets_name_hint,
+            "setDate" to R.string.sets_date_label,
+            "noDate" to R.string.sets_no_date,
             "noSets" to R.string.sets_empty_title,
             "emptySet" to R.string.set_empty_title,
             "setDeleteConfirm" to R.string.sets_delete_confirm,
