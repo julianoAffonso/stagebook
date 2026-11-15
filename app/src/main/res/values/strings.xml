@@ -1267,4 +1267,12 @@
     <string name="set_keep_editing">Keep editing</string>
     <string name="drawer_handle_move">Hold and drag to move the handle</string>
     <string name="editor_pdf_preview">The first page of the PDF</string>
+    <string name="editor_pdf_crop">Crop</string>
+    <string name="pdf_crop_title">Crop the PDF</string>
+    <string name="pdf_crop_hint">Drag the edges to keep only the part you play from. The file is not changed.</string>
+    <string name="pdf_crop_all">All pages</string>
+    <string name="pdf_crop_page">This page only</string>
+    <string name="pdf_crop_none">No crop</string>
+    <string name="pdf_crop_previous">Previous page</string>
+    <string name="pdf_crop_next">Next page</string>
 </resources>

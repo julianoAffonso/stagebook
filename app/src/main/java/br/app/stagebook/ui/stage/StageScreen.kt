@@ -1108,6 +1108,7 @@ fun StageScreen(
                         marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
                         onStroke = { page, points -> onPdfStroke(song.id, page, points) },
                         view = song.pdfView,
+                        crops = song.pdfCrops,
                         onView = { onPdfView(song.id, it) },
                     )
                     trackOverlays()

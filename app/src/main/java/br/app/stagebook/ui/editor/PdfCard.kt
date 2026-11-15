@@ -65,7 +65,7 @@ internal fun fileSizeText(bytes: Long): String =
  * device (a backup without the files), and the card says to attach it again.
  */
 @Composable
-fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}) {
+fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}, onCrop: () -> Unit = {}) {
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -91,6 +91,7 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
             // the colours of this song's PDF: white paper black, for a dark stage. Here, and not on the stage's header
             if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, Modifier.weight(1f), tone = ButtonTone.Tonal)
                 ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, Modifier.weight(1f), tone = ButtonTone.Tonal)
                 ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, Modifier.weight(1f), tone = ButtonTone.Quiet)
             }

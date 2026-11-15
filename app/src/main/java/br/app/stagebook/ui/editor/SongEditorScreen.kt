@@ -158,6 +158,8 @@ fun SongEditorRoute(
         onRemoveTrack = viewModel::removeTrack,
         pdf = viewModel.pdfInfo,
         onPdfInvert = viewModel::setPdfInvert,
+        onSetPdfCrop = viewModel::setPdfCrop,
+        onClearPdfCrop = viewModel::clearPdfCrop,
         onPickPdf = { pdfPicker.launch(br.app.stagebook.data.PdfStore.MIME) },
         onRemovePdf = viewModel::removePdf,
         allTags = remember { viewModel.allTags() },
@@ -200,6 +202,8 @@ fun SongEditorScreen(
     onPickPdf: () -> Unit = {},
     onRemovePdf: () -> Unit = {},
     onPdfInvert: (Boolean) -> Unit = {},
+    onSetPdfCrop: (br.app.stagebook.data.model.PdfCrop) -> Unit = {},
+    onClearPdfCrop: (Int) -> Unit = {},
     allTags: List<String> = emptyList(),
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
     midiOn: Boolean = false,   // the song's MIDI: a stage extra (essential mode hides it, T19) on a device with MIDI
@@ -217,6 +221,7 @@ fun SongEditorScreen(
     // a song that already has lyrics asks before taking a PDF (the lyrics stay saved), and removing the PDF asks too
     var askingPdf by rememberSaveable { mutableStateOf(false) }
     var removingPdf by rememberSaveable { mutableStateOf(false) }
+    var cropping by rememberSaveable { mutableStateOf(false) }
     val hasLyrics = remember(uiState.text) { Chords.hideMeta(uiState.text).isNotBlank() }
     val attachPdf = { if (pdf == null && hasLyrics) askingPdf = true else onPickPdf() }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
@@ -396,7 +401,7 @@ fun SongEditorScreen(
                         )
                         // a PDF song has no lyrics field: the card says what it is and offers to replace or remove it
                         EditorTab.LYRICS -> if (pdf != null) Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.m), contentAlignment = Alignment.TopCenter) {
-                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH), onInvert = onPdfInvert)
+                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH), onInvert = onPdfInvert, onCrop = { cropping = true })
                         } else Column(Modifier.fillMaxSize()) {
                             // one line of one-tap buttons: the highlighter, the sections and the chords (the lyrics have the rest)
                             ToolStrip(
@@ -455,6 +460,7 @@ fun SongEditorScreen(
         val initial = br.app.stagebook.ui.components.tagStates(options, listOf(uiState.tags))
         br.app.stagebook.ui.components.TagsDialog(options, initial, onTags) { tagging = false }
     }
+    if (cropping && pdf != null) PdfCropDialog(pdf, onSetPdfCrop, onClearPdfCrop) { cropping = false }
     if (askingPdf) {
         ConfirmDialog(stringResource(R.string.editor_pdf_ask_lyrics), stringResource(R.string.editor_pdf_attach), { onPickPdf() }, { askingPdf = false }, destructive = false)
     }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.unit.height
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -155,6 +156,42 @@ class PdfStageTest {
         compose.waitForIdle()
         val box = compose.onRoot().getBoundsInRoot().width
         assertTrue("enlarged past the box: ${page().getBoundsInRoot().width} in $box", page().getBoundsInRoot().width > box * 1.2f)
+    }
+
+    private fun showCropped(crops: List<br.app.stagebook.data.model.PdfCrop>, pageAt: Int = 0): FakeSource {
+        val source = FakeSource(3)
+        var count = 0
+        compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), pageAt, invert = false, onPageCount = { count = it }, crops = crops) } }
+        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página ${pageAt + 1} de 3 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        return source
+    }
+
+    @Test fun `a trimmed page shows only its part, in that part's shape and as large as the box allows`() {
+        // the page is 400 x 600 (2:3); the right half of it is 200 x 600 (1:3), twice as tall as wide
+        showCropped(listOf(br.app.stagebook.data.model.PdfCrop(page = br.app.stagebook.data.model.PdfCrop.ALL, left = 0.5f)))
+        val b = compose.onNodeWithContentDescription("Página 1 de 3 do PDF").getBoundsInRoot()
+        assertEquals("shaped as the trim (1:3): ${b.width} x ${b.height}", 3f, b.height.value / b.width.value, 0.05f)
+    }
+
+    @Test fun `a page with its own trim takes it over the one for all pages, and one with none shows whole`() {
+        val crops = listOf(
+            br.app.stagebook.data.model.PdfCrop(page = br.app.stagebook.data.model.PdfCrop.ALL, left = 0.5f),
+            br.app.stagebook.data.model.PdfCrop(page = 1, top = 0.5f),   // the lower half: 400 x 300, wider than tall
+        )
+        showCropped(crops, pageAt = 1)
+        val b = compose.onNodeWithContentDescription("Página 2 de 3 do PDF").getBoundsInRoot()
+        assertEquals("shaped as its own trim (4:3): ${b.width} x ${b.height}", 4f / 3f, b.width.value / b.height.value, 0.05f)
+    }
+
+    @Test fun `a trim only draws the page wide enough for its part to fill the box`() {
+        val source = showCropped(listOf(br.app.stagebook.data.model.PdfCrop(page = br.app.stagebook.data.model.PdfCrop.ALL, left = 0.5f)))
+        val first = source.rendered.first { it.first == 0 }.second
+        // half the width is shown, so the whole page is drawn twice as wide as the part on screen
+        val box = compose.onNodeWithContentDescription("Página 1 de 3 do PDF").getBoundsInRoot()
+        val shownPx = box.width.value * 1f   // mdpi in these tests: dp = px
+        assertTrue("whole page $first px for a part of $shownPx px", first >= shownPx * 1.9f)
     }
 
     @Test fun `the page never goes past the zoom its pixels allow`() {

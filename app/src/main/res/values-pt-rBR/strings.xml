@@ -1311,4 +1311,12 @@
     <string name="set_keep_editing">Continuar editando</string>
     <string name="drawer_handle_move">Segure e arraste para mover a alça</string>
     <string name="editor_pdf_preview">Primeira página do PDF</string>
+    <string name="editor_pdf_crop">Recortar</string>
+    <string name="pdf_crop_title">Recortar o PDF</string>
+    <string name="pdf_crop_hint">Arraste as bordas para ficar só com a parte que você toca. O arquivo não muda.</string>
+    <string name="pdf_crop_all">Todas as páginas</string>
+    <string name="pdf_crop_page">Só esta página</string>
+    <string name="pdf_crop_none">Sem recorte</string>
+    <string name="pdf_crop_previous">Página anterior</string>
+    <string name="pdf_crop_next">Próxima página</string>
 </resources>

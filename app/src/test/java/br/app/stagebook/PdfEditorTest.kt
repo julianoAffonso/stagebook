@@ -3,6 +3,8 @@ package br.app.stagebook
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -165,6 +167,24 @@ class PdfEditorTest {
         }
     }
 
+    @Test fun `the trims of a saved song are kept at once, only on this device, and go with the PDF`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, _) = open { it.saveSong(Song(title = "Chart", text = "x", pdf = "p.pdf", pdfName = "p.pdf")) }
+            val id = repo.library.value.songs.single().id
+            vm.setPdfCrop(br.app.stagebook.data.model.PdfCrop(br.app.stagebook.data.model.PdfCrop.ALL, left = 0.1f, right = 0.9f))
+            vm.setPdfCrop(br.app.stagebook.data.model.PdfCrop(2, top = 0.2f))
+            assertEquals(2, repo.song(id)!!.pdfCrops.size)
+            assertEquals(2, vm.pdfInfo!!.crops.size)
+            vm.clearPdfCrop(2)
+            assertEquals(1, repo.song(id)!!.pdfCrops.size)
+            vm.removePdf()
+            assertTrue(repo.song(id)!!.pdfCrops.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a refused PDF changes nothing and says why`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
@@ -181,8 +201,9 @@ class PdfEditorTest {
 
     // ---- the screen ----
 
-    private fun screen(state: SongEditorUiState, pdf: EditorPdf?, onPick: () -> Unit = {}, onRemove: () -> Unit = {}, onInvert: (Boolean) -> Unit = {}) = compose.setContent {
-        StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, pdf = pdf, onPickPdf = onPick, onRemovePdf = onRemove, onPdfInvert = onInvert) }
+    private fun screen(state: SongEditorUiState, pdf: EditorPdf?, onPick: () -> Unit = {}, onRemove: () -> Unit = {}, onInvert: (Boolean) -> Unit = {},
+        onSetCrop: (br.app.stagebook.data.model.PdfCrop) -> Unit = {}, onClearCrop: (Int) -> Unit = {}) = compose.setContent {
+        StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, pdf = pdf, onPickPdf = onPick, onRemovePdf = onRemove, onPdfInvert = onInvert, onSetPdfCrop = onSetCrop, onClearPdfCrop = onClearCrop) }
     }
 
     private val saved = SongEditorUiState(loading = false, mode = EditorMode.EDIT, title = "Chart", text = "[G]letra")
@@ -208,6 +229,54 @@ class PdfEditorTest {
     @Test fun `a PDF with no file to read has the card but no preview and no invert switch while lost`() {
         screen(saved, EditorPdf("a.pdf", lost = true))
         compose.onNodeWithText("Inverter as cores do PDF").assertDoesNotExist()
+    }
+
+    @Test fun `Crop opens the trim window, which saves the same trim for all pages by default`() {
+        var set: br.app.stagebook.data.model.PdfCrop? = null
+        screen(saved, EditorPdf("a.pdf", pages = 3, bytes = 1_000), onSetCrop = { set = it })
+        compose.onNodeWithText("Recortar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Recortar o PDF").assertExists()
+        compose.onNodeWithText("Todas as páginas").assertExists()
+        compose.onNodeWithText("Só esta página").assertExists()
+        compose.onNodeWithText("1 / 3").assertExists()
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
+        assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, set?.page)
+    }
+
+    @Test fun `This page only saves the trim for the page on screen, and No crop takes off the one for its scope`() {
+        var set: br.app.stagebook.data.model.PdfCrop? = null
+        var cleared: Int? = null
+        screen(saved, EditorPdf("a.pdf", pages = 3, bytes = 1_000), onSetCrop = { set = it }, onClearCrop = { cleared = it })
+        compose.onNodeWithText("Recortar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Só esta página").performClick()
+        compose.onNodeWithContentDescription("Próxima página").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("2 / 3").assertExists()
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
+        assertEquals(1, set?.page)
+        // again: no crop for that scope
+        compose.onNodeWithText("Recortar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Sem recorte").performClick()
+        compose.waitForIdle()
+        assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, cleared)
+    }
+
+    @Test fun `a PDF whose file is gone has no Crop button`() {
+        screen(saved, EditorPdf("a.pdf", lost = true))
+        compose.onAllNodesWithText("Recortar").assertCountEquals(0)
+    }
+
+    @Test fun `a one page PDF has no page switch and no scope choice`() {
+        screen(saved, EditorPdf("a.pdf", pages = 1, bytes = 1_000))
+        compose.onNodeWithText("Recortar").performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithText("Todas as páginas").assertCountEquals(0)
+        compose.onAllNodesWithText("1 / 1").assertCountEquals(0)
     }
 
     @Test fun `a song without a PDF keeps the lyrics field and has no card`() {

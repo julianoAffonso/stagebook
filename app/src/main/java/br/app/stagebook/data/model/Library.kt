@@ -54,6 +54,8 @@ data class Song(
     val pdfPanY: Float = 0f,
     // the colours turned over for this song's PDF (white paper black); null = as Settings says (Look.pdfInvert)
     val pdfInvert: Boolean? = null,
+    // the trims of its pages (see [PdfCrop]); the file is never changed
+    val pdfCrops: List<PdfCrop> = emptyList(),
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
@@ -62,7 +64,7 @@ data class Song(
     val pdfLost: Boolean get() = pdf.isEmpty() && pdfName.isNotEmpty()
 
     /** The same song with no trace of a PDF (what the QR, the text export and a received song never carry). */
-    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty()) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList())
+    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty()) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList())
 }
 
 /** One point of a highlighter stroke, relative to the page: 0 (left, top) to 1 (right, bottom), valid on any screen size. */
@@ -74,6 +76,20 @@ data class PdfPoint(val x: Float, val y: Float)
 @Immutable
 @Serializable
 data class PdfMark(val page: Int, val points: List<PdfPoint> = emptyList(), val width: Float = 0.02f)
+
+/**
+ * A trim of a PDF page, in fractions of the page (0 left/top .. 1 right/bottom): the stage shows only this part, enlarged
+ * to fill the screen. [page] counts from 0; [ALL] is the one for every page that has no trim of its own. This device only:
+ * never in a band package, the QR or the text export (the PDF itself is not changed).
+ */
+@Immutable
+@Serializable
+data class PdfCrop(val page: Int = ALL, val left: Float = 0f, val top: Float = 0f, val right: Float = 1f, val bottom: Float = 1f) {
+    /** Nothing trimmed. */
+    val isWhole: Boolean get() = left <= 0f && top <= 0f && right >= 1f && bottom >= 1f
+
+    companion object { const val ALL = -1 }
+}
 
 /** A song that just lost its audio, for the window that says so: the song and the audio's own name. */
 @Immutable
