@@ -1266,4 +1266,5 @@
     <string name="set_save_question">Save the changes to “%1$s”?</string>
     <string name="set_keep_editing">Keep editing</string>
     <string name="drawer_handle_move">Hold and drag to move the handle</string>
+    <string name="editor_pdf_preview">The first page of the PDF</string>
 </resources>

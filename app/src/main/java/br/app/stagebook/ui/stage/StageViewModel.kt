@@ -36,6 +36,7 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     val artist: String = "",   // for the setlist's panel, whose rows leave the year out ([meta] is the header's: artist and year)
     val pdf: String = "",   // the name of the song's PDF file ("" = it is lyrics and chords): the stage draws its pages
     val pdfMarks: List<br.app.stagebook.data.model.PdfMark> = emptyList(),   // the highlighter strokes on its pages
+    val pdfInvert: Boolean? = null,   // this song's PDF with its colours turned over; null = as Settings says
     val pdfView: br.app.stagebook.domain.PdfView = br.app.stagebook.domain.PdfView(),   // its zoom and place, as the person left them
 ) {
     /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
@@ -233,8 +234,6 @@ class StageViewModel @Inject constructor(
     /** Every stroke of [page] goes. */
     fun clearPdfPage(songId: String, page: Int) =
         repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.clearPage(it.pdfMarks, page)) }
-
-    fun setPdfInvert(on: Boolean) = repository.updateLook { it.copy(pdfInvert = on) }
 
     /** The side handle's place on the left edge (share of the height), kept as the person left it. */
     fun setDrawerHandle(y: Float) = repository.updateLook { it.copy(drawerHandleY = y.coerceIn(HANDLE_MIN, HANDLE_MAX)) }
@@ -441,7 +440,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty(), pdfView = s?.let { br.app.stagebook.domain.PdfView(it.pdfScale, it.pdfPanX, it.pdfPanY) } ?: br.app.stagebook.domain.PdfView())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty(), pdfInvert = s?.pdfInvert, pdfView = s?.let { br.app.stagebook.domain.PdfView(it.pdfScale, it.pdfPanX, it.pdfPanY) } ?: br.app.stagebook.domain.PdfView())
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),

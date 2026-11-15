@@ -52,6 +52,8 @@ data class Song(
     val pdfScale: Float = 1f,
     val pdfPanX: Float = 0f,
     val pdfPanY: Float = 0f,
+    // the colours turned over for this song's PDF (white paper black); null = as Settings says (Look.pdfInvert)
+    val pdfInvert: Boolean? = null,
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()

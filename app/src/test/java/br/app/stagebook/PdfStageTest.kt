@@ -91,25 +91,12 @@ class PdfStageTest {
         compose.onNodeWithText("Não consigo abrir este PDF", substring = true).assertExists()
     }
 
-    @Test fun `on the stage a PDF song shows the invert button`() {
+    @Test fun `the stage has no invert button - it lives in the song's editor`() {
         val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", pdf = "p.pdf")), look = Look())
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, pdfFile = { java.io.File("/no/such/$it") }) } }
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("Inverter as cores do PDF").assertIsDisplayed()
-    }
-
-    @Test fun `a lyrics song has no invert button`() {
-        val lyrics = StageUiState(false, listOf(StageSong("Letra", "", "linha", false)), look = Look())
-        compose.setContent { StagebookTheme { StageScreen(lyrics, 0, 0, { _, _ -> }) } }
         compose.onAllNodesWithContentDescription("Inverter as cores do PDF").assertCountEquals(0)
-    }
-
-    @Test fun `the invert button turns the colours over and back`() {
-        val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", pdf = "p.pdf")), look = Look())
-        var asked: Boolean? = null
-        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, pdfFile = { java.io.File("/no/such/$it") }, onPdfInvert = { asked = it }) } }
-        compose.onNodeWithContentDescription("Inverter as cores do PDF").performClick()
-        assertEquals(true, asked)
+        compose.onAllNodesWithContentDescription("Marca-texto").assertCountEquals(0)   // no button either: holding the page offers it
     }
 
     // ---- zoom ----
@@ -250,8 +237,9 @@ class PdfStageTest {
         assertTrue("a zoom is not a stroke: $strokes", strokes.isEmpty())
     }
 
-    @Test fun `on the stage the highlighter button shows the bar with undo, clear and done, and they act on the page on screen`() {
-        val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", pdf = "p.pdf")), look = Look())
+    @Test fun `holding a PDF page offers the highlighter, and with marks undo and clear page, which act on the page on screen`() {
+        val marks = listOf(br.app.stagebook.data.model.PdfMark(0, listOf(PdfPoint(0.1f, 0.1f), PdfPoint(0.5f, 0.1f)), 0.025f))
+        val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", pdf = "p.pdf", pdfMarks = marks)), look = Look())
         val asked = mutableListOf<String>()
         compose.setContent {
             StagebookTheme {
@@ -261,12 +249,26 @@ class PdfStageTest {
                 )
             }
         }
-        compose.onNodeWithContentDescription("Marca-texto").performClick()
+        compose.waitForIdle()
+        fun hold() = compose.onRoot().performTouchInput { down(center); advanceEventTime(900); up() }
+        hold(); compose.waitForIdle()
         compose.onNodeWithText("Desfazer").performClick()
+        hold(); compose.waitForIdle()
         compose.onNodeWithText("Limpar página").performClick()
         assertEquals(listOf("undo:p:0", "clear:p:0"), asked)
+    }
+
+    @Test fun `the highlighter from the hold shows the same bar as the lyrics' and Done leaves it`() {
+        val state = StageUiState(false, listOf(StageSong("Partitura", "Ana", "", false, id = "p", pdf = "p.pdf")), look = Look())
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, pdfFile = { java.io.File("/no/such/$it") }) } }
+        compose.waitForIdle()
+        compose.onRoot().performTouchInput { down(center); advanceEventTime(900); up() }
+        compose.waitForIdle()
+        compose.onAllNodesWithText("Desfazer").assertCountEquals(0)   // nothing marked on the page: only the highlighter is offered
+        compose.onNodeWithText("Marca-texto").performClick()
+        compose.waitForIdle()
         compose.onNodeWithText("Pronto").performClick()
-        compose.onAllNodesWithText("Limpar página").assertCountEquals(0)
+        compose.onAllNodesWithText("Pronto").assertCountEquals(0)
     }
 
     @Test fun `a PDF song with a backing track still has its play button on stage`() {

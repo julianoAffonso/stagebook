@@ -1,6 +1,20 @@
 package br.app.stagebook.ui.editor
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import br.app.stagebook.ui.components.SwitchRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,7 +65,7 @@ internal fun fileSizeText(bytes: Long): String =
  * device (a backup without the files), and the card says to attach it again.
  */
 @Composable
-fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}) {
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -71,7 +85,11 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
                     }
                 }
             }
+            // the first page, as it will look on the stage (with the colours turned over, if they are)
+            pdf.file?.let { PdfPreview(it, pdf.invert) }
             Text(stringResource(R.string.editor_pdf_note), style = MaterialTheme.typography.bodyMedium)
+            // the colours of this song's PDF: white paper black, for a dark stage. Here, and not on the stage's header
+            if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, Modifier.weight(1f), tone = ButtonTone.Tonal)
                 ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, Modifier.weight(1f), tone = ButtonTone.Quiet)
@@ -91,3 +109,25 @@ private fun PdfSongCardLightPreview() = PreviewSurface(dark = false) {
 private fun PdfSongCardDarkPreview() = PreviewSurface(dark = true) {
     PdfSongCard(EditorPdf("Chart - Canção do Vento.pdf", lost = true), onReplace = {}, onRemove = {}, modifier = Modifier.padding(Spacing.m))
 }
+
+/** The PDF's first page, small, in the card: drawn off the main thread, closed with the card. */
+@Composable
+private fun PdfPreview(file: java.io.File, invert: Boolean, modifier: Modifier = Modifier) {
+    val open by br.app.stagebook.ui.stage.rememberPdfOpen(file)
+    val ready = open as? br.app.stagebook.ui.stage.PdfOpen.Ready
+    val image by produceState<ImageBitmap?>(null, ready) {
+        value = ready?.let { r -> runCatching { r.pages.bitmap(0, PREVIEW_WIDTH).asImageBitmap() }.getOrNull() }
+    }
+    Box(modifier.fillMaxWidth().heightIn(max = PREVIEW_MAX_HEIGHT), contentAlignment = Alignment.Center) {
+        val shown = image
+        if (shown != null) {
+            Image(
+                shown, stringResource(R.string.editor_pdf_preview), Modifier.fillMaxHeight().clip(MaterialTheme.shapes.small).background(Color.White),
+                contentScale = ContentScale.Fit, colorFilter = if (invert) br.app.stagebook.ui.stage.InvertFilter else null,
+            )
+        } else if (open is br.app.stagebook.ui.stage.PdfOpen.Loading) CircularProgressIndicator()
+    }
+}
+
+private const val PREVIEW_WIDTH = 480
+private val PREVIEW_MAX_HEIGHT = 320.dp

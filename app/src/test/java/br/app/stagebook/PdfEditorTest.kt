@@ -148,6 +148,23 @@ class PdfEditorTest {
         }
     }
 
+    @Test fun `the invert choice of a saved song is kept at once, follows Settings until chosen and goes with the PDF`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, _) = open { it.saveSong(Song(title = "Chart", text = "x", pdf = "p.pdf", pdfName = "p.pdf")) }
+            val id = repo.library.value.songs.single().id
+            assertEquals(null, repo.song(id)!!.pdfInvert)
+            assertEquals("follows Settings (off here)", false, vm.pdfInfo!!.invert)
+            vm.setPdfInvert(true)
+            assertEquals(true, repo.song(id)!!.pdfInvert)
+            assertEquals(true, vm.pdfInfo!!.invert)
+            vm.removePdf()
+            assertEquals(null, repo.song(id)!!.pdfInvert)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a refused PDF changes nothing and says why`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
@@ -164,8 +181,8 @@ class PdfEditorTest {
 
     // ---- the screen ----
 
-    private fun screen(state: SongEditorUiState, pdf: EditorPdf?, onPick: () -> Unit = {}, onRemove: () -> Unit = {}) = compose.setContent {
-        StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, pdf = pdf, onPickPdf = onPick, onRemovePdf = onRemove) }
+    private fun screen(state: SongEditorUiState, pdf: EditorPdf?, onPick: () -> Unit = {}, onRemove: () -> Unit = {}, onInvert: (Boolean) -> Unit = {}) = compose.setContent {
+        StagebookTheme { SongEditorScreen(state, {}, {}, {}, {}, {}, {}, {}, pdf = pdf, onPickPdf = onPick, onRemovePdf = onRemove, onPdfInvert = onInvert) }
     }
 
     private val saved = SongEditorUiState(loading = false, mode = EditorMode.EDIT, title = "Chart", text = "[G]letra")
@@ -179,6 +196,18 @@ class PdfEditorTest {
         compose.onNodeWithText("Remover PDF").assertExists()
         // no lyrics field: its label is only the selector's segment ("Letra e cifra"), never a field
         compose.onNodeWithText("[G]letra", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun `the card has the invert switch, which says what it is now and asks for the other`() {
+        var asked: Boolean? = null
+        screen(saved, EditorPdf("a.pdf", 1, 1_000, invert = false), onInvert = { asked = it })
+        compose.onNodeWithText("Inverter as cores do PDF").performClick()
+        assertEquals(true, asked)
+    }
+
+    @Test fun `a PDF with no file to read has the card but no preview and no invert switch while lost`() {
+        screen(saved, EditorPdf("a.pdf", lost = true))
+        compose.onNodeWithText("Inverter as cores do PDF").assertDoesNotExist()
     }
 
     @Test fun `a song without a PDF keeps the lyrics field and has no card`() {

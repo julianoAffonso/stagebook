@@ -295,7 +295,6 @@ fun StageRoute(
                 if (setId != null) ({ d.openSetlist(setId, false) }) else d.open.takeIf { !d.pinned }
             },
             pdfFile = pdfStore::file,
-            onPdfInvert = viewModel::setPdfInvert,
             onDrawerHandle = viewModel::setDrawerHandle,
             onPdfView = viewModel::setPdfView,
             onPdfStroke = viewModel::addPdfStroke,
@@ -434,7 +433,6 @@ fun StageScreen(
     note: String = "",
     onBack: (() -> Unit)? = null,
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
-    onPdfInvert: (Boolean) -> Unit = {},
     onDrawerHandle: (Float) -> Unit = {},
     onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
     onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },
@@ -811,6 +809,11 @@ fun StageScreen(
             hold = { p ->
                 // a long press on the track button belongs to it (change/remove), not "edit this line"
                 if (trackButton?.contains(p) == true) return@GestureTargets
+                // a PDF: the hold offers the highlighter (and undo / clear page), as a line of lyrics offers it (user, 15/11)
+                if (song.pdf.isNotEmpty()) {
+                    if (!song.missing) { haptics.performHapticFeedback(HapticFeedbackType.LongPress); editOffer = EditOffer(p, -1, null) }
+                    return@GestureTargets
+                }
                 val line = hit.lineAt(p)
                 // the chord list has its own long press (take a chord off the list)
                 if (line != null && pageLines.getOrNull(line)?.source == -1) return@GestureTargets
@@ -1101,18 +1104,36 @@ fun StageScreen(
                 val open by rememberPdfOpen(pdfFile(song.pdf))
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
-                        open, current, look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
+                        open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
                         marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
                         onStroke = { page, points -> onPdfStroke(song.id, page, points) },
                         view = song.pdfView,
                         onView = { onPdfView(song.id, it) },
                     )
                     trackOverlays()
-                    // the highlighter's bar: what to do, undo, clear the page, and the way out
-                    if (marking) PdfMarkerBar(
-                        onUndo = { onPdfUndo(song.id, current) }, onClear = { onPdfClear(song.id, current) }, onDone = { marking = false },
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
+                    // the same bar as the lyrics' highlighter: what to do and the way out
+                    if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter), hint = stringResource(R.string.stage_pdf_marker_hint))
+                    // holding the page: the highlighter, and taking back what was marked on it
+                    val boxW = this@BoxWithConstraints.constraints.maxWidth
+                    editOffer?.let { offer ->
+                        val onPage = song.pdfMarks.any { it.page == current }
+                        PdfHoldButtons(
+                            onMarker = { editOffer = null; marking = true },
+                            onUndo = if (onPage) ({ editOffer = null; onPdfUndo(song.id, current) }) else null,
+                            onClear = if (onPage) ({ editOffer = null; onPdfClear(song.id, current) }) else null,
+                            modifier = Modifier.layout { measurable, c ->
+                                val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
+                                val gap = Spacing.l.roundToPx()
+                                val above = offer.at.y.roundToInt() - gap - p.height
+                                layout(p.width, p.height) {
+                                    p.place(
+                                        (offer.at.x.roundToInt() - p.width / 2).coerceIn(0, maxOf(boxW - p.width, 0)),
+                                        if (above >= 0) above else offer.at.y.roundToInt() + gap,
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
                 return@BoxWithConstraints
             }
@@ -1539,19 +1560,6 @@ fun StageScreen(
                     }
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
-            }
-            // a PDF: the highlighter, and its colours turned over for a dark stage (each lit while on)
-            if (song.pdf.isNotEmpty()) IconButton(onClick = { marking = !marking }) {
-                Icon(
-                    AppIcons.Highlighter, stringResource(R.string.stage_marker),
-                    tint = if (marking) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.7f),
-                )
-            }
-            if (song.pdf.isNotEmpty()) IconButton(onClick = { onPdfInvert(!look.pdfInvert) }) {
-                Icon(
-                    AppIcons.InvertColors, stringResource(R.string.stage_pdf_invert),
-                    tint = if (look.pdfInvert) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.7f),
-                )
             }
             if (current < pageCount - 1) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
@@ -2272,31 +2280,23 @@ private fun EditLineButtons(onEdit: () -> Unit, canMark: Boolean, onMarker: () -
  * the stage not turning pages with nothing saying why).
  */
 @Composable
-private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier) {
+private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier, hint: String = stringResource(R.string.stage_marker_hint)) {
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, shape = MaterialTheme.shapes.medium, shadowElevation = 6.dp, modifier = modifier.padding(Spacing.m)) {
         Row(Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.xs, bottom = Spacing.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Icon(AppIcons.Highlighter, null)
-            Text(stringResource(R.string.stage_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
+            Text(hint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
             androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
         }
     }
 }
 
-/** While the highlighter is on over a PDF page: what to do, undo the last stroke, clear the page, and the way out. */
+/** What holding a PDF page offers: the highlighter, and (with something marked on the page) undo the last stroke or clear the page. */
 @Composable
-private fun PdfMarkerBar(onUndo: () -> Unit, onClear: () -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, shape = MaterialTheme.shapes.medium, shadowElevation = 6.dp, modifier = modifier.padding(Spacing.m)) {
-        Column(Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.xs, bottom = Spacing.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Icon(AppIcons.Highlighter, null)
-                Text(stringResource(R.string.stage_pdf_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
-            }
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                androidx.compose.material3.TextButton(onUndo) { Text(stringResource(R.string.stage_pdf_undo)) }
-                androidx.compose.material3.TextButton(onClear) { Text(stringResource(R.string.stage_pdf_clear)) }
-                androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
-            }
-        }
+private fun PdfHoldButtons(onMarker: () -> Unit, onUndo: (() -> Unit)?, onClear: (() -> Unit)?, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        EditOfferButton(AppIcons.Highlighter, stringResource(R.string.stage_marker), onMarker)
+        if (onUndo != null) EditOfferButton(AppIcons.Undo, stringResource(R.string.stage_pdf_undo), onUndo)
+        if (onClear != null) EditOfferButton(AppIcons.Delete, stringResource(R.string.stage_pdf_clear), onClear)
     }
 }
 

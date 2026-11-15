@@ -1310,4 +1310,5 @@
     <string name="set_save_question">Salvar as alterações em “%1$s”?</string>
     <string name="set_keep_editing">Continuar editando</string>
     <string name="drawer_handle_move">Segure e arraste para mover a alça</string>
+    <string name="editor_pdf_preview">Primeira página do PDF</string>
 </resources>

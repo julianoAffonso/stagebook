@@ -157,6 +157,7 @@ fun SongEditorRoute(
         onPickTrack = { picker.launch(TrackStore.MIME) },
         onRemoveTrack = viewModel::removeTrack,
         pdf = viewModel.pdfInfo,
+        onPdfInvert = viewModel::setPdfInvert,
         onPickPdf = { pdfPicker.launch(br.app.stagebook.data.PdfStore.MIME) },
         onRemovePdf = viewModel::removePdf,
         allTags = remember { viewModel.allTags() },
@@ -198,6 +199,7 @@ fun SongEditorScreen(
     pdf: EditorPdf? = null,   // the song is a PDF: a card takes the place of the lyrics field; null = a song of text
     onPickPdf: () -> Unit = {},
     onRemovePdf: () -> Unit = {},
+    onPdfInvert: (Boolean) -> Unit = {},
     allTags: List<String> = emptyList(),
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
     midiOn: Boolean = false,   // the song's MIDI: a stage extra (essential mode hides it, T19) on a device with MIDI
@@ -394,7 +396,7 @@ fun SongEditorScreen(
                         )
                         // a PDF song has no lyrics field: the card says what it is and offers to replace or remove it
                         EditorTab.LYRICS -> if (pdf != null) Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.m), contentAlignment = Alignment.TopCenter) {
-                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH))
+                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH), onInvert = onPdfInvert)
                         } else Column(Modifier.fillMaxSize()) {
                             // one line of one-tap buttons: the highlighter, the sections and the chords (the lyrics have the rest)
                             ToolStrip(

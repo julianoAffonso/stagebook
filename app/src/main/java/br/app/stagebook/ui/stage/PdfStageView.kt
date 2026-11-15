@@ -201,8 +201,7 @@ fun PdfStageView(
                                         live = stroke.toList()
                                     } else if (!pinching && scale > 1f) {
                                         travelled += pan
-                                        // well past a tap's wobble: a touch by accident on an enlarged page must not make it walk (user, 15/11)
-                                        if (travelled.getDistance() > viewConfiguration.touchSlop * PAN_SLOP_TIMES) {
+                                        if (travelled.getDistance() > viewConfiguration.touchSlop) {
                                             offset = moved(pan)
                                             event.changes.forEach { it.consume() }
                                         }
@@ -260,6 +259,3 @@ private fun DrawScope.drawStroke(points: List<PdfPoint>, width: Float, color: Co
     }
     drawPath(path, paint, style = Stroke(width = thick, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
-
-/** The distance a finger must travel, in touch slops, before it moves an enlarged page. */
-private const val PAN_SLOP_TIMES = 3
