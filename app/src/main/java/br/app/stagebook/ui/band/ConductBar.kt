@@ -536,6 +536,8 @@ private fun ConductBarSamples() {
         ConductBar(ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), since), {}, {}, {}, {})
         // the leader's song waits for a menu to close, then for the person to finish elsewhere
         ConductBar(ConductUi.Following("Voz", "Evidências", false, false, emptyList(), emptyList()), {}, {}, {}, {}, waiting = br.app.stagebook.domain.FollowWait.MENU)
+        // the person is on another song of their own: not pulled back, the bar says what the band is on
+        ConductBar(ConductUi.Following("Voz", "Evidências", false, false, emptyList(), emptyList()), {}, {}, {}, {}, waiting = br.app.stagebook.domain.FollowWait.OTHER_SONG)
         // left, and the leader goes on: the way back
         ConductBar(ConductUi.Left("Voz"), {}, {}, {}, {})
         // armed from the Setlists list: waiting for the setlist to tap
