@@ -72,4 +72,18 @@ class SongsBottomBarTest {
         show()
         compose.onNodeWithContentDescription("PDF").assertIsDisplayed()
     }
+
+    @Test fun `the plus offers Import PDFs in the song list, and it runs the import`() {
+        var pdfs = 0
+        compose.setContent { StagebookTheme { SongsScreen(songs, "", {}, {}, {}, {}, onImportPdfs = { pdfs++ }) } }
+        compose.onNodeWithContentDescription("Nova e importar").performClick()
+        compose.onNodeWithText("Importar PDFs").performClick()
+        assertEquals(1, pdfs)
+    }
+
+    @Test fun `without a way to import PDFs the menu has no such item`() {
+        show()
+        compose.onNodeWithContentDescription("Nova e importar").performClick()
+        compose.onAllNodesWithText("Importar PDFs").assertCountEquals(0)
+    }
 }

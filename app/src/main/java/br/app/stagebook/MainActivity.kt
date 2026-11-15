@@ -69,6 +69,8 @@ class MainActivity : ComponentActivity() {
     private var clipboardPending = false
     // a .stagebook file tapped outside the app (file manager, download, chat): checked, then Open file in Settings
     private val openedFiles = kotlinx.coroutines.channels.Channel<br.app.stagebook.data.IncomingFiles.Result>(kotlinx.coroutines.channels.Channel.BUFFERED)
+    // PDFs opened with the app or shared to it: each comes in as a song, read now while the sender's permission lasts
+    private val openedPdfs = kotlinx.coroutines.channels.Channel<android.net.Uri>(kotlinx.coroutines.channels.Channel.BUFFERED)
 
     // already in a band: the band is used as soon as the app opens, so the local network permission is asked on open
     // (otherwise Android shows its device chooser instead); without a band it's asked in Settings → Band (user, 31/10)
@@ -123,6 +125,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) openLink(intent)   // recreated: the link was already opened
         val codes = receiveCodes.receiveAsFlow()
         val files = openedFiles.receiveAsFlow()
+        val pdfs = openedPdfs.receiveAsFlow()
         // pedal keys go through a root that sees them before Android drops the first one after a touch (PedalKeyRoot)
         setContentView(PedalKeyRoot(this, pedal).apply { addView(ComposeView(context).apply { setContent {
             StagebookTheme {
@@ -142,7 +145,7 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume) }
+                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -219,6 +222,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openLink(intent: Intent?) {
+        br.app.stagebook.data.IncomingFiles.pdfUri(intent)?.let { uri ->
+            openedPdfs.trySend(uri)
+            return
+        }
         br.app.stagebook.data.IncomingFiles.fileUri(intent)?.let { uri ->
             // read now, while the sender's permission lasts; copied and checked off the main thread
             lifecycleScope.launch { openedFiles.send(incomingFiles.receive(uri)) }

@@ -110,6 +110,7 @@ fun AddMenuButton(
     modifier: Modifier = Modifier,
     onNew: (() -> Unit)? = null,
     @androidx.annotation.StringRes newLabel: Int = R.string.songs_new,   // what [onNew] makes: a song, or a setlist
+    onPdfs: (() -> Unit)? = null,   // "Import PDFs": songs from PDF files (only in the song list)
     onSites: (() -> Unit)? = null,
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -127,6 +128,9 @@ fun AddMenuButton(
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             onNew?.let { new ->
                 DropdownMenuItem(text = { Text(stringResource(newLabel)) }, onClick = { open = false; new() }, leadingIcon = { Icon(AppIcons.Add, null) })
+            }
+            onPdfs?.let { pdfs ->
+                DropdownMenuItem(text = { Text(stringResource(R.string.import_pdfs)) }, onClick = { open = false; pdfs() }, leadingIcon = { Icon(AppIcons.Document, null) })
             }
             ImportMenuItems(online, onScan, onSites, received, onReceived, onSync, internetOn, localNet, close = { open = false }, onType = { typing = true })
         }

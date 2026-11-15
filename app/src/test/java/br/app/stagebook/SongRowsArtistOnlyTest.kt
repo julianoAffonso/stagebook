@@ -86,7 +86,7 @@ class SongRowsArtistOnlyTest {
         val show = SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         return Parts(
             repo, ids, set,
-            SongsViewModel(repo, connectivity, cloud, link, trust, internet),
+            SongsViewModel(repo, connectivity, cloud, link, trust, internet, br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector())),
             SetlistDetailViewModel(repo, SavedStateHandle(mapOf("setId" to set)), cloud, connectivity, link, trust, internet, BandConduct(link, repo, identity), show),
         )
     }

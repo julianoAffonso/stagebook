@@ -119,6 +119,13 @@ class IncomingFiles @Inject constructor(
          * The file an intent brings: Android's "open with" (VIEW, from a file manager, a download or a chat) or a share
          * to the app (SEND). Web links (the receive links) and anything without a file are not files: null.
          */
+        /** The PDF an intent brings (opened with the app, or shared to it): its address, or null when it is anything else. */
+        fun pdfUri(intent: Intent?): Uri? {
+            intent ?: return null
+            if (intent.type != "application/pdf") return null
+            return fileUri(intent)
+        }
+
         fun fileUri(intent: Intent?): Uri? {
             intent ?: return null
             val uri = when (intent.action) {

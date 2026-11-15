@@ -21,7 +21,11 @@ class StartViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val last: LastStage,
     private val show: SetlistShowStore,
+    private val pdfImporter: br.app.stagebook.data.PdfImporter,
 ) : ViewModel() {
+    /** PDFs that came to the app from outside: each becomes a song (checked first). */
+    suspend fun importPdfs(uris: List<android.net.Uri>) = pdfImporter.import(uris)
+
     /** The library has been read: only then is "was it deleted?" a real answer. */
     val loaded: StateFlow<Boolean> = repository.loaded
 

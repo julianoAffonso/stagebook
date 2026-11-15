@@ -88,6 +88,7 @@ SECTIONS = [
         "id": "importar", "pt": "Importar", "en": "Importing",
         "text_pt": [
             "O + embaixo, na aba Músicas, reúne tudo o que traz música de fora:",
+            "- **Importar PDFs:** escolhe um ou vários PDFs do aparelho; cada um vira uma música com o nome do arquivo e sem artista, que você completa no editor. O app confere cada PDF e diz o motivo dos que não passam, sem parar os outros. Dá para abrir um PDF direto no Stagebook (num gerenciador de arquivos, num download ou numa conversa, em Abrir com ou Compartilhar) e ele entra do mesmo jeito.",
             "- **Sincronizar com a banda:** procura novidades da banda agora.",
             "- **Recebidos da banda:** o que a banda mandou, para você conferir.",
             "- **Da internet:** abre os sites da sua lista. No perfil Automático, o app pergunta antes se você quer importar letra ou cifra, e abre o site daquele tipo.",
@@ -96,6 +97,7 @@ SECTIONS = [
         ],
         "text_en": [
             "The + at the bottom, on the Songs tab, gathers everything that brings songs in:",
+            "- **Import PDFs:** picks one or several PDFs from the device; each becomes a song named after the file, with no artist, for you to complete in the editor. The app checks each PDF and says why the ones that don't pass were left out, without stopping the others. You can also open a PDF straight in Stagebook (from a file manager, a download or a chat, with Open with or Share) and it comes in the same way.",
             "- **Sync with the band:** looks for what's new from the band right now.",
             "- **Received from the band:** what the band sent, for you to check.",
             "- **From the web:** opens the sites on your list. In the Automatic profile, the app first asks whether you want to import lyrics or chords, and opens that kind of site.",

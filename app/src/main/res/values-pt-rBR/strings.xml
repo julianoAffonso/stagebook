@@ -716,6 +716,13 @@
     <!-- ler o QR de um setlist (de outro aparelho) -->
     <string name="sets_scan">Ler QR</string>
     <string name="import_menu">Importar</string>
+    <string name="import_pdfs">Importar PDFs</string>
+    <plurals name="pdf_imported">
+        <item quantity="one">%d música em PDF adicionada.</item>
+        <item quantity="many">%d músicas em PDF adicionadas.</item>
+        <item quantity="other">%d músicas em PDF adicionadas.</item>
+    </plurals>
+    <string name="pdf_import_refused">%1$s: %2$s</string>
     <string name="add_menu">Nova e importar</string>
     <string name="select_mode">Selecionar músicas</string>
     <string name="select_sets">Selecionar setlists</string>

@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.app.stagebook.data.message
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -71,12 +72,14 @@ fun StagebookNavHost(
     installNotices: Flow<br.app.stagebook.domain.InstallNotice> = emptyFlow(),
     openedFiles: Flow<br.app.stagebook.data.IncomingFiles.Result> = emptyFlow(),
     resume: String? = null,
+    openedPdfs: Flow<android.net.Uri> = emptyFlow(),   // PDFs opened with the app or shared to it: each comes in as a song
 ) {
     val nav = rememberNavController()
     // at launch the app opens on the stage that was open last, over Home (back goes to the lists); not when it comes back
     // from an update (that has its own place to go to) and only once per start, a turned screen doesn't open it again
     val start: br.app.stagebook.ui.home.StartViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
     val libraryRead by start.loaded.collectAsStateWithLifecycle()
+    val pdfContext = androidx.compose.ui.platform.LocalContext.current
     var opened by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     LaunchedEffect(libraryRead) {
         if (!libraryRead || opened) return@LaunchedEffect
@@ -103,6 +106,10 @@ fun StagebookNavHost(
         ?.toRoute<ScanSetlist>()?.code?.takeIf { it.isNotEmpty() }
     fun openReceive(code: String) = nav.navigate(ScanSetlist(code, fromLink = true)) { popUpTo<ScanSetlist> { inclusive = true } }
     val message = rememberAppMessage()
+    // a PDF opened with the app: a song is made of it right away (nothing on screen is disturbed), and the message says so, or why not
+    LaunchedEffect(openedPdfs) {
+        openedPdfs.collect { uri -> message.show(start.importPdfs(listOf(uri)).message(pdfContext), long = true) }
+    }
     // the update going in: the system takes over, so the person is told what is happening, and only what is true
     val installStartedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_installing))
     val installFailedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_install_failed))

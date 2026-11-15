@@ -90,6 +90,7 @@ class SongsViewModel @Inject constructor(
     private val bandLink: BandLink,
     private val bandTrust: BandTrust,
     private val bandInternet: BandInternet,
+    private val pdfImporter: br.app.stagebook.data.PdfImporter,
 ) : ViewModel() {
     // the Share sheet's internet code and band send, shared with the setlist screen
     private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
@@ -100,6 +101,9 @@ class SongsViewModel @Inject constructor(
     val bandResult = share.bandResult
 
     /** Sends the chosen songs over the internet (no setlist); the code shows in a dialog. */
+    /** PDF files chosen to come in as songs (the + menu): each is checked, a song is made of the good ones. */
+    suspend fun importPdfs(uris: List<android.net.Uri>) = pdfImporter.import(uris)
+
     /** The sizes of the PDFs these songs carry (the internet send checks they fit). */
     fun pdfSizesOf(ids: List<String>): List<Long> = setlistCloud.pdfSizes(ids)
 
