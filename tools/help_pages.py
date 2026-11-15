@@ -562,10 +562,10 @@ SECTIONS = [
     {
         "id": "ajustes", "pt": "Ajustes", "en": "Settings", "toc_subs": True,
         "text_pt": [
-            "Os itens abaixo seguem a ordem da tela. No tablet deitado, a lista fica à esquerda e o assunto aberto à direita. Nos cartões, o ⓘ ao lado do título explica o que eles fazem. Com o modo essencial, alguns itens e opções somem até você religar.",
+            "Ajustes é uma página à parte: abra pelo botão Ajustes, embaixo (ou ao lado, no tablet), e a seta no alto volta para onde você estava. Os itens abaixo seguem a ordem da tela. No tablet deitado, a lista fica à esquerda e o assunto aberto à direita. Nos cartões, o ⓘ ao lado do título explica o que eles fazem. Com o modo essencial, alguns itens e opções somem até você religar.",
         ],
         "text_en": [
-            "The items below follow the order on screen. On a tablet lying down, the list sits on the left and the open topic on the right. On the cards, the ⓘ next to the title explains what they do. With essential mode, some items and options disappear until you turn them back on.",
+            "Settings is a page of its own: open it with the Settings button at the bottom (or on the side, on a tablet), and the arrow at the top goes back to where you were. The items below follow the order on screen. On a tablet lying down, the list sits on the left and the open topic on the right. On the cards, the ⓘ next to the title explains what they do. With essential mode, some items and options disappear until you turn them back on.",
         ],
         "figs": [Fig(("tablet_5_ajustes", "celular_5_ajustes", "Os ajustes", "Settings"))],
         "subs": [

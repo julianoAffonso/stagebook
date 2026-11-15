@@ -11,9 +11,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -41,6 +39,8 @@ import br.app.stagebook.ui.setlists.SetlistDetailRoute
 import br.app.stagebook.ui.stage.StageRoute
 import br.app.stagebook.ui.AppUpdateDialog
 import br.app.stagebook.data.UpdateOffer
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 // Back and opening another screen only count while the screen is still in front: a double tap on Save/OK/Back popped
 // two screens (the second was Home, and the app went blank), and a double tap on play stacked two stages (and the one
@@ -141,12 +141,10 @@ fun StagebookNavHost(
     if (updateOffer != null) AppUpdateDialog(updateOffer, updateActions.onUpdate, updateActions.onLater, updateActions.onInstall, updateActions.onClose, autoBlocker)
     // the "Lead the band" strip sits below any screen (the stage included) while the mode is on. Short messages
     // (snackbar) from any screen, at the bottom, above the "Lead the band" strip
-    // a link to a Settings section from any screen: back to Home, which opens Settings on that section (user, 01/11)
+    // a link to a Settings section from any screen: the Settings page over it, on that section; back returns to where it
+    // was (the stage with its break, its page and its counters; an editor with what was typed)
     val openSettings: (br.app.stagebook.ui.settings.SettingsSection) -> Unit = remember(nav) {
-        { section ->
-            br.app.stagebook.ui.settings.SettingsLinks.pending.value = section
-            nav.openSettingsFrom()
-        }
+        { section -> nav.navigate(Settings(section.name)) { launchSingleTop = true } }
     }
     // a .stagebook file tapped outside the app: Open file with its parts, as if picked there. On the stage it waits
     // and opens on leaving (the show is never interrupted); a file that isn't Stagebook's only gets the short message
@@ -216,7 +214,20 @@ fun StagebookNavHost(
                 onReceiveCode = { code -> entry.ifResumed { nav.navigate(ScanSetlist(code)) } },
                 onOpenReceived = { id -> entry.ifResumed { nav.navigate(ScanSetlist(inbox = id)) } },
                 onShareSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id, share = true)) } },
+                onOpenSettings = { section, alone -> entry.ifResumed { nav.navigate(Settings(section?.name.orEmpty(), alone)) { launchSingleTop = true } } },
             )
+        }
+        composable<Settings> { entry ->
+            val route = remember { entry.toRoute<Settings>() }
+            // not a screen the leader's song pulls away from (pullsToStage): it waits here and the strip says so
+            androidx.compose.material3.Scaffold(contentWindowInsets = br.app.stagebook.ui.components.ScreenInsets, containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background) { inner ->
+                Box(Modifier.padding(inner)) {
+                    val back = dropUnlessResumed { nav.popBackStack() }
+                    val section = br.app.stagebook.ui.settings.SettingsSection.fromSaved(route.section)
+                    if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(section, onLeave = back)
+                    else br.app.stagebook.ui.settings.SettingsRoute(section, onBack = back)
+                }
+            }
         }
         composable<SongEditor> { entry ->
             SongEditorRoute(

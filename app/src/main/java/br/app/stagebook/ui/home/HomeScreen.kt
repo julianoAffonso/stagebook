@@ -39,15 +39,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
@@ -57,10 +54,11 @@ import br.app.stagebook.R
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ScreenInsets
 import br.app.stagebook.ui.setlists.SetlistsRoute
-import br.app.stagebook.ui.settings.SettingsRoute
 import br.app.stagebook.ui.songs.SongsRoute
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SONGS(R.string.tab_songs, AppIcons.MusicNote),
@@ -68,10 +66,10 @@ enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SETTINGS(R.string.tab_settings, AppIcons.Tune),
 }
 
-/** Settings is in front (its tab, or its About screen opened from the rail): a band follower isn't pulled off it. */
-internal fun settingsFront(tab: HomeTab, aboutOpen: Boolean) = tab == HomeTab.SETTINGS || aboutOpen
-
-/** Songs, Setlists and Settings tabs: bottom bar on phones, wide rail on tablets (Material 3 Expressive). */
+/**
+ * Songs and Setlists tabs, and Settings beside them: bottom bar on phones, wide rail on tablets (Material 3 Expressive).
+ * Settings is not a tab with a screen of its own here: its button opens the Settings page ([onOpenSettings]).
+ */
 @Composable
 fun HomeScreen(
     onOpenSong: (String) -> Unit,
@@ -83,6 +81,7 @@ fun HomeScreen(
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},
     onShareSetlist: (String) -> Unit = {},
+    onOpenSettings: (section: br.app.stagebook.ui.settings.SettingsSection?, alone: Boolean) -> Unit = { _, _ -> },   // alone: only that section, as About from the logo
     inboxVm: InboxViewModel = hiltViewModel(),
     homeVm: HomeViewModel = hiltViewModel(),
 ) {
@@ -113,40 +112,19 @@ fun HomeScreen(
     )
     // back on a tab that isn't the start one goes to it (instead of closing the app)
     BackHandler(enabled = tab != home) { picked = home }
-    // About from the rail's logo: its own page over the tab the user was on, which back returns to (user, 03/11)
-    var aboutOpen by rememberSaveable { mutableStateOf(false) }
     // under the app's name on the rail: the number only, without the commit ("0.1.674 (7fd22d9d)")
     val context = androidx.compose.ui.platform.LocalContext.current
     val appVersion = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty().substringBefore(" (")
     }
-    BackHandler(enabled = aboutOpen) { aboutOpen = false }
 
     // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
     // once on the Fire
     val tabs = rememberSaveableStateHolder()
-    // Settings always opens on the starting list (not the last section seen): each tap on the icon is a new visit
-    var settingsVisit by rememberSaveable { mutableIntStateOf(0) }
-    var settingsStart by rememberSaveable { mutableStateOf<SettingsSection?>(null) }   // link from the alert: opens right on the section
-    val onTab: (HomeTab) -> Unit = { t ->
-        aboutOpen = false
-        if (t == HomeTab.SETTINGS) {
-            tabs.removeState("${HomeTab.SETTINGS}$settingsVisit")
-            settingsVisit++
-            settingsStart = null
-        }
-        picked = t
-    }
-    val openEssential = { onTab(HomeTab.SETTINGS); settingsStart = SettingsSection.DEVICE }
-    // a link from another screen (or another section): Settings opens right on it
-    val linked by br.app.stagebook.ui.settings.SettingsLinks.pending.collectAsStateWithLifecycle()
-    LaunchedEffect(linked) {
-        linked?.let { onTab(HomeTab.SETTINGS); settingsStart = it; br.app.stagebook.ui.settings.SettingsLinks.pending.value = null }
-    }
+    val onTab: (HomeTab) -> Unit = { t -> if (t == HomeTab.SETTINGS) onOpenSettings(null, false) else picked = t }
+    val openEssential = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.DEVICE, false) }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    // the leader's song doesn't pull this person off Settings (and the screens inside it): it waits and says so on the strip
-    br.app.stagebook.ui.components.FollowHoldWhile(settingsFront(tab, aboutOpen))
-    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, onAbout = { aboutOpen = true }) { m ->
+    HomeScaffold(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, onAbout = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.ABOUT, true) }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
@@ -175,17 +153,16 @@ fun HomeScreen(
         }
         Column(m) {
             Box(Modifier.weight(1f)) {
-                if (aboutOpen) {
-                    SettingsRoute(SettingsSection.ABOUT, onLeave = { aboutOpen = false })
-                } else androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status.takeIf { tab != HomeTab.SETTINGS }) {
-                tabs.SaveableStateProvider(if (tab == HomeTab.SETTINGS) "${HomeTab.SETTINGS}$settingsVisit" else tab.name) {
+                androidx.compose.runtime.CompositionLocalProvider(LocalHomeStatus provides status) {
+                tabs.SaveableStateProvider(tab.name) {
                     when (tab) {
                         HomeTab.SONGS -> SongsRoute(
                             onOpenSong, onEditSong, onImport, onScan = onScanSetlist, onReceiveCode = onReceiveCode,
                             received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                         )
                         HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = onShareSetlist, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
-                        HomeTab.SETTINGS -> SettingsRoute(settingsStart)
+                        // Settings has its own page: never the tab in front
+                        HomeTab.SETTINGS -> Unit
                     }
                 }
                 }

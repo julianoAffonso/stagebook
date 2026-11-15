@@ -181,6 +181,7 @@ import kotlin.math.roundToInt
 fun SettingsRoute(
     start: SettingsSection? = null,   // start: section open on entry (link from the alert)
     onLeave: (() -> Unit)? = null,   // set: only [start], on its own page, whose back arrow calls this (About from the rail's logo)
+    onBack: (() -> Unit)? = null,   // set: the list of sections has a back arrow that calls this (Settings is a page of its own)
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -325,6 +326,7 @@ fun SettingsRoute(
             section = section,
             onSection = { section = it },
             onLeave = onLeave,
+            onBack = onBack,
             uiState = uiState,
             actions = SettingsActions(
                 onFont = viewModel::setFont,
@@ -568,9 +570,8 @@ private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions
     }
 }
 
-/** A Settings section asked for by a link somewhere in the app (the Home screen opens it). */
+/** What reaches Settings from outside the app. */
 object SettingsLinks {
-    val pending = kotlinx.coroutines.flow.MutableStateFlow<SettingsSection?>(null)
     /** A `.stagebook` file tapped outside the app, already checked: Open file shows its parts. */
     val file = kotlinx.coroutines.flow.MutableStateFlow<android.net.Uri?>(null)
 }
@@ -602,6 +603,7 @@ fun SettingsScreen(
     section: SettingsSection? = null,
     onSection: (SettingsSection?) -> Unit = {},
     onLeave: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
 ) {
     // the search: its text survives a rotation; what a result opened flashes once (the focus is cleared after)
     var query by rememberSaveable { mutableStateOf("") }
@@ -641,7 +643,7 @@ fun SettingsScreen(
                 // tablet in landscape: fixed list on the left, open section on the right
                 val open = section ?: SettingsSection.LYRICS
                 Row(Modifier.fillMaxSize()) {
-                    SectionList(uiState, open, onSection, Modifier.width(Sizes.settingsList).fillMaxHeight(), band = actions.band, search = search)
+                    SectionList(uiState, open, onSection, Modifier.width(Sizes.settingsList).fillMaxHeight(), band = actions.band, search = search, onBack = onBack)
                     Column(
                         Modifier
                             .weight(1f)
@@ -661,7 +663,7 @@ fun SettingsScreen(
                 BackHandler(enabled = section != null) { onSection(null) }
                 Crossfade(section, label = "section") { open ->
                     if (open == null) {
-                        SectionList(uiState, null, onSection, Modifier.fillMaxSize(), band = actions.band, search = search)
+                        SectionList(uiState, null, onSection, Modifier.fillMaxSize(), band = actions.band, search = search, onBack = onBack)
                     } else {
                         SectionPage(open, uiState, actions, draft) { onSection(null) }
                     }
@@ -684,11 +686,11 @@ internal class SettingsSearch(val query: String, val onQuery: (String) -> Unit, 
 @Composable
 private fun SectionList(
     uiState: SettingsUiState, selected: SettingsSection?, onSection: (SettingsSection) -> Unit, modifier: Modifier = Modifier,
-    band: BandUi = BandUi(), search: SettingsSearch? = null,
+    band: BandUi = BandUi(), search: SettingsSearch? = null, onBack: (() -> Unit)? = null,
 ) {
     CenteredContent(modifier) {
         Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
-            ScreenHeader(stringResource(R.string.settings_title), Modifier.padding(top = Spacing.s, bottom = Spacing.s))
+            ScreenHeader(stringResource(R.string.settings_title), Modifier.padding(top = Spacing.s, bottom = Spacing.s), onBack = onBack)
             if (search != null) {
                 br.app.stagebook.ui.components.SearchField(
                     search.query, search.onQuery, stringResource(R.string.settings_search_hint), Modifier.padding(bottom = Spacing.s),

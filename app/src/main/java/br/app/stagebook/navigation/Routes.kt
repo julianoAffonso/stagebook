@@ -39,5 +39,9 @@ data class Stage(
     val fromList: Boolean = false,
 )
 
+/** Settings, a page of its own: [section] opens on that section's name (empty: the list); [alone]: only that section, as About from the logo. */
+@Serializable
+data class Settings(val section: String = "", val alone: Boolean = false)
+
 @Serializable
 data class Importer(val query: String = "", val queued: Boolean = false, val kind: String = "")   // queued: batch importing into a setlist
