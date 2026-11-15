@@ -42,9 +42,10 @@
     <string name="search_label">Search</string>
     <string name="search_hint">Song or artist</string>
     <string name="songs_search">Search song or artist</string>
+    <string name="song_is_pdf">PDF</string>
     <string name="songs_new">New song</string>
     <string name="songs_empty_title">No songs yet</string>
-    <string name="songs_empty_message">Create one, import from the web or bring your library in Settings.</string>
+    <string name="songs_empty_message">Tap + at the bottom to create one or bring songs in, or bring your library in Settings.</string>
     <string name="songs_not_found">Nothing found</string>
     <string name="songs_delete_confirm">Delete \"%1$s\"? It also leaves the setlists.</string>
 
@@ -694,6 +695,8 @@
     <!-- scan a setlist QR (from another device) -->
     <string name="sets_scan">Scan QR</string>
     <string name="import_menu">Import</string>
+    <string name="add_menu">New and import</string>
+    <string name="select_mode">Select songs</string>
     <string name="import_sync_band">Sync with the band</string>
     <string name="import_sync_band_offline">Sync with the band (no Wi-Fi)</string>
     <string name="import_syncing">Checking for news from the band…</string>

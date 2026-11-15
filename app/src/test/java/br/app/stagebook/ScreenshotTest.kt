@@ -1735,7 +1735,7 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText(str(R.string.import_menu))[0].performClick()
+        compose.onNodeWithContentDescription(str(R.string.add_menu)).performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_importar_menu.png")
     }
@@ -1748,7 +1748,7 @@ class ScreenshotTest {
                 }
             }
         }
-        compose.onAllNodesWithText(str(R.string.import_menu))[0].performClick()
+        compose.onNodeWithContentDescription(str(R.string.add_menu)).performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/jornada_importar_menu_tablet.png")
     }

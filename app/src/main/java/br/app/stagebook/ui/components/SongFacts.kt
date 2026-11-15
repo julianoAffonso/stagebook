@@ -34,17 +34,19 @@ internal val TrackMarkIcon: ImageVector get() = AppIcons.AudioWave
 
 /**
  * What the musician checks before the song starts, at the end of its row (the song list and a setlist): the key, and
- * under it the tempo, the capo and an audio wave with a backing track. Only what the song has; nothing at all with none.
+ * under it the tempo, the capo, a sheet of paper for a PDF and an audio wave with a backing track. Only what the song has; nothing at all with none.
  */
 @Composable
-fun SongFacts(songKey: String, bpm: Int, capo: Int, hasTrack: Boolean, modifier: Modifier = Modifier) {
-    if (songKey.isEmpty() && bpm <= 0 && capo <= 0 && !hasTrack) return
+fun SongFacts(songKey: String, bpm: Int, capo: Int, hasTrack: Boolean, modifier: Modifier = Modifier, hasPdf: Boolean = false) {
+    if (songKey.isEmpty() && bpm <= 0 && capo <= 0 && !hasTrack && !hasPdf) return
     Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (songKey.isNotEmpty()) SongKeyBadge(songKey)
-        if (bpm > 0 || capo > 0 || hasTrack) {
+        if (bpm > 0 || capo > 0 || hasTrack || hasPdf) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 val small = MaterialTheme.typography.labelSmall
                 val color = MaterialTheme.colorScheme.onSurfaceVariant
+                // a sheet of paper: the song is a PDF (SongbookPro marks it the same way)
+                if (hasPdf) Icon(AppIcons.Document, stringResource(R.string.song_is_pdf), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)
                 if (bpm > 0) Text(stringResource(R.string.set_bpm, bpm), style = small, color = color, maxLines = 1)
                 if (capo > 0) Text(stringResource(R.string.editor_data_capo, capo), style = small, color = color, maxLines = 1)
                 if (hasTrack) Icon(TrackMarkIcon, stringResource(R.string.stage_backing_track), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)

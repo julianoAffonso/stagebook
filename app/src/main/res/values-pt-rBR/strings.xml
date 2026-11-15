@@ -45,9 +45,10 @@
     <string name="search_label">Buscar</string>
     <string name="search_hint">Música, artista</string>
     <string name="songs_search">Buscar música ou artista</string>
+    <string name="song_is_pdf">PDF</string>
     <string name="songs_new">Nova música</string>
     <string name="songs_empty_title">Nenhuma música ainda</string>
-    <string name="songs_empty_message">Crie uma, importe da internet ou traga a biblioteca em Ajustes.</string>
+    <string name="songs_empty_message">Toque em + embaixo para criar ou trazer músicas, ou traga a biblioteca em Ajustes.</string>
     <string name="songs_not_found">Nada encontrado</string>
     <string name="songs_delete_confirm">Apagar \"%1$s\"? Ela também sai dos setlists.</string>
 
@@ -708,6 +709,8 @@
     <!-- ler o QR de um setlist (de outro aparelho) -->
     <string name="sets_scan">Ler QR</string>
     <string name="import_menu">Importar</string>
+    <string name="add_menu">Nova e importar</string>
+    <string name="select_mode">Selecionar músicas</string>
     <string name="import_sync_band">Sincronizar com a banda</string>
     <string name="import_sync_band_offline">Sincronizar com a banda (sem Wi-Fi)</string>
     <string name="import_syncing">Procurando novidades da banda…</string>

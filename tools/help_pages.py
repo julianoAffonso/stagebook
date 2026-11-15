@@ -44,11 +44,11 @@ SECTIONS = [
     {
         "id": "musicas", "pt": "Músicas", "en": "Songs",
         "text_pt": [
-            "O menu é a sua biblioteca: toque no primeiro botão do alto do palco (as três barras) e ele abre por cima, ocupando quase toda a largura, com três abas embaixo: Músicas, Setlists e Ajustes. Ajustes abre uma página à parte. No tablet, o alfinete do alto fixa o menu ao lado do palco. Tocar fora do menu, ou no voltar do Android, fecha. A aba Músicas é a lista. Tocando numa música, ela abre no palco. Nova música começa uma em branco, e Importar traz de outros lugares.",
+            "O menu é a sua biblioteca: toque no primeiro botão do alto do palco (as três barras) e ele abre por cima, ocupando quase toda a largura, com três abas embaixo: Músicas, Setlists e Ajustes. Ajustes abre uma página à parte. No tablet, o alfinete do alto fixa o menu ao lado do palco. Tocar fora do menu, ou no voltar do Android, fecha. A aba Músicas é a lista. Tocando numa música, ela abre no palco. O + embaixo à esquerda reúne o que traz música nova: Nova música começa uma em branco, e o resto traz de outros lugares (veja Importar). O botão de lista com marcas, embaixo à direita, liga as caixas de seleção: marque várias músicas para juntar a um setlist, mudar as tags, compartilhar ou apagar. Segurar uma música também começa a seleção. Uma música em PDF mostra uma folha de papel no fim da linha.",
             "Cada música mostra o nome e, embaixo, o artista. Na ponta da linha fica o tom e, embaixo dele, o BPM, o capo e uma marca de onda de áudio quando tem backing track. Só aparece o que a música tem. Um nome comprido fica numa linha só.",
         ],
         "text_en": [
-            "The menu is your library: tap the first button at the top of the stage (the three bars) and it opens over it, taking most of the width, with three tabs at the bottom: Songs, Setlists and Settings. Settings opens a page of its own. On a tablet, the pin at the top keeps the menu open beside the stage. Tapping outside the menu, or Android's back, closes it. The Songs tab is the list. Tap a song and it opens on stage. New song starts a blank one, and Import brings them from elsewhere.",
+            "The menu is your library: tap the first button at the top of the stage (the three bars) and it opens over it, taking most of the width, with three tabs at the bottom: Songs, Setlists and Settings. Settings opens a page of its own. On a tablet, the pin at the top keeps the menu open beside the stage. Tapping outside the menu, or Android's back, closes it. The Songs tab is the list. Tap a song and it opens on stage. The + at the bottom left gathers what brings a new song in: New song starts a blank one, and the rest brings them from elsewhere (see Import). The checklist button at the bottom right turns the selection boxes on: choose several songs to add to a setlist, change their tags, share or delete. Holding a song also starts the selection. A song that is a PDF shows a sheet of paper at the end of its row.",
             "Each song shows its name and, under it, the artist. At the end of the row is the key and, under it, the BPM, the capo and an audio wave mark when it has a backing track. Only what the song has shows. A long name stays on one line.",
         ],
         "figs": [Fig(("tablet_1_musicas", "celular_1_musicas", "A lista de músicas", "The song list"))],
@@ -87,7 +87,7 @@ SECTIONS = [
     {
         "id": "importar", "pt": "Importar", "en": "Importing",
         "text_pt": [
-            "O botão Importar, na aba Músicas, reúne tudo o que traz música de fora:",
+            "O + embaixo, na aba Músicas, reúne tudo o que traz música de fora:",
             "- **Sincronizar com a banda:** procura novidades da banda agora.",
             "- **Recebidos da banda:** o que a banda mandou, para você conferir.",
             "- **Da internet:** abre os sites da sua lista. No perfil Automático, o app pergunta antes se você quer importar letra ou cifra, e abre o site daquele tipo.",
@@ -95,7 +95,7 @@ SECTIONS = [
             "- **Digitar as 3 palavras:** recebe o que alguém mandou pela internet.",
         ],
         "text_en": [
-            "The Import button, on the Songs tab, gathers everything that brings songs in:",
+            "The + at the bottom, on the Songs tab, gathers everything that brings songs in:",
             "- **Sync with the band:** looks for what's new from the band right now.",
             "- **Received from the band:** what the band sent, for you to check.",
             "- **From the web:** opens the sites on your list. In the Automatic profile, the app first asks whether you want to import lyrics or chords, and opens that kind of site.",

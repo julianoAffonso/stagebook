@@ -81,40 +81,91 @@ fun ImportButton(
         ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
         br.app.stagebook.ui.components.FollowBusyWhile(open)
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
-            onSync?.let { sync ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(if (localNet) R.string.import_sync_band else R.string.import_sync_band_offline)) },
-                    onClick = { open = false; sync() },
-                    leadingIcon = { Icon(if (localNet) AppIcons.Sync else AppIcons.CloudOff, null) },
-                    enabled = localNet,
-                )
+            ImportMenuItems(online, onScan, onSites, received, onReceived, onSync, internetOn, localNet, close = { open = false }, onType = { typing = true })
+        }
+    }
+    if (typing) {
+        TextInputDialog(
+            stringResource(R.string.sets_type_code), "", stringResource(R.string.sets_code_hint),
+            onConfirm = { typing = false; if (it.isNotBlank()) onCode(it.trim()) },
+            onDismiss = { typing = false },
+        )
+    }
+}
+
+/** The ways to bring songs in, as menu items: sync with the band, what the band sent, the sites, the QR and the 3 words. */
+@Composable
+internal fun ImportMenuItems(
+    online: Boolean, onScan: () -> Unit, onSites: (() -> Unit)?, received: Int, onReceived: () -> Unit, onSync: (() -> Unit)?,
+    internetOn: Boolean, localNet: Boolean, close: () -> Unit, onType: () -> Unit,
+) {
+    onSync?.let { sync ->
+        DropdownMenuItem(
+            text = { Text(stringResource(if (localNet) R.string.import_sync_band else R.string.import_sync_band_offline)) },
+            onClick = { close(); sync() },
+            leadingIcon = { Icon(if (localNet) AppIcons.Sync else AppIcons.CloudOff, null) },
+            enabled = localNet,
+        )
+    }
+    if (received > 0) {
+        DropdownMenuItem(
+            text = { Text(pluralStringResource(R.plurals.import_received, received, received)) },
+            onClick = { close(); onReceived() },
+            leadingIcon = { Icon(AppIcons.Group, null) },
+        )
+    }
+    onSites?.let { sites ->
+        DropdownMenuItem(
+            text = { Text(stringResource(if (online) R.string.import_from_sites else R.string.import_from_sites_offline)) },
+            onClick = { close(); sites() },
+            leadingIcon = { Icon(if (online) AppIcons.Public else AppIcons.CloudOff, null) },
+            enabled = online,
+        )
+    }
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.sets_scan)) },
+        onClick = { close(); onScan() },
+        leadingIcon = { Icon(AppIcons.QrCode, null) },
+    )
+    if (internetOn) DropdownMenuItem(
+        text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
+        onClick = { close(); onType() },
+        leadingIcon = { Icon(AppIcons.Edit, null) },
+        enabled = online,
+    )
+}
+
+/**
+ * The + at the bottom of the library drawer (SongbookPro's): one menu with what brings something new in. [onNew], when
+ * given, is the first item (a new song); the rest are the import ways ([ImportMenuItems]). Whatever arrives by QR or
+ * code (setlist or loose songs) opens the right review, whatever the tab.
+ */
+@Composable
+fun AddMenuButton(
+    online: Boolean,
+    onScan: () -> Unit,
+    onCode: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onNew: (() -> Unit)? = null,
+    onSites: (() -> Unit)? = null,
+    received: Int = 0,
+    onReceived: () -> Unit = {},
+    onSync: (() -> Unit)? = null,
+    internetOn: Boolean = true,
+    localNet: Boolean = true,
+) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    var typing by rememberSaveable { mutableStateOf(false) }
+    Box(modifier) {
+        androidx.compose.material3.IconButton(onClick = { open = true }) {
+            Icon(AppIcons.Add, stringResource(R.string.add_menu))
+        }
+        br.app.stagebook.ui.components.FollowBusyWhile(open)
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
+            onNew?.let { new ->
+                DropdownMenuItem(text = { Text(stringResource(R.string.songs_new)) }, onClick = { open = false; new() }, leadingIcon = { Icon(AppIcons.Add, null) })
             }
-            if (received > 0) {
-                DropdownMenuItem(
-                    text = { Text(pluralStringResource(R.plurals.import_received, received, received)) },
-                    onClick = { open = false; onReceived() },
-                    leadingIcon = { Icon(AppIcons.Group, null) },
-                )
-            }
-            onSites?.let { sites ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(if (online) R.string.import_from_sites else R.string.import_from_sites_offline)) },
-                    onClick = { open = false; sites() },
-                    leadingIcon = { Icon(if (online) AppIcons.Public else AppIcons.CloudOff, null) },
-                    enabled = online,
-                )
-            }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.sets_scan)) },
-                onClick = { open = false; onScan() },
-                leadingIcon = { Icon(AppIcons.QrCode, null) },
-            )
-            if (internetOn) DropdownMenuItem(
-                text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
-                onClick = { open = false; typing = true },
-                leadingIcon = { Icon(AppIcons.Edit, null) },
-                enabled = online,
-            )
+            ImportMenuItems(online, onScan, onSites, received, onReceived, onSync, internetOn, localNet, close = { open = false }, onType = { typing = true })
         }
     }
     if (typing) {

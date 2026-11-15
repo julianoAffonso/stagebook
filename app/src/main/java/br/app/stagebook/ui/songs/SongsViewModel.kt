@@ -44,6 +44,7 @@ data class SongRowUi(
     val bpm: Int = 0,           // 0 = none
     val capo: Int = 0,
     val hasTrack: Boolean = false,
+    val hasPdf: Boolean = false,   // the song is a PDF (a sheet of paper in its row)
 )
 
 /** A letter of the A to Z index and where its first song is in [SongsUiState.songs]. */
@@ -129,7 +130,7 @@ class SongsViewModel @Inject constructor(
         val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map {
             val fact = known[it.id]
             // a song the search already has and the facts don't yet: its row comes bare and is redone right after
-            SongRowUi(it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true) to (fact?.letter ?: SongGroups.letter(it.title))
+            SongRowUi(it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true, it.pdf.isNotEmpty()) to (fact?.letter ?: SongGroups.letter(it.title))
         }
         val grouped = SongGroups.group(rows) { it.second }
         SongsUiState(
