@@ -287,9 +287,11 @@ SECTIONS = [
         "id": "palco", "pt": "Palco", "en": "Stage",
         "text_pt": [
             "No palco a letra aparece grande, com a cifra e as partes. Num setlist, o topo mostra a posição, como 2 de 12, e o fim da música mostra a próxima. Enquanto o palco está aberto, nada aparece por cima: o que a banda mandar fica esperando.",
+            "Ao abrir o app, ele já volta ao palco onde você parou: a última música, ou o último setlist, na música em que o show estava. Se aquela música ou setlist foi apagada, o app abre nas listas, como antes. Voltar do palco leva às listas.",
         ],
         "text_en": [
             "On stage the lyrics show large, with the chords and parts. In a setlist, the top shows the position, like 2 of 12, and the end of the song shows the next one. While the stage is open nothing pops up over it: whatever the band sends waits.",
+            "When you open the app, it goes back to the stage where you left off: the last song, or the last setlist, on the song the show was on. If that song or setlist was deleted, the app opens on the lists, as before. Back from the stage goes to the lists.",
         ],
         "figs": [Fig(("tablet_6_palco", "celular_7_palco", "O palco", "The stage")),
                  Fig(("tablet_6_palco_cifra", "celular_7_palco_cifra", "Com a cifra", "With chords"))],

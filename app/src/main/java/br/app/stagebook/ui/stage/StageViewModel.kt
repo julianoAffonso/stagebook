@@ -127,6 +127,7 @@ class StageViewModel @Inject constructor(
     private val midiOut: br.app.stagebook.data.MidiOut,
     private val show: br.app.stagebook.data.SetlistShowStore,
     private val bandTrust: br.app.stagebook.data.BandTrust,
+    private val lastStage: br.app.stagebook.data.LastStage,
 ) : ViewModel() {
     /** The setlist's menu, "Lead the band": sends it from the song on stage (each member says what's missing). */
     fun conductBand() {
@@ -217,6 +218,8 @@ class StageViewModel @Inject constructor(
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
         shownIndex = index
+        // the app opens on this stage next time (not the leader's break alone: there is no song of ours there)
+        if (!route.leaderBreak) lastStage.record(route.setId, route.songId)
         resumeBreak(index)
         route.setId?.let { conduct.open(it, index) }
         announce(index)

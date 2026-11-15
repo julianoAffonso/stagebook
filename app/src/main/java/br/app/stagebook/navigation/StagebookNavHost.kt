@@ -76,6 +76,16 @@ fun StagebookNavHost(
     resume: String? = null,
 ) {
     val nav = rememberNavController()
+    // at launch the app opens on the stage that was open last, over Home (back goes to the lists); not when it comes back
+    // from an update (that has its own place to go to) and only once per start, a turned screen doesn't open it again
+    val start: br.app.stagebook.ui.home.StartViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    val libraryRead by start.loaded.collectAsStateWithLifecycle()
+    var opened by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(libraryRead) {
+        if (!libraryRead || opened) return@LaunchedEffect
+        opened = true
+        if (resume == null) start.route()?.let { nav.navigate(it) }
+    }
     // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
     // it waits and opens on leaving; a code already open there is left alone (it would discard the review)
     val pendingLink = remember { br.app.stagebook.domain.PendingLink() }
