@@ -136,11 +136,14 @@ fun PdfStageView(
                 // the stroke under the finger, before it is kept
                 var live by remember(pages, at) { mutableStateOf(emptyList<PdfPoint>()) }
                 // the page's size on the screen: as large as it fits, drawn once and kept while the zoom changes the sharpness
-                var fit by remember(pages, at, widthPx, heightPx, crop) { mutableStateOf<Pair<Int, Int>?>(null) }
+                // (kept across pages: turning one leaves the last on screen until the next is drawn, in place of a spinner between them)
+                var fit by remember(pages, widthPx, heightPx) { mutableStateOf<Pair<Int, Int>?>(null) }
                 // the pixels of the whole page, drawn once, are what sets how far it may be enlarged: a trimmed page needs more of them
                 val maxScale = fit?.let { PdfZoom.maxScale((it.first / cropW).toInt(), (it.second / cropH).toInt()) } ?: 1.5f
                 val bucket = PdfZoom.bucket(scale, maxScale)
-                var drawn by remember(pages, at, crop) { mutableStateOf<ImageBitmap?>(null) }
+                var drawn by remember(pages, widthPx, heightPx) { mutableStateOf<ImageBitmap?>(null) }
+                // which page [drawn] is, and with which trim: what is on screen while the next one is being drawn
+                var drawnAt by remember(pages, widthPx, heightPx) { mutableStateOf(-1) }
                 // a page that can't be drawn (a damaged one, no room for its bitmap) says so, and doesn't close the app
                 var broken by remember(pages, at) { mutableStateOf(false) }
                 LaunchedEffect(pages, at, widthPx, heightPx, bucket, crop) {
@@ -150,11 +153,13 @@ fun PdfStageView(
                         val factor = minOf(widthPx / (pw * cropW), heightPx / (ph * cropH))
                         val fitW = (pw * cropW * factor).toInt().coerceAtLeast(1)
                         val fitH = (ph * cropH * factor).toInt().coerceAtLeast(1)
-                        fit = fitW to fitH
                         // the whole page is drawn wide enough for its trim to come out as wide as the box
                         val wholeW = (fitW / cropW).toInt().coerceAtLeast(1)
-                        // the sharper one replaces the page on screen only once it is drawn
-                        drawn = pages.bitmap(at, wholeW * bucket).asImageBitmap()
+                        // the new page (or the sharper one) replaces what is on screen only once it is drawn, size and picture together
+                        val bitmap = pages.bitmap(at, wholeW * bucket).asImageBitmap()
+                        fit = fitW to fitH
+                        drawn = bitmap
+                        drawnAt = at
                         // the next page is drawn ahead, so the turn shows it at once
                         if (bucket == 1 && at + 1 < pages.pageCount && crops.isEmpty()) pages.bitmap(at + 1, wholeW)
                     } catch (e: kotlinx.coroutines.CancellationException) {
@@ -177,10 +182,15 @@ fun PdfStageView(
                     val f = fitNow ?: return null
                     // a point of the part shown, taken to a point of the whole page: the strokes belong to the page
                     return PdfMarks.onPage(p.x, p.y, widthPx.toFloat(), heightPx.toFloat(), f.first.toFloat(), f.second.toFloat(), scale, offset.x, offset.y)
-                        ?.let { PdfCrops.toPage(crop, it) }
+                        ?.let { PdfCrops.toPage(PdfCrops.forPage(crops, if (drawnAt >= 0) drawnAt else at), it) }
                 }
                 val size = fit
                 val image = drawn
+                // the page on screen is the last one drawn (the turn is shown when the new one is ready)
+                val shownAt = if (drawnAt >= 0) drawnAt else at
+                val shownCrop = PdfCrops.forPage(crops, shownAt)
+                val shownCropW = shownCrop?.let { it.right - it.left } ?: 1f
+                val shownCropH = shownCrop?.let { it.bottom - it.top } ?: 1f
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -214,7 +224,7 @@ fun PdfStageView(
                                         live = stroke.toList()
                                     }
                                 } while (event.changes.any { it.pressed })
-                                if (marking && !pinching && stroke.isNotEmpty()) onStrokeNow(at, stroke.toList())
+                                if (marking && !pinching && stroke.isNotEmpty()) onStrokeNow(if (drawnAt >= 0) drawnAt else at, stroke.toList())
                                 live = emptyList()
                                 if (scale < 1.02f) { scale = 1f; offset = Offset.Zero }
                                 onView(br.app.stagebook.domain.PdfView(scale, offset.x / widthPx, offset.y / heightPx))
@@ -231,8 +241,8 @@ fun PdfStageView(
                                 .size(size.first.toDp(), size.second.toDp())
                                 .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
                         ) {
-                            val pageLabel = stringResource(R.string.stage_pdf_page, at + 1, pages.pageCount)
-                            if (crop == null) Image(
+                            val pageLabel = stringResource(R.string.stage_pdf_page, shownAt + 1, pages.pageCount)
+                            if (shownCrop == null) Image(
                                 image, contentDescription = pageLabel,
                                 modifier = Modifier.fillMaxSize().background(Color.White),
                                 colorFilter = if (invert) InvertFilter else null,
@@ -240,18 +250,18 @@ fun PdfStageView(
                                 // only the trimmed part of the whole page, stretched over the box (they share one shape)
                                 drawImage(
                                     image,
-                                    srcOffset = androidx.compose.ui.unit.IntOffset((crop.left * image.width).toInt(), (crop.top * image.height).toInt()),
-                                    srcSize = androidx.compose.ui.unit.IntSize((cropW * image.width).toInt().coerceAtLeast(1), (cropH * image.height).toInt().coerceAtLeast(1)),
+                                    srcOffset = androidx.compose.ui.unit.IntOffset((shownCrop.left * image.width).toInt(), (shownCrop.top * image.height).toInt()),
+                                    srcSize = androidx.compose.ui.unit.IntSize((shownCropW * image.width).toInt().coerceAtLeast(1), (shownCropH * image.height).toInt().coerceAtLeast(1)),
                                     dstSize = androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt()),
                                     colorFilter = if (invert) InvertFilter else null,
                                 )
                             }
                             // over the paper and not turned over with it: the highlighter keeps its colour on a dark stage
                             // the strokes of this page, as paths made once and drawn on every frame of a zoom or a move
-                            val strokes = remember(marks, at) { marks.filter { it.page == at } }
+                            val strokes = remember(marks, shownAt) { marks.filter { it.page == shownAt } }
                             Canvas(Modifier.fillMaxSize()) {
-                                strokes.forEach { drawStroke(it.points, it.width, markColor, crop) }
-                                if (live.isNotEmpty()) drawStroke(live, PdfMarks.WIDTH, markColor, crop)
+                                strokes.forEach { drawStroke(it.points, it.width, markColor, shownCrop) }
+                                if (live.isNotEmpty()) drawStroke(live, PdfMarks.WIDTH, markColor, shownCrop)
                             }
                         }
                     }

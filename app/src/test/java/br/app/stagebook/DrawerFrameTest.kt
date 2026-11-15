@@ -27,8 +27,10 @@ class DrawerFrameTest {
     @get:Rule val compose = createComposeRule()
 
     @Test fun `the three tabs are there with their names and the list sits between`() {
-        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, version = "0.1.7") { m -> Box(m) { Text("a lista") } } } }
-        listOf("Músicas", "Setlists", "Ajustes", "Stagebook", "0.1.7", "a lista").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}) { m -> Box(m) { Text("a lista") } } } }
+        listOf("Músicas", "Setlists", "Ajustes", "Stagebook", "a lista").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+        // the logo and the name only: no version under it
+        compose.onNode(androidx.compose.ui.test.hasText("0.1", substring = true)).assertDoesNotExist()
     }
 
     @Test fun `tapping a tab says which one`() {

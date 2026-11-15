@@ -43,9 +43,9 @@ data class Stage(
 @Serializable
 object SetlistsList
 
-/** Settings, a page of its own: [section] opens on that section's name (empty: the list); [alone]: only that section, as About from the logo. */
+/** Settings, a page of its own: [section] opens on that section's name (empty: the list); [alone]: only that section, as About from the logo; [fromMenu]: opened from the side menu, which opens again on leaving. */
 @Serializable
-data class Settings(val section: String = "", val alone: Boolean = false)
+data class Settings(val section: String = "", val alone: Boolean = false, val fromMenu: Boolean = false)
 
 @Serializable
 data class Importer(val query: String = "", val queued: Boolean = false, val kind: String = "")   // queued: batch importing into a setlist

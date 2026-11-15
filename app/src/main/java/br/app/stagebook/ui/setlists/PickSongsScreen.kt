@@ -86,14 +86,13 @@ fun PickSongsScreen(
                     subtitle = uiState.setName,
                     onBack = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-                    iconActions = false,
+                    iconActions = true,
                 ) {
                     // in the fixed header: the search keyboard covered the button when it sat at the bottom
-                    ActionButton(
-                        text = stringResource(R.string.pick_add_short, uiState.selectedCount),
-                        onClick = onConfirm,
-                        icon = AppIcons.Check,
-                        enabled = uiState.selectedCount > 0,
+                    // an icon, as the rest of the menu (the check; its name says how many go in)
+                    br.app.stagebook.ui.components.TipIcon(
+                        stringResource(R.string.pick_add_short, uiState.selectedCount), AppIcons.Check, onConfirm,
+                        tint = MaterialTheme.colorScheme.primary, enabled = uiState.selectedCount > 0,
                     )
                 }
                 br.app.stagebook.ui.components.SearchWithTags(

@@ -270,9 +270,10 @@ fun SetlistDetailScreen(
                         else stringResource(R.string.set_count_with_breaks, songs, pluralStringResource(R.plurals.break_count, breakCount, breakCount))
                     }
                     ScreenHeader(
-                        // looking: the setlist's name; editing: that it is being edited, the name below
-                        title = if (editing) stringResource(R.string.set_edit) else uiState.name,
-                        subtitle = if (editing) "${uiState.name} · $count" else count,
+                        // the setlist's name on one line either way: "Edit setlist" over it took the room of the icons and broke in two
+                        // (user, 15/11); editing shows in the ✕, the floppy and the handles
+                        title = uiState.name,
+                        subtitle = count,
                         onBack = if (editing) ({ if (changed) { afterAsk = null; asking = true } else finishEditing() }) else onBack,
                         closes = editing,
                         iconActions = true,
@@ -436,7 +437,7 @@ private fun RowScope.SetActions(
     onEdit: () -> Unit, onSave: () -> Unit, canSave: Boolean, menu: List<MenuAction>,
 ) {
     if (editing) {
-        IconButton(onClick = onAddSongs) { Icon(AppIcons.PlaylistAdd, stringResource(R.string.sets_add_songs), tint = MaterialTheme.colorScheme.onSurface) }
+        IconButton(onClick = onAddSongs) { Icon(AppIcons.Add, stringResource(R.string.sets_add_songs), tint = MaterialTheme.colorScheme.onSurface) }
         val message = br.app.stagebook.ui.components.LocalAppMessage.current
         val why = stringResource(R.string.sets_break_needs_two)
         val breakName = stringResource(R.string.sets_add_break)

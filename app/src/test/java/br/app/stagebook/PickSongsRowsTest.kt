@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
@@ -121,7 +122,7 @@ class PickSongsRowsTest {
         assertEquals(emptyList<String>(), toggled)
         compose.onNodeWithText("Só o tom", useUnmergedTree = true).performClick()
         assertEquals(listOf("2"), toggled)
-        compose.onNodeWithText("Adicionar (1)", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("Adicionar (1)", useUnmergedTree = true).performClick()
         assertEquals(1, confirmed)
     }
 }

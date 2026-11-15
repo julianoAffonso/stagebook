@@ -51,7 +51,6 @@ fun DrawerFrame(
     modifier: Modifier = Modifier,
     badges: Map<HomeTab, Int> = emptyMap(),
     onAbout: () -> Unit = {},
-    version: String = "",
     pinned: Boolean = false,
     onPin: (() -> Unit)? = null,
     content: @Composable (Modifier) -> Unit,
@@ -69,10 +68,8 @@ fun DrawerFrame(
                     painterResource(R.mipmap.ic_launcher_foreground), contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.size(Sizes.drawerLogo).clip(MaterialTheme.shapes.small).graphicsLayer { scaleX = 1.4f; scaleY = 1.4f },
                 )
-                Column {
-                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                    if (version.isNotEmpty()) Text(version, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                // the logo and the name, beside each other: no version under it (user, 15/11; it is in Settings → About)
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
             }
             if (onPin != null) IconButton(onClick = onPin) {
                 Icon(

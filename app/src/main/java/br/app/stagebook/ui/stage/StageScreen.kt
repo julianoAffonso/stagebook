@@ -2303,14 +2303,10 @@ private fun PdfHoldButtons(onMarker: () -> Unit, onUndo: (() -> Unit)?, onClear:
 
 @Composable
 private fun EditOfferButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    // an icon alone (user, 15/11: the words took the room); the name is for the screen reader and a long press
     Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, shadowElevation = 6.dp) {
-        Row(
-            Modifier.heightIn(min = Sizes.touch).padding(horizontal = Spacing.m),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1)
+        Box(Modifier.size(Sizes.touch), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }

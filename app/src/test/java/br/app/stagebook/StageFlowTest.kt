@@ -479,7 +479,7 @@ class StageFlowTest {
         val edits = mutableListOf<Pair<String, Int>>()
         stageWithEdit({ id, c -> edits += id to c })
         holdSecondLine()
-        compose.onNodeWithText("Editar esta linha").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Editar esta linha").assertIsDisplayed().performClick()
         // "[Refrão]\n" has 9 characters: the 2nd line shown ("primeira linha") starts there
         assertEquals(listOf("s1" to 9), edits)
     }
@@ -490,9 +490,9 @@ class StageFlowTest {
         val moves = mutableListOf<Int>()
         stageWithEdit({ _, c -> edits += c }, { s, _ -> moves += s })
         holdSecondLine()
-        compose.onNodeWithText("Editar esta linha").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Editar esta linha").assertIsDisplayed()
         compose.onNodeWithText("primeira linha", substring = true).performTouchInput { click(Offset(width * 0.9f, 10f)) }
-        compose.onNodeWithText("Editar esta linha").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Editar esta linha").assertDoesNotExist()
         assertTrue(edits.isEmpty())
         assertTrue(moves.isEmpty())
     }

@@ -216,10 +216,12 @@ fun StagebookNavHost(
         }
         composable<Settings> { entry ->
             val route = remember { entry.toRoute<Settings>() }
+            val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
             // not a screen the leader's song pulls away from (pullsToStage): it waits here and the strip says so
             androidx.compose.material3.Scaffold(contentWindowInsets = br.app.stagebook.ui.components.ScreenInsets, containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background) { inner ->
                 Box(Modifier.padding(inner)) {
-                    val back = dropUnlessResumed { nav.popBackStack() }
+                    // from the side menu, back brings the menu again (user, 15/11)
+                    val back = dropUnlessResumed { nav.popBackStack(); if (route.fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() }
                     val section = br.app.stagebook.ui.settings.SettingsSection.fromSaved(route.section)
                     if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(section, onLeave = back)
                     else br.app.stagebook.ui.settings.SettingsRoute(section, onBack = back)

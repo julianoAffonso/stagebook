@@ -129,7 +129,7 @@ class ScreenshotTest {
         val width = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.87f).dp.coerceAtMost(420.dp)
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f))) {
             Surface(Modifier.width(width).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                DrawerFrame(tab, {}, badges = badges, version = "0.1.1234", content = content)
+                DrawerFrame(tab, {}, badges = badges, content = content)
             }
         }
     }

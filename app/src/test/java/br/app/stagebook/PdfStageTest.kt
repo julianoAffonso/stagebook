@@ -297,9 +297,9 @@ class PdfStageTest {
         compose.waitForIdle()
         fun hold() = compose.onRoot().performTouchInput { down(center); advanceEventTime(900); up() }
         hold(); compose.waitForIdle()
-        compose.onNodeWithText("Desfazer").performClick()
+        compose.onNodeWithContentDescription("Desfazer").performClick()
         hold(); compose.waitForIdle()
-        compose.onNodeWithText("Limpar página").performClick()
+        compose.onNodeWithContentDescription("Limpar página").performClick()
         assertEquals(listOf("undo:p:0", "clear:p:0"), asked)
     }
 
@@ -309,8 +309,8 @@ class PdfStageTest {
         compose.waitForIdle()
         compose.onRoot().performTouchInput { down(center); advanceEventTime(900); up() }
         compose.waitForIdle()
-        compose.onAllNodesWithText("Desfazer").assertCountEquals(0)   // nothing marked on the page: only the highlighter is offered
-        compose.onNodeWithText("Marca-texto").performClick()
+        compose.onAllNodesWithContentDescription("Desfazer").assertCountEquals(0)   // nothing marked on the page: only the highlighter is offered
+        compose.onNodeWithContentDescription("Marca-texto").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Pronto").performClick()
         compose.onAllNodesWithText("Pronto").assertCountEquals(0)

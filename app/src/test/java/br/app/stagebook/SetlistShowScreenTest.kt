@@ -101,11 +101,11 @@ class SetlistShowScreenTest {
     // ---- the edit is the whole screen ----
     @Test fun `the screen is the edit, with a handle and a remove button on every row`() {
         screen()
-        compose.onNodeWithText("Editar setlist").assertIsDisplayed()   // the title
+        compose.onNodeWithText("Show").assertIsDisplayed()   // the setlist's name is the title, on one line
         handles().assertCountEquals(5)        // four songs and the break
         removeButtons().assertCountEquals(4)
         compose.onNodeWithContentDescription("Tirar o intervalo").assertExists()
-        compose.onNodeWithText("Show · 4 músicas · 1 intervalo").assertExists()   // which setlist, under the title
+        compose.onNodeWithText("4 músicas · 1 intervalo").assertExists()   // the count, under the name
         // nothing that belongs to the show: no marks, no stage button, no clear played
         listOf("TOCADA", "AGORA", "PRÓX.").forEach { compose.onNodeWithText(it).assertDoesNotExist() }
         compose.onNodeWithContentDescription("Palco").assertDoesNotExist()
@@ -158,7 +158,7 @@ class SetlistShowScreenTest {
     @Test fun `a tap on a song opens nothing, and holding one still selects`() {
         screen()
         compose.onNodeWithText("Música d").performClick()
-        compose.onNodeWithText("Editar setlist").assertIsDisplayed()
+        compose.onNodeWithText("Show").assertIsDisplayed()
         compose.onNodeWithText("Música b").performTouchInput { longClick() }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Selecionar todas").assertExists()

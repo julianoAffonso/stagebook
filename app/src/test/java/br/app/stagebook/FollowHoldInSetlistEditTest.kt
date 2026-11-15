@@ -98,7 +98,7 @@ class FollowHoldInSetlistEditTest {
     @Test fun `with the edit open and nothing being changed the band's song waits, with the strip's reason`() {
         start()
         band("b")
-        compose.onNodeWithText("Editar setlist").assertExists()
+        compose.onNodeWithText("Show").assertExists()
         compose.onAllNodesWithText("stage b").assertCountEquals(0)
         assertEquals("b", gate.pending?.target)
         assertEquals(FollowWait.SCREEN, gate.pending?.reason)

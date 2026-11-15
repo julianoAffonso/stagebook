@@ -93,19 +93,13 @@ fun HomeScreen(
     )
     // back on a tab that isn't the start one goes to it (instead of closing the app)
     BackHandler(enabled = tab != home) { picked = home }
-    // under the app's name on the rail: the number only, without the commit ("0.1.674 (7fd22d9d)")
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val appVersion = remember {
-        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty().substringBefore(" (")
-    }
-
     // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
     // once on the Fire
     val tabs = rememberSaveableStateHolder()
     val onTab: (HomeTab) -> Unit = { t -> if (t == HomeTab.SETTINGS) onOpenSettings(null, false) else picked = t }
     val openEssential = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.DEVICE, false) }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    br.app.stagebook.ui.drawer.DrawerFrame(tab = tab, onTabChange = onTab, badges = badges, version = appVersion, pinned = pinned, onPin = onPin, onAbout = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.ABOUT, true) }) { m ->
+    br.app.stagebook.ui.drawer.DrawerFrame(tab = tab, onTabChange = onTab, badges = badges, pinned = pinned, onPin = onPin, onAbout = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.ABOUT, true) }) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()

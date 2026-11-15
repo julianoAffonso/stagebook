@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
@@ -48,7 +49,7 @@ class StageScrollEditPhoneTest {
         compose.waitForIdle()
         compose.onRoot().performTouchInput { longClick(Offset(width * 0.3f, height * 0.5f)) }
         compose.waitForIdle()
-        val button = compose.onNodeWithText("Editar esta linha").fetchSemanticsNode().boundsInRoot
+        val button = compose.onNodeWithContentDescription("Editar esta linha").fetchSemanticsNode().boundsInRoot
         compose.onRoot().performTouchInput { click(button.center) }
         compose.waitForIdle()
         assertTrue("abriu o editor (cursor=$cursor, page=$page)", cursor >= 0)
