@@ -206,6 +206,9 @@ fun SetlistDetailScreen(
     var rows by remember(uiState.items, uiState.breaks) { mutableStateOf(setRows(uiState.items, uiState.breaks)) }
     val latestRows by rememberUpdatedState(rows)
     val items = remember(rows) { rows.mapNotNull { (it as? SetRow.Song)?.item } }
+    // something differs from when editing began (a screen that opened already editing has nothing to compare: it counts as changed)
+    val changed = before?.let { it != (items.map { i -> i.songId } to uiState.breaks) } ?: true
+    val changedNow by rememberUpdatedState(changed)
     val marks = remember(rows) { rowMarks(rows) }
     val breakCount = rows.size - items.size
     val dragStart = remember { DragStart() }
@@ -227,7 +230,7 @@ fun SetlistDetailScreen(
     fun finishEditing() { editing = false; asking = false; before = null; selected = emptyList(); drawerGuard?.asks = null }
     androidx.compose.runtime.DisposableEffect(drawerGuard, editing) {
         // the drawer closing (button, scrim, swipe, Back) while editing asks first; the answer closes it
-        val asks: () -> Boolean = { if (editing) { afterAsk = { drawer?.close?.invoke() }; asking = true; true } else false }
+        val asks: () -> Boolean = { if (editing && changedNow) { afterAsk = { drawer?.close?.invoke() }; asking = true; true } else false }
         if (editing) drawerGuard?.asks = asks
         onDispose { if (drawerGuard?.asks === asks) drawerGuard?.asks = null }
     }
@@ -265,23 +268,11 @@ fun SetlistDetailScreen(
                         // looking: the setlist's name; editing: that it is being edited, the name below
                         title = if (editing) stringResource(R.string.set_edit) else uiState.name,
                         subtitle = if (editing) "${uiState.name} · $count" else count,
-                        onBack = if (editing) ({ afterAsk = null; asking = true }) else onBack,
+                        onBack = if (editing) ({ if (changed) { afterAsk = null; asking = true } else finishEditing() }) else onBack,
                         closes = editing,
                         iconActions = editing,
                         modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-                    ) {
-                        if (editing) TextButton(onClick = { finishEditing() }) { Text(stringResource(R.string.action_save)) }
-                        else IconButton(onClick = { before = items.map { it.songId } to uiState.breaks; editing = true }) {
-                            Icon(AppIcons.Edit, stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.onSurface)
-                        }
-                        // what is rarely used, and deleting, away from the thumb
-                        OverflowMenu(
-                            listOf(
-                                MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
-                                MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
-                            ),
-                        )
-                    }
+                    )
                 }
                 Crossfade(targetState = uiState.loading, label = "set", modifier = Modifier.weight(1f)) { loading ->
                     when {
@@ -357,7 +348,15 @@ fun SetlistDetailScreen(
                 // at the bottom, as the Songs tab: songs, a break and share, icons in one line
                 if (!selecting) {
                     val canBreak = br.app.stagebook.domain.SetlistBreaks.canAdd(uiState.breaks, uiState.items.size)
-                    SetActions(editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak)
+                    SetActions(
+                        editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak,
+                        onEdit = { before = items.map { it.songId } to uiState.breaks; editing = true },
+                        onSave = { finishEditing() }, canSave = changed,
+                        menu = listOf(
+                            MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
+                            MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
+                        ),
+                    )
                 }
             }
         }
@@ -420,28 +419,35 @@ fun SetlistDetailScreen(
     cloud?.let { CloudDialog(it, { onDismissCloud(); doneSharing() }, onShareCode, onCopyCode) }
 }
 
-/** Songs, Break and Share as icons in one line at the bottom (the stage opens by tapping a song in the list). */
+/**
+ * The setlist's own actions as icons in one line at the bottom, as the Songs tab has them: looking, Edit and Share; editing,
+ * Songs and Break. The floppy (Save, off until something changed) and the ⋮ with what is rarely used close the line.
+ */
 @Composable
-private fun SetActions(editing: Boolean, hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, canBreak: Boolean, onAddBreak: () -> Unit, modifier: Modifier = Modifier) {
+private fun SetActions(
+    editing: Boolean, hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, canBreak: Boolean, onAddBreak: () -> Unit,
+    onEdit: () -> Unit, onSave: () -> Unit, canSave: Boolean, menu: List<MenuAction>, modifier: Modifier = Modifier,
+) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        // adding is part of editing; looking leaves only the sharing
-        if (editing) IconButton(onClick = onAddSongs) { Icon(AppIcons.PlaylistAdd, stringResource(R.string.sets_add_songs), tint = MaterialTheme.colorScheme.onSurface) }
-        // a break sits between two songs: with fewer than two there's no place for it
-        val breakName = stringResource(R.string.sets_add_break)
-        val breakLabel = if (canBreak) breakName else "$breakName. ${stringResource(R.string.sets_break_needs_two)}"
-        val message = br.app.stagebook.ui.components.LocalAppMessage.current
-        val why = stringResource(R.string.sets_break_needs_two)
-        // off but still touchable: the touch says why, as the first one on the off button met nothing (user test, 14/11)
-        if (editing) IconButton(
-            onClick = { if (canBreak) onAddBreak() else message.show(why) },
-            modifier = Modifier.semantics { if (!canBreak) disabled() },
-        ) {
-            Icon(AppIcons.Coffee, breakLabel, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (canBreak) 1f else 0.38f))
+        if (editing) {
+            IconButton(onClick = onAddSongs) { Icon(AppIcons.PlaylistAdd, stringResource(R.string.sets_add_songs), tint = MaterialTheme.colorScheme.onSurface) }
+            val message = br.app.stagebook.ui.components.LocalAppMessage.current
+            val why = stringResource(R.string.sets_break_needs_two)
+            val breakName = stringResource(R.string.sets_add_break)
+            val breakLabel = if (canBreak) breakName else "$breakName. $why"
+            // off but still touchable: the touch says why, as the first one on the off button met nothing (user test, 14/11)
+            IconButton(onClick = { if (canBreak) onAddBreak() else message.show(why) }, modifier = Modifier.semantics { if (!canBreak) disabled() }) {
+                Icon(AppIcons.Coffee, breakLabel, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (canBreak) 1f else 0.38f))
+            }
+        } else {
+            IconButton(onClick = onEdit) { Icon(AppIcons.Edit, stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.onSurface) }
         }
-        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
         IconButton(onClick = onShare, enabled = hasSongs) {
             Icon(AppIcons.Share, stringResource(R.string.share_title), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (hasSongs) 1f else 0.38f))
         }
+        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+        if (editing) br.app.stagebook.ui.components.TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary, enabled = canSave)
+        OverflowMenu(menu)
     }
 }
 

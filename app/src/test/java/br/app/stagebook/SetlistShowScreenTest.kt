@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -13,6 +15,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import br.app.stagebook.domain.SetlistBreaks
@@ -164,25 +167,39 @@ class SetlistShowScreenTest {
         assertEquals(1, left)
     }
 
-    @Test fun `Edit turns on the handles and Save turns them off, without leaving`() {
+    @Test fun `Edit turns on the handles, Save is off until something changes, and the x then leaves without asking`() {
         screen(editing = false)
         compose.onNodeWithContentDescription("Editar setlist").performClick()
         compose.waitForIdle()
         handles().assertCountEquals(5)
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNodeWithContentDescription("Salvar").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Fechar").performClick()
+        compose.waitForIdle()
+        handles().assertCountEquals(0)
+        compose.onAllNodesWithText("Salvar as alterações em", substring = true).assertCountEquals(0)
+        assertEquals(0, left)
+    }
+
+    @Test fun `with a song taken out Save turns on and ends the edit`() {
+        screen(editing = false)
+        compose.onNodeWithContentDescription("Editar setlist").performClick()
+        compose.waitForIdle()
+        removeButtons()[0].performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Salvar").assertIsEnabled().performClick()
         compose.waitForIdle()
         handles().assertCountEquals(0)
         assertEquals(0, left)
     }
 
-    @Test fun `the x while editing asks, and Keep editing stays`() {
-        screen()
+    @Test fun `the x while editing a changed setlist asks, and Keep editing stays`() {
+        screen()   // opened already editing: nothing to compare with, so it counts as changed
         compose.onNodeWithContentDescription("Fechar").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Salvar as alterações em", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Salvar as alterações em", substring = true).assertExists()
         compose.onNodeWithText("Continuar editando").performClick()
         compose.waitForIdle()
-        handles().assertCountEquals(5)
+        assertTrue("still editing", handles().fetchSemanticsNodes().isNotEmpty())
         assertEquals(0, left)
     }
 

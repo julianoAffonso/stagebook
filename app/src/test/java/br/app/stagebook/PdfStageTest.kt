@@ -117,6 +117,8 @@ class PdfStageTest {
         var count = 0
         compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 0, invert = false, onPageCount = { count = it }) } }
         compose.waitUntil(5_000) { count > 0 }
+        // the count comes before the first bitmap is drawn: wait for the page itself (a busy machine made this flaky)
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
     }
 
