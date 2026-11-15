@@ -6,6 +6,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import br.app.stagebook.domain.PdfZoom
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -80,25 +92,71 @@ fun PdfStageView(
                 val widthPx = constraints.maxWidth
                 val heightPx = constraints.maxHeight
                 val density = LocalDensity.current
-                // the page is drawn at the width it takes on the screen: fitting the height when it is the taller proportion
-                val drawn by produceState<Pair<ImageBitmap, Pair<Int, Int>>?>(null, pages, at, widthPx, heightPx) {
+                // the zoom and where the page was moved to: back to the whole page on every page (turning is not zoomed)
+                var scale by remember(pages, at) { mutableFloatStateOf(1f) }
+                var offset by remember(pages, at) { mutableStateOf(Offset.Zero) }
+                // the page's size on the screen: as large as it fits, drawn once and kept while the zoom changes the sharpness
+                var fit by remember(pages, at, widthPx, heightPx) { mutableStateOf<Pair<Int, Int>?>(null) }
+                val maxScale = fit?.let { PdfZoom.maxScale(it.first, it.second) } ?: 1.5f
+                val bucket = PdfZoom.bucket(scale, maxScale)
+                var drawn by remember(pages, at) { mutableStateOf<ImageBitmap?>(null) }
+                LaunchedEffect(pages, at, widthPx, heightPx, bucket) {
                     val (pw, ph) = pages.size(at)
-                    val scale = minOf(widthPx / pw.toFloat(), heightPx / ph.toFloat())
-                    val fitW = (pw * scale).toInt().coerceAtLeast(1)
-                    val fitH = (ph * scale).toInt().coerceAtLeast(1)
-                    value = pages.bitmap(at, fitW).asImageBitmap() to (fitW to fitH)
+                    val factor = minOf(widthPx / pw.toFloat(), heightPx / ph.toFloat())
+                    val fitW = (pw * factor).toInt().coerceAtLeast(1)
+                    val fitH = (ph * factor).toInt().coerceAtLeast(1)
+                    fit = fitW to fitH
+                    // the sharper one replaces the page on screen only once it is drawn
+                    drawn = pages.bitmap(at, fitW * bucket).asImageBitmap()
                     // the next page is drawn ahead, so the turn shows it at once
-                    if (at + 1 < pages.pageCount) pages.bitmap(at + 1, fitW)
+                    if (bucket == 1 && at + 1 < pages.pageCount) pages.bitmap(at + 1, fitW)
                 }
-                drawn?.let { (image, size) ->
-                    with(density) {
-                        Image(
-                            image, contentDescription = stringResource(R.string.stage_pdf_page, at + 1, pages.pageCount),
-                            modifier = Modifier.size(size.first.toDp(), size.second.toDp()).background(Color.White),
-                            colorFilter = if (invert) InvertFilter else null,
-                        )
-                    }
-                } ?: CircularProgressIndicator()
+                val fitNow by rememberUpdatedState(fit)
+                val maxNow by rememberUpdatedState(maxScale)
+                fun moved(by: Offset): Offset {
+                    val f = fitNow ?: return Offset.Zero
+                    val (x, y) = PdfZoom.clamp((offset.x + by.x) to (offset.y + by.y), scale, f.first.toFloat(), f.second.toFloat(), widthPx.toFloat(), heightPx.toFloat())
+                    return Offset(x, y)
+                }
+                val size = fit
+                val image = drawn
+                if (size == null || image == null) CircularProgressIndicator()
+                else with(density) {
+                    Image(
+                        image, contentDescription = stringResource(R.string.stage_pdf_page, at + 1, pages.pageCount),
+                        modifier = Modifier
+                            .size(size.first.toDp(), size.second.toDp())
+                            // taken here before the stage's own gestures: two fingers zoom and move the page, and with the page
+                            // enlarged one finger moves it; at its size a tap and a swipe still turn the page
+                            .pointerInput(pages, at) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    var travelled = Offset.Zero
+                                    var pinching = false
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val pan = event.calculatePan()
+                                        if (event.changes.count { it.pressed } >= 2) {
+                                            pinching = true
+                                            scale = PdfZoom.scaled(scale, event.calculateZoom(), maxNow)
+                                            offset = moved(pan)
+                                            event.changes.forEach { it.consume() }
+                                        } else if (!pinching && scale > 1f) {
+                                            travelled += pan
+                                            if (travelled.getDistance() > viewConfiguration.touchSlop) {
+                                                offset = moved(pan)
+                                                event.changes.forEach { it.consume() }
+                                            }
+                                        }
+                                    } while (event.changes.any { it.pressed })
+                                    if (scale < 1.02f) { scale = 1f; offset = Offset.Zero }
+                                }
+                            }
+                            .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y }
+                            .background(Color.White),
+                        colorFilter = if (invert) InvertFilter else null,
+                    )
+                }
             }
         }
     }

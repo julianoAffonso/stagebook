@@ -834,6 +834,7 @@ fun StageScreen(
             dismiss = { (editOffer != null).also { editOffer = null } },
             chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
             marking = marking,
+            pdf = song.pdf.isNotEmpty(),
             vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
             mark = { from, to ->
                 val start = hit.charAt(from)
@@ -1016,7 +1017,8 @@ fun StageScreen(
                             if (event.changes.any { it.isConsumed }) taken = true
                             if (event.changes.count { it.pressed } >= 2) {
                                 val change = event.calculateZoom()
-                                if (change != 1f) {
+                                // a PDF page zooms in its own view (it takes the pinch first): the lyrics' size stays as it was
+                                if (change != 1f && !latest.pdf) {
                                     zoom = (minOf(zoom, fitZoom) * change).coerceIn(minOf(latest.minZoom, fitZoom), minOf(latest.maxZoom, fitZoom))
                                     zoomTouched = true
                                 }
@@ -1767,6 +1769,7 @@ private class GestureTargets(
     val dismiss: () -> Boolean,   // closes the edit button; true if it was open
     val chord: (Offset) -> Boolean,   // tapped a chord: opens the diagram; true if it opened
     val marking: Boolean = false,      // highlighter on: one finger marks words, no page turn
+    val pdf: Boolean = false,          // a PDF song: its own view zooms it, the lyrics' zoom stays out of the way
     val vertical: Boolean = false,     // scroll mode: the lower half and a drag up go forward, the upper half and a drag down go back
     val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )

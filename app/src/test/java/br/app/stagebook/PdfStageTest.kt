@@ -9,6 +9,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
+import androidx.compose.ui.unit.width
+import androidx.compose.ui.test.swipeLeft
 import br.app.stagebook.data.PdfPages
 import br.app.stagebook.data.PdfSource
 import br.app.stagebook.data.model.Look
@@ -99,5 +105,59 @@ class PdfStageTest {
         compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, pdfFile = { java.io.File("/no/such/$it") }, onPdfInvert = { asked = it }) } }
         compose.onNodeWithContentDescription("Inverter as cores do PDF").performClick()
         assertEquals(true, asked)
+    }
+
+    // ---- zoom ----
+
+    private fun showOpen(source: FakeSource) {
+        var count = 0
+        compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 0, invert = false, onPageCount = { count = it }) } }
+        compose.waitUntil(5_000) { count > 0 }
+        compose.waitForIdle()
+    }
+
+    private fun page() = compose.onNodeWithContentDescription("Página 1 de 7 do PDF")
+
+    private fun pinch(out: Boolean) = page().performTouchInput {
+        val c = center
+        val near = 40f
+        val far = 240f
+        if (out) pinch(Offset(c.x - near, c.y), Offset(c.x - far, c.y), Offset(c.x + near, c.y), Offset(c.x + far, c.y))
+        else pinch(Offset(c.x - far, c.y), Offset(c.x - near, c.y), Offset(c.x + far, c.y), Offset(c.x + near, c.y))
+    }
+
+    @Test fun `two fingers apart enlarge the page and together bring it back to its size`() {
+        showOpen(FakeSource(7))
+        val whole = page().getBoundsInRoot().width
+        pinch(out = true)
+        compose.waitForIdle()
+        val zoomed = page().getBoundsInRoot().width
+        assertTrue("$whole -> $zoomed", zoomed > whole * 1.2f)
+        pinch(out = false)
+        compose.waitForIdle()
+        assertEquals(whole.value, page().getBoundsInRoot().width.value, 1f)
+    }
+
+    @Test fun `the page never goes past the zoom its pixels allow`() {
+        showOpen(FakeSource(7))
+        val whole = page().getBoundsInRoot().width
+        repeat(4) { pinch(out = true); compose.waitForIdle() }
+        val zoomed = page().getBoundsInRoot().width
+        assertTrue("$whole -> $zoomed", zoomed <= whole * 4.01f)
+    }
+
+    @Test fun `with the page enlarged one finger moves it, at its size it does not`() {
+        showOpen(FakeSource(7))
+        val left0 = page().getBoundsInRoot().left
+        page().performTouchInput { down(center); moveBy(Offset(-120f, 0f)); moveBy(Offset(-120f, 0f)); up() }
+        compose.waitForIdle()
+        assertEquals("at its size a drag is the stage's: the page stays", left0.value, page().getBoundsInRoot().left.value, 1f)
+        pinch(out = true)
+        compose.waitForIdle()
+        val before = page().getBoundsInRoot().left
+        page().performTouchInput { down(center); moveBy(Offset(-120f, 0f)); moveBy(Offset(-120f, 0f)); up() }
+        compose.waitForIdle()
+        val after = page().getBoundsInRoot().left
+        assertTrue("moved: $before -> $after", after < before)
     }
 }
