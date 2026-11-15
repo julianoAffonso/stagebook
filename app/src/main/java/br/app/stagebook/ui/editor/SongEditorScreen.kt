@@ -4,6 +4,7 @@ import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.LocalAppMessage
 import br.app.stagebook.data.TrackStore
+import br.app.stagebook.data.text
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.activity.result.contract.ActivityResultContracts
@@ -131,6 +132,12 @@ fun SongEditorRoute(
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch { if (!viewModel.attachTrack(uri)) message.show(trackBad, long = true) }
     }
+    // the song's PDF (copied into the app and checked when coming back from the picker; a refused one says why)
+    val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            (viewModel.attachPdf(uri) as? br.app.stagebook.data.PdfAttach.Refused)?.let { message.show(it.problem.text(context), long = true) }
+        }
+    }
     SongEditorScreen(
         uiState = viewModel.uiState,
         onTitle = viewModel::onTitle,
@@ -149,6 +156,9 @@ fun SongEditorRoute(
         trackName = viewModel.trackName,
         onPickTrack = { picker.launch(TrackStore.MIME) },
         onRemoveTrack = viewModel::removeTrack,
+        pdf = viewModel.pdfInfo,
+        onPickPdf = { pdfPicker.launch(br.app.stagebook.data.PdfStore.MIME) },
+        onRemovePdf = viewModel::removePdf,
         allTags = remember { viewModel.allTags() },
         onTags = viewModel::onTags,
         midiOn = look.extrasOn && hasMidi,
@@ -185,6 +195,9 @@ fun SongEditorScreen(
     onPickTrack: () -> Unit = {},
     onRemoveTrack: () -> Unit = {},
     trackName: String = "",   // the track's own name ("" = unknown)
+    pdf: EditorPdf? = null,   // the song is a PDF: a card takes the place of the lyrics field; null = a song of text
+    onPickPdf: () -> Unit = {},
+    onRemovePdf: () -> Unit = {},
     allTags: List<String> = emptyList(),
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
     midiOn: Boolean = false,   // the song's MIDI: a stage extra (essential mode hides it, T19) on a device with MIDI
@@ -199,6 +212,11 @@ fun SongEditorScreen(
     // an import over a song already in the library: saving replaces its text, so it asks first
     var replacing by rememberSaveable { mutableStateOf(false) }
     var tagging by rememberSaveable { mutableStateOf(false) }
+    // a song that already has lyrics asks before taking a PDF (the lyrics stay saved), and removing the PDF asks too
+    var askingPdf by rememberSaveable { mutableStateOf(false) }
+    var removingPdf by rememberSaveable { mutableStateOf(false) }
+    val hasLyrics = remember(uiState.text) { Chords.hideMeta(uiState.text).isNotBlank() }
+    val attachPdf = { if (pdf == null && hasLyrics) askingPdf = true else onPickPdf() }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
     var newChord by rememberSaveable { mutableStateOf(false) }
     // two screens in the same editor: the details and the lyrics. A song that exists opens on the lyrics, a new one on the
@@ -372,8 +390,12 @@ fun SongEditorScreen(
                         EditorTab.DATA -> DataPane(
                             uiState, look, onTitle, onAuthor, onYear, onTempo, onTranspose, onCapo,
                             track, trackName, onPickTrack, onRemoveTrack, midiOn, { midiOpen = true }, { tagging = true },
+                            pdf, attachPdf, { removingPdf = true },
                         )
-                        EditorTab.LYRICS -> Column(Modifier.fillMaxSize()) {
+                        // a PDF song has no lyrics field: the card says what it is and offers to replace or remove it
+                        EditorTab.LYRICS -> if (pdf != null) Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.m), contentAlignment = Alignment.TopCenter) {
+                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH))
+                        } else Column(Modifier.fillMaxSize()) {
                             // one line of one-tap buttons: the highlighter, the sections and the chords (the lyrics have the rest)
                             ToolStrip(
                                 previewing = previewing,
@@ -430,6 +452,12 @@ fun SongEditorScreen(
         val options = br.app.stagebook.ui.components.tagOptions(allTags + uiState.tags)
         val initial = br.app.stagebook.ui.components.tagStates(options, listOf(uiState.tags))
         br.app.stagebook.ui.components.TagsDialog(options, initial, onTags) { tagging = false }
+    }
+    if (askingPdf) {
+        ConfirmDialog(stringResource(R.string.editor_pdf_ask_lyrics), stringResource(R.string.editor_pdf_attach), { onPickPdf() }, { askingPdf = false }, destructive = false)
+    }
+    if (removingPdf) {
+        ConfirmDialog(stringResource(R.string.editor_pdf_remove_confirm), stringResource(R.string.editor_pdf_remove), onRemovePdf, { removingPdf = false })
     }
     if (discarding) {
         ConfirmDialog(
@@ -508,6 +536,9 @@ private fun DataPane(
     midiOn: Boolean,
     onMidi: () -> Unit,
     onTags: () -> Unit,
+    pdf: EditorPdf?,
+    onPickPdf: () -> Unit,
+    onRemovePdf: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.m, vertical = Spacing.m), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = DATA_MAX_WIDTH).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -526,6 +557,7 @@ private fun DataPane(
                 TagsField(uiState.tags, Modifier.weight(1f), onTags)
                 if (track != null) TrackField(track.isNotEmpty(), trackName, onPickTrack, onRemoveTrack, Modifier.weight(1f))
             }
+            PdfField(pdf, onPickPdf, onRemovePdf, Modifier.fillMaxWidth())
             if (midiOn) MidiField(uiState.midi.isEmpty(), onMidi, Modifier.fillMaxWidth())
             Text(stringResource(R.string.editor_auto_meta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -580,6 +612,31 @@ private fun TrackField(has: Boolean, name: String, onPick: () -> Unit, onRemove:
         },
         trailingIcon = if (has) {
             { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.stage_track_remove)) } }
+        } else null,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (has) MaterialTheme.colorScheme.onSurface else muted),
+        interactionSource = taps,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier,
+    )
+}
+
+/** The song's PDF as a field like the others: "None" in grey (tap to attach) or its name (tap to replace, × to remove). */
+@Composable
+private fun PdfField(pdf: EditorPdf?, onPick: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    val taps = br.app.stagebook.ui.components.rememberTapSource(onPick)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val has = pdf != null
+    OutlinedTextField(
+        value = pdf?.name?.ifEmpty { "PDF" } ?: stringResource(R.string.editor_pdf_empty),
+        onValueChange = {},
+        readOnly = true,
+        singleLine = true,
+        label = { Text(stringResource(R.string.editor_pdf_label)) },
+        isError = pdf?.lost == true,
+        supportingText = if (pdf?.lost == true) { { Text(stringResource(R.string.editor_pdf_missing)) } } else null,
+        leadingIcon = { Icon(PdfFileIcon, null, tint = if (pdf?.lost == true) MaterialTheme.colorScheme.error else if (has) MaterialTheme.colorScheme.primary else muted) },
+        trailingIcon = if (has) {
+            { IconButton(onClick = onRemove) { Icon(AppIcons.Close, stringResource(R.string.editor_pdf_remove)) } }
         } else null,
         textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (has) MaterialTheme.colorScheme.onSurface else muted),
         interactionSource = taps,

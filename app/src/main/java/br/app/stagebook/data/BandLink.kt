@@ -30,6 +30,7 @@ import java.net.NetworkInterface
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +50,9 @@ class BandLink @Inject constructor(
     private val stage: StageGate,
     private val inbox: BandInbox,
     private val repository: LibraryRepository,
+    // the songs' PDFs: read to leave, checked and saved on arrival (defaults only for the tests that don't care)
+    private val pdfs: PdfStore = PdfStore(context),
+    private val inspector: PdfInspector = PdfInspector(),
 ) {
     /** What goes in a band package: the list (in QR format, in Base64) and the songs. */
     @kotlinx.serialization.Serializable
@@ -161,8 +165,31 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, packageBytes(list, songs))
     }
 
-    internal fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray =
-        json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs, BandProtocol.packageVersion(list))).toByteArray()
+    internal fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray {
+        val (wire, carriesPdf) = withPdfBytes(songs)
+        return json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), wire, BandProtocol.packageVersion(list, carriesPdf))).toByteArray()
+    }
+
+    /**
+     * The songs as they go on the wire: each PDF read from its file into base64, while the package's PDFs stay within
+     * [br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES] (the rest of the songs go without their PDF). True when at
+     * least one PDF goes, which is what raises the package's version.
+     */
+    internal fun withPdfBytes(songs: List<SetlistCloud.SharedSong>): Pair<List<SetlistCloud.SharedSong>, Boolean> {
+        var budget = br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES
+        var any = false
+        val wire = songs.map { s ->
+            val file = s.pdfFile.takeIf { it.isNotEmpty() }?.let(pdfs::file)?.takeIf { it.isFile }
+            val size = file?.length() ?: 0L
+            if (file == null || size > br.app.stagebook.domain.BandContent.MAX_PDF_BYTES || size > budget) s.forWire()
+            else {
+                budget -= size
+                any = true
+                s.forWire().copy(pdf = java.util.Base64.getEncoder().encodeToString(file.readBytes()), pdfName = s.pdfName)
+            }
+        }
+        return wire to any
+    }
 
     /**
      * Searches for the band briefly (on app open with something pending: sends with no receipt, an unconfirmed "ok"),
@@ -332,12 +359,44 @@ class BandLink @Inject constructor(
     /** A package from band member [fromId], already decrypted: kept in the inbox, but for what [showIntake] took. */
     internal fun accept(fromId: String, fromName: String, plain: ByteArray): Boolean {
         val pkg = openPackage(plain) ?: return false
-        val rest = showIntake?.invoke(fromId, fromName, pkg.text, pkg.songs) ?: pkg.songs
+        // the PDFs are checked and saved here, before anything else sees the songs (only a member's package gets this far)
+        val songs = takePdfs(pkg.songs)
+        val rest = showIntake?.invoke(fromId, fromName, pkg.text, songs) ?: songs
         // every song went straight in: nothing is left to review
-        if (rest.isEmpty() && pkg.songs.isNotEmpty()) return true
+        if (rest.isEmpty() && songs.isNotEmpty()) return true
         inbox.add(fromId, fromName, pkg.text, rest, pkg.breaks)
         return true
     }
+
+    /**
+     * Each PDF that came ([SetlistCloud.SharedSong.pdf], base64) is checked ([PdfInspector]: header, 8 MB, readable, no
+     * password, 300 pages) and saved under a generated name; the song then carries only that file's name. One that fails
+     * is discarded and the song comes without it, with the reason in [SetlistCloud.SharedSong.pdfProblem]. What a sender
+     * says about this device's files is never believed.
+     */
+    internal fun takePdfs(songs: List<SetlistCloud.SharedSong>): List<SetlistCloud.SharedSong> {
+        var budget = br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES
+        val maxChars = (br.app.stagebook.domain.BandContent.MAX_PDF_BYTES + 2) / 3 * 4
+        return songs.map { s ->
+            val clean = s.copy(pdf = "", pdfFile = "", pdfProblem = "", pdfName = "")
+            if (s.pdf.isEmpty()) return@map clean
+            val bytes = if (s.pdf.length > maxChars) null else runCatching { java.util.Base64.getDecoder().decode(s.pdf) }.getOrNull()
+            val problem = when {
+                s.pdf.length > maxChars || (bytes != null && bytes.size > budget) -> PdfProblem.TOO_BIG
+                bytes == null -> PdfProblem.NOT_PDF
+                else -> null
+            }
+            if (problem != null || bytes == null) return@map clean.copy(pdfProblem = (problem ?: PdfProblem.NOT_PDF).name)
+            when (val saved = pdfs.saveCheckedNow(UUID.randomUUID().toString(), bytes, inspector)) {
+                is PdfAttach.Saved -> { budget -= bytes.size; clean.copy(pdfFile = saved.name, pdfName = shownPdfName(s.pdfName)) }
+                is PdfAttach.Refused -> clean.copy(pdfProblem = saved.problem.name)
+            }
+        }
+    }
+
+    // a name the sender wrote, to show: plain text, no folders, short
+    private fun shownPdfName(name: String): String =
+        name.substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim().take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
 
     /** Keeps loose [songs] from a band member in the inbox, to be reviewed like anything the band sends. */
     internal fun keep(fromId: String, fromName: String, songs: List<SetlistCloud.SharedSong>) =

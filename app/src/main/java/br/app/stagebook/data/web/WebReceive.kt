@@ -106,7 +106,7 @@ class WebReceive(
         val p = pending.remove(token) ?: return null
         val slots = p.found.mapIndexed { i, id ->
             id ?: choices[i]?.takeIf { repository.song(it) != null } ?: p.came[i]?.let { s ->
-                repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = Chords.withDetectedKey(s.text)))
+                repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = Chords.withDetectedKey(s.text), pdf = s.pdfFile, pdfName = if (s.pdfFile.isEmpty()) "" else s.pdfName))
             }
         }
         if (p.code.isNotEmpty()) accepted(p.code, p.received)

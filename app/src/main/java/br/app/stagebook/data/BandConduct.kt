@@ -573,9 +573,12 @@ class BandConduct internal constructor(
         synchronized(entering) {   // two arrivals of the same song: the second one finds the first
             if (_role.value !is Role.Following || repository.findSong(song.title, song.author) != null) return false
             val id = repository.saveSong(
-                br.app.stagebook.data.model.Song(title = song.title, author = song.author, year = song.year, text = br.app.stagebook.domain.Chords.withDetectedKey(song.text)),
+                br.app.stagebook.data.model.Song(
+                    title = song.title, author = song.author, year = song.year, text = br.app.stagebook.domain.Chords.withDetectedKey(song.text),
+                    pdf = song.pdfFile, pdfName = if (song.pdfFile.isEmpty()) "" else song.pdfName,
+                ),
             )
-            noChords = repository.library.value.look.chords && !br.app.stagebook.domain.Chords.hasChords(song.text)
+            noChords = repository.library.value.look.chords && song.pdfFile.isEmpty() && !br.app.stagebook.domain.Chords.hasChords(song.text)
             if (noChords) {
                 chordlessText[id] = repository.song(id)?.text.orEmpty()
                 _chordless.update { it + id }

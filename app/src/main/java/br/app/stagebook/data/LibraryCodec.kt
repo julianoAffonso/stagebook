@@ -64,7 +64,7 @@ object LibraryCodec {
     }.songs
 
     fun encodeSongs(songs: List<Song>): String =
-        json.encodeToString(SongsFile.serializer(), SongsFile(songs = songs.sortedBy { TextKey.of(it.title) }))
+        json.encodeToString(SongsFile.serializer(), SongsFile(songs = songs.map { it.withoutPdf() }.sortedBy { TextKey.of(it.title) }))
 }
 
 /** [lyricsChanged]: of the updated ones, how many had their lyrics replaced by the file's. */
@@ -85,10 +85,10 @@ fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library,
         val i = index.find(song.title, song.author) ?: -1
         if (i >= 0) {
             if (songs[i].text != song.text) lyricsChanged++
-            songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, zooms = song.zooms + songs[i].zooms, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year }, midi = song.midi ?: songs[i].midi)
+            songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, zooms = song.zooms + songs[i].zooms, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year }, midi = song.midi ?: songs[i].midi, pdf = songs[i].pdf, pdfName = songs[i].pdfName, pdfMarks = songs[i].pdfMarks)
             replaced++
         } else {
-            songs += song.copy(id = newId(), zoom = 1f)   // an old file's single zoom came from some other screen
+            songs += song.withoutPdf().copy(id = newId(), zoom = 1f)   // an old file's single zoom came from some other screen
             index.add(songs.lastIndex)
             added++
         }

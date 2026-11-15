@@ -231,7 +231,7 @@ fun ShareSheet(
  * one list) and [songs] songs that can go along; [setlists] true offers sending only the titles.
  */
 @Immutable
-data class ShareLimits(val lists: Int = 1, val songs: Int = 0, val setlists: Boolean = false)
+data class ShareLimits(val lists: Int = 1, val songs: Int = 0, val setlists: Boolean = false, val pdfSizes: List<Long> = emptyList())
 
 /**
  * The sheet's content (separate for the preview and screenshots). [band]: how many band members are on the network now.
@@ -251,7 +251,13 @@ fun ShareOptions(
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
     val bandOk = br.app.stagebook.domain.BandContent.bandFits(limits.lists)
-    val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, if (withSongs) limits.songs else 0)
+    val songsGoing = if (withSongs) limits.songs else 0
+    val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing)
+    // the songs' PDFs go over the internet only when they fit the messages left; otherwise the songs go without and the
+    // hint says why, with the numbers
+    val pdfSizes = if (withSongs) limits.pdfSizes else emptyList()
+    val pdfFits = pdfSizes.isNotEmpty() && br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing, pdfSizes)
+    val pdfLeftOut = pdfSizes.isNotEmpty() && !pdfFits && internetOk
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
         // band on the network: arrives by itself for band members on this Wi-Fi (no words, no QR)
@@ -268,7 +274,9 @@ fun ShareOptions(
         else if (online) {
             ShareOption(
                 AppIcons.Public, stringResource(R.string.share_internet),
-                if (internetOk) stringResource(R.string.share_internet_hint)
+                if (pdfLeftOut) pdfLimitText(limits.lists, songsGoing, pdfSizes)
+                else if (internetOk && pdfFits) stringResource(R.string.share_internet_pdf_fits, br.app.stagebook.domain.BandContent.internetMessages(limits.lists, songsGoing, pdfSizes), br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES)
+                else if (internetOk) stringResource(R.string.share_internet_hint)
                 else stringResource(if (limits.setlists && withSongs) R.string.share_internet_limit_titles else R.string.share_internet_limit),
                 enabled = internetOk,
             ) { onInternet(withSongs) }
@@ -287,6 +295,15 @@ fun ShareOptions(
         }
     }
 }
+
+/** Why the PDFs don't go over the internet, in numbers: what they need, what the server takes, what is left after the songs. */
+@Composable
+internal fun pdfLimitText(lists: Int, songs: Int, pdfSizes: List<Long>): String = stringResource(
+    R.string.share_internet_pdf_limit,
+    br.app.stagebook.domain.BandContent.internetPdfMessages(pdfSizes),
+    br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES,
+    br.app.stagebook.domain.BandContent.internetMessagesFree(lists, songs),
+)
 
 @Composable
 private fun ShareOption(icon: ImageVector, title: String, hint: String, enabled: Boolean = true, onClick: () -> Unit) {

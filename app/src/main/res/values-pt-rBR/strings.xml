@@ -929,6 +929,25 @@
     <string name="band_deny">Não autorizar</string>
     <!-- caixa de entrada: o que a banda mandou -->
     <string name="inbox_setlist">%1$s enviou o setlist \"%2$s\"</string>
+    <string name="editor_pdf_label">PDF</string>
+    <string name="editor_pdf_empty">Nenhum. Toque para anexar</string>
+    <string name="editor_pdf_attach">Anexar PDF</string>
+    <string name="editor_pdf_replace">Trocar PDF</string>
+    <string name="editor_pdf_remove">Remover PDF</string>
+    <string name="editor_pdf_missing">O PDF não está neste aparelho. Anexe de novo.</string>
+    <string name="editor_pdf_note">Esta música é um PDF. Não dá para editar o PDF; no palco você pode marcá-lo com o marca-texto.</string>
+    <string name="editor_pdf_ask_lyrics">Esta música já tem letra. Ela fica guardada e volta se você remover o PDF.</string>
+    <string name="editor_pdf_remove_confirm">Remover o PDF desta música? O arquivo é apagado deste aparelho e a letra volta.</string>
+    <plurals name="editor_pdf_facts">
+        <item quantity="one">%1$d página · %2$s</item>
+        <item quantity="many">%1$d páginas · %2$s</item>
+        <item quantity="other">%1$d páginas · %2$s</item>
+    </plurals>
+    <plurals name="inbox_pdf_refused">
+        <item quantity="one">\"%1$s\" chegou sem o PDF. %3$s</item>
+        <item quantity="many">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>
+        <item quantity="other">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>
+    </plurals>
     <plurals name="inbox_songs">
         <item quantity="one">%1$s enviou %2$d música</item>
         <item quantity="many">%1$s enviou %2$d músicas</item>
@@ -1146,6 +1165,8 @@
         <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
     </plurals>
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
+    <string name="share_internet_pdf_limit">Os PDFs precisam de %1$d mensagens de 4 KB, e o servidor da internet aceita %2$d por envio (sobram %3$d depois das músicas). As músicas vão sem o PDF. Para enviá-lo, use a banda na mesma rede.</string>
+    <string name="share_internet_pdf_fits">Os PDFs vão junto: %1$d das %2$d mensagens que o servidor aceita.</string>
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
     <string name="share_band_limit">Muitos setlists de uma vez. Mande em mais de uma vez.</string>
     <string name="settings_lyrics_card">Letra</string>
@@ -1283,4 +1304,9 @@
     <string name="search_in_help">na explicação</string>
     <string name="group_band_editor_on">Editor ligado</string>
     <string name="group_band_editor_off">Editor desligado</string>
+    <string name="pdf_refused_not_pdf">Este arquivo não é um PDF.</string>
+    <string name="pdf_refused_too_big">Este PDF é grande demais. O limite é %1$d MB.</string>
+    <string name="pdf_refused_password">Este PDF tem senha. Salve uma cópia sem senha e tente de novo.</string>
+    <string name="pdf_refused_too_many_pages">Este PDF tem páginas demais. O limite é %1$d.</string>
+    <string name="pdf_refused_unreadable">Não foi possível abrir este PDF. Ele pode estar danificado.</string>
 </resources>

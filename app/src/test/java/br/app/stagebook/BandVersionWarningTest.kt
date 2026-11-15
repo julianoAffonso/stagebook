@@ -19,8 +19,8 @@ import java.net.Socket
 import kotlin.concurrent.thread
 
 /**
- * The protocol version (user, 14/11: raised to 3 for the breaks and the missing-songs request). Both directions of the
- * warning: another device on 2 (older) and on 4 (newer) talking to this one (3). Nobody saves anything, and the text the
+ * The protocol version (user, 14/11: raised to 3 for the breaks and the missing-songs request; 15/11: to 4 for the PDF). Both directions of
+ * the warning: another device on 3 (older) and on 5 (newer) talking to this one (4). Nobody saves anything, and the text the
  * person reads says to update the app on every band device.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -58,16 +58,18 @@ class BandVersionWarningTest {
         return r to (me.trusted.isEmpty() && other.trusted.isEmpty())
     }
 
-    @Test fun `the protocol is on version 3`() = assertEquals(3, BandProtocol.VERSION)
+    @Test fun `the protocol is on version 4`() = assertEquals(4, BandProtocol.VERSION)
 
-    @Test fun `another device on 2 (the published app) - this one on 3 says version, and nothing is saved`() {
+    @Test fun `another device on 3 (the published app) - this one on 4 says version, and nothing is saved`() {
         assertEquals(BandSession.JoinResult.VERSION to true, join(2))
         assertEquals(BandSession.JoinResult.VERSION to true, joinOther(2))
+        assertEquals(BandSession.JoinResult.VERSION to true, join(3))
+        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(3))
     }
 
-    @Test fun `another device on 4 (a newer app) - this one on 3 says version, and nothing is saved`() {
-        assertEquals(BandSession.JoinResult.VERSION to true, join(4))
-        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(4))
+    @Test fun `another device on 5 (a newer app) - this one on 4 says version, and nothing is saved`() {
+        assertEquals(BandSession.JoinResult.VERSION to true, join(5))
+        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(5))
     }
 
     @Test fun `the same version still talks`() {
