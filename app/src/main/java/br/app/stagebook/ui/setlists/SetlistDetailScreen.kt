@@ -309,7 +309,7 @@ fun SetlistDetailScreen(
                                                     beforeNumber = if (selecting) ({ androidx.compose.material3.Checkbox(item.key in selected, { toggle(item.key) }) }) else ({ SetlistDragHandle() }),
                                                     dragZone = if (selecting) null else handle,
                                                     trailing = { Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        SongFacts(item.songKey, item.bpm, item.capo, item.hasTrack)
+                                                        SongFacts(item.songKey, item.bpm, item.capo, item.hasTrack, hasPdf = item.hasPdf)
                                                         // out at once, with "Undo" in the message: a confirmation for
                                                         // every song made cleaning a setlist slow (user, 13/11)
                                                         IconButton(onClick = {

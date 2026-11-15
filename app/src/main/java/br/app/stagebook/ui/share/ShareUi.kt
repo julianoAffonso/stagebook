@@ -282,7 +282,14 @@ fun ShareOptions(
         if (band > 0) {
             ShareOption(
                 AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band),
-                if (bandOk) stringResource(R.string.share_band_hint) else stringResource(R.string.share_band_limit),
+                if (!bandOk) stringResource(R.string.share_band_limit)
+                // the PDFs go to who is on this network; a band member far away gets the song through the internet without it
+                else if (pdfSizes.sum() > br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES) stringResource(R.string.share_band_hint) + " " + stringResource(
+                    R.string.share_band_pdf_budget,
+                    ((pdfSizes.sum() + MEGABYTE - 1) / MEGABYTE).toInt(), (br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES / MEGABYTE).toInt(),
+                ) + " " + stringResource(R.string.share_band_pdf_note)
+                else if (pdfSizes.isNotEmpty()) stringResource(R.string.share_band_hint) + " " + stringResource(R.string.share_band_pdf_note)
+                else stringResource(R.string.share_band_hint),
                 enabled = bandOk,
             ) { onBand(withSongs) }
         }
@@ -313,6 +320,8 @@ fun ShareOptions(
         }
     }
 }
+
+private const val MEGABYTE = 1024L * 1024
 
 /** Why the PDFs don't go over the internet, in numbers: what they need, what the server takes, what is left after the songs. */
 @Composable

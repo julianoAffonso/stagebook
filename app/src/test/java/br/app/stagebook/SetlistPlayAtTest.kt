@@ -1,6 +1,8 @@
 package br.app.stagebook
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.ui.drawer.SetlistRequest
@@ -52,5 +54,16 @@ class SetlistPlayAtTest {
         val first = SetlistRequest("a")
         Thread.sleep(2)
         assertNotEquals(first, SetlistRequest("a"))
+    }
+
+    @Test fun `a song that is a PDF shows a sheet in its row`() {
+        val state = SetlistDetailUiState(
+            loading = false, name = "Show",
+            items = listOf(SetItemUi("a", "a", "Partitura", "", false, hasPdf = true), SetItemUi("b", "b", "Letra", "", false)),
+        )
+        compose.setContent {
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) }
+        }
+        compose.onAllNodesWithContentDescription("PDF").assertCountEquals(1)
     }
 }

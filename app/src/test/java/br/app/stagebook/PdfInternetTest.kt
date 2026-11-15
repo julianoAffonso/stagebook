@@ -31,6 +31,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 
 /** The PDF over the internet (T-PDF 4): the count of messages, the reason when it doesn't fit, and the chunks that do. */
 @RunWith(RobolectricTestRunner::class)
@@ -189,5 +191,20 @@ class PdfInternetTest {
     fun `the send sheet says the PDFs go along when they fit`() {
         compose.setContent { StagebookTheme { ShareOptions(1, online = true, onQr = null, onInternet = {}, limits = ShareLimits(lists = 1, songs = 1, pdfSizes = listOf(24_000L))) } }
         compose.onNodeWithText("The PDFs go along: 13 of the 60 messages the server takes.").assertExists()
+    }
+
+    @Test fun `sending to the band with PDFs says a member far away gets the song without them`() {
+        compose.setContent { StagebookTheme { ShareOptions(1, online = true, onQr = null, onInternet = {}, band = 2, limits = ShareLimits(lists = 1, songs = 1, pdfSizes = listOf(20_000L))) } }
+        compose.onNodeWithText("recebe a música sem o PDF", substring = true).assertExists()
+    }
+
+    @Test fun `without PDFs the band option says nothing about them`() {
+        compose.setContent { StagebookTheme { ShareOptions(1, online = true, onQr = null, onInternet = {}, band = 2, limits = ShareLimits(lists = 1, songs = 1)) } }
+        compose.onAllNodesWithText("sem o PDF", substring = true).assertCountEquals(0)
+    }
+
+    @Test fun `PDFs that add up to more than a band send takes say how much and that some go without`() {
+        compose.setContent { StagebookTheme { ShareOptions(1, online = true, onQr = null, onInternet = {}, band = 2, limits = ShareLimits(lists = 1, songs = 2, pdfSizes = listOf(7_000_000L, 6_000_000L))) } }
+        compose.onNodeWithText("somam 13 MB", substring = true).assertExists()
     }
 }

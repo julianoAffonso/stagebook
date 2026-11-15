@@ -749,15 +749,16 @@ function showSet(set) {
 
 // <rows-logic>
 // What a song row shows at its end, the device's rule (ui/songs/RowFacts.kt read by ui/components/SongFacts.kt): the key,
-// then the tempo, then the capo, then the audio wave of a backing track; only what the song has. The tempo and the capo
+// then the tempo, then the capo, then the sheet of a PDF and the audio wave of a backing track; only what the song has. The tempo and the capo
 // arrive already held to the app's ranges (Chords.meta), so here 0 means none. Texts are the app's own ("120 bpm", "capo 2").
 // Tested without a browser by tools/web_rows_test.mjs.
 function rowFacts(s, t) {
   const key = s.key || "";
   const parts = [key, s.bpm > 0 ? fill(t.factBpm, s.bpm) : "", s.capo > 0 ? fill(t.factCapo, s.capo) : ""].filter(Boolean);
   const hasTrack = !!s.hasTrack;
+  const hasPdf = !!s.hasPdf;
   const text = parts.join(" · ");
-  return { key, parts, text, hasTrack, label: [text, hasTrack ? t.track : ""].filter(Boolean).join(" · ") };
+  return { key, parts, text, hasTrack, hasPdf, label: [text, hasPdf ? t.pdf : "", hasTrack ? t.track : ""].filter(Boolean).join(" · ") };
 }
 // the row's accessible name: title, artist and the facts (the wave is named by the app's own "Backing track")
 const rowLabel = (s, t) => [s.title || "–", s.author || s.artist, rowFacts(s, t).label].filter(Boolean).join(", ");
@@ -772,6 +773,18 @@ function waveIcon(label) {
   svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label);
   const title = document.createElementNS(ns, "title"); title.textContent = label;
   const path = document.createElementNS(ns, "path"); path.setAttribute("d", WAVE_PATH);
+  svg.append(title, path);
+  return svg;
+}
+// the app's sheet of paper (AppIcons.Document), same path: the song is a PDF
+const SHEET_PATH = "M14,2H6C4.9,2 4,2.9 4,4v16c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,18H8v-2h8v2zM16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z";
+function sheetIcon(label) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "wave");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label);
+  const title = document.createElementNS(ns, "title"); title.textContent = label;
+  const path = document.createElementNS(ns, "path"); path.setAttribute("d", SHEET_PATH);
   svg.append(title, path);
   return svg;
 }
@@ -792,6 +805,7 @@ function songRow(s, { n, onclick, extra, more } = {}) {
       part.textContent = i > 0 ? "· " + p : p;
       facts.append(part);
     });
+    if (f.hasPdf) facts.append(sheetIcon(t.pdf));
     if (f.hasTrack) facts.append(waveIcon(t.track));
     el.append(facts);
   }

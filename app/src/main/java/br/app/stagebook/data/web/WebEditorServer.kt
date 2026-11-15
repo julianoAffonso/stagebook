@@ -300,6 +300,7 @@ class WebEditorServer @Inject constructor(
             "setCountBreaks" to R.string.set_count_with_breaks,
             "addCount" to R.string.pick_add_short,
             "track" to R.string.stage_backing_track,
+            "pdf" to R.string.song_is_pdf,
             "factBpm" to R.string.set_bpm,
             "factCapo" to R.string.editor_data_capo,
             "trackNone" to R.string.editor_track_none,

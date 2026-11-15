@@ -210,7 +210,7 @@ private fun SetlistPanelContent(
                         onClick = { onSong(row) },
                         titleStyle = MaterialTheme.typography.titleMedium,
                         dense = true,
-                        trailing = { SongFacts(facts.key, facts.bpm, facts.capo, facts.hasTrack) },
+                        trailing = { SongFacts(facts.key, facts.bpm, facts.capo, facts.hasTrack, hasPdf = facts.hasPdf) },
                     )
                 }
             }

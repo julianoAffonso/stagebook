@@ -38,7 +38,7 @@ class WebEditorApi(
     data class SongItem(
         val id: String, val title: String, val author: String, val year: String, val key: String, val tags: List<String> = emptyList(),
         // what the device's rows show at the end (ui/songs/RowFacts.kt): tempo (0 = none or out of range), capo and a backing track
-        val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false,
+        val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false, val hasPdf: Boolean = false,
     )
 
     @Serializable
@@ -198,7 +198,7 @@ class WebEditorApi(
     /** The song's list row with the same facts the device's rows read once per song (key, BPM, capo, track). */
     private fun item(s: br.app.stagebook.data.model.Song): SongItem {
         val meta = Chords.meta(s.text)
-        return SongItem(s.id, s.title, s.author, s.year, meta.key, s.tags, meta.tempo, meta.capo, s.track.isNotEmpty())
+        return SongItem(s.id, s.title, s.author, s.year, meta.key, s.tags, meta.tempo, meta.capo, s.track.isNotEmpty(), s.pdf.isNotEmpty())
     }
 
     // the BPM has its own field: out of the text, so it isn't in two places

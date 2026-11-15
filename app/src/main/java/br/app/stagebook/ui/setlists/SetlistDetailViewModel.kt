@@ -49,6 +49,7 @@ data class SetItemUi(
     val bpm: Int = 0,           // 0 = none
     val capo: Int = 0,
     val hasTrack: Boolean = false,
+    val hasPdf: Boolean = false,
     val state: SetlistShow.State = SetlistShow.State.NONE,   // where the show is (this device only)
 )
 
@@ -126,7 +127,7 @@ class SetlistDetailViewModel @Inject constructor(
                 SetItemUi(
                     if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
                     songKey = meta.key, bpm = meta.tempo, capo = meta.capo,
-                    hasTrack = song?.track?.isNotEmpty() == true, state = states[i],
+                    hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i],
                 )
             },
             breaks = set?.breaks.orEmpty(),

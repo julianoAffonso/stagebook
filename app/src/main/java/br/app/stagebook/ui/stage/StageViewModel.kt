@@ -46,7 +46,7 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
 
 /** A setlist song's key ("" = none written), tempo and capo (0 = none) and whether it has a backing track, for the panel's row. */
 @Immutable
-data class StageRowFacts(val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false)
+data class StageRowFacts(val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false, val hasPdf: Boolean = false)
 
 /**
  * The setlist the stage was opened from, for the panel over the stage: its [name] and, for each song, where the show
@@ -455,9 +455,9 @@ class StageViewModel @Inject constructor(
     private fun factsOf(id: String, song: br.app.stagebook.data.model.Song?): StageRowFacts {
         if (song == null) return StageRowFacts()
         val kept = factsKept[id]
-        if (kept != null && kept.first.text == song.text && kept.first.track == song.track) return kept.second
+        if (kept != null && kept.first.text == song.text && kept.first.track == song.track && kept.first.pdf == song.pdf) return kept.second
         val meta = Chords.meta(song.text)
-        return StageRowFacts(meta.key, meta.tempo, meta.capo, song.track.isNotEmpty()).also { factsKept[id] = song to it }
+        return StageRowFacts(meta.key, meta.tempo, meta.capo, song.track.isNotEmpty(), song.pdf.isNotEmpty()).also { factsKept[id] = song to it }
     }
 
     /** Chord shape picked on stage: goes into the song as a ChordPro {define} (replaces the previous one). */
