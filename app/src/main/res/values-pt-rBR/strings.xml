@@ -1309,4 +1309,5 @@
     <string name="set_discard">Descartar</string>
     <string name="set_save_question">Salvar as alterações em “%1$s”?</string>
     <string name="set_keep_editing">Continuar editando</string>
+    <string name="drawer_handle_move">Segure e arraste para mover a alça</string>
 </resources>

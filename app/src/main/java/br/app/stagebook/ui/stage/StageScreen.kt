@@ -296,6 +296,7 @@ fun StageRoute(
             },
             pdfFile = pdfStore::file,
             onPdfInvert = viewModel::setPdfInvert,
+            onDrawerHandle = viewModel::setDrawerHandle,
             onPdfStroke = viewModel::addPdfStroke,
             onPdfUndo = viewModel::undoPdfStroke,
             onPdfClear = viewModel::clearPdfPage,
@@ -433,6 +434,7 @@ fun StageScreen(
     onBack: (() -> Unit)? = null,
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
     onPdfInvert: (Boolean) -> Unit = {},
+    onDrawerHandle: (Float) -> Unit = {},
     onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },
     onPdfUndo: (songId: String, page: Int) -> Unit = { _, _ -> },
     onPdfClear: (songId: String, page: Int) -> Unit = { _, _ -> },
@@ -1603,7 +1605,7 @@ fun StageScreen(
         )
     }
     if (onMenu != null && leadingButton) {
-        StageDrawerHandle(onMenu, fg, Color(look.bg), Modifier.align(Alignment.CenterStart))
+        StageDrawerHandle(onMenu, fg, Color(look.bg), look.drawerHandleY, onDrawerHandle, Modifier.fillMaxSize())
     }
     if (keyboardHint > 0) {
         Surface(

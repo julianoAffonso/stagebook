@@ -63,6 +63,8 @@ data class SetlistDetailUiState(
     val breaks: List<Int> = emptyList(),
     /** A song is marked played: "Clear played" has something to clear. */
     val anyPlayed: Boolean = false,
+    /** There is a band to lead and this device isn't already leading or following it: the menu's "Lead the band". */
+    val canConduct: Boolean = false,
     /** The breaks left open on the stage, by position (songs before it): their counter, running or paused. */
     val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
 )
@@ -132,6 +134,7 @@ class SetlistDetailViewModel @Inject constructor(
             },
             breaks = set?.breaks.orEmpty(),
             anyPlayed = marks[setId]?.played?.isNotEmpty() == true,
+            canConduct = lib.look.bandOn && role is br.app.stagebook.data.BandConduct.Role.None && bandTrust.members.value.isNotEmpty() && set?.items?.isNotEmpty() == true,
             // following the band the leader's break counts (its time, until it ends), not what this device had open itself
             openBreaks = set?.let {
                 val following = role as? br.app.stagebook.data.BandConduct.Role.Following
@@ -179,6 +182,14 @@ class SetlistDetailViewModel @Inject constructor(
 
     /** "Clear played": no song of this setlist is marked any more. */
     fun clearPlayed() = show.clear(setId)
+
+    /** "Lead the band" from this setlist, from the song the show is on (or the first). */
+    fun conductBand() {
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return
+        val now = SetlistShow.states(set.items, show.marks.value[setId]).indexOf(SetlistShow.State.NOW).coerceAtLeast(0)
+        conduct.startSetlist(setId, now)
+    }
 
     /** "Discard": the songs and breaks as they were when editing began. */
     fun restore(songIds: List<String>, breaks: List<Int>) = repository.setSetlistItems(setId, songIds, breaks)

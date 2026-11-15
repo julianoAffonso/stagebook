@@ -142,6 +142,8 @@ fun SetlistDetailRoute(
         onRemoveBreak = viewModel::removeBreak,
         onUndoRemove = viewModel::undoRemove,
         onRestore = viewModel::restore,
+        onConduct = viewModel::conductBand,
+        onClearPlayed = viewModel::clearPlayed,
         openShare = openShare,
     )
 }
@@ -175,6 +177,8 @@ fun SetlistDetailScreen(
     openShare: Boolean = false,   // from the stage's menu: opens with the Share sheet
     onPlayAt: (index: Int) -> Unit = {},   // a tap on a song (outside selecting): the stage opens on it
     pdfSizes: () -> List<Long> = { emptyList() },   // the PDFs the songs carry: the internet says if they fit
+    onConduct: () -> Unit = {},   // the menu's "Lead the band"
+    onClearPlayed: () -> Unit = {},   // the menu's "Clear played"
     startEditing: Boolean = false,   // opens in editing (tests, and a setlist just created)
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
 ) {
@@ -352,7 +356,9 @@ fun SetlistDetailScreen(
                         editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak,
                         onEdit = { before = items.map { it.songId } to uiState.breaks; editing = true },
                         onSave = { finishEditing() }, canSave = changed,
-                        menu = listOf(
+                        menu = listOfNotNull(
+                            MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { uiState.canConduct },
+                            MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, onClearPlayed).takeIf { uiState.anyPlayed },
                             MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
                             MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
                         ),
@@ -437,7 +443,7 @@ private fun SetActions(
             val breakLabel = if (canBreak) breakName else "$breakName. $why"
             // off but still touchable: the touch says why, as the first one on the off button met nothing (user test, 14/11)
             IconButton(onClick = { if (canBreak) onAddBreak() else message.show(why) }, modifier = Modifier.semantics { if (!canBreak) disabled() }) {
-                Icon(AppIcons.Coffee, breakLabel, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (canBreak) 1f else 0.38f))
+                Icon(AppIcons.Pause, breakLabel, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (canBreak) 1f else 0.38f))
             }
         } else {
             IconButton(onClick = onEdit) { Icon(AppIcons.Edit, stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.onSurface) }

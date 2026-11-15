@@ -203,11 +203,11 @@ class SetlistShowScreenTest {
         assertEquals(0, left)
     }
 
-    @Test fun `the menu has rename and delete only, and delete still asks`() {
+    @Test fun `the menu has rename and delete, and Clear played with a song played - delete still asks`() {
         screen()
         compose.onNodeWithContentDescription("Mais opções").performClick()
         compose.onNodeWithText("Renomear").assertIsDisplayed()
-        compose.onNodeWithText("Limpar tocadas").assertDoesNotExist()
+        compose.onNodeWithText("Limpar tocadas").assertIsDisplayed()   // a song of the setlist is marked played
         compose.onNodeWithText("Apagar o setlist").assertIsDisplayed().performClick()
         compose.waitForIdle()
         assertEquals("not before the answer", 0, deleted)

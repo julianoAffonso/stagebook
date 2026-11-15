@@ -231,6 +231,9 @@ class StageViewModel @Inject constructor(
 
     fun setPdfInvert(on: Boolean) = repository.updateLook { it.copy(pdfInvert = on) }
 
+    /** The side handle's place on the left edge (share of the height), kept as the person left it. */
+    fun setDrawerHandle(y: Float) = repository.updateLook { it.copy(drawerHandleY = y.coerceIn(HANDLE_MIN, HANDLE_MAX)) }
+
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
         shownIndex = index
@@ -545,3 +548,6 @@ private const val BREAK_SINCE = "breakSince"
 private const val BREAK_SONG = "breakSong"     // the song after the break on screen: its counter's key
 private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome
+
+private const val HANDLE_MIN = 0.1f
+private const val HANDLE_MAX = 0.9f

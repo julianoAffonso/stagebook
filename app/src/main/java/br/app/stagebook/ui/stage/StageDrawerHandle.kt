@@ -7,6 +7,13 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -35,37 +42,62 @@ import br.app.stagebook.ui.theme.Spacing
 /**
  * The small handle at the middle of the stage's left edge (user, 15/11: the header's ☰ goes, the side handle stays and
  * the title gets the room). Tapped, or pulled to the right, it opens the library drawer: on the setlist the stage came
- * from, or on the lists. Only this rectangle takes the drag: the rest of the edge is Android's back gesture.
+ * from, or on the lists. Only this rectangle takes the drag: the rest of the edge is Android's back gesture. Held and
+ * dragged up or down, it moves along the edge and stays where the person puts it (user, 15/11).
  */
 @Composable
-internal fun StageDrawerHandle(onOpen: () -> Unit, fg: Color, bg: Color, modifier: Modifier = Modifier) {
-    val flingPx = with(LocalDensity.current) { Sizes.swipe.toPx() }
+internal fun StageDrawerHandle(
+    onOpen: () -> Unit, fg: Color, bg: Color, y: Float, onMove: (Float) -> Unit, modifier: Modifier = Modifier,
+) {
+    val density = LocalDensity.current
+    val flingPx = with(density) { Sizes.swipe.toPx() }
+    val hitH = Sizes.touch * 2
     var pulled by remember { mutableFloatStateOf(0f) }
+    // while held, the handle follows the finger up and down; let go and the place is kept
+    var moving by remember { mutableStateOf(false) }
+    var dragY by remember { mutableFloatStateOf(y) }
     val label = stringResource(R.string.drawer_open)
-    Box(
-        modifier
-            .systemGestureExclusion()
-            .size(width = Spacing.xl, height = Sizes.touch * 2)
-            .testTag(DRAWER_HANDLE_TAG)
-            .draggable(
-                rememberDraggableState { pulled += it },
-                Orientation.Horizontal,
-                onDragStarted = { pulled = 0f },
-                onDragStopped = { velocity -> if (velocity > flingPx || pulled > flingPx) onOpen(); pulled = 0f },
-            )
-            .clickable(interactionSource = null, indication = null, role = Role.Button, onClick = onOpen)
-            .semantics { contentDescription = label },
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Column(
+    val hint = stringResource(R.string.drawer_handle_move)
+    BoxWithConstraints(modifier) {
+        val heightPx = with(density) { maxHeight.toPx() }
+        val hitPx = with(density) { hitH.toPx() }
+        val shown = if (moving) dragY else y
+        val top = ((shown * heightPx) - hitPx / 2f).coerceIn(0f, (heightPx - hitPx).coerceAtLeast(0f))
+        Box(
             Modifier
-                .size(width = HANDLE_WIDTH, height = HANDLE_HEIGHT)
-                .clip(RoundedCornerShape(topEnd = HANDLE_CORNER, bottomEnd = HANDLE_CORNER))
-                .overLyrics(bg, fg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .offset { IntOffset(0, top.roundToInt()) }
+                .systemGestureExclusion()
+                .size(width = Spacing.xl, height = hitH)
+                .testTag(DRAWER_HANDLE_TAG)
+                // a hold picks it up to move it along the edge; a short touch opens, a pull to the right opens too
+                .pointerInput(heightPx) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { moving = true; dragY = y },
+                        onDrag = { change, amount -> change.consume(); dragY = (dragY + amount.y / heightPx).coerceIn(0f, 1f) },
+                        onDragEnd = { moving = false; onMove(dragY) },
+                        onDragCancel = { moving = false },
+                    )
+                }
+                .draggable(
+                    rememberDraggableState { pulled += it },
+                    Orientation.Horizontal,
+                    onDragStarted = { pulled = 0f },
+                    onDragStopped = { velocity -> if (!moving && (velocity > flingPx || pulled > flingPx)) onOpen(); pulled = 0f },
+                )
+                .clickable(interactionSource = null, indication = null, role = Role.Button, onClickLabel = hint, onClick = onOpen)
+                .semantics { contentDescription = label },
+            contentAlignment = Alignment.CenterStart,
         ) {
-            repeat(3) { Box(Modifier.size(width = Spacing.s, height = HANDLE_LINE).background(fg.copy(alpha = HANDLE_LINE_ALPHA), CircleShape)) }
+            Column(
+                Modifier
+                    .size(width = HANDLE_WIDTH, height = HANDLE_HEIGHT)
+                    .clip(RoundedCornerShape(topEnd = HANDLE_CORNER, bottomEnd = HANDLE_CORNER))
+                    .overLyrics(bg, fg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                repeat(3) { Box(Modifier.size(width = Spacing.s, height = HANDLE_LINE).background(fg.copy(alpha = if (moving) 1f else HANDLE_LINE_ALPHA), CircleShape)) }
+            }
         }
     }
 }
