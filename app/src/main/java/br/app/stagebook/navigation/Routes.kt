@@ -39,6 +39,10 @@ data class Stage(
     val fromList: Boolean = false,
 )
 
+/** The list of setlists, the start of the library drawer's own navigation (it also holds [SetlistDetail] and [PickSongs]). */
+@Serializable
+object SetlistsList
+
 /** Settings, a page of its own: [section] opens on that section's name (empty: the list); [alone]: only that section, as About from the logo. */
 @Serializable
 data class Settings(val section: String = "", val alone: Boolean = false)

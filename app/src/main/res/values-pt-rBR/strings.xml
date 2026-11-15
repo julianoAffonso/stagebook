@@ -90,6 +90,7 @@
     <string name="sets_delete_confirm">Apagar o setlist \"%1$s\"? As músicas continuam na biblioteca.</string>
     <string name="action_more">Mais opções</string>
     <string name="sets_rename">Renomear</string>
+    <string name="sets_play">Tocar</string>
     <string name="sets_edit">Editar nome e data</string>
     <string name="sets_edit_title">Editar setlist</string>
     <string name="sets_date_label">Data do show</string>

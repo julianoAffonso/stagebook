@@ -87,6 +87,7 @@
     <string name="sets_delete_confirm">Delete the setlist \"%1$s\"? The songs stay in the library.</string>
     <string name="action_more">More options</string>
     <string name="sets_rename">Rename</string>
+    <string name="sets_play">Play</string>
     <string name="sets_edit">Edit name and date</string>
     <string name="sets_edit_title">Edit setlist</string>
     <string name="sets_date_label">Show date</string>

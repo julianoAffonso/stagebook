@@ -4,10 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.QrPayload
-import br.app.stagebook.navigation.PickSongs
 import br.app.stagebook.ui.songs.RowFactsReader
 import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,7 +47,7 @@ class PickSongsViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val setId = savedStateHandle.toRoute<PickSongs>().setId
+    private val setId: String = checkNotNull(savedStateHandle["setId"])
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
     // order they were checked = order they go into the setlist

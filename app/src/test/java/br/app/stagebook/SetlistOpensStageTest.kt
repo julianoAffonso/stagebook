@@ -21,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * V08: tapping a setlist opens its stage (where the show stopped); the card menu's first option and an empty setlist open the edit.
+ * V08: tapping a setlist opens it in the library drawer (its songs, in order); the card menu's first option plays it, on the stage where the show stopped.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w411dp-h891dp-port-xxhdpi", application = android.app.Application::class)
@@ -37,11 +37,11 @@ class SetlistOpensStageTest {
         }
     }
 
-    @Test fun `tapping a setlist opens the stage, not the edit`() {
+    @Test fun `tapping a setlist opens it, and does not start the stage`() {
         list(SetlistRowUi("a", "Show de sábado", 5))
         compose.onNodeWithText("Show de sábado").performClick()
-        assertEquals(listOf("a"), played)
-        assertEquals(emptyList<String>(), edited)
+        assertEquals(listOf("a"), edited)
+        assertEquals(emptyList<String>(), played)
     }
 
     @Test fun `an empty setlist opens the edit when tapped, as there is nothing to play`() {

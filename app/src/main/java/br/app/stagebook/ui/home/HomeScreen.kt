@@ -52,12 +52,12 @@ fun HomeScreen(
     onOpenSong: (String) -> Unit,
     onEditSong: (String?) -> Unit,
     onImport: (query: String, kind: String) -> Unit,
-    onOpenSetlist: (String) -> Unit,   // the setlist's edit
     onPlaySetlist: (setId: String, start: Int, atBreak: Boolean) -> Unit,   // its stage
     onScanSetlist: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     onOpenReceived: (String) -> Unit = {},
-    onShareSetlist: (String) -> Unit = {},
+    setlistRequest: br.app.stagebook.ui.drawer.SetlistRequest? = null,   // something asks the drawer to show a setlist
+    onRequestHandled: () -> Unit = {},
     pinned: Boolean = false,   // the drawer is pinned beside the stage: the pin shows in its top row
     onPin: (() -> Unit)? = null,
     onOpenSettings: (section: br.app.stagebook.ui.settings.SettingsSection?, alone: Boolean) -> Unit = { _, _ -> },   // alone: only that section, as About from the logo
@@ -69,6 +69,8 @@ fun HomeScreen(
     var picked by rememberSaveable { mutableStateOf<HomeTab?>(null) }
     val home = start ?: HomeTab.SETLISTS
     val tab = picked ?: home
+    // something outside asks for a setlist: the Setlists tab shows it
+    androidx.compose.runtime.LaunchedEffect(setlistRequest) { if (setlistRequest != null) picked = HomeTab.SETLISTS }
     // what the band sent: notice at the top of the tabs (the newest not dismissed yet), number on the icon and the list
     val inbox by inboxVm.items.collectAsStateWithLifecycle()
     val hasBand by inboxVm.hasBand.collectAsStateWithLifecycle()
@@ -139,7 +141,14 @@ fun HomeScreen(
                             onOpenSong, onEditSong, onImport, onScan = onScanSetlist, onReceiveCode = onReceiveCode,
                             received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                         )
-                        HomeTab.SETLISTS -> SetlistsRoute(onOpenSetlist, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = onShareSetlist, received = inbox.size, onReceived = { listOpen = true }, onSync = onSync)
+                        HomeTab.SETLISTS -> br.app.stagebook.ui.drawer.SetlistsPane(
+                            setlistRequest, onRequestHandled, onPlay = { id, index -> onPlaySetlist(id, index, false) },
+                        ) { open ->
+                            SetlistsRoute(
+                                { open(it, false) }, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = { open(it, true) },
+                                received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
+                            )
+                        }
                         // Settings has its own page: never the tab in front
                         HomeTab.SETTINGS -> Unit
                     }

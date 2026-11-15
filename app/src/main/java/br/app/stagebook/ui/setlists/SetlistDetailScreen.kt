@@ -87,6 +87,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun SetlistDetailRoute(
     onBack: () -> Unit,
     onAddSongs: (String) -> Unit,
+    onPlayAt: (setId: String, index: Int) -> Unit = { _, _ -> },   // tapping a song: its stage, on that song
     viewModel: SetlistDetailViewModel = hiltViewModel(),
     openShare: Boolean = false,
 ) {
@@ -127,6 +128,8 @@ fun SetlistDetailRoute(
         onBack = onBack,
         onRename = viewModel::rename,
         onAddSongs = { onAddSongs(viewModel.setId) },
+        onPlayAt = { onPlayAt(viewModel.setId, it) },
+        pdfSizes = viewModel::pdfSizes,
         onShowQr = viewModel::showQr,
         onHideQr = viewModel::hideQr,
         onMove = viewModel::move,
@@ -166,6 +169,8 @@ fun SetlistDetailScreen(
     onRemoveBreak: (position: Int) -> Unit = {},   // the break before the song at that position
     onUndoRemove: () -> Unit = {},   // the last song taken out goes back to its place
     openShare: Boolean = false,   // from the stage's menu: opens with the Share sheet
+    onPlayAt: (index: Int) -> Unit = {},   // a tap on a song (outside selecting): the stage opens on it
+    pdfSizes: () -> List<Long> = { emptyList() },   // the PDFs the songs carry: the internet says if they fit
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -294,7 +299,7 @@ fun SetlistDetailScreen(
                                                     title = title,
                                                     subtitle = item.subtitle,
                                                     state = SetlistShow.State.NONE,   // where the show is lives on the stage
-                                                    onClick = { if (selecting) toggle(item.key) },
+                                                    onClick = { if (selecting) toggle(item.key) else onPlayAt(mark.songsBefore) },
                                                     modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
                                                     onLongClick = { toggle(item.key) },
                                                     inline = wide,
@@ -361,6 +366,7 @@ fun SetlistDetailScreen(
             songs = uiState.items.count { !it.missing },
             online = online,
             internetOn = internetOn,
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = uiState.items.count { !it.missing }, setlists = true, pdfSizes = pdfSizes()),
             onQr = { sharing = false; onShowQr() },
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
             onDismiss = { sharing = false; doneSharing() },

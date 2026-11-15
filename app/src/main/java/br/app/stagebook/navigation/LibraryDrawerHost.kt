@@ -13,6 +13,9 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import br.app.stagebook.ui.drawer.SetlistRequest
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -49,8 +52,18 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
     val width = LocalConfiguration.current.screenWidthDp
     val wide = width >= Sizes.pinBreakpoint.value
     val fixed = pinned && wide
-    val drawer = remember(state, fixed) { DrawerControl({ scope.launch { state.open() } }, { scope.launch { state.close() } }, pinned = fixed) }
+    // something outside asks the drawer to show a setlist (the stage's menu, a setlist just received or imported)
+    var request by remember { mutableStateOf<SetlistRequest?>(null) }
+    val drawer = remember(state, fixed) {
+        DrawerControl(
+            { scope.launch { state.open() } }, { scope.launch { state.close() } }, pinned = fixed,
+            openSetlist = { id, share -> request = SetlistRequest(id, share); scope.launch { state.open() } },
+        )
+    }
     BackHandler(enabled = state.isOpen) { drawer.close() }
+    // the leader's song waits while the drawer is open: a setlist is being looked at, or songs picked, and the stage
+    // behind it must not be replaced under the person's hands
+    br.app.stagebook.ui.components.FollowHoldWhile(state.isOpen || fixed)
 
     // a tap only counts while the screen under it is in front (a double tap would open two screens)
     fun go(block: () -> Unit) {
@@ -71,12 +84,12 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
             onOpenSong = { openStage(Stage(songId = it, fromList = true)) },
             onEditSong = { go { nav.navigate(SongEditor(songId = it)) } },
             onImport = { query, kind -> go { nav.navigate(Importer(query, kind = kind)) } },
-            onOpenSetlist = { go { nav.navigate(SetlistDetail(it)) } },
             onPlaySetlist = { id, start0, atBreak -> openStage(Stage(setId = id, start = start0, atBreak = atBreak)) },
             onScanSetlist = { go { nav.navigate(ScanSetlist()) } },
             onReceiveCode = { code -> go { nav.navigate(ScanSetlist(code)) } },
             onOpenReceived = { id -> go { nav.navigate(ScanSetlist(inbox = id)) } },
-            onShareSetlist = { id -> go { nav.navigate(SetlistDetail(id, share = true)) } },
+            setlistRequest = request,
+            onRequestHandled = { request = null },
             pinned = fixed,
             onPin = if (wide) start::togglePin else null,
             onOpenSettings = { section, alone -> go { nav.navigate(Settings(section?.name.orEmpty(), alone)) { launchSingleTop = true } } },

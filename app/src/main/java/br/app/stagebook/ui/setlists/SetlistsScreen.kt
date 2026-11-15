@@ -79,7 +79,9 @@ fun SetlistsRoute(
         onCreateAt = { name, date -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name, date)) } },
         onEdit = viewModel::edit,
         // found what they were looking for: coming back the whole list shows, as in Songs
-        onOpen = { query = ""; onOpen(it) },
+        // armed to lead, a tap on a setlist plays it from where the show stopped and starts leading (the one place that does);
+        // otherwise it opens the setlist in the drawer
+        onOpen = { query = ""; if (conductButton.armed) { val at = viewModel.play(it); onPlay(it, at.start, at.atBreak) } else onOpen(it) },
         // tapping a setlist opens its stage where the show stopped (an empty one has nothing to play: the edit)
         onPlay = { query = ""; val at = viewModel.play(it); onPlay(it, at.start, at.atBreak) },
         query = query,
@@ -230,7 +232,7 @@ fun SetlistsScreen(
                                     br.app.stagebook.ui.components.songCountText(set.count),
                                     dayText(set.date, locale),
                                 ).joinToString(" · "),
-                                onClick = { if (selecting) toggle(set.id) else if (set.count > 0) onPlay(set.id) else onOpen(set.id) },
+                                onClick = { if (selecting) toggle(set.id) else onOpen(set.id) },
                                 onLongClick = { toggle(set.id) },
                                 leading = if (selecting) { { androidx.compose.material3.Checkbox(set.id in selected, { toggle(set.id) }) } } else null,
                                 modifier = Modifier.animateItem(),
@@ -238,7 +240,7 @@ fun SetlistsScreen(
                                 trailing = {
                                     // the ⋮ replaces the pencil: edit is its first option, as in the stage panel's menu (user, 14/11)
                                     if (!selecting) OverflowMenu(
-                                        setlistCardActions({ onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id }),
+                                        setlistCardActions({ if (set.count > 0) onPlay(set.id) else onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id }),
                                     )
                                 },
                             )
@@ -320,8 +322,8 @@ fun SetlistsScreen(
 
 /** The card's ⋮ menu, in this order. "Lead the band" is not here: it belongs to the header button and the stage panel. */
 @Composable
-internal fun setlistCardActions(onEdit: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
-    MenuAction(stringResource(R.string.set_edit), AppIcons.Edit, onEdit),
+internal fun setlistCardActions(onPlay: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
+    MenuAction(stringResource(R.string.sets_play), AppIcons.Play, onPlay),
     MenuAction(stringResource(R.string.share_title), AppIcons.Share, onShare),
     MenuAction(stringResource(R.string.sets_edit), AppIcons.Rename, onRename),
     MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, onDelete, danger = true),

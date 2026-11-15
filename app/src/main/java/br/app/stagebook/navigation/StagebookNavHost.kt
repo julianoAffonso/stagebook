@@ -33,8 +33,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import br.app.stagebook.ui.editor.SongEditorRoute
 import br.app.stagebook.ui.importer.ImportRoute
-import br.app.stagebook.ui.setlists.PickSongsRoute
-import br.app.stagebook.ui.setlists.SetlistDetailRoute
 import br.app.stagebook.ui.stage.StageRoute
 import br.app.stagebook.ui.AppUpdateDialog
 import br.app.stagebook.data.UpdateOffer
@@ -218,53 +216,49 @@ fun StagebookNavHost(
             }
         }
         composable<SongEditor> { entry ->
+            val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
             SongEditorRoute(
                 onDone = dropUnlessResumed { nav.popBackStack() },
                 onSaved = { id -> entry.ifResumed { nav.showSaved(id) } },
                 // import queue: saves, opens the next song in the importer; when done, opens the setlist
                 onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
-                onSetlistReady = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } },
+                onSetlistReady = { id -> nav.popBackStack<Importer>(inclusive = true); drawer?.openSetlist(id, false) },
                 // previous or next song: the editor of that song in place of this one (back still goes to where it came from)
                 onMoved = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id)) { popUpTo<SongEditor> { inclusive = true } } } },
             )
         }
-        composable<SetlistDetail> { entry ->
-            SetlistDetailRoute(
-                onBack = dropUnlessResumed { nav.popBackStack() },
-                onAddSongs = { entry.ifResumed { nav.navigate(PickSongs(it)) } },
-                openShare = remember { entry.toRoute<SetlistDetail>().share },
-            )
-        }
         composable<ScanSetlist> {
+            val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
             ScanSetlistRoute(
-                // created: opens the setlist in place of the scanner (back goes to the list)
-                onDone = { id -> nav.navigate(SetlistDetail(id)) { popUpTo<ScanSetlist> { inclusive = true } } },
+                // created: the scanner goes and the drawer opens on the new setlist
+                onDone = { id -> nav.popBackStack<ScanSetlist>(inclusive = true); drawer?.openSetlist(id, false) },
                 onBack = dropUnlessResumed { nav.popBackStack() },
                 // the missing ones: the importer opens as a queue in place of the scanner
                 onImport = { nav.navigate(Importer(queued = true)) { popUpTo<ScanSetlist> { inclusive = true } } },
             )
         }
-        composable<PickSongs> { PickSongsRoute(onDone = dropUnlessResumed { nav.popBackStack() }) }
         composable<Stage> { entry ->
+            val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
             StageRoute(
                 fromList = entry.toRoute<Stage>().fromList,
                 onEditSong = { id, cursor -> entry.ifResumed { nav.navigate(SongEditor(songId = id, cursor = cursor)) } },
                 onBack = dropUnlessResumed { if (nav.previousBackStackEntry != null) nav.popBackStack() else (context as? android.app.Activity)?.finish() },
                 // the library lost every song under the stage: the empty screen, with the drawer open
                 onEmptied = { nav.navigate(Home) { popUpTo<Stage> { inclusive = true } } },
-                // the setlist's own screen is only the edit now; it opens over the stage, and back comes back to it
-                onEditSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id)) } },
-                onShareSetlist = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id, share = true)) } },
+                // the setlist is looked at in the drawer, over the stage
+                onEditSetlist = { id -> entry.ifResumed { drawer?.openSetlist(id, false) } },
+                onShareSetlist = { id -> entry.ifResumed { drawer?.openSetlist(id, true) } },
             )
         }
         composable<Importer> { entry ->
+            val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
             ImportRoute(
                 onClose = dropUnlessResumed { nav.popBackStack() },
                 // the editor replaces the browser: save or cancel goes back to the list. Only from the open browser: a
                 // late answer can't open a second editor (audit 01/11)
                 onOpenEditor = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true)) { popUpTo<Importer> { inclusive = true } } } },
                 onOpenEditorQueued = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true)) } },
-                onSetlistReady = { id -> entry.ifResumed { nav.navigate(SetlistDetail(id)) { popUpTo<Importer> { inclusive = true } } } },
+                onSetlistReady = { id -> entry.ifResumed { nav.popBackStack<Importer>(inclusive = true); drawer?.openSetlist(id, false) } },
             )
         }
     }

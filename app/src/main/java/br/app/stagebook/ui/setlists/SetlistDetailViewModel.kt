@@ -18,13 +18,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.QrEncoder
 import br.app.stagebook.domain.QrPayload
 import br.app.stagebook.domain.Chords
 import br.app.stagebook.domain.SetlistShow
-import br.app.stagebook.navigation.SetlistDetail
 import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +85,8 @@ class SetlistDetailViewModel @Inject constructor(
     // the Share sheet's internet code and band send, shared with the songs screen
     private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
     val internetOn: StateFlow<Boolean> = share.internetOn
-    val setId = savedStateHandle.toRoute<SetlistDetail>().setId
+    // the setlist's id, from the arguments of the route that holds it (the library drawer's own navigation)
+    val setId: String = checkNotNull(savedStateHandle["setId"])
 
     /** Internet now? "Code over the internet" only shows with it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -98,6 +97,9 @@ class SetlistDetailViewModel @Inject constructor(
     val bandResult = share.bandResult
 
     /** Sends the setlist over the internet (with the songs, if [withSongs]); the code shows in a dialog. */
+    /** The sizes of the PDFs this setlist's songs carry (the internet send checks they fit). */
+    fun pdfSizes(): List<Long> = setlistCloud.pdfSizes(repository.library.value.setlist(setId)?.items.orEmpty().distinct())
+
     fun sendInternet(withSongs: Boolean) =
         share.sendCode(repository.library.value.setlist(setId)?.name.orEmpty()) { setlistCloud.send(setId, withSongs) }
 
