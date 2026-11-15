@@ -108,14 +108,21 @@ class FollowRealStageWindowTest {
         compose.waitForIdle()
     }
 
-    private fun leaderOpens(index: Int) { leader.open(set, index); settle() }
+    // the follower's flows run on IO: wait for what it knows (a fixed sleep made this class flaky on a slow machine)
+    private fun followerOn(song: String) {
+        val end = System.currentTimeMillis() + 10_000
+        while (follower.followingSong.value != song && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertEquals(song, follower.followingSong.value)
+    }
+
+    private fun leaderOpens(index: Int) { leader.open(set, index); followerOn(ids[index]); settle() }
     private fun leaderBreak() { leader.rest(set, 0L); settle() }
     private fun openMetronome() { compose.onNodeWithContentDescription("Metrônomo").performClick(); compose.onNodeWithContentDescription("Mais devagar").assertExists() }
     private fun closeWindow() { compose.onNodeWithContentDescription("Fechar").performClick(); settle() }
 
     private fun begin() {
         leader.start(set, "Show", items, 0)
-        Thread.sleep(300)
+        followerOn(ids[0])
         show()
         settle()
         compose.onNodeWithText("Letra Aaa", substring = true).assertExists()
@@ -133,13 +140,13 @@ class FollowRealStageWindowTest {
         assertNull(gate.pending)
     }
 
-    @Test fun `window open, the band goes to the break, closing the window shows it`() {
+    @Test fun `the band goes to the break over a stage with the song - it never covers the stage, window open or not`() {
         begin()
         openMetronome()
         leaderBreak()
-        assertEquals(true, gate.breakHeld)
+        assertFalse(gate.breakHeld)
         closeWindow()
-        compose.onNodeWithText("INTERVALO").assertExists()
+        compose.onAllNodesWithText("INTERVALO").assertCountEquals(0)
         assertFalse(gate.breakHeld)
     }
 

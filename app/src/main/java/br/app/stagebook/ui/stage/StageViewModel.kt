@@ -406,7 +406,9 @@ class StageViewModel @Inject constructor(
         StageUiState(
             followNext = followNext,
             followEnd = follow != null && followNext == null && follow.index >= 0,
-            followBreak = following?.let { followBreak(it, lib.songs) },
+            // the leader's break covers only a stage that has no song of the band's to show (opened for the break alone); a
+            // stage with the song stays free, and the strip tells the break (the stage isn't locked by following)
+            followBreak = following?.takeIf { route.leaderBreak }?.let { followBreak(it, lib.songs) },
             breakOver = loaded && route.leaderBreak && leaderBreakOver(role),
             live = set != null || role is br.app.stagebook.data.BandConduct.Role.Following,
             loading = !loaded,

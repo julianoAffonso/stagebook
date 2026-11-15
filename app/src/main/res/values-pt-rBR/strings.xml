@@ -49,7 +49,9 @@
     <!-- editor -->
     <string name="editor_new">Nova música</string>
     <string name="editor_imported_new">Música importada. Confira e salve.</string>
-    <string name="editor_imported_update">Letra nova importada. Confira e salve.</string>
+    <string name="editor_imported_update">Esta música já está na sua biblioteca. Salvar troca o texto dela pelo importado.</string>
+    <string name="editor_replace_confirm">Trocar o texto de “%1$s” pelo importado? O texto salvo será perdido.</string>
+    <string name="editor_replace">Trocar</string>
     <string name="import_offline_note">Sem internet: artista, ano e BPM não foram completados. Preencha em Dados da música.</string>
     <string name="editor_title">Nome da música</string>
     <string name="editor_author">Artista</string>
@@ -216,6 +218,8 @@
     <string name="conduct_wait_menu">Abre quando você fechar o menu</string>
     <string name="conduct_wait_keyboard">Abre quando você fechar o teclado</string>
     <string name="conduct_wait_screen">Abre quando você terminar aqui</string>
+    <string name="conduct_leading">%1$s está conduzindo “%2$s”</string>
+    <string name="conduct_wait_other">Você está em outra música</string>
     <string name="conduct_left">%1$s está conduzindo</string>
     <string name="conduct_follow">Acompanhar</string>
     <string name="conduct_lacks_title">O que falta</string>

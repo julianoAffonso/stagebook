@@ -102,15 +102,16 @@ SECTIONS = [
             "- **Scan QR:** reads a setlist's QR with the camera.",
             "- **Type the 3 words:** receives what someone sent over the internet.",
         ],
-        "figs": [Fig(("jornada_importar_menu_tablet", "jornada_importar_menu", "O menu Importar", "The Import menu"))],
+        "figs": [Fig(("jornada_importar_menu_tablet", "jornada_importar_menu", "O menu Importar", "The Import menu")),
+                 Fig(("tablet_4_editor_importar_existente", "celular_4_editor_importar_existente", "Importar uma música que você já tem", "Importing a song you already have"))],
         "subs": [
             sub("importar-internet", "Da internet", "From the web",
                 ["O importador abre o site marcado em [Sites de cifra](#ajustes-sites). Digite a música, o artista ou o endereço da página; uma busca digitada procura no Google. Abra a página da música e toque em Importar. Se o app não achar a letra, selecione-a com o dedo e toque de novo.",
                  "O app só baixa o que você mandar, e o que você importa fica só neste aparelho. Se o texto não parecer letra ou cifra, o app não aceita.",
-                 "A música abre no editor para você conferir e salvar."],
+                 "A música abre no editor para você conferir e salvar. Se você já tem uma música com o mesmo título e artista, o editor avisa no alto, e Salvar pergunta antes de trocar o texto dela pelo importado."],
                 ["The importer opens the site marked in [Chord sites](#ajustes-sites). Type the song, the artist or the page address; a typed search goes to Google. Open the song's page and tap Import. If the app can't find the lyrics, select them with your finger and tap it again.",
                  "The app only downloads what you ask for, and what you import stays on this device. If the text doesn't look like lyrics or chords, the app won't take it.",
-                 "The song opens in the editor for you to check and save."]),
+                 "The song opens in the editor for you to check and save. If you already have a song with the same title and artist, the editor says so at the top, and Save asks before replacing its text with the imported one."]),
             sub("importar-dados", "Tom, capo, artista e ano", "Key, capo, artist and year",
                 ["Tom, capotraste e BPM vêm do que a página diz, em qualquer site. Com capotraste, o tom guardado é o dos desenhos da cifra. O que faltar de artista, ano e BPM o app completa pela internet. Sem internet, preencha em Dados da música."],
                 ["Key, capo and BPM come from what the page says, on any site. With a capo, the saved key is the one of the chart's shapes. Whatever is missing of artist, year and BPM the app fills in over the internet. Offline, fill it in under Song details."]),
@@ -523,12 +524,13 @@ SECTIONS = [
                 ["Conduzir a banda sempre leva um setlist. Na aba Setlists, o ícone de grupo no alto arma a condução: ele acende, a faixa embaixo diz Pronto para conduzir e Cancelar, e o próximo setlist em que você tocar abre o palco e começa a conduzir, da música em que o show parou. Tocar no ícone de novo, ou em Cancelar, desarma. Fica armado até você abrir um setlist ou cancelar, também se girar a tela ou trocar de aba. O mesmo está no ⋮ do [setlist no palco](#palco-setlist), para o setlist que já está aberto. O ícone e o item só aparecem com alguém da banda adicionado e a banda ligada. Ele leva a banda a partir da música que está no palco, e os aparelhos da banda com o app aberto no mesmo Wi-Fi entram sozinhos em Acompanhando, na mesma música, e seguem cada troca.",
                  "- Quem acompanha não precisa ter o setlist, só as músicas. Se faltar uma, a faixa embaixo fica vermelha e ganha o botão Pedir. Ele pede a música à banda neste Wi-Fi. Se ninguém tiver, um aviso diz.",
                  "- No fim de cada música aparece a próxima do setlist de quem conduz.",
-                 "- No [intervalo](#palco-intervalo) de quem conduz, quem acompanha vê a mesma tela, com o mesmo tempo e a música que vem a seguir, mesmo sem ter a música de antes. Ela sai quando quem conduz segue ou volta: até lá, o pedal e o toque não viram a página. Quem está com uma versão mais antiga do app fica na música de antes do intervalo.",
+                 "- No [intervalo](#palco-intervalo) de quem conduz, quem acompanha continua livre no palco, com o pedal e o toque funcionando, e a faixa embaixo mostra o tempo do intervalo e a música que vem a seguir. Só quem não tem a música de antes vê a tela do intervalo sozinha, com o mesmo tempo e a próxima música; ela sai quando quem conduz segue ou volta, e até lá o pedal e o toque não viram a página. Quem está com uma versão mais antiga do app fica na música de antes do intervalo.",
                  "- No intervalo, a faixa embaixo também mostra o tempo e a próxima música. Ela fica vermelha se você não tem a próxima.",
                  "- Quem abriu o app depois entra sozinho em alguns segundos. Se não entrar, quem conduz toca em Procurar a banda (no celular, a lupa na faixa embaixo).",
                  "- Sair, na faixa embaixo, para de acompanhar: nada mais abre sozinho. Enquanto a mesma pessoa conduz, a faixa mostra quem está conduzindo e o botão Acompanhar. Ele abre a música ou o intervalo em que a banda está. Procurar a banda, de quem conduz (no celular, a lupa), também traz de volta quem saiu.",
-                 "- Quem está no meio de algo não é tirado da tela: editando, escolhendo músicas, recebendo, importando, em Ajustes, com um menu ou uma janela aberta, ou com o teclado aberto. A faixa embaixo diz para onde a banda foi (“Voz foi para “Evidências””) e que a música abre quando você fechar o menu. Ir abre na hora. Ao terminar, ou ao sair de Ajustes para outra aba, o palco abre sozinho na música em que a banda está agora, sem acumular as que passaram, e Voltar leva à tela em que você estava. O intervalo também: a faixa avisa, e a tela dele abre na volta se ele ainda não acabou. No palco vale o mesmo: com a janela do metrônomo, do acorde ou da mesa aberta, a música da banda espera e abre quando você fecha. O intervalo também espera atrás da janela: a faixa diz “Voz foi para o intervalo”, e ele aparece quando você fecha, se a banda ainda estiver nele. Ir mostra na hora. No editor de uma música, Ir sai do editor: se há algo não salvo, pergunta antes “Sair sem salvar?”, e só depois abre a música da banda. Em Editar setlist é igual: a tela segura quem acompanha enquanto está aberta (o que você muda ali já fica salvo na hora), e Ir só pergunta se há um arraste ou um renomear em andamento.",
+                 "- Quem está no meio de algo não é tirado da tela: editando, escolhendo músicas, recebendo, importando, em Ajustes, com um menu ou uma janela aberta, ou com o teclado aberto. A faixa embaixo diz para onde a banda foi (“Voz foi para “Evidências””) e que a música abre quando você fechar o menu. Ir abre na hora. Ao terminar, ou ao sair de Ajustes para outra aba, o palco abre sozinho na música em que a banda está agora, sem acumular as que passaram, e Voltar leva à tela em que você estava. O intervalo também: a faixa avisa, e a tela dele abre na volta se ele ainda não acabou. No palco vale o mesmo: com a janela do metrônomo, do acorde ou da mesa aberta, a música da banda espera e abre quando você fecha. No editor de uma música, Ir sai do editor: se há algo não salvo, pergunta antes “Sair sem salvar?”, e só depois abre a música da banda. Em Editar setlist é igual: a tela segura quem acompanha enquanto está aberta (o que você muda ali já fica salvo na hora), e Ir só pergunta se há um arraste ou um renomear em andamento.",
                  "- Na faixa de quem conduz, “N da banda não respondeu” conta quem está neste Wi-Fi agora e não respondeu: some quando a pessoa responde ou sai, e muda se alguém chega.",
+                 "- Seguir a banda não trava o palco: se você está numa música diferente da que a banda toca, o palco não é puxado de volta. A faixa embaixo diz “Voz está conduzindo “Evidências”” e Ir abre a música. Quem está na música da banda segue junto a cada troca. Se você chegar sozinho na música da banda, o aviso some.",
                  "- Quem conduz vê em Ver o que falta quem não tem cada música, com as músicas em linhas como no setlist (título e artista). Ali dá para enviar as que faltam a um aparelho, ou a todos de uma vez. Só recebe quem está acompanhando neste Wi-Fi. Quando a música chega, o aparelho sai da lista, também quando ele a pediu (Pedir) a quem conduz: a lista se atualiza em alguns segundos, sem tocar em Enviar.",
                  "- Quem acompanha vê em Ver o que falta aqui as músicas do setlist que não estão neste aparelho, antes de a banda chegar nelas, em linhas com título e artista. Só aparece quando falta alguma, e a música que chega sai da lista na hora; quando a lista esvazia, a janela fecha.",
                  "- A música que você pediu, ou que quem conduz enviou do setlist, entra direto na biblioteca durante o show. Se é a música da vez, o palco abre nela. Uma música que você já tem nunca é trocada: a que chegou espera em Recebidos da banda, como todo o resto que a banda mandar.",
@@ -537,12 +539,13 @@ SECTIONS = [
                 ["Leading the band always belongs to a setlist. On the Setlists tab, the group icon at the top arms it: it lights up, the bar at the bottom says Ready to lead with Cancel, and the next setlist you tap opens the stage and starts leading, from the song where the show stopped. Tapping the icon again, or Cancel, disarms it. It stays armed until you open a setlist or cancel, also if you turn the screen or change tabs. The same is in the ⋮ of the [setlist on stage](#palco-setlist), for the setlist already open. The icon and the item only show with someone added to the band and the band on. It leads the band from the song on stage, and band devices with the app open on the same Wi-Fi switch to Following by themselves, on the same song, and follow every change.",
                  "- Followers don't need the setlist, only the songs. If one is missing, the bar at the bottom turns red and gets the Ask button. It asks the band on this Wi-Fi for the song. If nobody has it, a notice says so.",
                  "- At the end of each song they see the leader's next one.",
-                 "- On the leader's [break](#palco-intervalo), followers see the same screen, with the same time and the song that comes next, even without the song before it. It goes away when the leader moves on or back: until then, the pedal and a tap turn no page. Someone on an older version of the app stays on the song before the break.",
+                 "- On the leader's [break](#palco-intervalo), followers stay free on stage, with the pedal and taps working, and the bar at the bottom shows the break's time and the song that comes next. Only someone without the song before it sees the break screen alone, with the same time and the next song; it goes away when the leader moves on or back, and until then the pedal and a tap turn no page. Someone on an older version of the app stays on the song before the break.",
                  "- On the break, the bar at the bottom shows the time and the next song too. It turns red if you don't have the next one.",
                  "- Someone who opens the app later joins by themselves within seconds. If not, the leader taps Look for the band (on a phone, the magnifying glass on the bar at the bottom).",
                  "- Leave, on the bar at the bottom, stops following: nothing else opens by itself. While the same person leads, the bar shows who is leading and the Follow button. It opens the song or the break the band is on. The leader's Look for the band (the magnifying glass on a phone) also brings back whoever left.",
-                 "- Someone in the middle of something isn't pulled off the screen: editing, picking songs, receiving, importing, in Settings, with a menu or a window open, or with the keyboard open. The bar at the bottom says where the band went (“Voz went to “Evidências””) and that the song opens when you close the menu. Go opens it at once. When you finish, or leave Settings for another tab, the stage opens by itself on the song the band is on now, without piling up the ones that passed, and Back returns to the screen you were on. The break too: the bar tells them, and its screen opens when they come back if it isn't over. On stage it is the same: with the metronome, chord or mixer window open, the band's song waits and opens when you close it. The break waits behind the window too: the bar says “Voz went to the break”, and it shows when you close it, if the band is still on it. Go shows it at once. In a song's editor, Go leaves the editor: if something isn't saved, it asks “Leave without saving?” first, and only then opens the band's song. Edit setlist is the same: the screen holds a follower while it is open (what you change there is already saved), and Go only asks if a drag or a rename is under way.",
+                 "- Someone in the middle of something isn't pulled off the screen: editing, picking songs, receiving, importing, in Settings, with a menu or a window open, or with the keyboard open. The bar at the bottom says where the band went (“Voz went to “Evidências””) and that the song opens when you close the menu. Go opens it at once. When you finish, or leave Settings for another tab, the stage opens by itself on the song the band is on now, without piling up the ones that passed, and Back returns to the screen you were on. The break too: the bar tells them, and its screen opens when they come back if it isn't over. On stage it is the same: with the metronome, chord or mixer window open, the band's song waits and opens when you close it. In a song's editor, Go leaves the editor: if something isn't saved, it asks “Leave without saving?” first, and only then opens the band's song. Edit setlist is the same: the screen holds a follower while it is open (what you change there is already saved), and Go only asks if a drag or a rename is under way.",
                  "- On the leader's bar, “N band members didn't answer” counts who is on this Wi-Fi now and didn't answer: it goes away when the person answers or leaves, and changes if someone arrives.",
+                 "- Following the band doesn't lock the stage: if you are on a different song than the band, the stage isn't pulled back. The bar at the bottom says “Voz is leading “Evidências”” and Go opens it. Whoever is on the band's song moves along at every change. If you get to the band's song on your own, the notice goes away.",
                  "- The leader sees in See what's missing who lacks each song, with the songs as rows like the setlist's (title and artist). From there you can send one device the songs it lacks, or all of them at once. Only devices following on this Wi-Fi get them. When the song arrives, the device leaves the list, also when it asked the leader for it (Ask): the list updates in a few seconds, without tapping Send.",
                  "- A follower sees in See what's missing here the songs of the setlist that aren't on this device, before the band gets to them, as rows with the title and the artist. It only shows when one is missing, a song that arrives leaves the list at once, and when the list empties the window closes.",
                  "- A song you asked for, or one of the setlist that the leader sent, goes straight into your library during the show. If it's the current song, the stage opens on it. A song you already have is never replaced: the one that arrived waits in Received from the band, like everything else the band sends.",
@@ -551,8 +554,7 @@ SECTIONS = [
                 [Fig(("jornada_setlist_1c_conduzir_armado_tablet", "jornada_setlist_1c_conduzir_armado", "Conduzir armado: escolha um setlist", "Lead armed: pick a setlist")),
                  Fig(("banda_conduzir_faixas", "banda_conduzir_faixas_celular", "Conduzindo a banda", "Leading the band")),
                  Fig(("banda_conduzir_falta", "banda_conduzir_falta_celular", "O que falta, e enviar", "What's missing, and sending it")),
-                 Fig(("tablet_6_palco_acompanhando", "celular_7_palco_acompanhando", "Acompanhando no palco", "Following on stage")),
-                 Fig(("tablet_6_palco_intervalo_espera", "celular_7_palco_intervalo_espera", "O intervalo espera a janela fechar", "The break waits for the window to close"))]),
+                 Fig(("tablet_6_palco_acompanhando", "celular_7_palco_acompanhando", "Acompanhando no palco", "Following on stage"))]),
         ],
     },
     {
@@ -1181,10 +1183,12 @@ _regroup_settings()
 UI = {
     "pt-BR": {"title": "Ajuda do Stagebook", "lead": "Como usar cada parte do app.", "contents": "Nesta página",
               "tablet": "Tablet", "phone": "Celular", "other": "English", "other_href": "../help/", "lang": "pt-BR",
-              "home": "Stagebook — página inicial", "repo": "Código do Stagebook no GitHub"},
+              "home": "Stagebook — página inicial", "repo": "Código do Stagebook no GitHub",
+              "search": "Buscar na ajuda", "none": "Nada encontrado."},
     "en": {"title": "Stagebook help", "lead": "How to use each part of the app.", "contents": "On this page",
            "tablet": "Tablet", "phone": "Phone", "other": "Português", "other_href": "../ajuda/", "lang": "en",
-           "home": "Stagebook — home page", "repo": "Stagebook source code on GitHub"},
+           "home": "Stagebook — home page", "repo": "Stagebook source code on GitHub",
+           "search": "Search the help", "none": "Nothing found."},
 }
 
 CSS = """
@@ -1225,13 +1229,24 @@ figcaption { color:var(--muted); font-size:14px; margin-top:8px; display:flex; g
 .switch { margin-left:auto; display:flex; background:var(--raised); border-radius:999px; padding:2px; }
 .switch button { border:0; background:none; color:var(--fg); font: 600 12px system-ui, sans-serif; padding:4px 10px; border-radius:999px; cursor:pointer; }
 .switch button[aria-pressed=true] { background:var(--accent); color:var(--on-accent); }
+/* the search: the results take the place of the contents while there is something typed */
+nav.toc input { width:100%; margin: 0 0 10px; padding: 8px 12px; border-radius: 999px; border:1px solid var(--line); background:var(--raised);
+                color:var(--fg); font: inherit; font-size:15px; }
+nav.toc input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+nav.toc.searching #links { display:none; }
+#res { display:none; } nav.toc.searching #res { display:block; }
+#res a { padding: 6px 8px; } #res a small { display:block; color:var(--muted); font-size:12px; }
+#res a span { display:block; font-size:14px; overflow-wrap:anywhere; }
+#res p { color:var(--muted); margin:4px 8px; font-size:14px; }
+mark { background: var(--accent); color: var(--on-accent); border-radius: 4px; padding: 0 2px; }
+.hit { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
 /* standing tablet or phone: the contents become a compact strip of links instead of a tall list */
 @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } nav.toc { position: static; padding: 12px; }
   nav.toc { max-height: none; }
   nav.toc a, nav.toc a.sub { display:inline-block; background:var(--raised); margin: 0 4px 6px 0; padding: 4px 12px; border-radius: 999px; font-size: 14px; } }
 """
 
-JS = """
+JS = r"""
 document.querySelectorAll('figure[data-tablet][data-phone]').forEach(f => {
   const img = f.querySelector('img');
   f.querySelectorAll('.switch button').forEach(b => b.onclick = () => {
@@ -1241,6 +1256,55 @@ document.querySelectorAll('figure[data-tablet][data-phone]').forEach(f => {
     f.querySelectorAll('.switch button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   });
 });
+
+// search: every heading, paragraph, list item and caption of the page, matched without accents or case; all the words
+// must be in it. A result jumps to its place (and lights it for a moment); the contents come back when the box empties
+(() => {
+  const q = document.getElementById('q'), res = document.getElementById('res'), nav = q.closest('nav');
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const items = []; let head = '';
+  document.querySelectorAll('main h2, main h3, main h4, main p, main li, main figcaption').forEach(el => {
+    const isHead = /^H/.test(el.tagName), text = el.textContent.replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    if (isHead) head = text;
+    items.push({ el, text, n: norm(text), head: isHead ? '' : head, isHead });
+  });
+  const close = () => { q.value = ''; nav.classList.remove('searching'); res.replaceChildren(); };
+  const show = el => { close(); el.scrollIntoView({ block: 'center' }); el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 2200); };
+  const snippet = (it, words) => {
+    const out = document.createElement('span');
+    const same = it.n.length === it.text.length;
+    const at = Math.max(0, Math.min(...words.map(w => it.n.indexOf(w)).filter(i => i >= 0)));
+    const from = same ? Math.max(0, at - 40) : 0;
+    const piece = it.text.slice(from, from + 150), n = norm(piece);
+    const marks = [];
+    words.forEach(w => { for (let i = n.indexOf(w); i >= 0; i = n.indexOf(w, i + w.length)) marks.push([i, i + w.length]); });
+    marks.sort((a, b) => a[0] - b[0]);
+    let pos = 0;
+    if (from > 0) out.append('… ');
+    marks.forEach(([a, b]) => { if (a < pos) return; out.append(piece.slice(pos, a)); const m = document.createElement('mark'); m.textContent = piece.slice(a, b); out.append(m); pos = b; });
+    out.append(piece.slice(pos) + (from + 150 < it.text.length ? ' …' : ''));
+    return out;
+  };
+  const run = () => {
+    const words = norm(q.value).split(/\s+/).filter(w => w.length > 1);
+    res.replaceChildren();
+    nav.classList.toggle('searching', q.value.trim().length > 0);
+    if (!words.length) return;
+    const hits = items.filter(it => words.every(w => it.n.includes(w))).sort((a, b) => b.isHead - a.isHead).slice(0, 40);
+    if (!hits.length) { const p = document.createElement('p'); p.textContent = q.dataset.none; res.append(p); return; }
+    hits.forEach(it => {
+      const a = document.createElement('a'); a.href = '#';
+      if (it.head) { const h = document.createElement('small'); h.textContent = it.head; a.append(h); }
+      a.append(snippet(it, words));
+      a.onclick = e => { e.preventDefault(); show(it.el); };
+      res.append(a);
+    });
+  };
+  q.addEventListener('input', run);
+  q.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  document.addEventListener('keydown', e => { if (e.key === '/' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); q.focus(); } });
+})();
 """
 
 
@@ -1332,7 +1396,7 @@ def build(lang):
 <body>
 <header><a class="home" href="../" aria-label="{ui['home']}"><img src="../logo.png" alt=""></a><div><h1>{ui['title']}</h1><p class="lead">{ui['lead']}</p></div>
 <a class="repo" href="https://github.com/julianoAffonso/stagebook" aria-label="{ui['repo']}">GitHub</a><a class="lang" href="{ui['other_href']}">{ui['other']}</a></header>
-<div class="wrap"><nav class="toc"><b>{ui['contents']}</b>{''.join(toc)}</nav><main>{''.join(body)}</main></div>
+<div class="wrap"><nav class="toc"><input id="q" type="search" placeholder="{ui['search']}" aria-label="{ui['search']}" data-none="{ui['none']}" autocomplete="off"><div id="res" role="region" aria-live="polite"></div><div id="links"><b>{ui['contents']}</b>{''.join(toc)}</div></nav><main>{''.join(body)}</main></div>
 <script>{JS}</script>
 </body></html>
 """

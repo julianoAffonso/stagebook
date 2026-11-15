@@ -10,6 +10,9 @@ enum class FollowWait {
 
     /** The keyboard is open. */
     KEYBOARD,
+
+    /** The stage is on a song other than the one the band was on: the person went somewhere on their own, not pulled back. */
+    OTHER_SONG,
 }
 
 /**

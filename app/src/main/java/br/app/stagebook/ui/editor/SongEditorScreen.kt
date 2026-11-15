@@ -196,6 +196,8 @@ fun SongEditorScreen(
     var midiOpen by rememberSaveable { mutableStateOf(false) }
     if (midiOpen) MidiDialog(uiState.midi, { onMidi(it); midiOpen = false }) { midiOpen = false }
     var deleting by rememberSaveable { mutableStateOf(false) }
+    // an import over a song already in the library: saving replaces its text, so it asks first
+    var replacing by rememberSaveable { mutableStateOf(false) }
     var tagging by rememberSaveable { mutableStateOf(false) }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
     var newChord by rememberSaveable { mutableStateOf(false) }
@@ -319,7 +321,7 @@ fun SongEditorScreen(
                 val headerActions: @Composable RowScope.() -> Unit = {
                     // tablets have the room on this line; on a phone it goes on the line below
                     if (wide && position != null) EditorSteps(position, step)
-                    TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary)
+                    TipIcon(stringResource(R.string.action_save), AppIcons.Save, { if (uiState.mode == EditorMode.IMPORTED_UPDATE) replacing = true else onSave() }, tint = MaterialTheme.colorScheme.primary)
                     // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option); only for a saved song
                     if (canDelete) TipIcon(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, tint = MaterialTheme.colorScheme.error)
                 }
@@ -450,6 +452,14 @@ fun SongEditorScreen(
             onOutside = { moving = 0 },
             cancelLabel = stringResource(R.string.action_cancel),
             onCancel = { moving = 0 },
+        )
+    }
+    if (replacing) {
+        ConfirmDialog(
+            stringResource(R.string.editor_replace_confirm, br.app.stagebook.ui.songs.shortName(uiState.title)),
+            stringResource(R.string.editor_replace),
+            { replacing = false; onSave() },
+            { replacing = false },
         )
     }
     if (deleting) {

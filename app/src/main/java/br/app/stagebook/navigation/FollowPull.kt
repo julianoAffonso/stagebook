@@ -32,6 +32,15 @@ internal fun NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>
 
 internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
 
+/** Is this the stage for [target]: the band's song, or the leader's break alone. */
+internal fun Stage.isFor(target: String?): Boolean = target != null && stageFor(target).let { it.songId == songId && it.leaderBreak == leaderBreak }
+
+/**
+ * The stage on screen is on a song other than [target]: the person went there on their own, so the band's song does not
+ * take them away; the strip says it and "Go" opens it. Not on a stage (null), nothing here to protect.
+ */
+internal fun Stage?.elsewhereFrom(target: String?): Boolean = this != null && !isFor(target)
+
 /**
  * Opens the follower's stage on [target], replacing the stage already open. Without the pop, a stage on top just takes
  * the new arguments (launchSingleTop keeps its entry and so its view model, which read the old song once): the screen
@@ -40,7 +49,7 @@ internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) St
 internal fun NavController.openFollowStage(target: String) {
     // already on that stage (the leader's break began over the song on screen): nothing to open, the stage draws the break
     val here = currentBackStackEntry?.takeIf { it.destination.hasRoute<Stage>() }?.toRoute<Stage>()
-    if (here != null && stageFor(target).let { it.songId == here.songId && it.leaderBreak == here.leaderBreak }) return
+    if (here?.isFor(target) == true) return
     navigate(stageFor(target)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
 }
 
@@ -65,6 +74,12 @@ internal fun FollowToStage(
     val focused = LocalWindowInfo.current.isWindowFocused
     val keyboard = WindowInsets.isImeVisible
     val here = entry?.destination
+    val stage = entry?.takeIf { it.destination.hasRoute<Stage>() }?.toRoute<Stage>()
+    val stageNow by rememberUpdatedState(stage)
+    // the song the band was on before the message that arrives: a stage on it moves along, a stage elsewhere stays
+    val bandWas = remember { arrayOf(followingSong.value) }
+    // what waits was met by a stage already on another song (decided when the first message came, not when it opens)
+    val away = remember { booleanArrayOf(false) }
     val wait: FollowWait? = here?.let {
         // on the stage only our own menus and windows hold the song: the window losing focus there (split screen, the
         // shade) must not stop a follower for good
@@ -75,14 +90,26 @@ internal fun FollowToStage(
     LaunchedEffect(followSongs) {
         followSongs.collect { id ->
             if (nav.currentBackStackEntry?.destination == null) return@collect
-            pendingFollow.arrive(id, waitNow)?.let(nav::openFollowStage)
+            val before = bandWas[0]; bandWas[0] = id
+            // the person is on another song of their own: not pulled, the strip tells it (the stage isn't locked to the band)
+            // a stage already on the song that arrives is in step too (it was opened by hand, before the band said anything)
+            if (pendingFollow.waiting == null) away[0] = stageNow.elsewhereFrom(before) && stageNow.elsewhereFrom(id)
+            val block = waitNow ?: FollowWait.OTHER_SONG.takeIf { away[0] }
+            pendingFollow.arrive(id, block)?.let(nav::openFollowStage)
             sync()
         }
     }
     // what they were doing is done (or it changed what it is): what waited opens now, or the reason is told again
     LaunchedEffect(wait) {
-        pendingFollow.release(wait, followingSong.value)?.let(nav::openFollowStage)
+        pendingFollow.release(wait, followingSong.value)?.let { target ->
+            // the menu or window closed, but the stage is on another song: still waiting for "Go"
+            if (away[0] && stageNow.elsewhereFrom(target)) pendingFollow.arrive(target, FollowWait.OTHER_SONG) else nav.openFollowStage(target)
+        }
         sync()
+    }
+    // the person got to the band's song by themselves: nothing waits any more
+    LaunchedEffect(stage) {
+        if (pendingFollow.waiting != null && stage?.isFor(followingSong.value) == true) { pendingFollow.clear(); sync() }
     }
     // the leader went elsewhere: what waits becomes where the band is now (nothing, if it isn't on anything here any more)
     LaunchedEffect(followingSong) {

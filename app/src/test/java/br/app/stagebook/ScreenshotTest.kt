@@ -421,6 +421,21 @@ class ScreenshotTest {
     @Test fun editorLyricsTablet() = editorShot("tablet_4_editor_letra", false)
     @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorLyricsTabletPortrait() = editorShot("tablet_em_pe_4_editor_letra", false)
 
+    // an import over a song already in the library: the note says so, and Save asks before replacing its text
+    private fun editorImportExisting(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                SongEditorScreen(editorSong.copy(mode = EditorMode.IMPORTED_UPDATE, unsaved = true), {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(playerMode = true))
+            }
+        }
+        compose.onNodeWithContentDescription(str(R.string.action_save)).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test @Config(qualifiers = PHONE) fun editorImportExistingPhone() = editorImportExisting("celular_4_editor_importar_existente")
+    @Test fun editorImportExistingTablet() = editorImportExisting("tablet_4_editor_importar_existente")
+
     @Test @Config(qualifiers = PHONE) fun editorDataPhone() = editorShot("celular_4_editor_dados", true)
     @Test fun editorDataTablet() = editorShot("tablet_4_editor_dados", true)
     @Test @Config(qualifiers = TABLET_PORTRAIT) fun editorDataTabletPortrait() = editorShot("tablet_em_pe_4_editor_dados", true)
@@ -894,37 +909,6 @@ class ScreenshotTest {
                 {}, {}, {}, {},
             )
         }
-    }
-
-    // the leader went to the break while a window is open: the break waits behind it, the strip says so
-    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    @Test fun conductBreakHeld() = conductBreakHeldShot("tablet_6_palco_intervalo_espera")
-
-    @Test @Config(qualifiers = PHONE)
-    fun conductBreakHeldPhone() = conductBreakHeldShot("celular_7_palco_intervalo_espera")
-
-    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    private fun conductBreakHeldShot(name: String) {
-        val gate = br.app.stagebook.ui.components.FollowGate()
-        var rest by androidx.compose.runtime.mutableStateOf<br.app.stagebook.ui.stage.FollowBreak?>(null)
-        compose.setContent {
-            StagebookTheme {
-                androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalFollowGate provides gate) {
-                    androidx.compose.foundation.layout.Column {
-                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage.copy(followBreak = rest), 0, 0, { _, _ -> }, onBack = {}) }
-                        br.app.stagebook.ui.band.ConductBar(
-                            br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, emptyList(), emptyList(), breakSince = rest?.since),
-                            {}, {}, {}, {}, waiting = gate.waiting(), onGo = gate::goNow,
-                        )
-                    }
-                }
-            }
-        }
-        compose.onNodeWithContentDescription(str(R.string.metro_title)).performClick()
-        compose.waitForIdle()
-        rest = br.app.stagebook.ui.stage.FollowBreak(System.currentTimeMillis() - 90_000, s("Garota de Ipanema"), "G")
-        compose.waitForIdle()
-        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
     @Test fun conductBar() = shoot("banda_conduzir_faixas") { br.app.stagebook.ui.band.ConductBarSamplesForTest() }
