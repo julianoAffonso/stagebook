@@ -92,7 +92,8 @@ internal fun FollowToStage(
             if (nav.currentBackStackEntry?.destination == null) return@collect
             val before = bandWas[0]; bandWas[0] = id
             // the person is on another song of their own: not pulled, the strip tells it (the stage isn't locked to the band)
-            if (pendingFollow.waiting == null) away[0] = stageNow.elsewhereFrom(before)
+            // a stage already on the song that arrives is in step too (it was opened by hand, before the band said anything)
+            if (pendingFollow.waiting == null) away[0] = stageNow.elsewhereFrom(before) && stageNow.elsewhereFrom(id)
             val block = waitNow ?: FollowWait.OTHER_SONG.takeIf { away[0] }
             pendingFollow.arrive(id, block)?.let(nav::openFollowStage)
             sync()
