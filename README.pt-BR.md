@@ -14,9 +14,11 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 **Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
 
 ## O que ele faz
-- **Menu lateral:** a biblioteca fica num menu que abre pelo primeiro botão do palco (87% da largura do celular, ou fixo
-  ao lado do palco no tablet), com três abas: Músicas, Setlists e Ajustes. O + traz coisas de fora (uma música nova, PDFs,
-  sites, QR, as 3 palavras); o botão de lista com marcas liga as caixas de seleção. O app abre no palco onde você parou.
+- **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda esquerda do palco (segure e arraste
+  para onde preferir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas: Músicas, Setlists e
+  Ajustes. O + traz coisas de fora (uma música nova, PDFs, sites, QR, as 3 palavras); o botão de lista com marcas liga as
+  caixas de seleção. O setlist abre para olhar, com um lápis para editar e um disquete para salvar; com o palco aberto por
+  um setlist, o menu abre nele. O app abre no palco onde você parou.
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. No modo Rolar, toque na metade de baixo ou arraste para cima para seguir, na de cima ou
   arraste para baixo para voltar. Cada botão do pedal pode fazer outra coisa.
@@ -38,8 +40,8 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   **Pedir** uma música pela faixa, e prefere a cópia com cifra quando o perfil mostra cifras. Todos da banda precisam
   da mesma versão do app: o app avisa quem não está.
 - **Músicas em PDF:** anexe um PDF a uma música (ou escolha PDFs no menu +, ou abra um com o Stagebook): as páginas
-  aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos, marque com o dedo e inverta
-  as cores para um palco escuro. Os PDFs vão para a banda no mesmo Wi-Fi (até 6 MB por envio) e pela internet quando cabem
+  aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos (o zoom fica na música), segure a página para marcar, recorte as
+  margens (todas as páginas ou uma) e inverta as cores para um palco escuro, os dois no editor da música. Os PDFs vão para a banda no mesmo Wi-Fi (até 6 MB por envio) e pela internet quando cabem
   nas mensagens de 4 KB que o servidor gratuito aceita (o envio diz o motivo quando não cabem). PDF nunca é lido como
   texto.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem

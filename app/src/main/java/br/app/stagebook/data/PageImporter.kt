@@ -108,7 +108,8 @@ class PageImporter @Inject constructor(
     }
 
     private companion object {
-        const val LOOKUP_TIMEOUT_MS = 8_000L
+        // the year waits its turn in line with MusicBrainz's one request a second (a song imported just after another)
+        const val LOOKUP_TIMEOUT_MS = 12_000L
         val SEARCH_HOST = Regex("""(^|\.)(google|bing|duckduckgo)\.""")
     }
 }

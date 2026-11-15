@@ -230,14 +230,17 @@ fun StagebookNavHost(
         }
         composable<SongEditor> { entry ->
             val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+            val fromMenu = remember { entry.toRoute<SongEditor>().fromMenu }
+            // opened from the Songs tab: leaving (saved or not) brings the menu again, on its list (user, 15/11)
+            val backToMenu = { nav.popBackStack(); drawer?.takeIf { !it.pinned }?.open?.invoke(); Unit }
             SongEditorRoute(
-                onDone = dropUnlessResumed { nav.popBackStack() },
-                onSaved = { id -> entry.ifResumed { nav.showSaved(id) } },
+                onDone = dropUnlessResumed { if (fromMenu) backToMenu() else nav.popBackStack() },
+                onSaved = { id -> entry.ifResumed { if (fromMenu) backToMenu() else nav.showSaved(id) } },
                 // import queue: saves, opens the next song in the importer; when done, opens the setlist
                 onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
                 onSetlistReady = { id -> nav.popBackStack<Importer>(inclusive = true); drawer?.openSetlist(id, false) },
                 // previous or next song: the editor of that song in place of this one (back still goes to where it came from)
-                onMoved = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id)) { popUpTo<SongEditor> { inclusive = true } } } },
+                onMoved = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromMenu = fromMenu)) { popUpTo<SongEditor> { inclusive = true } } } },
             )
         }
         composable<ScanSetlist> {
@@ -262,12 +265,13 @@ fun StagebookNavHost(
         }
         composable<Importer> { entry ->
             val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+            val fromMenu = remember { entry.toRoute<Importer>().fromMenu }
             ImportRoute(
-                onClose = dropUnlessResumed { nav.popBackStack() },
+                onClose = dropUnlessResumed { nav.popBackStack(); if (fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() },
                 // the editor replaces the browser: save or cancel goes back to the list. Only from the open browser: a
                 // late answer can't open a second editor (audit 01/11)
-                onOpenEditor = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true)) { popUpTo<Importer> { inclusive = true } } } },
-                onOpenEditorQueued = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true)) } },
+                onOpenEditor = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true, fromMenu = fromMenu)) { popUpTo<Importer> { inclusive = true } } } },
+                onOpenEditorQueued = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true, fromMenu = fromMenu)) } },
                 onSetlistReady = { id -> entry.ifResumed { nav.popBackStack<Importer>(inclusive = true); drawer?.openSetlist(id, false) } },
             )
         }

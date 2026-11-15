@@ -102,8 +102,8 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val library: @Composable () -> Unit = { holder.SaveableStateProvider("library") { HomeScreen(
             onOpenSong = { openStage(Stage(songId = it, fromList = true)) },
-            onEditSong = { go { nav.navigate(SongEditor(songId = it)) } },
-            onImport = { query, kind -> go { nav.navigate(Importer(query, kind = kind)) } },
+            onEditSong = { go { nav.navigate(SongEditor(songId = it, fromMenu = true)) } },
+            onImport = { query, kind -> go { nav.navigate(Importer(query, kind = kind, fromMenu = true)) } },
             onPlaySetlist = { id, start0, atBreak -> openStage(Stage(setId = id, start = start0, atBreak = atBreak)) },
             onScanSetlist = { go { nav.navigate(ScanSetlist()) } },
             onReceiveCode = { code -> go { nav.navigate(ScanSetlist(code)) } },

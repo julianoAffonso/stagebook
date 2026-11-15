@@ -12,6 +12,7 @@ data class SongEditor(
     val songId: String? = null,
     val fromImport: Boolean = false,
     val cursor: Int = -1,   // opened from the stage: position in the lyrics of the line the user held
+    val fromMenu: Boolean = false,   // opened from the Songs tab: saving or leaving brings the side menu again
 )
 
 @Serializable
@@ -48,4 +49,4 @@ object SetlistsList
 data class Settings(val section: String = "", val alone: Boolean = false, val fromMenu: Boolean = false)
 
 @Serializable
-data class Importer(val query: String = "", val queued: Boolean = false, val kind: String = "")   // queued: batch importing into a setlist
+data class Importer(val query: String = "", val queued: Boolean = false, val kind: String = "", val fromMenu: Boolean = false)   // queued: batch importing into a setlist

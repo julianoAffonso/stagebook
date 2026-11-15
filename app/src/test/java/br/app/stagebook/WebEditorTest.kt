@@ -174,7 +174,7 @@ class WebEditorTest {
         assertTrue(auth.ask("Chrome · Windows", "192.168.0.20") != null)
     }
 
-    @Test fun `the key cookie is a session cookie - no Max-Age or Expires - on approval and on each visit`() {
+    @Test fun `the key cookie lasts 90 days, on approval and renewed on each visit`() {
         val id = Regex("\"id\":\"([^\"]+)\"").find(routes.handle(req("POST", "/api/ask", """{"name":"Chrome · Windows"}""")).text())!!.groupValues[1]
         auth.answer(auth.requests.value.single().id, true)
         val approval = routes.handle(req("GET", "/api/ask?id=$id")).headers.getValue("Set-Cookie")
@@ -182,7 +182,7 @@ class WebEditorTest {
         val visit = routes.handle(req("GET", "/api/session", cookie = key)).headers.getValue("Set-Cookie")
         for (cookie in listOf(approval, visit)) {
             assertTrue(cookie, "${WebEditorRoutes.COOKIE}=$key" in cookie && "HttpOnly" in cookie && "SameSite=Strict" in cookie)
-            assertFalse(cookie, "max-age" in cookie.lowercase() || "expires" in cookie.lowercase())
+            assertTrue(cookie, "Max-Age=${WebEditorRoutes.COOKIE_DAYS * 24 * 3600}" in cookie)
         }
     }
 }

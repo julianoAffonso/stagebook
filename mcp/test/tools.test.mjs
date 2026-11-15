@@ -51,6 +51,14 @@ test("connect pairs with the tablet and saves the key", async () => {
   assert.equal(s.json.device, "TCL");
 });
 
+test("connecting again with a key the tablet accepts asks for no new approval", async () => {
+  const r = await call("stagebook_connect", { url: tablet.url });
+  assert.equal(r.error, false, r.body);
+  assert.match(r.body, /already approved/);
+  assert.doesNotMatch(r.body, /4821/);   // no request, no code: nothing to tap on the tablet
+  assert.equal((await call("stagebook_status")).json.device, "TCL");
+});
+
 test("songs: list with filters, read without and with the text", async () => {
   assert.equal((await call("list_songs")).json.count, 2);
   assert.equal((await call("list_songs", { query: "made up" })).json.songs[0].id, "s2");

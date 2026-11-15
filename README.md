@@ -14,10 +14,11 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 **Help, with a picture of every screen:** [docs/help](docs/help/index.html)
 
 ## What it does
-- **Side menu:** the library lives in a menu you open from the stage's first button (87% of a phone's width, or pinned
-  beside the stage on a tablet), with three tabs: Songs, Setlists and Settings. A + brings things in (a new song, PDFs,
-  sites, QR, the 3 words); the checklist button turns the selection boxes on. The app opens on the stage where you left
-  off.
+- **Side menu:** the library lives in a menu you open from a small handle on the stage's left edge (move it where you
+  like by holding it; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs: Songs, Setlists
+  and Settings. A + brings things in (a new song, PDFs, sites, QR, the 3 words); the checklist button turns the
+  selection boxes on. A setlist opens to look at, with a pencil to edit it and a floppy to save; with the stage open from
+  a setlist, the menu opens on it. The app opens on the stage where you left off.
 - **Stage:** full screen, always lit, in pages or scrolling. Turn with a Bluetooth or MIDI pedal (USB and Bluetooth),
   a tap or auto-scroll. In Scroll mode, tap the bottom half or drag up to go on, the top half or drag down to go
   back. Each pedal button can do something else.
@@ -38,8 +39,8 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   for a song from the strip, and prefers a copy with chords when the profile shows chords. Everyone in the band needs
   the same app version: the app warns who isn't.
 - **PDF songs:** attach a PDF to a song (or pick PDFs in the + menu, or open one with Stagebook): its pages show on stage,
-  turned by the pedal, a tap or a swipe; zoom with two fingers, highlight with your finger, invert the colors for a dark
-  stage. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet when they fit the 4 KB messages
+  turned by the pedal, a tap or a swipe; zoom with two fingers (kept with the song), hold the page to highlight, crop the
+  margins (all pages or one) and invert the colors for a dark stage, both in the song's editor. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet when they fit the 4 KB messages
   the free server takes (the send says why when they don't). PDFs are never read as text.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
   With a mixer, per-output routing, EQ and normalization.

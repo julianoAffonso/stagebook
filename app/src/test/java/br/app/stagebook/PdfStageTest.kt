@@ -83,6 +83,7 @@ class PdfStageTest {
         var count = 0
         compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 3, invert = false, onPageCount = { count = it }) } }
         compose.waitUntil(5_000) { count == 7 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 4 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Página 4 de 7 do PDF").assertIsDisplayed()
         assertTrue("page 3 was drawn, and 4 ahead", source.rendered.any { it.first == 3 } && source.rendered.any { it.first == 4 })
     }

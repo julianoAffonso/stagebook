@@ -120,7 +120,7 @@ export function buildServer(client: StagebookClient): McpServer {
         "Finds Stagebook on the local network (or uses the given address) and asks the tablet to let this computer in. " +
         "The tablet shows a request with a code: this tool returns at once with the code; tell the person and ask them to tap " +
         "Allow on the tablet, then call stagebook_status, which waits for it. Needs Stagebook open with Settings → Edit on " +
-        "the computer turned on. The key is saved for next time.",
+        "the computer turned on. The key is saved for next time, and a computer already approved is let in without asking again.",
       inputSchema: {
         url: z.string().optional().describe("Address shown in Stagebook, e.g. http://192.168.0.10:8090. Omit to search the network."),
         name: z.string().optional().describe("How this computer shows on the tablet (default: 'AI assistant')."),
@@ -146,6 +146,17 @@ export function buildServer(client: StagebookClient): McpServer {
           );
         }
         client.url = found[0];
+      }
+      // a computer already approved is let in without asking again (the saved key still works): the approval is for the
+      // computer, not for each session (user, 15/11). Only a key the tablet no longer accepts asks anew.
+      if (client.key) {
+        try {
+          const s = await client.get("/api/session");
+          await save({ url: client.url, key: client.key });
+          return text(`Stagebook found at ${client.url}: this computer is already approved there as "${s?.name}", no need to tap Allow again. Go on.`);
+        } catch (e) {
+          if (!(e instanceof StagebookError && e.status === 401)) throw e;
+        }
       }
       await save({ url: client.url, key: client.key });
       const code = await client.startPair(name ?? "AI assistant");
