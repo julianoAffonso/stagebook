@@ -29,6 +29,10 @@ class StartViewModel @Inject constructor(
     val pinned: StateFlow<Boolean> = repository.library.map { it.look.drawerPinned }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.drawerPinned)
 
+    /** The pedal buttons the stage knows: with the drawer open, a press of one of them is taken (see [br.app.stagebook.domain.pedalTakenByDrawer]). */
+    val pedalKeys: StateFlow<Map<Int, br.app.stagebook.domain.PedalAction>> = repository.library.map { it.look.pedalKeys }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.pedalKeys)
+
     fun togglePin() = repository.updateLook { it.copy(drawerPinned = !it.drawerPinned) }
 
     fun route(): Stage? = lastStageRoute(last.place(), repository.library.value) { id ->

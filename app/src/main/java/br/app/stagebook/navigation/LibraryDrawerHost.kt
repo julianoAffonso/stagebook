@@ -61,9 +61,12 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
         )
     }
     BackHandler(enabled = state.isOpen) { drawer.close() }
-    // the leader's song waits while the drawer is open: a setlist is being looked at, or songs picked, and the stage
-    // behind it must not be replaced under the person's hands
-    br.app.stagebook.ui.components.FollowHoldWhile(state.isOpen || fixed)
+    // the leader's song waits while the drawer is open over the stage: a setlist is being looked at, or songs picked, and
+    // the stage behind it must not be replaced under the person's hands
+    br.app.stagebook.ui.components.FollowHoldWhile(state.isOpen)   // pinned, the stage is in view and goes on following
+    // and the pedal does not turn the stage behind it (composed only while it is open: the last handler registered gets the press)
+    val pedalKeys by start.pedalKeys.collectAsStateWithLifecycle()
+    if (state.isOpen) br.app.stagebook.ui.PedalHandler { press -> br.app.stagebook.domain.pedalTakenByDrawer(press, pedalKeys) }
 
     // a tap only counts while the screen under it is in front (a double tap would open two screens)
     fun go(block: () -> Unit) {

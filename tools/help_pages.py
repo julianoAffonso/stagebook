@@ -302,11 +302,11 @@ SECTIONS = [
         "id": "palco", "pt": "Palco", "en": "Stage",
         "text_pt": [
             "No palco a letra aparece grande, com a cifra e as partes. Num setlist, o topo mostra a posição, como 2 de 12, e o fim da música mostra a próxima. Enquanto o palco está aberto, nada aparece por cima: o que a banda mandar fica esperando.",
-            "Ao abrir o app, ele já volta ao palco onde você parou: a última música, ou o último setlist, na música em que o show estava. Se aquela música ou setlist foi apagada, o app abre sem palco, com o menu aberto. O primeiro botão do alto do palco abre o menu (veja Músicas); o voltar do Android, com o menu fechado, sai do app, e antes pergunta se você está num show.",
+            "Ao abrir o app, ele já volta ao palco onde você parou: a última música, ou o último setlist, na música em que o show estava. Se aquela música ou setlist foi apagada, o app abre sem palco, com o menu aberto. O primeiro botão do alto do palco abre o menu (veja Músicas); o voltar do Android, com o menu fechado, sai do app, e antes pergunta se você está num show. Com o menu aberto, o pedal não vira página nem música do palco atrás dele, e quem acompanha a banda espera: a música do condutor abre quando o menu fecha (ou no Ir da faixa de baixo).",
         ],
         "text_en": [
             "On stage the lyrics show large, with the chords and parts. In a setlist, the top shows the position, like 2 of 12, and the end of the song shows the next one. While the stage is open nothing pops up over it: whatever the band sends waits.",
-            "When you open the app, it goes back to the stage where you left off: the last song, or the last setlist, on the song the show was on. If that song or setlist was deleted, the app opens with no stage and the menu open. The first button at the top of the stage opens the menu (see Songs); Android's back, with the menu closed, leaves the app, asking first if you are in a show.",
+            "When you open the app, it goes back to the stage where you left off: the last song, or the last setlist, on the song the show was on. If that song or setlist was deleted, the app opens with no stage and the menu open. The first button at the top of the stage opens the menu (see Songs); Android's back, with the menu closed, leaves the app, asking first if you are in a show. With the menu open, the pedal does not turn a page or song of the stage behind it, and whoever follows the band waits: the leader's song opens when the menu closes (or on Go in the strip below).",
         ],
         "figs": [Fig(("tablet_6_palco", "celular_7_palco", "O palco", "The stage")),
                  Fig(("tablet_6_palco_cifra", "celular_7_palco_cifra", "Com a cifra", "With chords"))],
