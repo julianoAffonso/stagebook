@@ -43,7 +43,7 @@ class SetlistBreakScreenTest {
         onAddBreak: () -> Unit = {},
         onRemoveBreak: (Int) -> Unit = {},
     ) = compose.setContent {
-        StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, onMove, { _, _ -> }, {}, onAddBreak = onAddBreak, onRemoveBreak = onRemoveBreak) }
+        StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, onMove, { _, _ -> }, {}, onAddBreak = onAddBreak, onRemoveBreak = onRemoveBreak, startEditing = true) }
     }
 
     @Test fun `the break shows between the songs, with a header on each block and the count under the name`() {
@@ -83,13 +83,13 @@ class SetlistBreakScreenTest {
     @Test fun `the Break button adds one, and needs two songs`() {
         var added = 0
         show(state(2, emptyList()), onAddBreak = { added++ })
-        compose.onNodeWithText("Intervalo").assertIsEnabled().performClick()
+        compose.onNodeWithContentDescription("Intervalo").assertIsEnabled().performClick()
         assertEquals(1, added)
     }
 
     @Test fun `with a single song the Break button is off`() {
         show(state(1, emptyList()))
-        compose.onNodeWithText("Intervalo").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Intervalo. Precisa de pelo menos 2 músicas").assertIsNotEnabled()
     }
 
     // the first touch on the off button used to meet nothing (user test, 14/11): it says why, to the eye and to the screen reader
@@ -101,7 +101,7 @@ class SetlistBreakScreenTest {
         compose.setContent {
             StagebookTheme {
                 androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalAppMessage provides message) {
-                    SetlistDetailScreen(state(1, emptyList()), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, onAddBreak = { added++ }, onRemoveBreak = {})
+                    SetlistDetailScreen(state(1, emptyList()), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, onAddBreak = { added++ }, onRemoveBreak = {}, startEditing = true)
                 }
             }
         }

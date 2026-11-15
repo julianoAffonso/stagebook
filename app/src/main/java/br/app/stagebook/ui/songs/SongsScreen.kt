@@ -249,8 +249,9 @@ fun SongsScreen(
                                 // animate only the removal on delete: enter and move animated dozens of rows on every
                                 // search letter
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
-                                titleStyle = MaterialTheme.typography.titleLarge,
-                                inline = wide,
+                                // the compact row of the setlist's (user, 15/11: one pattern in the drawer)
+                                titleStyle = MaterialTheme.typography.titleMedium,
+                                dense = true,
                                 titleLines = 1,
                                 gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
                                 // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete

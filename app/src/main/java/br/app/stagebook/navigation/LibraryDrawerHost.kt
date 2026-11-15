@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
@@ -46,8 +47,10 @@ private val PINNED_WIDTH = 360.dp
  * show); pinned, on a wide screen, it stays open beside the stage. Choosing something closes it and goes there.
  */
 @Composable
-internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Unit) {
-    val state = rememberDrawerState(DrawerValue.Closed)
+internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = {}, content: @Composable () -> Unit) {
+    val guard = remember { br.app.stagebook.ui.drawer.DrawerGuard() }
+    // a scrim tap or a swipe that would close it goes through the guard too
+    val state = rememberDrawerState(DrawerValue.Closed, confirmStateChange = { v -> !(v == DrawerValue.Closed && guard.asks?.invoke() == true) })
     val scope = rememberCoroutineScope()
     val start: StartViewModel = hiltViewModel()
     val pinned by start.pinned.collectAsStateWithLifecycle()
@@ -62,13 +65,16 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
     var request by remember { mutableStateOf<SetlistRequest?>(null) }
     val drawer = remember(state, fixed) {
         DrawerControl(
-            { scope.launch { state.open() } }, { scope.launch { state.close() } }, pinned = fixed,
+            { scope.launch { state.open() } }, { if (guard.asks?.invoke() != true) scope.launch { state.close() } }, pinned = fixed,
             openSetlist = { id, share -> request = SetlistRequest(id, share); scope.launch { state.open() } },
         )
     }
     // pinned, the sheet is not a sheet any more: it closes by itself (a left-open state held the pedal and Back for good)
     LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
     val open = state.isOpen && !fixed
+    val shown = !fixed && (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed)
+    LaunchedEffect(shown) { onShown(shown) }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onShown(false) } }
     BackHandler(enabled = open) { drawer.close() }
     // the leader's song waits while the drawer is open over the stage (a setlist is being looked at, or songs picked: the
     // stage behind it must not be replaced under the person's hands): a window of ours is open, as for a menu. Pinned, the
@@ -109,7 +115,7 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
             onOpenSettings = { section, alone -> go { nav.navigate(Settings(section?.name.orEmpty(), alone)) { launchSingleTop = true } } },
         ) }
     }
-    CompositionLocalProvider(LocalDrawer provides drawer) {
+    CompositionLocalProvider(LocalDrawer provides drawer, br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) {
         if (fixed) {
             Row {
                 Surface(Modifier.width(PINNED_WIDTH).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) { library() }
@@ -124,7 +130,7 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
                 // composed only while it is open or moving: closed, it holds no list, no collectors and no network callbacks
                 // (the stage is what runs in a show, and the Fire is the ruler)
                 drawerContent = {
-                    Surface(Modifier.width(sheet).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Surface(Modifier.width(sheet).fillMaxHeight().imePadding(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         if (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed) library()
                     }
                 },

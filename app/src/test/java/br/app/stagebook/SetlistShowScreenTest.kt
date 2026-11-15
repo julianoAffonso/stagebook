@@ -61,7 +61,7 @@ class SetlistShowScreenTest {
     private var removedBreaks = 0
     private val density = 1.5f   // hdpi
 
-    private fun screen(initial: SetlistDetailUiState = show, openShare: Boolean = false) {
+    private fun screen(initial: SetlistDetailUiState = show, openShare: Boolean = false, editing: Boolean = true) {
         state = initial
         compose.setContent {
             StagebookTheme {
@@ -81,6 +81,7 @@ class SetlistShowScreenTest {
                         onRemoveBreak = { removedBreaks++ },
                         onUndoRemove = { before?.let { state = it } },
                         openShare = openShare,
+                        startEditing = editing,
                     )
                     SnackbarHost(message.host)
                 }
@@ -122,9 +123,9 @@ class SetlistShowScreenTest {
 
     @Test fun `Songs, Break and Share are on the screen`() {
         screen()
-        compose.onNodeWithText("Músicas").assertIsDisplayed()
-        compose.onNodeWithText("Intervalo").assertIsDisplayed()
-        compose.onNodeWithText("Compartilhar").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Músicas").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Intervalo").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Compartilhar").assertIsDisplayed()
     }
 
     @Test fun `a row draws its handle, its small number, its title and its remove button, in that order`() {
@@ -154,12 +155,35 @@ class SetlistShowScreenTest {
     }
 
     // ---- the top bar and its menu ----
-    @Test fun `Done leaves, and so does the x`() {
-        screen()
-        compose.onNodeWithText("Pronto").performClick()
+    @Test fun `looking, the back arrow leaves and there are no handles or remove buttons`() {
+        screen(editing = false)
+        handles().assertCountEquals(0)
+        removeButtons().assertCountEquals(0)
+        compose.onNodeWithContentDescription("Editar setlist").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Voltar").performClick()
         assertEquals(1, left)
+    }
+
+    @Test fun `Edit turns on the handles and Save turns them off, without leaving`() {
+        screen(editing = false)
+        compose.onNodeWithContentDescription("Editar setlist").performClick()
+        compose.waitForIdle()
+        handles().assertCountEquals(5)
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
+        handles().assertCountEquals(0)
+        assertEquals(0, left)
+    }
+
+    @Test fun `the x while editing asks, and Keep editing stays`() {
+        screen()
         compose.onNodeWithContentDescription("Fechar").performClick()
-        assertEquals(2, left)
+        compose.waitForIdle()
+        compose.onNodeWithText("Salvar as alterações em", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Continuar editando").performClick()
+        compose.waitForIdle()
+        handles().assertCountEquals(5)
+        assertEquals(0, left)
     }
 
     @Test fun `the menu has rename and delete only, and delete still asks`() {
@@ -199,7 +223,7 @@ class SetlistShowScreenTest {
 
     @Test fun `closing the sheet opened from the edit's own Share button stays in the edit`() {
         screen()
-        compose.onNodeWithText("Compartilhar").performClick()
+        compose.onNodeWithContentDescription("Compartilhar").performClick()
         compose.waitForIdle()
         androidx.test.espresso.Espresso.pressBack()
         compose.waitForIdle()
@@ -209,7 +233,7 @@ class SetlistShowScreenTest {
     @Test fun `without it the Share sheet waits for the button`() {
         screen()
         compose.onNodeWithText("QR sem internet").assertDoesNotExist()
-        compose.onNodeWithText("Compartilhar").performClick()
+        compose.onNodeWithContentDescription("Compartilhar").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("QR sem internet").assertIsDisplayed()
     }

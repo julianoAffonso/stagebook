@@ -59,7 +59,7 @@ class FollowHoldInSetlistEditTest {
     private val following = MutableStateFlow<String?>("a")
     private var breaks by mutableStateOf(listOf(2))   // "the library": what the edit has changed so far
 
-    private fun start() {
+    private fun start(editing: Boolean = true) {
         compose.setContent {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {
@@ -73,7 +73,7 @@ class FollowHoldInSetlistEditTest {
                                 SetlistDetailUiState(loading = false, name = "Show", items = items, breaks = breaks), null,
                                 androidx.lifecycle.compose.dropUnlessResumed { nav.popBackStack() }, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {},
                                 onAddBreak = { breaks = SetlistBreaks.add(breaks, 3) },
-                            )
+                                startEditing = editing)
                         }
                         composable<Stage> { entry -> Text("stage ${entry.toRoute<Stage>().songId}") }
                     }
@@ -106,7 +106,7 @@ class FollowHoldInSetlistEditTest {
 
     @Test fun `after adding a break the band's song still waits, and the break is still there on reopening`() {
         start()
-        compose.onNodeWithText("Intervalo").performClick()
+        compose.onNodeWithContentDescription("Intervalo").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("3 músicas · 2 intervalos", substring = true).assertExists()
         band("b")
@@ -164,32 +164,25 @@ class FollowHoldInSetlistEditTest {
         assertEquals("b", gate.pending?.target)
     }
 
-    @Test fun `leaving the edit by Done opens the newest song of the band`() {
-        start()
+    // the setlist opens to be looked at: its back arrow is the way out
+    @Test fun `leaving the setlist by the arrow opens the newest song of the band`() {
+        start(editing = false)
         band("b")
         band("c")
-        compose.onNodeWithText("Pronto").performClick()
+        compose.onNodeWithContentDescription("Voltar").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("stage c").assertExists()
         compose.onAllNodesWithText("stage b").assertCountEquals(0)
     }
 
-    @Test fun `leaving the edit by the X opens the newest song of the band`() {
-        start()
-        band("b")
-        compose.onNodeWithContentDescription("Fechar").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("stage b").assertExists()
-    }
-
-    @Test fun `leaving the edit with the band already gone from it opens nothing`() {
-        start()
+    @Test fun `leaving the setlist with the band already gone from it opens nothing`() {
+        start(editing = false)
         band("b")
         following.value = null
         compose.waitForIdle()
-        compose.onNodeWithText("Pronto").performClick()
+        compose.onNodeWithContentDescription("Voltar").performClick()
         compose.waitForIdle()
-        // nothing opens: the stage that was under the edit is still the one that shows
+        // nothing opens: the stage that was under the setlist is still the one that shows
         compose.onNodeWithText("stage a").assertExists()
         compose.onAllNodesWithText("stage b").assertCountEquals(0)
     }

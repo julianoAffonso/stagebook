@@ -179,8 +179,6 @@ fun StageRoute(
     onEmptied: (() -> Unit)? = null,   // the library lost every song under the stage: where to go (default: [onBack])
     fromList: Boolean = false,   // opened from the Songs list: the editor steps through that list
     onBack: (() -> Unit)? = null,
-    onEditSetlist: (setId: String) -> Unit = {},
-    onShareSetlist: (setId: String) -> Unit = {},
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -291,19 +289,17 @@ fun StageRoute(
             },
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
-            onMenu = br.app.stagebook.ui.drawer.LocalDrawer.current?.takeIf { !it.pinned }?.open,
+            onMenu = br.app.stagebook.ui.drawer.LocalDrawer.current?.let { d ->
+                // from a setlist the drawer opens on it, with the song on stage in view; elsewhere on the lists
+                val setId = uiState.setlist?.id?.takeIf { it.isNotEmpty() }
+                if (setId != null) ({ d.openSetlist(setId, false) }) else d.open.takeIf { !d.pinned }
+            },
             pdfFile = pdfStore::file,
             onPdfInvert = viewModel::setPdfInvert,
             onPdfStroke = viewModel::addPdfStroke,
             onPdfUndo = viewModel::undoPdfStroke,
             onPdfClear = viewModel::clearPdfPage,
             leadingButton = br.app.stagebook.ui.drawer.LocalDrawer.current?.pinned != true,
-            setlistActions = SetlistActions(
-                onConduct = viewModel::conductBand,
-                onShare = { uiState.setlist?.id?.let(onShareSetlist) },
-                onEdit = { uiState.setlist?.id?.let(onEditSetlist) },
-                onClearPlayed = viewModel::clearPlayed,
-            ),
             onSaveShape = viewModel::saveShape,
             note = playerNote,
             playing = playerUi.playing || playerUi.waiting,
@@ -442,7 +438,6 @@ fun StageScreen(
     onPdfClear: (songId: String, page: Int) -> Unit = { _, _ -> },
     onMenu: (() -> Unit)? = null,   // the library drawer: the header's first button opens it instead of leaving
     leadingButton: Boolean = true,   // false: the drawer is pinned beside the stage, nothing to open or leave by
-    setlistActions: SetlistActions = SetlistActions(),
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
     onTranspose: (songId: String, semitones: Int) -> Unit = { _, _ -> },
@@ -512,8 +507,6 @@ fun StageScreen(
     val followRest = uiState.followBreak != null && !onBreakNow
     // the setlist over the stage (only on a stage opened from one): back closes it before anything else
     val setlist = uiState.setlist
-    var setlistOpen by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = setlistOpen && setlist != null) { setlistOpen = false }
     // keyboard doesn't use capo: chords show in the sounding key (chart in G with capo on fret 2 → A), without changing
     // the saved song (user's request, 29/10)
     val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD
@@ -789,21 +782,6 @@ fun StageScreen(
         presses.from = index to page
         onPosition(target, 0)
     }
-    // a song tapped on the setlist over the stage: at its start, by the same way a page turn changes song, so its
-    // MIDI, Now Playing and band message follow. No break on the way, and one on screen is left
-    fun jumpTo(target: Int) {
-        setlistOpen = false
-        if (target !in uiState.songs.indices || followRest) return
-        if (onBreakNow) {
-            onBreak(false)
-            // into the set after the break: its time counts from zero, as when the break is left forward
-            if (target > index && look.clockMode != br.app.stagebook.data.model.StageClockMode.CLOCK) onRestartShow()
-        }
-        presses.steps = 0
-        if (target == index && page == 0) return
-        presses.from = index to page
-        onPosition(target, 0)
-    }
     // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves, and
     // the click doesn't go on either (it stays off on coming back: the musician turns it on again)
     LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) { autoOn = false; metroOn = false } }
@@ -864,16 +842,13 @@ fun StageScreen(
         if (action == PedalAction.NONE) return@PedalHandler false
         // a foot resting on the pedal repeats the key: only the first one turns the page
         if (runs) {
-            // the setlist over the stage is a panel to look at: the pedal doesn't turn pages or songs under it (it still
-            // closes it, and plays/pauses the track)
-            val underPanel = setlistOpen && setlist != null
             when (action) {
-                PedalAction.NEXT -> if (!underPanel) next()
-                PedalAction.PREVIOUS -> if (!underPanel) previous()
-                PedalAction.NEXT_SONG -> if (!underPanel) goSong(true)
-                PedalAction.PREVIOUS_SONG -> if (!underPanel) goSong(false)
+                PedalAction.NEXT -> next()
+                PedalAction.PREVIOUS -> previous()
+                PedalAction.NEXT_SONG -> goSong(true)
+                PedalAction.PREVIOUS_SONG -> goSong(false)
                 PedalAction.PLAY_PAUSE -> if (look.playerMode && !song.missing && song.track.isNotEmpty()) onTogglePlay()
-                PedalAction.OPEN_SETLIST -> if (setlist != null) setlistOpen = !setlistOpen
+                PedalAction.OPEN_SETLIST -> onMenu?.invoke()
                 PedalAction.NONE -> Unit
             }
         }
@@ -904,9 +879,8 @@ fun StageScreen(
         Row(Modifier.fillMaxWidth().offset(x = Spacing.m - Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
-            if (!leadingButton) {
-            } else if (onMenu != null) {
-                br.app.stagebook.ui.components.BackButton(onMenu, tint = fg.copy(alpha = 0.6f), menu = true)
+            // with a drawer there is no button here: the side handle opens it and the title gets the room
+            if (!leadingButton || onMenu != null) {
             } else if (onBack != null) {
                 br.app.stagebook.ui.components.BackButton({ leave() }, tint = fg.copy(alpha = 0.6f))
             }
@@ -1628,20 +1602,8 @@ fun StageScreen(
             onPrevious = {},
         )
     }
-    // above the break too: there it is the only way out on screen besides going on or back
-    if (setlist != null) {
-        StageSetlistLayer(
-            open = setlistOpen,
-            onOpen = { setlistOpen = it },
-            setlist = setlist,
-            songs = uiState.songs,
-            breaks = uiState.breaks,
-            index = index,
-            fg = fg,
-            bg = Color(look.bg),
-            onSong = ::jumpTo,
-            actions = setlistActions,
-        )
+    if (onMenu != null && leadingButton) {
+        StageDrawerHandle(onMenu, fg, Color(look.bg), Modifier.align(Alignment.CenterStart))
     }
     if (keyboardHint > 0) {
         Surface(

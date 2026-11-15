@@ -1342,36 +1342,6 @@ class ScreenshotTest {
 
     @Test fun stageTablet() = shoot("tablet_6_palco") { StageScreen(stageInSet, 0, 0, { _, _ -> }, onBack = {}) }
 
-    // the setlist over the stage: the panel open on the third song, two played, with the break after it
-    @Test fun stageSetlistTablet() = shootStageSetlist("tablet_6_palco_setlist")
-
-    @Test @Config(qualifiers = PHONE)
-    fun stageSetlistPhone() = shootStageSetlist("celular_7_palco_setlist")
-
-    // the same panel with its ⋮ open: lead the band, share, edit and clear played
-    @Test fun stageSetlistMenuTablet() = shootStageSetlist("tablet_6_palco_setlist_menu", menu = true)
-
-    @Test @Config(qualifiers = PHONE)
-    fun stageSetlistMenuPhone() = shootStageSetlist("celular_7_palco_setlist_menu", menu = true)
-
-    private fun shootStageSetlist(name: String, menu: Boolean = false) {
-        val show = stage.copy(
-            songs = set.items.mapIndexed { i, it -> StageSong(it.title, it.subtitle, if (i == 2) stage.songs[0].text else "", false, artist = it.subtitle) },
-            live = true,
-            breaks = listOf(3),
-            setlist = br.app.stagebook.ui.stage.StageSetlist(
-                set.name, setShow.items.map { it.state }, set.items.map { br.app.stagebook.ui.stage.StageRowFacts(it.songKey, it.bpm, it.capo, it.hasTrack) },
-                mapOf(3 to br.app.stagebook.domain.BreakTimer.Timer("d", 0L, 750_000L, open = true)),   // the break left open, stopped at 12:30
-                id = "1", anyPlayed = true, canConduct = true,
-            ),
-        )
-        compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { StageScreen(show, 2, 0, { _, _ -> }, onBack = {}) } } }
-        compose.onNodeWithContentDescription(str(R.string.stage_setlist_open)).performClick()
-        if (menu) compose.onNodeWithContentDescription(str(R.string.action_more)).performClick()
-        compose.waitForIdle()
-        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
-    }
-
     // made-up chart (no real lyrics): chords above, a chords-only line, a ChordPro section and a comment
     private val chordSong = s("""
         {key: G}

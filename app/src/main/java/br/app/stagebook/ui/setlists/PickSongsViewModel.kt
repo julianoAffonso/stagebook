@@ -31,6 +31,7 @@ data class PickRowUi(
     val bpm: Int = 0,           // 0 = none
     val capo: Int = 0,
     val hasTrack: Boolean = false,
+    val order: Int = 0,   // the place it will take among the ones chosen now (1, 2, 3…): 0 = not chosen
 )
 
 @Immutable
@@ -76,8 +77,8 @@ class PickSongsViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<PickSongsUiState> = combine(filtered, selected) { f, sel ->
-        val chosen = sel.toHashSet()
-        f.copy(rows = f.rows.map { if (it.id in chosen) it.copy(selected = true) else it }, selectedCount = sel.size)
+        val place = HashMap<String, Int>(sel.size * 2).also { m -> sel.forEachIndexed { i, id -> m[id] = i + 1 } }
+        f.copy(rows = f.rows.map { r -> place[r.id]?.let { r.copy(selected = true, order = it) } ?: r }, selectedCount = sel.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PickSongsUiState())
 
     fun onQueryChange(q: String) { query.value = q }

@@ -108,16 +108,21 @@ fun PickSongsScreen(
                             SongListItem(
                                 title = row.title,
                                 subtitle = row.subtitle,
-                                // already in the setlist: faded and tagged, with everything else kept
+                                // already in the setlist: faded, with its box ticked and off (no phrase: the box says it)
                                 modifier = if (row.inSet) Modifier.alpha(IN_SET_ALPHA) else Modifier,
-                                titleBadge = if (row.inSet) { { InSetBadge() } } else null,
                                 onClick = { if (!row.inSet) onToggle(row.id) },
-                                inline = wide,
-                                leading = { Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet) },
+                                // the box and, once chosen, the place in the order they will be added (as SongbookPro)
+                                leading = {
+                                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                        Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet)
+                                        if (row.order > 0) br.app.stagebook.ui.components.NumberBadge(row.order, compact = true)
+                                    }
+                                },
                                 trailing = { SongFacts(row.songKey, row.bpm, row.capo, row.hasTrack) },
-                                titleStyle = MaterialTheme.typography.titleLarge,
+                                titleStyle = MaterialTheme.typography.titleMedium,
+                                dense = true,
                                 titleLines = 1,
-                                gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
+                                gap = Spacing.s,
                             )
                         }
                     }
@@ -128,19 +133,6 @@ fun PickSongsScreen(
 }
 
 private const val IN_SET_ALPHA = 0.5f
-
-/** The tag of a song that is already in the setlist, beside its title. */
-@Composable
-private fun InSetBadge() {
-    Text(
-        stringResource(R.string.pick_in_set),
-        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(horizontal = Spacing.s, vertical = Spacing.xs),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        maxLines = 1,
-        softWrap = false,
-    )
-}
 
 private val previewState = PickSongsUiState(
     setName = "Show de sábado",

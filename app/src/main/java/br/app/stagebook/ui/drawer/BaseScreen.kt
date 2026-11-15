@@ -24,9 +24,11 @@ import br.app.stagebook.ui.theme.Spacing
  * The drawer opens by itself, with Songs, so the first thing to do is already on screen.
  */
 @Composable
-fun BaseScreen(modifier: Modifier = Modifier) {
+fun BaseScreen(modifier: Modifier = Modifier, openDrawer: Boolean = true) {
     val drawer = LocalDrawer.current
-    LaunchedEffect(Unit) { drawer?.takeIf { !it.pinned }?.open?.invoke() }
+    // only when there really is no stage to go to: at a start the stage that was open last replaces this screen, and the
+    // drawer opening over it first made the app come back with the menu open
+    LaunchedEffect(openDrawer) { if (openDrawer) drawer?.takeIf { !it.pinned }?.open?.invoke() }
     Box(modifier.fillMaxSize().windowInsetsPadding(ScreenInsets).padding(Spacing.l), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
             EmptyState(AppIcons.MusicNote, stringResource(R.string.base_title), stringResource(R.string.base_text))

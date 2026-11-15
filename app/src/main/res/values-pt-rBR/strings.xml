@@ -111,7 +111,6 @@
     <string name="set_break_paused">Pausado</string>
     <string name="set_break_remove">Tirar o intervalo</string>
     <string name="set_edit">Editar setlist</string>
-    <string name="action_done">Pronto</string>
     <string name="action_undo">Desfazer</string>
     <string name="set_clear_played">Limpar tocadas</string>
     <string name="set_remove_song">Tirar deste setlist</string>
@@ -147,7 +146,6 @@
 
     <!-- escolher músicas -->
     <string name="pick_title">Músicas</string>
-    <string name="pick_in_set">No setlist</string>
     <string name="pick_add_short">Adicionar (%1$d)</string>
 
     <!-- QR -->
@@ -177,8 +175,6 @@
     <string name="stage_exit">Sair</string>
     <string name="stage_position">%1$d de %2$d</string>
     <string name="stage_next">Próxima: %1$s</string>
-    <string name="stage_setlist_open">Abrir o setlist</string>
-    <string name="stage_setlist_close">Fechar o setlist</string>
     <string name="stage_end">Fim do setlist</string>
     <string name="stage_edit">Editar a letra nesta página</string>
     <string name="stage_edit_line">Editar esta linha</string>
@@ -1310,4 +1306,7 @@
     <string name="pdf_refused_password">Este PDF tem senha. Salve uma cópia sem senha e tente de novo.</string>
     <string name="pdf_refused_too_many_pages">Este PDF tem páginas demais. O limite é %1$d.</string>
     <string name="pdf_refused_unreadable">Não foi possível abrir este PDF. Ele pode estar danificado.</string>
+    <string name="set_discard">Descartar</string>
+    <string name="set_save_question">Salvar as alterações em “%1$s”?</string>
+    <string name="set_keep_editing">Continuar editando</string>
 </resources>

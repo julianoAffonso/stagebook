@@ -180,6 +180,9 @@ class SetlistDetailViewModel @Inject constructor(
     /** "Clear played": no song of this setlist is marked any more. */
     fun clearPlayed() = show.clear(setId)
 
+    /** "Discard": the songs and breaks as they were when editing began. */
+    fun restore(songIds: List<String>, breaks: List<Int>) = repository.setSetlistItems(setId, songIds, breaks)
+
     /** QR limit notice: [LimitNotice.Songs] (doesn't fit to send) or [LimitNotice.Name] (name too long). */
     enum class LimitNotice { Songs, Name }
 

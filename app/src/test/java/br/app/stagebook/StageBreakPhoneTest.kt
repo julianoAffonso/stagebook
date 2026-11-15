@@ -110,7 +110,7 @@ class StageBreakPhoneTest {
         compose.onNode(hasText("A seguir: Um nome", substring = true) and hasText(" · Dm")).assertExists()
     }
 
-    @Test fun `the song under the break is not read, and the setlist's handle still is`() {
+    @Test fun `the song under the break is not read`() {
         show()
         compose.onNodeWithText("Uma linha da primeira", substring = true).assertExists()
         compose.onNodeWithText("Próxima: Intervalo").assertExists()
@@ -119,6 +119,5 @@ class StageBreakPhoneTest {
         compose.onNodeWithText("Uma linha da primeira", substring = true).assertDoesNotExist()
         compose.onNodeWithText("Primeira").assertDoesNotExist()
         compose.onNodeWithText("Próxima: Intervalo").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Abrir o setlist").assertExists()
     }
 }

@@ -24,8 +24,8 @@ import org.robolectric.annotation.Config
 class BaseScreenTest {
     @get:Rule val compose = createComposeRule()
 
-    private fun show(drawer: DrawerControl) = compose.setContent {
-        StagebookTheme { CompositionLocalProvider(LocalDrawer provides drawer) { BaseScreen() } }
+    private fun show(drawer: DrawerControl, openDrawer: Boolean = true) = compose.setContent {
+        StagebookTheme { CompositionLocalProvider(LocalDrawer provides drawer) { BaseScreen(openDrawer = openDrawer) } }
     }
 
     @Test fun `it says what to do, opens the drawer by itself and has a button to open it again`() {
@@ -44,5 +44,12 @@ class BaseScreenTest {
         compose.waitForIdle()
         assertEquals(0, opened)
         compose.onAllNodesWithText("Abrir o menu").assertCountEquals(0)
+    }
+
+    @Test fun `while a last stage is about to open the drawer is not opened`() {
+        var opened = 0
+        show(DrawerControl({ opened++ }, {}), openDrawer = false)
+        compose.waitForIdle()
+        assertEquals("the app must come back with the menu closed", 0, opened)
     }
 }

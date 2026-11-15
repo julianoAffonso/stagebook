@@ -109,9 +109,8 @@ class PickSongsRowsTest {
         compose.onNodeWithText("capo 2", useUnmergedTree = true).assertIsDisplayed()
         compose.onAllNodesWithContentDescription("Backing track", useUnmergedTree = true).assertCountEquals(2)   // the in-setlist row has one too
         compose.onAllNodesWithText("19", substring = true, useUnmergedTree = true).assertCountEquals(0)
-        // a song already in the setlist is tagged beside its title, keeps its artist, key, tempo, capo and mark, and can't be checked
-        compose.onNodeWithText("No setlist", useUnmergedTree = true).assertIsDisplayed()
-        compose.onAllNodesWithText("No setlist", useUnmergedTree = true).assertCountEquals(1)
+        // a song already in the setlist keeps its artist, key, tempo, capo and mark and can't be checked; no phrase (user, 15/11)
+        compose.onAllNodesWithText("No setlist", useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodesWithText("Já está no setlist", useUnmergedTree = true).assertCountEquals(0)
         compose.onNodeWithText("Cássia Eller", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("C", useUnmergedTree = true).assertIsDisplayed()

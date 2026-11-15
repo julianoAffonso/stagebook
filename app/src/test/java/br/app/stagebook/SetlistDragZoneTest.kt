@@ -35,7 +35,7 @@ class SetlistDragZoneTest {
             items = listOf("a", "b", "c").map { SetItemUi(it, it, "Música $it", "", false) },
         )
         compose.setContent {
-            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}) }
+            StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { f, t -> moves += f to t }, { _, _ -> }, {}, startEditing = true) }
         }
     }
 

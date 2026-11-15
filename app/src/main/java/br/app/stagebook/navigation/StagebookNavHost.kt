@@ -198,9 +198,10 @@ fun StagebookNavHost(
             runCatching { nav.navigate(where) { if (where.contains("Stage")) popUpTo(nav.graph.id) { inclusive = true } } }
         }
     }
+    var drawerShown by remember { androidx.compose.runtime.mutableStateOf(false) }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
-    BandStripLayout(screens = {
-    LibraryDrawerHost(nav) {
+    BandStripLayout(liftIme = !drawerShown, screens = {
+    LibraryDrawerHost(nav, onShown = { drawerShown = it }) {
     NavHost(
         modifier = Modifier.fillMaxSize(),
         navController = nav,
@@ -208,7 +209,11 @@ fun StagebookNavHost(
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
     ) {
-        composable<Home> { br.app.stagebook.ui.drawer.BaseScreen() }
+        composable<Home> {
+            // waits for the library: with a last stage to open, the empty screen never opens the drawer
+            val noStage = remember(libraryRead) { libraryRead && start.route() == null }
+            br.app.stagebook.ui.drawer.BaseScreen(openDrawer = noStage)
+        }
         composable<Settings> { entry ->
             val route = remember { entry.toRoute<Settings>() }
             // not a screen the leader's song pulls away from (pullsToStage): it waits here and the strip says so
@@ -251,9 +256,6 @@ fun StagebookNavHost(
                 onBack = dropUnlessResumed { if (nav.previousBackStackEntry != null) nav.popBackStack() else (context as? android.app.Activity)?.finish() },
                 // the library lost every song under the stage: the empty screen, with the drawer open
                 onEmptied = { nav.navigate(Home) { popUpTo<Stage> { inclusive = true } } },
-                // the setlist is looked at in the drawer, over the stage
-                onEditSetlist = { id -> entry.ifResumed { drawer?.openSetlist(id, false) } },
-                onShareSetlist = { id -> entry.ifResumed { drawer?.openSetlist(id, true) } },
             )
         }
         composable<Importer> { entry ->

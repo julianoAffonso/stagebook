@@ -39,15 +39,6 @@ class SetlistPhoneLayoutTest {
     private fun height(text: String) =
         compose.onNodeWithText(text, substring = true, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.height
 
-    @Test fun `with large text the buttons under the title keep their words whole`() {
-        RuntimeEnvironment.setFontScale(1.15f)
-        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}) } }
-        compose.waitForIdle()
-        // a label on one line is as tall as the others
-        assertEquals(height("Músicas"), height("Compartilhar"), 0.5f)
-        assertEquals(height("Músicas"), height("Intervalo"), 0.5f)
-    }
-
     @Test fun `with large text a long title stays on one line`() {
         RuntimeEnvironment.setFontScale(1.15f)
         compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}) } }

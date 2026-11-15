@@ -86,20 +86,4 @@ class StageMidShowTest {
         compose.waitForIdle()
         assertNull("no click on the break", clicks.last())
     }
-
-    private val open get() = compose.onNodeWithContentDescription("Abrir o setlist")
-
-    @Test fun `the pedal does not turn pages or songs under the setlist panel`() {
-        val keys = PedalAction.assign(PedalAction.assign(PedalAction.assign(emptyMap(), KeyEvent.KEYCODE_B, PedalAction.OPEN_SETLIST), KeyEvent.KEYCODE_F1, PedalAction.NEXT_SONG), KeyEvent.KEYCODE_F2, PedalAction.PREVIOUS_SONG)
-        show(keys = keys)
-        open.performClick(); compose.waitForIdle()
-        compose.onNodeWithTag("stage_setlist").assertIsDisplayed()
-        for (k in listOf(KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_F1, KeyEvent.KEYCODE_F2)) { press(k); assertEquals("key $k under the panel", Triple(1, 0, null), Triple(song, page, since)) }
-        compose.onNodeWithTag("stage_setlist").assertIsDisplayed()
-        press(KeyEvent.KEYCODE_B)   // closes the panel
-        press(KeyEvent.KEYCODE_PAGE_DOWN)
-        assertEquals(1 to 1, song to page)
-        press(KeyEvent.KEYCODE_F1)
-        assertEquals("the next song's key goes on (to its break first)", true, song == 2 || since != null)
-    }
 }

@@ -14,8 +14,10 @@ import androidx.compose.ui.Modifier
  * strip rises above the keyboard and the editor gives it exactly its height, no more.
  */
 @Composable
-internal fun BandStripLayout(screens: @Composable BoxScope.() -> Unit, strip: @Composable () -> Unit) {
-    Column(Modifier.imePadding()) {
+internal fun BandStripLayout(screens: @Composable BoxScope.() -> Unit, strip: @Composable () -> Unit, liftIme: Boolean = true) {
+    // [liftIme] off while the library drawer is open: the keyboard of its search must not shrink the stage behind it (the
+    // stage worked its zoom out again on every show of the keyboard); the drawer lifts its own sheet
+    Column(if (liftIme) Modifier.imePadding() else Modifier) {
         Box(Modifier.weight(1f), content = screens)
         strip()
     }

@@ -12,3 +12,11 @@ class DrawerControl(
 )
 
 val LocalDrawer = staticCompositionLocalOf<DrawerControl?> { null }
+
+/**
+ * A screen inside the drawer that must be asked before the drawer closes (a setlist being edited): [asks] returns true
+ * when it took the request and will close the drawer itself once answered.
+ */
+class DrawerGuard { var asks: (() -> Boolean)? = null }
+
+val LocalDrawerGuard = staticCompositionLocalOf<DrawerGuard?> { null }
