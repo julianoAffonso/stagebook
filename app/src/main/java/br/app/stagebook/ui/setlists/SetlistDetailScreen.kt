@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -274,9 +275,24 @@ fun SetlistDetailScreen(
                         subtitle = if (editing) "${uiState.name} · $count" else count,
                         onBack = if (editing) ({ if (changed) { afterAsk = null; asking = true } else finishEditing() }) else onBack,
                         closes = editing,
-                        iconActions = editing,
+                        iconActions = true,
                         modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-                    )
+                    ) {
+                        // all the setlist's own actions on this line, beside the back arrow, as SongbookPro's open set (user, 15/11):
+                        // no buttons above and below at once
+                        val canBreak = br.app.stagebook.domain.SetlistBreaks.canAdd(uiState.breaks, uiState.items.size)
+                        SetActions(
+                            editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak,
+                            onEdit = { before = items.map { it.songId } to uiState.breaks; editing = true },
+                            onSave = { finishEditing() }, canSave = changed,
+                            menu = listOfNotNull(
+                                MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { uiState.canConduct },
+                                MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, onClearPlayed).takeIf { uiState.anyPlayed },
+                                MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
+                                MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
+                            ),
+                        )
+                    }
                 }
                 Crossfade(targetState = uiState.loading, label = "set", modifier = Modifier.weight(1f)) { loading ->
                     when {
@@ -349,21 +365,6 @@ fun SetlistDetailScreen(
                         }
                     }
                 }
-                // at the bottom, as the Songs tab: songs, a break and share, icons in one line
-                if (!selecting) {
-                    val canBreak = br.app.stagebook.domain.SetlistBreaks.canAdd(uiState.breaks, uiState.items.size)
-                    SetActions(
-                        editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak,
-                        onEdit = { before = items.map { it.songId } to uiState.breaks; editing = true },
-                        onSave = { finishEditing() }, canSave = changed,
-                        menu = listOfNotNull(
-                            MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { uiState.canConduct },
-                            MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, onClearPlayed).takeIf { uiState.anyPlayed },
-                            MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
-                            MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
-                        ),
-                    )
-                }
             }
         }
     }
@@ -426,36 +427,33 @@ fun SetlistDetailScreen(
 }
 
 /**
- * The setlist's own actions as icons in one line at the bottom, as the Songs tab has them: looking, Edit and Share; editing,
- * Songs and Break (no Share: it waits for Save). The floppy (Save, off until something changed) and the ⋮ with what is rarely used close the line.
+ * The setlist's own actions as icons on the header's line: looking, Edit and Share; editing, Songs and Break (no Share: it
+ * waits for Save) and the floppy (off until something changed). The ⋮ with what is rarely used closes the line.
  */
 @Composable
-private fun SetActions(
+private fun RowScope.SetActions(
     editing: Boolean, hasSongs: Boolean, onAddSongs: () -> Unit, onShare: () -> Unit, canBreak: Boolean, onAddBreak: () -> Unit,
-    onEdit: () -> Unit, onSave: () -> Unit, canSave: Boolean, menu: List<MenuAction>, modifier: Modifier = Modifier,
+    onEdit: () -> Unit, onSave: () -> Unit, canSave: Boolean, menu: List<MenuAction>,
 ) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        if (editing) {
-            IconButton(onClick = onAddSongs) { Icon(AppIcons.PlaylistAdd, stringResource(R.string.sets_add_songs), tint = MaterialTheme.colorScheme.onSurface) }
-            val message = br.app.stagebook.ui.components.LocalAppMessage.current
-            val why = stringResource(R.string.sets_break_needs_two)
-            val breakName = stringResource(R.string.sets_add_break)
-            val breakLabel = if (canBreak) breakName else "$breakName. $why"
-            // off but still touchable: the touch says why, as the first one on the off button met nothing (user test, 14/11)
-            IconButton(onClick = { if (canBreak) onAddBreak() else message.show(why) }, modifier = Modifier.semantics { if (!canBreak) disabled() }) {
-                Icon(AppIcons.Pause, breakLabel, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (canBreak) 1f else 0.38f))
-            }
-        } else {
-            IconButton(onClick = onEdit) { Icon(AppIcons.Edit, stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.onSurface) }
-            // sharing is for the finished setlist: not while it is half edited (what Discard undoes would have gone out)
-            IconButton(onClick = onShare, enabled = hasSongs) {
-                Icon(AppIcons.Share, stringResource(R.string.share_title), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (hasSongs) 1f else 0.38f))
-            }
+    if (editing) {
+        IconButton(onClick = onAddSongs) { Icon(AppIcons.PlaylistAdd, stringResource(R.string.sets_add_songs), tint = MaterialTheme.colorScheme.onSurface) }
+        val message = br.app.stagebook.ui.components.LocalAppMessage.current
+        val why = stringResource(R.string.sets_break_needs_two)
+        val breakName = stringResource(R.string.sets_add_break)
+        val breakLabel = if (canBreak) breakName else "$breakName. $why"
+        // off but still touchable: the touch says why, as the first one on the off button met nothing (user test, 14/11)
+        IconButton(onClick = { if (canBreak) onAddBreak() else message.show(why) }, modifier = Modifier.semantics { if (!canBreak) disabled() }) {
+            Icon(AppIcons.Pause, breakLabel, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (canBreak) 1f else 0.38f))
         }
-        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-        if (editing) br.app.stagebook.ui.components.TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary, enabled = canSave)
-        OverflowMenu(menu)
+        br.app.stagebook.ui.components.TipIcon(stringResource(R.string.action_save), AppIcons.Save, onSave, tint = MaterialTheme.colorScheme.primary, enabled = canSave)
+    } else {
+        IconButton(onClick = onEdit) { Icon(AppIcons.Edit, stringResource(R.string.set_edit), tint = MaterialTheme.colorScheme.onSurface) }
+        // sharing is for the finished setlist: not while it is half edited (what Discard undoes would have gone out)
+        IconButton(onClick = onShare, enabled = hasSongs) {
+            Icon(AppIcons.Share, stringResource(R.string.share_title), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (hasSongs) 1f else 0.38f))
+        }
     }
+    OverflowMenu(menu)
 }
 
 /** A row of the setlist: a song or a break. [key] is stable while dragging. */
