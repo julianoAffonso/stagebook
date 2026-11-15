@@ -108,7 +108,19 @@ class PickSongsViewModel @Inject constructor(
 
     fun dismissLimit() { _limit.value = false }
 
-    fun confirm() = repository.addToSetlist(setId, selected.value)
+    fun confirm() = confirmPending()
+
+    /**
+     * Adds the checked songs to the setlist, in the order they were checked, and forgets the checks. Also what leaving
+     * the screen does with songs checked and not confirmed: they were meant to go in (user, 15/11), and a second call
+     * has nothing left to add.
+     */
+    fun confirmPending() {
+        val picked = selected.value
+        if (picked.isEmpty()) return
+        savedStateHandle[KEY_SELECTED] = ArrayList<String>()
+        repository.addToSetlist(setId, picked)
+    }
 
     private companion object {
         const val KEY_SELECTED = "selected"

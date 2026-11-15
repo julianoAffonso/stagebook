@@ -49,6 +49,11 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
     val limit by viewModel.limit.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
+    // leaving with songs checked and the green check forgotten (back, the menu closing): they go in as if it was tapped
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.DisposableEffect(viewModel) {
+        onDispose { if ((context as? android.app.Activity)?.isChangingConfigurations != true) viewModel.confirmPending() }   // a turned screen is not leaving
+    }
     if (limit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_message), viewModel::dismissLimit)
     PickSongsScreen(
         uiState = uiState,
@@ -82,18 +87,25 @@ fun PickSongsScreen(
         CenteredContent(Modifier.fillMaxSize().padding(inner)) {
             Column(Modifier.padding(horizontal = Spacing.m)) {
                 ScreenHeader(
-                    title = stringResource(R.string.pick_title),
-                    subtitle = uiState.setName,
+                    // the setlist's name alone, on one line ("Add songs" over it made it break in two; the check says the rest)
+                    title = uiState.setName,
                     onBack = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                     iconActions = true,
                 ) {
                     // in the fixed header: the search keyboard covered the button when it sat at the bottom
                     // an icon, as the rest of the menu (the check; its name says how many go in)
-                    br.app.stagebook.ui.components.TipIcon(
-                        stringResource(R.string.pick_add_short, uiState.selectedCount), AppIcons.Check, onConfirm,
-                        tint = MaterialTheme.colorScheme.primary, enabled = uiState.selectedCount > 0,
-                    )
+                    // with the number of songs the setlist will have: the ones it already has and the ones checked
+                    val total = uiState.inSetCount + uiState.selectedCount
+                    val addLabel = stringResource(R.string.pick_add_short, uiState.selectedCount)
+                    androidx.compose.material3.IconButton(onClick = onConfirm, enabled = uiState.selectedCount > 0) {
+                        androidx.compose.material3.BadgedBox(badge = { if (total > 0) androidx.compose.material3.Badge { Text(total.toString()) } }) {
+                            androidx.compose.material3.Icon(
+                                AppIcons.Check, addLabel,
+                                tint = if (uiState.selectedCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            )
+                        }
+                    }
                 }
                 br.app.stagebook.ui.components.SearchWithTags(
                     query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,

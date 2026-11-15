@@ -42,7 +42,8 @@ class PickSongsBadgeWidthTest {
         )
         compose.setContent { StagebookTheme { PickSongsScreen(PickSongsUiState(setName = "Show", rows = rows, selectedCount = 2), "", {}, {}, {}, {}) } }
         compose.onNodeWithText("1", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("2", useUnmergedTree = true).assertExists()
+        // "2": the row's place and the check's count (nothing in the setlist yet, two checked)
+        compose.onAllNodesWithText("2", useUnmergedTree = true).assertCountEquals(2)
         compose.onAllNodesWithText("3", useUnmergedTree = true).assertCountEquals(0)
     }
 }

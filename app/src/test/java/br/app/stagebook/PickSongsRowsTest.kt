@@ -94,6 +94,42 @@ class PickSongsRowsTest {
         }
     }
 
+    @Test fun `leaving with songs checked and not confirmed adds them in the order checked, once`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            runBlocking {
+                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+                withTimeout(5_000) { repo.loaded.first { it } }
+                val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha"), Song(title = "C", text = "linha")).map(repo::saveSong)
+                val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
+                val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
+                val job = CoroutineScope(Dispatchers.Main).launch { vm.uiState.collect {} }
+                assertEquals(true, vm.toggle(ids[2]))
+                assertEquals(true, vm.toggle(ids[1]))
+                vm.confirmPending()   // what the screen does on the way out
+                assertEquals(listOf(ids[0], ids[2], ids[1]), repo.library.value.setlist(set)!!.items)
+                vm.confirmPending()   // the checks are gone: nothing more to add
+                assertEquals(listOf(ids[0], ids[2], ids[1]), repo.library.value.setlist(set)!!.items)
+                assertEquals(0, withTimeout(5_000) { vm.uiState.first { it.selectedCount == 0 } }.selectedCount)
+                job.cancel()
+            }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `the header names the setlist alone and the check counts what the setlist will have`() {
+        val state = PickSongsUiState(
+            setName = "Show de sábado com um nome bem comprido que não cabe",
+            rows = listOf(PickRowUi("1", "Com tudo", "Banda", inSet = false, selected = true, order = 6)),
+            selectedCount = 1, inSetCount = 5,
+        )
+        compose.setContent { StagebookTheme { PickSongsScreen(state, "", {}, {}, {}, {}) } }
+        compose.onAllNodesWithText("Adicionar músicas").assertCountEquals(0)   // the name alone, on its line
+        // 5 it has + 1 checked = 6: on the check, and the row's own number is the 6th place too
+        compose.onAllNodesWithText("6", useUnmergedTree = true).assertCountEquals(2)
+    }
+
     @Test fun `a row draws the artist without the year, the key, the tempo, the capo and the mark, and a tap checks it`() {
         val toggled = ArrayList<String>()
         var confirmed = 0
