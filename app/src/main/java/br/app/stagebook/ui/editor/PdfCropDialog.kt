@@ -3,7 +3,9 @@ package br.app.stagebook.ui.editor
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -129,34 +133,47 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
     }
 }
 
-/** The frame over the page: what is outside it is dimmed, and each edge, corner or the inside is dragged. */
+/**
+ * The frame over the page: what is outside it is dimmed, and each edge, corner or the inside is dragged. The drawing is a
+ * little larger than the page, all round, so the handles on its edge are whole and not cut by the page's border.
+ */
 @Composable
 private fun CropFrame(left: Float, top: Float, right: Float, bottom: Float, onChange: (Float, Float, Float, Float) -> Unit) {
     val line = MaterialTheme.colorScheme.primary
-    val rect = PdfCrop(0, left, top, right, bottom)
+    // what the drag reads must be the frame as it is now, not as it was when the gesture detector was made (the other
+    // edges went back to where they started on every new drag)
+    val now by rememberUpdatedState(PdfCrop(0, left, top, right, bottom))
+    val push by rememberUpdatedState(onChange)
     Canvas(
         Modifier
-            .fillMaxSize()
+            .layout { measurable, c ->
+                val room = HANDLE_ROOM.roundToPx()
+                val placeable = measurable.measure(Constraints.fixed(c.maxWidth + 2 * room, c.maxHeight + 2 * room))
+                layout(c.maxWidth, c.maxHeight) { placeable.place(-room, -room) }
+            }
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .pointerInput(Unit) {
-                var grab = 0
                 val slop = 36.dp.toPx()
-                var l = 0f; var t = 0f; var r = 1f; var b = 1f
-                detectDragGestures(
-                    onDragStart = { p ->
-                        // which edges the touch is on: left, top, right, bottom (corners are two); the inside moves the frame
-                        val w = size.width.toFloat(); val h = size.height.toFloat()
-                        val nearL = abs(p.x - rect.left * w) < slop; val nearR = abs(p.x - rect.right * w) < slop
-                        val nearT = abs(p.y - rect.top * h) < slop; val nearB = abs(p.y - rect.bottom * h) < slop
-                        val inside = p.x in rect.left * w..rect.right * w && p.y in rect.top * h..rect.bottom * h
-                        grab = (if (nearL) 1 else 0) or (if (nearT) 2 else 0) or (if (nearR) 4 else 0) or (if (nearB) 8 else 0)
-                        if (grab == 0 && inside) grab = 15
-                        l = rect.left; t = rect.top; r = rect.right; b = rect.bottom
-                    },
-                    onDrag = { change, amount ->
-                        if (grab == 0) return@detectDragGestures
+                val room = HANDLE_ROOM.toPx()
+                awaitEachGesture {
+                    // taken from where the finger went down (not from where it first moved: a quick drag would have left the edge)
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val w = size.width - 2 * room; val h = size.height - 2 * room
+                    val x = down.position.x - room; val y = down.position.y - room
+                    val f = now
+                    val nearL = abs(x - f.left * w) < slop; val nearR = abs(x - f.right * w) < slop
+                    val nearT = abs(y - f.top * h) < slop; val nearB = abs(y - f.bottom * h) < slop
+                    val inside = x in f.left * w..f.right * w && y in f.top * h..f.bottom * h
+                    // which edges the touch is on (a corner is two); the inside moves the whole frame
+                    var grab = (if (nearL) 1 else 0) or (if (nearT) 2 else 0) or (if (nearR) 4 else 0) or (if (nearB) 8 else 0)
+                    if (grab == 0 && inside) grab = 15
+                    if (grab == 0) return@awaitEachGesture
+                    var l = f.left; var t = f.top; var r = f.right; var b = f.bottom
+                    down.consume()
+                    drag(down.id) { change ->
+                        val delta = change.position - change.previousPosition
                         change.consume()
-                        val dx = amount.x / size.width; val dy = amount.y / size.height
+                        val dx = delta.x / w; val dy = delta.y / h
                         if (grab == 15) {
                             // the whole frame, kept inside the page
                             val mx = dx.coerceIn(-l, 1f - r); val my = dy.coerceIn(-t, 1f - b)
@@ -167,23 +184,28 @@ private fun CropFrame(left: Float, top: Float, right: Float, bottom: Float, onCh
                             if (grab and 2 != 0) t = (t + dy).coerceIn(0f, b - PdfCrops.MIN_SIDE)
                             if (grab and 8 != 0) b = (b + dy).coerceIn(t + PdfCrops.MIN_SIDE, 1f)
                         }
-                        onChange(l, t, r, b)
-                    },
-                )
+                        push(l, t, r, b)
+                    }
+                }
             },
     ) {
-        val x = left * size.width; val y = top * size.height
-        val w = (right - left) * size.width; val h = (bottom - top) * size.height
-        // dim everything, then punch the frame out of it
-        drawRect(Color.Black.copy(alpha = 0.55f))
-        drawRoundRect(Color.Transparent, Offset(x, y), Size(w, h), CornerRadius(0f), blendMode = BlendMode.Clear)
+        val room = HANDLE_ROOM.toPx()
+        val pw = size.width - 2 * room; val ph = size.height - 2 * room
+        val x = room + left * pw; val y = room + top * ph
+        val w = (right - left) * pw; val h = (bottom - top) * ph
+        // dim the page (not the margin), then punch the frame out of it
+        drawRect(Color.Black.copy(alpha = 0.55f), Offset(room, room), Size(pw, ph))
+        drawRect(Color.Transparent, Offset(x, y), Size(w, h), blendMode = BlendMode.Clear)
         drawRect(line, Offset(x, y), Size(w, h), style = Stroke(width = 2.dp.toPx()))
         // handles at the corners and the middles of the sides
-        val r = 6.dp.toPx()
+        val radius = 6.dp.toPx()
         listOf(x to y, x + w to y, x to y + h, x + w to y + h, x + w / 2 to y, x + w / 2 to y + h, x to y + h / 2, x + w to y + h / 2)
-            .forEach { (cx, cy) -> drawCircle(line, r, Offset(cx, cy)) }
+            .forEach { (cx, cy) -> drawCircle(line, radius, Offset(cx, cy)) }
     }
 }
+
+/** The room around the page for the handles on its edge. */
+private val HANDLE_ROOM = 12.dp
 
 internal const val CROP_FRAME_TAG = "pdf_crop_frame"
 private const val PAGE_SHAPE = 2f / 3f   // a page of paper, until the real one is drawn

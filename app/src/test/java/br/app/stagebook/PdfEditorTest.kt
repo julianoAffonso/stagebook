@@ -5,6 +5,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -264,6 +267,24 @@ class PdfEditorTest {
         compose.onNodeWithText("Sem recorte").performClick()
         compose.waitForIdle()
         assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, cleared)
+    }
+
+    @Test fun `dragging one edge of the frame leaves the others where they were, and the next drag starts from there`() {
+        var set: br.app.stagebook.data.model.PdfCrop? = null
+        screen(saved, EditorPdf("a.pdf", pages = 1, bytes = 1_000), onSetCrop = { set = it })
+        compose.onNodeWithText("Recortar").performClick()
+        compose.waitForIdle()
+        val frame = compose.onNodeWithTag("pdf_crop_frame")
+        // the left edge 30% in, then the right edge 30% in: the first must still be there after the second
+        frame.performTouchInput { down(Offset(1f, height / 2f)); moveBy(Offset(width * 0.3f, 0f)); up() }
+        frame.performTouchInput { down(Offset(width - 2f, height / 2f)); moveBy(Offset(-width * 0.3f, 0f)); up() }
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
+        val crop = set!!
+        assertEquals("left kept: $crop", 0.3f, crop.left, 0.05f)
+        assertEquals("right moved: $crop", 0.7f, crop.right, 0.05f)
+        assertEquals(0f, crop.top, 0.001f)
+        assertEquals(1f, crop.bottom, 0.001f)
     }
 
     @Test fun `a PDF whose file is gone has no Crop button`() {
