@@ -56,6 +56,15 @@ class PdfMarksTest {
         assertEquals(marks, PdfMarks.add(marks, 2, emptyList()))
     }
 
+    @Test fun `a page keeps at most 200 strokes and the oldest go first, other pages are not touched`() {
+        var marks = listOf(PdfMark(5, listOf(PdfPoint(0f, 0f))))
+        repeat(PdfMarks.MAX_PER_PAGE + 30) { i -> marks = PdfMarks.add(marks, 1, listOf(PdfPoint(0.1f, i / 1000f), PdfPoint(0.9f, i / 1000f))) }
+        assertEquals(PdfMarks.MAX_PER_PAGE, marks.count { it.page == 1 })
+        assertEquals(1, marks.count { it.page == 5 })
+        // the oldest of the page went: the first kept is the 31st stroke made
+        assertEquals(30 / 1000f, marks.first { it.page == 1 }.points.first().y, 0.0001f)
+    }
+
     @Test fun `undo takes the last stroke of the page and clear takes them all, other pages stay`() {
         val a = PdfMark(0, listOf(PdfPoint(0f, 0f)))
         val b = PdfMark(1, listOf(PdfPoint(0.1f, 0.1f)))

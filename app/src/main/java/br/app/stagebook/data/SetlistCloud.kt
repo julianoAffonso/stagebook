@@ -257,7 +257,10 @@ class SetlistCloud @Inject constructor(
     // the PDFs that arrived complete, by song key: bytes and the name the sender gave; an incomplete or oversized one is nothing
     private fun assemblePdfs(plain: List<ByteArray>): Map<String, Pair<ByteArray, String>> {
         val chunks = plain.mapNotNull { unpack(PDF_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<PdfChunk>(it) }.getOrNull() }
-        val maxChunks = br.app.stagebook.domain.BandContent.internetPdfMessages(br.app.stagebook.domain.BandContent.MAX_PDF_BYTES)
+        // a real send has at most MAX_INTERNET_MESSAGES messages in all, chunks included: more than that is not a send of ours
+        // (anyone with the 3 words can post to the channel), and a flood of chunks is not put together
+        val maxChunks = br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES
+        if (chunks.size > maxChunks) return emptyMap()
         return chunks.groupBy { it.k }.mapNotNull { (key, parts) ->
             val n = parts.first().n
             val ordered = parts.filter { it.n == n }.distinctBy { it.i }.sortedBy { it.i }

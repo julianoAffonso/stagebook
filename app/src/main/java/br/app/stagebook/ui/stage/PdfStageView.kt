@@ -35,7 +35,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +50,7 @@ import br.app.stagebook.data.AndroidPdfSource
 import br.app.stagebook.data.PdfPages
 import br.app.stagebook.data.PdfSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -61,11 +61,23 @@ sealed interface PdfOpen {
     class Ready(val pages: PdfPages) : PdfOpen
 }
 
-/** Opens [file] off the main thread and closes it when the song leaves the stage. [open] is replaced by a fake in tests. */
+/**
+ * Opens [file] off the main thread and closes it when the song leaves the stage. The state starts again for each file (a
+ * state that went on from the song before showed a PDF already closed), and a PDF opened for a song that left meanwhile is
+ * closed too. [open] is replaced by a fake in tests.
+ */
 @Composable
 fun rememberPdfOpen(file: File, open: (File) -> PdfSource = ::AndroidPdfSource): State<PdfOpen> {
-    val state = produceState<PdfOpen>(PdfOpen.Loading, file) {
-        value = withContext(Dispatchers.IO) { runCatching { PdfOpen.Ready(PdfPages(open(file))) }.getOrDefault(PdfOpen.Failed) }
+    val state = remember(file) { mutableStateOf<PdfOpen>(PdfOpen.Loading) }
+    LaunchedEffect(file) {
+        val made = java.util.concurrent.atomic.AtomicReference<PdfPages?>()
+        try {
+            // the opening itself isn't interrupted: it ends, and what it opened is closed if nobody wants it any more
+            withContext(Dispatchers.IO) { made.set(runCatching { PdfPages(open(file)) }.getOrNull()) }
+            state.value = made.get()?.let { PdfOpen.Ready(it) } ?: PdfOpen.Failed
+        } finally {
+            if (!isActive) made.get()?.close()
+        }
     }
     DisposableEffect(file) { onDispose { (state.value as? PdfOpen.Ready)?.pages?.close() } }
     return state
@@ -97,6 +109,7 @@ fun PdfStageView(
     when (open) {
         PdfOpen.Loading -> Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         PdfOpen.Failed -> {
+            LaunchedEffect(Unit) { onPageCount(1) }   // the count of the song before must not stay
             Box(modifier.fillMaxSize(), Alignment.Center) { Text(stringResource(R.string.stage_pdf_unreadable), style = MaterialTheme.typography.titleMedium) }
         }
         is PdfOpen.Ready -> {
@@ -117,16 +130,26 @@ fun PdfStageView(
                 val maxScale = fit?.let { PdfZoom.maxScale(it.first, it.second) } ?: 1.5f
                 val bucket = PdfZoom.bucket(scale, maxScale)
                 var drawn by remember(pages, at) { mutableStateOf<ImageBitmap?>(null) }
+                // a page that can't be drawn (a damaged one, no room for its bitmap) says so, and doesn't close the app
+                var broken by remember(pages, at) { mutableStateOf(false) }
                 LaunchedEffect(pages, at, widthPx, heightPx, bucket) {
-                    val (pw, ph) = pages.size(at)
-                    val factor = minOf(widthPx / pw.toFloat(), heightPx / ph.toFloat())
-                    val fitW = (pw * factor).toInt().coerceAtLeast(1)
-                    val fitH = (ph * factor).toInt().coerceAtLeast(1)
-                    fit = fitW to fitH
-                    // the sharper one replaces the page on screen only once it is drawn
-                    drawn = pages.bitmap(at, fitW * bucket).asImageBitmap()
-                    // the next page is drawn ahead, so the turn shows it at once
-                    if (bucket == 1 && at + 1 < pages.pageCount) pages.bitmap(at + 1, fitW)
+                    try {
+                        val (pw, ph) = pages.size(at)
+                        val factor = minOf(widthPx / pw.toFloat(), heightPx / ph.toFloat())
+                        val fitW = (pw * factor).toInt().coerceAtLeast(1)
+                        val fitH = (ph * factor).toInt().coerceAtLeast(1)
+                        fit = fitW to fitH
+                        // the sharper one replaces the page on screen only once it is drawn
+                        drawn = pages.bitmap(at, fitW * bucket).asImageBitmap()
+                        // the next page is drawn ahead, so the turn shows it at once
+                        if (bucket == 1 && at + 1 < pages.pageCount) pages.bitmap(at + 1, fitW)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        broken = true
+                    } catch (e: OutOfMemoryError) {
+                        broken = true
+                    }
                 }
                 val fitNow by rememberUpdatedState(fit)
                 val maxNow by rememberUpdatedState(maxScale)
@@ -189,7 +212,8 @@ fun PdfStageView(
                         },
                     Alignment.Center,
                 ) {
-                    if (size == null || image == null) CircularProgressIndicator()
+                    if (broken) Text(stringResource(R.string.stage_pdf_unreadable), style = MaterialTheme.typography.titleMedium)
+                    else if (size == null || image == null) CircularProgressIndicator()
                     else with(density) {
                         // the page and its strokes move and grow together
                         Box(
@@ -203,8 +227,10 @@ fun PdfStageView(
                                 colorFilter = if (invert) InvertFilter else null,
                             )
                             // over the paper and not turned over with it: the highlighter keeps its colour on a dark stage
+                            // the strokes of this page, as paths made once and drawn on every frame of a zoom or a move
+                            val strokes = remember(marks, at) { marks.filter { it.page == at } }
                             Canvas(Modifier.fillMaxSize()) {
-                                marks.filter { it.page == at }.forEach { drawStroke(it.points, it.width, markColor) }
+                                strokes.forEach { drawStroke(it.points, it.width, markColor) }
                                 if (live.isNotEmpty()) drawStroke(live, PdfMarks.WIDTH, markColor)
                             }
                         }

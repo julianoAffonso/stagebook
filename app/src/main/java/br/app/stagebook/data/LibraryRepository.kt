@@ -164,7 +164,8 @@ class LibraryRepository @Inject constructor(
     /** Saves the song (empty id = new) and returns the id. */
     fun saveSong(song: Song): String {
         val id = song.id.ifEmpty { newId() }
-        val saved = song.copy(id = id)
+        // a PDF name from outside (a band answer, a file) that is not a plain file name is no PDF: it never points out of its folder
+        val saved = song.copy(id = id).let { if (it.pdf.isEmpty() || PdfStore.safeName(it.pdf) != null) it else it.copy(pdf = "", pdfName = "", pdfMarks = emptyList()) }
         mutate { lib ->
             val exists = lib.songs.any { it.id == id }
             lib.copy(songs = if (exists) lib.songs.map { if (it.id == id) saved else it } else lib.songs + saved)
@@ -213,7 +214,7 @@ class LibraryRepository @Inject constructor(
     fun deleteSongs(ids: Collection<String>) {
         val set = ids.toSet()
         // a deleted song's PDF goes with it (the startup sweep catches what a crash left)
-        _library.value.songs.filter { it.id in set && it.pdf.isNotEmpty() }.forEach { File(pdfDir, it.pdf).delete() }
+        _library.value.songs.filter { it.id in set && it.pdf.isNotEmpty() }.forEach { s -> PdfStore.safeName(s.pdf)?.let { File(pdfDir, it).delete() } }
         mutate { lib -> lib.copy(songs = lib.songs.filterNot { it.id in set }, sets = lib.sets.map { s -> s.withoutSongs(set) }) }
     }
 

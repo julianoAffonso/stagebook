@@ -11,25 +11,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import br.app.stagebook.domain.FollowWait
 
-/**
- * Home says here when its Settings tab is in front: the song then waits and opens when it's done.
- */
-val LocalFollowHold = staticCompositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
-
-/**
- * While [open], this screen is one where a band follower is in the middle of something and isn't taken to the stage: the
- * song waits, the strip says so, and it opens when the screen is left (or "Go"). The Settings tab and the screens inside
- * it say so for Home; the setlist screen says it for itself when busy.
- */
-@Composable
-fun FollowHoldWhile(open: Boolean) {
-    val hold = LocalFollowHold.current
-    DisposableEffect(hold, open) {
-        hold.value = open
-        onDispose { hold.value = false }
-    }
-}
-
 /** The song that waits for the follower to finish what they're doing, and why. */
 @androidx.compose.runtime.Immutable
 data class FollowPending(val target: String, val reason: FollowWait)

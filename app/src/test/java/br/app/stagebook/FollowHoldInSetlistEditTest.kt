@@ -26,7 +26,6 @@ import br.app.stagebook.navigation.Stage
 import br.app.stagebook.ui.band.goNow
 import br.app.stagebook.ui.components.FollowGate
 import br.app.stagebook.ui.components.LocalFollowGate
-import br.app.stagebook.ui.components.LocalFollowHold
 import br.app.stagebook.ui.setlists.SetItemUi
 import br.app.stagebook.ui.setlists.SetlistDetailScreen
 import br.app.stagebook.ui.setlists.SetlistDetailUiState
@@ -47,7 +46,7 @@ import org.robolectric.annotation.Config
  * before was gone on reopening. The screen is an action under way: it holds the follower the whole time it is open
  * (like the song editor), the strip says so, "Go" asks first only when something is not saved, and leaving the screen
  * by any way opens the newest song. The real [SetlistDetailScreen] in the real [FollowToStage], wired as the nav host
- * wires them (the same hold state on [LocalFollowHold]); the setlist lives in a state here, standing in for the library.
+ * wires them; the setlist lives in a state here, standing in for the library.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
@@ -63,10 +62,9 @@ class FollowHoldInSetlistEditTest {
     private fun start() {
         compose.setContent {
             StagebookTheme {
-                val hold = remember { mutableStateOf(false) }
-                CompositionLocalProvider(LocalFollowGate provides gate, LocalFollowHold provides hold) {
+                CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, songs, following, gate, hold)
+                    FollowToStage(nav, songs, following, gate)
                     NavHost(nav, startDestination = Home) {
                         composable<Home> { Text("home") }
                         composable<SetlistDetail> {

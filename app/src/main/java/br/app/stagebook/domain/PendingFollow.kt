@@ -20,8 +20,8 @@ enum class FollowWait {
  * waits. The stage follows (it replaces itself) unless a menu or window of its own is open. [pulls]: a screen that can be left; [setlistBusy]: that
  * screen is busy; [menu]: a menu or window is open; [keyboard]: the keyboard is open.
  */
-fun followBlock(pulls: Boolean, setlistBusy: Boolean, onStage: Boolean, menu: Boolean, keyboard: Boolean): FollowWait? = when {
-    !pulls || setlistBusy -> FollowWait.SCREEN
+fun followBlock(pulls: Boolean, onStage: Boolean, menu: Boolean, keyboard: Boolean): FollowWait? = when {
+    !pulls -> FollowWait.SCREEN
     menu -> FollowWait.MENU
     onStage -> null
     keyboard -> FollowWait.KEYBOARD

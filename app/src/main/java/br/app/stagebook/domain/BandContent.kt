@@ -24,11 +24,12 @@ object BandContent {
     const val MAX_PDF_BYTES = 8L * 1024 * 1024
 
     /**
-     * The PDFs' bytes that fit in one band package. The package is one line of at most [BandProtocol.MAX_MESSAGE] (20 MB)
-     * characters, and a PDF is written twice over in base64 (inside the package's JSON, then when the package is
-     * encrypted): 16/9 of its size. A MB is kept for the texts. About 10.7 MB of PDFs go in one package.
+     * The PDFs' bytes in one band package: 6 MB. The line of [BandProtocol.MAX_MESSAGE] (20 MB) characters would take about
+     * 10.7 MB (a PDF is written twice over in base64, inside the package's JSON and when it is encrypted: 16/9 of its
+     * size), but the receiver holds the line, the text, the decoded copies and the file at once, close to ten times the PDFs,
+     * and a Fire HD 10 has no such room in the middle of a show (audit, 15/11).
      */
-    const val PDF_PACKAGE_BYTES = (BandProtocol.MAX_MESSAGE - 1024 * 1024) / 16 * 9L
+    const val PDF_PACKAGE_BYTES = 6L * 1024 * 1024
 
     /**
      * The PDF's bytes in one internet message. A message is 4,000 characters of encrypted base64 (the server takes 4 KB):

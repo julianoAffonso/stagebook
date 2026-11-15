@@ -69,7 +69,7 @@ internal fun NavController.openFollowStage(target: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FollowToStage(
-    nav: NavController, followSongs: Flow<String>, followingSong: StateFlow<String?>, gate: FollowGate, followHold: MutableState<Boolean>,
+    nav: NavController, followSongs: Flow<String>, followingSong: StateFlow<String?>, gate: FollowGate,
 ) {
     val pendingFollow = remember { PendingFollow() }
     val entry by nav.currentBackStackEntryAsState()
@@ -85,7 +85,7 @@ internal fun FollowToStage(
     val wait: FollowWait? = here?.let {
         // on the stage only our own menus and windows hold the song: the window losing focus there (split screen, the
         // shade) must not stop a follower for good
-        followBlock(it.pullsToStage(), it.hasRoute<Home>() && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
+        followBlock(it.pullsToStage(), it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
     }
     val waitNow by rememberUpdatedState(wait)
     fun sync() { gate.pending = pendingFollow.waiting?.let { FollowPending(it, pendingFollow.reason ?: FollowWait.SCREEN) } }

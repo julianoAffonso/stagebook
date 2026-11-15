@@ -14,6 +14,8 @@ object PdfMarks {
     const val MIN_STEP = 0.004f
     /** The thickness of the highlighter, as a fraction of the page's width. */
     const val WIDTH = 0.025f
+    /** A page keeps this many strokes: past it the oldest go, so a page covered in scribbles stays light to draw and to save. */
+    const val MAX_PER_PAGE = 200
 
     /**
      * Where a touch at ([x], [y]) in a box of [boxW] x [boxH] falls on the page: a page of [fitW] x [fitH] at its size,
@@ -41,8 +43,14 @@ object PdfMarks {
         return if (kept.size <= MAX_POINTS) kept else List(MAX_POINTS) { kept[(it.toLong() * (kept.size - 1) / (MAX_POINTS - 1)).toInt()] }
     }
 
-    fun add(marks: List<PdfMark>, page: Int, points: List<PdfPoint>): List<PdfMark> =
-        if (points.isEmpty()) marks else marks + PdfMark(page, thin(points), WIDTH)
+    fun add(marks: List<PdfMark>, page: Int, points: List<PdfPoint>): List<PdfMark> {
+        if (points.isEmpty()) return marks
+        val all = marks + PdfMark(page, thin(points), WIDTH)
+        val extra = all.count { it.page == page } - MAX_PER_PAGE
+        if (extra <= 0) return all
+        var drop = extra
+        return all.filter { !(it.page == page && drop-- > 0) }
+    }
 
     /** The last stroke made on [page] goes. */
     fun undoLast(marks: List<PdfMark>, page: Int): List<PdfMark> {

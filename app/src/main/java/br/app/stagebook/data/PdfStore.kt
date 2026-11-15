@@ -20,7 +20,8 @@ import javax.inject.Singleton
 class PdfStore @Inject constructor(@ApplicationContext private val context: Context) {
     private val dir get() = File(context.filesDir, "pdfs").apply { mkdirs() }
 
-    fun file(name: String): File = File(dir, name)
+    /** The file of a PDF by its name in the library. A name that is not a plain file name never leaves this folder: it points at nothing. */
+    fun file(name: String): File = File(dir, safeName(name) ?: UNSAFE)
 
     /**
      * Copies the chosen PDF and checks it with [inspector]: [PdfAttach.Saved] with the generated name, or the reason it was
@@ -71,7 +72,7 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
     private fun newFile(songId: String, ext: String) =
         File(dir, "${songId.take(36)}-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(4)}.$ext")
 
-    fun remove(name: String) { if (name.isNotEmpty()) File(dir, name).delete() }
+    fun remove(name: String) { safeName(name)?.let { File(dir, it).delete() } }
 
     /** Deletes the files no song points to, and copies left half done, once older than [SWEEP_AGE_MS] (as [TrackStore.sweep]). */
     fun sweep(referenced: Set<String>, now: Long = System.currentTimeMillis()) {
@@ -90,6 +91,12 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         const val SWEEP_AGE_MS = 24L * 60 * 60 * 1000
         val MIME = arrayOf("application/pdf")
         private val MAGIC = "%PDF-".toByteArray(Charsets.US_ASCII)
+
+        /** A name that is a plain file name (what the app generates): no folders, no "..", no hidden file; else null. A name that comes from outside never gets past this. */
+        fun safeName(name: String): String? =
+            name.takeIf { it.isNotEmpty() && '/' !in it && '\\' !in it && ".." !in it && !it.startsWith('.') && it.none { c -> c.isISOControl() } }
+
+        private const val UNSAFE = "unsafe-name.none"
 
         fun looksLikePdf(head: ByteArray): Boolean = head.size >= MAGIC.size && MAGIC.indices.all { head[it] == MAGIC[it] }
 

@@ -71,7 +71,7 @@ class StageFollowWaitsTest {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, band, following, gate, androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) })
+                    FollowToStage(nav, band, following, gate)
                     NavHost(nav, startDestination = Stage(songId = "a")) {
                         composable<Home> { Text("home") }
                         composable<Stage> { entry ->

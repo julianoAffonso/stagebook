@@ -40,7 +40,12 @@ interface PdfPageCounter {
 
 class AndroidPdfPageCounter : PdfPageCounter {
     override fun pageCount(file: File): Int =
-        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { it.pageCount } }
+        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+            PdfRenderer(fd).use { r ->
+                // the first page opens too: a damaged page tree gives a page count and fails here, not later on the stage
+                r.pageCount.also { if (it > 0) r.openPage(0).close() }
+            }
+        }
 }
 
 /**

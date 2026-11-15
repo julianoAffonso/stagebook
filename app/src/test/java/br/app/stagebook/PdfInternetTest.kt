@@ -160,6 +160,15 @@ class PdfInternetTest {
         assertEquals("", got.pdfFile)
     }
 
+    @Test fun `a flood of chunks, more than a send can have, gives no PDF`() {
+        val repo = repo(); val c = cloud(repo)
+        val (sent, posted) = send(c, listOf(song(repo, 10_000)))
+        val plain = plainOf(sent.code, posted)
+        val flood = plain + List(70) { plain[3] }   // the 3rd message is a chunk
+        val got = (cloud(repo()).read(flood) as SetlistCloud.Received.Ok).songs.single()
+        assertEquals("", got.pdfFile)
+    }
+
     @Test fun `what a sender writes about files on this device is not believed`() {
         val repo = repo(); val c = cloud(repo)
         val song = SetlistCloud.SharedSong("Spoof", "Ana", "", "x", pdfFile = "../../databases/x", pdfProblem = "TOO_BIG", pdfName = "x.pdf")

@@ -70,6 +70,8 @@ class PdfStageTest {
         val pages = PdfPages(source)
         pages.bitmap(0, 200)
         pages.close()
+        // the file closes once any page being drawn is done: off the main thread, a moment later
+        kotlinx.coroutines.withTimeout(5_000) { while (!source.closed) kotlinx.coroutines.delay(10) }
         assertTrue(source.closed)
         assertEquals(0, pages.keptCount)
     }

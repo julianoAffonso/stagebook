@@ -4,7 +4,10 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -47,13 +50,19 @@ class AndroidPdfSource(file: File) : PdfSource {
 class PdfPages(private val source: PdfSource) {
     private val lock = Mutex()
     private val kept = LinkedHashMap<Pair<Int, Int>, Bitmap>()   // (page, width) → the page, oldest first
+    @Volatile private var closed = false
 
-    val pageCount: Int get() = source.pageCount
+    /** Read once, when it opened: asking a closed PDF for its pages would throw (a screen that still holds an old one). */
+    val pageCount: Int = source.pageCount
 
-    suspend fun size(page: Int): Pair<Int, Int> = lock.withLock { withContext(Dispatchers.IO) { source.pageSize(page) } }
+    suspend fun size(page: Int): Pair<Int, Int> = lock.withLock {
+        if (closed) throw CancellationException("the PDF was closed")
+        withContext(Dispatchers.IO) { source.pageSize(page) }
+    }
 
     /** The page drawn at [width] pixels, from the kept ones when it was drawn already. */
     suspend fun bitmap(page: Int, width: Int): Bitmap = lock.withLock {
+        if (closed) throw CancellationException("the PDF was closed")
         val key = page to width
         kept.remove(key)?.let { kept[key] = it; return@withLock it }   // seen again: the newest
         val drawn = withContext(Dispatchers.IO) { source.render(page, width) }
@@ -65,7 +74,14 @@ class PdfPages(private val source: PdfSource) {
     /** How many pages are kept now (for the tests). */
     val keptCount: Int get() = kept.size
 
-    fun close() { kept.clear(); source.close() }
+    /**
+     * The file is closed once a page being drawn (the renderer holds one at a time, off the main thread) is done: closing
+     * it under that page threw, and left the renderer open. Asking for a page after this is a cancellation, not a crash.
+     */
+    fun close() {
+        closed = true
+        CoroutineScope(Dispatchers.IO).launch { lock.withLock { kept.clear(); source.close() } }
+    }
 
     companion object {
         const val MAX_KEPT = 3

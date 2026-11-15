@@ -34,7 +34,9 @@ fun SetlistsPane(
     val inner = rememberNavController()
     LaunchedEffect(request) {
         request?.let {
-            inner.navigate(SetlistDetail(it.setId, it.share)) { launchSingleTop = true }
+            // from the list, so another setlist (or the same, on its share sheet) opens as a new entry with its own view model
+            inner.popBackStack<SetlistsList>(inclusive = false)
+            inner.navigate(SetlistDetail(it.setId, it.share))
             onRequestHandled()
         }
     }

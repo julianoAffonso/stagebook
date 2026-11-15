@@ -83,7 +83,7 @@ class FollowRealStageWindowTest {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, follower.openSong, follower.followingSong, gate, remember { androidx.compose.runtime.mutableStateOf(false) })
+                    FollowToStage(nav, follower.openSong, follower.followingSong, gate)
                     NavHost(nav, startDestination = Stage(songId = ids[0])) {
                         composable<Home> { androidx.compose.material3.Text("home") }
                         composable<Stage> { entry ->

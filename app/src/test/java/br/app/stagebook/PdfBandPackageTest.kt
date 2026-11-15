@@ -215,15 +215,15 @@ class PdfBandPackageTest {
 
     @Test fun `a package filled with PDFs to the limit still fits the line of 20 MB`() {
         val repo = repo(); val l = link(repo)
-        val a = songWithPdf(repo, "A", size = 8 * 1024 * 1024)
-        val rest = (BandContent.PDF_PACKAGE_BYTES - 8L * 1024 * 1024).toInt()
+        val a = songWithPdf(repo, "A", size = 4 * 1024 * 1024)
+        val rest = (BandContent.PDF_PACKAGE_BYTES - 4L * 1024 * 1024).toInt()
         val b = songWithPdf(repo, "B", size = rest)
         val plain = wire(l, repo, listOf(a, b))
         val encrypted = ShareCode.encrypt(ByteArray(32), plain)
         assertTrue("the line has ${encrypted.length} characters", encrypted.length <= BandProtocol.MAX_MESSAGE)
         assertEquals(2, l.withPdfBytes(listOf(a, b)).first.count { it.pdf.isNotEmpty() })
-        // 10.7 MB of PDFs in one package: the real number the screens can say
-        assertEquals(11_206_656L, BandContent.PDF_PACKAGE_BYTES)
+        // 6 MB of PDFs in one package: the number the screens say
+        assertEquals(6L * 1024 * 1024, BandContent.PDF_PACKAGE_BYTES)
     }
 
     @Test fun `the internet and the QR carry no PDF yet - the song goes as text`() {

@@ -267,6 +267,8 @@ class BandLink @Inject constructor(
     internal fun readAnswer(plain: ByteArray): List<SetlistCloud.SharedSong> =
         runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), plain.decodeToString()) }
             .getOrDefault(emptyList()).filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
+            // an answer carries no PDF and no name of a file here: what the other device says about files is never believed
+            .map { it.forWire() }
 
     /**
      * One answer per song. More than one device has the same song: the version with chords wins (in the lyrics only
@@ -360,7 +362,7 @@ class BandLink @Inject constructor(
     internal fun accept(fromId: String, fromName: String, plain: ByteArray): Boolean {
         val pkg = openPackage(plain) ?: return false
         // the PDFs are checked and saved here, before anything else sees the songs (only a member's package gets this far)
-        val songs = takePdfs(pkg.songs)
+        val songs = takePdfs(pkg.songs.take(br.app.stagebook.domain.BandContent.MAX_SONGS))   // a package of thousands of songs is not opened one by one
         val rest = showIntake?.invoke(fromId, fromName, pkg.text, songs) ?: songs
         // every song went straight in: nothing is left to review
         if (rest.isEmpty() && songs.isNotEmpty()) return true

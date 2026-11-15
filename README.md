@@ -39,7 +39,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   the same app version: the app warns who isn't.
 - **PDF songs:** attach a PDF to a song (or pick PDFs in the + menu, or open one with Stagebook): its pages show on stage,
   turned by the pedal, a tap or a swipe; zoom with two fingers, highlight with your finger, invert the colors for a dark
-  stage. PDFs go to the band on the same Wi-Fi (up to 8 MB each) and over the internet when they fit the 4 KB messages
+  stage. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet when they fit the 4 KB messages
   the free server takes (the send says why when they don't). PDFs are never read as text.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
   With a mixer, per-output routing, EQ and normalization.

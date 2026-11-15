@@ -56,10 +56,9 @@ class FollowWaitsInSettingsTest {
     private fun start(openSettings: Boolean = false, alone: Boolean = false) {
         compose.setContent {
             StagebookTheme {
-                val hold = remember { mutableStateOf(false) }
-                CompositionLocalProvider(LocalFollowGate provides gate, br.app.stagebook.ui.components.LocalFollowHold provides hold) {
+                CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, songs, following, gate, hold)
+                    FollowToStage(nav, songs, following, gate)
                     NavHost(nav, startDestination = Home) {
                         composable<Home> {
                             androidx.compose.foundation.layout.Column {

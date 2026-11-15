@@ -76,7 +76,7 @@ class FollowWaitsForMenuTest {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, songs, following, gate, menuOpen)
+                    FollowToStage(nav, songs, following, gate)
                     NavHost(nav, startDestination = Home) {
                         composable<Home> { home() }
                         composable<SongEditor> { Text("editor") }
@@ -172,14 +172,13 @@ class FollowWaitsForMenuTest {
     }
 
     @Test fun `the reasons by priority`() {
-        assertNull(followBlock(true, false, false, false, false))
-        assertEquals(FollowWait.SCREEN, followBlock(false, false, false, true, true))
-        assertEquals(FollowWait.SCREEN, followBlock(true, true, false, false, false))
-        assertEquals(FollowWait.MENU, followBlock(true, false, false, true, true))
-        assertEquals(FollowWait.KEYBOARD, followBlock(true, false, false, false, true))
+        assertNull(followBlock(true, false, false, false))
+        assertEquals(FollowWait.SCREEN, followBlock(false, false, true, true))
+        assertEquals(FollowWait.MENU, followBlock(true, false, true, true))
+        assertEquals(FollowWait.KEYBOARD, followBlock(true, false, false, true))
         // the stage follows, unless a menu or window of its own is open (the keyboard never holds it)
-        assertNull(followBlock(true, false, true, false, true))
-        assertEquals(FollowWait.MENU, followBlock(true, false, true, true, false))
+        assertNull(followBlock(true, true, false, true))
+        assertEquals(FollowWait.MENU, followBlock(true, true, true, false))
     }
 
     @Test fun `a waiting song with no time limit stays, and opens as where the band is when released`() {

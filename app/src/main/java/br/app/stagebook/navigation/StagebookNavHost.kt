@@ -75,18 +75,13 @@ fun StagebookNavHost(
     openedPdfs: Flow<android.net.Uri> = emptyFlow(),   // PDFs opened with the app or shared to it: each comes in as a song
 ) {
     val nav = rememberNavController()
-    // at launch the app opens on the stage that was open last, over Home (back goes to the lists); not when it comes back
-    // from an update (that has its own place to go to) and only once per start, a turned screen doesn't open it again
+    // at launch the app opens on the stage that was open last, in place of the empty screen (the stage is the root: back
+    // from it leaves the app). Coming back from an update it goes on to the place it was (below), over that stage. Only
+    // once per start: a turned screen doesn't open it again
     val start: br.app.stagebook.ui.home.StartViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
     val libraryRead by start.loaded.collectAsStateWithLifecycle()
     val pdfContext = androidx.compose.ui.platform.LocalContext.current
     var opened by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
-    LaunchedEffect(libraryRead) {
-        if (!libraryRead || opened) return@LaunchedEffect
-        opened = true
-        // the stage is the screen the app lives on: in place of the empty one, so back from it leaves the app
-        if (resume == null) start.route()?.let { route -> nav.navigate(route) { popUpTo<Home> { inclusive = true } } }
-    }
     // a receive link: the receive screen with its code, in place of another receive screen already open. On the stage
     // it waits and opens on leaving; a code already open there is left alone (it would discard the review)
     val pendingLink = remember { br.app.stagebook.domain.PendingLink() }
@@ -134,9 +129,8 @@ fun StagebookNavHost(
     }
     // the leader changed songs: the follower's stage opens on it, or waits while the person is mid-action (FollowPull.kt)
     // the setlist screen busy (renaming, sharing, deleting, selecting, dragging): the song waits for it
-    val followHold = remember { androidx.compose.runtime.mutableStateOf(false) }
     val followGate = remember { br.app.stagebook.ui.components.FollowGate() }
-    FollowToStage(nav, followSongs, followingSong, followGate, followHold)
+    FollowToStage(nav, followSongs, followingSong, followGate)
     val appContext = androidx.compose.ui.platform.LocalContext.current
     val context = appContext
     // asks the system only when the install is at hand: the button shows there and nowhere else in this window
@@ -189,17 +183,22 @@ fun StagebookNavHost(
         nav.addOnDestinationChangedListener(listener)
         onDispose { nav.removeOnDestinationChangedListener(listener) }
     }
-    // just updated: back where it was (Settings → About, or the screen the update window was over)
-    LaunchedEffect(resume) {
+    // the start, once the library is read: the stage that was open last; then, just updated, back where it was (Settings →
+    // About, or the screen the update window was over), over that stage and not over the empty screen
+    LaunchedEffect(libraryRead) {
+        if (!libraryRead || opened) return@LaunchedEffect
+        opened = true
+        start.route()?.let { route -> nav.navigate(route) { popUpTo<Home> { inclusive = true } } }
         val where = resume ?: return@LaunchedEffect
         if (where.startsWith(br.app.stagebook.domain.ResumePoint.SETTINGS)) {
             val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.fromSaved(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
             if (section != null) openSettings(section)
         } else if (where != br.app.stagebook.data.ResumeAfterUpdate.HOME && !where.contains("Home")) {
-            runCatching { nav.navigate(where) }
+            // a stage it was on takes the place of the one just opened (usually the same), and stays the root
+            runCatching { nav.navigate(where) { if (where.contains("Stage")) popUpTo(nav.graph.id) { inclusive = true } } }
         }
     }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowHold provides followHold, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     BandStripLayout(screens = {
     LibraryDrawerHost(nav) {
     NavHost(

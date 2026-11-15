@@ -12,7 +12,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import br.app.stagebook.ui.drawer.SetlistRequest
@@ -51,7 +53,11 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
     val pinned by start.pinned.collectAsStateWithLifecycle()
     val width = LocalConfiguration.current.screenWidthDp
     val wide = width >= Sizes.pinBreakpoint.value
-    val fixed = pinned && wide
+    // pinned beside the stage only where there is a stage to be beside: the editor, the importer and Settings are whole
+    // screens (a tap in the list there would take the stage in place of what was being typed)
+    val destination by nav.currentBackStackEntryAsState()
+    val besideStage = destination?.destination?.let { it.hasRoute<Stage>() || it.hasRoute<Home>() } != false
+    val fixed = pinned && wide && besideStage
     // something outside asks the drawer to show a setlist (the stage's menu, a setlist just received or imported)
     var request by remember { mutableStateOf<SetlistRequest?>(null) }
     val drawer = remember(state, fixed) {
@@ -60,13 +66,17 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
             openSetlist = { id, share -> request = SetlistRequest(id, share); scope.launch { state.open() } },
         )
     }
-    BackHandler(enabled = state.isOpen) { drawer.close() }
-    // the leader's song waits while the drawer is open over the stage: a setlist is being looked at, or songs picked, and
-    // the stage behind it must not be replaced under the person's hands
-    br.app.stagebook.ui.components.FollowHoldWhile(state.isOpen)   // pinned, the stage is in view and goes on following
+    // pinned, the sheet is not a sheet any more: it closes by itself (a left-open state held the pedal and Back for good)
+    LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
+    val open = state.isOpen && !fixed
+    BackHandler(enabled = open) { drawer.close() }
+    // the leader's song waits while the drawer is open over the stage (a setlist is being looked at, or songs picked: the
+    // stage behind it must not be replaced under the person's hands): a window of ours is open, as for a menu. Pinned, the
+    // stage is in view and goes on following
+    br.app.stagebook.ui.components.FollowBusyWhile(open)
     // and the pedal does not turn the stage behind it (composed only while it is open: the last handler registered gets the press)
     val pedalKeys by start.pedalKeys.collectAsStateWithLifecycle()
-    if (state.isOpen) br.app.stagebook.ui.PedalHandler { press -> br.app.stagebook.domain.pedalTakenByDrawer(press, pedalKeys) }
+    if (open) br.app.stagebook.ui.PedalHandler { press -> br.app.stagebook.domain.pedalTakenByDrawer(press, pedalKeys) }
 
     // a tap only counts while the screen under it is in front (a double tap would open two screens)
     fun go(block: () -> Unit) {
@@ -82,8 +92,9 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
             launchSingleTop = true
         }
     }
-    val library: @Composable () -> Unit = {
-        HomeScreen(
+    // what the tabs had (the tab, the search, where the list was) survives the drawer leaving the composition while closed
+    val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+    val library: @Composable () -> Unit = { holder.SaveableStateProvider("library") { HomeScreen(
             onOpenSong = { openStage(Stage(songId = it, fromList = true)) },
             onEditSong = { go { nav.navigate(SongEditor(songId = it)) } },
             onImport = { query, kind -> go { nav.navigate(Importer(query, kind = kind)) } },
@@ -96,7 +107,7 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
             pinned = fixed,
             onPin = if (wide) start::togglePin else null,
             onOpenSettings = { section, alone -> go { nav.navigate(Settings(section?.name.orEmpty(), alone)) { launchSingleTop = true } } },
-        )
+        ) }
     }
     CompositionLocalProvider(LocalDrawer provides drawer) {
         if (fixed) {
@@ -110,7 +121,13 @@ internal fun LibraryDrawerHost(nav: NavController, content: @Composable () -> Un
                 drawerState = state,
                 // opened by the button only; once open, a drag or a tap outside may close it
                 gesturesEnabled = state.isOpen,
-                drawerContent = { Surface(Modifier.width(sheet).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) { library() } },
+                // composed only while it is open or moving: closed, it holds no list, no collectors and no network callbacks
+                // (the stage is what runs in a show, and the Fire is the ruler)
+                drawerContent = {
+                    Surface(Modifier.width(sheet).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                        if (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed) library()
+                    }
+                },
                 content = content,
             )
         }

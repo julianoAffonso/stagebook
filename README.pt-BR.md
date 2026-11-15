@@ -39,7 +39,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   da mesma versão do app: o app avisa quem não está.
 - **Músicas em PDF:** anexe um PDF a uma música (ou escolha PDFs no menu +, ou abra um com o Stagebook): as páginas
   aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos, marque com o dedo e inverta
-  as cores para um palco escuro. Os PDFs vão para a banda no mesmo Wi-Fi (até 8 MB cada) e pela internet quando cabem
+  as cores para um palco escuro. Os PDFs vão para a banda no mesmo Wi-Fi (até 6 MB por envio) e pela internet quando cabem
   nas mensagens de 4 KB que o servidor gratuito aceita (o envio diz o motivo quando não cabem). PDF nunca é lido como
   texto.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
