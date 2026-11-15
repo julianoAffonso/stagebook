@@ -63,6 +63,8 @@ android {
         unitTests.isIncludeAndroidResources = true
         // captures folder (T39): -PshotsLang=en and -PshotsDir=<folder> reach the screenshot tests
         unitTests.all { test ->
+            // Robolectric with Compose dialogs and sheets outgrew the 512 MB default and died with OutOfMemoryError
+            test.maxHeapSize = "2g"
             test.systemProperty("shots.lang", project.findProperty("shotsLang")?.toString().orEmpty())
             test.systemProperty("shots.dir", project.findProperty("shotsDir")?.toString().orEmpty())
         }

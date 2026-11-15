@@ -100,6 +100,9 @@ class SongsViewModel @Inject constructor(
     val bandResult = share.bandResult
 
     /** Sends the chosen songs over the internet (no setlist); the code shows in a dialog. */
+    /** The sizes of the PDFs these songs carry (the internet send checks they fit). */
+    fun pdfSizesOf(ids: List<String>): List<Long> = setlistCloud.pdfSizes(ids)
+
     fun shareSongs(ids: List<String>) { if (ids.isNotEmpty()) share.sendCode("") { setlistCloud.sendSongs(ids) } }
 
     fun dismissCloud() = share.dismissCloud()

@@ -3,9 +3,10 @@ package br.app.stagebook
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import br.app.stagebook.ui.share.ImportButton
+import br.app.stagebook.ui.share.AddMenuButton
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Rule
 import org.junit.Test
@@ -20,8 +21,8 @@ class ImportSyncOfflineTest {
     @get:Rule val compose = createComposeRule()
 
     private fun open(localNet: Boolean) {
-        compose.setContent { StagebookTheme { ImportButton(false, {}, {}, onSync = {}, localNet = localNet) } }
-        compose.onNodeWithText("Importar").performClick()
+        compose.setContent { StagebookTheme { AddMenuButton(false, {}, {}, onSync = {}, localNet = localNet) } }
+        compose.onNodeWithContentDescription("Nova e importar").performClick()
     }
 
     @Test fun `without Wi-Fi the sync item is disabled with the reason`() {

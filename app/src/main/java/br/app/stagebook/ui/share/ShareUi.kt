@@ -49,49 +49,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.R
 import br.app.stagebook.domain.ShareCode
-import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
-import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.Spacing
 
 // Share (setlist or loose songs): the sheet with the ways to send and the internet code dialog.
-
-/**
- * Import (on the Songs and Setlists tabs), a single button with a menu: from the sites ([onSites], only on the Songs
- * tab and only with internet), scan the QR (always) or type the code (only with internet). Whatever arrives by QR or
- * code (setlist or loose songs) opens the right review, whatever the tab.
- */
-@Composable
-fun ImportButton(
-    online: Boolean,
-    onScan: () -> Unit,
-    onCode: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    onSites: (() -> Unit)? = null,
-    received: Int = 0,               // what the band sent and hasn't been reviewed
-    onReceived: () -> Unit = {},
-    onSync: (() -> Unit)? = null,    // "Sync with the band" (only with a band member)
-    internetOn: Boolean = true,      // essential mode (T19): no "Type the 3 words"
-    localNet: Boolean = true,        // no Wi-Fi: the band can't be reached, "Sync with the band" says so (B-26)
-) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    var typing by rememberSaveable { mutableStateOf(false) }
-    Box(modifier) {
-        ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
-        br.app.stagebook.ui.components.FollowBusyWhile(open)
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
-            ImportMenuItems(online, onScan, onSites, received, onReceived, onSync, internetOn, localNet, close = { open = false }, onType = { typing = true })
-        }
-    }
-    if (typing) {
-        TextInputDialog(
-            stringResource(R.string.sets_type_code), "", stringResource(R.string.sets_code_hint),
-            onConfirm = { typing = false; if (it.isNotBlank()) onCode(it.trim()) },
-            onDismiss = { typing = false },
-        )
-    }
-}
 
 /** The ways to bring songs in, as menu items: sync with the band, what the band sent, the sites, the QR and the 3 words. */
 @Composable
@@ -147,6 +109,7 @@ fun AddMenuButton(
     onCode: (String) -> Unit,
     modifier: Modifier = Modifier,
     onNew: (() -> Unit)? = null,
+    @androidx.annotation.StringRes newLabel: Int = R.string.songs_new,   // what [onNew] makes: a song, or a setlist
     onSites: (() -> Unit)? = null,
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -163,7 +126,7 @@ fun AddMenuButton(
         br.app.stagebook.ui.components.FollowBusyWhile(open)
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
             onNew?.let { new ->
-                DropdownMenuItem(text = { Text(stringResource(R.string.songs_new)) }, onClick = { open = false; new() }, leadingIcon = { Icon(AppIcons.Add, null) })
+                DropdownMenuItem(text = { Text(stringResource(newLabel)) }, onClick = { open = false; new() }, leadingIcon = { Icon(AppIcons.Add, null) })
             }
             ImportMenuItems(online, onScan, onSites, received, onReceived, onSync, internetOn, localNet, close = { open = false }, onType = { typing = true })
         }

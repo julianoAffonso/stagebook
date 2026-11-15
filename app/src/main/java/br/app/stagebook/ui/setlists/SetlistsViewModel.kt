@@ -101,6 +101,10 @@ class SetlistsViewModel @Inject constructor(
     /** How many different songs the chosen setlists have (the same song in two counts once). */
     fun songsIn(ids: List<String>): Int = ids.flatMap { repository.library.value.setlist(it)?.items.orEmpty() }.distinct().size
 
+    /** The sizes of the PDFs the chosen setlists carry, one per song that has one (the internet send checks they fit). */
+    fun pdfSizesIn(ids: List<String>): List<Long> =
+        setlistCloud.pdfSizes(ids.flatMap { repository.library.value.setlist(it)?.items.orEmpty() }.distinct())
+
     /** One code with all the chosen setlists (and their songs, if [withSongs]). */
     fun shareInternet(ids: List<String>, withSongs: Boolean) {
         val names = ids.mapNotNull { repository.library.value.setlist(it)?.name }

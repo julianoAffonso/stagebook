@@ -113,6 +113,7 @@ fun SongsRoute(
         tagsOf = viewModel::tagsOf,
         onDeleteMany = viewModel::deleteMany,
         onAddToSetlist = viewModel::addToSetlist,
+        pdfSizesOf = viewModel::pdfSizesOf,
     )
 }
 
@@ -150,6 +151,7 @@ fun SongsScreen(
     tagsOf: (ids: List<String>) -> List<List<String>> = { ids -> uiState.songs.filter { it.id in ids }.map { it.tags } },
     onDeleteMany: (List<String>) -> Unit = {},
     onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
+    pdfSizesOf: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen songs would carry: the internet says if they fit
     indexPinned: Boolean = false,   // screenshots and tests: the A to Z index shows without a scroll
 ) {
     var deletingMany by remember { mutableStateOf(false) }
@@ -294,6 +296,7 @@ fun SongsScreen(
     if (sharing) {
         ShareSheet(
             songs = selected.size, online = online, onQr = null, internetOn = internetOn,
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = selected.size, setlists = false, pdfSizes = pdfSizesOf(selected)),
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,

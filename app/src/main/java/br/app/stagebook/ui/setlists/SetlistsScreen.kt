@@ -2,9 +2,6 @@ package br.app.stagebook.ui.setlists
 
 import androidx.compose.material3.Text
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
-import br.app.stagebook.ui.components.ButtonTone
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,7 +35,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
-import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
@@ -49,8 +45,6 @@ import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.SongListItem
-import br.app.stagebook.ui.share.ImportButton
-import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
 
@@ -111,6 +105,7 @@ fun SetlistsRoute(
         onSendBand = viewModel::sendBand,
         onBandSearch = viewModel::bandSearch,
         songsIn = viewModel::songsIn,
+        pdfSizesIn = viewModel::pdfSizesIn,
         onSortAbc = viewModel::sortAbc,
     )
     br.app.stagebook.ui.share.BandResultMessage(viewModel.bandResult)
@@ -136,6 +131,7 @@ fun SetlistsScreen(
     onSendBand: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     songsIn: (List<String>) -> Int = { 0 },
+    pdfSizesIn: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen setlists would carry: the internet says if they fit
     onScan: () -> Unit = {},
     online: Boolean = false,
     internetOn: Boolean = true,
@@ -159,7 +155,10 @@ fun SetlistsScreen(
     var sharing by rememberSaveable { mutableStateOf(false) }
     var renamingId by rememberSaveable { mutableStateOf<String?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
-    val selecting = selection.active
+    // the boxes also come on by the checklist button at the bottom, with nothing chosen yet (as in the song list)
+    var pickMode by rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = pickMode && !selection.active) { pickMode = false }
+    val selecting = selection.active || pickMode
     val toggle = selection::toggle
     // full width beside the rail, like Settings (user, 03/11: centred at 840 dp left a gap after the rail)
     Box(modifier.fillMaxSize()) {
@@ -167,7 +166,7 @@ fun SetlistsScreen(
             if (selecting) {
                 br.app.stagebook.ui.components.SelectionTopBar(
                     count = selected.size,
-                    onClose = { selected = emptyList() },
+                    onClose = { selected = emptyList(); pickMode = false },
                     actions = listOf(
                         br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.share_title), AppIcons.Share) { sharing = true },
                         br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.action_delete), AppIcons.Delete) { deletingMany = true },
@@ -185,11 +184,6 @@ fun SetlistsScreen(
             ) {
                 if (conduct.shown) ConductArmButton(conduct.armed, onConduct)
                 br.app.stagebook.ui.components.HomeStatusIcons()
-            }
-            // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
-            if (!selecting) Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
-                ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
             // the search and the order beside it, as Songs has them (user, 04/11); order only when there's something to order
             br.app.stagebook.ui.components.SearchWithFilter(
@@ -213,7 +207,7 @@ fun SetlistsScreen(
             androidx.compose.runtime.LaunchedEffect(firstId) { if (topBefore) listState.scrollToItem(0) }
             br.app.stagebook.ui.components.ScrollToTopOn("${uiState.abc}|${uiState.query}", listState)
             val locale: java.util.Locale = androidx.compose.ui.platform.LocalConfiguration.current.locales.get(0)
-            Crossfade(targetState = uiState.loading, label = "sets") { loading ->
+            Crossfade(targetState = uiState.loading, label = "sets", modifier = Modifier.weight(1f)) { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.total == 0 -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
@@ -251,6 +245,20 @@ fun SetlistsScreen(
                         }
                         }
                     }
+                }
+            }
+            // at the bottom, as SongbookPro: the + (a new setlist, then the ways to bring one in) and the checklist for the boxes
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                br.app.stagebook.ui.share.AddMenuButton(
+                    online, onScan, onReceiveCode, onNew = { creating = true }, newLabel = R.string.sets_new, received = received,
+                    onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet,
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
+                    Icon(
+                        AppIcons.Checklist, stringResource(R.string.select_sets),
+                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         }
@@ -296,7 +304,7 @@ fun SetlistsScreen(
             band = band,
             onBand = { withSongs -> sharing = false; onSendBand(selected, withSongs); selected = emptyList() },
             onSearch = onBandSearch,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true),
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true, pdfSizes = pdfSizesIn(selected)),
         )
     }
     cloud?.let { br.app.stagebook.ui.share.CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
