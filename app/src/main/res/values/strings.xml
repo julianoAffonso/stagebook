@@ -1099,6 +1099,8 @@
         <item quantity="other">%d more setlists came along and are waiting in Received from the band.</item>
     </plurals>
     <string name="share_internet_limit">Too much to send over the internet at once. Send it in more than one go.</string>
+    <string name="share_internet_pdf_limit">The PDFs need %1$d messages of 4 KB, and the internet server takes %2$d per send (%3$d are left after the songs). The songs go without the PDF. To send it, use the band on the same network.</string>
+    <string name="share_internet_pdf_fits">The PDFs go along: %1$d of the %2$d messages the server takes.</string>
     <string name="share_internet_limit_titles">Too much to send over the internet at once. Turn off “Bring the songs” or send fewer setlists.</string>
     <string name="share_band_limit">Too many setlists at once. Send them in more than one go.</string>
     <string name="settings_lyrics_card">Lyrics</string>

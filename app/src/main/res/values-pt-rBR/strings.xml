@@ -1140,6 +1140,8 @@
         <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
     </plurals>
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
+    <string name="share_internet_pdf_limit">Os PDFs precisam de %1$d mensagens de 4 KB, e o servidor da internet aceita %2$d por envio (sobram %3$d depois das músicas). As músicas vão sem o PDF. Para enviá-lo, use a banda na mesma rede.</string>
+    <string name="share_internet_pdf_fits">Os PDFs vão junto: %1$d das %2$d mensagens que o servidor aceita.</string>
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
     <string name="share_band_limit">Muitos setlists de uma vez. Mande em mais de uma vez.</string>
     <string name="settings_lyrics_card">Letra</string>

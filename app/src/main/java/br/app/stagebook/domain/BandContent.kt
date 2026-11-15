@@ -30,8 +30,28 @@ object BandContent {
      */
     const val PDF_PACKAGE_BYTES = (BandProtocol.MAX_MESSAGE - 1024 * 1024) / 16 * 9L
 
-    /** Does a send by code fit? [lists]: setlists (loose songs are one list); [songs]: songs carried along. */
-    fun internetFits(lists: Int, songs: Int): Boolean = 1 + lists + songs <= MAX_INTERNET_MESSAGES && songs <= MAX_SONGS
+    /**
+     * The PDF's bytes in one internet message. A message is 4,000 characters of encrypted base64 (the server takes 4 KB):
+     * that is at most 2,972 bytes of plain text, and a chunk of the PDF written in base64 and deflated takes about its
+     * own size plus ~100 bytes of framing. 2,400 leaves room for that (checked with real encryption in the tests).
+     */
+    const val INTERNET_PDF_CHUNK = 2_400
+
+    /** The messages a PDF of [bytes] needs over the internet: one per [INTERNET_PDF_CHUNK]. */
+    fun internetPdfMessages(bytes: Long): Int = ((bytes + INTERNET_PDF_CHUNK - 1) / INTERNET_PDF_CHUNK).toInt()
+
+    /** The messages all the PDFs in [sizes] need (each PDF has its own chunks). */
+    fun internetPdfMessages(sizes: List<Long>): Int = sizes.sumOf { internetPdfMessages(it) }
+
+    /** The messages a send by code needs: the sender's card, the lists, each song and each PDF's chunks. */
+    fun internetMessages(lists: Int, songs: Int, pdfSizes: List<Long> = emptyList()): Int = 1 + lists + songs + internetPdfMessages(pdfSizes)
+
+    /** Messages left for PDFs after the card, the lists and the songs (what the screen says the server still accepts). */
+    fun internetMessagesFree(lists: Int, songs: Int): Int = (MAX_INTERNET_MESSAGES - 1 - lists - songs).coerceAtLeast(0)
+
+    /** Does a send by code fit? [lists]: setlists (loose songs are one list); [songs]: songs carried along; [pdfSizes]: the PDFs going too. */
+    fun internetFits(lists: Int, songs: Int, pdfSizes: List<Long> = emptyList()): Boolean =
+        internetMessages(lists, songs, pdfSizes) <= MAX_INTERNET_MESSAGES && songs <= MAX_SONGS
 
     /** Does a send to the band on the network fit? */
     fun bandFits(sets: Int): Boolean = sets <= MAX_BAND_SETS
