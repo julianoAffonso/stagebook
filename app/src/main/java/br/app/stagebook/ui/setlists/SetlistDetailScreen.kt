@@ -106,7 +106,10 @@ fun SetlistDetailRoute(
     val cloud by viewModel.cloud.collectAsStateWithLifecycle()
     val codeActions = rememberCodeActions()
     val bandOnline by viewModel.bandOnline.collectAsStateWithLifecycle()
-    BandResultMessage(viewModel.bandResult)
+    // opened only to share: after a band send the result is shown and then the screen goes back. Leaving at the tap would
+    // clear the view model, which is what sends, before it ended
+    val onlyShare = rememberSaveable { openShare }
+    BandResultMessage(viewModel.bandResult, onShown = { if (onlyShare) onBack() })
     SetlistDetailScreen(
         uiState = uiState,
         qr = qr,
@@ -167,6 +170,10 @@ fun SetlistDetailScreen(
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
     var sharing by rememberSaveable { mutableStateOf(openShare) }   // the "Share" sheet open
+    // opened only to share (the list's or the stage's menu): when the sharing is over the screen goes back to where it came
+    // from instead of staying in the setlist's edit
+    val onlyShare = rememberSaveable { openShare }
+    val doneSharing = { if (onlyShare) onBack() }
     var deleting by rememberSaveable { mutableStateOf(false) }
     val message = br.app.stagebook.ui.components.LocalAppMessage.current
     // holding a song selects it (Google's pattern, as in the song list): the top bar removes them from the setlist
@@ -348,7 +355,7 @@ fun SetlistDetailScreen(
             { removingMany = false },
         )
     }
-    if (qr != null) QrDialog(qr, onHideQr)
+    if (qr != null) QrDialog(qr, { onHideQr(); doneSharing() })
     if (sharing) {
         ShareSheet(
             songs = uiState.items.count { !it.missing },
@@ -356,13 +363,13 @@ fun SetlistDetailScreen(
             internetOn = internetOn,
             onQr = { sharing = false; onShowQr() },
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
-            onDismiss = { sharing = false },
+            onDismiss = { sharing = false; doneSharing() },
             band = band,
             onBand = { withSongs -> sharing = false; onSendBand(withSongs) },
             onSearch = onBandSearch,
         )
     }
-    cloud?.let { CloudDialog(it, onDismissCloud, onShareCode, onCopyCode) }
+    cloud?.let { CloudDialog(it, { onDismissCloud(); doneSharing() }, onShareCode, onCopyCode) }
 }
 
 /** Songs, Break and Share side by side (the stage opens by tapping a song in the list). */

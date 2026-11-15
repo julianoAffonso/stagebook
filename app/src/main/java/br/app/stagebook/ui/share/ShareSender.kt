@@ -97,7 +97,7 @@ class ShareSender(
     /** Sends [pkg] to everyone in the band now: nearby ones (Wi-Fi) right away, the others in each pair's inbox. */
     fun sendBand(pkg: () -> Pair<ByteArray, List<SetlistCloud.SharedSong>>?) {
         scope.launch {
-            val (list, songs) = pkg() ?: return@launch
+            val (list, songs) = pkg() ?: return@launch bandSent.send(0)   // nothing to send is also an answer
             val lan = bandLink.send(list, songs)
             val net = if (connectivity.isOnline()) bandInternet.sendToBand(list, songs, lan) else 0
             bandSent.send(lan.size + net)

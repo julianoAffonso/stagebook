@@ -189,6 +189,23 @@ class SetlistShowScreenTest {
         compose.onNodeWithText("QR sem internet").assertIsDisplayed()
     }
 
+    @Test fun `opened only to share, closing the sheet leaves the setlist's edit - and opened by the edit it stays`() {
+        screen(openShare = true)
+        compose.onNodeWithText("QR sem internet").assertIsDisplayed()
+        androidx.test.espresso.Espresso.pressBack()
+        compose.waitForIdle()
+        assertEquals(1, left)
+    }
+
+    @Test fun `closing the sheet opened from the edit's own Share button stays in the edit`() {
+        screen()
+        compose.onNodeWithText("Compartilhar").performClick()
+        compose.waitForIdle()
+        androidx.test.espresso.Espresso.pressBack()
+        compose.waitForIdle()
+        assertEquals(0, left)
+    }
+
     @Test fun `without it the Share sheet waits for the button`() {
         screen()
         compose.onNodeWithText("QR sem internet").assertDoesNotExist()
