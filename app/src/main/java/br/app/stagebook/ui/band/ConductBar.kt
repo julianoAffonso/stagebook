@@ -376,6 +376,7 @@ fun ConductBar(
                 is ConductUi.Conducting -> cutLine(R.string.conduct_conducting, ui.set)
                 is ConductUi.Following -> when {
                     waits && ui.breakSince != null -> cutLine(R.string.conduct_went_break, ui.from)
+                    waiting == br.app.stagebook.domain.FollowWait.OTHER_SONG -> cutLine(R.string.conduct_leading, ui.song, ui.from)
                     waits -> cutLine(R.string.conduct_went_to, ui.song, ui.from)
                     else -> cutLine(if (ui.gone) R.string.conduct_gone else R.string.conduct_following, ui.from)
                 }
@@ -387,6 +388,7 @@ fun ConductBar(
                 waits -> CutText(cut = stringResource(when (waiting) {
                     br.app.stagebook.domain.FollowWait.MENU -> R.string.conduct_wait_menu
                     br.app.stagebook.domain.FollowWait.KEYBOARD -> R.string.conduct_wait_keyboard
+                    br.app.stagebook.domain.FollowWait.OTHER_SONG -> R.string.conduct_wait_other
                     else -> R.string.conduct_wait_screen
                 }))                // the leader's break, for a follower on any screen: its time and what comes next (or that the next
                 // song isn't here), in place of the song. The time is never cut

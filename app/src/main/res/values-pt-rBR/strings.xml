@@ -216,6 +216,8 @@
     <string name="conduct_wait_menu">Abre quando você fechar o menu</string>
     <string name="conduct_wait_keyboard">Abre quando você fechar o teclado</string>
     <string name="conduct_wait_screen">Abre quando você terminar aqui</string>
+    <string name="conduct_leading">%1$s está conduzindo “%2$s”</string>
+    <string name="conduct_wait_other">Você está em outra música</string>
     <string name="conduct_left">%1$s está conduzindo</string>
     <string name="conduct_follow">Acompanhar</string>
     <string name="conduct_lacks_title">O que falta</string>
