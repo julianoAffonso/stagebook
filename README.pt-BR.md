@@ -131,7 +131,7 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 Mesmo tocando uma faixa, o Stagebook usa menos de 4% do processador inteiro (o pior caso medido, 31,3% de um núcleo, é 3,9% de oito). O modo essencial quase não muda esses
 números: o ganho dele é a tela mais simples.
 
-¹ No TCL o Android mantém seis dos oito núcleos em frequência baixa mesmo com bateria boa (71% e 70% na medição), então o uso bruto fica inflado (19,5% e 10,0%). Estes dois números contam só os dois núcleos disponíveis, ponderados pela frequência, como um núcleo na velocidade máxima. Com o player ligado e uma interface conectada, mas nada tocando, o motor mantém o fluxo USB vivo com silêncio e gasta cerca de 19% de um núcleo no OnePlus.
+¹ No TCL o Android mantém seis dos oito núcleos em frequência baixa mesmo com bateria boa (71% e 70% na medição), então o uso bruto fica inflado (19,5% e 10,0%). Estes dois números contam só os dois núcleos disponíveis, ponderados pela frequência, como um núcleo na velocidade máxima.
 
 ## Usar com assistentes de IA (MCP)
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
