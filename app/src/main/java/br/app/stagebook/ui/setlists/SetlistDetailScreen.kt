@@ -229,6 +229,16 @@ fun SetlistDetailScreen(
     // something differs from when editing began (a screen that opened already editing has nothing to compare: it counts as changed)
     val changed = before?.let { it != (items.map { i -> i.songId } to uiState.breaks) } ?: true
     val changedNow by rememberUpdatedState(changed)
+    // a setlist that opens empty (just created) opens ready to take songs: its empty screen says to tap the +, which only the
+    // edit shows (help review, 16/11: it opened looking, with a hint that pointed at nothing on screen). Once per opening
+    var openedOnce by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiState.loading) {
+        if (uiState.loading || openedOnce) return@LaunchedEffect
+        openedOnce = true
+        if (!editing && uiState.items.isEmpty() && uiState.breaks.isEmpty()) {
+            beforeIds = ArrayList(); beforeBreaks = ArrayList(); externalAtStart = uiState.external; editing = true
+        }
+    }
     val marks = remember(rows) { rowMarks(rows) }
     val breakCount = rows.size - items.size
     val dragStart = remember { DragStart() }
