@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -351,6 +352,21 @@ class PdfEditorTest {
         compose.waitForIdle()
         compose.onAllNodesWithText("Todas as páginas").assertCountEquals(0)
         compose.onAllNodesWithText("1 / 1").assertCountEquals(0)
+    }
+
+    @Test fun `the floppy is off on a saved song with nothing changed, lit with a change, and always on for a new one`() {
+        screen(saved, EditorPdf("a.pdf", pages = 2, bytes = 1_000))   // saved, nothing typed: the PDF's own windows saved theirs already
+        compose.onNodeWithContentDescription("Salvar").assertIsNotEnabled()
+    }
+
+    @Test fun `a saved song with something typed lights the floppy`() {
+        screen(saved.copy(unsaved = true), EditorPdf("a.pdf", pages = 2, bytes = 1_000))
+        compose.onNodeWithContentDescription("Salvar").assertIsEnabled()
+    }
+
+    @Test fun `a new song has the floppy on`() {
+        screen(saved.copy(mode = EditorMode.NEW), EditorPdf("a.pdf", pages = 2, bytes = 1_000))
+        compose.onNodeWithContentDescription("Salvar").assertIsEnabled()
     }
 
     @Test fun `a song without a PDF keeps the lyrics field and has no card`() {

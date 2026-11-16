@@ -346,7 +346,13 @@ fun SongEditorScreen(
                 val headerActions: @Composable RowScope.() -> Unit = {
                     // tablets have the room on this line; on a phone it goes on the line below
                     if (wide && position != null) EditorSteps(position, step)
-                    TipIcon(stringResource(R.string.action_save), AppIcons.Save, { if (uiState.mode == EditorMode.IMPORTED_UPDATE) replacing = true else onSave() }, tint = MaterialTheme.colorScheme.primary)
+                    // the floppy lights only with something to save: a saved song's PDF, track, crop and colours were saved in their own
+                    // windows already (user, 15/11); a new or imported song has all of it still to save
+                    val canSave = uiState.mode != EditorMode.EDIT || uiState.unsaved
+                    TipIcon(
+                        stringResource(R.string.action_save), AppIcons.Save, { if (uiState.mode == EditorMode.IMPORTED_UPDATE) replacing = true else onSave() },
+                        tint = if (canSave) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f), enabled = canSave,
+                    )
                     // delete straight in the bar, in red, after save (user, 01/11: no ⋮ for a single option); only for a saved song
                     if (canDelete) TipIcon(stringResource(R.string.editor_delete), AppIcons.Delete, { deleting = true }, tint = MaterialTheme.colorScheme.error)
                 }
