@@ -30,7 +30,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 - **Setlists:** build the show inside the menu and drag to reorder; each setlist has a **date**, and the list is grouped by
   month (or A to Z). Tap a setlist to open its songs, and a song to play it; the ⋮ on the card plays, shares, edits the
   name and date, or deletes it. Put a **break** between songs: on
-  stage it shows a timer, and the show time starts again after it. The setlist panel on stage shows what was played,
+  stage it shows a timer, and the show time starts again after it. The setlist open in the menu shows what was played,
   what is now and what is next, with each song's tempo, capo and track. Send it to whoever is next to you by QR, far
   away with 3 words over the internet, or to the whole band on the same Wi-Fi (the breaks go along, except by QR).
 - **Band:** with "Lead the band" (arm it on the Setlists tab, then tap a setlist), whoever leads changes songs and

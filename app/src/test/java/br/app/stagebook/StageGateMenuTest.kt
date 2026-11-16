@@ -29,4 +29,22 @@ class StageGateMenuTest {
         assertFalse("Settings over an open stage (the person turned the editor on there)", StageGate.quiet(true, false, false))
         assertFalse("no stage at all", StageGate.quiet(false, false, false))
     }
+
+    @Test fun `the show is on screen only with a stage open, in view and the menu closed`() {
+        val gate = StageGate()
+        assertFalse("no stage yet", gate.playing.value)
+        gate.enter()
+        assertTrue("a stage that opens is in view", gate.playing.value)
+        gate.setMenuOpen(true)
+        assertFalse("the menu is open: the person is not playing", gate.playing.value)
+        gate.setMenuOpen(false)
+        assertTrue(gate.playing.value)
+        gate.setStageInView(false)   // Settings, an editor or the importer over the stage
+        assertFalse(gate.playing.value)
+        assertTrue("the stage is still open under it", gate.onStage.value)
+        gate.setStageInView(true)
+        assertTrue(gate.playing.value)
+        gate.leave()
+        assertFalse(gate.playing.value)
+    }
 }

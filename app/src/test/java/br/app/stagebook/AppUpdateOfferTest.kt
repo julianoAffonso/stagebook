@@ -90,6 +90,28 @@ class AppUpdateOfferTest {
         assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
     }
 
+    @Test fun `with the show on screen it waits, and opening the menu is enough to ask`() {
+        // the stage is the app's base and never closes: waiting for it to close, the notice never came (help review, 16/11)
+        version = """{"versionCode":999999,"versionName":"0.3.999"}"""
+        gate.enter()
+        val o = offer()
+        val job = o.onEnter()
+        Thread.sleep(300)
+        assertNull(o.offer.value)
+        gate.setMenuOpen(true)
+        job.await()
+        assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
+    }
+
+    @Test fun `in Settings over an open stage it asks right away`() {
+        version = """{"versionCode":999999,"versionName":"0.3.999"}"""
+        gate.enter()
+        gate.setStageInView(false)
+        val o = offer()
+        o.onEnter().await()
+        assertEquals(UpdateOffer.Available("0.3.999"), o.offer.value)
+    }
+
     @Test fun `not now - the same version only comes back the next day`() {
         version = """{"versionCode":999999,"versionName":"0.3.999"}"""
         val o = offer()

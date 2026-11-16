@@ -156,7 +156,7 @@ class MainActivity : ComponentActivity() {
                 val quiet = StageGate.quiet(onStage, stageInView, menuOpen || attend)
                 // answered (or gone): the next one waits again
                 androidx.compose.runtime.LaunchedEffect(requests.size + webRequests.size) { if (requests.isEmpty() && webRequests.isEmpty()) stageGate.setAttend(false) }
-                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size), br.app.stagebook.ui.drawer.LocalAttendRequest provides { stageGate.setAttend(true) }) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
+                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size), br.app.stagebook.ui.drawer.LocalAttendRequest provides { stageGate.setAttend(true) }) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.playing, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -246,7 +246,7 @@ class MainActivity : ComponentActivity() {
     // the site couldn't open the app (not installed yet) and copied the link: opened once per code. Not with the
     // internet off (essential mode, T19: receiving by code is off) nor on stage (the show is never interrupted)
     private fun checkClipboard() {
-        if (!repository.library.value.look.internetOn || stageGate.onStage.value) return
+        if (!repository.library.value.look.internetOn || stageGate.playing.value) return
         receiveLinks.fromClipboard()?.let { receiveCodes.trySend(it) }
     }
 

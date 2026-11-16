@@ -554,7 +554,7 @@
     <string name="settings_bold_short">negrito</string>
     <string name="settings_pdf_card">PDF</string>
     <string name="settings_pdf_invert">Inverter as cores do PDF</string>
-    <string name="settings_pdf_invert_help">Vira o branco do papel em preto numa música em PDF, para um palco escuro. É também o botão ao lado do relógio no palco.</string>
+    <string name="settings_pdf_invert_help">Vira o branco do papel em preto numa música em PDF, para um palco escuro. Vale para todas; para uma música só, use o interruptor do cartão do PDF, no editor.</string>
     <string name="settings_sections_look">Títulos de seção</string>
     <string name="settings_normalize_card">Refrão e versos</string>
     <string name="settings_normalize_help">Nas músicas sem títulos de parte, o app acha o refrão (a estrofe que se repete) e os versos e põe os títulos. A letra não muda, e os títulos que já existem ficam como estão.</string>
@@ -1202,8 +1202,8 @@
     <string name="auto_blocker_hint">Se a instalação for bloqueada, desligue o Bloqueador automático da Samsung e volte.</string>
     <string name="editor_link_kept">Link guardado. Abre quando você sair da edição.</string>
     <string name="editor_file_kept">Arquivo guardado. Abre quando você sair da edição.</string>
-    <string name="stage_link_kept">Link guardado. Abre quando você sair do palco.</string>
-    <string name="stage_file_kept">Arquivo guardado. Abre quando você sair do palco.</string>
+    <string name="stage_link_kept">Link guardado. Abre quando você abrir o menu.</string>
+    <string name="stage_file_kept">Arquivo guardado. Abre quando você abrir o menu.</string>
     <string name="settings_metronome_test">Testar o metrônomo</string>
     <string name="settings_metronome_test_stop">Parar o teste</string>
     <string name="update_installing">Instalando a atualização. O app reinicia sozinho ao terminar.</string>

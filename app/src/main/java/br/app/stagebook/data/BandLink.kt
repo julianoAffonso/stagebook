@@ -96,8 +96,8 @@ class BandLink @Inject constructor(
     /** Someone is in this device's band (the saved list, online or not): without it there is nobody to lead. */
     fun hasSavedMembers(): Boolean = trust.members.value.isNotEmpty()
 
-    /** The stage is open (a show): nothing automatic runs then ([BandInternet] waits for it to close). */
-    val stageOpen: StateFlow<Boolean> get() = stage.onStage
+    /** The show is on screen ([StageGate.playing]): nothing automatic runs then ([BandInternet] waits for the menu or another screen). */
+    val stageOpen: StateFlow<Boolean> get() = stage.playing
 
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
@@ -513,7 +513,7 @@ class BandLink @Inject constructor(
     // the search turns on and off by itself, without touching the announcement: a screen that needs it open and off
     // stage
     private fun updateSearch() {
-        val want = _running.value && ((screenOpen && !stage.onStage.value) || onStageSearch.get() > 0)
+        val want = _running.value && ((screenOpen && !stage.playing.value) || onStageSearch.get() > 0)
         if (want && !searching) startSearch() else if (!want && searching) stopSearch()
     }
 
@@ -545,7 +545,7 @@ class BandLink @Inject constructor(
                     try {
                         session.serve(
                             client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
-                            busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
+                            busy = { stage.playing.value }, onPackage = ::receive, onAsk = ::answer,
                             onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false }, onConduct = ::onConduct,
                         )
                     } catch (e: Exception) {
@@ -682,7 +682,7 @@ class BandLink @Inject constructor(
     // went on stage: the search stops right away; left it, it comes back if the screen still needs it. Placed after all
     // fields: the collection runs on another thread and can call update() before the rest of the class exists
     init {
-        scope.launch { stage.onStage.collect { update() } }
+        scope.launch { stage.playing.collect { update() } }
         scope.launch {
             // the callback is reconciled on every emission (cheap, and the state read is the current one); the rest only
             // when the switch changed or the callback did

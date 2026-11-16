@@ -30,8 +30,8 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 - **Setlists:** monte o show dentro do menu e arraste para mudar a ordem; cada setlist tem uma **data**, e a lista fica
   agrupada por mês (ou de A a Z). Tocar num setlist abre as músicas dele, e tocar numa música a toca; o ⋮ do cartão toca,
   compartilha, edita o nome e a data ou apaga. Ponha um **intervalo**
-  entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O painel do setlist no
-  palco mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
+  entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O setlist aberto no
+  menu mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
   está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi (os intervalos
   vão junto, menos pelo QR).
 - **Banda:** com o "Conduzir a banda" (arme na aba Setlists e toque num setlist), quem conduz troca de música e o palco
