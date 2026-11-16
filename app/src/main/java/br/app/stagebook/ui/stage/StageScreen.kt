@@ -1113,7 +1113,8 @@ fun StageScreen(
                     val saved = song.pdfPage
                     if (current == 0 && saved in 1 until pageCount) onPosition(index, saved)
                 }
-                LaunchedEffect(current, restoredFor, index) { if (restoredFor == index && pageCountFor == index) onPdfPage(song.id, current) }
+                // (only with the PDF open: one that failed to open must not make the page it was on be forgotten)
+                LaunchedEffect(current, restoredFor, index, open) { if (restoredFor == index && pageCountFor == index && open is br.app.stagebook.ui.stage.PdfOpen.Ready) onPdfPage(song.id, current) }
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
                         open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
@@ -1121,6 +1122,9 @@ fun StageScreen(
                         onStroke = { page, points -> onPdfStroke(song.id, page, points) },
                         view = song.pdfView,
                         crops = song.pdfCrops,
+                        // nothing is drawn for page 0 while the song's own last page is being found
+                        ready = song.pdfPage == 0 || restoredFor == index,
+                        pageKey = index,
                         onView = { onPdfView(song.id, it) },
                     )
                     trackOverlays()

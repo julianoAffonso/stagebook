@@ -195,6 +195,23 @@ class PdfStageTest {
         assertTrue("whole page $first px for a part of $shownPx px", first >= shownPx * 1.9f)
     }
 
+    @Test fun `the view is kept only when a gesture changed the zoom or the place, not on a tap`() {
+        val kept = mutableListOf<br.app.stagebook.domain.PdfView>()
+        var count = 0
+        compose.setContent {
+            StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(FakeSource(7))), 0, invert = false, onPageCount = { count = it }, onView = { kept += it }) }
+        }
+        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        page().performTouchInput { down(center); up() }   // a tap: it turns the page, it does not touch the view
+        compose.waitForIdle()
+        assertEquals(0, kept.size)
+        pinch(out = true)
+        compose.waitForIdle()
+        assertTrue("the zoom was kept", kept.isNotEmpty() && kept.last().scale > 1.2f)
+    }
+
     @Test fun `the page never goes past the zoom its pixels allow`() {
         showOpen(FakeSource(7))
         val whole = page().getBoundsInRoot().width

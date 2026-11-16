@@ -112,6 +112,8 @@ fun PdfStageView(
     view: br.app.stagebook.domain.PdfView = br.app.stagebook.domain.PdfView(),
     onView: (br.app.stagebook.domain.PdfView) -> Unit = {},
     crops: List<br.app.stagebook.data.model.PdfCrop> = emptyList(),   // the trims of its pages: only that part shows, enlarged
+    ready: Boolean = true,   // false while the song's last page is being found: nothing is drawn for the wrong page meanwhile
+    pageKey: Any = Unit,     // which song this is (the same PDF twice in a row is still another song)
 ) {
     when (open) {
         PdfOpen.Loading -> Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
@@ -121,7 +123,7 @@ fun PdfStageView(
         }
         is PdfOpen.Ready -> {
             val pages = open.pages
-            LaunchedEffect(pages) { onPageCount(pages.pageCount.coerceAtLeast(1)) }
+            LaunchedEffect(pages, pageKey) { onPageCount(pages.pageCount.coerceAtLeast(1)) }
             val at = page.coerceIn(0, (pages.pageCount - 1).coerceAtLeast(0))
             val crop = PdfCrops.forPage(crops, at)
             val cropW = crop?.let { it.right - it.left } ?: 1f
@@ -146,7 +148,8 @@ fun PdfStageView(
                 var drawnAt by remember(pages, widthPx, heightPx) { mutableStateOf(-1) }
                 // a page that can't be drawn (a damaged one, no room for its bitmap) says so, and doesn't close the app
                 var broken by remember(pages, at) { mutableStateOf(false) }
-                LaunchedEffect(pages, at, widthPx, heightPx, bucket, crop) {
+                LaunchedEffect(pages, at, widthPx, heightPx, bucket, crop, ready) {
+                    if (!ready) return@LaunchedEffect
                     try {
                         val (pw, ph) = pages.size(at)
                         // the part shown (the whole page, or its trim) takes the box as far as it fits
@@ -154,15 +157,23 @@ fun PdfStageView(
                         val fitW = (pw * cropW * factor).toInt().coerceAtLeast(1)
                         val fitH = (ph * cropH * factor).toInt().coerceAtLeast(1)
                         // the whole page is drawn wide enough for its trim to come out as wide as the box
-                        val wholeW = (fitW / cropW).toInt().coerceAtLeast(1)
+                        // (held to the pixels a device can take: a small trim of a page would ask for a huge bitmap)
+                        val wholeW = PdfCrops.wholeWidth(pw to ph, crop, widthPx, heightPx)
                         // the new page (or the sharper one) replaces what is on screen only once it is drawn, size and picture together
-                        val bitmap = pages.bitmap(at, wholeW * bucket).asImageBitmap()
+                        val bitmap = pages.bitmap(at, PdfZoom.capWidth(wholeW * bucket, pw, ph)).asImageBitmap()
                         fit = fitW to fitH
                         drawn = bitmap
                         drawnAt = at
                         // the next page is drawn ahead, so the turn shows it at once
                         // (with a trim of its own the next page is drawn at the width that trim needs)
-                        if (bucket == 1 && at + 1 < pages.pageCount) pages.bitmap(at + 1, PdfCrops.wholeWidth(pages.size(at + 1), PdfCrops.forPage(crops, at + 1), widthPx, heightPx))
+                        // (a failure here must not make the page already on screen "unreadable")
+                        if (bucket == 1 && at + 1 < pages.pageCount) try {
+                            pages.bitmap(at + 1, PdfCrops.wholeWidth(pages.size(at + 1), PdfCrops.forPage(crops, at + 1), widthPx, heightPx))
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                        } catch (_: OutOfMemoryError) {
+                        }
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -174,6 +185,14 @@ fun PdfStageView(
                 val fitNow by rememberUpdatedState(fit)
                 val maxNow by rememberUpdatedState(maxScale)
                 val onStrokeNow by rememberUpdatedState(onStroke)
+                val cropsNow by rememberUpdatedState(crops)
+                val onViewNow by rememberUpdatedState(onView)
+                // the page moved for another one's shape (or the box changed): it never sits where the new one leaves a gap
+                LaunchedEffect(fit, widthPx, heightPx, scale) {
+                    val f = fit ?: return@LaunchedEffect
+                    val (x, y) = PdfZoom.clamp(offset.x to offset.y, scale, f.first.toFloat(), f.second.toFloat(), widthPx.toFloat(), heightPx.toFloat())
+                    if (x != offset.x || y != offset.y) offset = Offset(x, y)
+                }
                 fun moved(by: Offset): Offset {
                     val f = fitNow ?: return Offset.Zero
                     val (x, y) = PdfZoom.clamp((offset.x + by.x) to (offset.y + by.y), scale, f.first.toFloat(), f.second.toFloat(), widthPx.toFloat(), heightPx.toFloat())
@@ -183,7 +202,7 @@ fun PdfStageView(
                     val f = fitNow ?: return null
                     // a point of the part shown, taken to a point of the whole page: the strokes belong to the page
                     return PdfMarks.onPage(p.x, p.y, widthPx.toFloat(), heightPx.toFloat(), f.first.toFloat(), f.second.toFloat(), scale, offset.x, offset.y)
-                        ?.let { PdfCrops.toPage(PdfCrops.forPage(crops, if (drawnAt >= 0) drawnAt else at), it) }
+                        ?.let { PdfCrops.toPage(PdfCrops.forPage(cropsNow, if (drawnAt >= 0) drawnAt else at), it) }
                 }
                 val size = fit
                 val image = drawn
@@ -201,6 +220,8 @@ fun PdfStageView(
                         .pointerInput(pages, at, marking) {
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = false)
+                                val startScale = scale
+                                val startOffset = offset
                                 var pinching = false
                                 val stroke = ArrayList<PdfPoint>()
                                 if (marking) {
@@ -228,7 +249,8 @@ fun PdfStageView(
                                 if (marking && !pinching && stroke.isNotEmpty()) onStrokeNow(if (drawnAt >= 0) drawnAt else at, stroke.toList())
                                 live = emptyList()
                                 if (scale < 1.02f) { scale = 1f; offset = Offset.Zero }
-                                onView(br.app.stagebook.domain.PdfView(scale, offset.x / widthPx, offset.y / heightPx))
+                                // kept only when this gesture changed the zoom or the place (a tap or a swipe that turns the page doesn't)
+                                if (scale != startScale || offset != startOffset) onViewNow(br.app.stagebook.domain.PdfView(scale, offset.x / widthPx, offset.y / heightPx))
                             }
                         },
                     Alignment.Center,

@@ -19,4 +19,15 @@ class PdfCropsWidthTest {
         // a narrow box limits by width: the trim (half the page) shown 500 wide, the whole page 1000
         assertEquals(1000, PdfCrops.wholeWidth(400 to 600, half, 500, 5000))
     }
+
+    @Test fun `a small trim never asks for more pixels than a device can take`() {
+        // a trim of a tenth of each side would need 100 times the box's pixels: held to the pixel limit
+        val tiny = PdfCrop(PdfCrop.ALL, left = 0.9f, top = 0.9f)
+        val w = PdfCrops.wholeWidth(400 to 600, tiny, 1200, 1900)
+        val h = w.toLong() * 600 / 400
+        assertEquals(true, w.toLong() * h <= br.app.stagebook.domain.PdfZoom.MAX_PIXELS)
+        // and the zoom's sharper draws are held the same way
+        val sharper = br.app.stagebook.domain.PdfZoom.capWidth(w * 4, 400, 600)
+        assertEquals(true, sharper.toLong() * (sharper * 600L / 400) <= br.app.stagebook.domain.PdfZoom.MAX_PIXELS)
+    }
 }

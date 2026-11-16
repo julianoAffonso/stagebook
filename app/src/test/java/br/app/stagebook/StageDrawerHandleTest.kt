@@ -98,4 +98,17 @@ class StageDrawerHandleTest {
         compose.waitForIdle()
         assertEquals(1, opened)
     }
+
+    @Test fun `a second hold and drag starts from where the first one left the handle`() {
+        val moves = mutableListOf<Float>()
+        compose.setContent {
+            val y = androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0.3f) }
+            StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, y.floatValue, { y.floatValue = it; moves += it }, Modifier) }
+        }
+        fun dragDown() = compose.onNodeWithTag("stage_drawer_handle").performTouchInput { down(center); advanceEventTime(700); moveBy(Offset(0f, 160f)); up() }
+        dragDown(); compose.waitForIdle()
+        dragDown(); compose.waitForIdle()
+        assertEquals(2, moves.size)
+        assertTrue("the second went on from the first: $moves", moves[1] > moves[0] + 0.02f)
+    }
 }

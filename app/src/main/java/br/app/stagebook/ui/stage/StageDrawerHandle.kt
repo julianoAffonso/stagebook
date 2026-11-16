@@ -63,6 +63,10 @@ internal fun StageDrawerHandle(
     // while held, the handle follows the finger up and down; let go and the place is kept
     var moving by remember { mutableStateOf(false) }
     var dragY by remember { mutableFloatStateOf(y) }
+    // the place as it is now: the gesture detector below is made once, and a second drag must start from where the first ended
+    val yNow by androidx.compose.runtime.rememberUpdatedState(y)
+    val onMoveNow by androidx.compose.runtime.rememberUpdatedState(onMove)
+    val onOpenNow by androidx.compose.runtime.rememberUpdatedState(onOpen)
     val label = stringResource(R.string.drawer_open)
     val hint = stringResource(R.string.drawer_handle_move)
     BoxWithConstraints(modifier) {
@@ -81,9 +85,9 @@ internal fun StageDrawerHandle(
                 // a hold picks it up to move it along the edge; a short touch opens, a pull to the right opens too
                 .pointerInput(heightPx) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { moving = true; dragY = y },
+                        onDragStart = { moving = true; dragY = yNow },
                         onDrag = { change, amount -> change.consume(); dragY = (dragY + amount.y / heightPx).coerceIn(0f, 1f) },
-                        onDragEnd = { moving = false; onMove(dragY) },
+                        onDragEnd = { moving = false; onMoveNow(dragY) },
                         onDragCancel = { moving = false },
                     )
                 }
@@ -93,7 +97,7 @@ internal fun StageDrawerHandle(
                     onDragStarted = { pulled = 0f },
                     onDragStopped = { velocity ->
                         val toward = if (right) -1f else 1f   // the way that opens it: away from its edge
-                        if (!moving && (velocity * toward > flingPx || pulled * toward > flingPx)) onOpen()
+                        if (!moving && (velocity * toward > flingPx || pulled * toward > flingPx)) onOpenNow()
                         pulled = 0f
                     },
                 )

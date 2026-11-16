@@ -226,11 +226,15 @@ class StageViewModel @Inject constructor(
         repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.add(it.pdfMarks, page, points)) }
 
     /** The page of the PDF the song was left on: it opens there next time. */
-    fun setPdfPage(songId: String, page: Int) = repository.updateSong(songId) { if (it.pdfPage == page) it else it.copy(pdfPage = page) }
+    fun setPdfPage(songId: String, page: Int) {
+        if (repository.song(songId)?.pdfPage != page) repository.updateSong(songId) { it.copy(pdfPage = page) }   // nothing changed, nothing written
+    }
 
     /** The PDF's zoom and place on the stage, kept with the song. */
-    fun setPdfView(songId: String, view: br.app.stagebook.domain.PdfView) =
-        repository.updateSong(songId) { it.copy(pdfScale = view.scale, pdfPanX = view.panX, pdfPanY = view.panY) }
+    fun setPdfView(songId: String, view: br.app.stagebook.domain.PdfView) {
+        val s = repository.song(songId) ?: return
+        if (s.pdfScale != view.scale || s.pdfPanX != view.panX || s.pdfPanY != view.panY) repository.updateSong(songId) { it.copy(pdfScale = view.scale, pdfPanX = view.panX, pdfPanY = view.panY) }
+    }
 
     /** The last stroke made on [page] goes. */
     fun undoPdfStroke(songId: String, page: Int) =

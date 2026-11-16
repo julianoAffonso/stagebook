@@ -25,6 +25,10 @@ object PdfZoom {
         return room.coerceIn(1.5f, MAX_SCALE)
     }
 
+    /** [width] held so a page of [pageW] x [pageH] never has more than [MAX_PIXELS] (a small trim of a page must not ask for a huge bitmap). */
+    fun capWidth(width: Int, pageW: Int, pageH: Int): Int =
+        min(width.toDouble(), floor(sqrt(MAX_PIXELS.toDouble() * pageW / pageH.coerceAtLeast(1)))).toInt().coerceAtLeast(1)
+
     /** The whole number of times the fitted width to draw at, for a zoom of [scale] (1 = as it fits). */
     fun bucket(scale: Float, maxScale: Float): Int =
         min(ceil(scale - 0.001f).toInt(), floor(maxScale).toInt()).coerceAtLeast(1)

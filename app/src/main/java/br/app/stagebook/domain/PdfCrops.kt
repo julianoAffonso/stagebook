@@ -37,7 +37,7 @@ object PdfCrops {
         val cw = crop?.let { it.right - it.left } ?: 1f
         val ch = crop?.let { it.bottom - it.top } ?: 1f
         val factor = minOf(boxW / (size.first * cw), boxH / (size.second * ch))
-        return ((size.first * cw * factor) / cw).toInt().coerceAtLeast(1)
+        return PdfZoom.capWidth(((size.first * cw * factor) / cw).toInt().coerceAtLeast(1), size.first, size.second)
     }
 
     /** A point of the shown part ([x], [y] across and down it, 0 to 1) as a point of the whole page. */
