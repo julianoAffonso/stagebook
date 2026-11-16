@@ -101,12 +101,12 @@ class ConductLacksRowsTest {
         compose.onNodeWithText("Ver o que falta aqui").performClick()
         // closed, it says its label and what is chosen: each song as the band plays it
         compose.onNodeWithText("Qual cópia pedir").assertIsDisplayed()
-        compose.onNodeWithText("Como a banda toca").assertIsDisplayed()
+        compose.onNodeWithText("A mesma de quem conduz").assertIsDisplayed()
         compose.onAllNodesWithText("Só letra").assertCountEquals(0)
         compose.onNodeWithText("Pedir à banda (1 aparelho na rede)").performClick()
-        compose.onNodeWithText("Como a banda toca").performClick()
+        compose.onNodeWithText("A mesma de quem conduz").performClick()
         compose.onNodeWithText("PDF").performClick()
-        compose.onAllNodesWithText("Como a banda toca").assertCountEquals(0)
+        compose.onAllNodesWithText("A mesma de quem conduz").assertCountEquals(0)
         compose.onNodeWithText("Pedir à banda (1 aparelho na rede)").performClick()
         assertEquals(listOf("", "pdf"), asked)
     }
