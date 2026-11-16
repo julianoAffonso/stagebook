@@ -130,6 +130,17 @@ class ConductLacksRowsTest {
         compose.onNodeWithText("Ver o que falta aqui").assertIsDisplayed()
     }
 
+    @Test fun `when the song the band is on is the missing one, the strip's text still opens the whole window`() {
+        // role.songId null: the current song is not here, so the strip says so and offers the quick Ask
+        val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), null)
+        val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}, options = br.app.stagebook.ui.band.AskOptions(bandDevices = 1)) } }
+        compose.onNodeWithText("Pedir").assertIsDisplayed()
+        compose.onNodeWithText("Você não tem \"Evidências\"").performClick()
+        compose.onNodeWithText("Faltam neste aparelho").assertIsDisplayed()
+        compose.onNodeWithText("Qual cópia pedir").assertIsDisplayed()
+    }
+
     @Test fun `with nobody on the network and no online leader the list offers only the import`() {
         val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), "x")
         val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())

@@ -226,6 +226,7 @@ fun StagebookNavHost(
                 Box(Modifier.padding(inner)) {
                     // from the side menu, back brings the menu again (user, 15/11)
                     val back = dropUnlessResumed { nav.popBackStack(); if (route.fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() }
+                    MenuBack(route.fromMenu, back)
                     val section = br.app.stagebook.ui.settings.SettingsSection.fromSaved(route.section)
                     if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(section, onLeave = back)
                     else br.app.stagebook.ui.settings.SettingsRoute(section, onBack = back)
@@ -237,6 +238,7 @@ fun StagebookNavHost(
             val fromMenu = remember { entry.toRoute<SongEditor>().fromMenu }
             // opened from the Songs tab: leaving (saved or not) brings the menu again, on its list (user, 15/11)
             val backToMenu = { nav.popBackStack(); drawer?.takeIf { !it.pinned }?.open?.invoke(); Unit }
+            MenuBack(fromMenu, dropUnlessResumed { backToMenu() })
             SongEditorRoute(
                 onDone = dropUnlessResumed { if (fromMenu) backToMenu() else nav.popBackStack() },
                 onSaved = { id -> entry.ifResumed { if (fromMenu) backToMenu() else nav.showSaved(id) } },
@@ -270,8 +272,10 @@ fun StagebookNavHost(
         composable<Importer> { entry ->
             val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
             val fromMenu = remember { entry.toRoute<Importer>().fromMenu }
+            val close = dropUnlessResumed { nav.popBackStack(); if (fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() }
+            MenuBack(fromMenu, close)
             ImportRoute(
-                onClose = dropUnlessResumed { nav.popBackStack(); if (fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() },
+                onClose = close,
                 // the editor replaces the browser: save or cancel goes back to the list. Only from the open browser: a
                 // late answer can't open a second editor (audit 01/11)
                 onOpenEditor = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromImport = true, fromMenu = fromMenu)) { popUpTo<Importer> { inclusive = true } } } },
@@ -296,3 +300,11 @@ data class AppUpdateActions(
     val onInstall: () -> Unit = {},
     val onClose: () -> Unit = {},
 )
+
+/**
+ * The device's back button on a screen opened from the side menu does what the screen's own arrow does: it brings the
+ * menu again (device test 16/11: the arrow did, the button went to the stage). Placed before the screen, so the screen's
+ * own back handlers (a section open, a search typed, unsaved changes, the site's history) still come first.
+ */
+@Composable
+internal fun MenuBack(fromMenu: Boolean, onBack: () -> Unit) = androidx.activity.compose.BackHandler(enabled = fromMenu, onBack = onBack)
