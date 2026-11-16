@@ -88,7 +88,7 @@ SECTIONS = [
         "id": "importar", "pt": "Importar", "en": "Importing",
         "text_pt": [
             "O + embaixo, na aba Músicas, reúne tudo o que traz música de fora:",
-            "- **PDFs de sites:** abre o navegador nos sites de partituras livres em PDF (Mutopia Project, IMSLP e Musica Brasilis; a lista se muda em Ajustes → Importar e backup, em Sites de partituras em PDF). Abra uma partitura e toque no PDF: o app baixa, confere e cria a música. Sites que pedem conta ou pagamento ficaram de fora.",
+            "- **PDFs de sites:** abre o navegador nos sites de partituras livres em PDF (Mutopia Project, IMSLP e Musica Brasilis; aparece em qualquer perfil, e na pergunta do perfil automático (letra, cifra ou partitura em PDF); a lista se muda em Ajustes → Importar e backup, em Sites de partituras em PDF). Abra uma partitura e toque no PDF: o app baixa, confere e cria a música. Sites que pedem conta ou pagamento ficaram de fora.",
             "- **Importar PDFs:** escolhe um ou vários PDFs do aparelho; cada um vira uma música com o nome do arquivo (num arquivo chamado Artista - Título.pdf, o artista e o título já vêm separados), que você completa no editor. O app confere cada PDF e diz o motivo dos que não passam, sem parar os outros. Dá para abrir um PDF direto no Stagebook (num gerenciador de arquivos, num download ou numa conversa, em Abrir com ou Compartilhar) e ele entra do mesmo jeito.",
             "- **Sincronizar com a banda:** procura novidades da banda agora.",
             "- **Recebidos da banda:** o que a banda mandou, para você conferir.",
@@ -98,7 +98,7 @@ SECTIONS = [
         ],
         "text_en": [
             "The + at the bottom, on the Songs tab, gathers everything that brings songs in:",
-            "- **PDFs from sites:** opens the browser on free score sites in PDF (Mutopia Project, IMSLP and Musica Brasilis; the list is changed in Settings → Import and backup, under PDF score sites). Open a score and tap its PDF: the app downloads it, checks it and makes the song. Sites that ask for an account or payment were left out.",
+            "- **PDFs from sites:** opens the browser on free score sites in PDF (Mutopia Project, IMSLP and Musica Brasilis; it shows in every profile, and in the automatic profile's question (lyrics, chords or PDF score); the list is changed in Settings → Import and backup, under PDF score sites). Open a score and tap its PDF: the app downloads it, checks it and makes the song. Sites that ask for an account or payment were left out.",
             "- **Import PDFs:** picks one or several PDFs from the device; each becomes a song named after the file, with no artist, for you to complete in the editor. The app checks each PDF and says why the ones that don't pass were left out, without stopping the others. You can also open a PDF straight in Stagebook (from a file manager, a download or a chat, with Open with or Share) and it comes in the same way.",
             "- **Sync with the band:** looks for what's new from the band right now.",
             "- **Received from the band:** what the band sent, for you to check.",

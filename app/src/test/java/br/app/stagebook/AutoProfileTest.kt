@@ -65,6 +65,13 @@ class AutoProfileTest {
         assertEquals(SiteKind.LYRICS, picked)
     }
 
+    @Test fun `the question always offers the PDF scores too`() {
+        var picked: SiteKind? = null
+        compose.setContent { StagebookTheme { ImportKindDialog({ picked = it }, {}) } }
+        compose.onNodeWithText(str(R.string.import_kind_pdf)).performClick()
+        assertEquals(SiteKind.PDF, picked)
+    }
+
     private fun importer(look: Look, kind: String): ImportViewModel = runBlocking {
         val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
         withTimeout(5_000) { repo.loaded.first { it } }
