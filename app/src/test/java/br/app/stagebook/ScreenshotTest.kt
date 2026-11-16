@@ -526,14 +526,10 @@ class ScreenshotTest {
     }
 
     // T25: backup in Settings → Library and the choice of parts (all checked)
-    @Test fun settingsLibraryBackup() = shoot("tablet_5_ajustes_backup") {
-        SettingsPage { SettingsScreen(settings, SettingsActions(), it, onBack = {}, section = SettingsSection.LIBRARY) }
-    }
+    @Test fun settingsLibraryBackup() = shootLyricsAt("tablet_5_ajustes_backup", settings, str(R.string.backup_open_card), section = SettingsSection.LIBRARY)
 
-    @Test @Config(qualifiers = "pt-rBR-w412dp-h1800dp-port-xxhdpi")
-    fun settingsLibraryBackupPhone() = shoot("celular_5_ajustes_backup") {
-        SettingsPage { SettingsScreen(settings, SettingsActions(), it, onBack = {}, section = SettingsSection.LIBRARY) }
-    }
+    @Test @Config(qualifiers = PHONE)
+    fun settingsLibraryBackupPhone() = shootLyricsAt("celular_5_ajustes_backup", settings, str(R.string.backup_open_card), section = SettingsSection.LIBRARY)
 
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test fun backupPartsDialog() {
@@ -744,16 +740,23 @@ class ScreenshotTest {
 
     // without the permission: the card with the command to give it from the computer
     @Test @Config(qualifiers = PHONE)
-    fun settingsAdvancedNoPermissionPhone() = shoot("celular_5_ajustes_avancado_permissao") {
-        SettingsPage {
-            SettingsScreen(settings, SettingsActions(advanced = br.app.stagebook.ui.settings.sampleAdvanced.copy(canWrite = false)), it, section = SettingsSection.DEVICE)
-        }
-    }
+    fun settingsAdvancedNoPermissionPhone() = shootAdvancedNoPermission("celular_5_ajustes_avancado_permissao")
 
-    @Test fun settingsAdvancedNoPermissionTablet() = shoot("tablet_5_ajustes_avancado_permissao") {
-        SettingsPage {
-            SettingsScreen(settings, SettingsActions(advanced = br.app.stagebook.ui.settings.sampleAdvanced.copy(canWrite = false)), it, section = SettingsSection.DEVICE)
+    @Test fun settingsAdvancedNoPermissionTablet() = shootAdvancedNoPermission("tablet_5_ajustes_avancado_permissao")
+
+    private fun shootAdvancedNoPermission(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    SettingsPage {
+                        SettingsScreen(settings, SettingsActions(advanced = br.app.stagebook.ui.settings.sampleAdvanced.copy(canWrite = false)), it, onBack = {}, section = SettingsSection.DEVICE)
+                    }
+                }
+            }
         }
+        compose.onNodeWithText(str(R.string.advanced_permission_copy)).performScrollTo()
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
     @Test fun settingsEssentialTablet() = shoot("tablet_5_ajustes_essencial") {
@@ -1179,9 +1182,7 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
-    fun settingsPhoneChords() = shoot("celular_5_ajustes_cifras") {
-        SettingsPage { SettingsScreen(settings, SettingsActions(), it, onBack = {}, section = SettingsSection.LYRICS) }
-    }
+    fun settingsPhoneChords() = shootLyricsAt("celular_5_ajustes_cifras", settings, str(R.string.settings_chords_card), extraUp = 900f)
 
     // the tablet shows more of Lyrics at once: scroll the Chords in the lyrics card into view, down to its color
     @Test fun settingsTabletChords() = shootLyricsAt("tablet_5_ajustes_cifras", settings, str(R.string.settings_chords_color), extraUp = 100f)
@@ -1280,6 +1281,7 @@ class ScreenshotTest {
             }
         }
         compose.onNodeWithText(str(R.string.settings_sections_look)).performScrollTo()
+        compose.onRoot().performTouchInput { swipeUp(startY = centerY, endY = centerY - 900f) }
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/celular_5_ajustes_letra_secoes.png")
     }
@@ -1317,7 +1319,6 @@ class ScreenshotTest {
         }
         val detail = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.settings_columns)
         compose.onNodeWithText(detail).performScrollTo()
-        compose.onRoot().performTouchInput { swipeUp(startY = centerY, endY = centerY - 200f) }
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
@@ -1362,7 +1363,7 @@ class ScreenshotTest {
     // the Page card in Scroll mode, scrolled to its speed slider (the top of Lyrics looks the same in both modes)
     @Test fun settingsLyricsScrollTablet() {
         val look = settings.look.copy(stageMode = br.app.stagebook.data.model.StageMode.SCROLL)
-        shootLyricsAt("tablet_5_ajustes_rolar", settings.copy(look = look), str(R.string.settings_auto_scroll, look.autoScroll), extraUp = 200f, section = SettingsSection.PAGE)
+        shootLyricsAt("tablet_5_ajustes_rolar", settings.copy(look = look), str(R.string.settings_auto_scroll, look.autoScroll), section = SettingsSection.PAGE)
     }
 
     @Test @Config(qualifiers = PHONE)
