@@ -223,9 +223,12 @@ class BandLink @Inject constructor(
         }.mapNotNull { it.await() }.toSet()
     }
 
-    /** A song asked of the band (title and artist, as in the QR). */
+    /**
+     * A song asked of the band (title and artist, as in the QR) and which copy of it: [kind] is an [br.app.stagebook.domain.AskKind]
+     * ("" = as it is). An older app doesn't send it and ignores it.
+     */
     @kotlinx.serialization.Serializable
-    data class Wanted(val title: String, val artist: String = "")
+    data class Wanted(val title: String, val artist: String = "", val kind: String = "")
 
     // a connection to a device on the Wi-Fi, with the usual timeout (it was written out in five places)
     private fun dial(peer: Peer): Socket = dialSocket(Socket(), peer.host, peer.port, CONNECT_TIMEOUT_MS)
@@ -267,8 +270,9 @@ class BandLink @Inject constructor(
     internal fun readAnswer(plain: ByteArray): List<SetlistCloud.SharedSong> =
         runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), plain.decodeToString()) }
             .getOrDefault(emptyList()).filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
-            // an answer carries no PDF and no name of a file here: what the other device says about files is never believed
-            .map { it.forWire() }
+            // what the other device says about files on ITS side is never believed; a PDF that came as bytes is checked and saved
+            // here like one in a package (header, size, password, pages)
+            .let { takePdfs(it) }
 
     /**
      * One answer per song. More than one device has the same song: the version with chords wins (in the lyrics only
@@ -322,12 +326,16 @@ class BandLink @Inject constructor(
     }
 
     /** The songs here that answer a request (same rule as the QR: title, with the artist as tiebreaker). */
-    fun songsFor(wanted: List<Wanted>): List<String> = found(wanted).map { it.id }.distinct()
+    fun songsFor(wanted: List<Wanted>): List<String> = found(wanted).map { it.second.id }.distinct()
 
-    private fun found(wanted: List<Wanted>): List<br.app.stagebook.data.model.Song> {
+    // the songs here that answer each request, and only when they are the copy asked for (a PDF asked for and none here, or
+    // chords asked for and the song has only lyrics, is no answer: the one who asked hears "nobody has it")
+    private fun found(wanted: List<Wanted>): List<Pair<Wanted, br.app.stagebook.data.model.Song>> {
         val library = repository.library.value.songs
         return wanted.take(MAX_ASK).mapNotNull { w ->
-            br.app.stagebook.domain.SetlistMatcher.matchExact(QrPayload.Entry(w.title, w.artist), library)
+            val song = br.app.stagebook.domain.SetlistMatcher.matchExact(QrPayload.Entry(w.title, w.artist), library) ?: return@mapNotNull null
+            val pdfHere = song.pdf.isNotEmpty() && pdfs.file(song.pdf).isFile
+            if (br.app.stagebook.domain.AskKind.has(song, w.kind, pdfHere)) w to song else null
         }
     }
 
@@ -339,9 +347,19 @@ class BandLink @Inject constructor(
         val key = pairKeyWith(from.id) ?: return null
         val plain = ShareCode.decrypt(key, body) ?: return null
         val wanted = runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), plain.decodeToString()) }.getOrNull() ?: return null
-        val found = found(wanted).map { SetlistCloud.SharedSong(it.title, it.author, it.year, it.text) }
+        val found = shapedAnswer(wanted)
         if (found.isNotEmpty()) askedHandler?.invoke(from.id, wanted)
         return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
+    }
+
+    /** What a request is answered with, as it goes on the wire: each song as the copy asked for, the PDFs' bytes inside. */
+    internal fun shapedAnswer(wanted: List<Wanted>): List<SetlistCloud.SharedSong> {
+        val shaped = found(wanted).map { (w, s) ->
+            // the copy asked for: lyrics without the chords, the chart as it is, or the PDF with its pages (checked on the other side)
+            SetlistCloud.SharedSong(s.title, s.author, s.year, br.app.stagebook.domain.AskKind.textFor(s.text, w.kind), pdfName = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdfName else "", pdfFile = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdf else "")
+        }
+        // the PDFs share the budget of one package; a song whose file doesn't fit goes without it (and the asker says so)
+        return withPdfBytes(shaped).first
     }
 
     /**

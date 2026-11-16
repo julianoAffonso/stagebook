@@ -265,7 +265,7 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
             ConductBar(
                 it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, onCancel = viewModel::cancelArmed, asking = asking, onSend = viewModel::send, sending = sending,
                 waiting = gate.waiting().takeIf { _ -> it is ConductUi.Following }, onGo = gate::goNow,
-                options = options, onAskBand = { asks?.askBand() }, onAskInternet = { asks?.askInternet() },
+                options = options, onAskBand = { asks?.askBand(it) }, onAskInternet = { asks?.askInternet(it) },
                 onImportMissing = { if (asks?.importMissing() == true) openImporter() },
             )
         }
@@ -304,7 +304,7 @@ fun ConductBar(
     onAsk: () -> Unit = {}, asking: Boolean = false, onSend: (String?) -> Unit = {}, sending: Boolean = false,
     waiting: br.app.stagebook.domain.FollowWait? = null, onGo: () -> Unit = {}, onCancel: () -> Unit = {},
     // what a follower can do about the setlist's songs it lacks: ask the band here, ask the leader online, import from the sites
-    options: AskOptions = AskOptions(), onAskBand: () -> Unit = {}, onAskInternet: () -> Unit = {}, onImportMissing: () -> Unit = {},
+    options: AskOptions = AskOptions(), onAskBand: (String) -> Unit = {}, onAskInternet: (String) -> Unit = {}, onImportMissing: () -> Unit = {},
 ) {
     // the leader's song is waiting for this person to finish what they're doing: the strip says where the leader went,
     // why it hasn't opened, and offers to go now
@@ -459,10 +459,23 @@ fun ConductBar(
                 LackRows(ui.lackSongs, Modifier.weight(1f, fill = false).verticalScroll(androidx.compose.foundation.rememberScrollState()))
                 // what the review of a shared setlist offers for the songs it lacks (user, 15/11)
                 val count = ui.lacksHere.size
-                if (options.bandDevices > 0) TextButton(onAskBand, enabled = !asking) {
+                // which copy is asked for: said in the request, and the other device sends that one or nothing (user, 15/11)
+                var kind by rememberSaveable { mutableStateOf(options.defaultKind) }
+                if (options.bandDevices > 0 || options.internetFrom != null) {
+                    Text(stringResource(R.string.ask_kind_label), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = Spacing.s))
+                    br.app.stagebook.ui.components.SegmentedChoice(
+                        listOf(
+                            br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.LYRICS, R.string.ask_kind_lyrics),
+                            br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.CHORDS, R.string.ask_kind_chords),
+                            br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.PDF, R.string.ask_kind_pdf),
+                        ),
+                        kind, { kind = it },
+                    )
+                }
+                if (options.bandDevices > 0) TextButton({ onAskBand(kind) }, enabled = !asking) {
                     ActionText(if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices))
                 }
-                options.internetFrom?.let { name -> TextButton(onAskInternet) { ActionText(stringResource(R.string.scan_ask_internet, name)) } }
+                options.internetFrom?.let { name -> TextButton({ onAskInternet(kind) }) { ActionText(stringResource(R.string.scan_ask_internet, name)) } }
                 TextButton({ showLacks = false; onImportMissing() }) { ActionText(pluralStringResource(R.plurals.scan_import_missing, count, count)) }
             }
         }

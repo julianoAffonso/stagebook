@@ -540,7 +540,7 @@ class BandConduct internal constructor(
      * strip), as the review of a shared setlist does (user, 15/11). Each answer that is the song asked for goes straight in, the
      * copy with chords first; the notice says how many of how many.
      */
-    fun askAll() {
+    fun askAll(kind: String = br.app.stagebook.domain.AskKind.ANY) {
         if (!bandOn()) return
         val following = _role.value as? Role.Following ?: return
         val library = repository.library.value
@@ -548,7 +548,7 @@ class BandConduct internal constructor(
         if (items.isEmpty() || !_asking.compareAndSet(false, true)) return
         scope.launch {
             try {
-                val answers = request(items.map { BandLink.Wanted(it.title, it.artist) }).filter { it.song.allowed() }
+                val answers = request(items.map { BandLink.Wanted(it.title, it.artist, kind) }).filter { it.song.allowed() }
                 var got = 0
                 for (item in items) {
                     val best = answers.filter { Conduct.isFor(item, it.song.title, it.song.author) }

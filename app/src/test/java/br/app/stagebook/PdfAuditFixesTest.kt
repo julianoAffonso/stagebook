@@ -90,17 +90,19 @@ class PdfAuditFixesTest {
         assertTrue(outside.exists())
     }
 
-    @Test fun `what a band member answers carries no file name`() {
+    @Test fun `what a band member answers never carries the file name it says about its own files, and a PDF that came is checked`() {
         val link = BandLink(
             context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
             br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo(),
+            br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector(object : br.app.stagebook.data.PdfPageCounter { override fun pageCount(file: java.io.File) = 2 }),
         )
+        // a path of the sender's own: never believed. The bytes are looked at, and what is kept has a name made here
         val json = """[{"title":"A","author":"B","year":"","text":"[G]linha","pdfFile":"../library.json","pdf":"JVBERi0=","pdfName":"x.pdf"}]"""
         val answered: List<SetlistCloud.SharedSong> = link.readAnswer(json.toByteArray())
         assertEquals(1, answered.size)
-        assertEquals("", answered[0].pdfFile)
-        assertEquals("", answered[0].pdf)
-        assertEquals("", answered[0].pdfName)
+        // the bytes passed the check (a PDF header, two pages by the counter) and were saved under a name made here
+        assertTrue("a name of this device: ${answered[0].pdfFile}", answered[0].pdfFile.isNotEmpty() && ".." !in answered[0].pdfFile && '/' !in answered[0].pdfFile)
+        assertEquals("", answered[0].pdf)   // the bytes never stay in the song
     }
 
     // ---- a PDF closed under the stage, a page that fails ----

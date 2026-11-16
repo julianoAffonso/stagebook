@@ -1289,4 +1289,8 @@
     <string name="pick_ask_add">Add the %1$d checked songs to “%2$s”?</string>
     <string name="pick_add_yes">Add</string>
     <string name="set_discard_external">The setlist was also changed from outside (the band or the computer) while you edited. Discard undoes that change too.</string>
+    <string name="ask_kind_label">Which copy to ask for</string>
+    <string name="ask_kind_lyrics">Lyrics</string>
+    <string name="ask_kind_chords">Chords</string>
+    <string name="ask_kind_pdf">PDF</string>
 </resources>

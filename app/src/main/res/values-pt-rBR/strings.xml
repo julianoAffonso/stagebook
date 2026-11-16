@@ -1334,4 +1334,8 @@
     <string name="pick_ask_add">Adicionar as %1$d músicas marcadas a “%2$s”?</string>
     <string name="pick_add_yes">Adicionar</string>
     <string name="set_discard_external">O setlist também foi mudado de fora (pela banda ou pelo computador) enquanto você editava. Descartar desfaz essa mudança também.</string>
+    <string name="ask_kind_label">Qual cópia pedir</string>
+    <string name="ask_kind_lyrics">Só letra</string>
+    <string name="ask_kind_chords">Cifra</string>
+    <string name="ask_kind_pdf">PDF</string>
 </resources>
