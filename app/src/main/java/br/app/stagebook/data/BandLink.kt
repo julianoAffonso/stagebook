@@ -399,13 +399,29 @@ class BandLink @Inject constructor(
     /** What a request is answered with, as it goes on the wire: each song as the copy asked for, the PDFs' bytes inside. */
     internal fun shapedAnswer(wanted: List<Wanted>, pdfs: Boolean = true): List<SetlistCloud.SharedSong> {
         val here = found(wanted).filter { (w, _) -> pdfs || w.kind != br.app.stagebook.domain.AskKind.PDF }
-        val shaped = here.map { (w, s) ->
-            // the copy asked for: lyrics without the chords, the chart as it is, or the PDF with its pages (checked on the other side)
-            SetlistCloud.SharedSong(s.title, s.author, s.year, br.app.stagebook.domain.AskKind.textFor(s.text, w.kind), pdfName = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdfName else "", pdfFile = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdf else "")
-        }
+        val shaped = here.map { (w, s) -> copyAsked(w, s) }
         // the PDFs share the budget of one package. A PDF asked for whose file doesn't fit is left out of the answer: sent without
         // it, it came in as an empty song and was never asked for again (audit 16/11)
         return withPdfBytes(shaped).first.filterIndexed { i, song -> here[i].first.kind != br.app.stagebook.domain.AskKind.PDF || song.pdf.isNotEmpty() }
+    }
+
+    // the copy asked for: lyrics without the chords, the chart as it is, or the PDF with its pages (checked on the other side).
+    // The PDF is still its file's name here: the bytes are read when the answer leaves
+    private fun copyAsked(w: Wanted, s: br.app.stagebook.data.model.Song) =
+        SetlistCloud.SharedSong(s.title, s.author, s.year, br.app.stagebook.domain.AskKind.textFor(s.text, w.kind), pdfName = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdfName else "", pdfFile = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdf else "")
+
+    /**
+     * What a request that came over the internet is answered with: the same copies as on the Wi-Fi ([shapedAnswer]), as a
+     * package of loose songs for the pair's inbox (null = nothing here to send). A request for lyrics only went with the
+     * chords, and with the song's PDF, which then took the place of the lyrics on the stage (audit 16/11). A song asked for
+     * twice goes once, as the first copy asked for.
+     */
+    fun onlineAnswer(wanted: List<Wanted>): Pair<ByteArray, List<SetlistCloud.SharedSong>>? {
+        val here = found(wanted).distinctBy { it.second.id }
+        val sendable = sendableOnline(here.map { it.second.id }).toSet()
+        val songs = here.filter { it.second.id in sendable }.map { (w, s) -> copyAsked(w, s) }
+        if (songs.isEmpty()) return null
+        return QrPayload.pack(SetlistCloud.looseList(songs.map { it.title to it.author })) to songs
     }
 
     /**

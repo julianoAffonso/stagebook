@@ -103,6 +103,46 @@ class AskKindTest {
         assertTrue(l.songsFor(listOf(BandLink.Wanted("Cifrada", "Ana", AskKind.PDF))).isEmpty())
     }
 
+    /** What this device posts to a member's inbox for a request that came over the internet, as that member's app reads it. */
+    private fun answeredOnline(repo: LibraryRepository, wanted: List<BandLink.Wanted>): List<br.app.stagebook.data.SetlistCloud.SharedSong> = runBlocking {
+        val identity = DeviceIdentity(context)
+        val cloud = br.app.stagebook.data.SetlistCloud(repo, identity, pdfs, PdfInspector(Pages()))
+        val band = br.app.stagebook.data.BandInternet(context, cloud, BandTrust(context), identity, BandInbox(context), br.app.stagebook.data.Connectivity(context), link(repo))
+        val key = ByteArray(32) { it.toByte() }
+        val posted = mutableListOf<String>()
+        cloud.postHook = { _, body -> posted += body; true }
+        band.answerRequest(key, "ana", wanted)
+        cloud.getHook = { posted.mapIndexed { i, body -> """{"event":"message","id":"$i","message":"$body"}""" } }
+        cloud.fetchPair(key, null)!!.packages.flatMap { it.third }
+    }
+
+    @Test fun `over the internet a request is answered with the copy asked for too - lyrics only goes without the chords`() {
+        val repo = repo()
+        pdfs.file("net.pdf").writeBytes("%PDF-1.7\n".toByteArray() + ByteArray(2_000) { 7 })
+        repo.saveSong(Song(title = "Cifrada", author = "Ana", text = chords))
+        repo.saveSong(Song(title = "Letra", author = "Ana", text = "La la la\nLa la la\nLa la la"))
+        repo.saveSong(Song(title = "Partitura", author = "Ana", text = chords, pdf = "net.pdf", pdfName = "Partitura.pdf"))
+        fun answer(title: String, kind: String) = answeredOnline(repo, listOf(BandLink.Wanted(title, "Ana", kind)))
+        // lyrics only: the chords are left out of what goes (they went along)
+        val lyrics = answer("Cifrada", AskKind.LYRICS).single()
+        assertFalse("the chords went along: ${lyrics.text}", lyrics.text.contains("[G]"))
+        assertTrue(lyrics.text.contains("La la"))
+        // the chart, and a request from before the kinds: the song as it is
+        assertEquals(chords, answer("Cifrada", AskKind.CHORDS).single().text)
+        assertEquals(chords, answer("Cifrada", AskKind.ANY).single().text)
+        // chords asked for and the song has none: no answer
+        assertTrue(answer("Letra", AskKind.CHORDS).isEmpty())
+        // the PDF goes only when the PDF was asked for: with the lyrics it would take their place on the stage
+        val asLyrics = answer("Partitura", AskKind.LYRICS).single()
+        assertEquals("", asLyrics.pdfFile)
+        assertFalse(asLyrics.text.contains("[G]"))
+        val asPdf = answer("Partitura", AskKind.PDF).single()
+        assertTrue("the PDF asked for arrives and is saved", asPdf.pdfFile.isNotEmpty() && pdfs.file(asPdf.pdfFile).isFile)
+        // the same song asked for twice goes once, as the first copy asked for
+        val twice = answeredOnline(repo, listOf(BandLink.Wanted("Cifrada", "Ana", AskKind.LYRICS), BandLink.Wanted("Cifrada", "Ana", AskKind.CHORDS)))
+        assertFalse(twice.single().text.contains("[G]"))
+    }
+
     @Test fun `an answer with a PDF is checked and saved here, one that is not a PDF is left out with the reason`() {
         val repo = repo()
         val l = link(repo)
