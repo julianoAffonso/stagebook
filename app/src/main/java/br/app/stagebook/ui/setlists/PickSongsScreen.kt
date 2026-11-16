@@ -28,6 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
 import br.app.stagebook.ui.components.InfoDialog
+import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.CenteredContent
@@ -49,11 +50,28 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
     val limit by viewModel.limit.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
-    // leaving with songs checked and the green check forgotten (back, the menu closing): they go in as if it was tapped
-    val context = androidx.compose.ui.platform.LocalContext.current
-    androidx.compose.runtime.DisposableEffect(viewModel) {
-        onDispose { if ((context as? android.app.Activity)?.isChangingConfigurations != true) viewModel.confirmPending() }   // a turned screen is not leaving
+    // leaving with songs checked and the green check forgotten (back): they go in as if it was tapped. The screen being
+    // rebuilt (the pinned menu toggled, the window crossing 600 dp) is not leaving: the checks wait in the saved state
+    val leave = { viewModel.confirmPending(); onDone() }
+    androidx.activity.compose.BackHandler(enabled = uiState.selectedCount > 0, onBack = leave)
+    // closing the menu with songs checked asks first, as a setlist half edited does (user, 15/11)
+    var asking by rememberSaveable { mutableStateOf(false) }
+    val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
+    val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+    val pending by androidx.compose.runtime.rememberUpdatedState(uiState.selectedCount > 0)
+    androidx.compose.runtime.DisposableEffect(guard) {
+        val asks: () -> Boolean = { if (pending) { asking = true; true } else false }
+        guard?.asks = asks
+        onDispose { if (guard?.asks === asks) guard.asks = null }
     }
+    if (asking) QuestionDialog(
+        stringResource(R.string.pick_title),
+        stringResource(R.string.pick_ask_add, uiState.selectedCount, uiState.setName),
+        stringResource(R.string.pick_add_yes), { asking = false; viewModel.confirmPending(); guard?.asks = null; drawer?.close?.invoke() },
+        stringResource(R.string.set_discard), { asking = false; viewModel.clearPending(); guard?.asks = null; drawer?.close?.invoke() },
+        onOutside = { asking = false },
+        cancelLabel = stringResource(R.string.set_keep_editing), onCancel = { asking = false },
+    )
     if (limit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_message), viewModel::dismissLimit)
     PickSongsScreen(
         uiState = uiState,
@@ -62,7 +80,7 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
         // checked one: the search clears (with the keyboard open) for the next song
         onToggle = { if (viewModel.toggle(it)) query = "" },
         onConfirm = { viewModel.confirm(); onDone() },
-        onBack = onDone,
+        onBack = leave,
         onTagsChange = viewModel::onTagsChange,
     )
 }

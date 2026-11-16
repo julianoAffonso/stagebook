@@ -130,6 +130,99 @@ class PickSongsRowsTest {
         compose.onAllNodesWithText("6", useUnmergedTree = true).assertCountEquals(2)
     }
 
+    private fun pickerWithOneChecked(): Triple<PickSongsViewModel, LibraryRepository, Pair<String, String>> = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha")).map(repo::saveSong)
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
+        val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
+        assertEquals(true, vm.toggle(ids[1]))
+        Triple(vm, repo, set to ids[1])
+    }
+
+    @Test fun `closing the menu with songs checked asks first, and Add puts them in and closes`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, ids) = pickerWithOneChecked()
+            val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+            var closed = 0
+            compose.setContent {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard,
+                    br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
+                ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
+            }
+            compose.waitForIdle()
+            assertEquals("the menu asks the screen before it closes", true, guard.asks?.invoke())
+            compose.waitForIdle()
+            compose.onNodeWithText("Adicionar as 1 músicas marcadas", substring = true).assertIsDisplayed()
+            assertEquals("nothing went in yet", 1, repo.library.value.setlist(ids.first)!!.items.size)
+            compose.onNodeWithText("Adicionar").performClick()
+            compose.waitForIdle()
+            assertEquals(2, repo.library.value.setlist(ids.first)!!.items.size)
+            assertEquals(1, closed)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `closing the menu with songs checked and choosing Discard adds nothing`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, ids) = pickerWithOneChecked()
+            val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+            var closed = 0
+            compose.setContent {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard,
+                    br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
+                ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
+            }
+            compose.waitForIdle()
+            guard.asks?.invoke(); compose.waitForIdle()
+            compose.onNodeWithText("Descartar").performClick()
+            compose.waitForIdle()
+            assertEquals(1, repo.library.value.setlist(ids.first)!!.items.size)
+            assertEquals(1, closed)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `with nothing checked the menu closes without a question`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val repo = runBlocking { LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
+            val set = repo.createSetlist("Show")
+            val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
+            val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+            compose.setContent { androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } } }
+            compose.waitForIdle()
+            assertEquals(false, guard.asks?.invoke())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `the screen being rebuilt does not add what is checked, the checks wait`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, ids) = pickerWithOneChecked()
+            val show = androidx.compose.runtime.mutableStateOf(true)
+            compose.setContent { StagebookTheme { if (show.value) br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
+            compose.waitForIdle()
+            show.value = false   // what pinning the menu or crossing 600 dp does to it: gone from the composition, back a moment later
+            compose.waitForIdle()
+            show.value = true
+            compose.waitForIdle()
+            assertEquals("not added by the rebuild", 1, repo.library.value.setlist(ids.first)!!.items.size)
+            vm.confirmPending()
+            assertEquals(2, repo.library.value.setlist(ids.first)!!.items.size)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a row draws the artist without the year, the key, the tempo, the capo and the mark, and a tap checks it`() {
         val toggled = ArrayList<String>()
         var confirmed = 0

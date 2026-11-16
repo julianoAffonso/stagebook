@@ -1286,4 +1286,7 @@
         <item quantity="one">%1$d request waiting for an answer</item>
         <item quantity="other">%1$d requests waiting for an answer</item>
     </plurals>
+    <string name="pick_ask_add">Add the %1$d checked songs to “%2$s”?</string>
+    <string name="pick_add_yes">Add</string>
+    <string name="set_discard_external">The setlist was also changed from outside (the band or the computer) while you edited. Discard undoes that change too.</string>
 </resources>

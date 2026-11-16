@@ -1331,4 +1331,7 @@
         <item quantity="many">%1$d pedidos esperando resposta</item>
         <item quantity="other">%1$d pedidos esperando resposta</item>
     </plurals>
+    <string name="pick_ask_add">Adicionar as %1$d músicas marcadas a “%2$s”?</string>
+    <string name="pick_add_yes">Adicionar</string>
+    <string name="set_discard_external">O setlist também foi mudado de fora (pela banda ou pelo computador) enquanto você editava. Descartar desfaz essa mudança também.</string>
 </resources>

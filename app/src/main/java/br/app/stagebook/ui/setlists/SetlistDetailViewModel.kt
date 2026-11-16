@@ -65,6 +65,8 @@ data class SetlistDetailUiState(
     val anyPlayed: Boolean = false,
     /** There is a band to lead and this device isn't already leading or following it: the menu's "Lead the band". */
     val canConduct: Boolean = false,
+    /** How many times someone else (the band, the computer's editor) changed this setlist since the app opened. */
+    val external: Int = 0,
     /** The breaks left open on the stage, by position (songs before it): their counter, running or paused. */
     val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
 )
@@ -144,7 +146,8 @@ class SetlistDetailViewModel @Inject constructor(
                 }.orEmpty()
             }.orEmpty(),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
+    }.combine(repository.externalEdits) { state, ext -> state.copy(external = ext[setId] ?: 0) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
 
     // this device follows the band: its own open breaks of this setlist are over (the leader's is the one shown)
     init {

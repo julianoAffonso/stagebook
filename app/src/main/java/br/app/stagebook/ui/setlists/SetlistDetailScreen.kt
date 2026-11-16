@@ -214,6 +214,8 @@ fun SetlistDetailScreen(
     // one leaves the composition (a plain remember was lost then, and Discard restored nothing)
     var beforeIds by rememberSaveable { mutableStateOf<ArrayList<String>?>(null) }
     var beforeBreaks by rememberSaveable { mutableStateOf<ArrayList<Int>?>(null) }
+    // how many outside changes (the band, the computer) there were when editing began: more now = Discard would undo theirs too
+    var externalAtStart by rememberSaveable { mutableStateOf(0) }
     val before: Pair<List<String>, List<Int>>? = beforeIds?.let { it to (beforeBreaks ?: emptyList<Int>()) }
     var afterAsk by remember { mutableStateOf<(() -> Unit)?>(null) }
     val drawerGuard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
@@ -297,7 +299,7 @@ fun SetlistDetailScreen(
                         val canBreak = br.app.stagebook.domain.SetlistBreaks.canAdd(uiState.breaks, uiState.items.size)
                         SetActions(
                             editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak,
-                            onEdit = { beforeIds = ArrayList(items.map { it.songId }); beforeBreaks = ArrayList(uiState.breaks); editing = true },
+                            onEdit = { beforeIds = ArrayList(items.map { it.songId }); beforeBreaks = ArrayList(uiState.breaks); externalAtStart = uiState.external; editing = true },
                             onSave = { finishEditing() }, canSave = changed,
                             menu = listOfNotNull(
                                 MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { uiState.canConduct },
@@ -388,7 +390,9 @@ fun SetlistDetailScreen(
         // the question of closing the menu (or leaving the edit) with the setlist half done
         QuestionDialog(
             stringResource(R.string.set_edit),
-            stringResource(R.string.set_save_question, uiState.name),
+            stringResource(R.string.set_save_question, uiState.name) +
+                // someone else changed it while it was being edited: Discard would take their change back too
+                if (uiState.external != externalAtStart) "\n\n" + stringResource(R.string.set_discard_external) else "",
             stringResource(R.string.action_save), { val go = afterAsk; afterAsk = null; finishEditing(); go?.invoke() },
             stringResource(R.string.set_discard), { val go = afterAsk; afterAsk = null; before?.let { onRestore(it.first, it.second) }; finishEditing(); go?.invoke() },
             onOutside = { asking = false; afterAsk = null },

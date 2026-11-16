@@ -50,4 +50,20 @@ class SetlistDiscardTest {
         compose.waitForIdle()
         assertEquals(listOf("a", "b"), restored?.first)
     }
+
+    @Test fun `the question says Discard also undoes what the band or the computer changed meanwhile`() {
+        var state by mutableStateOf(SetlistDetailUiState(loading = false, name = "Show", items = listOf(SetItemUi("a", "a", "A", "", false)), external = 0))
+        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}) } }
+        compose.onNodeWithContentDescription("Editar setlist").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Fechar").performClick()   // unchanged: leaves the edit with no question
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Editar setlist").performClick()
+        compose.waitForIdle()
+        state = state.copy(external = 1, items = state.items + SetItemUi("b", "b", "B", "", false))   // changed from outside
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Fechar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("também foi mudado de fora", substring = true).assertExists()
+    }
 }

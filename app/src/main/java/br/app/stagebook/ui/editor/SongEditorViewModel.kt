@@ -121,7 +121,13 @@ class SongEditorViewModel @Inject constructor(
     var pdfInvert by mutableStateOf<Boolean?>(savedStateHandle.get<Boolean>(KEY_PDF_INVERT) ?: route.songId?.let(repository::song)?.pdfInvert)
         private set
     /** The trims of the PDF's pages (this device only). */
-    var pdfCrops by mutableStateOf(route.songId?.let(repository::song)?.pdfCrops.orEmpty())
+    private val cropsJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }   // before pdfCrops: its initializer uses it
+    // the trims: a saved song's are read from the library; a new song's wait here, and are kept with the state (the process being
+    // killed before saving must not lose them)
+    var pdfCrops by mutableStateOf(
+        savedStateHandle.get<String>(KEY_PDF_CROPS)?.let { runCatching { cropsJson.decodeFromString<List<br.app.stagebook.data.model.PdfCrop>>(it) }.getOrNull() }
+            ?: route.songId?.let(repository::song)?.pdfCrops.orEmpty(),
+    )
         private set
     private var pdfPages by mutableStateOf(0)
     private var pdfBytes by mutableStateOf(0L)
@@ -168,7 +174,10 @@ class SongEditorViewModel @Inject constructor(
     /** The trim of [page] ([br.app.stagebook.data.model.PdfCrop.ALL] for the one for all pages) taken off. */
     fun clearPdfCrop(page: Int) { pdfCrops = br.app.stagebook.domain.PdfCrops.clear(pdfCrops, page); keepCrops() }
 
-    private fun keepCrops() { if (route.songId != null) repository.updateSong(songId) { it.copy(pdfCrops = pdfCrops) } }
+    private fun keepCrops() {
+        savedStateHandle[KEY_PDF_CROPS] = cropsJson.encodeToString(pdfCrops)
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdfCrops = pdfCrops) }
+    }
 
     /** The colours turned over for this song's PDF: kept at once for a saved song, like the track. */
     fun setPdfInvert(on: Boolean) {
@@ -181,6 +190,7 @@ class SongEditorViewModel @Inject constructor(
     fun removePdf() {
         pdfInvert = null
         pdfCrops = emptyList()
+        savedStateHandle.remove<String>(KEY_PDF_CROPS)
         savedStateHandle.remove<Boolean>(KEY_PDF_INVERT)
         if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
         pdfs?.remove(pdf)
@@ -193,6 +203,7 @@ class SongEditorViewModel @Inject constructor(
         pdfPages = pages
         pdfBytes = bytes
         pdfCrops = emptyList()   // another file: the old trims were of other pages
+        savedStateHandle.remove<String>(KEY_PDF_CROPS)
         savedStateHandle[KEY_PDF] = name
         savedStateHandle[KEY_PDF_NAME] = shown
     }
@@ -419,6 +430,7 @@ class SongEditorViewModel @Inject constructor(
         const val KEY_FIELDS = "editor_fields"
         const val KEY_TAGS = "editor_tags"
         const val KEY_MIDI = "editor_midi"
+        const val KEY_PDF_CROPS = "editor_pdf_crops"
         const val KEY_IMPORTED = "editor_imported"
         const val KEY_NEW_ID = "editor_new_id"
         const val KEY_TRACK = "editor_track"

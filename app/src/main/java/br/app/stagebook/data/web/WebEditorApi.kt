@@ -506,6 +506,7 @@ class WebEditorApi(
         if (repository.library.value.setlist(id) == null) return HttpResponse.status(404)
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         if (!breaksOk(d, repository.library.value.setlist(id)?.items?.size ?: 0)) return problem("bad_breaks")
+        repository.markExternalEdit(id)   // from the computer: a setlist being edited on the device knows it changed from outside
         if (d.name.isNotBlank()) repository.renameSetlist(id, d.name.trim())
         d.date?.let { repository.setSetlistDate(id, it) }
         if (d.items != null || d.breaks != null) saveItems(id, d)

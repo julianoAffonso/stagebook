@@ -324,7 +324,14 @@ class LibraryRepository @Inject constructor(
      * setlist can have one; with nothing said about breaks (null: the QR, an older app) the setlist's own stay, as
      * when its songs are replaced. The one way in for the app's receive screen and the editor on the computer.
      */
+    // how many times each setlist was changed by someone other than this screen (the band's, the computer's editor): a setlist half
+    // edited here compares it to tell that "Discard" would undo their change too
+    private val _external = kotlinx.coroutines.flow.MutableStateFlow<Map<String, Int>>(emptyMap())
+    val externalEdits: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = _external
+    fun markExternalEdit(setId: String) { _external.value = _external.value + (setId to ((_external.value[setId] ?: 0) + 1)) }
+
     fun setReceivedSetlist(setId: String, slots: List<String?>, breaks: List<Int>?) {
+        markExternalEdit(setId)
         if (breaks == null) { setSetlistItems(setId, slots.filterNotNull()); return }
         updateSet(setId) { s ->
             val placed = SetlistBreaks.place(slots, breaks)

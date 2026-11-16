@@ -251,6 +251,27 @@ class PdfEditorTest {
         }
     }
 
+    @Test fun `the trims of a new song survive the process being killed before it is saved`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val scope = CoroutineScope(Dispatchers.IO)
+            val repo = LibraryRepository(context, scope)
+            withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList())
+            val handle = SavedStateHandle(mapOf("fromImport" to false))
+            fun editor() = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), handle, ImportQueue(repo), TrackStore(context), EditorQueue(), PdfStore(context), PdfInspector(Pages()))
+            val first = editor()
+            first.setPdfCrop(br.app.stagebook.data.model.PdfCrop(br.app.stagebook.data.model.PdfCrop.ALL, left = 0.2f, right = 0.9f))
+            // a new editor on the same saved state, as after the process came back
+            val second = editor()
+            assertEquals(1, second.pdfCrops.size)
+            assertEquals(0.2f, second.pdfCrops.single().left, 0.0001f)
+            second.clearPdfCrop(br.app.stagebook.data.model.PdfCrop.ALL)
+            assertEquals(0, editor().pdfCrops.size)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a refused PDF changes nothing and says why`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {

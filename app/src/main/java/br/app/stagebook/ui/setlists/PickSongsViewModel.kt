@@ -110,6 +110,12 @@ class PickSongsViewModel @Inject constructor(
 
     fun confirm() = confirmPending()
 
+    /** The checks forgotten, nothing added ("Discard" when the menu is closed with songs checked). */
+    fun clearPending() { savedStateHandle[KEY_SELECTED] = ArrayList<String>() }
+
+    // the screen is gone for good (its entry popped some other way): what was checked was meant to go in
+    override fun onCleared() { confirmPending() }
+
     /**
      * Adds the checked songs to the setlist, in the order they were checked, and forgets the checks. Also what leaving
      * the screen does with songs checked and not confirmed: they were meant to go in (user, 15/11), and a second call
