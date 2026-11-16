@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -481,21 +482,29 @@ fun ConductBar(
         InfoDialog(stringResource(R.string.conduct_lacks_here_title), "", onDismiss = { showLacks = false }) {
             Column {
                 LackRows(ui.lackSongs, Modifier.weight(1f, fill = false).verticalScroll(androidx.compose.foundation.rememberScrollState()))
+                androidx.compose.material3.HorizontalDivider(Modifier.padding(top = Spacing.m))
                 // what the review of a shared setlist offers for the songs it lacks (user, 15/11)
                 val count = ui.lacksHere.size
                 // which copy is asked for: said in the request, and the other device sends that one or nothing (user, 15/11)
                 var kind by rememberSaveable { mutableStateOf(options.defaultKind) }
                 if (options.bandDevices > 0 || options.internetFrom != null) {
                     // a list that opens, not a row of four: on a phone with large letters the row cut its first option (device test 16/11)
-                    AskKindPicker(kind, { kind = it }, Modifier.fillMaxWidth().padding(top = Spacing.s))
+                    AskKindPicker(kind, { kind = it }, Modifier.fillMaxWidth().padding(top = Spacing.m))
                 }
-                if (options.bandDevices > 0) TextButton({ onAskBand(kind) }, enabled = !asking) {
-                    // (these sentences wrap: on one line a phone cut them off, device test 16/11)
-                    Text(if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices))
+                // each way to get them is a line with its icon, starting where the title and the songs start, and its
+                // sentence wraps (on one line a phone cut it off, device test 16/11)
+                Column(Modifier.padding(top = Spacing.s)) {
+                    if (options.bandDevices > 0) LackAction(
+                        AppIcons.Group,
+                        if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices),
+                        enabled = !asking,
+                    ) { onAskBand(kind) }
+                    // the request went: the window closes, and the strip says so
+                    options.internetFrom?.let { name ->
+                        LackAction(AppIcons.Public, stringResource(R.string.scan_ask_internet, name), enabled = !options.askingOnline) { showLacks = false; onAskInternet(kind) }
+                    }
+                    LackAction(AppIcons.Download, pluralStringResource(R.plurals.scan_import_missing, count, count)) { showLacks = false; onImportMissing() }
                 }
-                // the request went: the window closes, and its notice shows whole (the strip rises over it while a window is open)
-                options.internetFrom?.let { name -> TextButton({ showLacks = false; onAskInternet(kind) }, enabled = !options.askingOnline) { Text(stringResource(R.string.scan_ask_internet, name)) } }
-                TextButton({ showLacks = false; onImportMissing() }) { Text(pluralStringResource(R.plurals.scan_import_missing, count, count)) }
             }
         }
     }
@@ -571,6 +580,21 @@ private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, ta
 /** An action's text: whole, on one line, whatever is beside it. */
 @Composable
 private fun ActionText(text: String) = Text(text, maxLines = 1, softWrap = false)
+
+/** One way to get the missing songs: its icon and its sentence, a whole line to touch. */
+@Composable
+private fun LackAction(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, enabled: Boolean = true, onClick: () -> Unit) {
+    val tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    Row(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .heightIn(min = Sizes.touch).padding(vertical = Spacing.s),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        Icon(icon, null, tint = tint)
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = if (enabled) MaterialTheme.colorScheme.onSurface else tint, modifier = Modifier.weight(1f))
+    }
+}
 
 /**
  * Which copy to ask for, as a line that opens a list. Not the app's dropdown: its read-only text field, as a window's

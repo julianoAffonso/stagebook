@@ -55,14 +55,16 @@ internal fun lackSongs(titles: List<String>, items: List<br.app.stagebook.domain
  */
 @Composable
 internal fun LackRows(songs: List<ConductUi.LackSong>, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.xs)) {
+    // plain lines that start where the window's title starts (user, 16/11: the list's own rows sat further in than the
+    // title and than the actions under them, three left edges in one window)
+    Column(modifier, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.s)) {
         songs.forEach { s ->
-            br.app.stagebook.ui.components.SongListItem(
-                title = s.title, subtitle = s.artist, onClick = null,
-                containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                gap = br.app.stagebook.ui.theme.Spacing.s, titleLines = 1, dense = true,
-                titleStyle = MaterialTheme.typography.titleMedium,
-            )
+            Column {
+                Text(s.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (s.artist.isNotEmpty()) {
+                    Text(s.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+            }
         }
     }
 }
