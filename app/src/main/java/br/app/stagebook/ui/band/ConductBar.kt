@@ -465,6 +465,8 @@ fun ConductBar(
                     Text(stringResource(R.string.ask_kind_label), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = Spacing.s))
                     br.app.stagebook.ui.components.SegmentedChoice(
                         listOf(
+                            // by default what makes sense for each song: the copy the leader plays
+                            br.app.stagebook.ui.components.Choice("", R.string.ask_kind_band),
                             br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.LYRICS, R.string.ask_kind_lyrics),
                             br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.CHORDS, R.string.ask_kind_chords),
                             br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.PDF, R.string.ask_kind_pdf),

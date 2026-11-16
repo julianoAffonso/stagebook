@@ -199,7 +199,7 @@ class BandConduct internal constructor(
         if (!bandOn() || !link.hasSavedMembers()) return false   // band off or nobody in it: nothing to lead (an armed button left behind doesn't lead either)
         val lib = repository.library.value
         val set = lib.setlist(setId) ?: return false
-        val songs = set.items.mapNotNull(lib::song).map { Conduct.Item(it.title, it.author) }
+        val songs = set.items.mapNotNull(lib::song).map { Conduct.Item(it.title, it.author, br.app.stagebook.domain.AskKind.of(it)) }
         if (songs.isEmpty()) return false
         start(setId, set.name, songs, index.coerceIn(0, songs.size - 1))
         return true
@@ -540,7 +540,7 @@ class BandConduct internal constructor(
      * strip), as the review of a shared setlist does (user, 15/11). Each answer that is the song asked for goes straight in, the
      * copy with chords first; the notice says how many of how many.
      */
-    fun askAll(kind: String = br.app.stagebook.domain.AskKind.ANY) {
+    fun askAll(kind: String = "") {
         if (!bandOn()) return
         val following = _role.value as? Role.Following ?: return
         val library = repository.library.value
@@ -548,7 +548,8 @@ class BandConduct internal constructor(
         if (items.isEmpty() || !_asking.compareAndSet(false, true)) return
         scope.launch {
             try {
-                val answers = request(items.map { BandLink.Wanted(it.title, it.artist, kind) }).filter { it.song.allowed() }
+                // what makes sense for each song: the copy the leader plays (its kind), unless the person chose another for all
+                val answers = request(items.map { BandLink.Wanted(it.title, it.artist, kind.ifEmpty { it.kind }) }).filter { it.song.allowed() }
                 var got = 0
                 for (item in items) {
                     val best = answers.filter { Conduct.isFor(item, it.song.title, it.song.author) }

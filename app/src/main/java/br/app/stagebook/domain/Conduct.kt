@@ -20,7 +20,9 @@ object Conduct {
     const val END = "end"       // it's over: each one is on their own again
 
     @Serializable
-    data class Item(val title: String, val artist: String = "")
+    // [kind]: which copy the leader plays (an [AskKind]: lyrics, chords or a PDF), so a follower that lacks the song asks for that
+    // one ("" = the leader's app doesn't say)
+    data class Item(val title: String, val artist: String = "", val kind: String = "")
 
     /** What a band member is missing ([who] = device name). */
     @Serializable

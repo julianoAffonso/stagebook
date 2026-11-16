@@ -1293,4 +1293,5 @@
     <string name="ask_kind_lyrics">Lyrics</string>
     <string name="ask_kind_chords">Chords</string>
     <string name="ask_kind_pdf">PDF</string>
+    <string name="ask_kind_band">Like the band</string>
 </resources>

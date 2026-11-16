@@ -27,7 +27,7 @@ import javax.inject.Inject
  * and the internet is on) to ask online, and the sites to import them from.
  */
 @Immutable
-data class AskOptions(val bandDevices: Int = 0, val internetFrom: String? = null, val defaultKind: String = br.app.stagebook.domain.AskKind.CHORDS)
+data class AskOptions(val bandDevices: Int = 0, val internetFrom: String? = null, val defaultKind: String = "")
 
 @HiltViewModel
 class ConductAskViewModel @Inject constructor(
@@ -41,7 +41,6 @@ class ConductAskViewModel @Inject constructor(
         val following = role as? Role.Following
         AskOptions(
             bandDevices = if (following != null && lib.look.bandOn) online.size else 0,
-            defaultKind = br.app.stagebook.domain.AskKind.default(lib.look.chords),
             internetFrom = following?.takeIf { lib.look.bandOn && lib.look.internetOn && trust.isMember(it.fromId) }?.let { trust.member(it.fromId)?.name },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AskOptions())
@@ -57,7 +56,7 @@ class ConductAskViewModel @Inject constructor(
     fun askInternet(kind: String) {
         val following = conduct.role.value as? Role.Following ?: return
         val name = trust.member(following.fromId)?.name ?: return
-        val wanted = missingItems(following).map { BandLink.Wanted(it.title, it.artist, kind) }
+        val wanted = missingItems(following).map { BandLink.Wanted(it.title, it.artist, kind.ifEmpty { it.kind }) }
         if (wanted.isEmpty()) return
         viewModelScope.launch { internet.send(name to bandInternet.requestSongs(following.fromId, wanted)) }
     }

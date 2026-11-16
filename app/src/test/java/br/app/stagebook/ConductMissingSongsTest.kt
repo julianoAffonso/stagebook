@@ -11,6 +11,7 @@ import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.SetlistCloud
 import br.app.stagebook.data.model.Song
 import br.app.stagebook.domain.BandProtocol
+import br.app.stagebook.domain.AskKind
 import br.app.stagebook.domain.Conduct
 import br.app.stagebook.domain.PendingFollow
 import br.app.stagebook.domain.QrPayload
@@ -453,5 +454,21 @@ class ConductMissingSongsTest {
         off.follower.askAll()
         runBlocking { delay(200) }
         assertTrue(off.asked.isEmpty())
+    }
+
+    @Test fun `asking all asks each song for the copy the leader plays, unless the person picks one for all`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords))
+        val items = listOf(Conduct.Item("Primeira", "Banda", AskKind.CHORDS), Conduct.Item("Segunda", "Banda", AskKind.PDF), Conduct.Item("Terceira", "Banda", AskKind.LYRICS))
+        b.leader.start("s1", "Show", items, 1)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        b.answers = { emptyList() }
+        b.follower.askAll()
+        await { b.asked.size == 1 }
+        // what makes sense for each: the one it has is not asked, the PDF as PDF, the lyrics as lyrics
+        assertEquals(listOf(BandLink.Wanted("Segunda", "Banda", AskKind.PDF), BandLink.Wanted("Terceira", "Banda", AskKind.LYRICS)), b.asked.single())
+        await { !b.follower.asking.value }
+        b.follower.askAll(AskKind.CHORDS)
+        await { b.asked.size == 2 }
+        assertEquals(listOf(AskKind.CHORDS, AskKind.CHORDS), b.asked.last().map { it.kind })
     }
 }
