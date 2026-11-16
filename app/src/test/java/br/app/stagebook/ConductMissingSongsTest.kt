@@ -417,4 +417,41 @@ class ConductMissingSongsTest {
         assertEquals(listOf(BandLink.Wanted("Segunda", "Banda")), b.asked.single())
         assertFalse((b.strip() as ConductUi.Following).missingHere)
     }
+
+    @Test fun `asking all sends one request with every song of the setlist not here, and the answers go straight in`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        b.answers = { listOf(answer(shared("Segunda"), "Baixo"), answer(shared("Terceira"), "Voz")) }
+        b.follower.askAll()
+        await { b.has("Segunda") != null && b.has("Terceira") != null }
+        await { !b.follower.asking.value }
+        // one question for both missing songs (the one it has is not asked for)
+        assertEquals(listOf(listOf(BandLink.Wanted("Segunda", "Banda"), BandLink.Wanted("Terceira", ""))), b.asked.toList())
+        assertEquals(Notice.AskedMany(2, 2), b.notices.last())
+    }
+
+    @Test fun `asking all says how many came when only some did, and when none did`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        b.answers = { listOf(answer(shared("Segunda"), "Baixo")) }
+        b.follower.askAll()
+        await { b.notices.any { it is Notice.AskedMany } }
+        assertEquals(Notice.AskedMany(1, 2), b.notices.filterIsInstance<Notice.AskedMany>().single())
+        await { !b.follower.asking.value }
+        b.answers = { emptyList() }
+        b.follower.askAll()
+        await { b.notices.count { it is Notice.AskedMany } == 2 }
+        assertEquals(Notice.AskedMany(0, 1), b.notices.filterIsInstance<Notice.AskedMany>().last())
+    }
+
+    @Test fun `asking all with nothing missing, or with the band off, asks nothing`() {
+        val full = Band(followerHas = arrayOf("Primeira" to chords, "Segunda" to chords, "Terceira" to chords)).started(index = 1)
+        full.follower.askAll()
+        runBlocking { delay(200) }
+        assertTrue(full.asked.isEmpty())
+        val off = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        off.repo.updateLook { it.copy(bandOn = false) }
+        await { !off.repo.library.value.look.bandOn }
+        off.follower.askAll()
+        runBlocking { delay(200) }
+        assertTrue(off.asked.isEmpty())
+    }
 }

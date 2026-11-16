@@ -203,7 +203,7 @@ fun StagebookNavHost(
         }
     }
     var drawerShown by remember { androidx.compose.runtime.mutableStateOf(false) }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
+    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalOpenImporter provides { nav.navigate(Importer(queued = true)) { launchSingleTop = true } }, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     BandStripLayout(liftIme = !drawerShown, screens = {
     LibraryDrawerHost(nav, onShown = { drawerShown = it; start.menuShown(it) }) {
     NavHost(
@@ -285,7 +285,7 @@ fun StagebookNavHost(
     // over any screen, the stage included: this device's USB can't carry the interface just opened
     val hostWarning by br.app.stagebook.player.StagePlayer.hostWarning.collectAsStateWithLifecycle()
     hostWarning?.let { br.app.stagebook.ui.components.HostWarningDialog(it, br.app.stagebook.player.StagePlayer::dismissHostWarning) }
-    }, strip = { br.app.stagebook.ui.band.ConductRoute() })
+    }, strip = { br.app.stagebook.ui.band.ConductRoute(asks = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()) })
     }
 }
 

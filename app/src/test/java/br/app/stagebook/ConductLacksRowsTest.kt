@@ -65,4 +65,39 @@ class ConductLacksRowsTest {
         compose.onAllNodesWithText("Evidências, Asa Branca", substring = true).assertCountEquals(0)
         compose.onNodeWithText("Enviar as 2 que faltam").assertIsDisplayed()
     }
+
+    @Test fun `a follower's list offers to ask the band, ask the leader online and import the missing ones, as a shared setlist does`() {
+        val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), "x")
+        val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())
+        var band = 0; var internet = 0; var import = 0
+        compose.setContent {
+            StagebookTheme {
+                ConductBar(ui, {}, {}, {}, {}, options = br.app.stagebook.ui.band.AskOptions(bandDevices = 2, internetFrom = "Voz"),
+                    onAskBand = { band++ }, onAskInternet = { internet++ }, onImportMissing = { import++ })
+            }
+        }
+        compose.onNodeWithText("Ver o que falta aqui").performClick()
+        compose.onNodeWithText("Pedir à banda (2 aparelhos na rede)").performClick()
+        compose.onNodeWithText("Pedir as que faltam a Voz pela internet").performClick()
+        compose.onNodeWithText("Importar as que faltam (3)").performClick()
+        assertEquals(listOf(1, 1, 1), listOf(band, internet, import))
+    }
+
+    @Test fun `with nobody on the network and no online leader the list offers only the import`() {
+        val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), "x")
+        val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}) } }
+        compose.onNodeWithText("Ver o que falta aqui").performClick()
+        compose.onAllNodesWithText("Pedir à banda", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("pela internet", substring = true).assertCountEquals(0)
+        compose.onNodeWithText("Importar as que faltam (3)").assertIsDisplayed()
+    }
+
+    @Test fun `a song that is not here shows Ask even while the strip waits, and not Go`() {
+        val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), null)
+        val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}, waiting = br.app.stagebook.domain.FollowWait.OTHER_SONG) } }
+        compose.onNodeWithText("Pedir").assertExists()   // the current song is not here (no song id)
+        compose.onAllNodesWithText("Ir").assertCountEquals(0)
+    }
 }

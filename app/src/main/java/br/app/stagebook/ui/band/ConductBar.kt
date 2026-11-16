@@ -178,6 +178,8 @@ internal fun BandConduct.Notice.text(resources: android.content.res.Resources): 
     is BandConduct.Notice.Nobody -> resources.getString(if (chords) R.string.conduct_nobody_has_chords else R.string.conduct_nobody_has)
     is BandConduct.Notice.ChordsKept -> resources.getString(R.string.conduct_chords_kept, title, from)
     is BandConduct.Notice.ChordsCame -> resources.getString(R.string.conduct_chords_came, title, from)
+    is BandConduct.Notice.AskedMany ->
+        if (got > 0) resources.getQuantityString(R.plurals.scan_band_got, asked, got, asked) else resources.getString(R.string.scan_band_none)
 }
 
 private fun ticks() = flow { while (true) { emit(System.currentTimeMillis()); delay(30_000) } }
@@ -238,8 +240,11 @@ class ConductViewModel @Inject constructor(
 }
 
 @Composable
-fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hiltViewModel()) {
+fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hiltViewModel(), asks: ConductAskViewModel? = null) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    // (the app passes it; a test of the strip alone leaves it out and the three actions do nothing)
+    val options by (asks?.options ?: kotlinx.coroutines.flow.MutableStateFlow(AskOptions())).collectAsStateWithLifecycle()
+    val openImporter = br.app.stagebook.ui.components.LocalOpenImporter.current
     val asking by viewModel.asking.collectAsStateWithLifecycle()
     val sending by viewModel.sending.collectAsStateWithLifecycle()
     val message = br.app.stagebook.ui.components.LocalAppMessage.current
@@ -248,12 +253,20 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
     LaunchedEffect(viewModel, message, resources) {
         viewModel.notices.collect { message.show(it.text(resources), long = it is BandConduct.Notice.ChordsKept) }
     }
+    // the answer of "ask online", as the review of a shared setlist says it
+    LaunchedEffect(asks, message, resources) {
+        asks?.internetResult?.collect { (name, ok) ->
+            message.show(if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), long = true)
+        }
+    }
     val gate = br.app.stagebook.ui.components.LocalFollowGate.current
     AnimatedVisibility(ui != null, modifier) {
         ui?.let {
             ConductBar(
                 it, viewModel::end, viewModel::leave, viewModel::search, viewModel::follow, onAsk = viewModel::ask, onCancel = viewModel::cancelArmed, asking = asking, onSend = viewModel::send, sending = sending,
                 waiting = gate.waiting().takeIf { _ -> it is ConductUi.Following }, onGo = gate::goNow,
+                options = options, onAskBand = { asks?.askBand() }, onAskInternet = { asks?.askInternet() },
+                onImportMissing = { if (asks?.importMissing() == true) openImporter() },
             )
         }
     }
@@ -290,6 +303,8 @@ fun ConductBar(
     ui: ConductUi, onEnd: () -> Unit, onLeave: () -> Unit, onSearch: () -> Unit, onFollow: () -> Unit, modifier: Modifier = Modifier,
     onAsk: () -> Unit = {}, asking: Boolean = false, onSend: (String?) -> Unit = {}, sending: Boolean = false,
     waiting: br.app.stagebook.domain.FollowWait? = null, onGo: () -> Unit = {}, onCancel: () -> Unit = {},
+    // what a follower can do about the setlist's songs it lacks: ask the band here, ask the leader online, import from the sites
+    options: AskOptions = AskOptions(), onAskBand: () -> Unit = {}, onAskInternet: () -> Unit = {}, onImportMissing: () -> Unit = {},
 ) {
     // the leader's song is waiting for this person to finish what they're doing: the strip says where the leader went,
     // why it hasn't opened, and offers to go now
@@ -337,9 +352,10 @@ fun ConductBar(
                 TextButton(onEnd) { ActionText(stringResource(R.string.conduct_end)) }
             }
             is ConductUi.Following -> {
-                if (waits) TextButton(onGo) { ActionText(stringResource(R.string.conduct_go)) }
+                // "Go" opens what waits; a song that isn't here can't be gone to: there it is "Ask", not both
+                if (waits && !ui.missingHere) TextButton(onGo) { ActionText(stringResource(R.string.conduct_go)) }
                 // busy while the answer comes
-                if (canAsk && !waits) {
+                if (canAsk) {
                     TextButton(onAsk, enabled = !asking) { ActionText(stringResource(if (asking) R.string.conduct_asking else R.string.conduct_ask)) }
                 }
                 TextButton(onLeave) { ActionText(stringResource(R.string.conduct_leave)) }
@@ -438,7 +454,18 @@ fun ConductBar(
         LacksDialog(ui.lackers, sending, onSend, onDismiss = { showLacks = false })
     } else if (showLacks && ui is ConductUi.Following && ui.lacksHere.isNotEmpty()) {
         // the leader's setlist songs that aren't here, as rows: only what the leader's message says (title, artist)
-        InfoDialog(stringResource(R.string.conduct_lacks_here_title), "", onDismiss = { showLacks = false }) { LackRows(ui.lackSongs, Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) }
+        InfoDialog(stringResource(R.string.conduct_lacks_here_title), "", onDismiss = { showLacks = false }) {
+            Column {
+                LackRows(ui.lackSongs, Modifier.weight(1f, fill = false).verticalScroll(androidx.compose.foundation.rememberScrollState()))
+                // what the review of a shared setlist offers for the songs it lacks (user, 15/11)
+                val count = ui.lacksHere.size
+                if (options.bandDevices > 0) TextButton(onAskBand, enabled = !asking) {
+                    ActionText(if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices))
+                }
+                options.internetFrom?.let { name -> TextButton(onAskInternet) { ActionText(stringResource(R.string.scan_ask_internet, name)) } }
+                TextButton({ showLacks = false; onImportMissing() }) { ActionText(pluralStringResource(R.plurals.scan_import_missing, count, count)) }
+            }
+        }
     }
 }
 

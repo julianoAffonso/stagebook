@@ -21,6 +21,9 @@ import br.app.stagebook.ui.settings.SettingsSection
  */
 val LocalOpenSettings = staticCompositionLocalOf<(SettingsSection) -> Unit> { {} }
 
+/** Opens the batch importer (the one a shared setlist's missing songs use), from where the screens' own navigation isn't: the band's strip. */
+val LocalOpenImporter = staticCompositionLocalOf<() -> Unit> { {} }
+
 /**
  * A text with a link in it: [template] has "%1$s" where [link] goes. The link is in the accent colour and semibold, no
  * underline, like the one in the essential mode notice (user, 30/10).

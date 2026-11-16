@@ -428,6 +428,8 @@ class BandConduct internal constructor(
         data class ChordsKept(val title: String, val from: String) : Notice
         /** The copy with chords asked for took the place of the one that had just come without them. */
         data class ChordsCame(val title: String, val from: String) : Notice
+        /** Every missing song of the setlist was asked of the band: [got] of [asked] came in. */
+        data class AskedMany(val got: Int, val asked: Int) : Notice
     }
 
     // a notice waits for the screen when nobody is collecting at that instant (the screen being redrawn: the device
@@ -527,6 +529,33 @@ class BandConduct internal constructor(
                         }
                     }
                 }
+            } finally {
+                _asking.value = false
+            }
+        }
+    }
+
+    /**
+     * Following: asks the band on this network for EVERY song of the leader's setlist that isn't here (not only the one on the
+     * strip), as the review of a shared setlist does (user, 15/11). Each answer that is the song asked for goes straight in, the
+     * copy with chords first; the notice says how many of how many.
+     */
+    fun askAll() {
+        if (!bandOn()) return
+        val following = _role.value as? Role.Following ?: return
+        val library = repository.library.value
+        val items = following.msg.songs.filter { Conduct.find(it, library.songs) == null }.distinctBy { it.title to it.artist }
+        if (items.isEmpty() || !_asking.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                val answers = request(items.map { BandLink.Wanted(it.title, it.artist) }).filter { it.song.allowed() }
+                var got = 0
+                for (item in items) {
+                    val best = answers.filter { Conduct.isFor(item, it.song.title, it.song.author) }
+                        .maxByOrNull { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 } ?: continue
+                    if (enter(best.song, best.fromName)) got++
+                }
+                notify(Notice.AskedMany(got, items.size))
             } finally {
                 _asking.value = false
             }
