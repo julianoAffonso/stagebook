@@ -9,6 +9,8 @@ import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.ActionButton
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.mutableLongStateOf
 import br.app.stagebook.domain.ShowTimer
 import br.app.stagebook.data.device.StageQuiet
@@ -1617,6 +1619,11 @@ fun StageScreen(
             }
         }
     }
+    // a tap on the very edge turns the page too: the lyrics' side margin is outside the page's own touch area, and a thumb
+    // at the edge of the device did nothing (user, 16/11). Under the break and the menu handle, which are drawn after
+    // (read when touched, never while composing: the targets are a new object at every composition, and reading them here
+    // made the stage compose for ever)
+    StageEdgeTaps(vertical = { latest.vertical }, enabled = { !latest.marking }, dismiss = { latest.dismiss() }, onPrevious = { latest.previous() }, onNext = { latest.next() })
     if (onBreakNow && breakSince != null) {
         val next = uiState.songs[index + 1]
         val nextKey = remember(next.text) { Chords.key(next.text) }
@@ -2632,3 +2639,35 @@ internal fun playButtonIcon(hasTrack: Boolean, away: Boolean, playing: Boolean, 
     playing -> AppIcons.Pause
     else -> AppIcons.Play
 }
+
+/** The two side margins of the stage as touch: the left one goes back and the right one forward (scrolling, the upper and lower halves). */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.StageEdgeTaps(
+    vertical: () -> Boolean, enabled: () -> Boolean, dismiss: () -> Boolean, onPrevious: () -> Unit, onNext: () -> Unit,
+) {
+    val vertical by rememberUpdatedState(vertical)
+    val enabled by rememberUpdatedState(enabled)
+    val dismiss by rememberUpdatedState(dismiss)
+    val previous by rememberUpdatedState(onPrevious)
+    val next by rememberUpdatedState(onNext)
+    listOf(false, true).forEach { right ->
+        Box(
+            Modifier
+                .align(if (right) Alignment.CenterEnd else Alignment.CenterStart)
+                .fillMaxHeight()
+                .width(Spacing.l)
+                .testTag(if (right) STAGE_EDGE_RIGHT_TAG else STAGE_EDGE_LEFT_TAG)
+                .pointerInput(right) {
+                    detectTapGestures { at ->
+                        // with the highlighter on a tap marks, it doesn't turn; with the edit button open it only closes it
+                        if (!enabled() || dismiss()) return@detectTapGestures
+                        val forward = if (vertical()) at.y > size.height / 2f else right
+                        if (forward) next() else previous()
+                    }
+                },
+        )
+    }
+}
+
+internal const val STAGE_EDGE_LEFT_TAG = "stage_edge_left"
+internal const val STAGE_EDGE_RIGHT_TAG = "stage_edge_right"
