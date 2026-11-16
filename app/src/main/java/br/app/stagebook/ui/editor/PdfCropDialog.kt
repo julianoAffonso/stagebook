@@ -78,6 +78,8 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
     var page by rememberSaveable { mutableIntStateOf(0) }
     // the scope is "all pages" unless this page has a trim of its own
     var all by rememberSaveable { mutableStateOf(pdf.crops.none { it.page == 0 }) }
+    // a page with a trim of its own shows that trim (it is the one the stage uses), not the one for all pages (audit 16/11)
+    androidx.compose.runtime.LaunchedEffect(page) { if (pdf.crops.any { it.page == page }) all = false }
     val scope = if (all) PdfCrop.ALL else page
     val current = pdf.crops.firstOrNull { it.page == scope } ?: PdfCrop(scope)
     // the frame being dragged, in fractions of the page; starts from what is kept for this scope

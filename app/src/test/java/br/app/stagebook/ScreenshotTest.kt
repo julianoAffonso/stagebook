@@ -959,6 +959,32 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/banda_conduzir_falta.png")
     }
 
+    // a follower's "See what's missing here": the copy to ask for and the three ways to get the songs
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun followerLacks(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    androidx.compose.foundation.layout.Column {
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
+                        br.app.stagebook.ui.band.ConductBar(
+                            br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), "Garota de Ipanema", false, false, emptyList(), listOf("Wave", "Corcovado")),
+                            {}, {}, {}, {}, options = br.app.stagebook.ui.band.AskOptions(bandDevices = 2, internetFrom = s("Voz")),
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText(str(R.string.conduct_see_lacks_here)).performClick()
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun followerLacksTablet() = followerLacks("banda_seguir_falta")
+
+    @Test @Config(qualifiers = PHONE)
+    fun followerLacksPhone() = followerLacks("banda_seguir_falta_celular")
+
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     @Test @Config(qualifiers = PHONE)
     fun conductLacksPhone() {
@@ -1701,7 +1727,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    DrawerShot(HomeTab.SONGS) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
+                    DrawerShot(HomeTab.SONGS) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}, onImportPdfs = {}, onImportPdfSites = {}) }
                 }
             }
         }
@@ -1714,7 +1740,7 @@ class ScreenshotTest {
         compose.setContent {
             StagebookTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    DrawerShot(HomeTab.SONGS) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}) }
+                    DrawerShot(HomeTab.SONGS) { br.app.stagebook.ui.songs.SongsScreen(songs, "", {}, {}, {}, {}, it, received = 2, onSync = {}, onImportPdfs = {}, onImportPdfSites = {}) }
                 }
             }
         }

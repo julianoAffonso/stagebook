@@ -173,6 +173,9 @@ private const val PAGE_SLOTS = 7      // dots in the footer (7 × 28dp fit on ph
 private const val PAGE_IN_MS = 220   // the new page coming in (and the dragged one going back with it)
 private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itself
 
+/** How long a PDF page stays on screen before it is remembered as the one the song was left on. */
+internal const val PDF_PAGE_REST_MS = 1_000L
+
 @Composable
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
@@ -1114,7 +1117,13 @@ fun StageScreen(
                     if (current == 0 && saved in 1 until pageCount) onPosition(index, saved)
                 }
                 // (only with the PDF open: one that failed to open must not make the page it was on be forgotten)
-                LaunchedEffect(current, restoredFor, index, open) { if (restoredFor == index && pageCountFor == index && open is br.app.stagebook.ui.stage.PdfOpen.Ready) onPdfPage(song.id, current) }
+                // (kept once the page rests: each turn used to rewrite the whole library, in the middle of a show, audit 16/11)
+                LaunchedEffect(current, restoredFor, index, open) {
+                    if (restoredFor == index && pageCountFor == index && open is br.app.stagebook.ui.stage.PdfOpen.Ready) {
+                        kotlinx.coroutines.delay(PDF_PAGE_REST_MS)
+                        onPdfPage(song.id, current)
+                    }
+                }
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
                         open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },

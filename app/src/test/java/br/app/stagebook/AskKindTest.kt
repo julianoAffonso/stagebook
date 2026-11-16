@@ -117,4 +117,52 @@ class AskKindTest {
         assertEquals("", bad.pdfFile)
         assertEquals("NOT_PDF", bad.pdfProblem)
     }
+
+    @Test fun `a song that is only a PDF answers a request for the PDF, never one for text or with no kind`() {
+        val repo = repo()
+        val l = link(repo)
+        pdfs.file("so.pdf").writeBytes("%PDF-1.7\n".toByteArray() + ByteArray(500) { 7 })
+        repo.saveSong(Song(title = "Só PDF", author = "Ana", text = "", pdf = "so.pdf", pdfName = "So.pdf"))
+        fun answer(kind: String) = l.shapedAnswer(listOf(BandLink.Wanted("Só PDF", "Ana", kind)))
+        assertTrue("it went as an empty song, and the PDF was never asked for", answer(AskKind.ANY).isEmpty())
+        assertTrue(answer(AskKind.LYRICS).isEmpty())
+        assertTrue(answer(AskKind.CHORDS).isEmpty())
+        assertTrue(answer(AskKind.PDF).single().pdf.isNotEmpty())
+        // over the internet the same: nothing that would arrive empty
+        assertTrue(l.songsFor(listOf(BandLink.Wanted("Só PDF", "Ana"))).isEmpty())
+    }
+
+    @Test fun `a PDF asked for that can't go is left out of the answer, not sent as an empty song`() {
+        val repo = repo()
+        val l = link(repo)
+        pdfs.file("some.pdf").writeBytes("%PDF-1.7\n".toByteArray() + ByteArray(500) { 7 })
+        val id = repo.saveSong(Song(title = "Partitura", author = "Ana", text = "", pdf = "some.pdf"))
+        val wanted = listOf(BandLink.Wanted("Partitura", "Ana", AskKind.PDF))
+        // another answer with PDFs is being made: this one goes without them
+        assertTrue(l.shapedAnswer(wanted, pdfs = false).isEmpty())
+        // the file is gone meanwhile
+        pdfs.file("some.pdf").delete()
+        assertTrue(l.shapedAnswer(wanted).isEmpty())
+        assertEquals(id, repo.findSong("Partitura", "Ana")?.id)
+    }
+
+    @Test fun `a PDF nobody asked for is not taken from an answer, and unused files are deleted`() {
+        val repo = repo()
+        val l = link(repo)
+        val bytes = java.util.Base64.getEncoder().encodeToString("%PDF-1.7\n".toByteArray() + ByteArray(800) { 3 })
+        fun answer() = kotlinx.serialization.json.Json.encodeToString(
+            kotlinx.serialization.builtins.ListSerializer(br.app.stagebook.data.SetlistCloud.SharedSong.serializer()),
+            listOf(br.app.stagebook.data.SetlistCloud.SharedSong("Letra", "Ana", "", "la la\nla la", pdf = bytes, pdfName = "x.pdf")),
+        ).toByteArray()
+        val before = pdfs.file("x").parentFile!!.listFiles()?.size ?: 0
+        // lyrics were asked for: the PDF that came along is not kept, and the lyrics stay the song
+        val unsolicited = l.readAnswer(answer()) { false }.single()
+        assertEquals("", unsolicited.pdfFile)
+        assertEquals(before, pdfs.file("x").parentFile!!.listFiles()?.size ?: 0)
+        // asked for as a PDF: saved; and when the answer ends up not used, its file goes
+        val asked = l.readAnswer(answer()) { true }.single()
+        assertTrue(pdfs.file(asked.pdfFile).isFile)
+        l.dropPdfs(listOf(asked))
+        assertFalse(pdfs.file(asked.pdfFile).exists())
+    }
 }

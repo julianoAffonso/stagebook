@@ -27,7 +27,7 @@ import javax.inject.Inject
  * and the internet is on) to ask online, and the sites to import them from.
  */
 @Immutable
-data class AskOptions(val bandDevices: Int = 0, val internetFrom: String? = null, val defaultKind: String = "")
+data class AskOptions(val bandDevices: Int = 0, val internetFrom: String? = null, val defaultKind: String = "", val askingOnline: Boolean = false)
 
 @HiltViewModel
 class ConductAskViewModel @Inject constructor(
@@ -57,9 +57,19 @@ class ConductAskViewModel @Inject constructor(
         val following = conduct.role.value as? Role.Following ?: return
         val name = trust.member(following.fromId)?.name ?: return
         val wanted = missingItems(following).map { BandLink.Wanted(it.title, it.artist, kind.ifEmpty { it.kind }) }
-        if (wanted.isEmpty()) return
-        viewModelScope.launch { internet.send(name to bandInternet.requestSongs(following.fromId, wanted)) }
+        // one request at a time (a slow connection and three taps made three requests and three notices)
+        if (wanted.isEmpty() || !_askingOnline.compareAndSet(false, true)) return
+        viewModelScope.launch {
+            try {
+                // a request is one small message: a long list goes in several, each within what the free server takes
+                val sent = wanted.chunked(ONLINE_REQUEST).map { bandInternet.requestSongs(following.fromId, it) }
+                internet.send(name to sent.all { it })
+            } finally { _askingOnline.value = false }
+        }
     }
+    private val _askingOnline = kotlinx.coroutines.flow.MutableStateFlow(false)
+    /** The online request is on its way: the button waits. */
+    val askingOnline: StateFlow<Boolean> = _askingOnline
 
     private fun missingItems(following: Role.Following) =
         following.msg.songs.filter { Conduct.find(it, repository.library.value.songs) == null }.distinctBy { it.title to it.artist }
@@ -74,11 +84,18 @@ class ConductAskViewModel @Inject constructor(
         val slots = following.msg.songs.map { Conduct.find(it, songs)?.id }
         val missing = slots.withIndex().filter { it.value == null }.map { (i, _) -> ImportQueue.Item(following.msg.songs[i].title, following.msg.songs[i].artist, i) }
         if (missing.isEmpty()) return false
+        // a batch import already running is the one that opens (starting over replaced it without a word)
+        if (importQueue.state.value != null) return true
         val name = following.msg.set.ifBlank { following.msg.songs.firstOrNull()?.title.orEmpty() }
         val existing = repository.library.value.sets.firstOrNull { br.app.stagebook.domain.TextKey.of(it.name) == br.app.stagebook.domain.TextKey.of(name) }?.id
         val setId = existing ?: repository.createSetlist(name)
         repository.setReceivedSetlist(setId, slots, null)
         importQueue.start(setId, name, slots, missing)
         return true
+    }
+
+    private companion object {
+        /** How many songs go in one online request (each is a line of JSON with title, artist and kind; the message holds ~4,000 characters). */
+        const val ONLINE_REQUEST = 15
     }
 }

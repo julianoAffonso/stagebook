@@ -169,14 +169,19 @@ class SongEditorViewModel @Inject constructor(
     }
 
     /** A trim set for a page (or for all of them), kept at once for a saved song like the invert. */
-    fun setPdfCrop(crop: br.app.stagebook.data.model.PdfCrop) { pdfCrops = br.app.stagebook.domain.PdfCrops.set(pdfCrops, crop); keepCrops() }
+    fun setPdfCrop(crop: br.app.stagebook.data.model.PdfCrop) = changeCrops { br.app.stagebook.domain.PdfCrops.set(it, crop) }
 
     /** The trim of [page] ([br.app.stagebook.data.model.PdfCrop.ALL] for the one for all pages) taken off. */
-    fun clearPdfCrop(page: Int) { pdfCrops = br.app.stagebook.domain.PdfCrops.clear(pdfCrops, page); keepCrops() }
+    fun clearPdfCrop(page: Int) = changeCrops { br.app.stagebook.domain.PdfCrops.clear(it, page) }
 
-    private fun keepCrops() {
+    // a saved song's trims change on top of what the library holds now (the editor on the computer may have set one meanwhile:
+    // writing this screen's own list over it lost that one, audit 16/11); a new song's live here until it is saved
+    private fun changeCrops(change: (List<br.app.stagebook.data.model.PdfCrop>) -> List<br.app.stagebook.data.model.PdfCrop>) {
+        if (route.songId != null) {
+            repository.updateSong(songId) { it.copy(pdfCrops = change(it.pdfCrops)) }
+            pdfCrops = repository.song(songId)?.pdfCrops ?: change(pdfCrops)
+        } else pdfCrops = change(pdfCrops)
         savedStateHandle[KEY_PDF_CROPS] = cropsJson.encodeToString(pdfCrops)
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdfCrops = pdfCrops) }
     }
 
     /** The colours turned over for this song's PDF: kept at once for a saved song, like the track. */

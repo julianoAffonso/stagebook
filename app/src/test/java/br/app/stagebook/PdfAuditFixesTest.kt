@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -172,5 +173,28 @@ class PdfAuditFixesTest {
         var count = 7
         compose.setContent { StagebookTheme { PdfStageView(br.app.stagebook.ui.stage.PdfOpen.Failed, 0, invert = false, onPageCount = { count = it }) } }
         compose.waitUntil(5_000) { count == 1 }
+    }
+
+    @Test fun `a page whose drawing was cancelled midway is kept, not drawn again for the next one who asks`() = runBlocking {
+        val gate = CountDownLatch(1)
+        val started = CountDownLatch(1)
+        var renders = 0
+        val source = object : PdfSource {
+            override val pageCount = 3
+            override fun pageSize(page: Int) = 400 to 600
+            override fun render(page: Int, width: Int): Bitmap {
+                renders++; started.countDown(); gate.await(5, TimeUnit.SECONDS)
+                return Bitmap.createBitmap(width, 10, Bitmap.Config.ARGB_8888)
+            }
+            override fun close() {}
+        }
+        val pages = PdfPages(source)
+        val job = kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch { pages.bitmap(1, 200) }
+        assertTrue(started.await(5, TimeUnit.SECONDS))
+        job.cancel()          // the musician turned the page while the next was being drawn
+        gate.countDown()
+        job.join()
+        pages.bitmap(1, 200)  // the page asked for next is that very one
+        assertEquals(1, renders)
     }
 }

@@ -37,9 +37,12 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 - **Banda:** com o "Conduzir a banda" (arme na aba Setlists e toque num setlist), quem conduz troca de música e o palco
   de todo mundo acompanha, intervalo incluído. Uma faixa embaixo mostra quem está conduzindo, com o **Ir** para ir onde
   a banda está. Quem conduz vê o **O que falta**, quem não tem cada música, e pode enviá-las; quem acompanha pode
-  **Pedir** uma música pela faixa, e prefere a cópia com cifra quando o perfil mostra cifras. Todos da banda precisam
+  **Pedir** a música da faixa, ou, em **Ver o que falta aqui**, pedir à banda todas as que faltam, pedir a quem conduz
+  pela internet ou importá-las dos sites. O pedido diz a cópia: por padrão a que quem conduz toca (só letra, cifra ou
+  PDF), e quem responde manda essa cópia ou nada. Todos da banda precisam
   da mesma versão do app: o app avisa quem não está.
-- **Músicas em PDF:** anexe um PDF a uma música (ou escolha PDFs no menu +, ou abra um com o Stagebook): as páginas
+- **Músicas em PDF:** anexe um PDF a uma música (ou escolha PDFs no menu +, abra um com o Stagebook, ou use **PDFs de sites**, que abre
+  sites de partituras livres e cria a música quando você toca num PDF): as páginas
   aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos (o zoom fica na música), segure a página para marcar, recorte as
   margens (todas as páginas ou uma) e inverta as cores para um palco escuro, os dois no editor da música. Os PDFs vão para a banda no mesmo Wi-Fi (até 6 MB por envio) e pela internet quando cabem
   nas mensagens de 4 KB que o servidor gratuito aceita (o envio diz o motivo quando não cabem). PDF nunca é lido como
@@ -154,7 +157,8 @@ O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa d
 **Por que fora da Play Store?** O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com
 direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza
 direto por estes releases, o que a loja não permite. Assim as versões saem sem esperar revisão, e o código fica aberto
-para quem quiser conferir. PDF é seu: o app não baixa partitura de lugar nenhum, só abre os arquivos que você anexa.
+para quem quiser conferir. PDF é seu: o app só abre os arquivos que você anexa e os que você mesmo toca para baixar no navegador da importação;
+os sites sugeridos são de partituras livres (domínio público ou licença aberta), e a lista é sua para mudar.
 
 ## Apoie
 O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café no

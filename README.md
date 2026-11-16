@@ -36,9 +36,12 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 - **Band:** with "Lead the band" (arm it on the Setlists tab, then tap a setlist), whoever leads changes songs and
   everyone's stage follows, break included. A strip at the bottom shows who is leading, with **Go** to jump to where
   the band is. The leader sees **What's missing**, who lacks which song, and can send the songs; a follower can **Ask**
-  for a song from the strip, and prefers a copy with chords when the profile shows chords. Everyone in the band needs
+  for the strip's song or, in **See what's missing here**, ask the band for all the missing ones, ask the leader online
+  or import them from the sites. The request says which copy: by default the one the leader plays (lyrics, chords or
+  PDF), and whoever answers sends that copy or nothing. Everyone in the band needs
   the same app version: the app warns who isn't.
-- **PDF songs:** attach a PDF to a song (or pick PDFs in the + menu, or open one with Stagebook): its pages show on stage,
+- **PDF songs:** attach a PDF to a song (or pick PDFs in the + menu, open one with Stagebook, or use **PDFs from sites**, which opens
+  free score sites and makes the song when you tap a PDF): its pages show on stage,
   turned by the pedal, a tap or a swipe; zoom with two fingers (kept with the song), hold the page to highlight, crop the
   margins (all pages or one) and invert the colors for a dark stage, both in the song's editor. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet when they fit the 4 KB messages
   the free server takes (the send says why when they don't). PDFs are never read as text.
@@ -151,8 +154,8 @@ Stagebook isn't on the Play Store; it's only here, for free. Needs Android 9 or 
 **Why not the Play Store?** The app imports lyrics and chords from websites, and the store's rules on copyrighted
 content leave this kind of app open to being pulled at any time. It also updates itself straight from these releases,
 which the store doesn't allow. This way new versions come out without waiting for a review, and the code stays open
-for anyone to check. PDFs are yours: the app downloads no sheet music from anywhere, it only opens the files you
-attach.
+for anyone to check. PDFs are yours: the app only opens the files you attach and the ones you tap to download yourself in the import
+browser; the suggested sites hold free scores (public domain or open licence), and the list is yours to change.
 
 ## Support
 Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about buying me a coffee on

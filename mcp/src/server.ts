@@ -151,6 +151,9 @@ export function buildServer(client: StagebookClient): McpServer {
               "shows in Settings → Edit on the computer and pass it as url.",
           );
         }
+        // an address found by searching that isn't the saved one gets no saved key (any device on the network can answer the
+        // search): the tablet is asked again, once, when its address changed (audit 16/11)
+        if (found[0] !== client.url) client.key = undefined;
         client.url = found[0];
       }
       // a computer already approved is let in without asking again (the saved key still works): the approval is for the

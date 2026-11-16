@@ -305,7 +305,9 @@ class LibraryRepository @Inject constructor(
 
     /** They go at the end, in the chosen order; one already in the setlist doesn't go in again. */
     fun addToSetlist(setId: String, songIds: List<String>) = updateSet(setId) { s ->
-        s.copy(items = s.items + songIds.filterNot { it in s.items }.distinct()).withValidBreaks()
+        // (a song deleted while it waited to go in doesn't go in as an empty row)
+        val known = _library.value.songs.mapTo(HashSet()) { it.id }
+        s.copy(items = s.items + songIds.filter { it in known && it !in s.items }.distinct()).withValidBreaks()
     }
 
     /**
@@ -328,7 +330,26 @@ class LibraryRepository @Inject constructor(
     // edited here compares it to tell that "Discard" would undo their change too
     private val _external = kotlinx.coroutines.flow.MutableStateFlow<Map<String, Int>>(emptyMap())
     val externalEdits: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = _external
-    fun markExternalEdit(setId: String) { _external.value = _external.value + (setId to ((_external.value[setId] ?: 0) + 1)) }
+    /**
+     * Where the count starts in this run of the app: a screen that kept a count from a run the system killed finds a different
+     * one, and warns (it can't know what changed meanwhile) instead of comparing with a count that started over.
+     */
+    val externalBase: Int = (System.nanoTime() and 0x3fffffff).toInt()
+    // (several threads mark it: the band's, the computer's, the screen's)
+    fun markExternalEdit(setId: String) = _external.update { it + (setId to ((it[setId] ?: externalBase) + 1)) }
+
+    /**
+     * "Discard" on a setlist: its songs and breaks as they were, written as they were (an old setlist with the same song twice
+     * keeps both), but for the songs deleted meanwhile, which don't come back as empty rows.
+     */
+    fun restoreSetlist(setId: String, songIds: List<String>, breaks: List<Int>) = updateSet(setId) { s ->
+        val known = _library.value.songs.mapTo(HashSet()) { it.id }
+        val keep = songIds.map { it in known }
+        // a break before a song that is gone moves to the next one that stays
+        val moved = breaks.map { b -> keep.take(b.coerceIn(0, keep.size)).count { it } }
+        val items = songIds.filterIndexed { i, _ -> keep[i] }
+        s.copy(items = items, breaks = SetlistBreaks.normalise(moved, items.size))
+    }
 
     fun setReceivedSetlist(setId: String, slots: List<String?>, breaks: List<Int>?) {
         markExternalEdit(setId)

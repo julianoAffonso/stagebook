@@ -511,8 +511,9 @@ class BandConduct internal constructor(
                 // several copies can answer (one per member, and per spelling of the artist): one with chords first
                 // the copy that makes sense: chords to replace a chordless one, else the one the leader plays
                 val kind = if (forChords) br.app.stagebook.domain.AskKind.CHORDS else item.kind
-                val got = request(listOf(BandLink.Wanted(item.title, item.artist, kind)))
-                    .filter { it.song.allowed() && Conduct.isFor(item, it.song.title, it.song.author) }
+                val answers = request(listOf(BandLink.Wanted(item.title, item.artist, kind)))
+                val got = answers
+                    .filter { it.song.allowed() && Conduct.isFor(item, it.song.title, it.song.author) && usable(it.song, kind) }
                     .filter { !forChords || br.app.stagebook.domain.Chords.hasChords(it.song.text) }
                     .maxByOrNull { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 }
                 when {
@@ -520,7 +521,7 @@ class BandConduct internal constructor(
                     own == null && enter(got.song, got.fromName) -> Unit
                     // the copy that had just come without chords, untouched since: the one with chords takes its place
                     // (user, 13/11: a guitarist shouldn't have to leave the stage to accept it)
-                    own != null && replaceChordless(own, got.song) -> notify(Notice.ChordsCame(got.song.title, got.fromName))
+                    own != null && replaceChordless(own, got.song) -> { link.dropPdfs(listOf(got.song)); notify(Notice.ChordsCame(got.song.title, got.fromName)) }
                     else -> {
                         // a song with this title and artist is here (or following ended meanwhile): reviewed like the rest
                         link.keep(got.fromId, got.fromName, listOf(got.song))
@@ -531,6 +532,8 @@ class BandConduct internal constructor(
                         }
                     }
                 }
+                // the files of the copies that weren't the one used don't stay behind
+                link.dropPdfs(answers.filter { it !== got }.map { it.song })
             } finally {
                 _asking.value = false
             }
@@ -553,11 +556,14 @@ class BandConduct internal constructor(
                 // what makes sense for each song: the copy the leader plays (its kind), unless the person chose another for all
                 val answers = request(items.map { BandLink.Wanted(it.title, it.artist, kind.ifEmpty { it.kind }) }).filter { it.song.allowed() }
                 var got = 0
+                val used = ArrayList<BandLink.Answer>()
                 for (item in items) {
-                    val best = answers.filter { Conduct.isFor(item, it.song.title, it.song.author) }
+                    val best = answers.filter { Conduct.isFor(item, it.song.title, it.song.author) && usable(it.song, kind.ifEmpty { item.kind }) }
                         .maxByOrNull { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 } ?: continue
-                    if (enter(best.song, best.fromName)) got++
+                    // (one notice for all of them at the end, not one per song)
+                    if (enter(best.song, best.fromName, quiet = true)) { got++; used += best }
                 }
+                link.dropPdfs(answers.filter { a -> used.none { it === a } }.map { it.song })
                 notify(Notice.AskedMany(got, items.size))
             } finally {
                 _asking.value = false
@@ -599,7 +605,12 @@ class BandConduct internal constructor(
      * may travel, and never when a song with that title and artist is here (the musician's own is not replaced). The
      * callers let in only what this device asked for, or what the leader sent of its setlist. False = not let in.
      */
-    private fun enter(song: SetlistCloud.SharedSong, fromName: String): Boolean {
+    // an answer worth taking: with something to show (an empty song with no PDF counted as "arrived" and was never asked for
+    // again), and with its PDF when the PDF is what was asked for
+    private fun usable(song: SetlistCloud.SharedSong, kind: String): Boolean =
+        if (kind == br.app.stagebook.domain.AskKind.PDF) song.pdfFile.isNotEmpty() else song.text.isNotBlank() || song.pdfFile.isNotEmpty()
+
+    private fun enter(song: SetlistCloud.SharedSong, fromName: String, quiet: Boolean = false): Boolean {
         if (!bandOn() || !song.allowed()) return false
         val noChords: Boolean
         synchronized(entering) {   // two arrivals of the same song: the second one finds the first
@@ -618,6 +629,7 @@ class BandConduct internal constructor(
         }
         val current = (_role.value as? Role.Following)?.item?.let { Conduct.isFor(it, song.title, song.author) } == true
         songArrived()
+        if (quiet) return true
         if (noChords) notify(Notice.NoChords(song.title)) else if (!current) notify(Notice.Arrived(song.title, fromName))
         return true
     }

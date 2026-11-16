@@ -44,7 +44,7 @@ class PdfImporter @Inject constructor(
 
     /** One PDF that came as bytes (a download in the importer): checked like a picked file, and a song made of it. */
     suspend fun importBytes(fileName: String, bytes: ByteArray): Result {
-        val shown = fileName.substringAfterLast('/').ifBlank { "PDF" }
+        val shown = fileName.substringAfterLast('/').filter { !it.isISOControl() }.trim().take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifBlank { "PDF" }
         return when (val saved = withContext(Dispatchers.IO) { store.saveCheckedNow(UUID.randomUUID().toString(), bytes, inspector) }) {
             is PdfAttach.Saved -> {
                 val (artist, named) = artistAndTitleOf(shown)

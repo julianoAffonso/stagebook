@@ -146,7 +146,7 @@ class SetlistDetailViewModel @Inject constructor(
                 }.orEmpty()
             }.orEmpty(),
         )
-    }.combine(repository.externalEdits) { state, ext -> state.copy(external = ext[setId] ?: 0) }
+    }.combine(repository.externalEdits) { state, ext -> state.copy(external = ext[setId] ?: repository.externalBase) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
 
     // this device follows the band: its own open breaks of this setlist are over (the leader's is the one shown)
@@ -198,7 +198,7 @@ class SetlistDetailViewModel @Inject constructor(
     }
 
     /** "Discard": the songs and breaks as they were when editing began. */
-    fun restore(songIds: List<String>, breaks: List<Int>) = repository.setSetlistItems(setId, songIds, breaks)
+    fun restore(songIds: List<String>, breaks: List<Int>) = repository.restoreSetlist(setId, songIds, breaks)
 
     /** QR limit notice: [LimitNotice.Songs] (doesn't fit to send) or [LimitNotice.Name] (name too long). */
     enum class LimitNotice { Songs, Name }

@@ -65,10 +65,15 @@ class PdfPages(private val source: PdfSource) {
         if (closed) throw CancellationException("the PDF was closed")
         val key = page to width
         kept.remove(key)?.let { kept[key] = it; return@withLock it }   // seen again: the newest
-        val drawn = withContext(Dispatchers.IO) { source.render(page, width) }
-        kept[key] = drawn
-        while (kept.size > MAX_KEPT) kept.remove(kept.keys.first())
-        drawn
+        // a page whose drawing was cancelled midway (a turn, a zoom) is kept all the same: the renderer can't stop, and the
+        // page asked for next is often this very one (it used to be drawn twice, audit 16/11)
+        // (kept inside the drawing itself, still under the lock: back here a cancelled caller gets the cancellation, not the page)
+        withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+            source.render(page, width).also { drawn ->
+                kept[key] = drawn
+                while (kept.size > MAX_KEPT) kept.remove(kept.keys.first())
+            }
+        }
     }
 
     /** How many pages are kept now (for the tests). */

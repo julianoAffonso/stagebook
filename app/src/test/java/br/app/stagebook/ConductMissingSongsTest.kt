@@ -481,4 +481,30 @@ class ConductMissingSongsTest {
         await { b.asked.size == 1 }
         assertEquals(listOf(BandLink.Wanted("Segunda", "Banda", AskKind.PDF)), b.asked.single())
     }
+
+    @Test fun `an answer with nothing in it, or without the PDF asked for, does not come in and is not counted`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords))
+        b.leader.start("s1", "Show", listOf(Conduct.Item("Primeira", "Banda", AskKind.CHORDS), Conduct.Item("Segunda", "Banda", AskKind.PDF), Conduct.Item("Terceira", "", AskKind.CHORDS)), 1)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        // the PDF asked for came as a song with no file, and the other as a song with no text
+        b.answers = { listOf(answer(shared("Segunda", text = "")), answer(shared("Terceira", text = "  "))) }
+        b.follower.askAll()
+        await { b.notices.any { it is Notice.AskedMany } }
+        assertEquals(Notice.AskedMany(0, 2), b.notices.filterIsInstance<Notice.AskedMany>().single())
+        assertEquals(null, b.has("Segunda"))
+        assertEquals(null, b.has("Terceira"))
+        // and the quick Ask of the strip says nobody has it, instead of opening an empty song
+        await { !b.follower.asking.value }
+        b.follower.ask()
+        await { b.notices.any { it is Notice.Nobody } }
+        assertEquals(null, b.has("Segunda"))
+    }
+
+    @Test fun `asking all gives one notice for all the songs, not one for each`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 0)
+        b.answers = { listOf(answer(shared("Segunda"), "Baixo"), answer(shared("Terceira"), "Voz")) }
+        b.follower.askAll()
+        await { b.notices.any { it is Notice.AskedMany } }
+        assertEquals(listOf<Notice>(Notice.AskedMany(2, 2)), b.notices.toList())
+    }
 }

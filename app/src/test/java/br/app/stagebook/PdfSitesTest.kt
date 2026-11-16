@@ -73,10 +73,68 @@ class PdfSitesTest {
         assertFalse("a page named .pdf with a page type", PdfDownload.isPdf("https://x.org/a.pdf", "text/html", null))
     }
 
-    @Test fun `only https is fetched`() = runBlocking {
-        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("http://x.org/a.pdf", null, null, null, "application/pdf"))
-        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("file:///etc/hosts", null, null, null, "application/pdf"))
-        Unit
+    /** A connection that answers what the test says, and remembers the headers it was given. */
+    private class Fake(url: String, val code: Int, val location: String? = null, val body: ByteArray = ByteArray(0), val boom: Boolean = false) : java.net.HttpURLConnection(java.net.URL(url)) {
+        val sent = HashMap<String, String>()
+        override fun setRequestProperty(key: String, value: String) { if (boom) throw IllegalArgumentException("bad header"); sent[key] = value }
+        override fun getResponseCode() = code
+        override fun getHeaderField(name: String): String? = if (name == "Location") location else null
+        override fun getContentLengthLong() = body.size.toLong()
+        override fun getInputStream() = body.inputStream()
+        override fun connect() {}
+        override fun disconnect() {}
+        override fun usingProxy() = false
+    }
+
+    @Test fun `only https is fetched, also after a redirect`() = runBlocking {
+        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("http://x.org/a.pdf", null, null, { null }))
+        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("file:///etc/hosts", null, null, { null }))
+        val hops = ArrayList<String>()
+        val r = PdfDownload.fetch("https://a.org/a.pdf", null, null, { null }, connect = { hops += it; Fake(it, 302, "http://b.org/a.pdf") })
+        assertEquals(PdfDownload.Fetched.Failed, r)
+        assertEquals(listOf("https://a.org/a.pdf"), hops)
+    }
+
+    @Test fun `a redirect to another host gets that host's cookies, never the first site's`() = runBlocking {
+        val made = ArrayList<Fake>()
+        val r = PdfDownload.fetch("https://a.org/get?id=1", "Agent", null, { if ("a.org" in it) "session=secret" else null }, connect = {
+            (if ("a.org" in it) Fake(it, 302, "https://cdn.b.org/files/Valsa.pdf") else Fake(it, 200, body = pdf)).also { f -> made += f }
+        })
+        assertTrue(r is PdfDownload.Fetched.Bytes)
+        assertEquals("Valsa.pdf", (r as PdfDownload.Fetched.Bytes).name)
+        assertEquals("session=secret", made[0].sent["Cookie"])
+        assertEquals(null, made[1].sent["Cookie"])
+        assertEquals("Agent", made[1].sent["User-Agent"])
+    }
+
+    @Test fun `redirects without end, a refused header and a server error all fail without closing the app`() = runBlocking {
+        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("https://a.org/a.pdf", null, null, { null }, connect = { Fake(it, 302, "https://a.org/a.pdf") }))
+        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("https://a.org/a.pdf", null, null, { "c=\u00e9" }, connect = { Fake(it, 200, body = pdf, boom = true) }))
+        assertEquals(PdfDownload.Fetched.Failed, PdfDownload.fetch("https://a.org/a.pdf", null, null, { null }, connect = { Fake(it, 404) }))
+        assertEquals(PdfDownload.Fetched.TooBig, PdfDownload.fetch("https://a.org/a.pdf", null, null, { null }, connect = { Fake(it, 200, body = ByteArray(PdfStore.MAX_BYTES.toInt() + 1)) }))
+    }
+
+    @Test fun `a PDF served under another type is taken by its name, and a name is cut to what can be shared`() {
+        assertTrue(PdfDownload.isPdf("https://x.org/dl/Valsa.pdf", "application/force-download", null))
+        assertTrue(PdfDownload.isPdf("https://x.org/dl?id=2", "application/x-download", "attachment; filename=Valsa.pdf"))
+        assertFalse(PdfDownload.isPdf("https://x.org/dl/pack.zip", "application/zip", null))
+        val long = PdfDownload.nameOf("https://x.org/" + "a".repeat(400) + "%0A.pdf", null)
+        assertTrue(long.length <= br.app.stagebook.domain.BandContent.MAX_PDF_NAME && long.none { it.isISOControl() })
+    }
+
+    @Test fun `a download waits for the person's yes, one at a time, and what is not a PDF is said`() = runBlocking {
+        val vm = br.app.stagebook.ui.importer.PdfSiteViewModel(importer)
+        vm.offered("https://x.org/pack.zip", null, null, "application/zip")
+        assertEquals(br.app.stagebook.ui.importer.PdfSiteViewModel.Outcome.NotPdf, withTimeout(2_000) { vm.outcome.first() })
+        assertEquals(null, vm.asking.value)
+        vm.offered("https://x.org/Valsa.pdf", null, null, "application/pdf")
+        assertEquals("Valsa.pdf", vm.asking.value?.name)
+        // a page that fires more downloads while the question is open adds nothing
+        vm.offered("https://x.org/Outra.pdf", null, null, "application/pdf")
+        assertEquals("Valsa.pdf", vm.asking.value?.name)
+        vm.decline()
+        assertEquals(null, vm.asking.value)
+        assertTrue("nothing came in without a yes", repo.library.value.songs.isEmpty())
     }
 
     @Test fun `a PDF that came as bytes becomes a song named after its file, and a bad one is refused with the reason`() = runBlocking {

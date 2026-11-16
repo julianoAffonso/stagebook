@@ -213,7 +213,7 @@ class BandInternet @Inject constructor(
                 // they asked for songs missing from the setlist I sent (T12): answers with the ones I have, in a songs
                 // package
                 got.requests.forEach { wanted ->
-                    val ids = link.songsFor(wanted)
+                    val ids = link.sendableOnline(link.songsFor(wanted))
                     if (ids.isNotEmpty()) cloud.songsPackage(ids)?.let { (list, songs) -> cloud.sendToPair(key, m.id, list, songs, java.util.UUID.randomUUID().toString()) }
                 }
                 got.packages.forEach { (pid, text, songs) ->

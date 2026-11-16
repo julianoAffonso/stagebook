@@ -1301,4 +1301,7 @@
     <string name="pdf_site_too_big">This PDF is too big for the app (8 MB at most).</string>
     <string name="pdf_site_failed">Could not get this PDF. Try again, or download it and use Import PDFs.</string>
     <string name="import_kind_pdf">PDF score</string>
+    <string name="pdf_site_ask">Import “%1$s” as a song?</string>
+    <string name="pdf_site_ask_yes">Import</string>
+    <string name="pdf_site_not_pdf">This file is not a PDF. Only PDFs come in here.</string>
 </resources>

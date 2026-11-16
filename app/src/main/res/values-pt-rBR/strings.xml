@@ -1346,4 +1346,7 @@
     <string name="pdf_site_too_big">Este PDF é grande demais para o app (no máximo 8 MB).</string>
     <string name="pdf_site_failed">Não consegui pegar este PDF. Tente de novo, ou baixe e use Importar PDFs.</string>
     <string name="import_kind_pdf">Partitura em PDF</string>
+    <string name="pdf_site_ask">Importar “%1$s” como música?</string>
+    <string name="pdf_site_ask_yes">Importar</string>
+    <string name="pdf_site_not_pdf">Este arquivo não é um PDF. Aqui só entram PDFs.</string>
 </resources>

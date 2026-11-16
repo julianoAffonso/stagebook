@@ -243,7 +243,9 @@ class ConductViewModel @Inject constructor(
 fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hiltViewModel(), asks: ConductAskViewModel? = null) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     // (the app passes it; a test of the strip alone leaves it out and the three actions do nothing)
-    val options by (asks?.options ?: kotlinx.coroutines.flow.MutableStateFlow(AskOptions())).collectAsStateWithLifecycle()
+    val askOptions by (asks?.options ?: kotlinx.coroutines.flow.MutableStateFlow(AskOptions())).collectAsStateWithLifecycle()
+    val askingOnline by (asks?.askingOnline ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsStateWithLifecycle()
+    val options = askOptions.copy(askingOnline = askingOnline)
     val openImporter = br.app.stagebook.ui.components.LocalOpenImporter.current
     val asking by viewModel.asking.collectAsStateWithLifecycle()
     val sending by viewModel.sending.collectAsStateWithLifecycle()
@@ -477,7 +479,7 @@ fun ConductBar(
                 if (options.bandDevices > 0) TextButton({ onAskBand(kind) }, enabled = !asking) {
                     ActionText(if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices))
                 }
-                options.internetFrom?.let { name -> TextButton({ onAskInternet(kind) }) { ActionText(stringResource(R.string.scan_ask_internet, name)) } }
+                options.internetFrom?.let { name -> TextButton({ onAskInternet(kind) }, enabled = !options.askingOnline) { ActionText(stringResource(R.string.scan_ask_internet, name)) } }
                 TextButton({ showLacks = false; onImportMissing() }) { ActionText(pluralStringResource(R.plurals.scan_import_missing, count, count)) }
             }
         }
