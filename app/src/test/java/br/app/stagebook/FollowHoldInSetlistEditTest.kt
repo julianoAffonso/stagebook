@@ -114,6 +114,11 @@ class FollowHoldInSetlistEditTest {
         compose.onNodeWithText("3 músicas · 2 intervalos", substring = true).assertExists()
         assertEquals(listOf(1, 2), breaks)
         go()
+        // an edit half done: Go asks first (user, 16/11), and Save goes on to the band's song
+        compose.onNodeWithText("Salvar as alterações em", substring = true).assertExists()
+        compose.onAllNodesWithText("stage b").assertCountEquals(0)
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
         compose.onNodeWithText("stage b").assertExists()
         // reopening the edit: nothing was lost
         compose.runOnIdle { nav.navigate(SetlistDetail("s")) }
@@ -121,12 +126,14 @@ class FollowHoldInSetlistEditTest {
         compose.onNodeWithText("3 músicas · 2 intervalos", substring = true).assertExists()
     }
 
-    @Test fun `Go with nothing unsaved leaves the edit and opens what the band shows now, without asking`() {
+    @Test fun `Go with the setlist in editing asks to save, and then opens what the band shows now`() {
         start()
         band("b")
         band("c")
         go()
         compose.onAllNodesWithText("Sair sem salvar?", substring = true).assertCountEquals(0)
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitForIdle()
         compose.onNodeWithText("stage c").assertExists()
         compose.onAllNodesWithText("stage a").assertCountEquals(0)
         assertNull(gate.pending)

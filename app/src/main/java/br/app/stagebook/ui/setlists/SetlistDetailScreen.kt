@@ -234,16 +234,24 @@ fun SetlistDetailScreen(
     val dragStart = remember { DragStart() }
     var dragNow by remember { mutableStateOf(false) }
     // this screen is an action under way: while it is open the band's song doesn't take the follower to the stage (the strip
-    // says so; FollowToStage holds any screen that is not Home or the stage). Every change but two is already in the library
-    // when made (a break, a removal), so "Go" on the strip only asks when a drag is going on or the rename window is open:
-    // the same question the song editor asks
+    // says so; FollowToStage holds any screen that is not Home or the stage). "Go" on the strip asks first when a drag is going
+    // on or the rename window is open (the song editor's question), or when the setlist is being edited (Save or Discard)
     val unsaved by rememberUpdatedState(renaming || dragNow)
     var discarding by rememberSaveable { mutableStateOf(false) }
     var afterLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
     val leave = remember(onBack) { { onBack(); afterLeave?.invoke(); afterLeave = null } }
     val gate = br.app.stagebook.ui.components.LocalFollowGate.current
     androidx.compose.runtime.DisposableEffect(gate, leave) {
-        val guard: (() -> Unit) -> Unit = { go -> afterLeave = go; if (unsaved) discarding = true else leave() }
+        // an edit half done asks Save, Discard or Keep editing before going, as closing the menu does: "Go" used to leave
+        // with the changes applied and no question (user, 16/11)
+        val guard: (() -> Unit) -> Unit = { go ->
+            afterLeave = go
+            when {
+                unsaved -> discarding = true
+                editing && changedNow -> { afterAsk = { leave() }; asking = true }
+                else -> leave()
+            }
+        }
         gate.leaveGuard = guard
         onDispose { if (gate.leaveGuard === guard) gate.leaveGuard = null }
     }
@@ -395,8 +403,9 @@ fun SetlistDetailScreen(
                 if (uiState.external != externalAtStart) "\n\n" + stringResource(R.string.set_discard_external) else "",
             stringResource(R.string.action_save), { val go = afterAsk; afterAsk = null; finishEditing(); go?.invoke() },
             stringResource(R.string.set_discard), { val go = afterAsk; afterAsk = null; before?.let { onRestore(it.first, it.second) }; finishEditing(); go?.invoke() },
-            onOutside = { asking = false; afterAsk = null },
-            cancelLabel = stringResource(R.string.set_keep_editing), onCancel = { asking = false; afterAsk = null },
+            // staying: the band's song is not gone to later by some other way out of this screen
+            onOutside = { asking = false; afterAsk = null; afterLeave = null },
+            cancelLabel = stringResource(R.string.set_keep_editing), onCancel = { asking = false; afterAsk = null; afterLeave = null },
         )
     }
     if (discarding) {
