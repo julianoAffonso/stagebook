@@ -175,6 +175,17 @@ class PdfAuditFixesTest {
         compose.waitUntil(5_000) { count == 1 }
     }
 
+    @Test fun `a PDF comes up on the page it was left on, but one played to the end starts from the first`() {
+        val restore = { saved: Int, count: Int -> br.app.stagebook.ui.stage.pdfPageToRestore(saved, count) }
+        assertEquals(2, restore(2, 5))    // left in the middle: back there
+        assertEquals(3, restore(3, 5))
+        assertEquals(0, restore(4, 5))    // left on the last page: the song was played to the end
+        assertEquals(0, restore(0, 5))
+        assertEquals(0, restore(1, 2))    // two pages: the second is the last
+        assertEquals(0, restore(7, 5))    // a page the file no longer has
+        assertEquals(0, restore(0, 1))
+    }
+
     @Test fun `a page whose drawing was cancelled midway is kept, not drawn again for the next one who asks`() = runBlocking {
         val gate = CountDownLatch(1)
         val started = CountDownLatch(1)

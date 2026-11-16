@@ -176,6 +176,12 @@ private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itsel
 /** How long a PDF page stays on screen before it is remembered as the one the song was left on. */
 internal const val PDF_PAGE_REST_MS = 1_000L
 
+/**
+ * The page a PDF song comes up on: the one it was left on, except its last. A song left on its last page was played to
+ * the end, and the next show starts it from the first (user, 16/11).
+ */
+internal fun pdfPageToRestore(saved: Int, pageCount: Int): Int = if (saved in 1 until pageCount - 1) saved else 0
+
 @Composable
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
@@ -1114,7 +1120,8 @@ fun StageScreen(
                     if (restoredFor == index || pageCountFor != index) return@LaunchedEffect
                     restoredFor = index
                     val saved = song.pdfPage
-                    if (current == 0 && saved in 1 until pageCount) onPosition(index, saved)
+                    val back = pdfPageToRestore(saved, pageCount)
+                    if (current == 0 && back > 0) onPosition(index, back)
                 }
                 // (only with the PDF open: one that failed to open must not make the page it was on be forgotten)
                 // (kept once the page rests: each turn used to rewrite the whole library, in the middle of a show, audit 16/11)
