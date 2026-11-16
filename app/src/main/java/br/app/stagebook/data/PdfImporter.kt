@@ -4,6 +4,8 @@ import android.net.Uri
 import br.app.stagebook.R
 import br.app.stagebook.data.model.Song
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,6 +40,20 @@ class PdfImporter @Inject constructor(
             }
         }
         return Result(added, refused)
+    }
+
+    /** One PDF that came as bytes (a download in the importer): checked like a picked file, and a song made of it. */
+    suspend fun importBytes(fileName: String, bytes: ByteArray): Result {
+        val shown = fileName.substringAfterLast('/').ifBlank { "PDF" }
+        return when (val saved = withContext(Dispatchers.IO) { store.saveCheckedNow(UUID.randomUUID().toString(), bytes, inspector) }) {
+            is PdfAttach.Saved -> {
+                val (artist, named) = artistAndTitleOf(shown)
+                val title = freeTitle(named, artist)
+                repository.saveSong(Song(title = title, author = artist, pdf = saved.name, pdfName = shown))
+                Result(listOf(title), emptyList())
+            }
+            is PdfAttach.Refused -> Result(emptyList(), listOf(Refusal(shown, saved.problem)))
+        }
     }
 
     // a title the artist doesn't already have ("Wonderwall", then "Wonderwall (2)")

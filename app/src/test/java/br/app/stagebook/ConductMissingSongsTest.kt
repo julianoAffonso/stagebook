@@ -471,4 +471,14 @@ class ConductMissingSongsTest {
         await { b.asked.size == 2 }
         assertEquals(listOf(AskKind.CHORDS, AskKind.CHORDS), b.asked.last().map { it.kind })
     }
+
+    @Test fun `the quick Ask of the strip asks for the copy the leader plays`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords))
+        b.leader.start("s1", "Show", listOf(Conduct.Item("Primeira", "Banda", AskKind.CHORDS), Conduct.Item("Segunda", "Banda", AskKind.PDF)), 1)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        b.answers = { emptyList() }
+        b.follower.ask()
+        await { b.asked.size == 1 }
+        assertEquals(listOf(BandLink.Wanted("Segunda", "Banda", AskKind.PDF)), b.asked.single())
+    }
 }

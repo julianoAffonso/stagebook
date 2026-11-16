@@ -147,6 +147,7 @@ private val allItems: List<SettingsItem> by lazy {
         item("sites_lyrics", B, R.string.settings_lyric_sites, R.string.settings_lyric_sites, R.string.settings_sites_help, R.string.kw_sites) {
             if (it.look.chords && !it.look.autoProfile) Hide(R.string.hide_sites_lyrics, "profile") else null
         },
+        item("sites_pdf", B, R.string.settings_pdf_sites, R.string.settings_pdf_sites, R.string.settings_sites_help, R.string.kw_sites),
         item("tags", B, R.string.tags_title, R.string.tags_auto, R.string.tags_auto_info, R.string.kw_tags) {
             if (!it.nationalTags) Hide(R.string.hide_pt, "language") else null
         },

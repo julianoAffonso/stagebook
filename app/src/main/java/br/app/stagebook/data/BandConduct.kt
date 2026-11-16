@@ -509,7 +509,9 @@ class BandConduct internal constructor(
         scope.launch {
             try {
                 // several copies can answer (one per member, and per spelling of the artist): one with chords first
-                val got = request(listOf(BandLink.Wanted(item.title, item.artist)))
+                // the copy that makes sense: chords to replace a chordless one, else the one the leader plays
+                val kind = if (forChords) br.app.stagebook.domain.AskKind.CHORDS else item.kind
+                val got = request(listOf(BandLink.Wanted(item.title, item.artist, kind)))
                     .filter { it.song.allowed() && Conduct.isFor(item, it.song.title, it.song.author) }
                     .filter { !forChords || br.app.stagebook.domain.Chords.hasChords(it.song.text) }
                     .maxByOrNull { if (br.app.stagebook.domain.Chords.hasChords(it.song.text)) 1 else 0 }

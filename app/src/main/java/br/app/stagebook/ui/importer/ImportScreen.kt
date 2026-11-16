@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
 import br.app.stagebook.data.ExtractScript
+import br.app.stagebook.data.message
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.LoadingOverlay
@@ -73,6 +74,7 @@ fun ImportRoute(
     viewModel: ImportViewModel = hiltViewModel(),
     onSetlistReady: (String) -> Unit = { onClose() },
     onOpenEditorQueued: (String?) -> Unit = onOpenEditor,
+    pdfSite: PdfSiteViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val queue by viewModel.queueState.collectAsStateWithLifecycle()
@@ -80,6 +82,22 @@ fun ImportRoute(
     val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
     val offlineNote = stringResource(R.string.import_offline_note)
     LaunchedEffect(viewModel) { viewModel.offlineImport.collect { appMessage.show(offlineNote, long = true) } }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pdfTooBig = stringResource(R.string.pdf_site_too_big)
+    val pdfFailed = stringResource(R.string.pdf_site_failed)
+    LaunchedEffect(pdfSite) {
+        pdfSite.outcome.collect {
+            appMessage.show(
+                when (it) {
+                    is PdfSiteViewModel.Outcome.Done -> it.result.message(context)
+                    PdfSiteViewModel.Outcome.TooBig -> pdfTooBig
+                    PdfSiteViewModel.Outcome.Failed -> pdfFailed
+                },
+                long = true,
+            )
+        }
+    }
+    val fetching by pdfSite.busy.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.openEditor.collect { if (viewModel.queueState.value != null) onOpenEditorQueued(it) else onOpenEditor(it) } }
     // the page has tablature: import it too? (asks every time)
     if (uiState.askTab) {
@@ -94,6 +112,9 @@ fun ImportRoute(
         initialQuery = viewModel.initialQuery,
         home = viewModel.home,
         urlFor = viewModel::urlFor,
+        pdfMode = viewModel.pdfMode,
+        fetching = fetching,
+        onPdf = pdfSite::take,
         // leaving mid-queue: stops the queue and opens the setlist with what came in
         onClose = { viewModel.queueState.value?.let { q -> viewModel.queueStop(); onSetlistReady(q.setId) } ?: onClose() },
         onExtracted = viewModel::onExtracted,
@@ -120,6 +141,9 @@ fun ImportScreen(
     onProblemShown: () -> Unit,
     modifier: Modifier = Modifier,
     home: String = ImportViewModel.HOME,
+    pdfMode: Boolean = false,
+    fetching: Boolean = false,
+    onPdf: (url: String, userAgent: String?, cookies: String?, disposition: String?, mime: String?) -> Unit = { _, _, _, _, _ -> },
     urlFor: (String) -> String = { ImportViewModel.urlFor(it) },
     // batch import for a setlist (queue): the search for the current song and the failover between the sites in the
     // list
@@ -151,6 +175,10 @@ fun ImportScreen(
         WebView(context).apply {
             settings.javaScriptEnabled = true   // lyrics extraction runs as a script on the page
             settings.domStorageEnabled = true
+            // a PDF tapped on a score site: the app takes it (only in the PDF browser; elsewhere the page is read as text)
+            if (pdfMode) setDownloadListener { url, agent, disposition, mime, _ ->
+                onPdf(url, agent, android.webkit.CookieManager.getInstance().getCookie(url), disposition, mime)
+            }
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) { address = url }
                 // queue: the Google search limited to the site brought nothing from it → tries the next one in the list
@@ -227,7 +255,12 @@ fun ImportScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Surface(color = MaterialTheme.colorScheme.surface) {
-                ActionButton(
+                if (pdfMode) Text(
+                    stringResource(if (fetching) R.string.pdf_site_fetching else R.string.pdf_site_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.m),
+                ) else ActionButton(
                     stringResource(R.string.import_this),
                     onClick = {
                         reading = true   // busy only starts when the script answers: a second tap would read the page twice

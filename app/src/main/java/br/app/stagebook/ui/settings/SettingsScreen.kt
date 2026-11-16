@@ -1416,6 +1416,8 @@ private fun ImportSitesDetail(look: Look, actions: SettingsActions) {
     kinds.forEach { kind ->
         SiteListCard(stringResource(if (kind == SiteKind.CHORDS) R.string.settings_chord_sites else R.string.settings_lyric_sites), look.sites(kind), if (kind == SiteKind.CHORDS) "sites_chords" else "sites_lyrics") { actions.onSites(kind, it) }
     }
+    // PDF scores are for every profile (the + menu's "PDFs from sites" opens on the first)
+    SiteListCard(stringResource(R.string.settings_pdf_sites), look.sites(SiteKind.PDF), "sites_pdf") { actions.onSites(SiteKind.PDF, it) }
 }
 
 @Composable

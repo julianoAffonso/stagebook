@@ -180,6 +180,15 @@ object ImportSites {
         ImportSite("Ultimate Guitar", "https://www.ultimate-guitar.com/"),
         ImportSite("LaCuerda", "https://acordes.lacuerda.net/"),
     )
+    // free scores in PDF (public domain or free licence, chosen 15/11): the person browses, taps a PDF, and it comes in as a song.
+    // Not on the list on purpose: sites that ask for an account or payment for the PDF (MuseScore), sites that refuse any
+    // automated check (CPDL answers 403, so it can't be confirmed to open), and chord/lyrics sites (they have no PDF, and the
+    // lists above import those as text).
+    val PDF = listOf(
+        ImportSite("Mutopia Project", "https://www.mutopiaproject.org/"),
+        ImportSite("IMSLP", "https://imslp.org/"),
+        ImportSite("Musica Brasilis", "https://musicabrasilis.org.br/"),
+    )
 }
 
 /** How the lyrics move on stage: turn pages (default) or scroll (user's request, 29/10). */
@@ -210,7 +219,7 @@ val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !ex
 enum class SongProfile { CHORDS, LYRICS, AUTO }
 
 /** What a list of import sites is for. */
-enum class SiteKind { LYRICS, CHORDS }
+enum class SiteKind { LYRICS, CHORDS, PDF }
 
 val Look.profile: SongProfile get() = when {
     autoProfile -> SongProfile.AUTO
@@ -228,7 +237,11 @@ fun Look.withProfile(profile: SongProfile): Look = copy(chords = profile != Song
 val Look.siteKind: SiteKind get() = if (chords) SiteKind.CHORDS else SiteKind.LYRICS
 
 /** The import sites of one kind, in the user's order. */
-fun Look.sites(kind: SiteKind): List<ImportSite> = if (kind == SiteKind.CHORDS) chordSites else lyricSites
+fun Look.sites(kind: SiteKind): List<ImportSite> = when (kind) {
+    SiteKind.CHORDS -> chordSites
+    SiteKind.PDF -> pdfSites
+    SiteKind.LYRICS -> lyricSites
+}
 
 /** Some part is off (band, internet, player, extras): the alert on open lists which. */
 val Look.anyOff: Boolean get() = !bandOn || !internetOn || !playerMode || !extrasOn
@@ -332,6 +345,7 @@ data class Look(
     // import: the sites for each kind; the first in each list is the default (where the importer opens)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
     val chordSites: List<ImportSite> = ImportSites.CHORDS,
+    val pdfSites: List<ImportSite> = ImportSites.PDF,
     // Setlists tab in A to Z instead of newest first (user, 03/11)
     val setsAbc: Boolean = false,
 ) {

@@ -102,6 +102,7 @@ fun SongsRoute(
         // the automatic profile has no kind of its own: the musician says what this one is, to open on the right site
         onImport = { if (viewModel.asksKind()) askKind = true else onImport(query, "") },
         onImportPdfs = { pickPdfs.launch(br.app.stagebook.data.PdfStore.MIME) },
+        onImportPdfSites = { onImport(query, br.app.stagebook.data.model.SiteKind.PDF.name) },
         // found what they were looking for: coming back from the stage the whole list shows
         // the editor opened from this song steps through the list as it is now (search and filters on)
         onOpen = { editorQueue.offerList(uiState.songs.map { s -> s.id }); query = ""; onOpenSong(it) },
@@ -162,6 +163,7 @@ fun SongsScreen(
     onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
     pdfSizesOf: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen songs would carry: the internet says if they fit
     onImportPdfs: (() -> Unit)? = null,   // "Import PDFs" in the + menu
+    onImportPdfSites: (() -> Unit)? = null,   // "PDFs from sites" in the + menu
     indexPinned: Boolean = false,   // screenshots and tests: the A to Z index shows without a scroll
 ) {
     var deletingMany by remember { mutableStateOf(false) }
@@ -291,7 +293,7 @@ fun SongsScreen(
             // at the bottom, as SongbookPro: the + with what is new (a song, the imports) and the checklist that turns the boxes on
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 br.app.stagebook.ui.share.AddMenuButton(
-                    online, onScan, onReceiveCode, onNew = onNewSong, onPdfs = onImportPdfs, onSites = onImport, received = received, onReceived = onReceived,
+                    online, onScan, onReceiveCode, onNew = onNewSong, onPdfs = onImportPdfs, onPdfSites = onImportPdfSites, onSites = onImport, received = received, onReceived = onReceived,
                     onSync = onSync, internetOn = internetOn, localNet = localNet,
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))

@@ -1294,4 +1294,10 @@
     <string name="ask_kind_chords">Chords</string>
     <string name="ask_kind_pdf">PDF</string>
     <string name="ask_kind_band">Like the band</string>
+    <string name="import_pdf_sites">PDFs from sites</string>
+    <string name="settings_pdf_sites">PDF score sites</string>
+    <string name="pdf_site_hint">Open a score and tap its PDF. It comes in as a song.</string>
+    <string name="pdf_site_fetching">Getting the PDF…</string>
+    <string name="pdf_site_too_big">This PDF is too big for the app (8 MB at most).</string>
+    <string name="pdf_site_failed">Could not get this PDF. Try again, or download it and use Import PDFs.</string>
 </resources>

@@ -1339,4 +1339,10 @@
     <string name="ask_kind_chords">Cifra</string>
     <string name="ask_kind_pdf">PDF</string>
     <string name="ask_kind_band">Como a banda</string>
+    <string name="import_pdf_sites">PDFs de sites</string>
+    <string name="settings_pdf_sites">Sites de partituras em PDF</string>
+    <string name="pdf_site_hint">Abra uma partitura e toque no PDF. Ele entra como música.</string>
+    <string name="pdf_site_fetching">Buscando o PDF…</string>
+    <string name="pdf_site_too_big">Este PDF é grande demais para o app (no máximo 8 MB).</string>
+    <string name="pdf_site_failed">Não consegui pegar este PDF. Tente de novo, ou baixe e use Importar PDFs.</string>
 </resources>

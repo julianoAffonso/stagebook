@@ -268,7 +268,13 @@ class SettingsViewModel @Inject constructor(
     fun setSectionFont(f: StageFont) = repository.updateLook { it.copy(sectionFont = f) }
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
     fun setSites(kind: SiteKind, sites: List<ImportSite>) =
-        repository.updateLook { if (kind == SiteKind.CHORDS) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
+        repository.updateLook {
+            when (kind) {
+                SiteKind.CHORDS -> it.copy(chordSites = sites)
+                SiteKind.PDF -> it.copy(pdfSites = sites)
+                SiteKind.LYRICS -> it.copy(lyricSites = sites)
+            }
+        }
 
     fun setPlayerMode(on: Boolean) {
         repository.updateLook { it.copy(playerMode = on).copy(essentialAlertOff = false) }

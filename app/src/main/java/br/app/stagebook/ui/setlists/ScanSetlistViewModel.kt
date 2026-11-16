@@ -180,7 +180,13 @@ class ScanSetlistViewModel @Inject constructor(
         if (missing.isEmpty()) return
         _asking.value = true
         viewModelScope.launch {
-            val got = bandLink.askMissing(missing.map { (_, r) -> BandLink.Wanted(r.title, r.artist) })
+            // the song as the band has it (chords first), and the PDF for the ones nobody has as a chart: a PDF-only song of the
+            // band is still a song of the setlist
+            val asked = missing.map { (_, r) -> BandLink.Wanted(r.title, r.artist) }
+            val first = bandLink.askMissing(asked)
+            val rest = asked.filter { w -> first.none { it.isFor(w.title, w.artist) } }
+                .map { it.copy(kind = br.app.stagebook.domain.AskKind.PDF) }
+            val got = first + if (rest.isEmpty()) emptyList() else bandLink.askMissing(rest)
             val now = _ui.value as? ScanUi.Review
             if (now != null) {
                 val came = carried.toMutableMap()
