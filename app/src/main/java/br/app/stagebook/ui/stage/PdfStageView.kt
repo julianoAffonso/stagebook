@@ -161,7 +161,8 @@ fun PdfStageView(
                         drawn = bitmap
                         drawnAt = at
                         // the next page is drawn ahead, so the turn shows it at once
-                        if (bucket == 1 && at + 1 < pages.pageCount && crops.isEmpty()) pages.bitmap(at + 1, wholeW)
+                        // (with a trim of its own the next page is drawn at the width that trim needs)
+                        if (bucket == 1 && at + 1 < pages.pageCount) pages.bitmap(at + 1, PdfCrops.wholeWidth(pages.size(at + 1), PdfCrops.forPage(crops, at + 1), widthPx, heightPx))
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {

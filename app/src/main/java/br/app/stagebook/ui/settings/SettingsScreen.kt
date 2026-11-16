@@ -336,6 +336,7 @@ fun SettingsRoute(
                 onSectionColor = viewModel::setSectionColor,
                 onShowSections = viewModel::setShowSections,
                 onPdfInvert = viewModel::setPdfInvert,
+                onHandleRight = viewModel::setHandleRight,
                 onTranslateSections = viewModel::setTranslateSections,
                 onProfile = viewModel::setProfile,
                 onChordScale = viewModel::setChordScale,
@@ -448,6 +449,7 @@ data class SettingsActions(
     val onSectionColor: (Int) -> Unit = {},
     val onShowSections: (Boolean) -> Unit = {},
     val onPdfInvert: (Boolean) -> Unit = {},
+    val onHandleRight: (Boolean) -> Unit = {},
     val onTranslateSections: (Boolean) -> Unit = {},
     val onProfile: (SongProfile) -> Unit = {},
     val onChordScale: (Float) -> Unit = {},
@@ -862,7 +864,11 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
     // chords and section titles live with the rest of the stage look too, under the same preview (user, 01/11)
     ChordsLookCard(look, actions, draft)
     SectionsDetail(look, actions, draft)
-    // a song that is a PDF: its colours turned over, the same switch as the stage's button
+    // the stage's handle that opens the side menu: on the right for left-handed players (it moves up and down by holding it)
+    SettingsCard(stringResource(R.string.settings_menu_card)) {
+        SwitchRow(stringResource(R.string.settings_handle_right), look.drawerHandleRight, actions.onHandleRight, Modifier.settingsItem("handle_right"), detail = stringResource(R.string.settings_handle_right_detail))
+    }
+    // a song that is a PDF: its colours turned over (the song's own switch is in its editor)
     SettingsCard(stringResource(R.string.settings_pdf_card), help = stringResource(R.string.settings_pdf_invert_help)) {
         SwitchRow(stringResource(R.string.settings_pdf_invert), look.pdfInvert, actions.onPdfInvert, Modifier.settingsItem("pdf_invert"))
     }

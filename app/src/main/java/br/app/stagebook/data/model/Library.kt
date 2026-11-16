@@ -252,6 +252,8 @@ data class Look(
     val drawerPinned: Boolean = false,
     // where the stage's side handle sits on the left edge, as a share of the height (0 top .. 1 bottom); held and dragged by the person
     val drawerHandleY: Float = 0.5f,
+    // the handle on the right edge instead of the left (left-handed players)
+    val drawerHandleRight: Boolean = false,
     val fg: Int = 0xFFFFFFFF.toInt(),
     val bg: Int = 0xFF000000.toInt(),
     val bold: Boolean = false,

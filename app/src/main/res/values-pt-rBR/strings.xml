@@ -1322,4 +1322,8 @@
     <string name="set_duplicate">Duplicar</string>
     <string name="set_copy_name">%1$s (cópia)</string>
     <string name="set_duplicated">Setlist duplicado</string>
+    <string name="settings_menu_card">Menu lateral</string>
+    <string name="settings_handle_right">Alça à direita</string>
+    <string name="settings_handle_right_detail">A alça do menu no palco vai para a borda direita. Segure nela para subir ou descer.</string>
+    <string name="kw_handle">alça menu lateral direita esquerda canhoto handle menu side left right drawer</string>
 </resources>

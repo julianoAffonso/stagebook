@@ -8,11 +8,14 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.moveBy
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.up
 import br.app.stagebook.ui.stage.StageDrawerHandle
 import br.app.stagebook.ui.theme.StagebookTheme
@@ -65,5 +68,34 @@ class StageDrawerHandleTest {
     @Test fun `no number on the handle when nobody waits`() {
         compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, waiting = 0) } }
         compose.onAllNodesWithText("0", useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test fun `on the right edge the handle sits at the right, and a pull to the left opens the menu`() {
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, right = true) } }
+        val node = compose.onNodeWithTag("stage_drawer_handle")
+        val b = node.fetchSemanticsNode().boundsInRoot
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue("at the right edge: $b in $root", b.right >= root.right - 1f)
+        node.performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        assertEquals(1, opened)
+    }
+
+    @Test fun `on the right edge a pull to the right does not open it`() {
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, right = true) } }
+        compose.onNodeWithTag("stage_drawer_handle").performTouchInput { swipeRight() }
+        compose.waitForIdle()
+        assertEquals(0, opened)
+    }
+
+    @Test fun `on the left edge a pull to the right opens the menu and a pull to the left does not`() {
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier) } }
+        val node = compose.onNodeWithTag("stage_drawer_handle")
+        node.performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        assertEquals(0, opened)
+        node.performTouchInput { swipeRight() }
+        compose.waitForIdle()
+        assertEquals(1, opened)
     }
 }

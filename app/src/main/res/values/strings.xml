@@ -1278,4 +1278,8 @@
     <string name="set_duplicate">Duplicate</string>
     <string name="set_copy_name">%1$s (copy)</string>
     <string name="set_duplicated">Setlist duplicated</string>
+    <string name="settings_menu_card">Side menu</string>
+    <string name="settings_handle_right">Handle on the right</string>
+    <string name="settings_handle_right_detail">The menu handle on the stage goes to the right edge. Hold it to move it up or down.</string>
+    <string name="kw_handle">handle menu side left right drawer alça menu lateral direita esquerda canhoto</string>
 </resources>

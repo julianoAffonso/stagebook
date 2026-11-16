@@ -1630,7 +1630,7 @@ fun StageScreen(
         )
     }
     if (onMenu != null && leadingButton) {
-        StageDrawerHandle(onMenu, fg, Color(look.bg), look.drawerHandleY, onDrawerHandle, Modifier.fillMaxSize())
+        StageDrawerHandle(onMenu, fg, Color(look.bg), look.drawerHandleY, onDrawerHandle, Modifier.fillMaxSize(), right = look.drawerHandleRight)
     }
     if (keyboardHint > 0) {
         Surface(

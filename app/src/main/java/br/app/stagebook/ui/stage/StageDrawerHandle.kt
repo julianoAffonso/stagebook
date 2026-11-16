@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import br.app.stagebook.ui.drawer.LocalWaitingRequests
 import br.app.stagebook.R
 import br.app.stagebook.ui.theme.Sizes
@@ -52,6 +53,7 @@ import br.app.stagebook.ui.theme.Spacing
 @Composable
 internal fun StageDrawerHandle(
     onOpen: () -> Unit, fg: Color, bg: Color, y: Float, onMove: (Float) -> Unit, modifier: Modifier = Modifier,
+    right: Boolean = false,   // on the right edge, for left-handed players: it is pulled to the left
     waiting: Int = LocalWaitingRequests.current,   // requests waiting for an answer: the number shows on the handle
 ) {
     val density = LocalDensity.current
@@ -66,11 +68,13 @@ internal fun StageDrawerHandle(
     BoxWithConstraints(modifier) {
         val heightPx = with(density) { maxHeight.toPx() }
         val hitPx = with(density) { hitH.toPx() }
+        val boxW = with(density) { Spacing.xl.toPx() }
+        val left = if (right) (constraints.maxWidth - boxW).coerceAtLeast(0f) else 0f
         val shown = if (moving) dragY else y
         val top = ((shown * heightPx) - hitPx / 2f).coerceIn(0f, (heightPx - hitPx).coerceAtLeast(0f))
         Box(
             Modifier
-                .offset { IntOffset(0, top.roundToInt()) }
+                .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
                 .systemGestureExclusion()
                 .size(width = Spacing.xl, height = hitH)
                 .testTag(DRAWER_HANDLE_TAG)
@@ -87,16 +91,20 @@ internal fun StageDrawerHandle(
                     rememberDraggableState { pulled += it },
                     Orientation.Horizontal,
                     onDragStarted = { pulled = 0f },
-                    onDragStopped = { velocity -> if (!moving && (velocity > flingPx || pulled > flingPx)) onOpen(); pulled = 0f },
+                    onDragStopped = { velocity ->
+                        val toward = if (right) -1f else 1f   // the way that opens it: away from its edge
+                        if (!moving && (velocity * toward > flingPx || pulled * toward > flingPx)) onOpen()
+                        pulled = 0f
+                    },
                 )
                 .clickable(interactionSource = null, indication = null, role = Role.Button, onClickLabel = hint, onClick = onOpen)
                 .semantics { contentDescription = label },
-            contentAlignment = Alignment.CenterStart,
+            contentAlignment = if (right) Alignment.CenterEnd else Alignment.CenterStart,
         ) {
             Column(
                 Modifier
                     .size(width = HANDLE_WIDTH, height = HANDLE_HEIGHT)
-                    .clip(RoundedCornerShape(topEnd = HANDLE_CORNER, bottomEnd = HANDLE_CORNER))
+                    .clip(if (right) RoundedCornerShape(topStart = HANDLE_CORNER, bottomStart = HANDLE_CORNER) else RoundedCornerShape(topEnd = HANDLE_CORNER, bottomEnd = HANDLE_CORNER))
                     .overLyrics(bg, fg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -105,7 +113,7 @@ internal fun StageDrawerHandle(
             }
             // someone asked to join (the band, the computer): open the menu to answer
             if (waiting > 0) Box(
-                Modifier.align(Alignment.TopStart).padding(start = HANDLE_WIDTH - Spacing.s).size(Spacing.m + Spacing.xs).background(MaterialTheme.colorScheme.error, CircleShape),
+                Modifier.align(if (right) Alignment.TopEnd else Alignment.TopStart).padding(if (right) PaddingValues(end = HANDLE_WIDTH - Spacing.s) else PaddingValues(start = HANDLE_WIDTH - Spacing.s)).size(Spacing.m + Spacing.xs).background(MaterialTheme.colorScheme.error, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(waiting.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onError)
