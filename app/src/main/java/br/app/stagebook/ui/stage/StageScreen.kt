@@ -99,6 +99,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawBehind
@@ -972,7 +973,9 @@ fun StageScreen(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .clipToBounds()
+                // the page is cut at the top and the bottom, and at the sides only at the screen's edge: cut at the lyrics' own
+                // margin, a page turning slid under two fixed bands, which read as a border on each side (user, 16/11)
+                .clipBeyondSides(Spacing.l)
                 .pointerInput(index) {
                     // a single gesture: two fingers = zoom; one finger tapping without dragging = turn the page; one
                     // finger dragging horizontally = turn toward the drag; one finger still for ~0.5 s = offer to edit
@@ -1429,8 +1432,10 @@ fun StageScreen(
                     val forward = targetState.song > initialState.song ||
                         (targetState.song == initialState.song && targetState.page > initialState.page)
                     val dir = if (forward) 1 else -1
-                    (slideInHorizontally(tween(PAGE_IN_MS)) { it / 6 * dir } + fadeIn(tween(PAGE_IN_MS))) togetherWith
-                        (slideOutHorizontally(tween(160)) { -it / 6 * dir } + fadeOut(tween(160)))
+                    ((slideInHorizontally(tween(PAGE_IN_MS)) { it / 6 * dir } + fadeIn(tween(PAGE_IN_MS))) togetherWith
+                        (slideOutHorizontally(tween(160)) { -it / 6 * dir } + fadeOut(tween(160))))
+                        // the pages are the same size: no size to animate, and no cut at the page's own width while it slides
+                        .using(androidx.compose.animation.SizeTransform(clip = false))
                 },
                 label = "page",
             ) { content ->
@@ -2671,3 +2676,9 @@ private fun androidx.compose.foundation.layout.BoxScope.StageEdgeTaps(
 
 internal const val STAGE_EDGE_LEFT_TAG = "stage_edge_left"
 internal const val STAGE_EDGE_RIGHT_TAG = "stage_edge_right"
+
+/** Clips to the bounds at the top and the bottom, and [side] past them at the left and the right (the screen's margin). */
+internal fun Modifier.clipBeyondSides(side: androidx.compose.ui.unit.Dp): Modifier = drawWithContent {
+    val extra = side.toPx()
+    clipRect(left = -extra, top = 0f, right = size.width + extra, bottom = size.height) { this@drawWithContent.drawContent() }
+}
