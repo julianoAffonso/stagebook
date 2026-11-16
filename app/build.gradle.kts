@@ -9,11 +9,16 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
-// Automatic version from git: <base>.<commit count> (commit); "+" = build with uncommitted changes. The commit count
-// only grows, so each new APK installs over the previous one.
+// Automatic version from git. versionCode is the commit count: it only grows, so each new APK installs over the previous
+// one, and it is what the update check compares. versionName is 0.<MINOR>.<commits since that minor began> (commit);
+// "+" = build with uncommitted changes. 0.2 begins with the side menu and PDF songs (user, 16/11): MINOR_BASE is the
+// commit count of main once that pull request is merged, so that release is 0.2.0 and the next ones 0.2.x.
 fun git(vararg args: String) = providers.exec { commandLine("git", *args) }.standardOutput.asText.get().trim()
 val commits = git("rev-list", "--count", "HEAD").toInt()
 val commit = git("rev-parse", "--short", "HEAD") + if (git("status", "--porcelain").isNotEmpty()) "+" else ""
+val MINOR = 2
+val MINOR_BASE = 1336
+val patch = (commits - MINOR_BASE).coerceAtLeast(0)
 
 // Signing key for published versions: it stays OUTSIDE the repository (the code is public). Without it, the release
 // isn't signed and can't be published. Losing the key = devices no longer accept updates.
@@ -30,7 +35,7 @@ android {
         minSdk = 28          // Android 9: Fire HD 10 (2019) and simpler tablets
         targetSdk = 37
         versionCode = commits
-        versionName = "0.1.$commits ($commit)"
+        versionName = "0.$MINOR.$patch ($commit)"
     }
 
     signingConfigs {
