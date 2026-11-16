@@ -50,7 +50,22 @@ class MusicBrainz @Inject constructor() {
         }
     }
 
+    // what was found, by song: asking again for one already answered (an import repeated, a song in two setlists) doesn't go to
+    // the network. Only answers with a year are kept: a miss may be a bad moment and is asked again
+    private val found = object : LinkedHashMap<String, Info>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Info>?) = size > CACHE_SIZE
+    }
+    internal fun cacheSize(): Int = synchronized(found) { found.size }
+
     suspend fun lookup(title: String, artist: String): Info? = withContext(Dispatchers.IO) {
+        val key = TextKey.of(title) + "|" + TextKey.of(artist)
+        synchronized(found) { found[key] }?.let { return@withContext it }
+        val got = fetch(title, artist)
+        if (got != null && got.year.isNotEmpty()) synchronized(found) { found[key] = got }
+        got
+    }
+
+    private suspend fun fetch(title: String, artist: String): Info? = run {
         gate.withLock {
             // the first try, and more after a growing pause when the server said "too many" (503), "slow down" (429) or
             // the connection broke or timed out: the first try of a cold connection failed often (user, 15/11)
@@ -93,6 +108,7 @@ class MusicBrainz @Inject constructor() {
     companion object {
         const val MIN_SPACING_MS = 1_100L
         const val ATTEMPTS = 3
+        const val CACHE_SIZE = 200
 
         private fun esc(s: String) = s.replace("\\", " ").replace("\"", " ")
 

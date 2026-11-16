@@ -1319,4 +1319,7 @@
     <string name="pdf_crop_none">Sem recorte</string>
     <string name="pdf_crop_previous">Página anterior</string>
     <string name="pdf_crop_next">Próxima página</string>
+    <string name="set_duplicate">Duplicar</string>
+    <string name="set_copy_name">%1$s (cópia)</string>
+    <string name="set_duplicated">Setlist duplicado</string>
 </resources>

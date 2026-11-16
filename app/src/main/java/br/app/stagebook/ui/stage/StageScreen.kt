@@ -297,6 +297,7 @@ fun StageRoute(
             pdfFile = pdfStore::file,
             onDrawerHandle = viewModel::setDrawerHandle,
             onPdfView = viewModel::setPdfView,
+            onPdfPage = viewModel::setPdfPage,
             onPdfStroke = viewModel::addPdfStroke,
             onPdfUndo = viewModel::undoPdfStroke,
             onPdfClear = viewModel::clearPdfPage,
@@ -435,6 +436,7 @@ fun StageScreen(
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
     onDrawerHandle: (Float) -> Unit = {},
     onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
+    onPdfPage: (String, Int) -> Unit = { _, _ -> },
     onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },
     onPdfUndo: (songId: String, page: Int) -> Unit = { _, _ -> },
     onPdfClear: (songId: String, page: Int) -> Unit = { _, _ -> },
@@ -1102,6 +1104,16 @@ fun StageScreen(
             // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
             if (song.pdf.isNotEmpty()) {
                 val open by rememberPdfOpen(pdfFile(song.pdf))
+                // it comes up on the page it was left on (once, when the song arrives on its first page, with its count known);
+                // after that each page turned is kept. A song entered from behind (the last page) is left where it is
+                var restoredFor by remember { mutableIntStateOf(-1) }
+                LaunchedEffect(index, song.id, pageCountFor, pageCount) {
+                    if (restoredFor == index || pageCountFor != index) return@LaunchedEffect
+                    restoredFor = index
+                    val saved = song.pdfPage
+                    if (current == 0 && saved in 1 until pageCount) onPosition(index, saved)
+                }
+                LaunchedEffect(current, restoredFor, index) { if (restoredFor == index && pageCountFor == index) onPdfPage(song.id, current) }
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
                         open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },

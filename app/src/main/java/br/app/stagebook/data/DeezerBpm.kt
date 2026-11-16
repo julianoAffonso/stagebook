@@ -63,12 +63,29 @@ class DeezerBpm @Inject constructor() {
 
     private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.content.orEmpty()
 
-    private fun get(url: String): String? = runCatching {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = TIMEOUT_MS
-        c.readTimeout = TIMEOUT_MS
-        try { if (c.responseCode == 200) c.inputStream.bufferedReader().readText() else null } finally { c.disconnect() }
-    }.getOrNull()
+    /** The answer, trying again after a pause when the server was busy (429, 503, "quota" in a 200) or the connection broke. */
+    private fun get(url: String): String? {
+        for (attempt in 0 until ATTEMPTS) {
+            if (attempt > 0) Thread.sleep(pauseMs * attempt)
+            val r = runCatching {
+                val c = URL(url).openConnection() as HttpURLConnection
+                c.connectTimeout = TIMEOUT_MS
+                c.readTimeout = TIMEOUT_MS
+                try {
+                    when (c.responseCode) {
+                        200 -> c.inputStream.bufferedReader().readText().let { if (it.contains("\"Quota limit exceeded\"")) Busy else it }
+                        429, 503 -> Busy
+                        else -> null
+                    }
+                } finally { c.disconnect() }
+            }.getOrElse { if (it is java.io.IOException) Busy else null }
+            if (r !== Busy) return r as String?
+        }
+        return null
+    }
 
-    private companion object { const val TIMEOUT_MS = 6_000 }
+    private object Busy
+    internal var pauseMs = 700L   // the tests shorten it
+
+    private companion object { const val TIMEOUT_MS = 6_000; const val ATTEMPTS = 3 }
 }

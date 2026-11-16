@@ -1275,4 +1275,7 @@
     <string name="pdf_crop_none">No crop</string>
     <string name="pdf_crop_previous">Previous page</string>
     <string name="pdf_crop_next">Next page</string>
+    <string name="set_duplicate">Duplicate</string>
+    <string name="set_copy_name">%1$s (copy)</string>
+    <string name="set_duplicated">Setlist duplicated</string>
 </resources>

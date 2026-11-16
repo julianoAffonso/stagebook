@@ -217,6 +217,20 @@ class PdfEditorTest {
         }
     }
 
+    @Test fun `the page a PDF was left on goes when the PDF is replaced or removed`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, _) = open { it.saveSong(Song(title = "Chart", text = "x", pdf = "p.pdf", pdfName = "p.pdf", pdfPage = 4)) }
+            val id = repo.library.value.songs.single().id
+            assertEquals(4, repo.song(id)!!.pdfPage)
+            vm.removePdf()
+            assertEquals(0, repo.song(id)!!.pdfPage)
+            assertEquals(0, Song(pdf = "a.pdf", pdfName = "a.pdf", pdfPage = 3).withoutPdf().pdfPage)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a refused PDF changes nothing and says why`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {

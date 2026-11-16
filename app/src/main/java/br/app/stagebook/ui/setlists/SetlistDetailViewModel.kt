@@ -183,6 +183,9 @@ class SetlistDetailViewModel @Inject constructor(
     /** "Clear played": no song of this setlist is marked any more. */
     fun clearPlayed() = show.clear(setId)
 
+    /** A copy of this setlist named [name]; its id, to open it. */
+    fun duplicate(name: String): String? = repository.duplicateSetlist(setId, name)
+
     /** "Lead the band" from this setlist, from the song the show is on (or the first). */
     fun conductBand() {
         val lib = repository.library.value

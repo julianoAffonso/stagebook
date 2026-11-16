@@ -155,7 +155,7 @@ class SongEditorViewModel @Inject constructor(
         if (result !is br.app.stagebook.data.PdfAttach.Saved) return result
         val shown = store.displayName(uri).ifBlank { "PDF" }
         val old = pdf
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList()) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0) }
         if (old != result.name) store.remove(old)
         keepPdf(result.name, shown, result.pages, result.bytes)
         if (uiState.title.isBlank()) onTitle(shown.substringBeforeLast('.').trim())
@@ -182,7 +182,7 @@ class SongEditorViewModel @Inject constructor(
         pdfInvert = null
         pdfCrops = emptyList()
         savedStateHandle.remove<Boolean>(KEY_PDF_INVERT)
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList()) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0) }
         pdfs?.remove(pdf)
         keepPdf("", "", 0, 0L)
     }

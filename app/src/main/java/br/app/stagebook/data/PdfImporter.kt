@@ -29,8 +29,9 @@ class PdfImporter @Inject constructor(
             val shown = store.displayName(uri)
             when (val saved = store.attach(UUID.randomUUID().toString(), uri, inspector)) {
                 is PdfAttach.Saved -> {
-                    val title = freeTitle(titleOf(shown))
-                    repository.saveSong(Song(title = title, pdf = saved.name, pdfName = shown))
+                    val (artist, named) = artistAndTitleOf(shown)
+                    val title = freeTitle(named, artist)
+                    repository.saveSong(Song(title = title, author = artist, pdf = saved.name, pdfName = shown))
                     added += title
                 }
                 is PdfAttach.Refused -> refused += Refusal(shown.ifEmpty { "PDF" }, saved.problem)
@@ -39,16 +40,25 @@ class PdfImporter @Inject constructor(
         return Result(added, refused)
     }
 
-    // a title no other song without an artist already has ("Wonderwall", then "Wonderwall (2)")
-    private fun freeTitle(title: String): String {
-        val taken = repository.library.value.songs.filter { it.author.isBlank() }.map { it.title.lowercase() }.toSet()
-        if (title.lowercase() !in taken) return title
+    // a title the artist doesn't already have ("Wonderwall", then "Wonderwall (2)")
+    private fun freeTitle(title: String, artist: String): String {
+        if (repository.findSong(title, artist) == null) return title
         var n = 2
-        while ("$title ($n)".lowercase() in taken) n++
+        while (repository.findSong("$title ($n)", artist) != null) n++
         return "$title ($n)"
     }
 
     companion object {
+        /**
+         * The artist and the title in a file named "Artist - Title.pdf" (one " - ", both sides with something); otherwise no
+         * artist and the whole name as the title ([titleOf]). The person fixes a wrong guess in the editor.
+         */
+        fun artistAndTitleOf(fileName: String): Pair<String, String> {
+            val whole = titleOf(fileName)
+            val parts = whole.split(" - ")
+            return if (parts.size == 2 && parts.all { it.isNotBlank() }) parts[0].trim() to parts[1].trim() else "" to whole
+        }
+
         /** The song's title from the file's name: no ".pdf", underscores as spaces, trimmed; "PDF" when nothing is left. */
         fun titleOf(fileName: String): String =
             fileName.substringAfterLast('/').removeSuffix(".pdf").removeSuffix(".PDF").replace('_', ' ').trim().ifEmpty { "PDF" }

@@ -98,4 +98,22 @@ class MusicBrainzTest {
         assertNull(runBlocking { mb.lookup("x", "y") })
         assertEquals(3, calls)
     }
+
+    @Test fun `a song already answered with a year is not asked again, a miss is`() {
+        var calls = 0
+        server.createContext("/cache") { ex -> calls++; val b = body.toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.write(b); ex.close() }
+        val mb = MusicBrainz().apply { endpoint = "http://127.0.0.1:${server.address.port}/cache"; spacingMs = 10 }
+        assertEquals("1987", runBlocking { mb.lookup("Camila, Camila", "Nenhum de Nós") }?.year)
+        // the same song, written a little differently (accents, case): from memory
+        assertEquals("1987", runBlocking { mb.lookup("camila  camila", "NENHUM DE NOS") }?.year)
+        assertEquals(1, calls)
+        assertEquals(1, mb.cacheSize())
+        // another song the server doesn't have: asked, and not kept
+        server.createContext("/vazio") { ex -> calls++; val b = """{"recordings":[]}""".toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.write(b); ex.close() }
+        mb.endpoint = "http://127.0.0.1:${server.address.port}/vazio"
+        assertNull(runBlocking { mb.lookup("Outra", "Banda") })
+        assertNull(runBlocking { mb.lookup("Outra", "Banda") })
+        assertEquals(3, calls)
+        assertEquals(1, mb.cacheSize())
+    }
 }

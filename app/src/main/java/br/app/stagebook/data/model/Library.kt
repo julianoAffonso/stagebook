@@ -56,6 +56,8 @@ data class Song(
     val pdfInvert: Boolean? = null,
     // the trims of its pages (see [PdfCrop]); the file is never changed
     val pdfCrops: List<PdfCrop> = emptyList(),
+    // the page the PDF was left on: the song opens there (0 = the first)
+    val pdfPage: Int = 0,
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
@@ -64,7 +66,7 @@ data class Song(
     val pdfLost: Boolean get() = pdf.isEmpty() && pdfName.isNotEmpty()
 
     /** The same song with no trace of a PDF (what the QR, the text export and a received song never carry). */
-    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty()) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList())
+    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty()) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0)
 }
 
 /** One point of a highlighter stroke, relative to the page: 0 (left, top) to 1 (right, bottom), valid on any screen size. */

@@ -94,4 +94,13 @@ class PdfImporterTest {
         assertNull(IncomingFiles.pdfUri(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("https://x.y/a.pdf"), "application/pdf")))
         assertNull(IncomingFiles.pdfUri(null))
     }
+
+    @Test fun `a file named Artist - Title gives the artist and the title, anything else only the title`() {
+        assertEquals("Legião Urbana" to "Pais e Filhos", PdfImporter.artistAndTitleOf("Legião Urbana - Pais e Filhos.pdf"))
+        assertEquals("Titãs" to "Epitáfio", PdfImporter.artistAndTitleOf("Titãs_-_Epitáfio.PDF"))
+        assertEquals("" to "Garota de Ipanema", PdfImporter.artistAndTitleOf("Garota_de_Ipanema.pdf"))
+        // two dashes, or one side empty: no guess
+        assertEquals("" to "A - B - C", PdfImporter.artistAndTitleOf("A - B - C.pdf"))
+        assertEquals("" to "- Sozinho", PdfImporter.artistAndTitleOf("- Sozinho.pdf"))
+    }
 }

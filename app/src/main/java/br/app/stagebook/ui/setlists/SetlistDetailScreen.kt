@@ -98,6 +98,10 @@ fun SetlistDetailRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val qr by viewModel.qr.collectAsStateWithLifecycle()
     val limit by viewModel.limit.collectAsStateWithLifecycle()
+    val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+    val message = br.app.stagebook.ui.components.LocalAppMessage.current
+    val copyName = stringResource(R.string.set_copy_name, uiState.name)
+    val copied = stringResource(R.string.set_duplicated)
     LaunchedEffect(uiState.loading, uiState.exists) { if (!uiState.loading && !uiState.exists) onBack() }
     limit?.let {
         InfoDialog(
@@ -145,6 +149,10 @@ fun SetlistDetailRoute(
         onRestore = viewModel::restore,
         onConduct = viewModel::conductBand,
         onClearPlayed = viewModel::clearPlayed,
+        onDuplicate = {
+            val id = viewModel.duplicate(copyName)
+            if (id != null) { message.show(copied); drawer?.openSetlist(id, false) }
+        },
         openShare = openShare,
     )
 }
@@ -180,6 +188,7 @@ fun SetlistDetailScreen(
     pdfSizes: () -> List<Long> = { emptyList() },   // the PDFs the songs carry: the internet says if they fit
     onConduct: () -> Unit = {},   // the menu's "Lead the band"
     onClearPlayed: () -> Unit = {},   // the menu's "Clear played"
+    onDuplicate: () -> Unit = {},   // the menu's "Duplicate": a copy of this setlist to build another show from
     startEditing: Boolean = false,   // opens in editing (tests, and a setlist just created)
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
 ) {
@@ -290,6 +299,7 @@ fun SetlistDetailScreen(
                                 MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { uiState.canConduct },
                                 MenuAction(stringResource(R.string.set_clear_played), AppIcons.Undo, onClearPlayed).takeIf { uiState.anyPlayed },
                                 MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, { renaming = true }),
+                                MenuAction(stringResource(R.string.set_duplicate), AppIcons.Copy, onDuplicate),
                                 MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, { deleting = true }, danger = true),
                             ),
                         )

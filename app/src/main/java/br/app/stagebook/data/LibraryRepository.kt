@@ -228,6 +228,17 @@ class LibraryRepository @Inject constructor(
         return id
     }
 
+    /**
+     * A copy of the setlist (same songs and breaks, today's day) under [name], first in the list: to build one show from
+     * another. Null when the setlist isn't there.
+     */
+    fun duplicateSetlist(id: String, name: String): String? {
+        val from = library.value.setlist(id) ?: return null
+        val copy = newId()
+        mutate { it.copy(sets = listOf(Setlist(id = copy, name = name, items = from.items, breaks = from.breaks, date = Setlist.today())) + it.sets) }
+        return copy
+    }
+
     private fun updateSet(id: String, change: (Setlist) -> Setlist) =
         mutate { lib -> lib.copy(sets = lib.sets.map { if (it.id == id) change(it) else it }) }
 
