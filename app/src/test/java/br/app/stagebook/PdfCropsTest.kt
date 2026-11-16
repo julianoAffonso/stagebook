@@ -49,6 +49,12 @@ class PdfCropsTest {
         assertEquals(PdfPoint(0.3f, 0.7f), PdfCrops.toPage(null, PdfPoint(0.3f, 0.7f)))
     }
 
+    @Test fun `a trim read from a backup with nothing in it is held to the page instead of dividing by zero`() {
+        val bad = PdfCrop(PdfCrop.ALL, left = 0.8f, top = 0f, right = 0.2f, bottom = 1f)
+        val held = PdfCrops.forPage(listOf(bad), 0)!!
+        assertTrue(held.right - held.left >= PdfCrops.MIN_SIDE - 0.0001f)
+    }
+
     @Test fun `an old song without trims opens with none`() {
         val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
         val song = json.decodeFromString<br.app.stagebook.data.model.Song>("""{"id":"a","title":"x"}""")

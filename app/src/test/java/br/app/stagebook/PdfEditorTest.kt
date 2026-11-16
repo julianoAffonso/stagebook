@@ -231,6 +231,26 @@ class PdfEditorTest {
         }
     }
 
+    @Test fun `replacing or removing the PDF leaves no zoom of the old one, and a saved song keeps what its windows saved`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, _) = open { it.saveSong(Song(title = "Chart", text = "x", pdf = "p.pdf", pdfName = "p.pdf", pdfScale = 3f, pdfPanX = 0.2f, pdfPanY = -0.1f, pdfInvert = true)) }
+            val id = repo.library.value.songs.single().id
+            // changed from outside (the computer's editor) while this one is open: saving here must not bring the old values back
+            repo.updateSong(id) { it.copy(pdfInvert = false, pdfCrops = listOf(br.app.stagebook.data.model.PdfCrop(0, left = 0.3f))) }
+            vm.save()
+            assertEquals(false, repo.song(id)!!.pdfInvert)
+            assertEquals(1, repo.song(id)!!.pdfCrops.size)
+            vm.removePdf()
+            val s = repo.song(id)!!
+            assertEquals(listOf(1f, 0f, 0f), listOf(s.pdfScale, s.pdfPanX, s.pdfPanY))
+            assertEquals(1f, Song(pdf = "a.pdf", pdfName = "a.pdf", pdfScale = 2f, pdfInvert = true).withoutPdf().pdfScale)
+            assertEquals(null, Song(pdf = "a.pdf", pdfName = "a.pdf", pdfInvert = true).withoutPdf().pdfInvert)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test fun `a refused PDF changes nothing and says why`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {

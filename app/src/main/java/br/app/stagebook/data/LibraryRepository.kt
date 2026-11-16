@@ -165,7 +165,7 @@ class LibraryRepository @Inject constructor(
     fun saveSong(song: Song): String {
         val id = song.id.ifEmpty { newId() }
         // a PDF name from outside (a band answer, a file) that is not a plain file name is no PDF: it never points out of its folder
-        val saved = song.copy(id = id).let { if (it.pdf.isEmpty() || PdfStore.safeName(it.pdf) != null) it else it.copy(pdf = "", pdfName = "", pdfMarks = emptyList()) }
+        val saved = song.copy(id = id).let { if (it.pdf.isEmpty() || PdfStore.safeName(it.pdf) != null) it else it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0) }
         mutate { lib ->
             val exists = lib.songs.any { it.id == id }
             lib.copy(songs = if (exists) lib.songs.map { if (it.id == id) saved else it } else lib.songs + saved)

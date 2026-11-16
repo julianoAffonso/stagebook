@@ -155,7 +155,7 @@ class SongEditorViewModel @Inject constructor(
         if (result !is br.app.stagebook.data.PdfAttach.Saved) return result
         val shown = store.displayName(uri).ifBlank { "PDF" }
         val old = pdf
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
         if (old != result.name) store.remove(old)
         keepPdf(result.name, shown, result.pages, result.bytes)
         if (uiState.title.isBlank()) onTitle(shown.substringBeforeLast('.').trim())
@@ -182,7 +182,7 @@ class SongEditorViewModel @Inject constructor(
         pdfInvert = null
         pdfCrops = emptyList()
         savedStateHandle.remove<Boolean>(KEY_PDF_INVERT)
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
         pdfs?.remove(pdf)
         keepPdf("", "", 0, 0L)
     }
@@ -400,7 +400,10 @@ class SongEditorViewModel @Inject constructor(
         if (!br.app.stagebook.domain.BandContent.songOk(title, s.author.trim(), s.year.trim(), s.text)) { uiState = s.copy(error = EditorError.NOT_SONG); return null }
         // part of the saved song kept so nothing the editor doesn't show is lost (e.g. stage zoom)
         val base = route.songId?.let(repository::song) ?: Song()
-        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, pdf = pdf, pdfName = pdfName, pdfInvert = pdfInvert, pdfCrops = pdfCrops, pdfMarks = if (pdf == base.pdf) base.pdfMarks else emptyList(), title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, midi = s.midi.takeUnless { it.isEmpty() }, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
+        val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, // a saved song's PDF, colours and trims were saved in their own windows (and may have changed from the computer): its
+            // own values stay; a new song takes what the editor holds
+            pdf = if (route.songId != null) base.pdf else pdf, pdfName = if (route.songId != null) base.pdfName else pdfName,
+            pdfInvert = if (route.songId != null) base.pdfInvert else pdfInvert, pdfCrops = if (route.songId != null) base.pdfCrops else pdfCrops, pdfMarks = if (pdf == base.pdf) base.pdfMarks else emptyList(), title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, midi = s.midi.takeUnless { it.isEmpty() }, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         return id
     }

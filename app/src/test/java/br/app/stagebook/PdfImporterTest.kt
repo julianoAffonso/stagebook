@@ -49,6 +49,8 @@ class PdfImporterTest {
         assertEquals("Wonderwall", PdfImporter.titleOf("Wonderwall.pdf"))
         assertEquals("Garota de Ipanema", PdfImporter.titleOf("Garota_de_Ipanema.PDF"))
         assertEquals("PDF", PdfImporter.titleOf(".pdf"))
+        assertEquals("Cifra", PdfImporter.titleOf("Cifra.Pdf"))
+        assertEquals("Cifra", PdfImporter.titleOf("Cifra.pdf  "))
         assertEquals("minha cifra", PdfImporter.titleOf("pasta/minha cifra.pdf"))
     }
 

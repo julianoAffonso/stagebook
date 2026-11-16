@@ -88,6 +88,7 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
     val open by pdf.file?.let { rememberPdfOpen(it) } ?: remember { mutableStateOf<PdfOpen>(PdfOpen.Failed) }
     val ready = open as? PdfOpen.Ready
     val image by produceState<ImageBitmap?>(null, ready, page) {
+        value = null   // the frame of the new page must not sit on the picture of the old one
         value = ready?.let { r -> runCatching { r.pages.bitmap(page.coerceIn(0, r.pages.pageCount - 1), 900).asImageBitmap() }.getOrNull() }
     }
     val shape = image?.let { it.width.toFloat() / it.height } ?: PAGE_SHAPE
@@ -161,8 +162,11 @@ private fun CropFrame(left: Float, top: Float, right: Float, bottom: Float, onCh
                     val w = size.width - 2 * room; val h = size.height - 2 * room
                     val x = down.position.x - room; val y = down.position.y - room
                     val f = now
-                    val nearL = abs(x - f.left * w) < slop; val nearR = abs(x - f.right * w) < slop
-                    val nearT = abs(y - f.top * h) < slop; val nearB = abs(y - f.bottom * h) < slop
+                    // an edge counts only along its own length (plus the slack): a touch in the empty beside a tall frame is not on it
+                    val inX = x >= f.left * w - slop && x <= f.right * w + slop
+                    val inY = y >= f.top * h - slop && y <= f.bottom * h + slop
+                    val nearL = inY && abs(x - f.left * w) < slop; val nearR = inY && abs(x - f.right * w) < slop
+                    val nearT = inX && abs(y - f.top * h) < slop; val nearB = inX && abs(y - f.bottom * h) < slop
                     val inside = x in f.left * w..f.right * w && y in f.top * h..f.bottom * h
                     // which edges the touch is on (a corner is two); the inside moves the whole frame
                     var grab = (if (nearL) 1 else 0) or (if (nearT) 2 else 0) or (if (nearR) 4 else 0) or (if (nearB) 8 else 0)

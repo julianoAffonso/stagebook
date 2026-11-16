@@ -424,7 +424,7 @@ class WebEditorApi(
             val shown = req.query["name"].orEmpty().substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim()
                 .take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
             // a new PDF has other pages: the old one's highlighter marks go
-            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0) }
+            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
             if (song.pdf != saved.name) store.remove(song.pdf)
             return ok(json.encodeToString(PdfSet(saved.name, shown, saved.pages, saved.bytes)))
         } finally {
@@ -459,7 +459,7 @@ class WebEditorApi(
     private fun pdfDelete(id: String): HttpResponse {
         val store = pdfs() ?: return HttpResponse.status(404)
         val song = repository.song(id) ?: return HttpResponse.status(404)
-        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0) }
+        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
         store.remove(song.pdf)
         return HttpResponse.status(204)
     }

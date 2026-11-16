@@ -10,7 +10,8 @@ object PdfCrops {
 
     /** The trim for [page]: its own, else the one for all pages, else none. */
     fun forPage(crops: List<PdfCrop>, page: Int): PdfCrop? =
-        (crops.firstOrNull { it.page == page } ?: crops.firstOrNull { it.page == PdfCrop.ALL })?.takeUnless { it.isWhole }
+        // one from a backup or a hand-edited file is held to the page too: a side of nothing would divide by zero
+        (crops.firstOrNull { it.page == page } ?: crops.firstOrNull { it.page == PdfCrop.ALL })?.let(::valid)?.takeUnless { it.isWhole }
 
     /** [crop] inside the page and at least [MIN_SIDE] on each side. */
     fun valid(crop: PdfCrop): PdfCrop {

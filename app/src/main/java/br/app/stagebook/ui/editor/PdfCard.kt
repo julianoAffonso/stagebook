@@ -117,6 +117,7 @@ private fun PdfPreview(file: java.io.File, invert: Boolean, modifier: Modifier =
     val open by br.app.stagebook.ui.stage.rememberPdfOpen(file)
     val ready = open as? br.app.stagebook.ui.stage.PdfOpen.Ready
     val image by produceState<ImageBitmap?>(null, ready) {
+        value = null
         value = ready?.let { r -> runCatching { r.pages.bitmap(0, PREVIEW_WIDTH).asImageBitmap() }.getOrNull() }
     }
     Box(modifier.fillMaxWidth().heightIn(max = PREVIEW_MAX_HEIGHT), contentAlignment = Alignment.Center) {

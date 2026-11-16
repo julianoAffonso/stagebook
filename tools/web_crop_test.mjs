@@ -54,3 +54,14 @@ test("an edge cannot cross the opposite one, and the whole frame stays on the pa
   c = L.cropMove(crop(0, 0.2, 0.2, 0.6, 0.6), 15, 5, -5);
   assert.deepEqual([c.left, c.top, c.right, c.bottom].map((x) => Math.round(x * 100) / 100), [0.6, 0, 1, 0.4]);
 });
+
+test("an edge counts only along its own length: a touch in the empty beside a narrow frame is on nothing", () => {
+  const c = crop(0, 0.4, 0.4, 0.46, 0.9), w = 1000, h = 1000, slop = 36;
+  // the frame is 60 px wide: far above it, level with its left edge's x, is empty page
+  assert.equal(L.cropGrab(400, 100, c, w, h, slop), 0);
+  // on the edge itself, and at a corner, it still grabs
+  assert.equal(L.cropGrab(400, 600, c, w, h, slop), 1);
+  assert.equal(L.cropGrab(460, 400, c, w, h, slop), 4 | 2);
+  // a frame narrower than twice the slack: the left and right edges are both near, so it is two edges, not a miss
+  assert.equal(L.cropGrab(430, 600, c, w, h, slop), 1 | 4);
+});

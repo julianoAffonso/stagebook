@@ -61,7 +61,7 @@ class PdfImporter @Inject constructor(
 
         /** The song's title from the file's name: no ".pdf", underscores as spaces, trimmed; "PDF" when nothing is left. */
         fun titleOf(fileName: String): String =
-            fileName.substringAfterLast('/').removeSuffix(".pdf").removeSuffix(".PDF").replace('_', ' ').trim().ifEmpty { "PDF" }
+            fileName.substringAfterLast('/').replace('_', ' ').trim().replace(Regex("(?i)\\.pdf$"), "").trim().ifEmpty { "PDF" }
     }
 }
 

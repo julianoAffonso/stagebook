@@ -702,9 +702,11 @@ async function loadPdfPage(n) {
   if (!current || !current.id || !current.pdf) return "";
   const key = `${current.id}:${current.pdf}:${n}`;
   if (pdfPages.has(key)) return pdfPages.get(key);
-  const r = await fetch(`/api/songs/${encodeURIComponent(current.id)}/pdf-page?n=${n}`, { headers: { "X-Stagebook": "1" }, credentials: "same-origin" }).catch(() => null);
+  const r = await fetch(`/api/songs/${encodeURIComponent(current.id)}/pdf-page?n=${n}&v=${encodeURIComponent(current.pdf)}`, { headers: { "X-Stagebook": "1" }, credentials: "same-origin" }).catch(() => null);
   if (!r || r.status !== 200) return "";
   const url = URL.createObjectURL(await r.blob());
+  // two loads of the same page at once: the first one's picture is let go, not left behind
+  if (pdfPages.has(key)) URL.revokeObjectURL(pdfPages.get(key));
   if (pdfPages.size > 12) { URL.revokeObjectURL(pdfPages.values().next().value); pdfPages.delete(pdfPages.keys().next().value); }
   pdfPages.set(key, url);
   return url;
@@ -740,8 +742,10 @@ async function showCropPage() {
   $("crop-page-n").textContent = `${cropPage + 1} / ${n}`;
   $("crop-prev").disabled = cropPage <= 0; $("crop-next").disabled = cropPage >= n - 1;
   $("crop-img").style.filter = current.pdfInvert ? "invert(1)" : "";
-  const url = await loadPdfPage(cropPage);
-  if (url) $("crop-img").src = url;
+  const asked = cropPage;
+  const url = await loadPdfPage(asked);
+  // a late answer for a page already left must not draw over the one on screen
+  if (url && asked === cropPage) $("crop-img").src = url;
 }
 $("pdf-crop").onclick = async () => {
   cropPage = 0;
@@ -895,7 +899,9 @@ function cropSet(crops, c) { const rest = crops.filter((x) => x.page !== c.page)
 const cropClear = (crops, page) => crops.filter((c) => c.page !== page);
 // which edges a touch at (x, y) in a box of w x h is on: 1 left, 2 top, 4 right, 8 bottom (a corner is two); the inside is all (15)
 function cropGrab(x, y, c, w, h, slop) {
-  let g = (Math.abs(x - c.left * w) < slop ? 1 : 0) | (Math.abs(y - c.top * h) < slop ? 2 : 0) | (Math.abs(x - c.right * w) < slop ? 4 : 0) | (Math.abs(y - c.bottom * h) < slop ? 8 : 0);
+  // an edge counts only along its own length (plus the slack): a touch in the empty beside a tall frame is not on it
+  const inX = x >= c.left * w - slop && x <= c.right * w + slop, inY = y >= c.top * h - slop && y <= c.bottom * h + slop;
+  let g = (inY && Math.abs(x - c.left * w) < slop ? 1 : 0) | (inX && Math.abs(y - c.top * h) < slop ? 2 : 0) | (inY && Math.abs(x - c.right * w) < slop ? 4 : 0) | (inX && Math.abs(y - c.bottom * h) < slop ? 8 : 0);
   if (!g && x >= c.left * w && x <= c.right * w && y >= c.top * h && y <= c.bottom * h) g = 15;
   return g;
 }
