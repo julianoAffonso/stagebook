@@ -507,4 +507,33 @@ class ConductMissingSongsTest {
         await { b.notices.any { it is Notice.AskedMany } }
         assertEquals(listOf<Notice>(Notice.AskedMany(2, 2)), b.notices.toList())
     }
+
+    @Test fun `a setlist edited while leading is told as it is now, on the next move`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords, "Segunda" to chords, "Terceira" to chords))
+        val ids = listOf("Primeira", "Segunda", "Terceira").map { t -> b.leaderRepo.library.value.songs.first { it.title == t }.id }
+        val set = b.leaderRepo.createSetlist("Show")
+        b.leaderRepo.addToSetlist(set, ids)
+        // (started with the list of that moment, as the Setlists tab does; the test band has no saved members to arm with)
+        b.leader.start(set, "Show", songs, 0)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        // the leader adds a song to the setlist in the middle of the show, and goes to it
+        val added = b.leaderRepo.saveSong(Song(title = "Quarta", author = "Banda", text = chords))
+        b.leaderRepo.addToSetlist(set, listOf(added))
+        b.leader.open(set, 3)
+        await { (b.follower.role.value as? Role.Following)?.msg?.index == 3 }
+        val following = b.follower.role.value as Role.Following
+        assertEquals(listOf("Primeira", "Segunda", "Terceira", "Quarta"), following.msg.songs.map { it.title })
+        // the strip names the song that is missing, and "what's missing here" lists it
+        val ui = b.strip() as br.app.stagebook.ui.band.ConductUi.Following
+        assertEquals("Quarta", ui.song)
+        assertTrue(ui.missingHere)
+        assertEquals(listOf("Quarta"), ui.lacksHere)
+    }
+
+    @Test fun `a position with no song in the leader's list is not a song to lack or to ask for`() {
+        val role = Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = songs, index = songs.size), null)
+        val ui = br.app.stagebook.ui.band.followingUi(role, emptyList(), System.currentTimeMillis())
+        assertEquals("", ui.song)
+        assertEquals(false, ui.missingHere)
+    }
 }

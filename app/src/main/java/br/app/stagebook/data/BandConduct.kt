@@ -195,6 +195,12 @@ class BandConduct internal constructor(
      * Leads setlist [setId] from song [index] (what the stage does too: songs gone from the library aren't counted).
      * False = nothing started: the setlist is gone or has no song here.
      */
+    // the songs of setlist [setId] as the band is told them (null: no such setlist here, or it is empty)
+    private fun songsOf(setId: String): List<Conduct.Item>? {
+        val lib = repository.library.value
+        return lib.setlist(setId)?.items?.mapNotNull(lib::song)?.map { Conduct.Item(it.title, it.author, br.app.stagebook.domain.AskKind.of(it)) }?.takeIf { it.isNotEmpty() }
+    }
+
     fun startSetlist(setId: String, index: Int): Boolean {
         if (!bandOn() || !link.hasSavedMembers()) return false   // band off or nobody in it: nothing to lead (an armed button left behind doesn't lead either)
         val lib = repository.library.value
@@ -223,10 +229,14 @@ class BandConduct internal constructor(
     /** The leader changed songs on the stage of setlist [setId]. */
     fun open(setId: String, index: Int) {
         val now = _role.value as? Role.Conducting ?: return
-        if (now.setId != setId || (now.msg.index == index && now.msg.type == Conduct.OPEN)) return
+        if (now.setId != setId) return
+        // the setlist as it is now: one edited while leading (a song added or taken out) went on being told by the list of when
+        // leading began, so the followers got a position with no song (device test 16/11)
+        val songs = songsOf(setId) ?: now.msg.songs
+        if (now.msg.index == index && now.msg.type == Conduct.OPEN && songs == now.msg.songs) return
         breakStart = null; breakFrozen = null   // another song on stage: the break, if there was one, is over
         moves.incrementAndGet()
-        scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, index = index)) }
+        scope.launch { send(setId, now.msg.copy(type = Conduct.OPEN, songs = songs, index = index.coerceIn(0, (songs.size - 1).coerceAtLeast(0)))) }
     }
 
     /**

@@ -161,7 +161,9 @@ internal fun followingUi(
         return ConductUi.Following(msg.from, own?.title ?: next.title, own == null, role.gone(now), others(msg.index + 1), lacks, role.breakSince, breakFrozen = role.breakFrozen, lackSongs = lackSongs)
     }
     return ConductUi.Following(
-        msg.from, msg.songs.getOrNull(msg.index)?.title.orEmpty(), role.songId == null, role.gone(now),
+        // (a position past the list the leader sent has no song to lack or to ask for: the strip said "You don't have """,
+        // device test 16/11)
+        msg.from, msg.songs.getOrNull(msg.index)?.title.orEmpty(), role.songId == null && msg.songs.getOrNull(msg.index) != null, role.gone(now),
         others(msg.index), lacks, lackSongs = lackSongs,
         // still without chords: once the musician writes them in, the strip stops saying so
         noChords = role.songId in chordless && songs.firstOrNull { it.id == role.songId }?.let { !br.app.stagebook.domain.Chords.hasChords(it.text) } == true,
