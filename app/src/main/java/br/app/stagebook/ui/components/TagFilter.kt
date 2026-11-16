@@ -158,7 +158,9 @@ fun SearchWithFilter(
 ) {
     val gap = br.app.stagebook.ui.theme.Spacing.s
     androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
-        val wide = wideLists()
+        // by the room this row has, not by the screen: on a tablet the menu is 420 dp wide, and the row was laid out as on a wide
+        // screen there, with the tag filter taking most of it and the search left with a sliver (user, 16/11)
+        val wide = wideLists() && maxWidth >= WIDE_FROM
         // the drawer is narrower than a phone (87%): beside the filter the search was left with a sliver and the two ran
         // together, so under 360 dp they stack, each on its own line (user, 15/11)
         val stacked = filter != null && !wide && maxWidth < STACK_BELOW
@@ -180,6 +182,7 @@ fun SearchWithFilter(
 }
 
 private val STACK_BELOW = 360.dp
+private val WIDE_FROM = 560.dp   // from here the long hint and the wide filter fit side by side
 
 @LightPreview
 @Composable
