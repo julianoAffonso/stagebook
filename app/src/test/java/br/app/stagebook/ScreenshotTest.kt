@@ -127,9 +127,13 @@ class ScreenshotTest {
     @Composable
     private fun DrawerShot(tab: HomeTab, badges: Map<HomeTab, Int> = emptyMap(), content: @Composable (Modifier) -> Unit) {
         val width = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.87f).dp.coerceAtMost(420.dp)
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f))) {
+        // as in the app: the stage is behind the menu, dimmed, and on a wide screen the pin is at the top of the menu
+        val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= br.app.stagebook.ui.theme.Sizes.pinBreakpoint.value
+        Box(Modifier.fillMaxSize()) {
+            StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}, onMenu = {})
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)))
             Surface(Modifier.width(width).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                DrawerFrame(tab, {}, badges = badges, content = content)
+                DrawerFrame(tab, {}, badges = badges, onPin = if (wide) ({}) else null, content = content)
             }
         }
     }
@@ -228,12 +232,12 @@ class ScreenshotTest {
     // the setlist's own screen is the edit (the pencil on its card): a handle and a remove button on every row, with the
     // key, tempo, capo and backing track kept on each; where the show is lives on the stage's panel
     @Test fun setlistDetailTablet() = shoot("tablet_3_setlist") {
-        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        DrawerShot(HomeTab.SETLISTS) { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, modifier = it) }
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistDetailPhone() = shoot("celular_3_setlist") {
-        SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+        DrawerShot(HomeTab.SETLISTS) { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, modifier = it) }
     }
 
     // a break in the setlist: its row between the songs, the two blocks and the count under the name
@@ -243,7 +247,10 @@ class ScreenshotTest {
     fun setlistBreakPhone() = shoot("celular_3_setlist_intervalo") { SetlistBreak() }
 
     @Composable
-    private fun SetlistBreak() = SetlistDetailScreen(set.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {})
+    private fun SetlistBreak() = DrawerShot(HomeTab.SETLISTS) {
+        // in editing, where the break is put: the handles, the remove buttons and the Songs and Break buttons at the top
+        SetlistDetailScreen(set.copy(breaks = listOf(3)), null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, modifier = it, startEditing = true)
+    }
 
     // the break on stage, twelve and a half minutes in, with the song that comes next
     @Test fun stageBreakTablet() = shoot("tablet_6_palco_intervalo") { StageBreak() }
@@ -894,30 +901,31 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_8_bloqueador.png")
     }
 
-    @Test fun pickSongsTablet() = shoot("tablet_9_escolher_musicas") {
+    // adding songs to a setlist, inside the menu as in the app: the one the setlist already has, two checked with the number
+    // of the place each will take, and the total on the check at the top
+    @Composable
+    private fun PickSongs() = DrawerShot(HomeTab.SETLISTS) {
         br.app.stagebook.ui.setlists.PickSongsScreen(
             br.app.stagebook.ui.setlists.PickSongsUiState(
                 setName = s("Show de sábado"),
-                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
+                rows = songs.songs.map {
+                    br.app.stagebook.ui.setlists.PickRowUi(
+                        it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3",
+                        songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack, order = when (it.id) { "2" -> 2; "3" -> 3; else -> 0 },
+                    )
+                },
                 selectedCount = 2,
+                inSetCount = 1,
                 tags = listOf(s("Internacional"), s("Nacional")),
-                chosenTags = setOf(s("Nacional")),
             ),
-            "", {}, {}, {}, {},
+            "", {}, {}, {}, {}, it,
         )
     }
 
+    @Test fun pickSongsTablet() = shoot("tablet_9_escolher_musicas") { PickSongs() }
+
     @Test @Config(qualifiers = PHONE)
-    fun pickSongsPhone() = shoot("celular_9_escolher_musicas") {
-        br.app.stagebook.ui.setlists.PickSongsScreen(
-            br.app.stagebook.ui.setlists.PickSongsUiState(
-                setName = s("Show de sábado"),
-                rows = songs.songs.map { br.app.stagebook.ui.setlists.PickRowUi(it.id, it.title, it.subtitle, inSet = it.id == "1", selected = it.id == "2" || it.id == "3", songKey = it.songKey, bpm = it.bpm, capo = it.capo, hasTrack = it.hasTrack) },
-                selectedCount = 2,
-            ),
-            "", {}, {}, {}, {},
-        )
-    }
+    fun pickSongsPhone() = shoot("celular_9_escolher_musicas") { PickSongs() }
 
     @Test fun settingsTablet() = shoot("tablet_5_ajustes") {
         SettingsPage {
@@ -2122,7 +2130,7 @@ class ScreenshotTest {
         compose.setContent {
             val d = androidx.compose.ui.platform.LocalDensity.current
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, fontScale)) {
-                StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { SongsScreen(tagged, "", {}, {}, {}, {}) } }
+                StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { SongsScreen(tagged, "", {}, {}, {}, {}, it) } } }
             }
         }
         compose.onNodeWithText(if (fontScale > 0f && compose.onAllNodesWithText("2 tags").fetchSemanticsNodes().isNotEmpty()) "2 tags" else s("Nacional +1")).performClick()
