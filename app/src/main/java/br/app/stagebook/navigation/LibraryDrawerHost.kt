@@ -85,7 +85,9 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     br.app.stagebook.ui.components.FollowBusyWhile(open, window = false)   // the menu is not a window: Android's bar stays hidden
     // and the pedal does not turn the stage behind it (composed only while it is open: the last handler registered gets the press)
     val pedalKeys by start.pedalKeys.collectAsStateWithLifecycle()
-    if (open) br.app.stagebook.ui.PedalHandler { press -> br.app.stagebook.domain.pedalTakenByDrawer(press, pedalKeys) }
+    // (a text field of the menu being typed in: Compose's view says so, asked at each press)
+    val menuView = androidx.compose.ui.platform.LocalView.current
+    if (open) br.app.stagebook.ui.PedalHandler { press -> br.app.stagebook.domain.pedalTakenByDrawer(press, pedalKeys, typing = menuView.onCheckIsTextEditor()) }
 
     // a tap only counts while the screen under it is in front (a double tap would open two screens)
     fun go(block: () -> Unit) {
