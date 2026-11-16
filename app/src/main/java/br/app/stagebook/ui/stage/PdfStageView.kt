@@ -16,18 +16,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import br.app.stagebook.data.model.PdfMark
 import br.app.stagebook.data.model.PdfPoint
 import br.app.stagebook.domain.PdfMarks
 import br.app.stagebook.domain.PdfCrops
-import br.app.stagebook.data.model.PdfCrop
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import br.app.stagebook.domain.PdfZoom
@@ -288,37 +282,12 @@ fun PdfStageView(
                             }
                             // over the paper and not turned over with it: the highlighter keeps its colour on a dark stage
                             // the strokes of this page, as paths made once and drawn on every frame of a zoom or a move
-                            val strokes = remember(marks, shownAt) { marks.filter { it.page == shownAt } }
-                            Canvas(Modifier.fillMaxSize()) {
-                                strokes.forEach { drawStroke(it.points, it.width, markColor, shownCrop) }
-                                if (live.isNotEmpty()) drawStroke(live, PdfMarks.WIDTH, markColor, shownCrop)
-                            }
+                            val ink = remember(marks, shownAt, shownCrop) { PdfInk(marks.filter { it.page == shownAt }, shownCrop) }
+                            Canvas(Modifier.fillMaxSize()) { ink.draw(this, live, markColor) }
                         }
                     }
                 }
             }
         }
     }
-}
-
-/** A highlighter stroke over the page: [points] are fractions of the page, [width] a fraction of its width; [crop], if any, is the part shown. */
-private fun DrawScope.drawStroke(points: List<PdfPoint>, width: Float, color: Color, crop: PdfCrop? = null) {
-    if (points.isEmpty()) return
-    val cw = crop?.let { it.right - it.left } ?: 1f
-    val ch = crop?.let { it.bottom - it.top } ?: 1f
-    val x0 = crop?.left ?: 0f
-    val y0 = crop?.top ?: 0f
-    fun px(p: PdfPoint) = Offset((p.x - x0) / cw * size.width, (p.y - y0) / ch * size.height)
-    val thick = width / cw * size.width
-    val paint = color.copy(alpha = 0.4f)
-    if (points.size == 1) {
-        drawCircle(paint, thick / 2f, px(points[0]))
-        return
-    }
-    val path = Path().apply {
-        val first = px(points[0])
-        moveTo(first.x, first.y)
-        points.drop(1).forEach { val q = px(it); lineTo(q.x, q.y) }
-    }
-    drawPath(path, paint, style = Stroke(width = thick, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
