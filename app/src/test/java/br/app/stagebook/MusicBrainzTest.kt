@@ -78,4 +78,24 @@ class MusicBrainzTest {
         assertNull(runBlocking { mb.lookup("x", "y") })
         assertEquals(1, calls)
     }
+
+    @Test fun `a connection that breaks is tried again, up to three times, and the year comes when one answers`() {
+        var calls = 0
+        server.createContext("/cai") { ex ->
+            if (++calls < 3) { ex.close() } else {   // the first two: the connection closes with nothing said
+                val b = body.toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.write(b); ex.close()
+            }
+        }
+        val mb = MusicBrainz().apply { endpoint = "http://127.0.0.1:${server.address.port}/cai"; spacingMs = 30 }
+        assertEquals("1987", runBlocking { mb.lookup("Camila, Camila", "Nenhum de Nós") }?.year)
+        assertEquals(3, calls)
+    }
+
+    @Test fun `three busy answers in a row give nothing`() {
+        var calls = 0
+        server.createContext("/sempre") { ex -> calls++; ex.sendResponseHeaders(503, -1); ex.close() }
+        val mb = MusicBrainz().apply { endpoint = "http://127.0.0.1:${server.address.port}/sempre"; spacingMs = 20 }
+        assertNull(runBlocking { mb.lookup("x", "y") })
+        assertEquals(3, calls)
+    }
 }

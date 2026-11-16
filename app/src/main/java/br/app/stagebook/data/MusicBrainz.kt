@@ -52,9 +52,10 @@ class MusicBrainz @Inject constructor() {
 
     suspend fun lookup(title: String, artist: String): Info? = withContext(Dispatchers.IO) {
         gate.withLock {
-            // the first try, and one more after a pause if the server said "too many" (503) or "slow down" (429)
-            for (attempt in 0..1) {
-                val wait = lastAt + spacingMs - System.currentTimeMillis()
+            // the first try, and more after a growing pause when the server said "too many" (503), "slow down" (429) or
+            // the connection broke or timed out: the first try of a cold connection failed often (user, 15/11)
+            for (attempt in 0 until ATTEMPTS) {
+                val wait = lastAt + spacingMs * (attempt + 1) - System.currentTimeMillis()
                 if (wait > 0) delay(wait)
                 lastAt = System.currentTimeMillis()
                 val r = ask(title, artist)
@@ -87,10 +88,11 @@ class MusicBrainz @Inject constructor() {
             } finally {
                 c.disconnect()
             }
-        }.getOrDefault(Asked.Found(null))
+        }.getOrElse { if (it is java.io.IOException) Asked.Busy else Asked.Found(null) }
 
     companion object {
         const val MIN_SPACING_MS = 1_100L
+        const val ATTEMPTS = 3
 
         private fun esc(s: String) = s.replace("\\", " ").replace("\"", " ")
 

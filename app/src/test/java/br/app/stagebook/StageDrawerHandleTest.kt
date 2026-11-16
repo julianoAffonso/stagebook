@@ -5,6 +5,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -52,5 +55,15 @@ class StageDrawerHandleTest {
         compose.waitForIdle()
         assertTrue("moved down from 0.3: $moved", (moved ?: 0f) > 0.3f)
         assertEquals(0, opened)
+    }
+
+    @Test fun `with requests waiting the handle carries their number, and with none it has none`() {
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, waiting = 2) } }
+        compose.onNodeWithText("2", useUnmergedTree = true).assertExists()
+    }
+
+    @Test fun `no number on the handle when nobody waits`() {
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, waiting = 0) } }
+        compose.onAllNodesWithText("0", useUnmergedTree = true).assertCountEquals(0)
     }
 }

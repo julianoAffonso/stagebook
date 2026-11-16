@@ -18,6 +18,11 @@ class StageGate @Inject constructor() {
     private val _exits = MutableStateFlow(0)
     val exits: StateFlow<Int> = _exits.asStateFlow()
 
+    // the side menu is open over the stage: the person is not playing, so notices may show (see MainActivity)
+    private val _menuOpen = MutableStateFlow(false)
+    val menuOpen: StateFlow<Boolean> = _menuOpen.asStateFlow()
+    fun setMenuOpen(open: Boolean) { _menuOpen.value = open }
+
     fun enter() { open.update { it + 1 }; _onStage.value = open.value > 0 }
     fun leave() {
         open.update { (it - 1).coerceAtLeast(0) }

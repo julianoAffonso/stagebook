@@ -19,4 +19,7 @@ val LocalDrawer = staticCompositionLocalOf<DrawerControl?> { null }
  */
 class DrawerGuard { var asks: (() -> Boolean)? = null }
 
+/** How many requests wait for an answer (someone to join the band, a computer to edit): the stage's handle says so. */
+val LocalWaitingRequests = staticCompositionLocalOf { 0 }
+
 val LocalDrawerGuard = staticCompositionLocalOf<DrawerGuard?> { null }

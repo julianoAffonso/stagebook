@@ -22,7 +22,11 @@ class StartViewModel @Inject constructor(
     private val last: LastStage,
     private val show: SetlistShowStore,
     private val pdfImporter: br.app.stagebook.data.PdfImporter,
+    private val gate: br.app.stagebook.data.StageGate,
 ) : ViewModel() {
+    /** The side menu shows or goes: with it open, requests to join (band, computer) may ask over the stage. */
+    fun menuShown(open: Boolean) = gate.setMenuOpen(open)
+
     /** PDFs that came to the app from outside: each becomes a song (checked first). */
     suspend fun importPdfs(uris: List<android.net.Uri>) = pdfImporter.import(uris)
 

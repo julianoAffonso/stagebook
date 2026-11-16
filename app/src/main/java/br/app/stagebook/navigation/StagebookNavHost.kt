@@ -201,7 +201,7 @@ fun StagebookNavHost(
     var drawerShown by remember { androidx.compose.runtime.mutableStateOf(false) }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     BandStripLayout(liftIme = !drawerShown, screens = {
-    LibraryDrawerHost(nav, onShown = { drawerShown = it }) {
+    LibraryDrawerHost(nav, onShown = { drawerShown = it; start.menuShown(it) }) {
     NavHost(
         modifier = Modifier.fillMaxSize(),
         navController = nav,

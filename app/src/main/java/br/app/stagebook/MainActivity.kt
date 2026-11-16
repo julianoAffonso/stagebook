@@ -145,7 +145,14 @@ class MainActivity : ComponentActivity() {
                         onClose = updateOffer::dismiss,
                     )
                 }
-                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
+                val requests by band.requests.collectAsStateWithLifecycle()
+                val onStage by stageGate.onStage.collectAsStateWithLifecycle()
+                val menuOpen by stageGate.menuOpen.collectAsStateWithLifecycle()
+                val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
+                // on stage nothing shows on top, but with the side menu open the person is not playing: it shows then, and the
+                // stage's handle carries the number waiting so they know to open it (the stage is the app's base now)
+                val quiet = onStage && !menuOpen
+                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size)) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -157,15 +164,12 @@ class MainActivity : ComponentActivity() {
                 }
                 // "So-and-so wants to join the band" on any screen, one at a time. On stage nothing shows on top: the
                 // show is never interrupted.
-                val requests by band.requests.collectAsStateWithLifecycle()
-                val onStage by stageGate.onStage.collectAsStateWithLifecycle()
-                if (!onStage) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
+                if (!quiet) requests.firstOrNull()?.let { r -> BandRequestDialog(r.name) { ok -> band.answer(r, ok) } }
                 // the songs that just lost their audio (a file opened without the tracks, Android's own copy), named once
                 val lostAudio by repository.lostAudio.collectAsStateWithLifecycle()
-                if (!onStage && lostAudio.isNotEmpty()) br.app.stagebook.ui.components.LostAudioDialog(lostAudio, repository::lostAudioSeen)
+                if (!quiet && lostAudio.isNotEmpty()) br.app.stagebook.ui.components.LostAudioDialog(lostAudio, repository::lostAudioSeen)
                 // "Chrome · Windows wants to edit" (editor on the computer, T37): also never on stage; the browser waits
-                val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
-                if (!onStage && requests.isEmpty()) webRequests.firstOrNull()?.let { r ->
+                if (!quiet && requests.isEmpty()) webRequests.firstOrNull()?.let { r ->
                     br.app.stagebook.ui.web.WebRequestDialog(r.name, r.ip, r.code) { ok -> webEditor.auth.answer(r.id, ok) }
                 }
             }

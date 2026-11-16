@@ -35,6 +35,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import br.app.stagebook.ui.drawer.LocalWaitingRequests
 import br.app.stagebook.R
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
@@ -48,6 +52,7 @@ import br.app.stagebook.ui.theme.Spacing
 @Composable
 internal fun StageDrawerHandle(
     onOpen: () -> Unit, fg: Color, bg: Color, y: Float, onMove: (Float) -> Unit, modifier: Modifier = Modifier,
+    waiting: Int = LocalWaitingRequests.current,   // requests waiting for an answer: the number shows on the handle
 ) {
     val density = LocalDensity.current
     val flingPx = with(density) { Sizes.swipe.toPx() }
@@ -97,6 +102,13 @@ internal fun StageDrawerHandle(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 repeat(3) { Box(Modifier.size(width = Spacing.s, height = HANDLE_LINE).background(fg.copy(alpha = if (moving) 1f else HANDLE_LINE_ALPHA), CircleShape)) }
+            }
+            // someone asked to join (the band, the computer): open the menu to answer
+            if (waiting > 0) Box(
+                Modifier.align(Alignment.TopStart).padding(start = HANDLE_WIDTH - Spacing.s).size(Spacing.m + Spacing.xs).background(MaterialTheme.colorScheme.error, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(waiting.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onError)
             }
         }
     }
