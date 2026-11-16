@@ -151,7 +151,8 @@ class MainActivity : ComponentActivity() {
                 val webRequests by webEditor.auth.requests.collectAsStateWithLifecycle()
                 // on stage nothing shows on top, but with the side menu open the person is not playing: it shows then, and the
                 // stage's handle carries the number waiting so they know to open it (the stage is the app's base now)
-                val quiet = onStage && !menuOpen
+                val stageInView by stageGate.stageInView.collectAsStateWithLifecycle()
+                val quiet = StageGate.quiet(onStage, stageInView, menuOpen)
                 CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size)) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(

@@ -23,6 +23,19 @@ class StageGate @Inject constructor() {
     val menuOpen: StateFlow<Boolean> = _menuOpen.asStateFlow()
     fun setMenuOpen(open: Boolean) { _menuOpen.value = open }
 
+    // the stage is the screen in view (not Settings, an editor or the importer over it, whose stage is still open under them)
+    private val _stageInView = MutableStateFlow(false)
+    val stageInView: StateFlow<Boolean> = _stageInView.asStateFlow()
+    fun setStageInView(inView: Boolean) { _stageInView.value = inView }
+
+    companion object {
+        /**
+         * Requests to join (band, computer) wait, with nothing on top, only while the show is on screen: the stage open and in
+         * view, and the menu closed. Settings or an editor over an open stage, or the menu open, are not the show.
+         */
+        fun quiet(onStage: Boolean, stageInView: Boolean, menuOpen: Boolean): Boolean = onStage && stageInView && !menuOpen
+    }
+
     fun enter() { open.update { it + 1 }; _onStage.value = open.value > 0 }
     fun leave() {
         open.update { (it - 1).coerceAtLeast(0) }

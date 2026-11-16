@@ -27,6 +27,9 @@ class StartViewModel @Inject constructor(
     /** The side menu shows or goes: with it open, requests to join (band, computer) may ask over the stage. */
     fun menuShown(open: Boolean) = gate.setMenuOpen(open)
 
+    /** The screen in view is (or is not) the stage: only there do requests to join wait instead of showing. */
+    fun stageShown(inView: Boolean) = gate.setStageInView(inView)
+
     /** PDFs that came to the app from outside: each becomes a song (checked first). */
     suspend fun importPdfs(uris: List<android.net.Uri>) = pdfImporter.import(uris)
 

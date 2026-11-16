@@ -180,8 +180,12 @@ fun StagebookNavHost(
                 br.app.stagebook.domain.ResumePoint.fill(pattern, keys.associateWith { k -> args?.get(k)?.toString() }) { android.net.Uri.encode(it) }
             }
         }
+        // only the stage in view keeps a request from showing (Settings over an open stage must show it: the person is there
+        // turning the editor on and waiting for it)
+        val stageWatcher = NavController.OnDestinationChangedListener { _, destination, _ -> start.stageShown(destination.hasRoute<Stage>()) }
+        nav.addOnDestinationChangedListener(stageWatcher)
         nav.addOnDestinationChangedListener(listener)
-        onDispose { nav.removeOnDestinationChangedListener(listener) }
+        onDispose { nav.removeOnDestinationChangedListener(listener); nav.removeOnDestinationChangedListener(stageWatcher) }
     }
     // the start, once the library is read: the stage that was open last; then, just updated, back where it was (Settings →
     // About, or the screen the update window was over), over that stage and not over the empty screen

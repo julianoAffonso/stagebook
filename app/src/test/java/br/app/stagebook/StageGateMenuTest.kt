@@ -22,4 +22,11 @@ class StageGateMenuTest {
         assertFalse(gate.menuOpen.value)
         assertTrue("the menu doesn't change the stage's rule for sync", gate.onStage.value)
     }
+
+    @Test fun `a request waits only while the stage is open, in view and the menu closed`() {
+        assertTrue(StageGate.quiet(onStage = true, stageInView = true, menuOpen = false))
+        assertFalse("menu open over the stage", StageGate.quiet(true, true, true))
+        assertFalse("Settings over an open stage (the person turned the editor on there)", StageGate.quiet(true, false, false))
+        assertFalse("no stage at all", StageGate.quiet(false, false, false))
+    }
 }
