@@ -4,7 +4,12 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.data.BandConduct
@@ -84,6 +89,45 @@ class ConductLacksRowsTest {
         compose.onNodeWithText("Ver o que falta aqui").performClick()
         compose.onNodeWithText("Importar as que faltam (3)").performClick()
         assertEquals(listOf(1, 1, 1), listOf(band, internet, import))
+    }
+
+    @Test fun `the copy to ask for is picked from a list that opens, and the request says it`() {
+        val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), "x")
+        val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())
+        val asked = mutableListOf<String>()
+        compose.setContent {
+            StagebookTheme { ConductBar(ui, {}, {}, {}, {}, options = br.app.stagebook.ui.band.AskOptions(bandDevices = 1), onAskBand = { asked += it }) }
+        }
+        compose.onNodeWithText("Ver o que falta aqui").performClick()
+        // closed, it says its label and what is chosen: each song as the band plays it
+        compose.onNodeWithText("Qual cópia pedir").assertIsDisplayed()
+        compose.onNodeWithText("Como a banda toca").assertIsDisplayed()
+        compose.onAllNodesWithText("Só letra").assertCountEquals(0)
+        compose.onNodeWithText("Pedir à banda (1 aparelho na rede)").performClick()
+        compose.onNodeWithText("Como a banda toca").performClick()
+        compose.onNodeWithText("PDF").performClick()
+        compose.onAllNodesWithText("Como a banda toca").assertCountEquals(0)
+        compose.onNodeWithText("Pedir à banda (1 aparelho na rede)").performClick()
+        assertEquals(listOf("", "pdf"), asked)
+    }
+
+    @Test fun `what just happened is said in the strip, whole, in place of its lines`() {
+        val role = BandConduct.Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = items, index = 0), "x")
+        val ui = followingUi(role, emptyList<Song>(), System.currentTimeMillis())
+        var notice by mutableStateOf<String?>(null)
+        val text = "Pedido enviado a Voz. As músicas chegam em Recebidos da banda quando a pessoa abrir o Stagebook."
+        compose.setContent { StagebookTheme { ConductBar(ui, {}, {}, {}, {}, notice = notice) } }
+        compose.onAllNodesWithTag("conduct-notice").assertCountEquals(0)
+        compose.onNodeWithText("Ver o que falta aqui").assertIsDisplayed()
+        notice = text
+        compose.onNodeWithText(text).assertIsDisplayed()
+        compose.onAllNodesWithText("Ver o que falta aqui").assertCountEquals(0)
+        // the sentence is inside the strip, not over what is above it
+        val strip = compose.onNodeWithTag("conduct-notice").getUnclippedBoundsInRoot()
+        val said = compose.onNodeWithText(text).getUnclippedBoundsInRoot()
+        assertTrue("the sentence fits in the strip", said.top >= strip.top && said.bottom <= strip.bottom && said.left >= strip.left && said.right <= strip.right)
+        notice = null
+        compose.onNodeWithText("Ver o que falta aqui").assertIsDisplayed()
     }
 
     @Test fun `with nobody on the network and no online leader the list offers only the import`() {

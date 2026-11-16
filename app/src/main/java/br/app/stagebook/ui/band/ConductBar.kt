@@ -39,6 +39,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.text
@@ -254,13 +255,21 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
     val message = br.app.stagebook.ui.components.LocalAppMessage.current
     val resources = androidx.compose.ui.platform.LocalResources.current
     // what happened to the missing songs, as the app's short message (it waits; nothing runs until one comes)
+    // (user, 16/11: said in the strip itself, for a few seconds: the floating message sat over the stage's play button and its
+    // clock; with no strip on screen it is the app's message as before)
+    var notice by remember { mutableStateOf<String?>(null) }
+    suspend fun say(text: String, long: Boolean) {
+        if (viewModel.ui.value == null) { message.show(text, long = long); return }
+        notice = text
+        try { kotlinx.coroutines.delay(if (long) NOTICE_LONG_MS else NOTICE_MS) } finally { notice = null }
+    }
     LaunchedEffect(viewModel, message, resources) {
-        viewModel.notices.collect { message.show(it.text(resources), long = it is BandConduct.Notice.ChordsKept) }
+        viewModel.notices.collect { say(it.text(resources), long = it is BandConduct.Notice.ChordsKept) }
     }
     // the answer of "ask online", as the review of a shared setlist says it
     LaunchedEffect(asks, message, resources) {
         asks?.internetResult?.collect { (name, ok) ->
-            message.show(if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), long = true)
+            say(if (ok) resources.getString(R.string.scan_internet_sent, name) else resources.getString(R.string.scan_internet_failed), long = true)
         }
     }
     val gate = br.app.stagebook.ui.components.LocalFollowGate.current
@@ -271,6 +280,7 @@ fun ConductRoute(modifier: Modifier = Modifier, viewModel: ConductViewModel = hi
                 waiting = gate.waiting().takeIf { _ -> it is ConductUi.Following }, onGo = gate::goNow,
                 options = options, onAskBand = { asks?.askBand(it) }, onAskInternet = { asks?.askInternet(it) },
                 onImportMissing = { if (asks?.importMissing() == true) openImporter() },
+                notice = notice,
             )
         }
     }
@@ -309,6 +319,7 @@ fun ConductBar(
     waiting: br.app.stagebook.domain.FollowWait? = null, onGo: () -> Unit = {}, onCancel: () -> Unit = {},
     // what a follower can do about the setlist's songs it lacks: ask the band here, ask the leader online, import from the sites
     options: AskOptions = AskOptions(), onAskBand: (String) -> Unit = {}, onAskInternet: (String) -> Unit = {}, onImportMissing: () -> Unit = {},
+    notice: String? = null,   // what just happened, said in the strip in place of its lines for a few seconds
 ) {
     // the leader's song is waiting for this person to finish what they're doing: the strip says where the leader went,
     // why it hasn't opened, and offers to go now
@@ -369,8 +380,8 @@ fun ConductBar(
         }
     }
     Surface(
-        color = if (alert) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = if (alert) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        color = if (alert && notice == null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = if (alert && notice == null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier.fillMaxWidth().aboveNavigationBar(),
     ) {
         // on a phone two text buttons don't fit next to the text. The leader's "End" broke letter by letter and the
@@ -381,7 +392,16 @@ fun ConductBar(
         // stays beside the text, and on a phone "See what's missing" is a tap on the text (with an arrow): as a button
         // it pushed both onto a third line and left the strip tall and half empty (user, 02/11)
         // every strip has the same least height, and a one-line one keeps its text in the middle of it
-        androidx.compose.foundation.layout.BoxWithConstraints(
+        if (notice != null) Row(
+            Modifier.windowInsetsPadding(WindowInsets.navigationBars).heightIn(min = Sizes.strip).fillMaxWidth()
+                .padding(horizontal = Spacing.m, vertical = Spacing.s)
+                .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite; testTag = NOTICE_TAG },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            Icon(AppIcons.Check, null)
+            // the whole sentence, on as many lines as it takes: it is all the strip says meanwhile
+            Text(notice, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        } else androidx.compose.foundation.layout.BoxWithConstraints(
             Modifier.windowInsetsPadding(WindowInsets.navigationBars).heightIn(min = Sizes.strip), contentAlignment = Alignment.Center,
         ) {
             val small = maxWidth < NARROW
@@ -466,17 +486,8 @@ fun ConductBar(
                 // which copy is asked for: said in the request, and the other device sends that one or nothing (user, 15/11)
                 var kind by rememberSaveable { mutableStateOf(options.defaultKind) }
                 if (options.bandDevices > 0 || options.internetFrom != null) {
-                    Text(stringResource(R.string.ask_kind_label), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = Spacing.s))
-                    br.app.stagebook.ui.components.SegmentedChoice(
-                        listOf(
-                            // by default what makes sense for each song: the copy the leader plays
-                            br.app.stagebook.ui.components.Choice("", R.string.ask_kind_band),
-                            br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.LYRICS, R.string.ask_kind_lyrics),
-                            br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.CHORDS, R.string.ask_kind_chords),
-                            br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.AskKind.PDF, R.string.ask_kind_pdf),
-                        ),
-                        kind, { kind = it },
-                    )
+                    // a list that opens, not a row of four: on a phone with large letters the row cut its first option (device test 16/11)
+                    AskKindPicker(kind, { kind = it }, Modifier.fillMaxWidth().padding(top = Spacing.s))
                 }
                 if (options.bandDevices > 0) TextButton({ onAskBand(kind) }, enabled = !asking) {
                     // (these sentences wrap: on one line a phone cut them off, device test 16/11)
@@ -560,6 +571,57 @@ private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, ta
 /** An action's text: whole, on one line, whatever is beside it. */
 @Composable
 private fun ActionText(text: String) = Text(text, maxLines = 1, softWrap = false)
+
+/**
+ * Which copy to ask for, as a line that opens a list. Not the app's dropdown: its read-only text field, as a window's
+ * first field, never came to rest (the tests of the window never went idle and ran out of memory).
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun AskKindPicker(kind: String, onPick: (String) -> Unit, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    @Composable fun nameOf(k: String) = stringResource(
+        when (k) {
+            br.app.stagebook.domain.AskKind.LYRICS -> R.string.ask_kind_lyrics
+            br.app.stagebook.domain.AskKind.CHORDS -> R.string.ask_kind_chords
+            br.app.stagebook.domain.AskKind.PDF -> R.string.ask_kind_pdf
+            // by default what makes sense for each song: the copy the leader plays
+            else -> R.string.ask_kind_band
+        },
+    )
+    androidx.compose.material3.ExposedDropdownMenuBox(open, { open = it }, modifier) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth().menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        ) {
+            Row(Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.ask_kind_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(nameOf(kind), style = MaterialTheme.typography.bodyLarge)
+                }
+                androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = open)
+            }
+        }
+        br.app.stagebook.ui.components.FollowBusyWhile(open)
+        ExposedDropdownMenu(
+            expanded = open, onDismissRequest = { open = false }, containerColor = br.app.stagebook.ui.components.AppMenu.color,
+            shadowElevation = br.app.stagebook.ui.components.AppMenu.shadow, border = br.app.stagebook.ui.components.AppMenu.border,
+        ) {
+            (listOf("") + br.app.stagebook.domain.AskKind.choices).forEach { k ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(nameOf(k), style = MaterialTheme.typography.bodyLarge) },
+                    onClick = { onPick(k); open = false },
+                    contentPadding = androidx.compose.material3.ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
+    }
+}
+
+/** How long the strip says what just happened, a short notice and a long one. */
+internal const val NOTICE_TAG = "conduct-notice"
+private const val NOTICE_MS = 4_000L
+private const val NOTICE_LONG_MS = 7_000L
 
 private const val CUT_HERE = "\u2060"   // stands for the name while the sentence is split around it
 

@@ -980,6 +980,30 @@ class ScreenshotTest {
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }
 
+    /** The strip saying what has just happened, over the stage: the whole sentence, and nothing of the stage under it. */
+    private fun followerNotice(name: String) {
+        compose.setContent {
+            StagebookTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    androidx.compose.foundation.layout.Column {
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}) }
+                        br.app.stagebook.ui.band.ConductBar(
+                            br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), "Garota de Ipanema", false, false, emptyList(), listOf("Wave", "Corcovado")),
+                            {}, {}, {}, {}, notice = str(R.string.scan_internet_sent, s("Voz")),
+                        )
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
+    }
+
+    @Test fun followerNoticeTablet() = followerNotice("banda_seguir_aviso")
+
+    @Test @Config(qualifiers = PHONE)
+    fun followerNoticePhone() = followerNotice("banda_seguir_aviso_celular")
+
     @Test fun followerLacksTablet() = followerLacks("banda_seguir_falta")
 
     @Test @Config(qualifiers = PHONE)

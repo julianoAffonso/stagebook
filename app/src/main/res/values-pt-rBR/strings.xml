@@ -1338,7 +1338,7 @@
     <string name="ask_kind_lyrics">Só letra</string>
     <string name="ask_kind_chords">Cifra</string>
     <string name="ask_kind_pdf">PDF</string>
-    <string name="ask_kind_band">Da banda</string>
+    <string name="ask_kind_band">Como a banda toca</string>
     <string name="import_pdf_sites">PDFs de sites</string>
     <string name="settings_pdf_sites">Sites de partituras em PDF</string>
     <string name="pdf_site_hint">Abra uma partitura e toque no PDF. Ele entra como música.</string>
