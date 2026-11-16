@@ -1282,4 +1282,8 @@
     <string name="settings_handle_right">Handle on the right</string>
     <string name="settings_handle_right_detail">The menu handle on the stage goes to the right edge. Hold it to move it up or down.</string>
     <string name="kw_handle">handle menu side left right drawer alça menu lateral direita esquerda canhoto</string>
+    <plurals name="drawer_requests">
+        <item quantity="one">%1$d request waiting for an answer</item>
+        <item quantity="other">%1$d requests waiting for an answer</item>
+    </plurals>
 </resources>

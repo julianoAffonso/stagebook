@@ -1326,4 +1326,9 @@
     <string name="settings_handle_right">Alça à direita</string>
     <string name="settings_handle_right_detail">A alça do menu no palco vai para a borda direita. Segure nela para subir ou descer.</string>
     <string name="kw_handle">alça menu lateral direita esquerda canhoto handle menu side left right drawer</string>
+    <plurals name="drawer_requests">
+        <item quantity="one">%1$d pedido esperando resposta</item>
+        <item quantity="many">%1$d pedidos esperando resposta</item>
+        <item quantity="other">%1$d pedidos esperando resposta</item>
+    </plurals>
 </resources>

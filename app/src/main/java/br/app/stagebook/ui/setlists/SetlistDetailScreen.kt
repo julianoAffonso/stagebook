@@ -210,7 +210,11 @@ fun SetlistDetailScreen(
     // change is already in the library when made, so Discard puts back what it was when editing began
     var editing by rememberSaveable { mutableStateOf(startEditing) }
     var asking by rememberSaveable { mutableStateOf(false) }
-    var before by remember { mutableStateOf<Pair<List<String>, List<Int>>?>(null) }
+    // the setlist as it was when editing began, saved with the screen: adding songs opens another screen over this one and this
+    // one leaves the composition (a plain remember was lost then, and Discard restored nothing)
+    var beforeIds by rememberSaveable { mutableStateOf<ArrayList<String>?>(null) }
+    var beforeBreaks by rememberSaveable { mutableStateOf<ArrayList<Int>?>(null) }
+    val before: Pair<List<String>, List<Int>>? = beforeIds?.let { it to (beforeBreaks ?: emptyList<Int>()) }
     var afterAsk by remember { mutableStateOf<(() -> Unit)?>(null) }
     val drawerGuard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
     val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
@@ -241,7 +245,7 @@ fun SetlistDetailScreen(
         gate.leaveGuard = guard
         onDispose { if (gate.leaveGuard === guard) gate.leaveGuard = null }
     }
-    fun finishEditing() { editing = false; asking = false; before = null; selected = emptyList(); drawerGuard?.asks = null }
+    fun finishEditing() { editing = false; asking = false; beforeIds = null; beforeBreaks = null; selected = emptyList(); drawerGuard?.asks = null }
     androidx.compose.runtime.DisposableEffect(drawerGuard, editing) {
         // the drawer closing (button, scrim, swipe, Back) while editing asks first; the answer closes it
         val asks: () -> Boolean = { if (editing && changedNow) { afterAsk = { drawer?.close?.invoke() }; asking = true; true } else false }
@@ -293,7 +297,7 @@ fun SetlistDetailScreen(
                         val canBreak = br.app.stagebook.domain.SetlistBreaks.canAdd(uiState.breaks, uiState.items.size)
                         SetActions(
                             editing, items.isNotEmpty(), onAddSongs, { sharing = true }, canBreak, onAddBreak,
-                            onEdit = { before = items.map { it.songId } to uiState.breaks; editing = true },
+                            onEdit = { beforeIds = ArrayList(items.map { it.songId }); beforeBreaks = ArrayList(uiState.breaks); editing = true },
                             onSave = { finishEditing() }, canSave = changed,
                             menu = listOfNotNull(
                                 MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, onConduct).takeIf { uiState.canConduct },

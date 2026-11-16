@@ -69,4 +69,16 @@ class DrawerFrameTest {
         compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}) { m -> Box(m) } } }
         compose.onAllNodesWithContentDescription("Manter o menu aberto").assertCountEquals(0)
     }
+
+    @Test fun `with requests waiting the menu header carries their number, and a tap asks to answer`() {
+        var attended = 0
+        compose.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(
+                br.app.stagebook.ui.drawer.LocalWaitingRequests provides 2,
+                br.app.stagebook.ui.drawer.LocalAttendRequest provides { attended++ },
+            ) { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, pinned = true, onPin = {}) { m -> Box(m) { Text("a lista") } } } }
+        }
+        compose.onNodeWithContentDescription("2 pedidos esperando resposta").performClick()
+        assertEquals(1, attended)
+    }
 }

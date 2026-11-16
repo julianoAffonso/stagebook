@@ -33,6 +33,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import br.app.stagebook.R
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.home.HomeTab
@@ -70,6 +72,14 @@ fun DrawerFrame(
                 )
                 // the logo and the name, beside each other: no version under it (user, 15/11; it is in Settings → About)
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+            }
+            // the pinned menu is always open, so a request to join has no "opening" to wait for: its number is here, and a tap
+            // brings the window up (the stage's handle carries it too when the menu is not pinned)
+            val waiting = LocalWaitingRequests.current
+            val attend = LocalAttendRequest.current
+            val waitingLabel = androidx.compose.ui.res.pluralStringResource(R.plurals.drawer_requests, waiting, waiting)
+            if (waiting > 0) androidx.compose.material3.TextButton(onClick = attend, modifier = Modifier.semantics { contentDescription = waitingLabel }) {
+                androidx.compose.material3.Badge { Text(waiting.toString()) }
             }
             if (onPin != null) IconButton(onClick = onPin) {
                 Icon(

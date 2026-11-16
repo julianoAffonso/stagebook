@@ -22,4 +22,7 @@ class DrawerGuard { var asks: (() -> Boolean)? = null }
 /** How many requests wait for an answer (someone to join the band, a computer to edit): the stage's handle says so. */
 val LocalWaitingRequests = staticCompositionLocalOf { 0 }
 
+/** What the pinned menu's number of waiting requests does when tapped: the window with the first one comes up. */
+val LocalAttendRequest = staticCompositionLocalOf<() -> Unit> { {} }
+
 val LocalDrawerGuard = staticCompositionLocalOf<DrawerGuard?> { null }

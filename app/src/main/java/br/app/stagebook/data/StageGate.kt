@@ -23,6 +23,11 @@ class StageGate @Inject constructor() {
     val menuOpen: StateFlow<Boolean> = _menuOpen.asStateFlow()
     fun setMenuOpen(open: Boolean) { _menuOpen.value = open }
 
+    // the person asked, on the pinned menu, to answer a request waiting: shown now even with the stage in view
+    private val _attend = MutableStateFlow(false)
+    val attend: StateFlow<Boolean> = _attend.asStateFlow()
+    fun setAttend(on: Boolean) { _attend.value = on }
+
     // the stage is the screen in view (not Settings, an editor or the importer over it, whose stage is still open under them)
     private val _stageInView = MutableStateFlow(false)
     val stageInView: StateFlow<Boolean> = _stageInView.asStateFlow()

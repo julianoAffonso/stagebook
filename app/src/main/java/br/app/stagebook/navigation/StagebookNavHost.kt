@@ -241,7 +241,7 @@ fun StagebookNavHost(
                 onDone = dropUnlessResumed { if (fromMenu) backToMenu() else nav.popBackStack() },
                 onSaved = { id -> entry.ifResumed { if (fromMenu) backToMenu() else nav.showSaved(id) } },
                 // import queue: saves, opens the next song in the importer; when done, opens the setlist
-                onNextImport = { nav.navigate(Importer(queued = true)) { popUpTo<Importer> { inclusive = true } } },
+                onNextImport = { nav.navigate(Importer(queued = true, fromMenu = fromMenu)) { popUpTo<Importer> { inclusive = true } } },
                 onSetlistReady = { id -> nav.popBackStack<Importer>(inclusive = true); drawer?.openSetlist(id, false) },
                 // previous or next song: the editor of that song in place of this one (back still goes to where it came from)
                 onMoved = { id -> entry.ifResumed { nav.navigate(SongEditor(songId = id, fromMenu = fromMenu)) { popUpTo<SongEditor> { inclusive = true } } } },

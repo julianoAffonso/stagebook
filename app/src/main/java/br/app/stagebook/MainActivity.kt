@@ -152,8 +152,11 @@ class MainActivity : ComponentActivity() {
                 // on stage nothing shows on top, but with the side menu open the person is not playing: it shows then, and the
                 // stage's handle carries the number waiting so they know to open it (the stage is the app's base now)
                 val stageInView by stageGate.stageInView.collectAsStateWithLifecycle()
-                val quiet = StageGate.quiet(onStage, stageInView, menuOpen)
-                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size)) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
+                val attend by stageGate.attend.collectAsStateWithLifecycle()
+                val quiet = StageGate.quiet(onStage, stageInView, menuOpen || attend)
+                // answered (or gone): the next one waits again
+                androidx.compose.runtime.LaunchedEffect(requests.size + webRequests.size) { if (requests.isEmpty() && webRequests.isEmpty()) stageGate.setAttend(false) }
+                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size), br.app.stagebook.ui.drawer.LocalAttendRequest provides { stageGate.setAttend(true) }) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.onStage, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
