@@ -228,6 +228,7 @@ class WebEditorServer @Inject constructor(
             "askingCode" to R.string.web_asking_code,
             "denied" to R.string.web_denied,
             "busy" to R.string.web_busy,
+            "deniedWait" to R.string.web_denied_wait,
             "connected" to R.string.web_connected,
             "offline" to R.string.web_offline,
             "saved" to R.string.web_saved,

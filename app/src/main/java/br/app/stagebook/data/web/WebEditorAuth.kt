@@ -72,6 +72,10 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
      * A browser asks to come in: a new request on the tablet (at most [MAX_WAITING] at a time, one per address; an
      * address that was denied waits [DENIED_MS] before asking again). Null = refused for now.
      */
+    /** How long the address that was just denied still waits before it may ask again, in milliseconds (0 = it may ask). */
+    @Synchronized
+    fun deniedLeft(ip: String): Long = ((deniedUntil[ip] ?: 0L) - now()).coerceAtLeast(0L)
+
     @Synchronized
     fun ask(name: String, ip: String = ""): Request? {
         expire()

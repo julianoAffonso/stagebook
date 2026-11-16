@@ -347,7 +347,13 @@ async function ask() {
   say("gate-text", "");
   const r = await post("/api/ask", { name: computerName() });
   if (!r) return offline();
-  if (r.status === 429) { say("gate-text", t.busy); $("ask").disabled = false; return; }
+  if (r.status === 429) {
+    // just denied on the device: it says so, with how long this computer still waits
+    const why = await r.json().catch(() => null);
+    say("gate-text", why && why.denied ? fill(t.deniedWait, String(why.minutes)) : t.busy, why && why.denied ? "error" : undefined);
+    $("ask").disabled = false;
+    return;
+  }
   const { id, code } = await r.json();
   // the same code shows on the tablet: the musician allows only if they match
   say("gate-text", fill(t.askingCode, code));

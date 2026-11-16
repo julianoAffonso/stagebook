@@ -949,7 +949,8 @@
     <string name="web_title">Stagebook editor</string>
     <string name="web_ask">Ask to come in</string>
     <string name="web_asking_code">On the device, check code %1$s and allow.</string>
-    <string name="web_denied">Not allowed. Ask again if it was a mistake.</string>
+    <string name="web_denied">Not allowed. If it was a mistake, ask again in 5 minutes.</string>
+    <string name="web_denied_wait">This computer\'s request was denied on the device. Ask again in %1$s min.</string>
     <string name="web_busy">Too many requests at once. Try again in a minute.</string>
     <string name="web_connected">Connected to %1$s</string>
     <string name="web_saved">Saved</string>

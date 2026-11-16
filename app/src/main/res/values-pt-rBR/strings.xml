@@ -985,7 +985,8 @@
     <string name="web_title">Editor do Stagebook</string>
     <string name="web_ask">Pedir para entrar</string>
     <string name="web_asking_code">No aparelho, confira o código %1$s e autorize.</string>
-    <string name="web_denied">Não autorizado. Peça de novo se foi engano.</string>
+    <string name="web_denied">Não autorizado. Se foi engano, peça de novo em 5 minutos.</string>
+    <string name="web_denied_wait">O pedido deste computador foi recusado no aparelho. Peça de novo em %1$s min.</string>
     <string name="web_busy">Muitos pedidos ao mesmo tempo. Tente de novo em um minuto.</string>
     <string name="web_connected">Conectado ao %1$s</string>
     <string name="web_saved">Salvo</string>

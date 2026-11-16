@@ -67,7 +67,13 @@ class WebEditorRoutes(
         "POST" -> {
             val name = runCatching { json.parseToJsonElement(req.text()).jsonObject["name"]?.jsonPrimitive?.content }.getOrNull().orEmpty()
             // the code shows on the page and on the tablet: the musician allows only if they match
-            auth.ask(name, req.remote)?.let { HttpResponse.json(200, buildJsonObject { put("id", it.id); put("code", it.code) }.toString()) } ?: HttpResponse.status(429)
+            auth.ask(name, req.remote)?.let { HttpResponse.json(200, buildJsonObject { put("id", it.id); put("code", it.code) }.toString()) }
+                // refused for now: a denied address is told so, and in how many minutes it may ask again (it used to read "too many
+                // requests, try again in a minute", the wrong reason and the wrong time; help review 16/11)
+                ?: auth.deniedLeft(req.remote).takeIf { it > 0 }?.let { left ->
+                    HttpResponse.json(429, buildJsonObject { put("denied", true); put("minutes", ((left + 59_999) / 60_000).toInt()) }.toString())
+                }
+                ?: HttpResponse.status(429)
         }
         "GET" -> when (val p = auth.poll(req.query["id"].orEmpty())) {
             WebEditorAuth.Poll.Waiting -> HttpResponse.json(202, "{}")
