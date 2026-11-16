@@ -479,10 +479,12 @@ fun ConductBar(
                     )
                 }
                 if (options.bandDevices > 0) TextButton({ onAskBand(kind) }, enabled = !asking) {
-                    ActionText(if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices))
+                    // (these sentences wrap: on one line a phone cut them off, device test 16/11)
+                    Text(if (asking) stringResource(R.string.scan_asking_band) else pluralStringResource(R.plurals.scan_ask_band, options.bandDevices, options.bandDevices))
                 }
-                options.internetFrom?.let { name -> TextButton({ onAskInternet(kind) }, enabled = !options.askingOnline) { ActionText(stringResource(R.string.scan_ask_internet, name)) } }
-                TextButton({ showLacks = false; onImportMissing() }) { ActionText(pluralStringResource(R.plurals.scan_import_missing, count, count)) }
+                // the request went: the window closes, and its notice shows whole (the strip rises over it while a window is open)
+                options.internetFrom?.let { name -> TextButton({ showLacks = false; onAskInternet(kind) }, enabled = !options.askingOnline) { Text(stringResource(R.string.scan_ask_internet, name)) } }
+                TextButton({ showLacks = false; onImportMissing() }) { Text(pluralStringResource(R.plurals.scan_import_missing, count, count)) }
             }
         }
     }

@@ -79,6 +79,9 @@ class ConductLacksRowsTest {
         compose.onNodeWithText("Ver o que falta aqui").performClick()
         compose.onNodeWithText("Pedir à banda (2 aparelhos na rede)").performClick()
         compose.onNodeWithText("Pedir as que faltam a Voz pela internet").performClick()
+        // the online request closes the window (its notice shows whole): opened again for the import
+        compose.onAllNodesWithText("Faltam neste aparelho").assertCountEquals(0)
+        compose.onNodeWithText("Ver o que falta aqui").performClick()
         compose.onNodeWithText("Importar as que faltam (3)").performClick()
         assertEquals(listOf(1, 1, 1), listOf(band, internet, import))
     }

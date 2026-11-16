@@ -71,6 +71,9 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     }
     // pinned, the sheet is not a sheet any more: it closes by itself (a left-open state held the pedal and Back for good)
     LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
+    // a whole screen opened from outside the menu (the band strip's "Import the missing ones") must not stay hidden behind it:
+    // the importer opened under the open menu, and nothing seemed to happen (device test 16/11)
+    LaunchedEffect(besideStage) { if (!besideStage && state.isOpen) state.close() }
     val open = state.isOpen && !fixed
     val shown = !fixed && (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed)
     LaunchedEffect(shown) { onShown(shown) }
