@@ -66,6 +66,7 @@ h2 { font-size: clamp(32px, 6vw, 56px); line-height:1.06; letter-spacing:-0.02em
 .lead { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); margin: 20px 0 0; max-width: 46ch; }
 .lead b { color: var(--fg); font-weight:600; }
 .feature { display:grid; gap: 32px; align-items:center; }
+.frame.phone { max-width: 340px; margin: 0 auto; }
 .frame { border-radius: var(--radius); overflow:hidden; background:#000; border:1px solid var(--line); box-shadow: 0 16px 48px rgba(0,0,0,.5); }
 @media (min-width: 880px) {
   .feature { grid-template-columns: 5fr 7fr; gap: 56px; }
@@ -197,10 +198,10 @@ footer .copy { margin-left:auto; }
         <span class="en">Attach the PDF and the song becomes its pages on stage. <b>The same pedal turns the page.</b> Zoom with two fingers, crop the margin, paint with the highlighter and invert the colors for a dark stage. The PDF goes along when you send the song to the band.</span>
       </p>
     </div>
-    <div class="frame">
-      <img loading="lazy" src="help/img/tablet_4_editor_pdf.jpg" data-pt="ajuda/img/tablet_4_editor_pdf.jpg" width="1400" height="875"
-           alt="A song that is a PDF, in the editor: its preview, pages and size, with invert colors and crop"
-           data-alt-pt="Uma música que é um PDF, no editor: a prévia, as páginas e o tamanho, com inverter cores e recortar">
+    <div class="frame phone">
+      <img loading="lazy" src="pdf-stage.jpg" width="716" height="1600"
+           alt="A PDF score on the stage of a phone: Bach's Prelude in C, page 1 of 2"
+           data-alt-pt="Uma partitura em PDF no palco de um celular: o Prelúdio em Dó de Bach, página 1 de 2">
     </div>
   </div>
 </section>
