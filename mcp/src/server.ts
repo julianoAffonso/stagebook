@@ -69,6 +69,7 @@ export async function localFile(path: string, max: number): Promise<Uint8Array> 
   return readFile(full);
 }
 
+const DATE = z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/, "yyyy-mm-dd, or empty for no date").describe("The show day, yyyy-mm-dd (empty = no date).");
 const BREAKS = z.array(z.number()).describe("Interval positions: integers from 1 to the number of songs minus 1, ascending, no repeats (1 = before the second song).");
 
 /** Breaks the setlist can have: the app's rule, said here in words before the tablet is asked. */
@@ -119,14 +120,20 @@ export function buildServer(client: StagebookClient): McpServer {
         "Finds Stagebook on the local network (or uses the given address) and asks the tablet to let this computer in. " +
         "The tablet shows a request with a code: this tool returns at once with the code; tell the person and ask them to tap " +
         "Allow on the tablet, then call stagebook_status, which waits for it. Needs Stagebook open with Settings → Edit on " +
-        "the computer turned on. The key is saved for next time.",
+        "the computer turned on. The key is saved for next time, and a computer already approved is let in without asking again.",
       inputSchema: {
         url: z.string().optional().describe("Address shown in Stagebook, e.g. http://192.168.0.10:8090. Omit to search the network."),
         name: z.string().optional().describe("How this computer shows on the tablet (default: 'AI assistant')."),
       },
     },
     safe(async ({ url, name }: { url?: string; name?: string }) => {
-      if (url) client.url = url;
+      // an address given that is not the saved one never gets the saved key (a made-up address in text the assistant read
+      // would have received it): the key goes only to the tablet it was approved on, and a new one pairs from the start
+      if (url) {
+        const same = (a?: string, b?: string) => !!a && !!b && a.replace(/\/+$/, "") === b.replace(/\/+$/, "");
+        if (!same(url, client.url)) client.key = undefined;
+        client.url = url;
+      }
       // no address given: the saved one if it still answers, otherwise search again (the tablet's address can change
       // with the Wi-Fi; the saved one was used forever, audit 03/11)
       else if (!client.url || !(await answers(client.url))) {
@@ -144,7 +151,21 @@ export function buildServer(client: StagebookClient): McpServer {
               "shows in Settings → Edit on the computer and pass it as url.",
           );
         }
+        // an address found by searching that isn't the saved one gets no saved key (any device on the network can answer the
+        // search): the tablet is asked again, once, when its address changed (audit 16/11)
+        if (found[0] !== client.url) client.key = undefined;
         client.url = found[0];
+      }
+      // a computer already approved is let in without asking again (the saved key still works): the approval is for the
+      // computer, not for each session (user, 15/11). Only a key the tablet no longer accepts asks anew.
+      if (client.key) {
+        try {
+          const s = await client.get("/api/session");
+          await save({ url: client.url, key: client.key });
+          return text(`Stagebook found at ${client.url}: this computer is already approved there as "${s?.name}", no need to tap Allow again. Go on.`);
+        } catch (e) {
+          if (!(e instanceof StagebookError && e.status === 401)) throw e;
+        }
       }
       await save({ url: client.url, key: client.key });
       const code = await client.startPair(name ?? "AI assistant");
@@ -344,7 +365,7 @@ export function buildServer(client: StagebookClient): McpServer {
     "list_setlists",
     {
       title: "List setlists",
-      description: "The setlists (id, name, number of songs), in the order the app's Setlists tab shows them. Optional filter.",
+      description: "The setlists (id, name, number of songs, show date), in the order the app's Setlists tab shows them. Optional filter.",
       inputSchema: { query: z.string().optional().describe("Part of the name (accents and case ignored).") },
       annotations: { readOnlyHint: true },
     },
@@ -371,7 +392,7 @@ export function buildServer(client: StagebookClient): McpServer {
     "get_setlist",
     {
       title: "Get a setlist",
-      description: "A setlist with its songs in order (a song deleted from the library shows with an empty title) and its breaks: \"breaks\" are the positions where the show stops for an interval, 1 = before the second song.",
+      description: "A setlist with its show date (yyyy-mm-dd, empty = none), its songs in order (a song deleted from the library shows with an empty title) and its breaks: \"breaks\" are the positions where the show stops for an interval, 1 = before the second song.",
       inputSchema: { id: z.string() },
       annotations: { readOnlyHint: true },
     },
@@ -382,13 +403,13 @@ export function buildServer(client: StagebookClient): McpServer {
     "create_setlist",
     {
       title: "Create a setlist",
-      description: "Creates a setlist with these songs, in this order (song ids from list_songs). Without a name it's named after the date and time. Optional breaks: the positions of the intervals (1 = before the second song, up to the number of songs minus 1, in order, no repeats); without it there are none.",
-      inputSchema: { name: z.string().optional(), song_ids: z.array(z.string()).optional(), breaks: BREAKS.optional() },
+      description: "Creates a setlist with these songs, in this order (song ids from list_songs). Without a name it's named after the date and time. Optional date (yyyy-mm-dd; today when left out). Optional breaks: the positions of the intervals (1 = before the second song, up to the number of songs minus 1, in order, no repeats); without it there are none.",
+      inputSchema: { name: z.string().optional(), song_ids: z.array(z.string()).optional(), breaks: BREAKS.optional(), date: DATE.optional() },
     },
-    safe(async ({ name, song_ids, breaks }: { name?: string; song_ids?: string[]; breaks?: number[] }) => {
+    safe(async ({ name, song_ids, breaks, date }: { name?: string; song_ids?: string[]; breaks?: number[]; date?: string }) => {
       const items = song_ids ?? [];
       checkBreaks(breaks, items.length);
-      return text({ created: (await client.send("POST", "/api/sets", { name: name ?? "", items, ...(breaks ? { breaks } : {}) }))?.id });
+      return text({ created: (await client.send("POST", "/api/sets", { name: name ?? "", items, ...(breaks ? { breaks } : {}), ...(date !== undefined ? { date } : {}) }))?.id });
     }),
   );
 
@@ -396,20 +417,20 @@ export function buildServer(client: StagebookClient): McpServer {
     "update_setlist",
     {
       title: "Update a setlist",
-      description: "Renames a setlist and/or replaces its songs (the full list, in order) and/or its breaks (the full list of interval positions: 1 = before the second song, up to the number of songs minus 1, in order, no repeats; [] takes them all out). Omitted fields stay: without breaks, the existing ones stay before the same songs. Emptying it (song_ids []) needs confirm=true.",
+      description: "Renames a setlist and/or changes its show date (yyyy-mm-dd, empty takes it off) and/or replaces its songs (the full list, in order) and/or its breaks (the full list of interval positions: 1 = before the second song, up to the number of songs minus 1, in order, no repeats; [] takes them all out). Omitted fields stay: without breaks, the existing ones stay before the same songs. Emptying it (song_ids []) needs confirm=true.",
       inputSchema: {
-        id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional(), breaks: BREAKS.optional(),
+        id: z.string(), name: z.string().optional(), song_ids: z.array(z.string()).optional(), breaks: BREAKS.optional(), date: DATE.optional(),
         confirm: z.boolean().optional().describe("Required true to leave the setlist with no songs."),
       },
     },
-    safe(async ({ id, name, song_ids, breaks, confirm }: { id: string; name?: string; song_ids?: string[]; breaks?: number[]; confirm?: boolean }) => {
+    safe(async ({ id, name, song_ids, breaks, date, confirm }: { id: string; name?: string; song_ids?: string[]; breaks?: number[]; date?: string; confirm?: boolean }) => {
       const cur = await client.get(`/api/sets/${encodeURIComponent(id)}`);
       checkBreaks(breaks, (song_ids ?? cur.songs).length);
       // an empty list takes every song out: like deleting, it asks first (audit 03/11)
       if (song_ids?.length === 0 && cur.songs.length > 0 && !confirm) {
         throw new StagebookError(`This takes all ${cur.songs.length} songs out of "${cur.name}": ask the person and pass confirm=true.`);
       }
-      await client.send("PUT", `/api/sets/${encodeURIComponent(id)}`, { name: name ?? cur.name, items: song_ids ?? cur.songs.map((s: SongItem) => s.id), ...(breaks ? { breaks } : {}) });
+      await client.send("PUT", `/api/sets/${encodeURIComponent(id)}`, { name: name ?? cur.name, items: song_ids ?? cur.songs.map((s: SongItem) => s.id), ...(breaks ? { breaks } : {}), ...(date !== undefined ? { date } : {}) });
       return text({ updated: id });
     }),
   );

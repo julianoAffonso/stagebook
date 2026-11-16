@@ -64,6 +64,7 @@ class ConductArmedTest {
     private val voice = BandProtocol.Hello("voz", "Voz", "key")
     private val member = BandProtocol.Hello("armed-member", "Baixo", "key")
     private val played = mutableListOf<String>()
+    private val opened = mutableListOf<String>()
     private val sent = mutableListOf<Conduct.Msg>()
 
     private val repo = runBlocking {
@@ -107,7 +108,7 @@ class ConductArmedTest {
                 CompositionLocalProvider(LocalAppMessage provides message) {
                     Box {
                         Column {
-                            Box(androidx.compose.ui.Modifier.weight(1f)) { SetlistsRoute(onOpen = {}, onPlay = { id, _, _ -> played += id }, viewModel = vm) }
+                            Box(androidx.compose.ui.Modifier.weight(1f)) { SetlistsRoute(onOpen = { opened += it }, onPlay = { id, _, _ -> played += id }, viewModel = vm) }
                             SnackbarHost(message.host)   // above the strip, as the app's host is
                             ConductRoute(viewModel = strip)
                         }
@@ -186,10 +187,11 @@ class ConductArmedTest {
         compose.onAllNodesWithText("Cancelar").assertCountEquals(0)
     }
 
-    @Test fun `tapping a setlist when not armed only opens the stage`() {
+    @Test fun `tapping a setlist when not armed only opens it, with no stage and no leading`() {
         member(); screen()
         compose.onNodeWithText("Show de sábado").performClick()
-        assertEquals(listOf(setId), played)
+        assertEquals(listOf(setId), opened)
+        assertEquals(emptyList<String>(), played)
         assertEquals(Role.None, conduct.role.value)
     }
 
@@ -220,9 +222,9 @@ class ConductArmedTest {
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().performClick()
         compose.waitUntil(5_000) { conduct.armed.value }
-        // the edit (the card menu, or a setlist reached by import, receive or create) does not start leading
+        // sharing from the card menu (or a setlist reached by import, receive or create) does not start leading
         compose.onAllNodesWithContentDescription("Mais opções")[0].performClick()
-        compose.onNodeWithText("Editar setlist").performClick()
+        compose.onNodeWithText("Compartilhar").performClick()
         assertEquals(Role.None, conduct.role.value)
         assertTrue(conduct.armed.value)
     }

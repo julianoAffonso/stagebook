@@ -1,6 +1,9 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import br.app.stagebook.ui.setlists.SetItemUi
 import br.app.stagebook.ui.setlists.SetlistDetailScreen
@@ -39,19 +42,19 @@ class SetlistPhoneLayoutTest {
     private fun height(text: String) =
         compose.onNodeWithText(text, substring = true, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.height
 
-    @Test fun `with large text the buttons under the title keep their words whole`() {
-        RuntimeEnvironment.setFontScale(1.15f)
-        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}) } }
-        compose.waitForIdle()
-        // a label on one line is as tall as the others
-        assertEquals(height("Músicas"), height("Compartilhar"), 0.5f)
-        assertEquals(height("Músicas"), height("Intervalo"), 0.5f)
-    }
-
     @Test fun `with large text a long title stays on one line`() {
         RuntimeEnvironment.setFontScale(1.15f)
         compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}) } }
         compose.waitForIdle()
         assertEquals(height("Curta"), height("Um título bem comprido"), 0.5f)
+    }
+
+    @Test fun `editing, the setlist's name stays on one line beside the four icons, at large text`() {
+        RuntimeEnvironment.setFontScale(1.3f)
+        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}, startEditing = true) } }
+        compose.waitForIdle()
+        // "Edit setlist" no longer sits over the name: nothing to wrap
+        compose.onAllNodesWithText("Editar setlist").assertCountEquals(0)
+        compose.onNodeWithText("Show", useUnmergedTree = true).assertIsDisplayed()
     }
 }

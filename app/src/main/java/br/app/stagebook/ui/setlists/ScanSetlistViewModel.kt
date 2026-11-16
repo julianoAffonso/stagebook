@@ -180,7 +180,13 @@ class ScanSetlistViewModel @Inject constructor(
         if (missing.isEmpty()) return
         _asking.value = true
         viewModelScope.launch {
-            val got = bandLink.askMissing(missing.map { (_, r) -> BandLink.Wanted(r.title, r.artist) })
+            // the song as the band has it (chords first), and the PDF for the ones nobody has as a chart: a PDF-only song of the
+            // band is still a song of the setlist
+            val asked = missing.map { (_, r) -> BandLink.Wanted(r.title, r.artist) }
+            val first = bandLink.askMissing(asked)
+            val rest = asked.filter { w -> first.none { it.isFor(w.title, w.artist) } }
+                .map { it.copy(kind = br.app.stagebook.domain.AskKind.PDF) }
+            val got = first + if (rest.isEmpty()) emptyList() else bandLink.askMissing(rest)
             val now = _ui.value as? ScanUi.Review
             if (now != null) {
                 val came = carried.toMutableMap()
@@ -360,7 +366,7 @@ class ScanSetlistViewModel @Inject constructor(
 
     // in the lyrics and chords profile, flag a song that arrived with lyrics only (chords missing)
     private fun noChords(s: SetlistCloud.SharedSong) =
-        repository.library.value.look.chords && !br.app.stagebook.domain.Chords.hasChords(s.text)
+        repository.library.value.look.chords && s.pdfFile.isEmpty() && !br.app.stagebook.domain.Chords.hasChords(s.text)
 
     fun setName(name: String) = _ui.update { if (it is ScanUi.Review) it.copy(name = name) else it }
 
@@ -386,7 +392,7 @@ class ScanSetlistViewModel @Inject constructor(
 
     // a song that came goes into the library with its key computed (the editor shows it)
     private fun save(s: SetlistCloud.SharedSong): String =
-        repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text)))
+        repository.saveSong(Song(title = s.title, author = s.author, year = s.year, text = br.app.stagebook.domain.Chords.withDetectedKey(s.text), pdf = s.pdfFile, pdfName = if (s.pdfFile.isEmpty()) "" else s.pdfName))
 
     // a song that came answers a setlist line: same title, and the artist when both say one
     private fun SetlistCloud.SharedSong.isFor(title: String, artist: String) =

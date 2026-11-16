@@ -48,11 +48,12 @@ class WebEditorRoutes(
             "/api/ask" -> return ask(req)
         }
         val device = auth.device(req.cookie(COOKIE)) ?: return HttpResponse.status(401)
+        auth.touch(device.id)   // its key's 90 days start again
         // only an approved computer keeps the editor on (a stranger pinging it would keep it on all show; audit 30/10)
         onAccess()
         if (req.path == "/api/ping") return HttpResponse.status(204)
         if (req.path == "/api/session" && req.method == "GET") {
-            // each visit renews the cookie: the cookie stays a session cookie
+            // each visit renews the cookie, so a computer in use never expires
             return HttpResponse.json(
                 200, buildJsonObject { put("name", device.name); put("app", deviceName()) }.toString(),
                 mapOf("Set-Cookie" to cookie(req.cookie(COOKIE).orEmpty())),
@@ -66,7 +67,13 @@ class WebEditorRoutes(
         "POST" -> {
             val name = runCatching { json.parseToJsonElement(req.text()).jsonObject["name"]?.jsonPrimitive?.content }.getOrNull().orEmpty()
             // the code shows on the page and on the tablet: the musician allows only if they match
-            auth.ask(name, req.remote)?.let { HttpResponse.json(200, buildJsonObject { put("id", it.id); put("code", it.code) }.toString()) } ?: HttpResponse.status(429)
+            auth.ask(name, req.remote)?.let { HttpResponse.json(200, buildJsonObject { put("id", it.id); put("code", it.code) }.toString()) }
+                // refused for now: a denied address is told so, and in how many minutes it may ask again (it used to read "too many
+                // requests, try again in a minute", the wrong reason and the wrong time; help review 16/11)
+                ?: auth.deniedLeft(req.remote).takeIf { it > 0 }?.let { left ->
+                    HttpResponse.json(429, buildJsonObject { put("denied", true); put("minutes", ((left + 59_999) / 60_000).toInt()) }.toString())
+                }
+                ?: HttpResponse.status(429)
         }
         "GET" -> when (val p = auth.poll(req.query["id"].orEmpty())) {
             WebEditorAuth.Poll.Waiting -> HttpResponse.json(202, "{}")
@@ -82,9 +89,11 @@ class WebEditorRoutes(
 
     companion object {
         const val COOKIE = "stagebook_key"
-        // the key travels over plain HTTP on the local network: a session cookie (no Max-Age/Expires), so it dies with
-        // the browser session and a browser that reopens asks to be approved again
-        private fun cookie(key: String) = "$COOKIE=$key; Path=/; HttpOnly; SameSite=Strict"
+        // an approved computer stays approved (user, 15/11: asking again at every session made the approval pointless):
+        // the cookie lasts [COOKIE_DAYS] days and each visit renews it; removing the computer in Settings ends it at once
+        // (only the key's hash is kept on the tablet). The key still travels over plain HTTP on the local network.
+        const val COOKIE_DAYS = 90
+        private fun cookie(key: String) = "$COOKIE=$key; Path=/; Max-Age=${COOKIE_DAYS * 24 * 3600}; HttpOnly; SameSite=Strict"
 
         /** "192.168.0.10:8090" yes; "evil.example:8090" no. */
         fun hostIsAddress(host: String): Boolean {

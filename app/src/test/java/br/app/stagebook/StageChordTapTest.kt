@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -115,8 +116,8 @@ class StageChordTapTest {
         val lyric = compose.onNodeWithText("Segunda linha", substring = true).fetchSemanticsNode().boundsInRoot
         compose.onRoot().performTouchInput { longClick(Offset(lyric.left + 40f, lyric.top + 180f)) }
         compose.waitForIdle()
-        compose.onNodeWithText("Editar esta linha").assertExists()
-        compose.onNodeWithText("Marca-texto").performClick()
+        compose.onNodeWithContentDescription("Editar esta linha").assertExists()
+        compose.onNodeWithContentDescription("Marca-texto").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Passe o dedo", substring = true).assertExists()
         // a tap on a word of the second line: it's marked, the page doesn't turn
@@ -158,7 +159,7 @@ class StageChordTapTest {
         compose.onNodeWithContentDescription("Tocar o backing track").performTouchInput { longClick() }
         compose.waitForIdle()
         compose.onNodeWithText("Trocar o backing track").assertExists()
-        assertEquals(0, compose.onAllNodesWithText("Editar esta linha").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithContentDescription("Editar esta linha").fetchSemanticsNodes().size)
     }
 
     // live, the track playing goes on when the song changes: on a song without a track the button stays, to stop it

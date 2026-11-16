@@ -3,7 +3,6 @@ package br.app.stagebook.ui.songs
 import br.app.stagebook.ui.share.rememberCodeActions
 import br.app.stagebook.ui.share.ShareSheet
 import br.app.stagebook.ui.share.BandResultMessage
-import br.app.stagebook.ui.share.ImportButton
 import br.app.stagebook.ui.share.CodeActions
 import br.app.stagebook.ui.share.CloudDialog
 import br.app.stagebook.ui.share.CloudUi
@@ -30,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import br.app.stagebook.data.message
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -40,15 +40,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
-import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
-import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
 import br.app.stagebook.ui.components.EmptyState
 import br.app.stagebook.ui.components.LightPreview
 import br.app.stagebook.ui.components.ScreenHeader
-import br.app.stagebook.ui.components.SearchField
 import br.app.stagebook.ui.components.SongListItem
 import br.app.stagebook.ui.components.SongFacts
 import br.app.stagebook.ui.components.LetterHeader
@@ -56,8 +53,6 @@ import br.app.stagebook.ui.components.LetterIndex
 import br.app.stagebook.ui.components.rememberLetterIndexShown
 import androidx.compose.foundation.layout.offset
 import kotlinx.coroutines.launch
-import br.app.stagebook.ui.components.MenuAction
-import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.wideLists
 import br.app.stagebook.ui.components.InfoDialog
 import br.app.stagebook.ui.components.SearchWithTags
@@ -89,6 +84,13 @@ fun SongsRoute(
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
     var askKind by rememberSaveable { mutableStateOf(false) }
     if (askKind) br.app.stagebook.ui.importer.ImportKindDialog({ kind -> askKind = false; onImport(query, kind.name) }, { askKind = false })
+    // PDF files chosen in the + menu: each becomes a song named after the file (checked first, the reason told when one is left out)
+    val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val importScope = androidx.compose.runtime.rememberCoroutineScope()
+    val pickPdfs = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) importScope.launch { appMessage.show(viewModel.importPdfs(uris).message(context), long = true) }
+    }
     SongsScreen(
         uiState = uiState,
         online = online,
@@ -99,6 +101,8 @@ fun SongsRoute(
         onNewSong = { onEditSong(null) },
         // the automatic profile has no kind of its own: the musician says what this one is, to open on the right site
         onImport = { if (viewModel.asksKind()) askKind = true else onImport(query, "") },
+        onImportPdfs = { pickPdfs.launch(br.app.stagebook.data.PdfStore.MIME) },
+        onImportPdfSites = { onImport(query, br.app.stagebook.data.model.SiteKind.PDF.name) },
         // found what they were looking for: coming back from the stage the whole list shows
         // the editor opened from this song steps through the list as it is now (search and filters on)
         onOpen = { editorQueue.offerList(uiState.songs.map { s -> s.id }); query = ""; onOpenSong(it) },
@@ -119,6 +123,7 @@ fun SongsRoute(
         tagsOf = viewModel::tagsOf,
         onDeleteMany = viewModel::deleteMany,
         onAddToSetlist = viewModel::addToSetlist,
+        pdfSizesOf = viewModel::pdfSizesOf,
     )
 }
 
@@ -156,6 +161,9 @@ fun SongsScreen(
     tagsOf: (ids: List<String>) -> List<List<String>> = { ids -> uiState.songs.filter { it.id in ids }.map { it.tags } },
     onDeleteMany: (List<String>) -> Unit = {},
     onAddToSetlist: (ids: List<String>, setId: String?, newName: String) -> AddResult = { _, _, _ -> AddResult.Limit },
+    pdfSizesOf: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen songs would carry: the internet says if they fit
+    onImportPdfs: (() -> Unit)? = null,   // "Import PDFs" in the + menu
+    onImportPdfSites: (() -> Unit)? = null,   // "PDFs from sites" in the + menu
     indexPinned: Boolean = false,   // screenshots and tests: the A to Z index shows without a scroll
 ) {
     var deletingMany by remember { mutableStateOf(false) }
@@ -176,7 +184,10 @@ fun SongsScreen(
     val selection = br.app.stagebook.ui.components.rememberSelection(initialSelection)
     var selected by selection.state
     var sharing by rememberSaveable { mutableStateOf(false) }
-    val selecting = selection.active
+    // the boxes also come on by the checklist button at the bottom, with nothing chosen yet (SongbookPro's way)
+    var pickMode by rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = pickMode && !selection.active) { pickMode = false }
+    val selecting = selection.active || pickMode
     val toggle = selection::toggle
     // selecting lets go of the search: otherwise, when a dialog of the selection closed (new setlist, tags), the focus
     // went back to the search and the keyboard opened over the list (device test B-02)
@@ -190,7 +201,7 @@ fun SongsScreen(
             if (selecting) {
                 br.app.stagebook.ui.components.SelectionTopBar(
                     count = selected.size,
-                    onClose = { selected = emptyList() },
+                    onClose = { selected = emptyList(); pickMode = false },
                     actions = listOf(
                         br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.tags_action), AppIcons.Label) { tagging = selected },
                         br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.songs_add_to_set), AppIcons.PlaylistAdd) { addingToSet = true },
@@ -209,14 +220,6 @@ fun SongsScreen(
                 onClearFilter = if (filtering) { { onQueryChange(""); onTagsChange(emptySet()) } } else null,
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
-            // while selecting, the actions are in the top bar. Actions first, then what acts on the list next to it: same
-            // order as the Setlists tab
-            if (!selecting) Row(Modifier.padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                // secondary at the start, the main action at the end (like Google's apps). Import from sites (with
-                // internet), scan the QR or type the code: one button, one menu.
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), onSites = onImport, received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
-                ActionButton(stringResource(R.string.songs_new), onNewSong, Modifier.weight(1f), icon = AppIcons.Add)
-            }
             SearchWithTags(
                 query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
                 Modifier.padding(bottom = Spacing.m),
@@ -229,7 +232,7 @@ fun SongsScreen(
             }
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             br.app.stagebook.ui.components.ScrollToTopOn("${uiState.query}|${uiState.chosenTags.sorted()}", listState)
-            Crossfade(targetState = uiState.loading, label = "songs") { loading ->
+            Crossfade(targetState = uiState.loading, label = "songs", modifier = Modifier.weight(1f)) { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.total == 0 -> EmptyState(AppIcons.MusicNote, stringResource(R.string.songs_empty_title), stringResource(R.string.songs_empty_message))
@@ -244,12 +247,13 @@ fun SongsScreen(
                                 onLongClick = { toggle(song.id) },
                                 leading = if (selecting) { { Checkbox(song.id in selected, { toggle(song.id) }) } } else null,
                                 // what the musician checks before the song, as on a setlist's rows (user, 13/11)
-                                trailing = { SongFacts(song.songKey, song.bpm, song.capo, song.hasTrack) },
+                                trailing = { SongFacts(song.songKey, song.bpm, song.capo, song.hasTrack, hasPdf = song.hasPdf) },
                                 // animate only the removal on delete: enter and move animated dozens of rows on every
                                 // search letter
                                 modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = null),
-                                titleStyle = MaterialTheme.typography.titleLarge,
-                                inline = wide,
+                                // the compact row of the setlist's (user, 15/11: one pattern in the drawer)
+                                titleStyle = MaterialTheme.typography.titleMedium,
+                                dense = true,
                                 titleLines = 1,
                                 gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
                                 // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete
@@ -286,11 +290,26 @@ fun SongsScreen(
                     }
                 }
             }
+            // at the bottom, as SongbookPro: the + with what is new (a song, the imports) and the checklist that turns the boxes on
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                br.app.stagebook.ui.share.AddMenuButton(
+                    online, onScan, onReceiveCode, onNew = onNewSong, onPdfs = onImportPdfs, onPdfSites = onImportPdfSites, onSites = onImport, received = received, onReceived = onReceived,
+                    onSync = onSync, internetOn = internetOn, localNet = localNet,
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                androidx.compose.material3.IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
+                    Icon(
+                        AppIcons.Checklist, stringResource(R.string.select_mode),
+                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
         }
     }
     if (sharing) {
         ShareSheet(
             songs = selected.size, online = online, onQr = null, internetOn = internetOn,
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = selected.size, setlists = false, pdfSizes = pdfSizesOf(selected)),
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,

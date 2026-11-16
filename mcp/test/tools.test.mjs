@@ -51,6 +51,14 @@ test("connect pairs with the tablet and saves the key", async () => {
   assert.equal(s.json.device, "TCL");
 });
 
+test("connecting again with a key the tablet accepts asks for no new approval", async () => {
+  const r = await call("stagebook_connect", { url: tablet.url });
+  assert.equal(r.error, false, r.body);
+  assert.match(r.body, /already approved/);
+  assert.doesNotMatch(r.body, /4821/);   // no request, no code: nothing to tap on the tablet
+  assert.equal((await call("stagebook_status")).json.device, "TCL");
+});
+
 test("songs: list with filters, read without and with the text", async () => {
   assert.equal((await call("list_songs")).json.count, 2);
   assert.equal((await call("list_songs", { query: "made up" })).json.songs[0].id, "s2");
@@ -95,6 +103,19 @@ test("setlists: create, read, update keeps what wasn't passed", async () => {
   await call("update_setlist", { id, name: "Sunday night" });
   assert.deepEqual(tablet.sets.get(id).items, ["s1"]);
   assert.equal(tablet.sets.get(id).name, "Sunday night");
+});
+
+test("setlists: the show date is created, read, changed, taken off and kept when not passed", async () => {
+  const id = (await call("create_setlist", { name: "Dated", song_ids: ["s1"], date: "2026-12-24" })).json.created;
+  assert.equal((await call("get_setlist", { id })).json.date, "2026-12-24");
+  await call("update_setlist", { id, name: "Dated again" });
+  assert.equal(tablet.sets.get(id).date, "2026-12-24");
+  await call("update_setlist", { id, date: "2027-01-02" });
+  assert.equal(tablet.sets.get(id).date, "2027-01-02");
+  await call("update_setlist", { id, date: "" });
+  assert.equal(tablet.sets.get(id).date, "");
+  const bad = await mcp.callTool({ name: "update_setlist", arguments: { id, date: "tomorrow" } });
+  assert.equal(bad.isError, true);
 });
 
 test("setlists: breaks are read, created, replaced and kept", async () => {
@@ -200,3 +221,19 @@ test("setlists filter by name and their order reads and changes", async () => {
   assert.equal(JSON.parse((await call("setlist_order", { order: "abc" })).body).order, "abc");
   assert.equal(JSON.parse((await call("setlist_order")).body).order, "abc");
 });
+
+// last of the file: it drops the saved key, which the tests before it need
+test("an address that is not the saved one never gets the saved key, and pairs from the start", async () => {
+  const other = await fakeTablet();
+  try {
+    const seen = [];
+    other.server.on("request", (req) => seen.push(req.headers.cookie ?? ""));
+    const r = await call("stagebook_connect", { url: other.url });
+    assert.equal(r.error, false, r.body);
+    assert.match(r.body, /4821/, "a new request, not \"already approved\"");
+    assert.ok(seen.every((c) => c === ""), `the saved key went to the other address: ${JSON.stringify(seen)}`);
+  } finally {
+    other.server.close();
+  }
+});
+

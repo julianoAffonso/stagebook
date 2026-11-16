@@ -11,6 +11,7 @@ import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.SetlistCloud
 import br.app.stagebook.data.model.Song
 import br.app.stagebook.domain.BandProtocol
+import br.app.stagebook.domain.AskKind
 import br.app.stagebook.domain.Conduct
 import br.app.stagebook.domain.PendingFollow
 import br.app.stagebook.domain.QrPayload
@@ -303,7 +304,7 @@ class ConductMissingSongsTest {
     @Test fun `the messages are the ones the published app reads`() {
         val b = Band()
         val json = Json { ignoreUnknownKeys = true }
-        assertEquals("the version was raised for the new fields", 3, BandProtocol.VERSION)
+        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
         // what the leader sends: a band package as before, with a list that has no name (loose songs)
         val (packed, shared) = SetlistCloud.looseSongs(b.leaderRepo.library.value.songs)!!
         val wire = json.parseToJsonElement(b.leaderLink.packageBytes(packed, shared).decodeToString()).jsonObject
@@ -416,5 +417,123 @@ class ConductMissingSongsTest {
         await { b.has("Segunda") != null }
         assertEquals(listOf(BandLink.Wanted("Segunda", "Banda")), b.asked.single())
         assertFalse((b.strip() as ConductUi.Following).missingHere)
+    }
+
+    @Test fun `asking all sends one request with every song of the setlist not here, and the answers go straight in`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        b.answers = { listOf(answer(shared("Segunda"), "Baixo"), answer(shared("Terceira"), "Voz")) }
+        b.follower.askAll()
+        await { b.has("Segunda") != null && b.has("Terceira") != null }
+        await { !b.follower.asking.value }
+        // one question for both missing songs (the one it has is not asked for)
+        assertEquals(listOf(listOf(BandLink.Wanted("Segunda", "Banda"), BandLink.Wanted("Terceira", ""))), b.asked.toList())
+        assertEquals(Notice.AskedMany(2, 2), b.notices.last())
+    }
+
+    @Test fun `asking all says how many came when only some did, and when none did`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        b.answers = { listOf(answer(shared("Segunda"), "Baixo")) }
+        b.follower.askAll()
+        await { b.notices.any { it is Notice.AskedMany } }
+        assertEquals(Notice.AskedMany(1, 2), b.notices.filterIsInstance<Notice.AskedMany>().single())
+        await { !b.follower.asking.value }
+        b.answers = { emptyList() }
+        b.follower.askAll()
+        await { b.notices.count { it is Notice.AskedMany } == 2 }
+        assertEquals(Notice.AskedMany(0, 1), b.notices.filterIsInstance<Notice.AskedMany>().last())
+    }
+
+    @Test fun `asking all with nothing missing, or with the band off, asks nothing`() {
+        val full = Band(followerHas = arrayOf("Primeira" to chords, "Segunda" to chords, "Terceira" to chords)).started(index = 1)
+        full.follower.askAll()
+        runBlocking { delay(200) }
+        assertTrue(full.asked.isEmpty())
+        val off = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 1)
+        off.repo.updateLook { it.copy(bandOn = false) }
+        await { !off.repo.library.value.look.bandOn }
+        off.follower.askAll()
+        runBlocking { delay(200) }
+        assertTrue(off.asked.isEmpty())
+    }
+
+    @Test fun `asking all asks each song for the copy the leader plays, unless the person picks one for all`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords))
+        val items = listOf(Conduct.Item("Primeira", "Banda", AskKind.CHORDS), Conduct.Item("Segunda", "Banda", AskKind.PDF), Conduct.Item("Terceira", "Banda", AskKind.LYRICS))
+        b.leader.start("s1", "Show", items, 1)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        b.answers = { emptyList() }
+        b.follower.askAll()
+        await { b.asked.size == 1 }
+        // what makes sense for each: the one it has is not asked, the PDF as PDF, the lyrics as lyrics
+        assertEquals(listOf(BandLink.Wanted("Segunda", "Banda", AskKind.PDF), BandLink.Wanted("Terceira", "Banda", AskKind.LYRICS)), b.asked.single())
+        await { !b.follower.asking.value }
+        b.follower.askAll(AskKind.CHORDS)
+        await { b.asked.size == 2 }
+        assertEquals(listOf(AskKind.CHORDS, AskKind.CHORDS), b.asked.last().map { it.kind })
+    }
+
+    @Test fun `the quick Ask of the strip asks for the copy the leader plays`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords))
+        b.leader.start("s1", "Show", listOf(Conduct.Item("Primeira", "Banda", AskKind.CHORDS), Conduct.Item("Segunda", "Banda", AskKind.PDF)), 1)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        b.answers = { emptyList() }
+        b.follower.ask()
+        await { b.asked.size == 1 }
+        assertEquals(listOf(BandLink.Wanted("Segunda", "Banda", AskKind.PDF)), b.asked.single())
+    }
+
+    @Test fun `an answer with nothing in it, or without the PDF asked for, does not come in and is not counted`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords))
+        b.leader.start("s1", "Show", listOf(Conduct.Item("Primeira", "Banda", AskKind.CHORDS), Conduct.Item("Segunda", "Banda", AskKind.PDF), Conduct.Item("Terceira", "", AskKind.CHORDS)), 1)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        // the PDF asked for came as a song with no file, and the other as a song with no text
+        b.answers = { listOf(answer(shared("Segunda", text = "")), answer(shared("Terceira", text = "  "))) }
+        b.follower.askAll()
+        await { b.notices.any { it is Notice.AskedMany } }
+        assertEquals(Notice.AskedMany(0, 2), b.notices.filterIsInstance<Notice.AskedMany>().single())
+        assertEquals(null, b.has("Segunda"))
+        assertEquals(null, b.has("Terceira"))
+        // and the quick Ask of the strip says nobody has it, instead of opening an empty song
+        await { !b.follower.asking.value }
+        b.follower.ask()
+        await { b.notices.any { it is Notice.Nobody } }
+        assertEquals(null, b.has("Segunda"))
+    }
+
+    @Test fun `asking all gives one notice for all the songs, not one for each`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords)).started(index = 0)
+        b.answers = { listOf(answer(shared("Segunda"), "Baixo"), answer(shared("Terceira"), "Voz")) }
+        b.follower.askAll()
+        await { b.notices.any { it is Notice.AskedMany } }
+        assertEquals(listOf<Notice>(Notice.AskedMany(2, 2)), b.notices.toList())
+    }
+
+    @Test fun `a setlist edited while leading is told as it is now, on the next move`() {
+        val b = Band(followerHas = arrayOf("Primeira" to chords, "Segunda" to chords, "Terceira" to chords))
+        val ids = listOf("Primeira", "Segunda", "Terceira").map { t -> b.leaderRepo.library.value.songs.first { it.title == t }.id }
+        val set = b.leaderRepo.createSetlist("Show")
+        b.leaderRepo.addToSetlist(set, ids)
+        // (started with the list of that moment, as the Setlists tab does; the test band has no saved members to arm with)
+        b.leader.start(set, "Show", songs, 0)
+        await { b.arrived.get() >= 1 && b.follower.role.value is Role.Following }
+        // the leader adds a song to the setlist in the middle of the show, and goes to it
+        val added = b.leaderRepo.saveSong(Song(title = "Quarta", author = "Banda", text = chords))
+        b.leaderRepo.addToSetlist(set, listOf(added))
+        b.leader.open(set, 3)
+        await { (b.follower.role.value as? Role.Following)?.msg?.index == 3 }
+        val following = b.follower.role.value as Role.Following
+        assertEquals(listOf("Primeira", "Segunda", "Terceira", "Quarta"), following.msg.songs.map { it.title })
+        // the strip names the song that is missing, and "what's missing here" lists it
+        val ui = b.strip() as br.app.stagebook.ui.band.ConductUi.Following
+        assertEquals("Quarta", ui.song)
+        assertTrue(ui.missingHere)
+        assertEquals(listOf("Quarta"), ui.lacksHere)
+    }
+
+    @Test fun `a position with no song in the leader's list is not a song to lack or to ask for`() {
+        val role = Role.Following("voz", Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = songs, index = songs.size), null)
+        val ui = br.app.stagebook.ui.band.followingUi(role, emptyList(), System.currentTimeMillis())
+        assertEquals("", ui.song)
+        assertEquals(false, ui.missingHere)
     }
 }

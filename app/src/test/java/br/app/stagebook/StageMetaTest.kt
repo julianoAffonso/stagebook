@@ -151,6 +151,7 @@ internal fun testStage(
     saved: SavedStateHandle,
     show: br.app.stagebook.data.SetlistShowStore = br.app.stagebook.data.SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO)),
     bandTrust: br.app.stagebook.data.BandTrust = br.app.stagebook.data.BandTrust(context),
+    lastStage: br.app.stagebook.data.LastStage = br.app.stagebook.data.LastStage(context),
     conduct: br.app.stagebook.data.BandConduct = br.app.stagebook.data.BandConduct(
         br.app.stagebook.data.BandLink(
             context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
@@ -171,4 +172,5 @@ internal fun testStage(
     br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
     show,
     bandTrust,
+    lastStage,
 )

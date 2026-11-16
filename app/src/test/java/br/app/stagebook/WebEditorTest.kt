@@ -174,7 +174,25 @@ class WebEditorTest {
         assertTrue(auth.ask("Chrome · Windows", "192.168.0.20") != null)
     }
 
-    @Test fun `the key cookie is a session cookie - no Max-Age or Expires - on approval and on each visit`() {
+    @Test fun `a computer just denied is told so, with the minutes it still waits, not that there are too many requests`() {
+        val pc = req("POST", "/api/ask", """{"name":"Chrome"}""").copy(remote = "192.168.0.20")
+        assertEquals(200, routes.handle(pc).status)
+        auth.answer(auth.requests.value.single().id, false)
+        val again = routes.handle(pc)
+        assertEquals(429, again.status)
+        assertTrue(again.text(), "\"denied\":true" in again.text() && "\"minutes\":5" in again.text())
+        clock += 2 * 60_000L + 1
+        assertTrue(routes.handle(pc).text(), "\"minutes\":3" in routes.handle(pc).text())
+        // too many waiting is another matter: no "denied" there
+        repeat(3) { routes.handle(req("POST", "/api/ask", """{"name":"PC $it"}""").copy(remote = "192.168.0.3$it")) }
+        val full = routes.handle(req("POST", "/api/ask", """{"name":"PC 9"}""").copy(remote = "192.168.0.99"))
+        assertEquals(429, full.status)
+        assertTrue(full.text(), "denied" !in full.text())
+        clock += WebEditorAuth.DENIED_MS
+        assertEquals("the wait over, it may ask again", 0L, auth.deniedLeft("192.168.0.20"))
+    }
+
+    @Test fun `the key cookie lasts 90 days, on approval and renewed on each visit`() {
         val id = Regex("\"id\":\"([^\"]+)\"").find(routes.handle(req("POST", "/api/ask", """{"name":"Chrome · Windows"}""")).text())!!.groupValues[1]
         auth.answer(auth.requests.value.single().id, true)
         val approval = routes.handle(req("GET", "/api/ask?id=$id")).headers.getValue("Set-Cookie")
@@ -182,7 +200,23 @@ class WebEditorTest {
         val visit = routes.handle(req("GET", "/api/session", cookie = key)).headers.getValue("Set-Cookie")
         for (cookie in listOf(approval, visit)) {
             assertTrue(cookie, "${WebEditorRoutes.COOKIE}=$key" in cookie && "HttpOnly" in cookie && "SameSite=Strict" in cookie)
-            assertFalse(cookie, "max-age" in cookie.lowercase() || "expires" in cookie.lowercase())
+            assertTrue(cookie, "Max-Age=${WebEditorRoutes.COOKIE_DAYS * 24 * 3600}" in cookie)
         }
+    }
+
+    @Test fun `a key not used for 90 days stops opening the editor, and each use starts the 90 days again`() {
+        val id = Regex("\"id\":\"([^\"]+)\"").find(routes.handle(req("POST", "/api/ask", """{"name":"Chrome · Windows"}""")).text())!!.groupValues[1]
+        auth.answer(auth.requests.value.single().id, true)
+        val key = Regex("${WebEditorRoutes.COOKIE}=([^;]+)").find(routes.handle(req("GET", "/api/ask?id=$id")).headers.getValue("Set-Cookie"))!!.groupValues[1]
+        val day = 24L * 3600 * 1000
+        // used on day 80: still in, and the clock starts again
+        clock += 80 * day
+        assertEquals(200, routes.handle(req("GET", "/api/session", cookie = key)).status)
+        // another 80 days after that use: in (it would be 160 from the start, but 80 from the last use)
+        clock += 80 * day
+        assertEquals(200, routes.handle(req("GET", "/api/session", cookie = key)).status)
+        // 91 days with no use: out
+        clock += 91 * day
+        assertEquals(401, routes.handle(req("GET", "/api/session", cookie = key)).status)
     }
 }

@@ -96,6 +96,8 @@ private val allItems: List<SettingsItem> by lazy {
         item("font_sections", L, R.string.settings_sections_look, R.string.settings_font_sections, kw = R.string.kw_font, hide = noSections),
         item("section_color", L, R.string.settings_sections_look, R.string.settings_section_color, kw = R.string.kw_color, hide = noSections),
         item("translate_sections", L, R.string.settings_sections_look, R.string.settings_translate_sections, R.string.settings_translate_sections_help, R.string.kw_sections, sw),
+        item("handle_right", L, R.string.settings_menu_card, R.string.settings_handle_right, R.string.settings_handle_right_detail, R.string.kw_handle, sw),
+        item("pdf_invert", L, R.string.settings_pdf_card, R.string.settings_pdf_invert, R.string.settings_pdf_invert_help, R.string.kw_pdf, sw),
 
         // Turn the page
         item("stage_mode", P, R.string.settings_page_mode, R.string.settings_stage_mode, R.string.settings_stage_mode_help, R.string.kw_mode),
@@ -145,6 +147,7 @@ private val allItems: List<SettingsItem> by lazy {
         item("sites_lyrics", B, R.string.settings_lyric_sites, R.string.settings_lyric_sites, R.string.settings_sites_help, R.string.kw_sites) {
             if (it.look.chords && !it.look.autoProfile) Hide(R.string.hide_sites_lyrics, "profile") else null
         },
+        item("sites_pdf", B, R.string.settings_pdf_sites, R.string.settings_pdf_sites, R.string.settings_sites_help, R.string.kw_sites),
         item("tags", B, R.string.tags_title, R.string.tags_auto, R.string.tags_auto_info, R.string.kw_tags) {
             if (!it.nationalTags) Hide(R.string.hide_pt, "language") else null
         },

@@ -18,13 +18,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.QrEncoder
 import br.app.stagebook.domain.QrPayload
 import br.app.stagebook.domain.Chords
 import br.app.stagebook.domain.SetlistShow
-import br.app.stagebook.navigation.SetlistDetail
 import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +49,7 @@ data class SetItemUi(
     val bpm: Int = 0,           // 0 = none
     val capo: Int = 0,
     val hasTrack: Boolean = false,
+    val hasPdf: Boolean = false,
     val state: SetlistShow.State = SetlistShow.State.NONE,   // where the show is (this device only)
 )
 
@@ -64,6 +63,10 @@ data class SetlistDetailUiState(
     val breaks: List<Int> = emptyList(),
     /** A song is marked played: "Clear played" has something to clear. */
     val anyPlayed: Boolean = false,
+    /** There is a band to lead and this device isn't already leading or following it: the menu's "Lead the band". */
+    val canConduct: Boolean = false,
+    /** How many times someone else (the band, the computer's editor) changed this setlist since the app opened. */
+    val external: Int = 0,
     /** The breaks left open on the stage, by position (songs before it): their counter, running or paused. */
     val openBreaks: Map<Int, br.app.stagebook.domain.BreakTimer.Timer> = emptyMap(),
 )
@@ -87,7 +90,8 @@ class SetlistDetailViewModel @Inject constructor(
     // the Share sheet's internet code and band send, shared with the songs screen
     private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
     val internetOn: StateFlow<Boolean> = share.internetOn
-    val setId = savedStateHandle.toRoute<SetlistDetail>().setId
+    // the setlist's id, from the arguments of the route that holds it (the library drawer's own navigation)
+    val setId: String = checkNotNull(savedStateHandle["setId"])
 
     /** Internet now? "Code over the internet" only shows with it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -98,6 +102,9 @@ class SetlistDetailViewModel @Inject constructor(
     val bandResult = share.bandResult
 
     /** Sends the setlist over the internet (with the songs, if [withSongs]); the code shows in a dialog. */
+    /** The sizes of the PDFs this setlist's songs carry (the internet send checks they fit). */
+    fun pdfSizes(): List<Long> = setlistCloud.pdfSizes(repository.library.value.setlist(setId)?.items.orEmpty().distinct())
+
     fun sendInternet(withSongs: Boolean) =
         share.sendCode(repository.library.value.setlist(setId)?.name.orEmpty()) { setlistCloud.send(setId, withSongs) }
 
@@ -124,11 +131,12 @@ class SetlistDetailViewModel @Inject constructor(
                 SetItemUi(
                     if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
                     songKey = meta.key, bpm = meta.tempo, capo = meta.capo,
-                    hasTrack = song?.track?.isNotEmpty() == true, state = states[i],
+                    hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i],
                 )
             },
             breaks = set?.breaks.orEmpty(),
             anyPlayed = marks[setId]?.played?.isNotEmpty() == true,
+            canConduct = lib.look.bandOn && role is br.app.stagebook.data.BandConduct.Role.None && bandTrust.members.value.isNotEmpty() && set?.items?.isNotEmpty() == true,
             // following the band the leader's break counts (its time, until it ends), not what this device had open itself
             openBreaks = set?.let {
                 val following = role as? br.app.stagebook.data.BandConduct.Role.Following
@@ -138,7 +146,8 @@ class SetlistDetailViewModel @Inject constructor(
                 }.orEmpty()
             }.orEmpty(),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
+    }.combine(repository.externalEdits) { state, ext -> state.copy(external = ext[setId] ?: repository.externalBase) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistDetailUiState())
 
     // this device follows the band: its own open breaks of this setlist are over (the leader's is the one shown)
     init {
@@ -176,6 +185,20 @@ class SetlistDetailViewModel @Inject constructor(
 
     /** "Clear played": no song of this setlist is marked any more. */
     fun clearPlayed() = show.clear(setId)
+
+    /** A copy of this setlist named [name]; its id, to open it. */
+    fun duplicate(name: String): String? = repository.duplicateSetlist(setId, name)
+
+    /** "Lead the band" from this setlist, from the song the show is on (or the first). */
+    fun conductBand() {
+        val lib = repository.library.value
+        val set = lib.setlist(setId) ?: return
+        val now = SetlistShow.states(set.items, show.marks.value[setId]).indexOf(SetlistShow.State.NOW).coerceAtLeast(0)
+        conduct.startSetlist(setId, now)
+    }
+
+    /** "Discard": the songs and breaks as they were when editing began. */
+    fun restore(songIds: List<String>, breaks: List<Int>) = repository.restoreSetlist(setId, songIds, breaks)
 
     /** QR limit notice: [LimitNotice.Songs] (doesn't fit to send) or [LimitNotice.Name] (name too long). */
     enum class LimitNotice { Songs, Name }

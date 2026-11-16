@@ -4,6 +4,7 @@ import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.model.Song
 import br.app.stagebook.domain.Chords
 import br.app.stagebook.domain.SetlistBreaks
+import br.app.stagebook.domain.byShowDay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -25,6 +26,11 @@ class WebEditorApi(
     private val band: () -> Band? = { null },
     private val backup: () -> br.app.stagebook.data.Backup? = { null },
     private val tracks: () -> br.app.stagebook.data.TrackStore? = { null },
+    // the songs' PDFs: the file copied into the app and checked as in the app's editor (null = this editor can't take one)
+    private val pdfs: () -> br.app.stagebook.data.PdfStore? = { null },
+    private val inspector: br.app.stagebook.data.PdfInspector = br.app.stagebook.data.PdfInspector(),
+    // a page of a song's PDF as an image, for the crop window (the renderer can't draw in the tests: they pass their own)
+    private val pageImage: (java.io.File, Int) -> ByteArray? = { f, n -> br.app.stagebook.data.PdfPreview.jpeg(f, n) },
     private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir")) },
 ) {
     /** The band, for Import → Sync with the band / Received from the band. */
@@ -34,7 +40,7 @@ class WebEditorApi(
     data class SongItem(
         val id: String, val title: String, val author: String, val year: String, val key: String, val tags: List<String> = emptyList(),
         // what the device's rows show at the end (ui/songs/RowFacts.kt): tempo (0 = none or out of range), capo and a backing track
-        val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false,
+        val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false, val hasPdf: Boolean = false,
     )
 
     @Serializable
@@ -47,6 +53,16 @@ class WebEditorApi(
         val text: String = "",
         val track: String = "",   // the backing track file ("" = none); read only, changed by its own calls
         val trackName: String = "",   // the track's own name, as the app shows it
+        // the song is a PDF: its file (read only, changed by its own calls), its own name, pages and size for the card. The
+        // lyrics stay in [text], hidden by the page, and come back when the PDF goes (as in the app)
+        val pdf: String = "",
+        val pdfName: String = "",
+        val pdfPages: Int = 0,
+        val pdfBytes: Long = 0L,
+        // how the PDF shows on the stage: its colours turned over (this song's choice, or what Settings says) and the trims of
+        // its pages. Read only: changed by their own call, so a page from before them can't wipe them on saving
+        val pdfInvert: Boolean = false,
+        val pdfCrops: List<br.app.stagebook.data.model.PdfCrop> = emptyList(),
         // key and capo live in the song's details, not in the lyrics, as in the app (user, 01/11): the page shows and
         // sends them apart, and the app puts them back in the text with its own rule
         val key: String = "",
@@ -76,7 +92,7 @@ class WebEditorApi(
     private data class Created(val setlist: String)
 
     @Serializable
-    data class SetItem(val id: String, val name: String, val count: Int)
+    data class SetItem(val id: String, val name: String, val count: Int, val date: String = "")
 
     /** The Setlists tab's order, the same choice on the tablet, in the browser and for the assistants. */
     @Serializable
@@ -87,14 +103,14 @@ class WebEditorApi(
      * positions of its breaks: 1..n-1, a break before the song at that place (0-based), as in the app.
      */
     @Serializable
-    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList(), val breaks: List<Int> = emptyList())
+    data class SetData(val id: String = "", val name: String = "", val songs: List<SongItem> = emptyList(), val breaks: List<Int> = emptyList(), val date: String = "")
 
     /**
      * [items] null (a client that doesn't send songs) keeps the setlist's songs and breaks; an empty list empties it.
      * [breaks] null (a client that doesn't know them) keeps the breaks the setlist has, as the app does when songs are replaced.
      */
     @Serializable
-    data class SetSave(val name: String = "", val items: List<String>? = null, val breaks: List<Int>? = null)
+    data class SetSave(val name: String = "", val items: List<String>? = null, val breaks: List<Int>? = null, val date: String? = null)
 
     @Serializable
     data class BackupInfo(val token: String, val parts: List<String>, val songs: Int, val newer: Boolean)
@@ -105,6 +121,18 @@ class WebEditorApi(
     @Serializable
     // the stored file and the name the page shows right away (without it the page showed a piece of the file name)
     private data class TrackSet(val track: String, val trackName: String = "")
+
+    /** What the page keeps after sending a PDF: the file, its name, pages and size. */
+    /** The PDF's look: null leaves it as it is. [invert] is this song's own choice; [crops] replaces the trims. */
+    @Serializable
+    data class PdfView(val invert: Boolean? = null, val crops: List<br.app.stagebook.data.model.PdfCrop>? = null)
+
+    /** The key a step of [semitones] from [key] gives (C when there is none), for a PDF song, which has no chords to move. */
+    @Serializable
+    data class KeyStep(val key: String = "", val semitones: Int = 0)
+
+    @Serializable
+    private data class PdfSet(val pdf: String, val pdfName: String, val pdfPages: Int, val pdfBytes: Long)
 
     @Serializable
     private data class RestoreDone(val skipped: Int, val bandAgain: Boolean = false, val lost: List<br.app.stagebook.data.model.LostAudio> = emptyList())
@@ -160,6 +188,14 @@ class WebEditorApi(
             }
             parts == listOf("backup", "inspect") && req.method == "POST" -> backupInspect(req)
             parts == listOf("backup", "restore") && req.method == "POST" -> backupRestore(req)
+            parts == listOf("key-step") && req.method == "POST" -> keyStep(req)
+            parts.size == 3 && parts[0] == "songs" && parts[2] == "pdf-view" && req.method == "PUT" -> pdfView(parts[1], req)
+            parts.size == 3 && parts[0] == "songs" && parts[2] == "pdf-page" && req.method == "GET" -> pdfPage(parts[1], req)
+            parts.size == 3 && parts[0] == "songs" && parts[2] == "pdf" -> when (req.method) {
+                "PUT" -> pdfPut(parts[1], req)
+                "DELETE" -> pdfDelete(parts[1])
+                else -> HttpResponse.status(405)
+            }
             parts.size == 3 && parts[0] == "songs" && parts[2] == "track" -> when (req.method) {
                 "PUT" -> trackPut(parts[1], req)
                 "DELETE" -> trackDelete(parts[1])
@@ -179,14 +215,20 @@ class WebEditorApi(
     /** The song's list row with the same facts the device's rows read once per song (key, BPM, capo, track). */
     private fun item(s: br.app.stagebook.data.model.Song): SongItem {
         val meta = Chords.meta(s.text)
-        return SongItem(s.id, s.title, s.author, s.year, meta.key, s.tags, meta.tempo, meta.capo, s.track.isNotEmpty())
+        return SongItem(s.id, s.title, s.author, s.year, meta.key, s.tags, meta.tempo, meta.capo, s.track.isNotEmpty(), s.pdf.isNotEmpty())
     }
 
     // the BPM has its own field: out of the text, so it isn't in two places
     private fun data(s: Song): SongData {
         val meta = Chords.meta(s.text)
         // the app's own lines (hidden chords, picked shapes) stay out of the page, as in the app's editor
-        return SongData(s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi())
+        // a PDF's pages and size for the card (read here, once per song opened: the renderer is opened and closed at once)
+        val file = s.pdf.takeIf { it.isNotEmpty() }?.let { pdfs()?.file(it) }?.takeIf { it.isFile }
+        val pages = file?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
+        return SongData(
+            s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
+            s.pdf, s.pdfName, pages, file?.length() ?: 0L, s.pdfInvert ?: repository.library.value.look.pdfInvert, s.pdfCrops, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi(),
+        )
     }
 
     // the page's lyrics with the key and capo it keeps apart, in the app's way (the BPM goes in on its own)
@@ -365,6 +407,63 @@ class WebEditorApi(
         }
     }
 
+    // the PDF from the computer: the file comes in the body, its name in ?name=. The same check as the app's editor (header,
+    // 8 MB, readable, no password, 300 pages); a refused one says why and nothing is kept. One at a time, like the track
+    @Synchronized
+    private fun pdfPut(id: String, req: HttpRequest): HttpResponse {
+        val store = pdfs() ?: return HttpResponse.status(404)
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        val upload = req.file ?: return HttpResponse.status(400)
+        val named = java.io.File(workDir(), "pdf-${java.util.UUID.randomUUID()}.pdf")
+        if (!upload.renameTo(named)) return problem("unreadable")
+        try {
+            val saved = when (val r = kotlinx.coroutines.runBlocking { store.attach(id, android.net.Uri.fromFile(named), inspector) }) {
+                is br.app.stagebook.data.PdfAttach.Refused -> return problem("pdf_" + r.problem.name.lowercase())
+                is br.app.stagebook.data.PdfAttach.Saved -> r
+            }
+            val shown = req.query["name"].orEmpty().substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim()
+                .take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
+            // a new PDF has other pages: the old one's highlighter marks go
+            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+            if (song.pdf != saved.name) store.remove(song.pdf)
+            return ok(json.encodeToString(PdfSet(saved.name, shown, saved.pages, saved.bytes)))
+        } finally {
+            named.delete()
+        }
+    }
+
+    private fun keyStep(req: HttpRequest): HttpResponse {
+        val k = runCatching { json.decodeFromString<KeyStep>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        val key = k.key.trim()
+        return ok(json.encodeToString(KeyStep(if (key.isEmpty()) "C" else Chords.transposeKey(key, k.semitones.coerceIn(-11, 11)), 0)))
+    }
+
+    private fun pdfView(id: String, req: HttpRequest): HttpResponse {
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        if (song.pdf.isEmpty()) return HttpResponse.status(404)
+        val v = runCatching { json.decodeFromString<PdfView>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        // each trim held to the page and to the least size, one per page, at most one more than the PDF has pages
+        val crops = v.crops?.filter { it.page == br.app.stagebook.data.model.PdfCrop.ALL || it.page in 0 until br.app.stagebook.data.PdfInspector.MAX_PAGES }?.map(br.app.stagebook.domain.PdfCrops::valid)?.filterNot { it.isWhole }?.distinctBy { it.page }?.take(MAX_CROPS)
+        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops) }
+        val now = repository.song(id) ?: return HttpResponse.status(404)
+        return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops)))
+    }
+
+    private fun pdfPage(id: String, req: HttpRequest): HttpResponse {
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        val file = song.pdf.takeIf { it.isNotEmpty() }?.let { pdfs()?.file(it) }?.takeIf { it.isFile } ?: return HttpResponse.status(404)
+        val bytes = pageImage(file, req.query["n"]?.toIntOrNull() ?: 0) ?: return HttpResponse.status(404)
+        return HttpResponse(200, bytes, "image/jpeg", mapOf("Cache-Control" to "private, max-age=60"))
+    }
+
+    private fun pdfDelete(id: String): HttpResponse {
+        val store = pdfs() ?: return HttpResponse.status(404)
+        val song = repository.song(id) ?: return HttpResponse.status(404)
+        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+        store.remove(song.pdf)
+        return HttpResponse.status(204)
+    }
+
     private fun trackDelete(id: String): HttpResponse {
         val store = tracks() ?: return HttpResponse.status(404)
         val song = repository.song(id) ?: return HttpResponse.status(404)
@@ -378,13 +477,14 @@ class WebEditorApi(
         set.id, set.name,
         set.items.map { id -> repository.song(id)?.let(::item) ?: SongItem(id, "", "", "", "") },
         SetlistBreaks.normalise(set.breaks, set.items.size),
+        set.date,
     )
 
     /** The setlists in the order the tab shows them, newest first or A to Z. */
     private fun setRows(): List<SetItem> {
         val lib = repository.library.value
-        val rows = lib.sets.map { SetItem(it.id, it.name, it.items.size) }
-        return if (lib.look.setsAbc) br.app.stagebook.domain.TextKey.sorted(rows) { it.name } else rows
+        val rows = lib.sets.map { SetItem(it.id, it.name, it.items.size, it.date) }
+        return if (lib.look.setsAbc) br.app.stagebook.domain.TextKey.sorted(rows) { it.name } else rows.byShowDay { it.date }
     }
 
     private fun setsOrder(req: HttpRequest): HttpResponse {
@@ -397,7 +497,7 @@ class WebEditorApi(
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         val name = d.name.trim().ifEmpty { java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
         if (!breaksOk(d)) return problem("bad_breaks")
-        val id = repository.createSetlist(name)
+        val id = repository.createSetlist(name, d.date?.takeIf { it.isEmpty() || runCatching { java.time.LocalDate.parse(it) }.isSuccess } ?: br.app.stagebook.data.model.Setlist.today())
         if (!d.items.isNullOrEmpty()) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }
@@ -406,7 +506,9 @@ class WebEditorApi(
         if (repository.library.value.setlist(id) == null) return HttpResponse.status(404)
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         if (!breaksOk(d, repository.library.value.setlist(id)?.items?.size ?: 0)) return problem("bad_breaks")
+        repository.markExternalEdit(id)   // from the computer: a setlist being edited on the device knows it changed from outside
         if (d.name.isNotBlank()) repository.renameSetlist(id, d.name.trim())
+        d.date?.let { repository.setSetlistDate(id, it) }
         if (d.items != null || d.breaks != null) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
     }
@@ -422,6 +524,8 @@ class WebEditorApi(
         val items = d.items ?: repository.library.value.setlist(id)?.items ?: return
         repository.setReceivedSetlist(id, items.map { it.takeIf { sid -> repository.song(sid) != null } }, d.breaks)
     }
+
+    private companion object { const val MAX_CROPS = 301 }
 
     private fun ok(body: String) = HttpResponse.json(200, body)
 

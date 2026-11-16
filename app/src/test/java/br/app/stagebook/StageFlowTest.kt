@@ -42,6 +42,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 
 /** Turning pages and songs on stage the way the pedal does, including mid-animation. */
 @RunWith(RobolectricTestRunner::class)
@@ -266,6 +267,26 @@ class StageFlowTest {
         assertEquals(1, back)
     }
 
+    // the library drawer (user, 15/11): the header's first button opens it, in a show too, and asks nothing
+    @Test fun `with the drawer the first button opens it without asking and does not leave`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f), live = true)
+        var back = 0
+        var menu = 0
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = { back++ }, onMenu = { menu++ }) } }
+        compose.onNodeWithContentDescription("Abrir o menu").performClick()
+        compose.waitForIdle()
+        assertEquals(1, menu)
+        assertEquals(0, back)
+        assertEquals("the arrow is gone: the menu took its place", 0, compose.onAllNodesWithContentDescription("Voltar").fetchSemanticsNodes().size)
+    }
+
+    @Test fun `with the drawer pinned beside the stage the header has no first button`() {
+        val state = StageUiState(false, listOf(StageSong("Longa", "", stanzas("longa", 12), false)), look = Look(fontSp = 34f))
+        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = {}, leadingButton = false) } }
+        assertEquals(0, compose.onAllNodesWithContentDescription("Voltar").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithContentDescription("Abrir o menu").fetchSemanticsNodes().size)
+    }
+
     @Test fun `dragging left goes to the next page`() {
         assertEquals(1, swipeStage(0) { swipeLeft(startX = centerX + width / 4f, endX = centerX - width / 4f) })
     }
@@ -458,7 +479,7 @@ class StageFlowTest {
         val edits = mutableListOf<Pair<String, Int>>()
         stageWithEdit({ id, c -> edits += id to c })
         holdSecondLine()
-        compose.onNodeWithText("Editar esta linha").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Editar esta linha").assertIsDisplayed().performClick()
         // "[Refrão]\n" has 9 characters: the 2nd line shown ("primeira linha") starts there
         assertEquals(listOf("s1" to 9), edits)
     }
@@ -469,9 +490,9 @@ class StageFlowTest {
         val moves = mutableListOf<Int>()
         stageWithEdit({ _, c -> edits += c }, { s, _ -> moves += s })
         holdSecondLine()
-        compose.onNodeWithText("Editar esta linha").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Editar esta linha").assertIsDisplayed()
         compose.onNodeWithText("primeira linha", substring = true).performTouchInput { click(Offset(width * 0.9f, 10f)) }
-        compose.onNodeWithText("Editar esta linha").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Editar esta linha").assertDoesNotExist()
         assertTrue(edits.isEmpty())
         assertTrue(moves.isEmpty())
     }

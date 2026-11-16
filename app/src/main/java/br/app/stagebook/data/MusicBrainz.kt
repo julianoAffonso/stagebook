@@ -5,6 +5,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
@@ -31,6 +33,11 @@ class MusicBrainz @Inject constructor() {
     internal var endpoint = "https://musicbrainz.org/ws/2/recording/"   // tests swap it for a local server
     // blocking network calls (DNS, connect) ignore cancellation: they run loose here, and the waiter gives up on time
     private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // MusicBrainz lets one request through per second and answers the rest with 503: songs imported one after the other
+    // lost their year to it, silently (user, 15/11, "Camila, Camila"). One at a time, a second apart, and a 503 is tried again.
+    private val gate = Mutex()
+    private var lastAt = 0L
+    internal var spacingMs = MIN_SPACING_MS   // the tests shorten it
 
     /** Like [lookup], but returns null within [ms] even with a stuck network (the request goes on and is discarded). */
     suspend fun lookupWithin(title: String, artist: String, ms: Long): Info? {
@@ -42,7 +49,46 @@ class MusicBrainz @Inject constructor() {
         }
     }
 
-    suspend fun lookup(title: String, artist: String): Info? = withContext(Dispatchers.IO) {
+    // what was found, by song: asking again for one already answered (an import repeated, a song in two setlists) doesn't go to
+    // the network. Only answers with a year are kept: a miss may be a bad moment and is asked again
+    private val found = object : LinkedHashMap<String, Info>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Info>?) = size > CACHE_SIZE
+    }
+    internal fun cacheSize(): Int = synchronized(found) { found.size }
+
+    /** [patient] false (a lookup nobody waits for) gives up at once when another one is going: an import waiting for its year goes first. */
+    suspend fun lookup(title: String, artist: String, patient: Boolean = true): Info? = withContext(Dispatchers.IO) {
+        val key = TextKey.of(title) + "|" + TextKey.of(artist)
+        synchronized(found) { found[key] }?.let { return@withContext it }
+        val got = fetch(title, artist, patient)
+        if (got != null && got.year.isNotEmpty()) synchronized(found) { found[key] = got }
+        got
+    }
+
+    private suspend fun fetch(title: String, artist: String, patient: Boolean): Info? {
+        if (patient) gate.lock() else if (!gate.tryLock()) return null
+        try {
+            // the first try, and more after a growing pause when the server said "too many" (503), "slow down" (429) or
+            // the connection broke or timed out: the first try of a cold connection failed often (user, 15/11)
+            for (attempt in 0 until ATTEMPTS) {
+                val wait = lastAt + spacingMs * (attempt + 1) - System.currentTimeMillis()
+                if (wait > 0) delay(wait)
+                lastAt = System.currentTimeMillis()
+                val r = ask(title, artist)
+                if (r !is Asked.Busy) return (r as? Asked.Found)?.info
+            }
+            return null
+        } finally {
+            gate.unlock()
+        }
+    }
+
+    private sealed interface Asked {
+        data class Found(val info: Info?) : Asked
+        data object Busy : Asked
+    }
+
+    private fun ask(title: String, artist: String): Asked =
         runCatching {
             val q = "recording:\"${esc(title)}\"" + if (artist.isBlank()) "" else " AND artist:\"${esc(artist)}\""
             val url = URL(endpoint + "?fmt=json&limit=25&query=" + URLEncoder.encode(q, "UTF-8"))
@@ -52,14 +98,21 @@ class MusicBrainz @Inject constructor() {
             c.setRequestProperty("User-Agent", "StagebookApp/0.2 (uso pessoal; app de letras para banda)")
             c.setRequestProperty("Accept", "application/json")
             try {
-                if (c.responseCode != 200) null else best(c.inputStream.bufferedReader().readText(), title, artist)
+                when (c.responseCode) {
+                    200 -> Asked.Found(best(c.inputStream.bufferedReader().readText(), title, artist))
+                    503, 429 -> Asked.Busy
+                    else -> Asked.Found(null)
+                }
             } finally {
                 c.disconnect()
             }
-        }.getOrNull()
-    }
+        }.getOrElse { if (it is java.io.IOException) Asked.Busy else Asked.Found(null) }
 
     companion object {
+        const val MIN_SPACING_MS = 1_100L
+        const val ATTEMPTS = 3
+        const val CACHE_SIZE = 200
+
         private fun esc(s: String) = s.replace("\\", " ").replace("\"", " ")
 
         /** Same title (ignoring accents/case), compatible artist and the oldest release. */

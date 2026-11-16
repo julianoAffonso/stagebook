@@ -17,7 +17,7 @@ const L = vm.runInNewContext(`${fill}\n${block}\n({ rowFacts, rowLabel })`);
 const strings = (dir) => {
   const xml = read(`../app/src/main/res/${dir}/strings.xml`);
   const get = (name) => xml.match(new RegExp(`<string name="${name}">([^<]*)</string>`))[1].replace(/\\'/g, "'");
-  return { factBpm: get("set_bpm"), factCapo: get("editor_data_capo"), track: get("stage_backing_track") };
+  return { factBpm: get("set_bpm"), factCapo: get("editor_data_capo"), track: get("stage_backing_track"), pdf: get("song_is_pdf") };
 };
 const en = strings("values");
 const pt = strings("values-pt-rBR");
@@ -26,6 +26,14 @@ const song = (o = {}) => ({ title: "Evidências", author: "Chitãozinho & Xoror�
 test("key, tempo and capo in that order, joined with a dot", () => {
   assert.equal(L.rowFacts(song({ key: "G", bpm: 72, capo: 2 }), en).text, "G · 72 bpm · capo 2");
   assert.equal(L.rowFacts(song({ key: "Em", bpm: 120, capo: 2, hasTrack: true }), pt).text, "Em · 120 bpm · capo 2");
+});
+
+test("a PDF song says so in the label, before the backing track", () => {
+  const f = L.rowFacts(song({ key: "G", hasPdf: true, hasTrack: true }), en);
+  assert.equal(f.hasPdf, true);
+  assert.equal(f.label, "G · PDF · Backing track");
+  assert.equal(L.rowFacts(song({ key: "G" }), en).hasPdf, false);
+  assert.equal(L.rowFacts(song({ hasPdf: true }), pt).label, "PDF");
 });
 
 test("only what the song has is shown", () => {
@@ -40,7 +48,7 @@ test("a capo of 0 and a tempo of 0 are none; a song with nothing has no facts at
   const f = L.rowFacts(song({ key: "G", bpm: 0, capo: 0 }), en);
   assert.equal(f.text, "G");
   const none = L.rowFacts(song(), en);
-  assert.deepEqual(JSON.parse(JSON.stringify(none)), { key: "", parts: [], hasTrack: false, text: "", label: "" });
+  assert.deepEqual(JSON.parse(JSON.stringify(none)), { key: "", parts: [], hasTrack: false, hasPdf: false, text: "", label: "" });
 });
 
 test("a backing track alone still shows its wave, and says it", () => {

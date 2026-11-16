@@ -14,6 +14,11 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 **Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
 
 ## O que ele faz
+- **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda esquerda do palco (segure e arraste
+  para onde preferir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas: Músicas, Setlists e
+  Ajustes. O + traz coisas de fora (uma música nova, PDFs, sites, QR, as 3 palavras); o botão de lista com marcas liga as
+  caixas de seleção. O setlist abre para olhar, com um lápis para editar e um disquete para salvar; com o palco aberto por
+  um setlist, o menu abre nele. O app abre no palco onde você parou.
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. No modo Rolar, toque na metade de baixo ou arraste para cima para seguir, na de cima ou
   arraste para baixo para voltar. Cada botão do pedal pode fazer outra coisa.
@@ -22,17 +27,26 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   escolhe letra e cifra, só letra ou automático (o importador então pergunta se a música é letra ou cifra).
   Anotações na linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam
   ao transpor. Toque num acorde, na letra ou na lista de acordes, para ver o diagrama dele.
-- **Setlists:** monte o show e arraste para mudar a ordem; liste os mais recentes primeiro ou de A a Z. Tocar num
-  setlist abre o palco onde o show parou; o ⋮ do cartão edita, compartilha, renomeia ou apaga. Ponha um **intervalo**
-  entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O painel do setlist no
-  palco mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
-  está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi (os intervalos
+- **Setlists:** monte o show dentro do menu e arraste para mudar a ordem; cada setlist tem uma **data**, e a lista fica
+  agrupada por mês (ou de A a Z). Tocar num setlist abre as músicas dele, e tocar numa música a toca; o ⋮ do cartão toca,
+  compartilha, edita o nome e a data ou apaga. Ponha um **intervalo**
+  entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O setlist aberto no
+  menu mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
+  está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda (na hora no mesmo Wi-Fi, pela internet em até 12 horas para quem está longe) (os intervalos
   vão junto, menos pelo QR).
 - **Banda:** com o "Conduzir a banda" (arme na aba Setlists e toque num setlist), quem conduz troca de música e o palco
   de todo mundo acompanha, intervalo incluído. Uma faixa embaixo mostra quem está conduzindo, com o **Ir** para ir onde
   a banda está. Quem conduz vê o **O que falta**, quem não tem cada música, e pode enviá-las; quem acompanha pode
-  **Pedir** uma música pela faixa, e prefere a cópia com cifra quando o perfil mostra cifras. Todos da banda precisam
+  **Pedir** a música da faixa, ou, em **Ver o que falta aqui**, pedir à banda todas as que faltam, pedir a quem conduz
+  pela internet ou importá-las dos sites. O pedido diz a cópia: por padrão a que quem conduz toca (só letra, cifra ou
+  PDF), e quem responde manda essa cópia ou nada. Todos da banda precisam
   da mesma versão do app: o app avisa quem não está.
+- **Músicas em PDF:** anexe um PDF a uma música (ou escolha PDFs no menu +, abra um com o Stagebook, ou use **PDFs de sites**, que abre
+  sites de partituras livres e cria a música quando você toca num PDF): as páginas
+  aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos (o zoom fica na música), segure a página para marcar, recorte as
+  margens (todas as páginas ou uma) e inverta as cores para um palco escuro, os dois no editor da música. Os PDFs vão para a banda no mesmo Wi-Fi (até 6 MB por envio) e pela internet quando cabem
+  nas mensagens de 4 KB que o servidor gratuito aceita (o envio diz o motivo quando não cabem). PDF nunca é lido como
+  texto.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
 - **Ajustes por tarefa:** sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
@@ -117,13 +131,13 @@ Medido em aparelhos de verdade, um minuto por tela (processador em % de **um** n
 Mesmo tocando uma faixa, o Stagebook usa menos de 4% do processador inteiro (o pior caso medido, 31,3% de um núcleo, é 3,9% de oito). O modo essencial quase não muda esses
 números: o ganho dele é a tela mais simples.
 
-¹ No TCL o Android mantém seis dos oito núcleos em frequência baixa mesmo com bateria boa (71% e 70% na medição), então o uso bruto fica inflado (19,5% e 10,0%). Estes dois números contam só os dois núcleos disponíveis, ponderados pela frequência, como um núcleo na velocidade máxima. Com o player ligado e uma interface conectada, mas nada tocando, o motor mantém o fluxo USB vivo com silêncio e gasta cerca de 19% de um núcleo no OnePlus.
+¹ No TCL o Android mantém seis dos oito núcleos em frequência baixa mesmo com bateria boa (71% e 70% na medição), então o uso bruto fica inflado (19,5% e 10,0%). Estes dois números contam só os dois núcleos disponíveis, ponderados pela frequência, como um núcleo na velocidade máxima.
 
 ## Usar com assistentes de IA (MCP)
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
 Gemini CLI, o Codex e outros assistentes de IA lerem e editarem a sua biblioteca: "monta um setlist de 15 músicas para
 sábado", "passa as músicas deste artista meio tom abaixo", "confere os acordes desta música", "importa esta página". Ele
-roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Banda e computador → Editar no computador**; você autoriza o
+roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Banda e computador → No navegador**; você autoriza o
 computador uma vez no tablet. Está no npm como [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): com o [Node.js](https://nodejs.org) no
 computador, o Claude Code se liga com `claude mcp add stagebook -- npx -y stagebook-mcp`. Configuração de cada
 assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).
@@ -143,7 +157,8 @@ O Stagebook não está na Play Store; ele sai só por aqui, de graça. Precisa d
 **Por que fora da Play Store?** O app importa letras e cifras de sites, e as regras da loja sobre conteúdo com
 direito autoral deixam esse tipo de app sujeito a ser retirado de uma hora para outra. Além disso, ele se atualiza
 direto por estes releases, o que a loja não permite. Assim as versões saem sem esperar revisão, e o código fica aberto
-para quem quiser conferir.
+para quem quiser conferir. PDF é seu: o app só abre os arquivos que você anexa e os que você mesmo toca para baixar no navegador da importação;
+os sites sugeridos são de partituras livres (domínio público ou licença aberta), e a lista é sua para mudar.
 
 ## Apoie
 O Stagebook é gratuito e sem propaganda. Se ele ajuda nos seus ensaios e shows, que tal me pagar um café no

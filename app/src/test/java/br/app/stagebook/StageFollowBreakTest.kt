@@ -167,18 +167,6 @@ class StageFollowBreakTest {
         assertEquals(0, asked)
     }
 
-    @Test fun `the pedal still opens the setlist over the leader's break, and a song tapped there opens nothing`() {
-        rest = FollowBreak(System.currentTimeMillis(), "Segunda", "G")
-        val three = listOf(long.copy(id = "a", title = "Um"), long.copy(id = "b", title = "Dois"), long.copy(id = "c", title = "Tres"))
-        showLong(three, start = 1, setlist = br.app.stagebook.ui.stage.StageSetlist("Show de sábado"))
-        press(KeyEvent.KEYCODE_D)
-        compose.onNodeWithTag("stage_setlist").assertIsDisplayed()
-        compose.onNode(androidx.compose.ui.test.hasText("Tres") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("stage_setlist"))).performClick()
-        compose.waitForIdle()
-        assertEquals(emptyList<Pair<Int, Int>>(), moves)
-        assertEquals(1 to 1, index to page)
-    }
-
     @Test fun `when the leader leaves the break the pedal turns the page again`() {
         rest = FollowBreak(System.currentTimeMillis(), "Segunda", "G")
         showLong()

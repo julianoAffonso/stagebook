@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -36,14 +37,14 @@ class DeezerBpm @Inject constructor() {
     /** The BPM within [ms] at most (a stuck network doesn't hold up the import); null with no answer or no data. */
     suspend fun lookupWithin(title: String, artist: String, ms: Long): Int? {
         if (title.isBlank()) return null
-        val job = io.async { lookup(title, artist) }
+        val job = io.async { lookup(title, artist) { isActive } }
         return try { withTimeoutOrNull(ms) { job.await() } } finally { job.cancel() }
     }
 
-    private fun lookup(title: String, artist: String): Int? {
+    private fun lookup(title: String, artist: String, alive: () -> Boolean): Int? {
         val q = URLEncoder.encode("$title $artist".trim(), "UTF-8")
-        val id = get("${endpoint}search?q=$q&limit=5")?.let { pickTrack(it, title, artist) } ?: return null
-        return get("${endpoint}track/$id")?.let(::bpmOf)
+        val id = get("${endpoint}search?q=$q&limit=5", alive)?.let { pickTrack(it, title, artist) } ?: return null
+        return get("${endpoint}track/$id", alive)?.let(::bpmOf)
     }
 
     /** The search track that is the song (same title; with an artist, it breaks the tie); null if none matches. */
@@ -63,12 +64,31 @@ class DeezerBpm @Inject constructor() {
 
     private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.content.orEmpty()
 
-    private fun get(url: String): String? = runCatching {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = TIMEOUT_MS
-        c.readTimeout = TIMEOUT_MS
-        try { if (c.responseCode == 200) c.inputStream.bufferedReader().readText() else null } finally { c.disconnect() }
-    }.getOrNull()
+    /** The answer, trying again after a pause when the server was busy (429, 503, "quota" in a 200) or the connection broke. */
+    private fun get(url: String, alive: () -> Boolean): String? {
+        for (attempt in 0 until ATTEMPTS) {
+            // whoever asked gave up (cancel does not interrupt a blocked thread): no more tries, no sleeping for nobody
+            if (!alive()) return null
+            if (attempt > 0) Thread.sleep(pauseMs * attempt)
+            val r = runCatching {
+                val c = URL(url).openConnection() as HttpURLConnection
+                c.connectTimeout = TIMEOUT_MS
+                c.readTimeout = TIMEOUT_MS
+                try {
+                    when (c.responseCode) {
+                        200 -> c.inputStream.bufferedReader().readText().let { if (it.contains("\"Quota limit exceeded\"")) Busy else it }
+                        429, 503 -> Busy
+                        else -> null
+                    }
+                } finally { c.disconnect() }
+            }.getOrElse { if (it is java.io.IOException) Busy else null }
+            if (r !== Busy) return r as String?
+        }
+        return null
+    }
 
-    private companion object { const val TIMEOUT_MS = 6_000 }
+    private object Busy
+    internal var pauseMs = 700L   // the tests shorten it
+
+    private companion object { const val TIMEOUT_MS = 6_000; const val ATTEMPTS = 3 }
 }

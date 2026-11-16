@@ -55,48 +55,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * The break's line in the stage's setlist panel says "INTERVALO · mm:ss" (running, or stopped with the pause icon), and the
- * setlist's screen of a device that follows the band says the leader's time, until the leader's break ends (device test
- * v0.1.1123: no time in the panel, and "INTERVALO · 18:43" five minutes into the next song on the follower).
- */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "pt-rBR-w1280dp-h800dp-land-hdpi", application = android.app.Application::class)
-class BreakTimeInPanelTest {
-    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-
-    private val songs = listOf("Primeira", "Segunda", "Terceira").map { StageSong(it, "", "Uma linha", false, id = it, artist = "x") }
-    private val inPanel = hasAnyAncestor(hasTestTag("stage_setlist"))
-
-    private fun show(open: Map<Int, BreakTimer.Timer>) {
-        val setlist = StageSetlist("Show", listOf(State.NOW, State.NEXT, State.NONE), listOf("G", "G", "G").map { br.app.stagebook.ui.stage.StageRowFacts(it) }, open)
-        compose.setContent {
-            StagebookTheme { StageScreen(StageUiState(loading = false, songs = songs, live = true, breaks = listOf(2), setlist = setlist), 0, 0, { _, _ -> }, onBack = {}) }
-        }
-        compose.waitForIdle()
-        compose.onNodeWithContentDescription("Abrir o setlist").performClick()
-        compose.waitForIdle()
-    }
-
-    @Test fun `an open break says its time in the panel, stopped with the pause icon`() {
-        show(mapOf(2 to BreakTimer.Timer("d", 0L, 750_000L, open = true)))
-        compose.onNode(hasText("INTERVALO · 12:30") and inPanel).assertExists()
-        compose.onNode(hasText("Pausado") or androidx.compose.ui.test.hasContentDescription("Pausado")).assertExists()
-    }
-
-    @Test fun `a running one counts in the panel`() {
-        show(mapOf(2 to BreakTimer.Timer("d", System.currentTimeMillis() - 65_000, 0L, open = true)))
-        compose.onNode(hasText("INTERVALO · 01:0", substring = true) and inPanel).assertExists()
-        compose.onAllNodesWithContentDescription("Pausado").assertCountEquals(0)
-    }
-
-    @Test fun `with no open break the panel says just the word`() {
-        show(emptyMap())
-        compose.onNode(hasText("INTERVALO") and inPanel).assertExists()
-        compose.onNode(hasText("INTERVALO ·", substring = true) and inPanel).assertDoesNotExist()
-    }
-}
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)

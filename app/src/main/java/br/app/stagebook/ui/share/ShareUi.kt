@@ -49,72 +49,94 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.R
 import br.app.stagebook.domain.ShareCode
-import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
-import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.Spacing
 
 // Share (setlist or loose songs): the sheet with the ways to send and the internet code dialog.
 
+/** The ways to bring songs in, as menu items: sync with the band, what the band sent, the sites, the QR and the 3 words. */
+@Composable
+internal fun ImportMenuItems(
+    online: Boolean, onScan: () -> Unit, onSites: (() -> Unit)?, received: Int, onReceived: () -> Unit, onSync: (() -> Unit)?,
+    internetOn: Boolean, localNet: Boolean, close: () -> Unit, onType: () -> Unit,
+) {
+    onSync?.let { sync ->
+        DropdownMenuItem(
+            text = { Text(stringResource(if (localNet) R.string.import_sync_band else R.string.import_sync_band_offline)) },
+            onClick = { close(); sync() },
+            leadingIcon = { Icon(if (localNet) AppIcons.Sync else AppIcons.CloudOff, null) },
+            enabled = localNet,
+        )
+    }
+    if (received > 0) {
+        DropdownMenuItem(
+            text = { Text(pluralStringResource(R.plurals.import_received, received, received)) },
+            onClick = { close(); onReceived() },
+            leadingIcon = { Icon(AppIcons.Group, null) },
+        )
+    }
+    onSites?.let { sites ->
+        DropdownMenuItem(
+            text = { Text(stringResource(if (online) R.string.import_from_sites else R.string.import_from_sites_offline)) },
+            onClick = { close(); sites() },
+            leadingIcon = { Icon(if (online) AppIcons.Public else AppIcons.CloudOff, null) },
+            enabled = online,
+        )
+    }
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.sets_scan)) },
+        onClick = { close(); onScan() },
+        leadingIcon = { Icon(AppIcons.QrCode, null) },
+    )
+    if (internetOn) DropdownMenuItem(
+        text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
+        onClick = { close(); onType() },
+        leadingIcon = { Icon(AppIcons.Edit, null) },
+        enabled = online,
+    )
+}
+
 /**
- * Import (on the Songs and Setlists tabs), a single button with a menu: from the sites ([onSites], only on the Songs
- * tab and only with internet), scan the QR (always) or type the code (only with internet). Whatever arrives by QR or
+ * The + at the bottom of the library drawer (SongbookPro's): one menu with what brings something new in. [onNew], when
+ * given, is the first item (a new song); the rest are the import ways ([ImportMenuItems]). Whatever arrives by QR or
  * code (setlist or loose songs) opens the right review, whatever the tab.
  */
 @Composable
-fun ImportButton(
+fun AddMenuButton(
     online: Boolean,
     onScan: () -> Unit,
     onCode: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onNew: (() -> Unit)? = null,
+    @androidx.annotation.StringRes newLabel: Int = R.string.songs_new,   // what [onNew] makes: a song, or a setlist
+    onPdfs: (() -> Unit)? = null,   // "Import PDFs": songs from PDF files (only in the song list)
+    onPdfSites: (() -> Unit)? = null,   // "PDFs from sites": the browser on the score sites
     onSites: (() -> Unit)? = null,
-    received: Int = 0,               // what the band sent and hasn't been reviewed
+    received: Int = 0,
     onReceived: () -> Unit = {},
-    onSync: (() -> Unit)? = null,    // "Sync with the band" (only with a band member)
-    internetOn: Boolean = true,      // essential mode (T19): no "Type the 3 words"
-    localNet: Boolean = true,        // no Wi-Fi: the band can't be reached, "Sync with the band" says so (B-26)
+    onSync: (() -> Unit)? = null,
+    internetOn: Boolean = true,
+    localNet: Boolean = true,
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     var typing by rememberSaveable { mutableStateOf(false) }
     Box(modifier) {
-        ActionButton(stringResource(R.string.import_menu), onClick = { open = true }, modifier = Modifier.fillMaxWidth(), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+        androidx.compose.material3.IconButton(onClick = { open = true }) {
+            Icon(AppIcons.Add, stringResource(R.string.add_menu))
+        }
         br.app.stagebook.ui.components.FollowBusyWhile(open)
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = AppMenu.color, shadowElevation = AppMenu.shadow, border = AppMenu.border) {
-            onSync?.let { sync ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(if (localNet) R.string.import_sync_band else R.string.import_sync_band_offline)) },
-                    onClick = { open = false; sync() },
-                    leadingIcon = { Icon(if (localNet) AppIcons.Sync else AppIcons.CloudOff, null) },
-                    enabled = localNet,
-                )
+            onNew?.let { new ->
+                DropdownMenuItem(text = { Text(stringResource(newLabel)) }, onClick = { open = false; new() }, leadingIcon = { Icon(AppIcons.Add, null) })
             }
-            if (received > 0) {
-                DropdownMenuItem(
-                    text = { Text(pluralStringResource(R.plurals.import_received, received, received)) },
-                    onClick = { open = false; onReceived() },
-                    leadingIcon = { Icon(AppIcons.Group, null) },
-                )
+            onPdfs?.let { pdfs ->
+                DropdownMenuItem(text = { Text(stringResource(R.string.import_pdfs)) }, onClick = { open = false; pdfs() }, leadingIcon = { Icon(AppIcons.Document, null) })
             }
-            onSites?.let { sites ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(if (online) R.string.import_from_sites else R.string.import_from_sites_offline)) },
-                    onClick = { open = false; sites() },
-                    leadingIcon = { Icon(if (online) AppIcons.Public else AppIcons.CloudOff, null) },
-                    enabled = online,
-                )
+            onPdfSites?.let { sites ->
+                DropdownMenuItem(text = { Text(stringResource(R.string.import_pdf_sites)) }, onClick = { open = false; sites() }, leadingIcon = { Icon(AppIcons.Download, null) })
             }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.sets_scan)) },
-                onClick = { open = false; onScan() },
-                leadingIcon = { Icon(AppIcons.QrCode, null) },
-            )
-            if (internetOn) DropdownMenuItem(
-                text = { Text(stringResource(if (online) R.string.sets_type_code else R.string.sets_type_code_offline)) },
-                onClick = { open = false; typing = true },
-                leadingIcon = { Icon(AppIcons.Edit, null) },
-                enabled = online,
-            )
+            ImportMenuItems(online, onScan, onSites, received, onReceived, onSync, internetOn, localNet, close = { open = false }, onType = { typing = true })
         }
     }
     if (typing) {
@@ -231,7 +253,7 @@ fun ShareSheet(
  * one list) and [songs] songs that can go along; [setlists] true offers sending only the titles.
  */
 @Immutable
-data class ShareLimits(val lists: Int = 1, val songs: Int = 0, val setlists: Boolean = false)
+data class ShareLimits(val lists: Int = 1, val songs: Int = 0, val setlists: Boolean = false, val pdfSizes: List<Long> = emptyList())
 
 /**
  * The sheet's content (separate for the preview and screenshots). [band]: how many band members are on the network now.
@@ -251,14 +273,27 @@ fun ShareOptions(
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
     val bandOk = br.app.stagebook.domain.BandContent.bandFits(limits.lists)
-    val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, if (withSongs) limits.songs else 0)
+    val songsGoing = if (withSongs) limits.songs else 0
+    val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing)
+    // the songs' PDFs go over the internet only when they fit the messages left; otherwise the songs go without and the
+    // hint says why, with the numbers
+    val pdfSizes = if (withSongs) limits.pdfSizes else emptyList()
+    val pdfFits = pdfSizes.isNotEmpty() && br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing, pdfSizes)
+    val pdfLeftOut = pdfSizes.isNotEmpty() && !pdfFits && internetOk
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
         // band on the network: arrives by itself for band members on this Wi-Fi (no words, no QR)
         if (band > 0) {
             ShareOption(
                 AppIcons.Group, pluralStringResource(R.plurals.share_band, band, band),
-                if (bandOk) stringResource(R.string.share_band_hint) else stringResource(R.string.share_band_limit),
+                if (!bandOk) stringResource(R.string.share_band_limit)
+                // the PDFs go to who is on this network; a band member far away gets the song through the internet without it
+                else if (pdfSizes.sum() > br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES) stringResource(R.string.share_band_hint) + " " + stringResource(
+                    R.string.share_band_pdf_budget,
+                    ((pdfSizes.sum() + MEGABYTE - 1) / MEGABYTE).toInt(), (br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES / MEGABYTE).toInt(),
+                ) + " " + stringResource(R.string.share_band_pdf_note)
+                else if (pdfSizes.isNotEmpty()) stringResource(R.string.share_band_hint) + " " + stringResource(R.string.share_band_pdf_note)
+                else stringResource(R.string.share_band_hint),
                 enabled = bandOk,
             ) { onBand(withSongs) }
         }
@@ -268,7 +303,9 @@ fun ShareOptions(
         else if (online) {
             ShareOption(
                 AppIcons.Public, stringResource(R.string.share_internet),
-                if (internetOk) stringResource(R.string.share_internet_hint)
+                if (pdfLeftOut) pdfLimitText(limits.lists, songsGoing, pdfSizes)
+                else if (internetOk && pdfFits) stringResource(R.string.share_internet_pdf_fits, br.app.stagebook.domain.BandContent.internetMessages(limits.lists, songsGoing, pdfSizes), br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES)
+                else if (internetOk) stringResource(R.string.share_internet_hint)
                 else stringResource(if (limits.setlists && withSongs) R.string.share_internet_limit_titles else R.string.share_internet_limit),
                 enabled = internetOk,
             ) { onInternet(withSongs) }
@@ -287,6 +324,17 @@ fun ShareOptions(
         }
     }
 }
+
+private const val MEGABYTE = 1024L * 1024
+
+/** Why the PDFs don't go over the internet, in numbers: what they need, what the server takes, what is left after the songs. */
+@Composable
+internal fun pdfLimitText(lists: Int, songs: Int, pdfSizes: List<Long>): String = stringResource(
+    R.string.share_internet_pdf_limit,
+    br.app.stagebook.domain.BandContent.internetPdfMessages(pdfSizes),
+    br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES,
+    br.app.stagebook.domain.BandContent.internetMessagesFree(lists, songs),
+)
 
 @Composable
 private fun ShareOption(icon: ImageVector, title: String, hint: String, enabled: Boolean = true, onClick: () -> Unit) {

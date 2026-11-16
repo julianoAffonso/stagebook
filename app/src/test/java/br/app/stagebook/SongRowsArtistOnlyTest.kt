@@ -86,7 +86,7 @@ class SongRowsArtistOnlyTest {
         val show = SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         return Parts(
             repo, ids, set,
-            SongsViewModel(repo, connectivity, cloud, link, trust, internet),
+            SongsViewModel(repo, connectivity, cloud, link, trust, internet, br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector())),
             SetlistDetailViewModel(repo, SavedStateHandle(mapOf("setId" to set)), cloud, connectivity, link, trust, internet, BandConduct(link, repo, identity), show),
         )
     }
@@ -171,23 +171,5 @@ class SongRowsArtistOnlyTest {
         compose.onNodeWithText("Trio Imaginário", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("120 bpm").assertIsDisplayed()
         noYear()
-    }
-
-    @Test fun `on stage the header keeps artist and year, and the setlist's panel draws the artist alone`() {
-        val (_, state) = built({ p ->
-            testStage(context, p.repo, SavedStateHandle(mapOf("setId" to p.set, "start" to 0))).uiState.first { !it.loading && it.songs.size == 3 }
-        })
-        assertEquals(listOf("Banda Fictícia · 1985", "Trio Imaginário · 1999", "2003"), state.songs.map { it.meta })
-        assertEquals(listOf("Banda Fictícia", "Trio Imaginário", ""), state.songs.map { it.artist })
-        compose.setContent { StagebookTheme { StageScreen(state, 0, 0, { _, _ -> }, onBack = {}) } }
-        compose.onNodeWithText("Banda Fictícia · 1985").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Abrir o setlist").performClick()
-        compose.waitForIdle()
-        val inPanel = hasAnyAncestor(hasTestTag("stage_setlist"))
-        compose.onNode(hasText("Banda Fictícia") and inPanel, useUnmergedTree = true).assertIsDisplayed()
-        compose.onNode(hasText("Trio Imaginário") and inPanel, useUnmergedTree = true).assertIsDisplayed()
-        listOf("1985", "1999", "2003").forEach { compose.onAllNodes(hasText(it, substring = true) and inPanel, useUnmergedTree = true).assertCountEquals(0) }
-        // the header under the panel still says the year
-        compose.onNodeWithText("Banda Fictícia · 1985").assertExists()
     }
 }

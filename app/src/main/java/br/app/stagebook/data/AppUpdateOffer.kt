@@ -53,7 +53,7 @@ class AppUpdateOffer @Inject constructor(
             val p = updater.published(background) ?: return@launch   // no internet: next launch
             if (p.versionCode <= updater.installedCode) return@launch
             if (order.declinedToday(p.versionCode) || order.closedNow(p.versionCode)) return@launch
-            stage.onStage.first { !it }   // on stage: wait until leaving
+            stage.playing.first { !it }   // the show is on screen: waits for the menu, Settings or any other screen
             code = p.versionCode
             _offer.value = UpdateOffer.Available(p.versionName, p.notesSince(updater.installedCode))
         }

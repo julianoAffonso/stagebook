@@ -63,7 +63,9 @@ class ImportViewModel @Inject constructor(
     // what is being imported: what the automatic profile asked for, otherwise the profile's own kind
     private val kind: SiteKind get() = SiteKind.entries.firstOrNull { it.name == route.kind } ?: look.siteKind
     val home: String get() = look.sites(kind).firstOrNull()?.url ?: HOME
-    fun urlFor(q: String): String = urlFor(q, if (kind == SiteKind.CHORDS) "cifra" else "letra")
+    /** Browsing for PDF scores: a tapped PDF becomes a song, and there is no "import this page". */
+    val pdfMode: Boolean get() = kind == SiteKind.PDF
+    fun urlFor(q: String): String = urlFor(q, when (kind) { SiteKind.CHORDS -> "cifra"; SiteKind.PDF -> "partitura pdf"; SiteKind.LYRICS -> "letra" })
 
     private val _uiState = MutableStateFlow(ImportUiState())
     val uiState: StateFlow<ImportUiState> = _uiState.asStateFlow()

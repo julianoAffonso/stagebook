@@ -10,11 +10,15 @@
     <string name="action_delete">Apagar</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Salvar</string>
-    <string name="action_stage">Palco</string>
 
     <!-- abas -->
     <string name="tab_songs">Músicas</string>
     <string name="tab_setlists">Setlists</string>
+    <string name="base_title">Escolha uma música</string>
+    <string name="base_text">Abra o menu para escolher uma música ou um setlist, ou para trazer novos.</string>
+    <string name="drawer_open">Abrir o menu</string>
+    <string name="drawer_pin">Manter o menu aberto</string>
+    <string name="drawer_unpin">Deixar o menu fechar</string>
     <string name="tab_settings">Ajustes</string>
 
     <plurals name="settings_pedal_reset">
@@ -40,9 +44,16 @@
     <string name="search_label">Buscar</string>
     <string name="search_hint">Música, artista</string>
     <string name="songs_search">Buscar música ou artista</string>
+    <string name="song_is_pdf">PDF</string>
+    <string name="stage_pdf_unreadable">Não consigo abrir este PDF. Ele pode ter sido movido ou estar danificado: anexe de novo no editor da música.</string>
+    <string name="stage_pdf_page">Página %1$d de %2$d do PDF</string>
+    <string name="stage_pdf_marker_hint">Passe o dedo na página para marcar. Dois dedos ampliam.</string>
+    <string name="stage_pdf_undo">Desfazer</string>
+    <string name="stage_pdf_clear">Limpar página</string>
+    <string name="stage_pdf_invert">Inverter as cores do PDF</string>
     <string name="songs_new">Nova música</string>
     <string name="songs_empty_title">Nenhuma música ainda</string>
-    <string name="songs_empty_message">Crie uma, importe da internet ou traga a biblioteca em Ajustes.</string>
+    <string name="songs_empty_message">Toque em + embaixo para criar ou trazer músicas, ou traga a biblioteca em Ajustes.</string>
     <string name="songs_not_found">Nada encontrado</string>
     <string name="songs_delete_confirm">Apagar \"%1$s\"? Ela também sai dos setlists.</string>
 
@@ -84,6 +95,13 @@
     <string name="sets_delete_confirm">Apagar o setlist \"%1$s\"? As músicas continuam na biblioteca.</string>
     <string name="action_more">Mais opções</string>
     <string name="sets_rename">Renomear</string>
+    <string name="sets_play">Tocar</string>
+    <string name="sets_edit">Editar nome e data</string>
+    <string name="sets_edit_title">Editar setlist</string>
+    <string name="sets_date_label">Data do show</string>
+    <string name="sets_no_date">Sem data</string>
+    <string name="sets_date_pick">Escolher a data</string>
+    <string name="sets_date_clear">Tirar a data</string>
     <string name="sets_delete">Apagar o setlist</string>
     <string name="sets_add_songs">Músicas</string>
     <string name="sets_add_break">Intervalo</string>
@@ -93,7 +111,6 @@
     <string name="set_break_paused">Pausado</string>
     <string name="set_break_remove">Tirar o intervalo</string>
     <string name="set_edit">Editar setlist</string>
-    <string name="action_done">Pronto</string>
     <string name="action_undo">Desfazer</string>
     <string name="set_clear_played">Limpar tocadas</string>
     <string name="set_remove_song">Tirar deste setlist</string>
@@ -123,18 +140,17 @@
     <string name="qr_limit_batch">Essas músicas não cabem juntas neste setlist (o QR tem limite). Escolha menos músicas ou crie outro setlist.</string>
     <string name="qr_limit_name">Esse nome é grande demais para este setlist. Use um mais curto.</string>
     <string name="set_empty_title">Setlist vazio</string>
-    <string name="set_empty_message">Toque em \"Músicas\" para escolher o que entra no setlist.</string>
+    <string name="set_empty_message">Toque no + para escolher o que entra no setlist.</string>
     <string name="set_item_missing">(música removida)</string>
     <string name="set_reorder">Arrastar para mudar a ordem</string>
 
     <!-- escolher músicas -->
     <string name="pick_title">Músicas</string>
-    <string name="pick_in_set">No setlist</string>
     <string name="pick_add_short">Adicionar (%1$d)</string>
 
     <!-- QR -->
     <string name="qr_description">QR code do setlist</string>
-    <string name="qr_hint">Quem recebe toca em Importar → Ler QR. O app avisa se faltar alguma música.</string>
+    <string name="qr_hint">Quem recebe toca no + → Ler QR. O app avisa se faltar alguma música.</string>
     <plurals name="qr_count">
         <item quantity="one">%d música no QR</item>
         <item quantity="many">%d músicas no QR</item>
@@ -159,8 +175,6 @@
     <string name="stage_exit">Sair</string>
     <string name="stage_position">%1$d de %2$d</string>
     <string name="stage_next">Próxima: %1$s</string>
-    <string name="stage_setlist_open">Abrir o setlist</string>
-    <string name="stage_setlist_close">Fechar o setlist</string>
     <string name="stage_end">Fim do setlist</string>
     <string name="stage_edit">Editar a letra nesta página</string>
     <string name="stage_edit_line">Editar esta linha</string>
@@ -287,8 +301,6 @@
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
     <string name="essential_extras">Metrônomo e extras dos acordes</string>
     <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing e MIDI das músicas</string>
-    <string name="essential_on_short">Ligado</string>
-    <string name="essential_off_short">Desligado</string>
     <string name="essential_banner">Modo essencial ligado</string>
     <string name="essential_alert_title">Modo essencial ligado</string>
     <string name="essential_alert_text">Ficam a letra, a cifra, os diagramas dos acordes e o pedal. O que está desligado:</string>
@@ -384,8 +396,6 @@
     <string name="backup_restore_failed">Não deu para restaurar o backup</string>
     <string name="backup_restored">Backup restaurado</string>
     <string name="backup_band_again">Este aparelho é novo para a banda. Autorize a banda de novo em Ajustes → Banda e computador.</string>
-    <string name="editor_data_label">Dados da música</string>
-    <string name="editor_data_untitled">Música sem título</string>
     <string name="editor_data_capo">capo %1$d</string>
     <string name="editor_tempo">BPM</string>
     <string name="editor_tempo_range">%1$d–%2$d</string>
@@ -476,7 +486,6 @@
     <string name="import_kind_title">O que você quer importar?</string>
     <string name="import_kind_lyrics">Letra</string>
     <string name="import_kind_chords">Cifra</string>
-    <string name="settings_import_sites">Sites de importação</string>
     <string name="settings_chords_show_help">Letra e cifra: os acordes aparecem em cima da letra. Só letra: o palco mostra só a letra, mesmo nas músicas com cifra. Automático: como letra e cifra, e o importador pergunta se a música entra como letra ou cifra.</string>
     <string name="settings_chords_size">Tamanho dos acordes: %1$d%% da letra</string>
     <string name="settings_chords_color">Cor dos acordes</string>
@@ -514,13 +523,11 @@
         <item quantity="many">%d músicas ajustadas.</item>
         <item quantity="other">%d músicas ajustadas.</item>
     </plurals>
-    <string name="settings_screen">Tela</string>
     <string name="settings_keep_screen_on">Manter a tela ligada com o app aberto</string>
     <string name="settings_keep_screen_on_help">Para o show. O tablet não apaga enquanto o Stagebook estiver na frente. Fora do app, apaga normalmente. O palco fica sempre aceso.</string>
     <string name="settings_stage_dnd">Não perturbe no palco</string>
     <string name="settings_stage_dnd_detail">Contatos favoritos ainda podem ligar</string>
     <string name="settings_stage_dnd_missing">O Android ainda não autorizou</string>
-    <string name="settings_stage_dnd_help">Com o palco aberto, as notificações não aparecem e o telefone não toca. Contatos favoritos e quem ligar duas vezes seguidas ainda passam. Ao sair do palco, tudo volta como estava. O Android pede autorização uma vez.</string>
     <string name="stage_dnd_ask">Para nenhuma notificação atrapalhar a música, o Stagebook pode ligar o Não perturbe com o palco aberto. O Android vai abrir uma lista. Ligue o Stagebook nela.</string>
     <string name="stage_clock_time">Hora</string>
     <string name="stage_clock_elapsed">Tempo de show</string>
@@ -533,9 +540,6 @@
     <string name="stage_dnd_allow">Autorizar</string>
     <string name="stage_dnd_later">Agora não</string>
     <string name="settings_pedal">Pedal e MIDI</string>
-    <string name="settings_pedal_none_short">Nenhum pedal reconhecido ainda</string>
-    <string name="settings_pedal_connected_short">conectado</string>
-    <string name="settings_pedal_disconnected_short">desconectado</string>
     <string name="settings_font_help">Vale para todas as músicas. No palco, a pinça muda só a música aberta.</string>
     <string name="settings_columns">Dividir em colunas</string>
     <string name="settings_stage_mode">Como avançar na tela</string>
@@ -543,13 +547,14 @@
     <string name="settings_stage_mode_scroll">Rolar</string>
     <string name="settings_stage_mode_help">Virar página mostra uma página por vez, em uma ou duas colunas. Rolar mostra a letra numa coluna só, e cada toque ou pedal leva até a primeira linha que não cabia. Essa linha acende por um instante.</string>
     <string name="settings_columns_auto">Automático</string>
-    <string name="settings_columns_one_short">1 coluna</string>
-    <string name="settings_columns_two_short">2 colunas</string>
     <string name="settings_columns_never">Nunca</string>
     <string name="settings_columns_always">Sempre</string>
     <string name="stage_zoom_auto">Automático</string>
     <string name="settings_columns_help">Automático decide para cada música: divide em 2 colunas quando a letra não cabe numa página e as frases são curtas ou, deitado, quando dá menos páginas. O pedal vira as duas colunas juntas.</string>
     <string name="settings_bold_short">negrito</string>
+    <string name="settings_pdf_card">PDF</string>
+    <string name="settings_pdf_invert">Inverter as cores do PDF</string>
+    <string name="settings_pdf_invert_help">Vira o branco do papel em preto numa música em PDF, para um palco escuro. Vale para todas; para uma música só, use o interruptor do cartão do PDF, no editor.</string>
     <string name="settings_sections_look">Títulos de seção</string>
     <string name="settings_normalize_card">Refrão e versos</string>
     <string name="settings_normalize_help">Nas músicas sem títulos de parte, o app acha o refrão (a estrofe que se repete) e os versos e põe os títulos. A letra não muda, e os títulos que já existem ficam como estão.</string>
@@ -653,7 +658,7 @@
     <!-- mixer do player (Ajustes → Player) -->
     <string name="mixer_title">Mixer</string>
     <string name="mixer_monitor">Ver os níveis ao vivo</string>
-    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui, até o número da faixa com mais canais já tocada. Toque no nome do canal para escolher a saída, igualar o volume, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
+    <string name="mixer_help">Vale para todos os backing tracks. Cada canal do arquivo vira um canal aqui, até o número da faixa com mais canais já tocada. Toque no nome do canal para renomear, e no ícone ao lado para escolher a saída, igualar o volume, EQ e mais. De fábrica, cada canal sai na saída de mesmo número. Sem interface USB, só existem as saídas 1 (esquerda) e 2 (direita) do aparelho.</string>
     <string name="mixer_channel">Canal %1$d</string>
     <string name="mixer_pair" tools:ignore="PluralsCandidate">Canais %1$d e %2$d</string>
     <string name="mixer_name">Nome</string>
@@ -697,6 +702,16 @@
     <!-- ler o QR de um setlist (de outro aparelho) -->
     <string name="sets_scan">Ler QR</string>
     <string name="import_menu">Importar</string>
+    <string name="import_pdfs">Importar PDFs</string>
+    <plurals name="pdf_imported">
+        <item quantity="one">%d música em PDF adicionada.</item>
+        <item quantity="many">%d músicas em PDF adicionadas.</item>
+        <item quantity="other">%d músicas em PDF adicionadas.</item>
+    </plurals>
+    <string name="pdf_import_refused">%1$s: %2$s</string>
+    <string name="add_menu">Nova e importar</string>
+    <string name="select_mode">Selecionar músicas</string>
+    <string name="select_sets">Selecionar setlists</string>
     <string name="import_sync_band">Sincronizar com a banda</string>
     <string name="import_sync_band_offline">Sincronizar com a banda (sem Wi-Fi)</string>
     <string name="import_syncing">Procurando novidades da banda…</string>
@@ -866,15 +881,15 @@
         <item quantity="many">%1$d músicas grandes demais não foram.</item>
         <item quantity="other">%1$d músicas grandes demais não foram.</item>
     </plurals>
-    <string name="share_sent_hint">No outro aparelho, vá em Importar → Digitar as 3 palavras. Valem por 12 horas.</string>
+    <string name="share_sent_hint">No outro aparelho, toque no + e em Digitar as 3 palavras. Valem por 12 horas.</string>
     <string name="share_send_code">Mandar por mensagem</string>
-    <string name="share_message_songs">Músicas no Stagebook. Toque em %1$s para receber. Ou vá em Importar → Digitar as 3 palavras e digite %2$s. Vale por 12 horas.</string>
+    <string name="share_message_songs">Músicas no Stagebook. Toque em %1$s para receber. Ou toque no + e em Digitar as 3 palavras e digite %2$s. Vale por 12 horas.</string>
     <string name="share_joined">%1$s aceitou e agora é da banda</string>
-    <string name="share_qr_or">Se preferir, leia este QR em Importar → Ler QR.</string>
+    <string name="share_qr_or">Se preferir, leia este QR no + → Ler QR.</string>
     <string name="share_copy">Copiar as palavras</string>
     <string name="share_copied">Palavras copiadas</string>
-    <string name="share_code_qr">QR das palavras. Tire uma foto ou leia em Importar → Ler QR.</string>
-    <string name="share_message">Setlist \"%1$s\" no Stagebook. Toque em %2$s para receber. Ou vá em Importar → Digitar as 3 palavras e digite %3$s. Vale por 12 horas.</string>
+    <string name="share_code_qr">QR das palavras. Tire uma foto ou leia no + → Ler QR.</string>
+    <string name="share_message">Setlist \"%1$s\" no Stagebook. Toque em %2$s para receber. Ou toque no + e em Digitar as 3 palavras e digite %3$s. Vale por 12 horas.</string>
     <!-- seleção na aba Músicas (compartilhar várias) -->
     <string name="songs_select_cancel">Sair da seleção</string>
     <!-- banda na rede local (Ajustes → Banda e computador e o pedido de entrada) -->
@@ -918,6 +933,25 @@
     <string name="band_deny">Não autorizar</string>
     <!-- caixa de entrada: o que a banda mandou -->
     <string name="inbox_setlist">%1$s enviou o setlist \"%2$s\"</string>
+    <string name="editor_pdf_label">PDF</string>
+    <string name="editor_pdf_empty">Nenhum. Toque para anexar</string>
+    <string name="editor_pdf_attach">Anexar PDF</string>
+    <string name="editor_pdf_replace">Trocar PDF</string>
+    <string name="editor_pdf_remove">Remover PDF</string>
+    <string name="editor_pdf_missing">O PDF não está neste aparelho. Anexe de novo.</string>
+    <string name="editor_pdf_note">Esta música é um PDF. Não dá para editar o PDF; no palco você pode marcá-lo com o marca-texto.</string>
+    <string name="editor_pdf_ask_lyrics">Esta música já tem letra. Ela fica guardada e volta se você remover o PDF.</string>
+    <string name="editor_pdf_remove_confirm">Remover o PDF desta música? O arquivo é apagado deste aparelho e a letra volta.</string>
+    <plurals name="editor_pdf_facts">
+        <item quantity="one">%1$d página · %2$s</item>
+        <item quantity="many">%1$d páginas · %2$s</item>
+        <item quantity="other">%1$d páginas · %2$s</item>
+    </plurals>
+    <plurals name="inbox_pdf_refused">
+        <item quantity="one">\"%1$s\" chegou sem o PDF. %3$s</item>
+        <item quantity="many">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>
+        <item quantity="other">%2$d músicas chegaram sem o PDF. Em \"%1$s\": %3$s</item>
+    </plurals>
     <plurals name="inbox_songs">
         <item quantity="one">%1$s enviou %2$d música</item>
         <item quantity="many">%1$s enviou %2$d músicas</item>
@@ -934,7 +968,6 @@
     </plurals>
     <string name="scan_from">Enviado por %1$s</string>
     <!-- editor on the computer (T37); the web_ texts are the page's -->
-    <string name="settings_web_editor">Editar no computador</string>
     <string name="settings_web_editor_card">No navegador</string>
     <string name="settings_web_editor_switch">Ligar o editor</string>
     <string name="settings_web_editor_help">Edite músicas e setlists no navegador do computador, no mesmo Wi-Fi. Começa desligado toda vez que o app abre e desliga sozinho depois de 5 minutos sem uso no computador, ou ao fechar o app.</string>
@@ -944,8 +977,6 @@
     <string name="settings_web_editor_devices">Computadores autorizados</string>
     <string name="settings_web_editor_none">Nenhum ainda. Na primeira vez, o Stagebook pergunta antes de deixar o computador entrar.</string>
     <string name="settings_web_editor_remove">Tirar %1$s</string>
-    <string name="settings_web_editor_on_short">Ligado</string>
-    <string name="settings_web_editor_off_short">Desligado</string>
     <string name="web_request_title">%1$s quer editar</string>
     <string name="web_request_text">Um computador nesta rede quer abrir o editor. Autorize só se for seu. Na próxima vez não pergunta.</string>
     <string name="web_request_code">Endereço %1$s · código %2$s. Autorize só se o computador mostrar o mesmo código.</string>
@@ -954,7 +985,8 @@
     <string name="web_title">Editor do Stagebook</string>
     <string name="web_ask">Pedir para entrar</string>
     <string name="web_asking_code">No aparelho, confira o código %1$s e autorize.</string>
-    <string name="web_denied">Não autorizado. Peça de novo se foi engano.</string>
+    <string name="web_denied">Não autorizado. Se foi engano, peça de novo em 5 minutos.</string>
+    <string name="web_denied_wait">O pedido deste computador foi recusado no aparelho. Peça de novo em %1$s min.</string>
     <string name="web_busy">Muitos pedidos ao mesmo tempo. Tente de novo em um minuto.</string>
     <string name="web_connected">Conectado ao %1$s</string>
     <string name="web_saved">Salvo</string>
@@ -991,8 +1023,6 @@
     </plurals>
     <string name="web_offline">Não achei o Stagebook. O app está aberto, com o editor ligado?</string>
     <!-- Settings → Advanced (31/10) -->
-    <string name="settings_advanced">Avançado</string>
-    <string name="settings_advanced_short">Para tocar sem falhas</string>
     <string name="advanced_play">Para tocar sem falhas</string>
     <string name="advanced_play_help">Ajustes do Android que já derrubaram a interface de áudio ou pararam o app no palco. Vêm ligados; desligue um só se souber por quê. Alguns só existem em certos tablets e só aparecem neles.</string>
     <string name="advanced_rewrite">Com a permissão, estes ajustes valem para o aparelho inteiro, e o Stagebook grava de novo sempre que abre. Mude por aqui: o que você mudar nos ajustes do Android volta.</string>
@@ -1022,14 +1052,11 @@
     <string name="tweak_debugging_detail">Para testar pelo computador com o adb, sem abrir os ajustes do Android. Vem desligado.</string>
     <string name="stage_mixer_open">Abrir o mixer</string>
     <string name="stage_stop">Parar o backing track e voltar ao início</string>
-    <string name="settings_track_button">Botão da faixa no palco</string>
     <string name="settings_track_stops">Parar volta ao início</string>
     <string name="settings_track_stops_detail">Desligado, o botão pausa e a música continua de onde parou.</string>
     <string name="eq_no_channel">Nenhum canal passa pelo equalizador. No mixer, toque num canal e ligue \"Equalizador ligado\".</string>
     <string name="usb_record_why">Para o Android lembrar da interface USB e não pedir permissão toda vez que o cabo voltar, permita o acesso ao áudio. O Stagebook não grava nada: a entrada da interface só acerta o relógio.</string>
     <string name="usb_record_allow">Permitir</string>
-    <string name="player_title">Player</string>
-    <string name="player_on_alone">Ligado</string>
     <string name="metro_out">Saída do som</string>
     <string name="metro_out_device">Aparelho</string>
     <string name="metro_out_reading">Lendo as saídas da %s…</string>
@@ -1120,7 +1147,6 @@
         <item quantity="other">Tirar %d músicas deste setlist? Elas continuam na biblioteca.</item>
     </plurals>
     <string name="tags_auto_info">Marca, pelo idioma da letra, as músicas que ainda não têm Nacional nem Internacional: Nacional é o idioma do app. Depois dá para corrigir no editor de cada música ou selecionando várias na lista.</string>
-    <string name="editor_auto_meta_short">Em branco: o app completa</string>
     <string name="editor_track_empty">Nenhum</string>
     <string name="editor_track_unnamed">Áudio anexado</string>
     <string name="editor_track_missing">O áudio não está neste aparelho. Anexe de novo.</string>
@@ -1135,10 +1161,13 @@
         <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
     </plurals>
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
+    <string name="share_internet_pdf_limit">Os PDFs precisam de %1$d mensagens de 4 KB, e o servidor da internet aceita %2$d por envio (sobram %3$d depois das músicas). As músicas vão sem o PDF. Para enviá-lo, use a banda na mesma rede.</string>
+    <string name="share_band_pdf_budget">Os PDFs somam %1$d MB e um envio à banda leva até %2$d MB: os que não couberem vão sem o PDF.</string>
+    <string name="share_band_pdf_note">Os PDFs vão para quem está nesta rede; um membro da banda que está longe recebe os pequenos (até 60 KB no total) e a música sem os outros.</string>
+    <string name="share_internet_pdf_fits">Os PDFs vão junto: %1$d das %2$d mensagens que o servidor aceita.</string>
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
     <string name="share_band_limit">Muitos setlists de uma vez. Mande em mais de uma vez.</string>
     <string name="settings_lyrics_card">Letra</string>
-    <string name="settings_page_card">Página</string>
     <string name="metro_summary_shown">No palco</string>
     <string name="metro_summary_hidden">Escondido do palco</string>
     <string name="settings_font_lyrics">Fonte da letra</string>
@@ -1174,8 +1203,8 @@
     <string name="auto_blocker_hint">Se a instalação for bloqueada, desligue o Bloqueador automático da Samsung e volte.</string>
     <string name="editor_link_kept">Link guardado. Abre quando você sair da edição.</string>
     <string name="editor_file_kept">Arquivo guardado. Abre quando você sair da edição.</string>
-    <string name="stage_link_kept">Link guardado. Abre quando você sair do palco.</string>
-    <string name="stage_file_kept">Arquivo guardado. Abre quando você sair do palco.</string>
+    <string name="stage_link_kept">Link guardado. Abre quando você abrir o menu.</string>
+    <string name="stage_file_kept">Arquivo guardado. Abre quando você abrir o menu.</string>
     <string name="settings_metronome_test">Testar o metrônomo</string>
     <string name="settings_metronome_test_stop">Parar o teste</string>
     <string name="update_installing">Instalando a atualização. O app reinicia sozinho ao terminar.</string>
@@ -1209,6 +1238,7 @@
     <string name="kw_color">cor cores color colour colors</string>
     <string name="kw_background">fundo cor tela escura clara background dark light theme</string>
     <string name="kw_profile">perfil só letra com cifra automático acordes mostrar esconder profile lyrics only chords automatic show hide</string>
+    <string name="kw_pdf">pdf partitura papel inverter cores escuro sheet paper invert colors dark</string>
     <string name="kw_sections">seção seções título refrão verso ponte intro section sections title chorus verse bridge intro</string>
     <string name="kw_mode">virar página rolar rolagem paginar turn page scroll paging</string>
     <string name="kw_scroll">rolagem automática velocidade rolar sozinho autoscroll scroll speed automatic</string>
@@ -1272,4 +1302,52 @@
     <string name="search_in_help">na explicação</string>
     <string name="group_band_editor_on">Editor ligado</string>
     <string name="group_band_editor_off">Editor desligado</string>
+    <string name="pdf_refused_not_pdf">Este arquivo não é um PDF.</string>
+    <string name="pdf_refused_too_big">Este PDF é grande demais. O limite é %1$d MB.</string>
+    <string name="pdf_refused_password">Este PDF tem senha. Salve uma cópia sem senha e tente de novo.</string>
+    <string name="pdf_refused_too_many_pages">Este PDF tem páginas demais. O limite é %1$d.</string>
+    <string name="pdf_refused_unreadable">Não foi possível abrir este PDF. Ele pode estar danificado.</string>
+    <string name="set_discard">Descartar</string>
+    <string name="set_save_question">Salvar as alterações em “%1$s”?</string>
+    <string name="set_keep_editing">Continuar editando</string>
+    <string name="drawer_handle_move">Segure e arraste para mover a alça</string>
+    <string name="editor_pdf_preview">Primeira página do PDF</string>
+    <string name="editor_pdf_crop">Recortar</string>
+    <string name="pdf_crop_title">Recortar o PDF</string>
+    <string name="pdf_crop_hint">Arraste as bordas para ficar só com a parte que você toca. O arquivo não muda.</string>
+    <string name="pdf_crop_all">Todas as páginas</string>
+    <string name="pdf_crop_page">Só esta página</string>
+    <string name="pdf_crop_none">Sem recorte</string>
+    <string name="pdf_crop_previous">Página anterior</string>
+    <string name="pdf_crop_next">Próxima página</string>
+    <string name="set_duplicate">Duplicar</string>
+    <string name="set_copy_name">%1$s (cópia)</string>
+    <string name="set_duplicated">Setlist duplicado</string>
+    <string name="settings_menu_card">Menu lateral</string>
+    <string name="settings_handle_right">Alça à direita</string>
+    <string name="settings_handle_right_detail">A alça do menu no palco vai para a borda direita. Segure nela para subir ou descer.</string>
+    <string name="kw_handle">alça menu lateral direita esquerda canhoto handle menu side left right drawer</string>
+    <plurals name="drawer_requests">
+        <item quantity="one">%1$d pedido esperando resposta</item>
+        <item quantity="many">%1$d pedidos esperando resposta</item>
+        <item quantity="other">%1$d pedidos esperando resposta</item>
+    </plurals>
+    <string name="pick_ask_add">Adicionar as %1$d músicas marcadas a “%2$s”?</string>
+    <string name="pick_add_yes">Adicionar</string>
+    <string name="set_discard_external">O setlist também foi mudado de fora (pela banda ou pelo computador) enquanto você editava. Descartar desfaz essa mudança também.</string>
+    <string name="ask_kind_label">Qual cópia pedir</string>
+    <string name="ask_kind_lyrics">Só letra</string>
+    <string name="ask_kind_chords">Cifra</string>
+    <string name="ask_kind_pdf">PDF</string>
+    <string name="ask_kind_band">Igual à de quem conduz</string>
+    <string name="import_pdf_sites">PDFs de sites</string>
+    <string name="settings_pdf_sites">Sites de partituras em PDF</string>
+    <string name="pdf_site_hint">Abra uma partitura e toque no PDF. Ele entra como música.</string>
+    <string name="pdf_site_fetching">Buscando o PDF…</string>
+    <string name="pdf_site_too_big">Este PDF é grande demais para o app (no máximo 8 MB).</string>
+    <string name="pdf_site_failed">Não consegui pegar este PDF. Tente de novo, ou baixe e use Importar PDFs.</string>
+    <string name="import_kind_pdf">Partitura em PDF</string>
+    <string name="pdf_site_ask">Importar “%1$s” como música?</string>
+    <string name="pdf_site_ask_yes">Importar</string>
+    <string name="pdf_site_not_pdf">Este arquivo não é um PDF. Aqui só entram PDFs.</string>
 </resources>

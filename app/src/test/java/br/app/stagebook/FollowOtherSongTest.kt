@@ -46,7 +46,7 @@ class FollowOtherSongTest {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {
                     nav = rememberNavController()
-                    FollowToStage(nav, songs, following, gate, androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) })
+                    FollowToStage(nav, songs, following, gate)
                     NavHost(nav, startDestination = Home) {
                         composable<Home> { Text("home") }
                         composable<Stage> { Text("stage ${it.toRoute<Stage>().songId}") }

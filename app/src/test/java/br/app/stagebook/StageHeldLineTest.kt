@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -52,7 +53,7 @@ class StageHeldLineTest {
         // reference: hold and tap at once
         compose.onRoot().performTouchInput { longClick(center) }
         compose.waitForIdle()
-        compose.onNodeWithText("Editar esta linha").performClick()
+        compose.onNodeWithContentDescription("Editar esta linha").performClick()
         compose.waitForIdle()
         val expected = cursor
         // hold, then the text is laid out again (bigger letters: more pieces per line), then tap
@@ -60,7 +61,7 @@ class StageHeldLineTest {
         compose.waitForIdle()
         zoom = 1.8f
         compose.waitForIdle()
-        compose.onNodeWithText("Editar esta linha").performClick()
+        compose.onNodeWithContentDescription("Editar esta linha").performClick()
         compose.waitForIdle()
         assertNotEquals(-2, expected)
         assertEquals(expected, cursor)

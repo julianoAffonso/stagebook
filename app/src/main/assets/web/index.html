@@ -53,6 +53,18 @@
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   .row > div { flex: 1; min-width: 120px; }
   .grow { flex: 3 !important; }
+  /* the PDF card: the first page, the invert switch, and the crop window (the frame's handles sit outside the page, not cut by it) */
+  #pdf-preview { display: block; max-width: 100%; max-height: 320px; margin: 8px auto; border-radius: 8px; background: #fff; }
+  .switch { display: flex; align-items: center; gap: 12px; margin: 8px 0; cursor: pointer; }
+  .switch input { width: 20px; height: 20px; flex: none; }
+  dialog#crop-dialog { background: var(--surface); color: var(--text); border: 0; border-radius: 28px; padding: 24px; width: min(94vw, 760px); }
+  dialog#crop-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  #crop-wrap { position: relative; padding: 12px; touch-action: none; user-select: none; width: fit-content; max-width: 100%; margin: 8px auto; }
+  #crop-stage { position: relative; overflow: hidden; line-height: 0; }
+  #crop-img { display: block; max-width: 100%; max-height: 56vh; background: #fff; }
+  #crop-frame { position: absolute; border: 2px solid var(--accent); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55); }
+  #crop-handles { position: absolute; inset: 12px; pointer-events: none; }
+  #crop-handles i { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent); }
   .stepper { display: flex; align-items: center; gap: 4px; }
   .stepper b { min-width: 72px; text-align: center; font-weight: 600; }
   textarea { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; resize: vertical; line-height: 1.6; }
@@ -155,7 +167,37 @@
             <button class="outline" id="track-pick"></button><button class="text" id="track-remove"></button>
             <input id="track-file" type="file" accept=".ogg,.mp3,.wav,audio/*" hidden>
           </div>
-          <div><div class="row"><label for="f-text" data-t="lyrics" class="grow"></label><button class="outline" id="highlight" type="button"></button></div><textarea id="f-text" spellcheck="false"></textarea></div>
+          <!-- the song's PDF: only for a saved song (the file is named after it); a PDF song shows the card in place of the lyrics -->
+          <div class="track" id="pdf-row" hidden>
+            <span id="pdf-icon"></span><span data-t="pdfLabel"></span><span id="pdf-name" class="muted"></span>
+            <button class="outline" type="button" id="pdf-pick"></button><button class="text" type="button" id="pdf-remove"></button>
+            <input id="pdf-file" type="file" accept=".pdf,application/pdf" hidden>
+          </div>
+          <div class="card" id="pdf-card" hidden>
+            <div class="row"><span id="pdf-card-icon"></span><b id="pdf-card-name" class="grow"></b></div>
+            <div id="pdf-card-facts" class="muted"></div>
+            <img id="pdf-preview" alt="" hidden>
+            <p id="pdf-note"></p>
+            <label class="switch"><input type="checkbox" id="pdf-invert"><span data-t="pdfInvert"></span></label>
+            <button class="outline" type="button" id="pdf-crop"></button>
+          </div>
+          <dialog id="crop-dialog">
+            <h3 data-t="cropTitle"></h3>
+            <p class="muted" data-t="cropHint"></p>
+            <div id="crop-wrap">
+              <div id="crop-stage"><img id="crop-img" alt="" draggable="false"><div id="crop-frame"></div></div>
+              <div id="crop-handles"></div>
+            </div>
+            <div class="row" id="crop-pages" style="justify-content:center;align-items:center">
+              <button class="outline" type="button" id="crop-prev">‹</button><b id="crop-page-n"></b><button class="outline" type="button" id="crop-next">›</button>
+            </div>
+            <div class="row" id="crop-scope" style="margin:8px 0">
+              <label class="switch"><input type="radio" name="crop-scope" value="all" checked><span data-t="cropAll"></span></label>
+              <label class="switch"><input type="radio" name="crop-scope" value="page"><span data-t="cropPage"></span></label>
+            </div>
+            <div class="actions"><button class="text" type="button" id="crop-none"></button><span class="grow"></span><button class="text" type="button" id="crop-cancel"></button><button type="button" id="crop-save"></button></div>
+          </dialog>
+          <div id="lyrics-block"><div class="row"><label for="f-text" data-t="lyrics" class="grow"></label><button class="outline" id="highlight" type="button"></button></div><textarea id="f-text" spellcheck="false"></textarea></div>
           <div class="actions">
             <button class="text" id="delete"></button>
             <span id="status" class="muted"></span>
@@ -179,6 +221,7 @@
         <p id="set-pick" class="muted"></p>
         <div id="set-form" class="stack" hidden>
           <div><label for="set-name" data-t="setName"></label><input id="set-name"></div>
+          <div><label for="set-date" data-t="setDate"></label><input id="set-date" type="date"></div>
           <ol class="items" id="set-items"></ol>
           <p id="set-empty" class="muted" hidden></p>
           <div class="row" style="align-items: center"><button class="outline" id="set-break-add"></button><span id="set-break-hint" class="muted"></span></div>
@@ -304,7 +347,13 @@ async function ask() {
   say("gate-text", "");
   const r = await post("/api/ask", { name: computerName() });
   if (!r) return offline();
-  if (r.status === 429) { say("gate-text", t.busy); $("ask").disabled = false; return; }
+  if (r.status === 429) {
+    // just denied on the device: it says so, with how long this computer still waits
+    const why = await r.json().catch(() => null);
+    say("gate-text", why && why.denied ? fill(t.deniedWait, String(why.minutes)) : t.busy, why && why.denied ? "error" : undefined);
+    $("ask").disabled = false;
+    return;
+  }
   const { id, code } = await r.json();
   // the same code shows on the tablet: the musician allows only if they match
   say("gate-text", fill(t.askingCode, code));
@@ -448,6 +497,7 @@ function fillForm(song) {
   say("status", "");
   dirty = false;
   drawTrack();
+  drawPdf();
   drawKeyCapo();
   markOpen();
 }
@@ -455,6 +505,49 @@ function fillForm(song) {
 // only the highlight moves when a song opens (the whole list used to be rebuilt)
 function markOpen() {
   document.querySelectorAll("#songs li").forEach((el) => el.classList.toggle("on", !!current && el.dataset.id === current.id));
+}
+
+// the song's PDF: the field with its name and the actions, and (a PDF song) the card that takes the place of the lyrics. The
+// lyrics stay in the page and are saved as they are; they come back when the PDF goes
+const PDF_PATH = "M20,2L8,2c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2L22,4c0,-1.1 -0.9,-2 -2,-2zM11.5,9.5c0,0.83 -0.67,1.5 -1.5,1.5L9,11v2L7.5,13L7.5,7L10,7c0.83,0 1.5,0.67 1.5,1.5v1zM14.5,13L12,13L12,7h2.5c0.83,0 1.5,0.67 1.5,1.5v3c0,0.83 -0.67,1.5 -1.5,1.5zM20.5,8.5L19,8.5v1h1.5L20.5,11L19,11v2h-1.5L17.5,7h3v1.5zM9,9.5h1v-1L9,8.5v1zM4,6L2,6v14c0,1.1 0.9,2 2,2h14v-2L4,20L4,6zM14,11.5h1v-3h-1v3z";
+function pdfIcon(label) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "wave");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label);
+  const path = document.createElementNS(ns, "path"); path.setAttribute("d", PDF_PATH);
+  svg.append(path);
+  return svg;
+}
+const pdfSize = (b) => (b < 1048576 ? `${Math.ceil(b / 1024)} KB` : `${(b / 1048576).toFixed(1)} MB`);
+function drawPdf() {
+  const has = !!(current && current.pdf);
+  const lost = !has && !!(current && current.pdfName);
+  const isPdf = has || lost;
+  $("pdf-row").hidden = !(current && current.id);
+  $("pdf-icon").replaceChildren(pdfIcon(t.pdfLabel));
+  $("pdf-name").textContent = has ? current.pdfName || "PDF" : lost ? `⚠ ${current.pdfName}. ${t.pdfMissing}` : t.pdfNone;
+  $("pdf-name").className = lost ? "warn" : "muted";
+  $("pdf-pick").textContent = isPdf ? t.pdfReplace : t.pdfAttach;
+  $("pdf-remove").textContent = t.pdfRemove;
+  $("pdf-remove").hidden = !isPdf;
+  // a PDF song has no lyrics field: the card says what it is
+  $("pdf-card").hidden = !isPdf;
+  $("lyrics-block").hidden = isPdf;
+  $("pdf-card-icon").replaceChildren(pdfIcon(t.pdfLabel));
+  $("pdf-card-name").textContent = current && current.pdfName || "PDF";
+  const n = current && current.pdfPages || 0;
+  $("pdf-card-facts").textContent = lost ? t.pdfMissing : n ? fill(t["pdfFacts" + (n === 0 ? "0" : n === 1 ? "1" : "N")], n, pdfSize(current.pdfBytes || 0)) : "";
+  $("pdf-note").textContent = t.pdfNote;
+  // the first page as it will look on the stage (turned over if the colours are), the invert switch and the trim
+  const preview = $("pdf-preview");
+  preview.hidden = !has;
+  if (has) loadPdfPage(0).then((url) => { if (url) { preview.src = url; preview.alt = t.pdfPreview; } else preview.hidden = true; });
+  preview.style.filter = current && current.pdfInvert ? "invert(1)" : "";
+  $("pdf-invert").checked = !!(current && current.pdfInvert);
+  $("pdf-invert").parentElement.hidden = !has;
+  $("pdf-crop").textContent = t.pdfCrop;
+  $("pdf-crop").hidden = !has;
 }
 
 function drawTrack() {
@@ -593,6 +686,110 @@ async function sendTrack(file) {
   say("status", t.saved);
 }
 
+// the PDF: the file goes to the tablet as is; the tablet checks it like the app's editor does and answers with the reason when it won't do
+const pdfProblems = () => ({
+  pdf_not_pdf: t.pdfNotPdf, pdf_too_big: fill(t.pdfTooBig, 8), pdf_password: t.pdfPassword, pdf_too_many_pages: fill(t.pdfTooManyPages, 300), pdf_unreadable: t.pdfUnreadable,
+});
+async function sendPdf(file) {
+  if (!file || !current || !current.id) return;
+  const r = await fetch(`/api/songs/${encodeURIComponent(current.id)}/pdf?name=${encodeURIComponent(file.name)}`,
+    { method: "PUT", body: file, headers: { "X-Stagebook": "1", "Content-Type": "application/pdf" }, credentials: "same-origin" }).catch(() => null);
+  if (!r) return offline();
+  if (r.status !== 200) return say("status", r.status === 413 ? fill(t.pdfTooBig, 8) : (pdfProblems()[(await r.json().catch(() => ({}))).error] || t.pdfUnreadable), "error");
+  const sent = await r.json();
+  current.pdf = sent.pdf; current.pdfName = sent.pdfName; current.pdfPages = sent.pdfPages; current.pdfBytes = sent.pdfBytes;
+  drawPdf();
+  say("status", t.saved);
+}
+
+// a page of the PDF as an image (the tablet draws it; the request carries the header the API wants, so it comes as a blob)
+const pdfPages = new Map();
+async function loadPdfPage(n) {
+  if (!current || !current.id || !current.pdf) return "";
+  const key = `${current.id}:${current.pdf}:${n}`;
+  if (pdfPages.has(key)) return pdfPages.get(key);
+  const r = await fetch(`/api/songs/${encodeURIComponent(current.id)}/pdf-page?n=${n}&v=${encodeURIComponent(current.pdf)}`, { headers: { "X-Stagebook": "1" }, credentials: "same-origin" }).catch(() => null);
+  if (!r || r.status !== 200) return "";
+  const url = URL.createObjectURL(await r.blob());
+  // two loads of the same page at once: the first one's picture is let go, not left behind
+  if (pdfPages.has(key)) URL.revokeObjectURL(pdfPages.get(key));
+  if (pdfPages.size > 12) { URL.revokeObjectURL(pdfPages.values().next().value); pdfPages.delete(pdfPages.keys().next().value); }
+  pdfPages.set(key, url);
+  return url;
+}
+// the colours and the trims go to the tablet at once (the file is saved already, as for the track)
+async function sendPdfView(body) {
+  const r = await api(`/api/songs/${encodeURIComponent(current.id)}/pdf-view`, { method: "PUT", body: JSON.stringify(body) }).catch(() => null);
+  if (!r || r.status !== 200) return offline();
+  const v = await r.json();
+  current.pdfInvert = v.invert; current.pdfCrops = v.crops;
+  drawPdf();
+}
+$("pdf-invert").onchange = () => sendPdfView({ invert: $("pdf-invert").checked });
+
+// the crop window: the page with a frame, for every page or for this one
+let cropPage = 0, cropRect = null;
+const cropAll = () => document.querySelector("input[name=crop-scope]:checked").value === "all";
+const cropScope = () => (cropAll() ? CROP_ALL : cropPage);
+function drawCrop() {
+  const c = cropRect, f = $("crop-frame");
+  f.style.left = `${c.left * 100}%`; f.style.top = `${c.top * 100}%`; f.style.width = `${(c.right - c.left) * 100}%`; f.style.height = `${(c.bottom - c.top) * 100}%`;
+  const pts = [[c.left, c.top], [c.right, c.top], [c.left, c.bottom], [c.right, c.bottom], [(c.left + c.right) / 2, c.top], [(c.left + c.right) / 2, c.bottom], [c.left, (c.top + c.bottom) / 2], [c.right, (c.top + c.bottom) / 2]];
+  $("crop-handles").replaceChildren(...pts.map(([x, y]) => Object.assign(document.createElement("i"), { style: `left:${x * 100}%;top:${y * 100}%` })));
+}
+function loadCropRect() {
+  const own = (current.pdfCrops || []).find((c) => c.page === cropScope());
+  cropRect = own ? { ...own } : { page: cropScope(), left: 0, top: 0, right: 1, bottom: 1 };
+  drawCrop();
+}
+async function showCropPage() {
+  const n = current.pdfPages || 1;
+  $("crop-pages").hidden = n <= 1; $("crop-scope").hidden = n <= 1;
+  $("crop-page-n").textContent = `${cropPage + 1} / ${n}`;
+  $("crop-prev").disabled = cropPage <= 0; $("crop-next").disabled = cropPage >= n - 1;
+  $("crop-img").style.filter = current.pdfInvert ? "invert(1)" : "";
+  const asked = cropPage;
+  const url = await loadPdfPage(asked);
+  // a late answer for a page already left must not draw over the one on screen
+  if (url && asked === cropPage) $("crop-img").src = url;
+}
+$("pdf-crop").onclick = async () => {
+  cropPage = 0;
+  // this page only when it has a trim of its own, as in the app
+  document.querySelector(`input[name=crop-scope][value=${(current.pdfCrops || []).some((c) => c.page === 0) ? "page" : "all"}]`).checked = true;
+  $("crop-none").textContent = t.cropNone; $("crop-cancel").textContent = t.cancel; $("crop-save").textContent = t.save;
+  $("crop-prev").setAttribute("aria-label", t.cropPrev); $("crop-next").setAttribute("aria-label", t.cropNext);
+  loadCropRect();
+  $("crop-dialog").showModal();
+  await showCropPage();
+};
+$("crop-prev").onclick = () => { cropPage -= 1; loadCropRect(); showCropPage(); };
+$("crop-next").onclick = () => { cropPage += 1; loadCropRect(); showCropPage(); };
+document.querySelectorAll("input[name=crop-scope]").forEach((el) => (el.onchange = loadCropRect));
+$("crop-cancel").onclick = () => $("crop-dialog").close();
+$("crop-none").onclick = () => { sendPdfView({ crops: cropClear(current.pdfCrops || [], cropScope()) }); $("crop-dialog").close(); };
+$("crop-save").onclick = () => { sendPdfView({ crops: cropSet(current.pdfCrops || [], { ...cropRect, page: cropScope() }) }); $("crop-dialog").close(); };
+// the frame is dragged by the edge nearest the pointer, or by its inside (from where the pointer went down)
+(() => {
+  const wrap = $("crop-wrap");
+  let grab = 0, last = null, rect = null;
+  wrap.onpointerdown = (e) => {
+    rect = $("crop-stage").getBoundingClientRect();
+    grab = cropGrab(e.clientX - rect.left, e.clientY - rect.top, cropRect, rect.width, rect.height, 24);
+    if (!grab) return;
+    last = [e.clientX, e.clientY];
+    wrap.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  wrap.onpointermove = (e) => {
+    if (!grab) return;
+    cropRect = cropMove(cropRect, grab, (e.clientX - last[0]) / rect.width, (e.clientY - last[1]) / rect.height);
+    last = [e.clientX, e.clientY];
+    drawCrop();
+  };
+  wrap.onpointerup = wrap.onpointercancel = () => { grab = 0; };
+})();
+
 // the list redraws a moment after typing stops, not on every letter
 let searchTimer = 0;
 $("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { drawList(); $("songs").scrollTop = 0; }, 150); };
@@ -601,10 +798,29 @@ $("tag-filter").onchange = () => { drawList(); $("songs").scrollTop = 0; };
 $("list-clear").onclick = () => { $("search").value = ""; $("tag-filter").value = ""; drawList(); $("songs").scrollTop = 0; };
 $("save").onclick = save;
 $("delete").onclick = removeSong;
-$("key-down").onclick = () => changeText("/api/transpose", { semitones: -1 });
-$("key-up").onclick = () => changeText("/api/transpose", { semitones: 1 });
+// a PDF song has no chords to move: the key is only written down, a step at a time (C when there was none), and the hidden
+// lyrics are left alone, as in the app
+async function stepKey(semitones) {
+  if (!(current.pdf || current.pdfName)) return changeText("/api/transpose", { semitones });
+  const r = await post("/api/key-step", { key: current.key || "", semitones });
+  if (!r || r.status !== 200) return offline();
+  current.key = (await r.json()).key;
+  dirty = true;
+  drawKeyCapo();
+}
+$("key-down").onclick = () => stepKey(-1);
+$("key-up").onclick = () => stepKey(1);
 $("capo-down").onclick = () => changeText("/api/capo", { capo: (current.capo || 0) - 1 });
 $("capo-up").onclick = () => changeText("/api/capo", { capo: (current.capo || 0) + 1 });
+// a song that already has lyrics asks first: they stay saved and come back when the PDF goes
+$("pdf-pick").onclick = () => { if (!(current.pdf || current.pdfName) && $("f-text").value.trim() && !confirm(t.pdfAskLyrics)) return; $("pdf-file").click(); };
+$("pdf-file").onchange = () => { sendPdf($("pdf-file").files[0]); $("pdf-file").value = ""; };
+$("pdf-remove").onclick = async () => {
+  if (!confirm(t.pdfRemoveConfirm)) return;
+  await api(`/api/songs/${encodeURIComponent(current.id)}/pdf`, { method: "DELETE" }).catch(() => null);
+  current.pdf = ""; current.pdfName = ""; current.pdfPages = 0; current.pdfBytes = 0;
+  drawPdf();
+};
 $("track-pick").onclick = () => $("track-file").click();
 $("track-file").onchange = () => { sendTrack($("track-file").files[0]); $("track-file").value = ""; };
 $("track-remove").onclick = async () => {
@@ -663,6 +879,7 @@ async function openSet(id) {
 function showSet(set) {
   currentSet = { ...set, breaks: set.breaks || [] };
   $("set-name").value = set.name;
+  $("set-date").value = set.date || "";
   $("set-form").hidden = false;
   $("set-pick").hidden = true;
   $("set-delete").hidden = !set.id;
@@ -674,17 +891,53 @@ function showSet(set) {
   loadSets();
 }
 
+// <crop-logic>
+// The trim of a PDF page, the app's rule (domain/PdfCrops.kt, ui/editor/PdfCropDialog.kt): fractions of the page, 0 left/top to
+// 1 right/bottom; [page] counts from 0 and -1 is the trim for every page without its own. Tested by tools/web_crop_test.mjs.
+const CROP_ALL = -1, CROP_MIN = 0.1;
+const cropWhole = (c) => c.left <= 0 && c.top <= 0 && c.right >= 1 && c.bottom >= 1;
+const cropFor = (crops, page) => (crops.find((c) => c.page === page) || crops.find((c) => c.page === CROP_ALL) || null);
+function cropValid(c) {
+  const left = Math.min(Math.max(c.left, 0), 1 - CROP_MIN), top = Math.min(Math.max(c.top, 0), 1 - CROP_MIN);
+  return { page: c.page, left, top, right: Math.min(Math.max(c.right, left + CROP_MIN), 1), bottom: Math.min(Math.max(c.bottom, top + CROP_MIN), 1) };
+}
+function cropSet(crops, c) { const rest = crops.filter((x) => x.page !== c.page), v = cropValid(c); return cropWhole(v) ? rest : [...rest, v]; }
+const cropClear = (crops, page) => crops.filter((c) => c.page !== page);
+// which edges a touch at (x, y) in a box of w x h is on: 1 left, 2 top, 4 right, 8 bottom (a corner is two); the inside is all (15)
+function cropGrab(x, y, c, w, h, slop) {
+  // an edge counts only along its own length (plus the slack): a touch in the empty beside a tall frame is not on it
+  const inX = x >= c.left * w - slop && x <= c.right * w + slop, inY = y >= c.top * h - slop && y <= c.bottom * h + slop;
+  let g = (inY && Math.abs(x - c.left * w) < slop ? 1 : 0) | (inX && Math.abs(y - c.top * h) < slop ? 2 : 0) | (inY && Math.abs(x - c.right * w) < slop ? 4 : 0) | (inX && Math.abs(y - c.bottom * h) < slop ? 8 : 0);
+  if (!g && x >= c.left * w && x <= c.right * w && y >= c.top * h && y <= c.bottom * h) g = 15;
+  return g;
+}
+// the frame after a drag of (dx, dy) as fractions: an edge moves alone, the inside moves the whole frame, always on the page
+function cropMove(c, grab, dx, dy) {
+  let { left: l, top: t, right: r, bottom: b } = c;
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  if (grab === 15) { const mx = clamp(dx, -l, 1 - r), my = clamp(dy, -t, 1 - b); l += mx; r += mx; t += my; b += my; }
+  else {
+    if (grab & 1) l = clamp(l + dx, 0, r - CROP_MIN);
+    if (grab & 4) r = clamp(r + dx, l + CROP_MIN, 1);
+    if (grab & 2) t = clamp(t + dy, 0, b - CROP_MIN);
+    if (grab & 8) b = clamp(b + dy, t + CROP_MIN, 1);
+  }
+  return { page: c.page, left: l, top: t, right: r, bottom: b };
+}
+// </crop-logic>
+
 // <rows-logic>
 // What a song row shows at its end, the device's rule (ui/songs/RowFacts.kt read by ui/components/SongFacts.kt): the key,
-// then the tempo, then the capo, then the audio wave of a backing track; only what the song has. The tempo and the capo
+// then the tempo, then the capo, then the sheet of a PDF and the audio wave of a backing track; only what the song has. The tempo and the capo
 // arrive already held to the app's ranges (Chords.meta), so here 0 means none. Texts are the app's own ("120 bpm", "capo 2").
 // Tested without a browser by tools/web_rows_test.mjs.
 function rowFacts(s, t) {
   const key = s.key || "";
   const parts = [key, s.bpm > 0 ? fill(t.factBpm, s.bpm) : "", s.capo > 0 ? fill(t.factCapo, s.capo) : ""].filter(Boolean);
   const hasTrack = !!s.hasTrack;
+  const hasPdf = !!s.hasPdf;
   const text = parts.join(" · ");
-  return { key, parts, text, hasTrack, label: [text, hasTrack ? t.track : ""].filter(Boolean).join(" · ") };
+  return { key, parts, text, hasTrack, hasPdf, label: [text, hasPdf ? t.pdf : "", hasTrack ? t.track : ""].filter(Boolean).join(" · ") };
 }
 // the row's accessible name: title, artist and the facts (the wave is named by the app's own "Backing track")
 const rowLabel = (s, t) => [s.title || "–", s.author || s.artist, rowFacts(s, t).label].filter(Boolean).join(", ");
@@ -699,6 +952,18 @@ function waveIcon(label) {
   svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label);
   const title = document.createElementNS(ns, "title"); title.textContent = label;
   const path = document.createElementNS(ns, "path"); path.setAttribute("d", WAVE_PATH);
+  svg.append(title, path);
+  return svg;
+}
+// the app's sheet of paper (AppIcons.Document), same path: the song is a PDF
+const SHEET_PATH = "M14,2H6C4.9,2 4,2.9 4,4v16c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,18H8v-2h8v2zM16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z";
+function sheetIcon(label) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "wave");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label);
+  const title = document.createElementNS(ns, "title"); title.textContent = label;
+  const path = document.createElementNS(ns, "path"); path.setAttribute("d", SHEET_PATH);
   svg.append(title, path);
   return svg;
 }
@@ -719,6 +984,7 @@ function songRow(s, { n, onclick, extra, more } = {}) {
       part.textContent = i > 0 ? "· " + p : p;
       facts.append(part);
     });
+    if (f.hasPdf) facts.append(sheetIcon(t.pdf));
     if (f.hasTrack) facts.append(waveIcon(t.track));
     el.append(facts);
   }
@@ -873,8 +1139,9 @@ async function runOnce(run, busy) {
 }
 // The breaks go only when this page changed them (or the songs they sit between): a page opened before the musician
 // put a break on the tablet would erase it by sending its old list. Without the field, the tablet keeps its own.
-function setBody(name, set, breaksTouched) {
+function setBody(name, set, breaksTouched, date) {
   const body = { name, items: set.songs.map((s) => s.id) };
+  if (date !== undefined) body.date = date;   // "" takes the day off; left out keeps the tablet's
   if (breaksTouched) body.breaks = breakNorm(set.breaks, set.songs.length);
   return body;
 }
@@ -888,7 +1155,7 @@ let breaksTouched = false;   // set by the buttons that move or take out songs a
 
 async function saveSet() {
   return runOnce(async () => {
-    const body = setBody($("set-name").value, currentSet, breaksTouched);
+    const body = setBody($("set-name").value, currentSet, breaksTouched, $("set-date").value);
     const id = currentSet.id;
     const r = await api(id ? `/api/sets/${encodeURIComponent(id)}` : "/api/sets", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }).catch(() => null);
     if (!r) return offline();
@@ -903,8 +1170,9 @@ async function saveSet() {
   }, (on) => ($("set-save").disabled = on));
 }
 
-$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [] }); };
+$("set-new").onclick = () => { if (leaveOk()) showSet({ id: "", name: "", songs: [], breaks: [], date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) }); };
 $("set-name").oninput = () => (dirty = true);
+$("set-date").oninput = () => (dirty = true);
 $("set-add-search").oninput = drawSetAdd;
 $("set-break-add").onclick = () => { breaksTouched = true; currentSet.breaks = breakAdd(currentSet.breaks, currentSet.songs.length); dirty = true; drawSet(); };
 $("set-save").onclick = saveSet;

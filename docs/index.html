@@ -66,6 +66,7 @@ h2 { font-size: clamp(32px, 6vw, 56px); line-height:1.06; letter-spacing:-0.02em
 .lead { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); margin: 20px 0 0; max-width: 46ch; }
 .lead b { color: var(--fg); font-weight:600; }
 .feature { display:grid; gap: 32px; align-items:center; }
+.frame.phone { max-width: 340px; margin: 0 auto; }
 .frame { border-radius: var(--radius); overflow:hidden; background:#000; border:1px solid var(--line); box-shadow: 0 16px 48px rgba(0,0,0,.5); }
 @media (min-width: 880px) {
   .feature { grid-template-columns: 5fr 7fr; gap: 56px; }
@@ -133,8 +134,8 @@ footer .copy { margin-left:auto; }
   <img class="logo" src="logo.png" alt="Stagebook" width="96" height="96">
   <h1><span class="pt">O show inteiro. <em>Numa tela só.</em></span><span class="en">Your whole show. <em>One screen.</em></span></h1>
   <p class="promise">
-    <span class="pt">Letra, cifra e backing track no seu Android. Vire a página no pedal e continue olhando para o público.</span>
-    <span class="en">Lyrics, chords and backing tracks on your Android. Turn the page with a pedal and keep your eyes on the crowd.</span>
+    <span class="pt">Letra, cifra, partitura em PDF e backing track no seu Android. Vire a página no pedal e continue olhando para o público.</span>
+    <span class="en">Lyrics, chords, PDF scores and backing tracks on your Android. Turn the page with a pedal and keep your eyes on the crowd.</span>
   </p>
   <div class="actions">
     <a class="btn primary" href="https://github.com/julianoAffonso/stagebook/releases/latest/download/stagebook.apk">
@@ -187,8 +188,26 @@ footer .copy { margin-left:auto; }
   </div>
 </section>
 
-<section class="wrap" id="faixas">
+<section class="wrap" id="pdf">
   <div class="feature">
+    <div class="text">
+      <p class="kicker"><span class="pt">Partitura em PDF</span><span class="en">PDF scores</span></p>
+      <h2><span class="pt">O papel ficou em casa.</span><span class="en">Leave the paper at home.</span></h2>
+      <p class="lead">
+        <span class="pt">Anexe o PDF e a música vira as páginas dele no palco. <b>O mesmo pedal vira a página.</b> Amplie com dois dedos, recorte a margem, pinte com o marca-texto e inverta as cores para o palco escuro. O PDF vai junto quando você manda a música para a banda.</span>
+        <span class="en">Attach the PDF and the song becomes its pages on stage. <b>The same pedal turns the page.</b> Zoom with two fingers, crop the margin, paint with the highlighter and invert the colors for a dark stage. The PDF goes along when you send the song to the band.</span>
+      </p>
+    </div>
+    <div class="frame phone">
+      <img loading="lazy" src="pdf-stage.jpg" width="716" height="1600"
+           alt="A PDF score on the stage of a phone: Bach's Prelude in C, page 1 of 2"
+           data-alt-pt="Uma partitura em PDF no palco de um celular: o Prelúdio em Dó de Bach, página 1 de 2">
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="faixas">
+  <div class="feature flip">
     <div class="text">
       <p class="kicker"><span class="pt">Backing tracks</span><span class="en">Backing tracks</span></p>
       <h2><span class="pt">A banda por trás da banda.</span><span class="en">The band behind the band.</span></h2>
@@ -234,6 +253,9 @@ footer .copy { margin-left:auto; }
     <li><b><span class="pt">Ninguém sem música.</span><span class="en">Nobody missing a song.</span></b>
       <span class="pt">Antes de começar, o app avisa quem está sem alguma música do setlist.</span>
       <span class="en">Before you start, the app tells you who is missing a song from the setlist.</span></li>
+    <li><b><span class="pt">Faltou? Peça ali mesmo.</span><span class="en">Missing one? Ask right there.</span></b>
+      <span class="pt">Quem acompanha pede o que falta à banda ou pela internet, do jeito que quem conduz toca: letra, cifra ou PDF.</span>
+      <span class="en">A follower asks for what is missing, from the band or online, the way the leader plays it: lyrics, chords or PDF.</span></li>
     <li><b><span class="pt">Do lado, sem internet.</span><span class="en">Next to you, no internet.</span></b>
       <span class="pt">Quem está do lado lê um QR com a câmera.</span>
       <span class="en">Whoever is next to you reads a QR with the camera.</span></li>
@@ -270,7 +292,9 @@ footer .copy { margin-left:auto; }
     <li><span class="pt">Tempo de show no relógio</span><span class="en">Show timer on the clock</span></li>
     <li><span class="pt">MIDI ao entrar e sair da música</span><span class="en">MIDI when a song shows and when you leave it</span></li>
     <li><span class="pt">Tablatura</span><span class="en">Tablature</span></li>
-    <li><span class="pt">Importa letra e cifra de sites</span><span class="en">Imports lyrics and chords from websites</span></li>
+    <li><span class="pt">Importa letra, cifra e partitura em PDF de sites</span><span class="en">Imports lyrics, chords and PDF scores from websites</span></li>
+    <li><span class="pt">Biblioteca num menu lateral, sem sair do palco</span><span class="en">Your library in a side menu, without leaving the stage</span></li>
+    <li><span class="pt">Setlists com a data do show</span><span class="en">Setlists with the show date</span></li>
     <li><span class="pt">Edite no computador pelo navegador, com setlists e intervalos</span><span class="en">Edit on the computer in the browser, with setlists and breaks</span></li>
     <li><span class="pt">Intervalos no setlist, com cronômetro no palco</span><span class="en">Setlist breaks, with a timer on stage</span></li>
     <li><span class="pt">Editor de música em duas telas: Dados e Letra e cifra</span><span class="en">Song editor in two screens: Data and Lyrics and chords</span></li>

@@ -28,6 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
 import br.app.stagebook.ui.components.InfoDialog
+import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.CenteredContent
@@ -49,6 +50,28 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
     val limit by viewModel.limit.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
+    // leaving with songs checked and the green check forgotten (back): they go in as if it was tapped. The screen being
+    // rebuilt (the pinned menu toggled, the window crossing 600 dp) is not leaving: the checks wait in the saved state
+    val leave = { viewModel.confirmPending(); onDone() }
+    androidx.activity.compose.BackHandler(enabled = uiState.selectedCount > 0, onBack = leave)
+    // closing the menu with songs checked asks first, as a setlist half edited does (user, 15/11)
+    var asking by rememberSaveable { mutableStateOf(false) }
+    val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
+    val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+    val pending by androidx.compose.runtime.rememberUpdatedState(uiState.selectedCount > 0)
+    androidx.compose.runtime.DisposableEffect(guard) {
+        val asks: () -> Boolean = { if (pending) { asking = true; true } else false }
+        guard?.asks = asks
+        onDispose { if (guard?.asks === asks) guard.asks = null }
+    }
+    if (asking) QuestionDialog(
+        stringResource(R.string.pick_title),
+        stringResource(R.string.pick_ask_add, uiState.selectedCount, uiState.setName),
+        stringResource(R.string.pick_add_yes), { asking = false; viewModel.confirmPending(); guard?.asks = null; drawer?.close?.invoke() },
+        stringResource(R.string.set_discard), { asking = false; viewModel.clearPending(); guard?.asks = null; drawer?.close?.invoke() },
+        onOutside = { asking = false },
+        cancelLabel = stringResource(R.string.set_keep_editing), onCancel = { asking = false },
+    )
     if (limit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_message), viewModel::dismissLimit)
     PickSongsScreen(
         uiState = uiState,
@@ -57,7 +80,7 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
         // checked one: the search clears (with the keyboard open) for the next song
         onToggle = { if (viewModel.toggle(it)) query = "" },
         onConfirm = { viewModel.confirm(); onDone() },
-        onBack = onDone,
+        onBack = leave,
         onTagsChange = viewModel::onTagsChange,
     )
 }
@@ -82,19 +105,25 @@ fun PickSongsScreen(
         CenteredContent(Modifier.fillMaxSize().padding(inner)) {
             Column(Modifier.padding(horizontal = Spacing.m)) {
                 ScreenHeader(
-                    title = stringResource(R.string.pick_title),
-                    subtitle = uiState.setName,
+                    // the setlist's name alone, on one line ("Add songs" over it made it break in two; the check says the rest)
+                    title = uiState.setName,
                     onBack = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
-                    iconActions = false,
+                    iconActions = true,
                 ) {
                     // in the fixed header: the search keyboard covered the button when it sat at the bottom
-                    ActionButton(
-                        text = stringResource(R.string.pick_add_short, uiState.selectedCount),
-                        onClick = onConfirm,
-                        icon = AppIcons.Check,
-                        enabled = uiState.selectedCount > 0,
-                    )
+                    // an icon, as the rest of the menu (the check; its name says how many go in)
+                    // with the number of songs the setlist will have: the ones it already has and the ones checked
+                    val total = uiState.inSetCount + uiState.selectedCount
+                    val addLabel = stringResource(R.string.pick_add_short, uiState.selectedCount)
+                    androidx.compose.material3.IconButton(onClick = onConfirm, enabled = uiState.selectedCount > 0) {
+                        androidx.compose.material3.BadgedBox(badge = { if (total > 0) androidx.compose.material3.Badge { Text(total.toString()) } }) {
+                            androidx.compose.material3.Icon(
+                                AppIcons.Check, addLabel,
+                                tint = if (uiState.selectedCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            )
+                        }
+                    }
                 }
                 br.app.stagebook.ui.components.SearchWithTags(
                     query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
@@ -108,16 +137,21 @@ fun PickSongsScreen(
                             SongListItem(
                                 title = row.title,
                                 subtitle = row.subtitle,
-                                // already in the setlist: faded and tagged, with everything else kept
+                                // already in the setlist: faded, with its box ticked and off (no phrase: the box says it)
                                 modifier = if (row.inSet) Modifier.alpha(IN_SET_ALPHA) else Modifier,
-                                titleBadge = if (row.inSet) { { InSetBadge() } } else null,
                                 onClick = { if (!row.inSet) onToggle(row.id) },
-                                inline = wide,
-                                leading = { Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet) },
+                                // the box and, once chosen, the place in the order they will be added (as SongbookPro)
+                                leading = {
+                                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                        Checkbox(checked = row.selected || row.inSet, onCheckedChange = null, enabled = !row.inSet)
+                                        if (row.order > 0) br.app.stagebook.ui.components.NumberBadge(row.order, compact = true)
+                                    }
+                                },
                                 trailing = { SongFacts(row.songKey, row.bpm, row.capo, row.hasTrack) },
-                                titleStyle = MaterialTheme.typography.titleLarge,
+                                titleStyle = MaterialTheme.typography.titleMedium,
+                                dense = true,
                                 titleLines = 1,
-                                gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
+                                gap = Spacing.s,
                             )
                         }
                     }
@@ -128,19 +162,6 @@ fun PickSongsScreen(
 }
 
 private const val IN_SET_ALPHA = 0.5f
-
-/** The tag of a song that is already in the setlist, beside its title. */
-@Composable
-private fun InSetBadge() {
-    Text(
-        stringResource(R.string.pick_in_set),
-        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, CircleShape).padding(horizontal = Spacing.s, vertical = Spacing.xs),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        maxLines = 1,
-        softWrap = false,
-    )
-}
 
 private val previewState = PickSongsUiState(
     setName = "Show de sábado",

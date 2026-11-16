@@ -7,7 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.BandConduct
 import br.app.stagebook.data.BandLink
@@ -37,7 +40,8 @@ import org.robolectric.annotation.Config
  * "Arrived without chords" (and the other short notices of the band) has to be on screen when it happens, also when it
  * happens while the strip's screen is being redrawn (turning the device, a text size change): a notice used to be
  * dropped when nobody was collecting at that instant (two devices, 13/11: it didn't show on arrival).
- * ConductRoute's snackbar is the screen that draws it.
+ * The strip itself says it, in place of its lines for a few seconds (user, 16/11: the floating message sat over the
+ * stage's play button); ConductBar's notice row is what draws it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h800dp-port-xxhdpi", application = android.app.Application::class)
@@ -107,9 +111,8 @@ class ConductNoticeShownTest {
         noticeShown()
     }
 
-    // the strip's own second line says the same words: the notice is the second one, in the snackbar
-    private fun noticeShown() = compose.waitUntil(5_000) { compose.onAllNodesWithTextCount("Segunda chegou sem cifra") >= 2 }
-
-    private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithTextCount(t: String) =
-        onAllNodesWithText(t).fetchSemanticsNodes().size
+    private fun noticeShown() {
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("conduct-notice").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasText("Segunda chegou sem cifra", substring = true) and hasAnyAncestor(hasTestTag("conduct-notice")), useUnmergedTree = true).assertExists()
+    }
 }

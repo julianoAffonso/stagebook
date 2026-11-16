@@ -212,10 +212,7 @@ class BandInternet @Inject constructor(
                 val got = cloud.fetchPair(key, prefs.getString("$KEY_SINCE${m.id}", null)) ?: return@forEach
                 // they asked for songs missing from the setlist I sent (T12): answers with the ones I have, in a songs
                 // package
-                got.requests.forEach { wanted ->
-                    val ids = link.songsFor(wanted)
-                    if (ids.isNotEmpty()) cloud.songsPackage(ids)?.let { (list, songs) -> cloud.sendToPair(key, m.id, list, songs, java.util.UUID.randomUUID().toString()) }
-                }
+                got.requests.forEach { wanted -> answerRequest(key, m.id, wanted) }
                 got.packages.forEach { (pid, text, songs) ->
                     // a repeat (a resend that arrived twice) doesn't come in again; the receipt goes anyway
                     if (seen.add("${m.id}|$pid")) inbox.add(m.id, m.name, text, songs, got.breaks[pid])
@@ -242,6 +239,15 @@ class BandInternet @Inject constructor(
                 since.forEach { (id, last) -> putString("$KEY_SINCE$id", last) }
             }
         }
+    }
+
+    /**
+     * Answers a member's request for songs that came over the internet: the songs here, each as the copy asked for (lyrics
+     * only goes without the chords, as on the Wi-Fi), in a songs package to their inbox. false = nothing here, or it didn't go.
+     */
+    internal suspend fun answerRequest(key: ByteArray, memberId: String, wanted: List<BandLink.Wanted>): Boolean {
+        val (list, songs) = link.onlineAnswer(wanted) ?: return false
+        return cloud.sendToPair(key, memberId, list, songs, UUID.randomUUID().toString())
     }
 
     // on the same Wi-Fi: sends with no receipt go directly (and leave the queue); my pending "ok" too. The lock is held

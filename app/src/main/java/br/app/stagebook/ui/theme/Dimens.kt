@@ -15,7 +15,7 @@ object Spacing {
 object Sizes {
     val touch = 48.dp           // minimum touch target
     val icon = 24.dp            // a standard icon beside text
-    val railLogo = 48.dp        // the app icon on top of the tablet's rail
+    val drawerLogo = 40.dp      // the app icon on top of the library drawer
     val fader = 200.dp          // vertical fader height (mixer and EQ on tablets)
     val meter = 8.dp            // width of the live meter bar
     val button = 56.dp          // main buttons (finger on stage, tablet far away)
@@ -39,5 +39,5 @@ object Sizes {
     val contentMax = 840.dp     // max content width on a tablet in landscape
     val pageDot = 28.dp         // numbered page dot in the stage footer
     val swipe = 64.dp           // dragging on stage: from here on, turns the page toward the drag
-    val railBreakpoint = 600.dp // from here on, side rail instead of a bottom bar
+    val pinBreakpoint = 600.dp  // from here on, the drawer can be pinned beside the stage
 }

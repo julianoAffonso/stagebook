@@ -17,6 +17,8 @@ import javax.inject.Inject
 class StagebookApp : Application() {
     @Inject lateinit var repository: LibraryRepository
     @Inject lateinit var tracks: TrackStore
+    @Inject lateinit var pdfs: br.app.stagebook.data.PdfStore
+    @Inject lateinit var inbox: br.app.stagebook.data.BandInbox
     // made at start so it follows the USB cable from the first moment (the interface shows as soon as it's plugged in)
     @Inject lateinit var player: br.app.stagebook.player.StagePlayer
 
@@ -37,6 +39,8 @@ class StagebookApp : Application() {
         backgroundScope(Dispatchers.IO).launch {
             repository.loaded.first { it }
             tracks.sweep(repository.library.value.songs.mapTo(HashSet()) { it.track })
+            // the PDFs a band member sent and the inbox still holds are in use too (a PDF song nobody accepted yet)
+            pdfs.sweep(repository.library.value.songs.mapTo(HashSet()) { it.pdf } + inbox.items.value.flatMap { it.songs }.mapTo(HashSet()) { it.pdfFile })
         }
     }
 }

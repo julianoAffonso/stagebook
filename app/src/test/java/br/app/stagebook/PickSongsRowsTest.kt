@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
@@ -79,10 +80,144 @@ class PickSongsRowsTest {
                 assertEquals(true, vm.toggle(ids[0]))
                 val picked = state { it.selectedCount == 2 }
                 assertEquals(listOf("Primeira", "Segunda"), picked.rows.filter { it.selected }.map { it.title }.sorted())
+                // the numbers go on from the songs the setlist already has (one): the first chosen is the 2nd, the next the 3rd
+                assertEquals(1, picked.inSetCount)
+                assertEquals(2, picked.rows.first { it.title == "Segunda" }.order)
+                assertEquals(3, picked.rows.first { it.title == "Primeira" }.order)
+                assertEquals(0, picked.rows.first { it.title == "Terceira" }.order)
                 vm.confirm()
                 assertEquals(listOf(ids[2], ids[1], ids[0]), repo.library.value.setlist(set)!!.items)
                 job.cancel()
             }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `leaving with songs checked and not confirmed adds them in the order checked, once`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            runBlocking {
+                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+                withTimeout(5_000) { repo.loaded.first { it } }
+                val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha"), Song(title = "C", text = "linha")).map(repo::saveSong)
+                val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
+                val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
+                val job = CoroutineScope(Dispatchers.Main).launch { vm.uiState.collect {} }
+                assertEquals(true, vm.toggle(ids[2]))
+                assertEquals(true, vm.toggle(ids[1]))
+                vm.confirmPending()   // what the screen does on the way out
+                assertEquals(listOf(ids[0], ids[2], ids[1]), repo.library.value.setlist(set)!!.items)
+                vm.confirmPending()   // the checks are gone: nothing more to add
+                assertEquals(listOf(ids[0], ids[2], ids[1]), repo.library.value.setlist(set)!!.items)
+                assertEquals(0, withTimeout(5_000) { vm.uiState.first { it.selectedCount == 0 } }.selectedCount)
+                job.cancel()
+            }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `the header names the setlist alone and the check counts what the setlist will have`() {
+        val state = PickSongsUiState(
+            setName = "Show de sábado com um nome bem comprido que não cabe",
+            rows = listOf(PickRowUi("1", "Com tudo", "Banda", inSet = false, selected = true, order = 6)),
+            selectedCount = 1, inSetCount = 5,
+        )
+        compose.setContent { StagebookTheme { PickSongsScreen(state, "", {}, {}, {}, {}) } }
+        compose.onAllNodesWithText("Adicionar músicas").assertCountEquals(0)   // the name alone, on its line
+        // 5 it has + 1 checked = 6: on the check, and the row's own number is the 6th place too
+        compose.onAllNodesWithText("6", useUnmergedTree = true).assertCountEquals(2)
+    }
+
+    private fun pickerWithOneChecked(): Triple<PickSongsViewModel, LibraryRepository, Pair<String, String>> = runBlocking {
+        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha")).map(repo::saveSong)
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
+        val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
+        assertEquals(true, vm.toggle(ids[1]))
+        Triple(vm, repo, set to ids[1])
+    }
+
+    @Test fun `closing the menu with songs checked asks first, and Add puts them in and closes`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, ids) = pickerWithOneChecked()
+            val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+            var closed = 0
+            compose.setContent {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard,
+                    br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
+                ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
+            }
+            compose.waitForIdle()
+            assertEquals("the menu asks the screen before it closes", true, guard.asks?.invoke())
+            compose.waitForIdle()
+            compose.onNodeWithText("Adicionar as 1 músicas marcadas", substring = true).assertIsDisplayed()
+            assertEquals("nothing went in yet", 1, repo.library.value.setlist(ids.first)!!.items.size)
+            compose.onNodeWithText("Adicionar").performClick()
+            compose.waitForIdle()
+            assertEquals(2, repo.library.value.setlist(ids.first)!!.items.size)
+            assertEquals(1, closed)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `closing the menu with songs checked and choosing Discard adds nothing`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, ids) = pickerWithOneChecked()
+            val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+            var closed = 0
+            compose.setContent {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard,
+                    br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
+                ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
+            }
+            compose.waitForIdle()
+            guard.asks?.invoke(); compose.waitForIdle()
+            compose.onNodeWithText("Descartar").performClick()
+            compose.waitForIdle()
+            assertEquals(1, repo.library.value.setlist(ids.first)!!.items.size)
+            assertEquals(1, closed)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `with nothing checked the menu closes without a question`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val repo = runBlocking { LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
+            val set = repo.createSetlist("Show")
+            val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
+            val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+            compose.setContent { androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } } }
+            compose.waitForIdle()
+            assertEquals(false, guard.asks?.invoke())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test fun `the screen being rebuilt does not add what is checked, the checks wait`() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        try {
+            val (vm, repo, ids) = pickerWithOneChecked()
+            val show = androidx.compose.runtime.mutableStateOf(true)
+            compose.setContent { StagebookTheme { if (show.value) br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
+            compose.waitForIdle()
+            show.value = false   // what pinning the menu or crossing 600 dp does to it: gone from the composition, back a moment later
+            compose.waitForIdle()
+            show.value = true
+            compose.waitForIdle()
+            assertEquals("not added by the rebuild", 1, repo.library.value.setlist(ids.first)!!.items.size)
+            vm.confirmPending()
+            assertEquals(2, repo.library.value.setlist(ids.first)!!.items.size)
         } finally {
             Dispatchers.resetMain()
         }
@@ -109,9 +244,8 @@ class PickSongsRowsTest {
         compose.onNodeWithText("capo 2", useUnmergedTree = true).assertIsDisplayed()
         compose.onAllNodesWithContentDescription("Backing track", useUnmergedTree = true).assertCountEquals(2)   // the in-setlist row has one too
         compose.onAllNodesWithText("19", substring = true, useUnmergedTree = true).assertCountEquals(0)
-        // a song already in the setlist is tagged beside its title, keeps its artist, key, tempo, capo and mark, and can't be checked
-        compose.onNodeWithText("No setlist", useUnmergedTree = true).assertIsDisplayed()
-        compose.onAllNodesWithText("No setlist", useUnmergedTree = true).assertCountEquals(1)
+        // a song already in the setlist keeps its artist, key, tempo, capo and mark and can't be checked; no phrase (user, 15/11)
+        compose.onAllNodesWithText("No setlist", useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodesWithText("Já está no setlist", useUnmergedTree = true).assertCountEquals(0)
         compose.onNodeWithText("Cássia Eller", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("C", useUnmergedTree = true).assertIsDisplayed()
@@ -122,7 +256,7 @@ class PickSongsRowsTest {
         assertEquals(emptyList<String>(), toggled)
         compose.onNodeWithText("Só o tom", useUnmergedTree = true).performClick()
         assertEquals(listOf("2"), toggled)
-        compose.onNodeWithText("Adicionar (1)", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("Adicionar (1)", useUnmergedTree = true).performClick()
         assertEquals(1, confirmed)
     }
 }

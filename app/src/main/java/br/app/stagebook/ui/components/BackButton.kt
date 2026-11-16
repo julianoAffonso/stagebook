@@ -33,10 +33,12 @@ fun BackButton(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurface,
     closes: Boolean = false,   // an ✕ in the arrow's place: it leaves a mode of the screen, not the screen
+    menu: Boolean = false,   // the three bars in the arrow's place, same room: it opens the library drawer (the stage's header)
 ) {
     Box(modifier.width(BackButtonWidth)) {
         IconButton(onClick = onClick, modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true).offset(x = -HeaderIconInset)) {
-            if (closes) Icon(AppIcons.Close, contentDescription = stringResource(R.string.action_close), tint = tint)
+            if (menu) Icon(AppIcons.Menu, contentDescription = stringResource(R.string.drawer_open), tint = tint)
+            else if (closes) Icon(AppIcons.Close, contentDescription = stringResource(R.string.action_close), tint = tint)
             else Icon(AppIcons.Back, contentDescription = stringResource(R.string.action_back), tint = tint)
         }
     }

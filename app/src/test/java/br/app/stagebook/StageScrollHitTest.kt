@@ -54,7 +54,7 @@ class StageScrollHitTest {
         compose.waitForIdle()
         compose.onRoot().performTouchInput { longClick(center) }
         compose.waitForIdle()
-        compose.onNodeWithText("Editar esta linha").performClick()
+        compose.onNodeWithContentDescription("Editar esta linha").performClick()
         compose.waitForIdle()
         return cursor
     }

@@ -44,6 +44,7 @@ class WebEditorServer @Inject constructor(
     inbox: javax.inject.Provider<br.app.stagebook.data.BandInbox>,
     backup: javax.inject.Provider<br.app.stagebook.data.Backup>,
     tracks: javax.inject.Provider<br.app.stagebook.data.TrackStore>,
+    pdfs: javax.inject.Provider<br.app.stagebook.data.PdfStore>,
 ) {
     private val scope = br.app.stagebook.data.backgroundScope(Dispatchers.IO)   // errors logged, never a crash (audit 01/11)
     private var server: ServerSocket? = null
@@ -63,7 +64,7 @@ class WebEditorServer @Inject constructor(
         importer = { importer.get() }, readPage = { url, script -> pages.get().read(url, script ?: br.app.stagebook.data.ExtractScript.SOURCE) },
         receiver = { receiver.value }, clearReview = { if (receiver.isInitialized()) receiver.value.clear() },
         band = { WebEditorApi.Band({ inbox.get().items.value }, { bandInternet.get().syncNow() }) },
-        backup = { backup.get() }, tracks = { tracks.get() },
+        backup = { backup.get() }, tracks = { tracks.get() }, pdfs = { pdfs.get() },
         workDir = { java.io.File(context.cacheDir, "web").apply { mkdirs() } },
     )
     private val receiver = lazy {
@@ -162,10 +163,11 @@ class WebEditorServer @Inject constructor(
     }
 
     // backups and backing tracks are big: they go to a file; everything else is a small text
-    private fun isBig(path: String) = path == "/api/backup/inspect" || (path.startsWith("/api/songs/") && path.endsWith("/track"))
+    private fun isBig(path: String) = path == "/api/backup/inspect" || (path.startsWith("/api/songs/") && (path.endsWith("/track") || path.endsWith("/pdf")))
 
     private fun maxBody(path: String): Long = when {
         path == "/api/backup/inspect" -> MAX_FILE
+        path.startsWith("/api/songs/") && path.endsWith("/pdf") -> br.app.stagebook.data.PdfStore.MAX_BYTES   // a PDF: the same limit as in the app
         isBig(path) -> br.app.stagebook.data.TrackStore.MAX_BYTES   // a backing track: the same limit as in the app
         else -> MAX_BODY.toLong()
     }
@@ -217,7 +219,7 @@ class WebEditorServer @Inject constructor(
                     listOf("0" to 0, "1" to 1, "N" to 2).map { (suffix, quantity) -> name + suffix to localized.resources.getQuantityText(id, quantity).toString() }
                 }
 
-        val WEB_PLURALS = mapOf("songCount" to R.plurals.song_count, "breakCount" to R.plurals.break_count)
+        val WEB_PLURALS = mapOf("songCount" to R.plurals.song_count, "breakCount" to R.plurals.break_count, "pdfFacts" to R.plurals.editor_pdf_facts)
 
         /** Texts the page uses, by the name it knows them. */
         val WEB_STRINGS = mapOf(
@@ -226,6 +228,7 @@ class WebEditorServer @Inject constructor(
             "askingCode" to R.string.web_asking_code,
             "denied" to R.string.web_denied,
             "busy" to R.string.web_busy,
+            "deniedWait" to R.string.web_denied_wait,
             "connected" to R.string.web_connected,
             "offline" to R.string.web_offline,
             "saved" to R.string.web_saved,
@@ -285,6 +288,8 @@ class WebEditorServer @Inject constructor(
             "newSet" to R.string.sets_new,
             "setName" to R.string.sets_name,
             "setNameHint" to R.string.sets_name_hint,
+            "setDate" to R.string.sets_date_label,
+            "noDate" to R.string.sets_no_date,
             "noSets" to R.string.sets_empty_title,
             "emptySet" to R.string.set_empty_title,
             "setDeleteConfirm" to R.string.sets_delete_confirm,
@@ -296,6 +301,7 @@ class WebEditorServer @Inject constructor(
             "setCountBreaks" to R.string.set_count_with_breaks,
             "addCount" to R.string.pick_add_short,
             "track" to R.string.stage_backing_track,
+            "pdf" to R.string.song_is_pdf,
             "factBpm" to R.string.set_bpm,
             "factCapo" to R.string.editor_data_capo,
             "trackNone" to R.string.editor_track_none,
@@ -305,6 +311,31 @@ class WebEditorServer @Inject constructor(
             "trackChange" to R.string.editor_track_change,
             "trackRemove" to R.string.stage_track_remove,
             "trackBad" to R.string.stage_track_bad,
+            "pdfLabel" to R.string.editor_pdf_label,
+            "pdfNone" to R.string.editor_pdf_empty,
+            "pdfAttach" to R.string.editor_pdf_attach,
+            "pdfReplace" to R.string.editor_pdf_replace,
+            "pdfRemove" to R.string.editor_pdf_remove,
+            "pdfMissing" to R.string.editor_pdf_missing,
+            "pdfNote" to R.string.editor_pdf_note,
+            "pdfPreview" to R.string.editor_pdf_preview,
+            "pdfInvert" to R.string.stage_pdf_invert,
+            "pdfCrop" to R.string.editor_pdf_crop,
+            "cropTitle" to R.string.pdf_crop_title,
+            "cropHint" to R.string.pdf_crop_hint,
+            "cropAll" to R.string.pdf_crop_all,
+            "cropPage" to R.string.pdf_crop_page,
+            "cropNone" to R.string.pdf_crop_none,
+            "cropPrev" to R.string.pdf_crop_previous,
+            "cropNext" to R.string.pdf_crop_next,
+            "cancel" to R.string.action_cancel,
+            "pdfAskLyrics" to R.string.editor_pdf_ask_lyrics,
+            "pdfRemoveConfirm" to R.string.editor_pdf_remove_confirm,
+            "pdfNotPdf" to R.string.pdf_refused_not_pdf,
+            "pdfTooBig" to R.string.pdf_refused_too_big,
+            "pdfPassword" to R.string.pdf_refused_password,
+            "pdfTooManyPages" to R.string.pdf_refused_too_many_pages,
+            "pdfUnreadable" to R.string.pdf_refused_unreadable,
             "go" to R.string.import_go,
             "highlight" to R.string.editor_highlight,
             "highlightHint" to R.string.editor_highlight_hint,

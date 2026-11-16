@@ -108,6 +108,20 @@
                 <data android:pathPattern=".*\\..*\\.stagebook" />
                 <data android:pathPattern=".*\\..*\\..*\\.stagebook" />
             </intent-filter>
+            <!-- a PDF opened with the app (a file manager, a download, a chat) or shared to it comes in as a song
+                 (PdfImporter): checked first, and the reason told when it is left out -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
             <!-- shared to the app (a chat's or a file manager's Share) -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

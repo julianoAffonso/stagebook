@@ -30,6 +30,7 @@ import java.net.NetworkInterface
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +50,9 @@ class BandLink @Inject constructor(
     private val stage: StageGate,
     private val inbox: BandInbox,
     private val repository: LibraryRepository,
+    // the songs' PDFs: read to leave, checked and saved on arrival (defaults only for the tests that don't care)
+    private val pdfs: PdfStore = PdfStore(context),
+    private val inspector: PdfInspector = PdfInspector(),
 ) {
     /** What goes in a band package: the list (in QR format, in Base64) and the songs. */
     @kotlinx.serialization.Serializable
@@ -92,8 +96,8 @@ class BandLink @Inject constructor(
     /** Someone is in this device's band (the saved list, online or not): without it there is nobody to lead. */
     fun hasSavedMembers(): Boolean = trust.members.value.isNotEmpty()
 
-    /** The stage is open (a show): nothing automatic runs then ([BandInternet] waits for it to close). */
-    val stageOpen: StateFlow<Boolean> get() = stage.onStage
+    /** The show is on screen ([StageGate.playing]): nothing automatic runs then ([BandInternet] waits for the menu or another screen). */
+    val stageOpen: StateFlow<Boolean> get() = stage.playing
 
     /** The app came to the front / left it (MainActivity). In front, it follows Wi-Fi turning on and off. */
     fun setForeground(on: Boolean) {
@@ -161,8 +165,31 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, packageBytes(list, songs))
     }
 
-    internal fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray =
-        json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), songs, BandProtocol.packageVersion(list))).toByteArray()
+    internal fun packageBytes(list: ByteArray, songs: List<SetlistCloud.SharedSong>): ByteArray {
+        val (wire, carriesPdf) = withPdfBytes(songs)
+        return json.encodeToString(Package.serializer(), Package(java.util.Base64.getEncoder().encodeToString(list), wire, BandProtocol.packageVersion(list, carriesPdf))).toByteArray()
+    }
+
+    /**
+     * The songs as they go on the wire: each PDF read from its file into base64, while the package's PDFs stay within
+     * [br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES] (the rest of the songs go without their PDF). True when at
+     * least one PDF goes, which is what raises the package's version.
+     */
+    internal fun withPdfBytes(songs: List<SetlistCloud.SharedSong>): Pair<List<SetlistCloud.SharedSong>, Boolean> {
+        var budget = br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES
+        var any = false
+        val wire = songs.map { s ->
+            val file = s.pdfFile.takeIf { it.isNotEmpty() }?.let(pdfs::file)?.takeIf { it.isFile }
+            val size = file?.length() ?: 0L
+            if (file == null || size > br.app.stagebook.domain.BandContent.MAX_PDF_BYTES || size > budget) s.forWire()
+            else {
+                budget -= size
+                any = true
+                s.forWire().copy(pdf = java.util.Base64.getEncoder().encodeToString(file.readBytes()), pdfName = s.pdfName)
+            }
+        }
+        return wire to any
+    }
 
     /**
      * Searches for the band briefly (on app open with something pending: sends with no receipt, an unconfirmed "ok"),
@@ -196,9 +223,12 @@ class BandLink @Inject constructor(
         }.mapNotNull { it.await() }.toSet()
     }
 
-    /** A song asked of the band (title and artist, as in the QR). */
+    /**
+     * A song asked of the band (title and artist, as in the QR) and which copy of it: [kind] is an [br.app.stagebook.domain.AskKind]
+     * ("" = as it is). An older app doesn't send it and ignores it.
+     */
     @kotlinx.serialization.Serializable
-    data class Wanted(val title: String, val artist: String = "")
+    data class Wanted(val title: String, val artist: String = "", val kind: String = "")
 
     // a connection to a device on the Wi-Fi, with the usual timeout (it was written out in five places)
     private fun dial(peer: Peer): Socket = dialSocket(Socket(), peer.host, peer.port, CONNECT_TIMEOUT_MS)
@@ -222,24 +252,50 @@ class BandLink @Inject constructor(
     /** [askMissing], also saying who each song came from. */
     suspend fun askBand(wanted: List<Wanted>): List<Answer> = kotlinx.coroutines.withContext(Dispatchers.IO) io@{
         if (wanted.isEmpty()) return@io emptyList()
-        val plain = json.encodeToString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), wanted).toByteArray()
-        val answers = onlineMembers.value.map { peer ->
-            this@io.async {
-                val key = pairKeyWith(peer.id) ?: return@async emptyList()
-                runCatching {
-                    val s = dial(peer)
-                    val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain)) ?: return@async emptyList()
-                    readAnswer(ShareCode.decrypt(key, body) ?: return@async emptyList()).map { Answer(it, peer.id, peer.name) }
-                }.getOrDefault(emptyList())
-            }
-        }.flatMap { it.await() }
-        pick(answers)
+        val peers = onlineMembers.value
+        // text is asked of everyone at once (one answer is small). A PDF is asked of one device at a time, and only what hasn't
+        // come yet: every device answering with the same 6 MB at once took close to ten times that in memory each, and wrote
+        // every copy to disk (audit 16/11)
+        val (asPdf, asText) = wanted.partition { it.kind == br.app.stagebook.domain.AskKind.PDF }
+        val texts = if (asText.isEmpty()) emptyList() else peers.map { peer -> this@io.async { askPeer(peer, asText) } }.flatMap { it.await() }
+        val pdfs = ArrayList<Answer>()
+        var left = asPdf
+        for (peer in peers) {
+            if (left.isEmpty()) break
+            val got = askPeer(peer, left)
+            pdfs += got
+            left = left.filterNot { w -> got.any { it.song.pdfFile.isNotEmpty() && it.song.isFor(w.title, w.artist) } }
+        }
+        val all = texts + pdfs
+        pick(all).also { kept -> dropPdfs(all.filterNot { it in kept }.map { it.song }) }
     }
 
+    // one device asked for [wanted]; a PDF is taken only for a song asked for as a PDF (one sent along with lyrics or chords that
+    // were asked for is not what the person asked, and would take the place of the text on the stage)
+    private fun askPeer(peer: Peer, wanted: List<Wanted>): List<Answer> {
+        val key = pairKeyWith(peer.id) ?: return emptyList()
+        val plain = json.encodeToString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), wanted).toByteArray()
+        val asPdf = wanted.filter { it.kind == br.app.stagebook.domain.AskKind.PDF }
+        return runCatching {
+            val s = dial(peer)
+            val body = BandSession(identity.hello()).ask(s, peer.id, ShareCode.encrypt(key, plain)) ?: return emptyList()
+            readAnswer(ShareCode.decrypt(key, body) ?: return emptyList()) { song -> asPdf.any { song.isFor(it.title, it.artist) } }
+                .map { Answer(it, peer.id, peer.name) }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun SetlistCloud.SharedSong.isFor(title: String, artist: String) = br.app.stagebook.domain.SongMatch.same(title, artist, this.title, author)
+
+    /** The PDF files of answers that ended up not used (another copy won, the song was here already): deleted, not left behind. */
+    fun dropPdfs(songs: List<SetlistCloud.SharedSong>) = songs.forEach { if (it.pdfFile.isNotEmpty()) pdfs.remove(it.pdfFile) }
+
     /** What a member answered, already decrypted: only what may travel, and no more than a setlist holds. */
-    internal fun readAnswer(plain: ByteArray): List<SetlistCloud.SharedSong> =
+    internal fun readAnswer(plain: ByteArray, pdfAsked: (SetlistCloud.SharedSong) -> Boolean = { true }): List<SetlistCloud.SharedSong> =
         runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), plain.decodeToString()) }
             .getOrDefault(emptyList()).filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
+            // what the other device says about files on ITS side is never believed; a PDF that came as bytes is checked and saved
+            // here like one in a package (header, size, password, pages)
+            .let { songs -> takePdfs(songs.map { if (it.pdf.isEmpty() || pdfAsked(it)) it else it.copy(pdf = "", pdfName = "") }) }
 
     /**
      * One answer per song. More than one device has the same song: the version with chords wins (in the lyrics only
@@ -292,13 +348,29 @@ class BandLink @Inject constructor(
         return ShareCode.encrypt(key, json.encodeToString(br.app.stagebook.domain.Conduct.Lack.serializer(), lack).toByteArray())
     }
 
-    /** The songs here that answer a request (same rule as the QR: title, with the artist as tiebreaker). */
-    fun songsFor(wanted: List<Wanted>): List<String> = found(wanted).map { it.id }.distinct()
+    /**
+     * Of [ids], the songs worth sending over the internet: one that is only a PDF too big for the paired inbox would arrive as an
+     * empty song (the PDF is left out there), so it doesn't go.
+     */
+    fun sendableOnline(ids: List<String>): List<String> = ids.filter { id ->
+        val song = repository.song(id) ?: return@filter false
+        song.text.isNotBlank() || (song.pdf.isNotEmpty() && pdfs.file(song.pdf).let { it.isFile && it.length() <= br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES })
+    }
 
-    private fun found(wanted: List<Wanted>): List<br.app.stagebook.data.model.Song> {
+    /** The songs here that answer a request (same rule as the QR: title, with the artist as tiebreaker). */
+    fun songsFor(wanted: List<Wanted>): List<String> = found(wanted).map { it.second.id }.distinct()
+
+    // the songs here that answer each request, and only when they are the copy asked for (a PDF asked for and none here, or
+    // chords asked for and the song has only lyrics, is no answer: the one who asked hears "nobody has it")
+    private fun found(wanted: List<Wanted>): List<Pair<Wanted, br.app.stagebook.data.model.Song>> {
         val library = repository.library.value.songs
         return wanted.take(MAX_ASK).mapNotNull { w ->
-            br.app.stagebook.domain.SetlistMatcher.matchExact(QrPayload.Entry(w.title, w.artist), library)
+            val song = br.app.stagebook.domain.SetlistMatcher.matchExact(QrPayload.Entry(w.title, w.artist), library) ?: return@mapNotNull null
+            val pdfHere = song.pdf.isNotEmpty() && pdfs.file(song.pdf).isFile
+            // a song that is only a PDF has nothing to give a request for text (one with no kind included: it went as an empty
+            // song, and the PDF was then never asked for)
+            val textOk = w.kind == br.app.stagebook.domain.AskKind.PDF || song.text.isNotBlank() || song.pdf.isEmpty()
+            if (textOk && br.app.stagebook.domain.AskKind.has(song, w.kind, pdfHere)) w to song else null
         }
     }
 
@@ -310,9 +382,46 @@ class BandLink @Inject constructor(
         val key = pairKeyWith(from.id) ?: return null
         val plain = ShareCode.decrypt(key, body) ?: return null
         val wanted = runCatching { json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(Wanted.serializer()), plain.decodeToString()) }.getOrNull() ?: return null
-        val found = found(wanted).map { SetlistCloud.SharedSong(it.title, it.author, it.year, it.text) }
-        if (found.isNotEmpty()) askedHandler?.invoke(from.id, wanted)
-        return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
+        // one answer with PDFs at a time (each takes many times its files in memory, and any member can ask, also during a
+        // show): a second request meanwhile is answered with what is text only, and its PDFs are asked for again
+        val wantsPdf = wanted.any { it.kind == br.app.stagebook.domain.AskKind.PDF }
+        val mayPdf = !wantsPdf || pdfAnswers.tryAcquire()
+        try {
+            val found = shapedAnswer(wanted, mayPdf)
+            if (found.isNotEmpty()) askedHandler?.invoke(from.id, wanted)
+            return ShareCode.encrypt(key, json.encodeToString(kotlinx.serialization.builtins.ListSerializer(SetlistCloud.SharedSong.serializer()), found).toByteArray())
+        } finally {
+            if (wantsPdf && mayPdf) pdfAnswers.release()
+        }
+    }
+    private val pdfAnswers = java.util.concurrent.Semaphore(1)
+
+    /** What a request is answered with, as it goes on the wire: each song as the copy asked for, the PDFs' bytes inside. */
+    internal fun shapedAnswer(wanted: List<Wanted>, pdfs: Boolean = true): List<SetlistCloud.SharedSong> {
+        val here = found(wanted).filter { (w, _) -> pdfs || w.kind != br.app.stagebook.domain.AskKind.PDF }
+        val shaped = here.map { (w, s) -> copyAsked(w, s) }
+        // the PDFs share the budget of one package. A PDF asked for whose file doesn't fit is left out of the answer: sent without
+        // it, it came in as an empty song and was never asked for again (audit 16/11)
+        return withPdfBytes(shaped).first.filterIndexed { i, song -> here[i].first.kind != br.app.stagebook.domain.AskKind.PDF || song.pdf.isNotEmpty() }
+    }
+
+    // the copy asked for: lyrics without the chords, the chart as it is, or the PDF with its pages (checked on the other side).
+    // The PDF is still its file's name here: the bytes are read when the answer leaves
+    private fun copyAsked(w: Wanted, s: br.app.stagebook.data.model.Song) =
+        SetlistCloud.SharedSong(s.title, s.author, s.year, br.app.stagebook.domain.AskKind.textFor(s.text, w.kind), pdfName = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdfName else "", pdfFile = if (w.kind == br.app.stagebook.domain.AskKind.PDF) s.pdf else "")
+
+    /**
+     * What a request that came over the internet is answered with: the same copies as on the Wi-Fi ([shapedAnswer]), as a
+     * package of loose songs for the pair's inbox (null = nothing here to send). A request for lyrics only went with the
+     * chords, and with the song's PDF, which then took the place of the lyrics on the stage (audit 16/11). A song asked for
+     * twice goes once, as the first copy asked for.
+     */
+    fun onlineAnswer(wanted: List<Wanted>): Pair<ByteArray, List<SetlistCloud.SharedSong>>? {
+        val here = found(wanted).distinctBy { it.second.id }
+        val sendable = sendableOnline(here.map { it.second.id }).toSet()
+        val songs = here.filter { it.second.id in sendable }.map { (w, s) -> copyAsked(w, s) }
+        if (songs.isEmpty()) return null
+        return QrPayload.pack(SetlistCloud.looseList(songs.map { it.title to it.author })) to songs
     }
 
     /**
@@ -332,12 +441,44 @@ class BandLink @Inject constructor(
     /** A package from band member [fromId], already decrypted: kept in the inbox, but for what [showIntake] took. */
     internal fun accept(fromId: String, fromName: String, plain: ByteArray): Boolean {
         val pkg = openPackage(plain) ?: return false
-        val rest = showIntake?.invoke(fromId, fromName, pkg.text, pkg.songs) ?: pkg.songs
+        // the PDFs are checked and saved here, before anything else sees the songs (only a member's package gets this far)
+        val songs = takePdfs(pkg.songs.take(br.app.stagebook.domain.BandContent.MAX_SONGS))   // a package of thousands of songs is not opened one by one
+        val rest = showIntake?.invoke(fromId, fromName, pkg.text, songs) ?: songs
         // every song went straight in: nothing is left to review
-        if (rest.isEmpty() && pkg.songs.isNotEmpty()) return true
+        if (rest.isEmpty() && songs.isNotEmpty()) return true
         inbox.add(fromId, fromName, pkg.text, rest, pkg.breaks)
         return true
     }
+
+    /**
+     * Each PDF that came ([SetlistCloud.SharedSong.pdf], base64) is checked ([PdfInspector]: header, 8 MB, readable, no
+     * password, 300 pages) and saved under a generated name; the song then carries only that file's name. One that fails
+     * is discarded and the song comes without it, with the reason in [SetlistCloud.SharedSong.pdfProblem]. What a sender
+     * says about this device's files is never believed.
+     */
+    internal fun takePdfs(songs: List<SetlistCloud.SharedSong>): List<SetlistCloud.SharedSong> {
+        var budget = br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES
+        val maxChars = (br.app.stagebook.domain.BandContent.MAX_PDF_BYTES + 2) / 3 * 4
+        return songs.map { s ->
+            val clean = s.copy(pdf = "", pdfFile = "", pdfProblem = "", pdfName = "")
+            if (s.pdf.isEmpty()) return@map clean
+            val bytes = if (s.pdf.length > maxChars) null else runCatching { java.util.Base64.getDecoder().decode(s.pdf) }.getOrNull()
+            val problem = when {
+                s.pdf.length > maxChars || (bytes != null && bytes.size > budget) -> PdfProblem.TOO_BIG
+                bytes == null -> PdfProblem.NOT_PDF
+                else -> null
+            }
+            if (problem != null || bytes == null) return@map clean.copy(pdfProblem = (problem ?: PdfProblem.NOT_PDF).name)
+            when (val saved = pdfs.saveCheckedNow(UUID.randomUUID().toString(), bytes, inspector)) {
+                is PdfAttach.Saved -> { budget -= bytes.size; clean.copy(pdfFile = saved.name, pdfName = shownPdfName(s.pdfName)) }
+                is PdfAttach.Refused -> clean.copy(pdfProblem = saved.problem.name)
+            }
+        }
+    }
+
+    // a name the sender wrote, to show: plain text, no folders, short
+    private fun shownPdfName(name: String): String =
+        name.substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim().take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
 
     /** Keeps loose [songs] from a band member in the inbox, to be reviewed like anything the band sends. */
     internal fun keep(fromId: String, fromName: String, songs: List<SetlistCloud.SharedSong>) =
@@ -372,7 +513,7 @@ class BandLink @Inject constructor(
     // the search turns on and off by itself, without touching the announcement: a screen that needs it open and off
     // stage
     private fun updateSearch() {
-        val want = _running.value && ((screenOpen && !stage.onStage.value) || onStageSearch.get() > 0)
+        val want = _running.value && ((screenOpen && !stage.playing.value) || onStageSearch.get() > 0)
         if (want && !searching) startSearch() else if (!want && searching) stopSearch()
     }
 
@@ -404,7 +545,7 @@ class BandLink @Inject constructor(
                     try {
                         session.serve(
                             client, trust::isMember, ::ask, { h -> trust.add(h.id, h.name, h.key); update() },
-                            busy = { stage.onStage.value }, onPackage = ::receive, onAsk = ::answer,
+                            busy = { stage.playing.value }, onPackage = ::receive, onAsk = ::answer,
                             onCodeAck = { h, body -> codeAckHandler?.invoke(h, body) ?: false }, onConduct = ::onConduct,
                         )
                     } catch (e: Exception) {
@@ -541,7 +682,7 @@ class BandLink @Inject constructor(
     // went on stage: the search stops right away; left it, it comes back if the screen still needs it. Placed after all
     // fields: the collection runs on another thread and can call update() before the rest of the class exists
     init {
-        scope.launch { stage.onStage.collect { update() } }
+        scope.launch { stage.playing.collect { update() } }
         scope.launch {
             // the callback is reconciled on every emission (cheap, and the state read is the current one); the rest only
             // when the switch changed or the callback did

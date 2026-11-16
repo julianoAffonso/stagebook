@@ -44,6 +44,7 @@ data class SongRowUi(
     val bpm: Int = 0,           // 0 = none
     val capo: Int = 0,
     val hasTrack: Boolean = false,
+    val hasPdf: Boolean = false,   // the song is a PDF (a sheet of paper in its row)
 )
 
 /** A letter of the A to Z index and where its first song is in [SongsUiState.songs]. */
@@ -89,6 +90,7 @@ class SongsViewModel @Inject constructor(
     private val bandLink: BandLink,
     private val bandTrust: BandTrust,
     private val bandInternet: BandInternet,
+    private val pdfImporter: br.app.stagebook.data.PdfImporter,
 ) : ViewModel() {
     // the Share sheet's internet code and band send, shared with the setlist screen
     private val share = br.app.stagebook.ui.share.ShareSender(viewModelScope, repository, connectivity, bandLink, bandTrust, bandInternet)
@@ -99,6 +101,12 @@ class SongsViewModel @Inject constructor(
     val bandResult = share.bandResult
 
     /** Sends the chosen songs over the internet (no setlist); the code shows in a dialog. */
+    /** PDF files chosen to come in as songs (the + menu): each is checked, a song is made of the good ones. */
+    suspend fun importPdfs(uris: List<android.net.Uri>) = pdfImporter.import(uris)
+
+    /** The sizes of the PDFs these songs carry (the internet send checks they fit). */
+    fun pdfSizesOf(ids: List<String>): List<Long> = setlistCloud.pdfSizes(ids)
+
     fun shareSongs(ids: List<String>) { if (ids.isNotEmpty()) share.sendCode("") { setlistCloud.sendSongs(ids) } }
 
     fun dismissCloud() = share.dismissCloud()
@@ -129,7 +137,7 @@ class SongsViewModel @Inject constructor(
         val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map {
             val fact = known[it.id]
             // a song the search already has and the facts don't yet: its row comes bare and is redone right after
-            SongRowUi(it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true) to (fact?.letter ?: SongGroups.letter(it.title))
+            SongRowUi(it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true, it.pdf.isNotEmpty()) to (fact?.letter ?: SongGroups.letter(it.title))
         }
         val grouped = SongGroups.group(rows) { it.second }
         SongsUiState(

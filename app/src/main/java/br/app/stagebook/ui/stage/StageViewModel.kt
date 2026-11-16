@@ -34,6 +34,12 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
     val zooms: Map<String, br.app.stagebook.data.model.ScreenZoom> = emptyMap(),
     val fit: br.app.stagebook.data.model.ScreenZoom? = null,   // the calculated zoom saved for this screen
     val artist: String = "",   // for the setlist's panel, whose rows leave the year out ([meta] is the header's: artist and year)
+    val pdf: String = "",   // the name of the song's PDF file ("" = it is lyrics and chords): the stage draws its pages
+    val pdfMarks: List<br.app.stagebook.data.model.PdfMark> = emptyList(),   // the highlighter strokes on its pages
+    val pdfPage: Int = 0,   // the page it was left on
+    val pdfCrops: List<br.app.stagebook.data.model.PdfCrop> = emptyList(),   // the trims of its pages (this device)
+    val pdfInvert: Boolean? = null,   // this song's PDF with its colours turned over; null = as Settings says
+    val pdfView: br.app.stagebook.domain.PdfView = br.app.stagebook.domain.PdfView(),   // its zoom and place, as the person left them
 ) {
     /** The song as [screen] shows it: its zoom there, or none, which is the automatic one. */
     fun onScreen(screen: String): StageSong {
@@ -44,7 +50,7 @@ data class StageSong(val title: String, val meta: String, val text: String, val 
 
 /** A setlist song's key ("" = none written), tempo and capo (0 = none) and whether it has a backing track, for the panel's row. */
 @Immutable
-data class StageRowFacts(val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false)
+data class StageRowFacts(val key: String = "", val bpm: Int = 0, val capo: Int = 0, val hasTrack: Boolean = false, val hasPdf: Boolean = false)
 
 /**
  * The setlist the stage was opened from, for the panel over the stage: its [name] and, for each song, where the show
@@ -127,6 +133,7 @@ class StageViewModel @Inject constructor(
     private val midiOut: br.app.stagebook.data.MidiOut,
     private val show: br.app.stagebook.data.SetlistShowStore,
     private val bandTrust: br.app.stagebook.data.BandTrust,
+    private val lastStage: br.app.stagebook.data.LastStage,
 ) : ViewModel() {
     /** The setlist's menu, "Lead the band": sends it from the song on stage (each member says what's missing). */
     fun conductBand() {
@@ -214,9 +221,37 @@ class StageViewModel @Inject constructor(
         }
     }
 
+    /** A highlighter stroke made on a page of the song's PDF. */
+    fun addPdfStroke(songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) =
+        repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.add(it.pdfMarks, page, points)) }
+
+    /** The page of the PDF the song was left on: it opens there next time. */
+    fun setPdfPage(songId: String, page: Int) {
+        if (repository.song(songId)?.pdfPage != page) repository.updateSong(songId) { it.copy(pdfPage = page) }   // nothing changed, nothing written
+    }
+
+    /** The PDF's zoom and place on the stage, kept with the song. */
+    fun setPdfView(songId: String, view: br.app.stagebook.domain.PdfView) {
+        val s = repository.song(songId) ?: return
+        if (s.pdfScale != view.scale || s.pdfPanX != view.panX || s.pdfPanY != view.panY) repository.updateSong(songId) { it.copy(pdfScale = view.scale, pdfPanX = view.panX, pdfPanY = view.panY) }
+    }
+
+    /** The last stroke made on [page] goes. */
+    fun undoPdfStroke(songId: String, page: Int) =
+        repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.undoLast(it.pdfMarks, page)) }
+
+    /** Every stroke of [page] goes. */
+    fun clearPdfPage(songId: String, page: Int) =
+        repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.clearPage(it.pdfMarks, page)) }
+
+    /** The side handle's place on the left edge (share of the height), kept as the person left it. */
+    fun setDrawerHandle(y: Float) = repository.updateLook { it.copy(drawerHandleY = y.coerceIn(HANDLE_MIN, HANDLE_MAX)) }
+
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
         shownIndex = index
+        // the app opens on this stage next time (not the leader's break alone: there is no song of ours there)
+        if (!route.leaderBreak) lastStage.record(route.setId, route.songId)
         resumeBreak(index)
         route.setId?.let { conduct.open(it, index) }
         announce(index)
@@ -414,7 +449,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty(), pdfInvert = s?.pdfInvert, pdfCrops = s?.pdfCrops.orEmpty(), pdfPage = s?.pdfPage ?: 0, pdfView = s?.let { br.app.stagebook.domain.PdfView(it.pdfScale, it.pdfPanX, it.pdfPanY) } ?: br.app.stagebook.domain.PdfView())
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),
@@ -436,9 +471,9 @@ class StageViewModel @Inject constructor(
     private fun factsOf(id: String, song: br.app.stagebook.data.model.Song?): StageRowFacts {
         if (song == null) return StageRowFacts()
         val kept = factsKept[id]
-        if (kept != null && kept.first.text == song.text && kept.first.track == song.track) return kept.second
+        if (kept != null && kept.first.text == song.text && kept.first.track == song.track && kept.first.pdf == song.pdf) return kept.second
         val meta = Chords.meta(song.text)
-        return StageRowFacts(meta.key, meta.tempo, meta.capo, song.track.isNotEmpty()).also { factsKept[id] = song to it }
+        return StageRowFacts(meta.key, meta.tempo, meta.capo, song.track.isNotEmpty(), song.pdf.isNotEmpty()).also { factsKept[id] = song to it }
     }
 
     /** Chord shape picked on stage: goes into the song as a ChordPro {define} (replaces the previous one). */
@@ -526,3 +561,6 @@ private const val BREAK_SINCE = "breakSince"
 private const val BREAK_SONG = "breakSong"     // the song after the break on screen: its counter's key
 private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome
+
+private const val HANDLE_MIN = 0.1f
+private const val HANDLE_MAX = 0.9f

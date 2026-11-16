@@ -9,6 +9,8 @@ import br.app.stagebook.ui.components.QuestionDialog
 import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.ActionButton
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.mutableLongStateOf
 import br.app.stagebook.domain.ShowTimer
 import br.app.stagebook.data.device.StageQuiet
@@ -97,6 +99,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawBehind
@@ -173,17 +176,27 @@ private const val PAGE_SLOTS = 7      // dots in the footer (7 × 28dp fit on ph
 private const val PAGE_IN_MS = 220   // the new page coming in (and the dragged one going back with it)
 private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itself
 
+/** How long a PDF page stays on screen before it is remembered as the one the song was left on. */
+internal const val PDF_PAGE_REST_MS = 1_000L
+
+/**
+ * The page a PDF song comes up on: the one it was left on, except its last. A song left on its last page was played to
+ * the end, and the next show starts it from the first (user, 16/11).
+ */
+internal fun pdfPageToRestore(saved: Int, pageCount: Int): Int = if (saved in 1 until pageCount - 1) saved else 0
+
 @Composable
 fun StageRoute(
     onEditSong: (songId: String, cursor: Int) -> Unit = { _, _ -> },
+    onEmptied: (() -> Unit)? = null,   // the library lost every song under the stage: where to go (default: [onBack])
     fromList: Boolean = false,   // opened from the Songs list: the editor steps through that list
     onBack: (() -> Unit)? = null,
-    onEditSetlist: (setId: String) -> Unit = {},
-    onShareSetlist: (setId: String) -> Unit = {},
     viewModel: StageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val pdfStore = remember(appContext) { br.app.stagebook.data.PdfStore(appContext) }
     // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
     if (viewModel.breakOnly) {
         KeepScreenOn()
@@ -265,7 +278,7 @@ fun StageRoute(
         )
     }
     val playerNote = rememberPlayerNote(playerUi.message, viewModel::playerNoticeFresh)
-    val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { onBack?.invoke() }
+    val emptied = leaveWhenEmptied(uiState.loading, uiState.songs.any { !it.missing }) { (onEmptied ?: onBack)?.invoke() }
     if (!uiState.loading && uiState.songs.isNotEmpty() && !emptied) {
         val config = androidx.compose.ui.platform.LocalConfiguration.current
         val screen = br.app.stagebook.data.model.screenKey(config.screenWidthDp, config.screenHeightDp, uiState.look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL)
@@ -288,12 +301,19 @@ fun StageRoute(
             },
             onHighlightWords = viewModel::highlightWords,
             onBack = onBack,
-            setlistActions = SetlistActions(
-                onConduct = viewModel::conductBand,
-                onShare = { uiState.setlist?.id?.let(onShareSetlist) },
-                onEdit = { uiState.setlist?.id?.let(onEditSetlist) },
-                onClearPlayed = viewModel::clearPlayed,
-            ),
+            onMenu = br.app.stagebook.ui.drawer.LocalDrawer.current?.let { d ->
+                // from a setlist the drawer opens on it, with the song on stage in view; elsewhere on the lists
+                val setId = uiState.setlist?.id?.takeIf { it.isNotEmpty() }
+                if (setId != null) ({ d.openSetlist(setId, false) }) else d.open.takeIf { !d.pinned }
+            },
+            pdfFile = pdfStore::file,
+            onDrawerHandle = viewModel::setDrawerHandle,
+            onPdfView = viewModel::setPdfView,
+            onPdfPage = viewModel::setPdfPage,
+            onPdfStroke = viewModel::addPdfStroke,
+            onPdfUndo = viewModel::undoPdfStroke,
+            onPdfClear = viewModel::clearPdfPage,
+            leadingButton = br.app.stagebook.ui.drawer.LocalDrawer.current?.pinned != true,
             onSaveShape = viewModel::saveShape,
             note = playerNote,
             playing = playerUi.playing || playerUi.waiting,
@@ -425,7 +445,15 @@ fun StageScreen(
     onHighlightWords: (songId: String, line: Int, shown: String, from: Int, to: Int, after: Int) -> Unit = { _, _, _, _, _, _ -> },
     note: String = "",
     onBack: (() -> Unit)? = null,
-    setlistActions: SetlistActions = SetlistActions(),
+    pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
+    onDrawerHandle: (Float) -> Unit = {},
+    onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
+    onPdfPage: (String, Int) -> Unit = { _, _ -> },
+    onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },
+    onPdfUndo: (songId: String, page: Int) -> Unit = { _, _ -> },
+    onPdfClear: (songId: String, page: Int) -> Unit = { _, _ -> },
+    onMenu: (() -> Unit)? = null,   // the library drawer: the header's first button opens it instead of leaving
+    leadingButton: Boolean = true,   // false: the drawer is pinned beside the stage, nothing to open or leave by
     onSaveShape: (songId: String, chord: String, define: String) -> Unit = { _, _, _ -> },
     onHiddenChords: (songId: String, hidden: Set<String>) -> Unit = { _, _ -> },
     onTranspose: (songId: String, semitones: Int) -> Unit = { _, _ -> },
@@ -495,8 +523,6 @@ fun StageScreen(
     val followRest = uiState.followBreak != null && !onBreakNow
     // the setlist over the stage (only on a stage opened from one): back closes it before anything else
     val setlist = uiState.setlist
-    var setlistOpen by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = setlistOpen && setlist != null) { setlistOpen = false }
     // keyboard doesn't use capo: chords show in the sounding key (chart in G with capo on fret 2 → A), without changing
     // the saved song (user's request, 29/10)
     val keyboard = look.instrument == br.app.stagebook.data.model.Instrument.KEYBOARD
@@ -772,21 +798,6 @@ fun StageScreen(
         presses.from = index to page
         onPosition(target, 0)
     }
-    // a song tapped on the setlist over the stage: at its start, by the same way a page turn changes song, so its
-    // MIDI, Now Playing and band message follow. No break on the way, and one on screen is left
-    fun jumpTo(target: Int) {
-        setlistOpen = false
-        if (target !in uiState.songs.indices || followRest) return
-        if (onBreakNow) {
-            onBreak(false)
-            // into the set after the break: its time counts from zero, as when the break is left forward
-            if (target > index && look.clockMode != br.app.stagebook.data.model.StageClockMode.CLOCK) onRestartShow()
-        }
-        presses.steps = 0
-        if (target == index && page == 0) return
-        presses.from = index to page
-        onPosition(target, 0)
-    }
     // a break on screen, the leader's or this setlist's: the lyrics it covers don't go on scrolling by themselves, and
     // the click doesn't go on either (it stays off on coming back: the musician turns it on again)
     LaunchedEffect(onBreakNow || followRest) { if (onBreakNow || followRest) { autoOn = false; metroOn = false } }
@@ -812,6 +823,11 @@ fun StageScreen(
             hold = { p ->
                 // a long press on the track button belongs to it (change/remove), not "edit this line"
                 if (trackButton?.contains(p) == true) return@GestureTargets
+                // a PDF: the hold offers the highlighter (and undo / clear page), as a line of lyrics offers it (user, 15/11)
+                if (song.pdf.isNotEmpty()) {
+                    if (!song.missing) { haptics.performHapticFeedback(HapticFeedbackType.LongPress); editOffer = EditOffer(p, -1, null) }
+                    return@GestureTargets
+                }
                 val line = hit.lineAt(p)
                 // the chord list has its own long press (take a chord off the list)
                 if (line != null && pageLines.getOrNull(line)?.source == -1) return@GestureTargets
@@ -822,7 +838,8 @@ fun StageScreen(
             },
             dismiss = { (editOffer != null).also { editOffer = null } },
             chord = { p -> look.chords && look.chordTap && hit.chordAt(p)?.let { shownChord = it; true } == true },
-            marking = marking,
+            marking = marking && song.pdf.isEmpty(),   // the words of lyrics; a PDF has its own highlighter
+            pdf = song.pdf.isNotEmpty(),
             vertical = look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL,
             mark = { from, to ->
                 val start = hit.charAt(from)
@@ -846,16 +863,13 @@ fun StageScreen(
         if (action == PedalAction.NONE) return@PedalHandler false
         // a foot resting on the pedal repeats the key: only the first one turns the page
         if (runs) {
-            // the setlist over the stage is a panel to look at: the pedal doesn't turn pages or songs under it (it still
-            // closes it, and plays/pauses the track)
-            val underPanel = setlistOpen && setlist != null
             when (action) {
-                PedalAction.NEXT -> if (!underPanel) next()
-                PedalAction.PREVIOUS -> if (!underPanel) previous()
-                PedalAction.NEXT_SONG -> if (!underPanel) goSong(true)
-                PedalAction.PREVIOUS_SONG -> if (!underPanel) goSong(false)
+                PedalAction.NEXT -> next()
+                PedalAction.PREVIOUS -> previous()
+                PedalAction.NEXT_SONG -> goSong(true)
+                PedalAction.PREVIOUS_SONG -> goSong(false)
                 PedalAction.PLAY_PAUSE -> if (look.playerMode && !song.missing && song.track.isNotEmpty()) onTogglePlay()
-                PedalAction.OPEN_SETLIST -> if (setlist != null) setlistOpen = !setlistOpen
+                PedalAction.OPEN_SETLIST -> onMenu?.invoke()
                 PedalAction.NONE -> Unit
             }
         }
@@ -886,7 +900,9 @@ fun StageScreen(
         Row(Modifier.fillMaxWidth().offset(x = Spacing.m - Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
             // leave the stage in one tap, like Google's full-screen viewers: Android's bars stay hidden and the edge
             // gesture was a fight (user's request, 23/10). Icon only.
-            if (onBack != null) {
+            // with a drawer there is no button here: the side handle opens it and the title gets the room
+            if (!leadingButton || onMenu != null) {
+            } else if (onBack != null) {
                 br.app.stagebook.ui.components.BackButton({ leave() }, tint = fg.copy(alpha = 0.6f))
             }
             // the texts on one baseline among themselves, the group centred on the arrow's line (with the arrow in the
@@ -957,7 +973,9 @@ fun StageScreen(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .clipToBounds()
+                // the page is cut at the top and the bottom, and at the sides only at the screen's edge: cut at the lyrics' own
+                // margin, a page turning slid under two fixed bands, which read as a border on each side (user, 16/11)
+                .clipBeyondSides(Spacing.l)
                 .pointerInput(index) {
                     // a single gesture: two fingers = zoom; one finger tapping without dragging = turn the page; one
                     // finger dragging horizontally = turn toward the drag; one finger still for ~0.5 s = offer to edit
@@ -1002,7 +1020,8 @@ fun StageScreen(
                             if (event.changes.any { it.isConsumed }) taken = true
                             if (event.changes.count { it.pressed } >= 2) {
                                 val change = event.calculateZoom()
-                                if (change != 1f) {
+                                // a PDF page zooms in its own view (it takes the pinch first): the lyrics' size stays as it was
+                                if (change != 1f && !latest.pdf) {
                                     zoom = (minOf(zoom, fitZoom) * change).coerceIn(minOf(latest.minZoom, fitZoom), minOf(latest.maxZoom, fitZoom))
                                     zoomTouched = true
                                 }
@@ -1045,6 +1064,117 @@ fun StageScreen(
                     }
                 },
         ) {
+            // what sits over the page of any song: the track's play button and mixer, and the player's short note. The PDF
+            // branch below draws the same ones over its pages
+            val trackOverlays: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {
+                if (look.playerMode && !song.missing && song.lostTrack.isNotEmpty() && !playing) {
+                    LostTrackButton(
+                        name = song.lostTrack,
+                        bg = Color(look.bg),
+                        onPick = { onPickTrack(song.id) },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
+                    )
+                } else if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
+                    TrackButton(
+                        hasTrack = song.track.isNotEmpty() || playing,
+                        playing = playing,
+                        away = usbAway,
+                        awayColor = MaterialTheme.colorScheme.error,
+                        stops = look.trackStops,
+                        fg = fg,
+                        bg = Color(look.bg),
+                        onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
+                        onChange = { onPickTrack(song.id) },
+                        onRemove = { onRemoveTrack(song.id) },
+                        // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button
+                        // less over the lyrics)
+                        onMixer = { mixerOpen = true },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
+                    )
+                }
+                // the song's own mix over the global one, or the global mixer itself (user, 31/10 and 01/11)
+                if (mixerOpen) StageMixerSheet(
+                    look.mixer.forSong(song.mix),
+                    own = song.mix != null,
+                    onMixer = { if (song.mix != null) onSongMix(song.id, it) else onGlobalMix(it) },
+                    onOwn = { onSongMix(song.id, look.mixer) },
+                    onGeneral = { onSongMix(song.id, null) },
+                    onDismiss = { mixerOpen = false },
+                )
+                // the look and time of the app's messages, centred above the footer: the metronome and the pages stay free
+                if (note.isNotEmpty()) {
+                    Text(
+                        note,
+                        Modifier.align(Alignment.BottomCenter)
+                            .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
+                            .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
+            if (song.pdf.isNotEmpty()) {
+                val open by rememberPdfOpen(pdfFile(song.pdf))
+                // it comes up on the page it was left on (once, when the song arrives on its first page, with its count known);
+                // after that each page turned is kept. A song entered from behind (the last page) is left where it is
+                var restoredFor by remember { mutableIntStateOf(-1) }
+                LaunchedEffect(index, song.id, pageCountFor, pageCount) {
+                    if (restoredFor == index || pageCountFor != index) return@LaunchedEffect
+                    restoredFor = index
+                    val saved = song.pdfPage
+                    val back = pdfPageToRestore(saved, pageCount)
+                    if (current == 0 && back > 0) onPosition(index, back)
+                }
+                // (only with the PDF open: one that failed to open must not make the page it was on be forgotten)
+                // (kept once the page rests: each turn used to rewrite the whole library, in the middle of a show, audit 16/11)
+                LaunchedEffect(current, restoredFor, index, open) {
+                    if (restoredFor == index && pageCountFor == index && open is br.app.stagebook.ui.stage.PdfOpen.Ready) {
+                        kotlinx.coroutines.delay(PDF_PAGE_REST_MS)
+                        onPdfPage(song.id, current)
+                    }
+                }
+                Box(Modifier.fillMaxSize()) {
+                    PdfStageView(
+                        open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
+                        marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
+                        onStroke = { page, points -> onPdfStroke(song.id, page, points) },
+                        view = song.pdfView,
+                        crops = song.pdfCrops,
+                        // nothing is drawn for page 0 while the song's own last page is being found
+                        ready = song.pdfPage == 0 || restoredFor == index,
+                        pageKey = index,
+                        onView = { onPdfView(song.id, it) },
+                    )
+                    trackOverlays()
+                    // the same bar as the lyrics' highlighter: what to do and the way out
+                    if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter), hint = stringResource(R.string.stage_pdf_marker_hint))
+                    // holding the page: the highlighter, and taking back what was marked on it
+                    val boxW = this@BoxWithConstraints.constraints.maxWidth
+                    editOffer?.let { offer ->
+                        val onPage = song.pdfMarks.any { it.page == current }
+                        PdfHoldButtons(
+                            onMarker = { editOffer = null; marking = true },
+                            onUndo = if (onPage) ({ editOffer = null; onPdfUndo(song.id, current) }) else null,
+                            onClear = if (onPage) ({ editOffer = null; onPdfClear(song.id, current) }) else null,
+                            modifier = Modifier.layout { measurable, c ->
+                                val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
+                                val gap = Spacing.l.roundToPx()
+                                val above = offer.at.y.roundToInt() - gap - p.height
+                                layout(p.width, p.height) {
+                                    p.place(
+                                        (offer.at.x.roundToInt() - p.width / 2).coerceIn(0, maxOf(boxW - p.width, 0)),
+                                        if (above >= 0) above else offer.at.y.roundToInt() + gap,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+                return@BoxWithConstraints
+            }
             val width = constraints.maxWidth
             val height = constraints.maxHeight
             val gutter = with(LocalDensity.current) { Spacing.xxl.roundToPx() }
@@ -1302,8 +1432,10 @@ fun StageScreen(
                     val forward = targetState.song > initialState.song ||
                         (targetState.song == initialState.song && targetState.page > initialState.page)
                     val dir = if (forward) 1 else -1
-                    (slideInHorizontally(tween(PAGE_IN_MS)) { it / 6 * dir } + fadeIn(tween(PAGE_IN_MS))) togetherWith
-                        (slideOutHorizontally(tween(160)) { -it / 6 * dir } + fadeOut(tween(160)))
+                    ((slideInHorizontally(tween(PAGE_IN_MS)) { it / 6 * dir } + fadeIn(tween(PAGE_IN_MS))) togetherWith
+                        (slideOutHorizontally(tween(160)) { -it / 6 * dir } + fadeOut(tween(160))))
+                        // the pages are the same size: no size to animate, and no cut at the page's own width while it slides
+                        .using(androidx.compose.animation.SizeTransform(clip = false))
                 },
                 label = "page",
             ) { content ->
@@ -1383,54 +1515,8 @@ fun StageScreen(
             // A track playing goes on when the song changes, so the button stays (to stop it) on any song meanwhile
             // a song whose audio didn't come (Android's own copy, a file whose track was lost) shows an alert there instead, never over a
             // track that is playing
-            if (look.playerMode && !song.missing && song.lostTrack.isNotEmpty() && !playing) {
-                LostTrackButton(
-                    name = song.lostTrack,
-                    bg = Color(look.bg),
-                    onPick = { onPickTrack(song.id) },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s),
-                )
-            } else if (look.playerMode && !song.missing && (song.track.isNotEmpty() || playing)) {
-                TrackButton(
-                    hasTrack = song.track.isNotEmpty() || playing,
-                    playing = playing,
-                    away = usbAway,
-                    awayColor = MaterialTheme.colorScheme.error,
-                    stops = look.trackStops,
-                    fg = fg,
-                    bg = Color(look.bg),
-                    onClick = { if (playing || song.track.isNotEmpty()) onTogglePlay() else onPickTrack(song.id) },
-                    onChange = { onPickTrack(song.id) },
-                    onRemove = { onRemoveTrack(song.id) },
-                    // the mixer lives in play's long press now, adjusting while the song plays (user, 01/11: one button
-                    // less over the lyrics)
-                    onMixer = { mixerOpen = true },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.s).onGloballyPositioned { trackButton = it.boundsInParent() },
-                )
-            }
-            // the song's own mix over the global one, or the global mixer itself (user, 31/10 and 01/11)
-            if (mixerOpen) StageMixerSheet(
-                look.mixer.forSong(song.mix),
-                own = song.mix != null,
-                onMixer = { if (song.mix != null) onSongMix(song.id, it) else onGlobalMix(it) },
-                onOwn = { onSongMix(song.id, look.mixer) },
-                onGeneral = { onSongMix(song.id, null) },
-                onDismiss = { mixerOpen = false },
-            )
+            trackOverlays()
             if (marking) MarkerBar({ marking = false }, Modifier.align(Alignment.BottomCenter))
-            // the look and time of the app's messages, centred above the footer: the metronome and the pages stay free
-            if (note.isNotEmpty()) {
-                Text(
-                    note,
-                    Modifier.align(Alignment.BottomCenter)
-                        .background(MaterialTheme.colorScheme.inverseSurface, androidx.compose.foundation.shape.RoundedCornerShape(Spacing.s))
-                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.inverseOnSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
             ZoomBadge(
                 visible = zoomTouched,
                 percent = { (minOf(zoomState.floatValue, fit) * 100).roundToInt() },
@@ -1538,6 +1624,11 @@ fun StageScreen(
             }
         }
     }
+    // a tap on the very edge turns the page too: the lyrics' side margin is outside the page's own touch area, and a thumb
+    // at the edge of the device did nothing (user, 16/11). Under the break and the menu handle, which are drawn after
+    // (read when touched, never while composing: the targets are a new object at every composition, and reading them here
+    // made the stage compose for ever)
+    StageEdgeTaps(vertical = { latest.vertical }, enabled = { !latest.marking }, dismiss = { latest.dismiss() }, onPrevious = { latest.previous() }, onNext = { latest.next() })
     if (onBreakNow && breakSince != null) {
         val next = uiState.songs[index + 1]
         val nextKey = remember(next.text) { Chords.key(next.text) }
@@ -1570,20 +1661,8 @@ fun StageScreen(
             onPrevious = {},
         )
     }
-    // above the break too: there it is the only way out on screen besides going on or back
-    if (setlist != null) {
-        StageSetlistLayer(
-            open = setlistOpen,
-            onOpen = { setlistOpen = it },
-            setlist = setlist,
-            songs = uiState.songs,
-            breaks = uiState.breaks,
-            index = index,
-            fg = fg,
-            bg = Color(look.bg),
-            onSong = ::jumpTo,
-            actions = setlistActions,
-        )
+    if (onMenu != null && leadingButton) {
+        StageDrawerHandle(onMenu, fg, Color(look.bg), look.drawerHandleY, onDrawerHandle, Modifier.fillMaxSize(), right = look.drawerHandleRight)
     }
     if (keyboardHint > 0) {
         Surface(
@@ -1740,6 +1819,7 @@ private class GestureTargets(
     val dismiss: () -> Boolean,   // closes the edit button; true if it was open
     val chord: (Offset) -> Boolean,   // tapped a chord: opens the diagram; true if it opened
     val marking: Boolean = false,      // highlighter on: one finger marks words, no page turn
+    val pdf: Boolean = false,          // a PDF song: its own view zooms it, the lyrics' zoom stays out of the way
     val vertical: Boolean = false,     // scroll mode: the lower half and a drag up go forward, the upper half and a drag down go back
     val mark: (from: Offset, to: Offset) -> Unit = { _, _ -> },
 )
@@ -2245,26 +2325,32 @@ private fun EditLineButtons(onEdit: () -> Unit, canMark: Boolean, onMarker: () -
  * the stage not turning pages with nothing saying why).
  */
 @Composable
-private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier) {
+private fun MarkerBar(onDone: () -> Unit, modifier: Modifier = Modifier, hint: String = stringResource(R.string.stage_marker_hint)) {
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, shape = MaterialTheme.shapes.medium, shadowElevation = 6.dp, modifier = modifier.padding(Spacing.m)) {
         Row(Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.xs, bottom = Spacing.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Icon(AppIcons.Highlighter, null)
-            Text(stringResource(R.string.stage_marker_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
+            Text(hint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
             androidx.compose.material3.TextButton(onDone) { Text(stringResource(R.string.stage_marker_done)) }
         }
     }
 }
 
+/** What holding a PDF page offers: the highlighter, and (with something marked on the page) undo the last stroke or clear the page. */
+@Composable
+private fun PdfHoldButtons(onMarker: () -> Unit, onUndo: (() -> Unit)?, onClear: (() -> Unit)?, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        EditOfferButton(AppIcons.Highlighter, stringResource(R.string.stage_marker), onMarker)
+        if (onUndo != null) EditOfferButton(AppIcons.Undo, stringResource(R.string.stage_pdf_undo), onUndo)
+        if (onClear != null) EditOfferButton(AppIcons.Delete, stringResource(R.string.stage_pdf_clear), onClear)
+    }
+}
+
 @Composable
 private fun EditOfferButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    // an icon alone (user, 15/11: the words took the room); the name is for the screen reader and a long press
     Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, shadowElevation = 6.dp) {
-        Row(
-            Modifier.heightIn(min = Sizes.touch).padding(horizontal = Spacing.m),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1)
+        Box(Modifier.size(Sizes.touch), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }
@@ -2557,4 +2643,42 @@ internal fun playButtonIcon(hasTrack: Boolean, away: Boolean, playing: Boolean, 
     playing && stops -> AppIcons.Stop
     playing -> AppIcons.Pause
     else -> AppIcons.Play
+}
+
+/** The two side margins of the stage as touch: the left one goes back and the right one forward (scrolling, the upper and lower halves). */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.StageEdgeTaps(
+    vertical: () -> Boolean, enabled: () -> Boolean, dismiss: () -> Boolean, onPrevious: () -> Unit, onNext: () -> Unit,
+) {
+    val vertical by rememberUpdatedState(vertical)
+    val enabled by rememberUpdatedState(enabled)
+    val dismiss by rememberUpdatedState(dismiss)
+    val previous by rememberUpdatedState(onPrevious)
+    val next by rememberUpdatedState(onNext)
+    listOf(false, true).forEach { right ->
+        Box(
+            Modifier
+                .align(if (right) Alignment.CenterEnd else Alignment.CenterStart)
+                .fillMaxHeight()
+                .width(Spacing.l)
+                .testTag(if (right) STAGE_EDGE_RIGHT_TAG else STAGE_EDGE_LEFT_TAG)
+                .pointerInput(right) {
+                    detectTapGestures { at ->
+                        // with the highlighter on a tap marks, it doesn't turn; with the edit button open it only closes it
+                        if (!enabled() || dismiss()) return@detectTapGestures
+                        val forward = if (vertical()) at.y > size.height / 2f else right
+                        if (forward) next() else previous()
+                    }
+                },
+        )
+    }
+}
+
+internal const val STAGE_EDGE_LEFT_TAG = "stage_edge_left"
+internal const val STAGE_EDGE_RIGHT_TAG = "stage_edge_right"
+
+/** Clips to the bounds at the top and the bottom, and [side] past them at the left and the right (the screen's margin). */
+internal fun Modifier.clipBeyondSides(side: androidx.compose.ui.unit.Dp): Modifier = drawWithContent {
+    val extra = side.toPx()
+    clipRect(left = -extra, top = 0f, right = size.width + extra, bottom = size.height) { this@drawWithContent.drawContent() }
 }

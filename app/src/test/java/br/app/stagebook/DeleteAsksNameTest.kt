@@ -70,7 +70,7 @@ class DeleteAsksNameTest {
             loading = false, name = "Sábado",
             items = listOf(SetItemUi("a", "1", "Hazard", "Richard Marx", false), SetItemUi("b", "2", "Instrumental", "", false)),
         )
-        compose.setContent { StagebookTheme { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}) } }
+        compose.setContent { StagebookTheme { SetlistDetailScreen(set, null, {}, {}, {}, {}, {}, { _, _ -> }, { _, _ -> }, {}, startEditing = true) } }
         compose.onNodeWithText("Hazard").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("Tirar").performClick()
         compose.onNodeWithText("Tirar “Hazard” deste setlist? Ela continua na biblioteca.").assertExists()

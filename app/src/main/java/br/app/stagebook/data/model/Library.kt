@@ -42,9 +42,55 @@ data class Song(
     val tags: List<String> = emptyList(),
     // MIDI sent when the song shows on stage and when it leaves (user, 07/11); goes in the backup, not to the band
     val midi: br.app.stagebook.domain.SongMidi? = null,
+    // the song is a PDF: the file copied into the app (generated name in filesDir/pdfs), its original name to show, and
+    // the highlighter strokes drawn over its pages. Like the track: this device, the backup and (the file only) the band;
+    // never the QR or the text export. The text stays as it is, hidden, and returns when the PDF goes
+    val pdf: String = "",
+    val pdfName: String = "",
+    val pdfMarks: List<PdfMark> = emptyList(),
+    // the zoom and the move of the PDF on the stage, kept as the person left them (every page opens as the last one was)
+    val pdfScale: Float = 1f,
+    val pdfPanX: Float = 0f,
+    val pdfPanY: Float = 0f,
+    // the colours turned over for this song's PDF (white paper black); null = as Settings says (Look.pdfInvert)
+    val pdfInvert: Boolean? = null,
+    // the trims of its pages (see [PdfCrop]); the file is never changed
+    val pdfCrops: List<PdfCrop> = emptyList(),
+    // the page the PDF was left on: the song opens there (0 = the first)
+    val pdfPage: Int = 0,
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
+
+    /** The PDF didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
+    val pdfLost: Boolean get() = pdf.isEmpty() && pdfName.isNotEmpty()
+
+    /** The same song with no trace of a PDF (what the QR, the text export and a received song never carry). */
+    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty() && pdfInvert == null && pdfScale == 1f && pdfPanX == 0f && pdfPanY == 0f) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfInvert = null, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f)
+}
+
+/** One point of a highlighter stroke, relative to the page: 0 (left, top) to 1 (right, bottom), valid on any screen size. */
+@Immutable
+@Serializable
+data class PdfPoint(val x: Float, val y: Float)
+
+/** A highlighter stroke over a PDF page ([page] counts from 0); [width] is relative to the page's width. */
+@Immutable
+@Serializable
+data class PdfMark(val page: Int, val points: List<PdfPoint> = emptyList(), val width: Float = 0.02f)
+
+/**
+ * A trim of a PDF page, in fractions of the page (0 left/top .. 1 right/bottom): the stage shows only this part, enlarged
+ * to fill the screen. [page] counts from 0; [ALL] is the one for every page that has no trim of its own. This device only:
+ * never in a band package, the QR or the text export (the PDF itself is not changed).
+ */
+@Immutable
+@Serializable
+data class PdfCrop(val page: Int = ALL, val left: Float = 0f, val top: Float = 0f, val right: Float = 1f, val bottom: Float = 1f) {
+    /** Nothing trimmed. */
+    val isWhole: Boolean get() = left <= 0f && top <= 0f && right >= 1f && bottom >= 1f
+
+    companion object { const val ALL = -1 }
 }
 
 /** A song that just lost its audio, for the window that says so: the song and the audio's own name. */
@@ -61,12 +107,18 @@ data class Setlist(
     // breaks: each is "before the song at this position" (1 to items.size - 1), sorted; see SetlistBreaks. An older
     // app version doesn't know the key and reads the setlist without them
     val breaks: List<Int> = emptyList(),
+    // the show's day, "yyyy-MM-dd" ("" = none: a setlist from before this existed). Local to this library: it doesn't travel
+    // with the setlist (band, QR, code), a received one takes the day it arrived
+    val date: String = "",
 ) {
     /** The same setlist with only the breaks that fit its songs (a file edited by hand, or saved by another version). */
     fun withValidBreaks(): Setlist = br.app.stagebook.domain.SetlistBreaks.normalise(breaks, items.size).let { if (it === breaks) this else copy(breaks = it) }
 
     companion object {
         /** A new setlist with no name given: the date and time ("01/11/2026 21:30"). */
+        /** Today as the setlist's date: "2026-11-15". */
+        fun today(): String = java.time.LocalDate.now().toString()
+
         fun defaultName(): String = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ROOT).format(java.util.Date())
     }
 }
@@ -128,6 +180,15 @@ object ImportSites {
         ImportSite("Ultimate Guitar", "https://www.ultimate-guitar.com/"),
         ImportSite("LaCuerda", "https://acordes.lacuerda.net/"),
     )
+    // free scores in PDF (public domain or free licence, chosen 15/11): the person browses, taps a PDF, and it comes in as a song.
+    // Not on the list on purpose: sites that ask for an account or payment for the PDF (MuseScore), sites that refuse any
+    // automated check (CPDL answers 403, so it can't be confirmed to open), and chord/lyrics sites (they have no PDF, and the
+    // lists above import those as text).
+    val PDF = listOf(
+        ImportSite("Mutopia Project", "https://www.mutopiaproject.org/"),
+        ImportSite("IMSLP", "https://imslp.org/"),
+        ImportSite("Musica Brasilis", "https://musicabrasilis.org.br/"),
+    )
 }
 
 /** How the lyrics move on stage: turn pages (default) or scroll (user's request, 29/10). */
@@ -158,7 +219,7 @@ val Look.essential: Boolean get() = !bandOn && !internetOn && !playerMode && !ex
 enum class SongProfile { CHORDS, LYRICS, AUTO }
 
 /** What a list of import sites is for. */
-enum class SiteKind { LYRICS, CHORDS }
+enum class SiteKind { LYRICS, CHORDS, PDF }
 
 val Look.profile: SongProfile get() = when {
     autoProfile -> SongProfile.AUTO
@@ -176,7 +237,11 @@ fun Look.withProfile(profile: SongProfile): Look = copy(chords = profile != Song
 val Look.siteKind: SiteKind get() = if (chords) SiteKind.CHORDS else SiteKind.LYRICS
 
 /** The import sites of one kind, in the user's order. */
-fun Look.sites(kind: SiteKind): List<ImportSite> = if (kind == SiteKind.CHORDS) chordSites else lyricSites
+fun Look.sites(kind: SiteKind): List<ImportSite> = when (kind) {
+    SiteKind.CHORDS -> chordSites
+    SiteKind.PDF -> pdfSites
+    SiteKind.LYRICS -> lyricSites
+}
 
 /** Some part is off (band, internet, player, extras): the alert on open lists which. */
 val Look.anyOff: Boolean get() = !bandOn || !internetOn || !playerMode || !extrasOn
@@ -194,6 +259,14 @@ fun Song.claimOldZoom(screen: String): Song =
 @Serializable
 data class Look(
     val fontSp: Float = 30f,
+    // a PDF on the stage with its colours turned over (white paper becomes black)
+    val pdfInvert: Boolean = false,
+    // the library drawer stays open beside the stage (the pin on its top row; only where the screen is wide enough)
+    val drawerPinned: Boolean = false,
+    // where the stage's side handle sits on the left edge, as a share of the height (0 top .. 1 bottom); held and dragged by the person
+    val drawerHandleY: Float = 0.5f,
+    // the handle on the right edge instead of the left (left-handed players)
+    val drawerHandleRight: Boolean = false,
     val fg: Int = 0xFFFFFFFF.toInt(),
     val bg: Int = 0xFF000000.toInt(),
     val bold: Boolean = false,
@@ -272,6 +345,7 @@ data class Look(
     // import: the sites for each kind; the first in each list is the default (where the importer opens)
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
     val chordSites: List<ImportSite> = ImportSites.CHORDS,
+    val pdfSites: List<ImportSite> = ImportSites.PDF,
     // Setlists tab in A to Z instead of newest first (user, 03/11)
     val setsAbc: Boolean = false,
 ) {
@@ -313,5 +387,11 @@ data class Library(
     fun withoutMissingTracks(exists: (String) -> Boolean): Library {
         if (songs.none { it.track.isNotEmpty() && !exists(it.track) }) return this
         return copy(songs = songs.map { if (it.track.isNotEmpty() && !exists(it.track)) it.copy(track = "") else it })
+    }
+
+    /** Like [withoutMissingTracks] for the PDFs: the link goes, the original name stays ("PDF lost"). Same library when nothing is missing. */
+    fun withoutMissingPdfs(exists: (String) -> Boolean): Library {
+        if (songs.none { it.pdf.isNotEmpty() && !exists(it.pdf) }) return this
+        return copy(songs = songs.map { if (it.pdf.isNotEmpty() && !exists(it.pdf)) it.copy(pdf = "") else it })
     }
 }

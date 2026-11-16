@@ -2,9 +2,6 @@ package br.app.stagebook.ui.setlists
 
 import androidx.compose.material3.Text
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
-import br.app.stagebook.ui.components.ButtonTone
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,7 +35,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.app.stagebook.R
-import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.AppIcons
 import br.app.stagebook.ui.components.ConfirmDialog
 import br.app.stagebook.ui.components.DarkPreview
@@ -49,8 +45,6 @@ import br.app.stagebook.ui.components.MenuAction
 import br.app.stagebook.ui.components.OverflowMenu
 import br.app.stagebook.ui.components.ScreenHeader
 import br.app.stagebook.ui.components.SongListItem
-import br.app.stagebook.ui.share.ImportButton
-import br.app.stagebook.ui.components.TextInputDialog
 import br.app.stagebook.ui.theme.StagebookTheme
 import br.app.stagebook.ui.theme.Spacing
 
@@ -82,8 +76,12 @@ fun SetlistsRoute(
         uiState = uiState,
         // double tap on OK created two setlists: after the first one the screen is already leaving
         onCreate = { name -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name)) } },
+        onCreateAt = { name, date -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { query = ""; onOpen(viewModel.create(name, date)) } },
+        onEdit = viewModel::edit,
         // found what they were looking for: coming back the whole list shows, as in Songs
-        onOpen = { query = ""; onOpen(it) },
+        // armed to lead, a tap on a setlist plays it from where the show stopped and starts leading (the one place that does);
+        // otherwise it opens the setlist in the drawer
+        onOpen = { query = ""; if (conductButton.armed) { val at = viewModel.play(it); onPlay(it, at.start, at.atBreak) } else onOpen(it) },
         // tapping a setlist opens its stage where the show stopped (an empty one has nothing to play: the edit)
         onPlay = { query = ""; val at = viewModel.play(it); onPlay(it, at.start, at.atBreak) },
         query = query,
@@ -109,6 +107,7 @@ fun SetlistsRoute(
         onSendBand = viewModel::sendBand,
         onBandSearch = viewModel::bandSearch,
         songsIn = viewModel::songsIn,
+        pdfSizesIn = viewModel::pdfSizesIn,
         onSortAbc = viewModel::sortAbc,
     )
     br.app.stagebook.ui.share.BandResultMessage(viewModel.bandResult)
@@ -134,6 +133,7 @@ fun SetlistsScreen(
     onSendBand: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     songsIn: (List<String>) -> Int = { 0 },
+    pdfSizesIn: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen setlists would carry: the internet says if they fit
     onScan: () -> Unit = {},
     online: Boolean = false,
     internetOn: Boolean = true,
@@ -145,6 +145,9 @@ fun SetlistsScreen(
     onSortAbc: (Boolean) -> Unit = {},
     query: String = "",
     onQueryChange: (String) -> Unit = {},
+    // the new-setlist window also asks for the day, the edit window for name and day (the defaults keep a caller without a day working)
+    onCreateAt: (name: String, date: String) -> Unit = { name, _ -> onCreate(name) },
+    onEdit: (id: String, name: String, date: String) -> Unit = { id, name, _ -> onRename(id, name) },
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
@@ -154,7 +157,10 @@ fun SetlistsScreen(
     var sharing by rememberSaveable { mutableStateOf(false) }
     var renamingId by rememberSaveable { mutableStateOf<String?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
-    val selecting = selection.active
+    // the boxes also come on by the checklist button at the bottom, with nothing chosen yet (as in the song list)
+    var pickMode by rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = pickMode && !selection.active) { pickMode = false }
+    val selecting = selection.active || pickMode
     val toggle = selection::toggle
     // full width beside the rail, like Settings (user, 03/11: centred at 840 dp left a gap after the rail)
     Box(modifier.fillMaxSize()) {
@@ -162,7 +168,7 @@ fun SetlistsScreen(
             if (selecting) {
                 br.app.stagebook.ui.components.SelectionTopBar(
                     count = selected.size,
-                    onClose = { selected = emptyList() },
+                    onClose = { selected = emptyList(); pickMode = false },
                     actions = listOf(
                         br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.share_title), AppIcons.Share) { sharing = true },
                         br.app.stagebook.ui.components.SelectionAction(stringResource(R.string.action_delete), AppIcons.Delete) { deletingMany = true },
@@ -180,11 +186,6 @@ fun SetlistsScreen(
             ) {
                 if (conduct.shown) ConductArmButton(conduct.armed, onConduct)
                 br.app.stagebook.ui.components.HomeStatusIcons()
-            }
-            // import one (QR or code) at the start and the main action, new setlist, at the end (same as the Songs tab)
-            if (!selecting) Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                ImportButton(online, onScan, onReceiveCode, Modifier.weight(1f), received = received, onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet)
-                ActionButton(stringResource(R.string.sets_new), onClick = { creating = true }, modifier = Modifier.weight(1f), icon = AppIcons.Add)
             }
             // the search and the order beside it, as Songs has them (user, 04/11); order only when there's something to order
             br.app.stagebook.ui.components.SearchWithFilter(
@@ -207,17 +208,31 @@ fun SetlistsScreen(
             val topBefore = atTop   // read while composing the change, before the list is measured with the new items
             androidx.compose.runtime.LaunchedEffect(firstId) { if (topBefore) listState.scrollToItem(0) }
             br.app.stagebook.ui.components.ScrollToTopOn("${uiState.abc}|${uiState.query}", listState)
-            Crossfade(targetState = uiState.loading, label = "sets") { loading ->
+            val locale: java.util.Locale = androidx.compose.ui.platform.LocalConfiguration.current.locales.get(0)
+            Crossfade(targetState = uiState.loading, label = "sets", modifier = Modifier.weight(1f)) { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     uiState.total == 0 -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
                     uiState.sets.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.sets_not_found), "")
                     else -> LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.l)) {
-                        items(uiState.sets, key = { it.id }) { set ->
+                        // newest first: one heading per month (and "No date" for the old ones); in A to Z, no headings
+                        val groups = if (uiState.abc) listOf("-" to uiState.sets) else setlistMonths(uiState.sets)
+                        groups.forEach { (month, rows) ->
+                        if (!uiState.abc) item(key = "month-$month") {
+                            Text(
+                                if (month.isEmpty()) stringResource(R.string.sets_no_date) else monthTitle(month, locale),
+                                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = Spacing.s).animateItem(),
+                            )
+                        }
+                        items(rows, key = { it.id }) { set ->
                             SongListItem(
                                 title = set.name,
-                                subtitle = br.app.stagebook.ui.components.songCountText(set.count),
-                                onClick = { if (selecting) toggle(set.id) else if (set.count > 0) onPlay(set.id) else onOpen(set.id) },
+                                subtitle = listOfNotNull(
+                                    br.app.stagebook.ui.components.songCountText(set.count),
+                                    dayText(set.date, locale),
+                                ).joinToString(" · "),
+                                onClick = { if (selecting) toggle(set.id) else onOpen(set.id) },
                                 onLongClick = { toggle(set.id) },
                                 leading = if (selecting) { { androidx.compose.material3.Checkbox(set.id in selected, { toggle(set.id) }) } } else null,
                                 modifier = Modifier.animateItem(),
@@ -225,32 +240,49 @@ fun SetlistsScreen(
                                 trailing = {
                                     // the ⋮ replaces the pencil: edit is its first option, as in the stage panel's menu (user, 14/11)
                                     if (!selecting) OverflowMenu(
-                                        setlistCardActions({ onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id }),
+                                        setlistCardActions({ if (set.count > 0) onPlay(set.id) else onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id }),
                                     )
                                 },
                             )
                         }
+                        }
                     }
+                }
+            }
+            // at the bottom, as SongbookPro: the + (a new setlist, then the ways to bring one in) and the checklist for the boxes
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                br.app.stagebook.ui.share.AddMenuButton(
+                    online, onScan, onReceiveCode, onNew = { creating = true }, newLabel = R.string.sets_new, received = received,
+                    onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet,
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
+                    Icon(
+                        AppIcons.Checklist, stringResource(R.string.select_sets),
+                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         }
     }
     if (creating) {
-        TextInputDialog(
+        SetlistEditDialog(
             title = stringResource(R.string.sets_new),
-            initial = "",
-            placeholder = stringResource(R.string.sets_name_hint),
-            onConfirm = onCreate,
+            name = "",
+            date = br.app.stagebook.data.model.Setlist.today(),
+            namePlaceholder = stringResource(R.string.sets_name_hint),
+            onConfirm = onCreateAt,
             onDismiss = { creating = false },
         )
     }
     renamingId?.let { id ->
         val set = uiState.sets.firstOrNull { it.id == id }
-        if (set != null) TextInputDialog(
-            title = stringResource(R.string.sets_rename),
-            initial = set.name,
-            placeholder = stringResource(R.string.sets_name),
-            onConfirm = { renamingId = null; onRename(id, it) },
+        if (set != null) SetlistEditDialog(
+            title = stringResource(R.string.sets_edit_title),
+            name = set.name,
+            date = set.date,
+            namePlaceholder = stringResource(R.string.sets_name),
+            onConfirm = { name, date -> renamingId = null; onEdit(id, name, date) },
             onDismiss = { renamingId = null },
         )
     }
@@ -274,7 +306,7 @@ fun SetlistsScreen(
             band = band,
             onBand = { withSongs -> sharing = false; onSendBand(selected, withSongs); selected = emptyList() },
             onSearch = onBandSearch,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true),
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true, pdfSizes = pdfSizesIn(selected)),
         )
     }
     cloud?.let { br.app.stagebook.ui.share.CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
@@ -290,10 +322,10 @@ fun SetlistsScreen(
 
 /** The card's ⋮ menu, in this order. "Lead the band" is not here: it belongs to the header button and the stage panel. */
 @Composable
-internal fun setlistCardActions(onEdit: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
-    MenuAction(stringResource(R.string.set_edit), AppIcons.Edit, onEdit),
+internal fun setlistCardActions(onPlay: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
+    MenuAction(stringResource(R.string.sets_play), AppIcons.Play, onPlay),
     MenuAction(stringResource(R.string.share_title), AppIcons.Share, onShare),
-    MenuAction(stringResource(R.string.sets_rename), AppIcons.Rename, onRename),
+    MenuAction(stringResource(R.string.sets_edit), AppIcons.Rename, onRename),
     MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, onDelete, danger = true),
 )
 

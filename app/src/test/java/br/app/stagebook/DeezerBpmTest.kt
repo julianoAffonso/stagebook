@@ -25,4 +25,45 @@ class DeezerBpmTest {
         assertNull(deezer.bpmOf("""{"id":33,"bpm":999}"""))
         assertNull(deezer.bpmOf("lixo"))
     }
+
+    @Test fun `a busy answer or a quota notice is tried again and the BPM comes`() {
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        var searches = 0
+        server.createContext("/search") { ex ->
+            val body = if (++searches == 1) null else search
+            if (body == null) { ex.sendResponseHeaders(503, -1) } else { val b = body.toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.write(b) }
+            ex.close()
+        }
+        var tracks = 0
+        server.createContext("/track/33") { ex ->
+            // the first answer is Deezer's quota notice inside a 200
+            val body = if (++tracks == 1) """{"error":{"type":"Exception","message":"Quota limit exceeded","code":4}}""" else """{"id":33,"bpm":96.2}"""
+            val b = body.toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.write(b); ex.close()
+        }
+        server.start()
+        try {
+            val d = DeezerBpm().apply { endpoint = "http://127.0.0.1:${server.address.port}/"; pauseMs = 10 }
+            assertEquals(96, kotlinx.coroutines.runBlocking { d.lookupWithin("Hazard", "Richard Marx", 5_000) })
+            assertEquals(2, searches)
+            assertEquals(2, tracks)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test fun `a lookup the caller gave up on does not go on trying or sleeping`() {
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        var searches = 0
+        server.createContext("/search") { ex -> searches++; ex.sendResponseHeaders(503, -1); ex.close() }
+        server.start()
+        try {
+            val d = DeezerBpm().apply { endpoint = "http://127.0.0.1:${server.address.port}/"; pauseMs = 300 }
+            // gives up after 100 ms: the first try went, the pauses between the tries are not slept for nobody
+            assertEquals(null, kotlinx.coroutines.runBlocking { d.lookupWithin("Hazard", "Richard Marx", 100) })
+            Thread.sleep(1_200)
+            assertEquals("the later tries were not made: $searches", true, searches <= 2)
+        } finally {
+            server.stop(0)
+        }
+    }
 }

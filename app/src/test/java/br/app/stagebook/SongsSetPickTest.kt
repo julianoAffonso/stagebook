@@ -43,6 +43,7 @@ class SongsSetPickTest {
             val vm = SongsViewModel(
                 repo, br.app.stagebook.data.Connectivity(context), cloud, link, br.app.stagebook.data.BandTrust(context),
                 BandInternet(context, cloud, br.app.stagebook.data.BandTrust(context), identity, br.app.stagebook.data.BandInbox(context), br.app.stagebook.data.Connectivity(context), link),
+                br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector()),
             )
             val job = kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch { vm.uiState.collect {} }
             withTimeout(5_000) { vm.uiState.first { !it.loading } }
@@ -72,6 +73,7 @@ class SongsSetPickTest {
             val vm = SongsViewModel(
                 repo, br.app.stagebook.data.Connectivity(context), cloud, link, br.app.stagebook.data.BandTrust(context),
                 BandInternet(context, cloud, br.app.stagebook.data.BandTrust(context), identity, br.app.stagebook.data.BandInbox(context), br.app.stagebook.data.Connectivity(context), link),
+                br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector()),
             )
             vm.onQueryChange("Primeira")
             assertEquals(listOf(listOf("Lenta"), listOf("Rock")), vm.tagsOf(listOf(a, b)))

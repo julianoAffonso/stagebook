@@ -38,6 +38,8 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
         /** Setlist name; empty = loose songs. */
         val setName: String get() = text.split('\n').getOrNull(2).orEmpty()
         val songCount: Int get() = text.split('\n').getOrNull(1)?.trim()?.toIntOrNull() ?: songs.size
+        /** The songs that came without the PDF they were sent with, because it didn't pass the check ([SetlistCloud.SharedSong.pdfProblem]). */
+        val pdfRefused: List<SetlistCloud.SharedSong> get() = songs.filter { it.pdfProblem.isNotEmpty() }
         /** Came from a newer Stagebook: it can only be reviewed after updating. */
         val newer: Boolean get() = text == SetlistCloud.NEWER
     }
@@ -45,6 +47,7 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
     // the items carry every song's text: a file of their own, replaced whole (prefs keep everything in memory and
     // rewrite the whole XML; audit 01/11)
     private val file = File(context.filesDir, FILE)
+    private val pdfDir = File(context.filesDir, "pdfs")
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _items = MutableStateFlow(load())
@@ -64,12 +67,20 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
             breaks = valid,
         )
         _items.update { list ->
-            if (list.any { it.fromId == fromId && it.text == text && it.songs == item.songs && it.breaks == item.breaks }) return@update list
+            // the same send again: its PDFs came under new names each time, so what is compared is the songs without them. The
+            // copy that came now is dropped with its own files (nothing else points at them yet)
+            val same = list.any { it.fromId == fromId && it.text == text && it.songs.map { s -> s.forWire() } == item.songs.map { s -> s.forWire() } && it.breaks == item.breaks }
+            if (same) { dropNewFiles(item); return@update list }
             val old = if (item.setName.isEmpty()) emptyList() else list.filter { it.fromId == fromId && it.setName == item.setName }
             // the same person's new version replaces the old one and is marked updated (and unseen again)
             ((list - old.toSet()) + item.copy(updated = old.isNotEmpty())).takeLast(MAX)
         }
         save()
+    }
+
+    // the PDFs saved for an item that turned out to be a repeat: new files that no song and no other item has
+    private fun dropNewFiles(item: Item) {
+        item.songs.forEach { s -> br.app.stagebook.data.PdfStore.safeName(s.pdfFile)?.let { File(pdfDir, it).delete() } }
     }
 
     fun get(id: String) = _items.value.firstOrNull { it.id == id }

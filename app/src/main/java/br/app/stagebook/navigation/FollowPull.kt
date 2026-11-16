@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -24,10 +23,11 @@ import br.app.stagebook.ui.components.FollowGate
 import br.app.stagebook.ui.components.FollowPending
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.getValue
 
 // screens the leader's song can take the follower away from: nothing is being typed or chosen there. Home's Songs and
-// Setlists tabs do; its Settings tab (and the screens inside it) waits (FollowHoldWhile), and so do the editors and the
-// setlist's edit screen (an action under way, held the whole time it is open)
+// Setlists tabs do; the Settings page (and the screens inside it) waits, and so do the editors and the setlist's edit
+// screen (an action under way, held the whole time it is open)
 internal fun NavDestination.pullsToStage() = hasRoute<Home>() || hasRoute<Stage>()
 
 internal fun stageFor(target: String) = if (target == BandConduct.BREAK_ONLY) Stage(leaderBreak = true) else Stage(songId = target)
@@ -50,6 +50,8 @@ internal fun NavController.openFollowStage(target: String) {
     // already on that stage (the leader's break began over the song on screen): nothing to open, the stage draws the break
     val here = currentBackStackEntry?.takeIf { it.destination.hasRoute<Stage>() }?.toRoute<Stage>()
     if (here?.isFor(target) == true) return
+    // released from the Settings page: it goes, so back from the stage does not land on it
+    if (currentBackStackEntry?.destination?.hasRoute<Settings>() == true) popBackStack()
     navigate(stageFor(target)) { popUpTo<Stage> { inclusive = true }; launchSingleTop = true }
 }
 
@@ -67,7 +69,7 @@ internal fun NavController.openFollowStage(target: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FollowToStage(
-    nav: NavController, followSongs: Flow<String>, followingSong: StateFlow<String?>, gate: FollowGate, followHold: MutableState<Boolean>,
+    nav: NavController, followSongs: Flow<String>, followingSong: StateFlow<String?>, gate: FollowGate,
 ) {
     val pendingFollow = remember { PendingFollow() }
     val entry by nav.currentBackStackEntryAsState()
@@ -83,7 +85,7 @@ internal fun FollowToStage(
     val wait: FollowWait? = here?.let {
         // on the stage only our own menus and windows hold the song: the window losing focus there (split screen, the
         // shade) must not stop a follower for good
-        followBlock(it.pullsToStage(), it.hasRoute<Home>() && followHold.value, it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
+        followBlock(it.pullsToStage(), it.hasRoute<Stage>(), gate.menus > 0 || (!focused && !it.hasRoute<Stage>()), keyboard)
     }
     val waitNow by rememberUpdatedState(wait)
     fun sync() { gate.pending = pendingFollow.waiting?.let { FollowPending(it, pendingFollow.reason ?: FollowWait.SCREEN) } }
@@ -120,11 +122,4 @@ internal fun FollowToStage(
     }
 }
 
-/**
- * A link to a Settings section: Home, which opens Settings on it. From the stage Home goes over it (back returns to the
- * stage that was there, with its break, its page and its counters); from anywhere else it takes the place of what is
- * above Home, as before.
- */
-internal fun NavController.openSettingsFrom() {
-    if (currentBackStackEntry?.destination?.hasRoute<Stage>() == true) navigate(Home) else popBackStack<Home>(inclusive = false)
-}
+

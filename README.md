@@ -14,6 +14,11 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 **Help, with a picture of every screen:** [docs/help](docs/help/index.html)
 
 ## What it does
+- **Side menu:** the library lives in a menu you open from a small handle on the stage's left edge (move it where you
+  like by holding it; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs: Songs, Setlists
+  and Settings. A + brings things in (a new song, PDFs, sites, QR, the 3 words); the checklist button turns the
+  selection boxes on. A setlist opens to look at, with a pencil to edit it and a floppy to save; with the stage open from
+  a setlist, the menu opens on it. The app opens on the stage where you left off.
 - **Stage:** full screen, always lit, in pages or scrolling. Turn with a Bluetooth or MIDI pedal (USB and Bluetooth),
   a tap or auto-scroll. In Scroll mode, tap the bottom half or drag up to go on, the top half or drag down to go
   back. Each pedal button can do something else.
@@ -22,16 +27,24 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   picks lyrics and chords, lyrics only or automatic (the importer then asks whether a song is lyrics or chords).
   Notes on the chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you
   transpose. Tap a chord, in the lyrics or in the chord list, to see its diagram.
-- **Setlists:** build the show and drag to reorder; list them newest first or A to Z. Tap a setlist to open the stage
-  where the show stopped; the ⋮ on the card edits, shares, renames or deletes it. Put a **break** between songs: on
-  stage it shows a timer, and the show time starts again after it. The setlist panel on stage shows what was played,
+- **Setlists:** build the show inside the menu and drag to reorder; each setlist has a **date**, and the list is grouped by
+  month (or A to Z). Tap a setlist to open its songs, and a song to play it; the ⋮ on the card plays, shares, edits the
+  name and date, or deletes it. Put a **break** between songs: on
+  stage it shows a timer, and the show time starts again after it. The setlist open in the menu shows what was played,
   what is now and what is next, with each song's tempo, capo and track. Send it to whoever is next to you by QR, far
-  away with 3 words over the internet, or to the whole band on the same Wi-Fi (the breaks go along, except by QR).
+  away with 3 words over the internet, or to the whole band (right away on the same Wi-Fi, online within 12 hours for whoever is away) (the breaks go along, except by QR).
 - **Band:** with "Lead the band" (arm it on the Setlists tab, then tap a setlist), whoever leads changes songs and
   everyone's stage follows, break included. A strip at the bottom shows who is leading, with **Go** to jump to where
   the band is. The leader sees **What's missing**, who lacks which song, and can send the songs; a follower can **Ask**
-  for a song from the strip, and prefers a copy with chords when the profile shows chords. Everyone in the band needs
+  for the strip's song or, in **See what's missing here**, ask the band for all the missing ones, ask the leader online
+  or import them from the sites. The request says which copy: by default the one the leader plays (lyrics, chords or
+  PDF), and whoever answers sends that copy or nothing. Everyone in the band needs
   the same app version: the app warns who isn't.
+- **PDF songs:** attach a PDF to a song (or pick PDFs in the + menu, open one with Stagebook, or use **PDFs from sites**, which opens
+  free score sites and makes the song when you tap a PDF): its pages show on stage,
+  turned by the pedal, a tap or a swipe; zoom with two fingers (kept with the song), hold the page to highlight, crop the
+  margins (all pages or one) and invert the colors for a dark stage, both in the song's editor. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet when they fit the 4 KB messages
+  the free server takes (the send says why when they don't). PDFs are never read as text.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
   With a mixer, per-output routing, EQ and normalization.
 - **Settings by task:** seven groups (stage, chords, page turning, import and backup, band and computer, player and
@@ -121,7 +134,7 @@ its gain is a simpler screen.
 Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex
 and other AI assistants read and edit your library: "build a 15-song setlist for Saturday", "move every song by this
 artist down a half tone", "check the chords of this song", "import this page". It runs on your computer and talks to the
-tablet over your Wi-Fi through **Settings → Band and computer → Edit on the computer**; you approve the computer once on the tablet.
+tablet over your Wi-Fi through **Settings → Band and computer → In the browser**; you approve the computer once on the tablet.
 It's on npm as [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): with [Node.js](https://nodejs.org) on
 the computer, Claude Code connects with `claude mcp add stagebook -- npx -y stagebook-mcp`. Setup for each assistant:
 [mcp/README.md](mcp/README.md).
@@ -141,7 +154,8 @@ Stagebook isn't on the Play Store; it's only here, for free. Needs Android 9 or 
 **Why not the Play Store?** The app imports lyrics and chords from websites, and the store's rules on copyrighted
 content leave this kind of app open to being pulled at any time. It also updates itself straight from these releases,
 which the store doesn't allow. This way new versions come out without waiting for a review, and the code stays open
-for anyone to check.
+for anyone to check. PDFs are yours: the app only opens the files you attach and the ones you tap to download yourself in the import
+browser; the suggested sites hold free scores (public domain or open licence), and the list is yours to change.
 
 ## Support
 Stagebook is free and ad-free. If it helps your rehearsals and gigs, how about buying me a coffee on

@@ -28,7 +28,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.Config
 
-/** V19: the setlist card has no pencil, only a ⋮ with Edit, Share, Rename and Delete (in this order), and tapping the card opens the stage. */
+/** V19: the setlist card has no pencil, only a ⋮ with Play, Share, Edit name and date and Delete (in this order), and tapping the card opens the setlist in the drawer. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h800dp-port-xxhdpi", application = android.app.Application::class)
 class SetlistCardMenuTest {
@@ -55,9 +55,9 @@ class SetlistCardMenuTest {
         compose.onAllNodesWithContentDescription("Mais opções").assertCountEquals(2)
     }
 
-    @Test fun `the menu has Edit, Share, Rename and Delete in this order, and no Lead the band`() {
+    @Test fun `the menu has Play, Share, Edit and Delete in this order, and no Lead the band`() {
         screen(); open()
-        val names = listOf("Editar setlist", "Compartilhar", "Renomear", "Apagar o setlist")
+        val names = listOf("Tocar", "Compartilhar", "Editar nome e data", "Apagar o setlist")
         val tops = names.map { compose.onNodeWithText(it).getUnclippedBoundsInRoot().top }
         assertEquals(tops.sorted(), tops)
         assertEquals(4, tops.toSet().size)
@@ -68,13 +68,13 @@ class SetlistCardMenuTest {
         var actions = emptyList<MenuAction>()
         compose.setContent { StagebookTheme { actions = setlistCardActions({}, {}, {}, {}) } }
         compose.waitForIdle()
-        assertEquals(listOf(AppIcons.Edit, AppIcons.Share, AppIcons.Rename, AppIcons.Delete), actions.map { it.icon })
+        assertEquals(listOf(AppIcons.Play, AppIcons.Share, AppIcons.Rename, AppIcons.Delete), actions.map { it.icon })
         assertEquals(listOf(false, false, false, true), actions.map { it.danger })
     }
 
-    @Test fun `Edit opens the edit and not the stage`() {
-        screen(); open(); compose.onNodeWithText("Editar setlist").performClick()
-        assertEquals(listOf("edit:a"), log)
+    @Test fun `Play opens the stage and not the setlist`() {
+        screen(); open(); compose.onNodeWithText("Tocar").performClick()
+        assertEquals(listOf("play:a"), log)
     }
 
     @Test fun `Share opens the setlist's share sheet`() {
@@ -89,7 +89,7 @@ class SetlistCardMenuTest {
         var actions = emptyList<MenuAction>()
         compose.setContent { StagebookTheme { actions = setlistCardActions({}, {}, { renamed++ }, {}) } }
         compose.waitForIdle()
-        assertEquals(listOf("Editar setlist", "Compartilhar", "Renomear", "Apagar o setlist"), actions.map { it.label })
+        assertEquals(listOf("Tocar", "Compartilhar", "Editar nome e data", "Apagar o setlist"), actions.map { it.label })
         actions[2].onClick()
         assertEquals(1, renamed)
     }
@@ -108,14 +108,14 @@ class SetlistCardMenuTest {
         assertTrue(log.isEmpty())
     }
 
-    @Test fun `tapping the card opens the stage, and the menu button does not`() {
+    @Test fun `tapping the card opens the setlist, and the menu button does not`() {
         screen(); open()
         assertTrue(log.isEmpty())
-        compose.onNodeWithText("Editar setlist").assertIsDisplayed()
+        compose.onNodeWithText("Tocar").assertIsDisplayed()
         compose.onNodeWithText("Show de sábado").performClick()   // closes the menu
         compose.waitForIdle()
         compose.onNodeWithText("Ensaio").performClick()
-        assertTrue("play:b" in log)
+        assertTrue("edit:b" in log)
     }
 
     @Test fun `an empty setlist still opens the edit when tapped`() {

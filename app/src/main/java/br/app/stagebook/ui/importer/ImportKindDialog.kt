@@ -30,7 +30,7 @@ fun ImportKindDialog(onPick: (SiteKind) -> Unit, onDismiss: () -> Unit) {
         title = { Text(stringResource(R.string.import_kind_title)) },
         text = {
             Column {
-                listOf(SiteKind.LYRICS to R.string.import_kind_lyrics, SiteKind.CHORDS to R.string.import_kind_chords).forEach { (kind, name) ->
+                listOf(SiteKind.LYRICS to R.string.import_kind_lyrics, SiteKind.CHORDS to R.string.import_kind_chords, SiteKind.PDF to R.string.import_kind_pdf).forEach { (kind, name) ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button) { onPick(kind) }, verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(name), style = MaterialTheme.typography.bodyLarge)
                     }

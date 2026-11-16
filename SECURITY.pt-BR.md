@@ -24,6 +24,8 @@ Conte o que encontrou, a versão do app, o aparelho e a versão do Android, e os
 
 ## O que vale
 
-O app Android, o editor no computador que ele serve na rede local, o compartilhamento com a banda (rede local, QR e links pela internet), os arquivos `.stagebook` e os backups, o servidor MCP deste repositório e os workflows do GitHub.
+O app Android, o editor no computador que ele serve na rede local, o compartilhamento com a banda (rede local, QR e links pela internet), inclusive os PDFs que viajam com a música (conferidos antes de serem guardados: cabeçalho de PDF de verdade, no máximo 8 MB e 300 páginas, sem senha, com um nome que o app mesmo gera, e só de quem já está na banda), os arquivos `.stagebook` e os backups, o servidor MCP deste repositório e os workflows do GitHub.
+
+Como o editor no computador confia num computador, para você avaliar: o navegador pede para entrar e a pessoa autoriza no aparelho, comparando um código de 4 números. O navegador guarda então uma chave aleatória num cookie por 90 dias, renovado a cada visita, e um assistente ligado pelo MCP guarda a própria chave num arquivo que só aquele usuário lê. O aparelho guarda só o hash de cada chave, e remover um computador em Ajustes → Editar no computador corta o acesso na hora. A chave viaja em HTTP puro na rede local (o editor só responde a um endereço, não a um nome): use numa rede em que você confia.
 
 Fica de fora: problemas do próprio Android, do software do fabricante do aparelho ou do firmware da interface de áudio USB.

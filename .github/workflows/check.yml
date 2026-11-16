@@ -57,6 +57,7 @@ jobs:
       - run: python3 -I tools/web_save_test.py
       # the editor page's song rows (key, BPM, capo and backing track as on the device)
       - run: python3 -I tools/web_rows_test.py
+      - run: python3 -I tools/web_crop_test.py
       # the list of validated trees that pre-push trusts keeps the latest 5000, with no duplicates
       - run: python3 -I tools/validated_test.py
       - if: github.event_name == 'pull_request'

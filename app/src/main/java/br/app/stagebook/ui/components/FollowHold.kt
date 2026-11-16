@@ -11,25 +11,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import br.app.stagebook.domain.FollowWait
 
-/**
- * Home says here when its Settings tab is in front: the song then waits and opens when it's done.
- */
-val LocalFollowHold = staticCompositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
-
-/**
- * While [open], this screen is one where a band follower is in the middle of something and isn't taken to the stage: the
- * song waits, the strip says so, and it opens when the screen is left (or "Go"). The Settings tab and the screens inside
- * it say so for Home; the setlist screen says it for itself when busy.
- */
-@Composable
-fun FollowHoldWhile(open: Boolean) {
-    val hold = LocalFollowHold.current
-    DisposableEffect(hold, open) {
-        hold.value = open
-        onDispose { hold.value = false }
-    }
-}
-
 /** The song that waits for the follower to finish what they're doing, and why. */
 @androidx.compose.runtime.Immutable
 data class FollowPending(val target: String, val reason: FollowWait)
@@ -42,6 +23,12 @@ data class FollowPending(val target: String, val reason: FollowWait)
 @Stable
 class FollowGate {
     var menus by mutableIntStateOf(0)
+    /**
+     * Of [menus], the ones that are windows of their own (a popup, a dialog): those bring Android's navigation bar back, and
+     * the strip is drawn above it. The library menu is not one: with only it open the strip stays where it is (it used to rise
+     * over the menu's tabs, device test 16/11).
+     */
+    var windows by mutableIntStateOf(0)
     var pending by mutableStateOf<FollowPending?>(null)
     var go: () -> Unit = {}
 
@@ -60,10 +47,10 @@ val LocalFollowGate = staticCompositionLocalOf { FollowGate() }
 
 /** While [open], a menu or window of ours is open: the leader's song waits, and opens when it closes. */
 @Composable
-fun FollowBusyWhile(open: Boolean = true) {
+fun FollowBusyWhile(open: Boolean = true, window: Boolean = true) {
     val gate = LocalFollowGate.current
-    DisposableEffect(gate, open) {
-        if (open) gate.menus++
-        onDispose { if (open) gate.menus-- }
+    DisposableEffect(gate, open, window) {
+        if (open) { gate.menus++; if (window) gate.windows++ }
+        onDispose { if (open) { gate.menus--; if (window) gate.windows-- } }
     }
 }

@@ -34,13 +34,19 @@ internal val TrackMarkIcon: ImageVector get() = AppIcons.AudioWave
 
 /**
  * What the musician checks before the song starts, at the end of its row (the song list and a setlist): the key, and
- * under it the tempo, the capo and an audio wave with a backing track. Only what the song has; nothing at all with none.
+ * under it the tempo, the capo and an audio wave; a sheet of paper for a PDF closes the key's line with a backing track. Only what the song has; nothing at all with none.
  */
 @Composable
-fun SongFacts(songKey: String, bpm: Int, capo: Int, hasTrack: Boolean, modifier: Modifier = Modifier) {
-    if (songKey.isEmpty() && bpm <= 0 && capo <= 0 && !hasTrack) return
+fun SongFacts(songKey: String, bpm: Int, capo: Int, hasTrack: Boolean, modifier: Modifier = Modifier, hasPdf: Boolean = false) {
+    if (songKey.isEmpty() && bpm <= 0 && capo <= 0 && !hasTrack && !hasPdf) return
     Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        if (songKey.isNotEmpty()) SongKeyBadge(songKey)
+        // the key and, at the very end of the line, the sheet of paper: the song is a PDF (SongbookPro marks it the same way)
+        if (songKey.isNotEmpty() || hasPdf) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                if (songKey.isNotEmpty()) SongKeyBadge(songKey)
+                if (hasPdf) Icon(AppIcons.Document, stringResource(R.string.song_is_pdf), Modifier.size(Spacing.m), tint = MaterialTheme.colorScheme.primary)
+            }
+        }
         if (bpm > 0 || capo > 0 || hasTrack) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 val small = MaterialTheme.typography.labelSmall

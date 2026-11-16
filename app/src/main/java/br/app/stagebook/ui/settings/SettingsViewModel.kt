@@ -259,13 +259,22 @@ class SettingsViewModel @Inject constructor(
     fun setBold(on: Boolean) = repository.updateLook { it.copy(bold = on) }
     fun setSectionColor(argb: Int) = repository.updateLook { it.copy(sectionColor = argb) }
     fun setShowSections(on: Boolean) = repository.updateLook { it.copy(showSections = on) }
+    fun setPdfInvert(on: Boolean) = repository.updateLook { it.copy(pdfInvert = on) }
+
+    fun setHandleRight(on: Boolean) = repository.updateLook { it.copy(drawerHandleRight = on) }
     fun setTranslateSections(on: Boolean) = repository.updateLook { it.copy(translateSections = on) }
     fun setFontFamily(f: StageFont) = repository.updateLook { it.copy(font = f) }
     fun setChordFont(f: StageFont) = repository.updateLook { it.copy(chordFont = f) }
     fun setSectionFont(f: StageFont) = repository.updateLook { it.copy(sectionFont = f) }
     fun setInstrument(i: Instrument) = repository.updateLook { it.copy(instrument = i) }
     fun setSites(kind: SiteKind, sites: List<ImportSite>) =
-        repository.updateLook { if (kind == SiteKind.CHORDS) it.copy(chordSites = sites) else it.copy(lyricSites = sites) }
+        repository.updateLook {
+            when (kind) {
+                SiteKind.CHORDS -> it.copy(chordSites = sites)
+                SiteKind.PDF -> it.copy(pdfSites = sites)
+                SiteKind.LYRICS -> it.copy(lyricSites = sites)
+            }
+        }
 
     fun setPlayerMode(on: Boolean) {
         repository.updateLook { it.copy(playerMode = on).copy(essentialAlertOff = false) }

@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import br.app.stagebook.R
@@ -155,17 +156,33 @@ fun SearchWithFilter(
     modifier: Modifier = Modifier,
     filter: (@Composable (Modifier) -> Unit)? = null,
 ) {
-    androidx.compose.foundation.layout.Row(modifier, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(br.app.stagebook.ui.theme.Spacing.s)) {
-        val wide = wideLists()
-        // on phones, beside the filter, the long hint was cut: "Search" goes on top, like "Tags" (user, 01/11)
-        if (filter != null && !wide) {
-            SearchField(query, onQueryChange, shortHint, Modifier.weight(1f), label = stringResource(R.string.search_label))
-        } else {
-            SearchField(query, onQueryChange, placeholder, Modifier.weight(1f))
+    val gap = br.app.stagebook.ui.theme.Spacing.s
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        // by the room this row has, not by the screen: on a tablet the menu is 420 dp wide, and the row was laid out as on a wide
+        // screen there, with the tag filter taking most of it and the search left with a sliver (user, 16/11)
+        val wide = wideLists() && maxWidth >= WIDE_FROM
+        // the drawer is narrower than a phone (87%): beside the filter the search was left with a sliver and the two ran
+        // together, so under 360 dp they stack, each on its own line (user, 15/11)
+        val stacked = filter != null && !wide && maxWidth < STACK_BELOW
+        if (stacked) {
+            androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap)) {
+                SearchField(query, onQueryChange, placeholder, Modifier.fillMaxWidth())
+                filter?.invoke(Modifier.fillMaxWidth())
+            }
+        } else androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap)) {
+            // on phones, beside the filter, the long hint was cut: "Search" goes on top, like "Tags" (user, 01/11)
+            if (filter != null && !wide) {
+                SearchField(query, onQueryChange, shortHint, Modifier.weight(1f), label = stringResource(R.string.search_label))
+            } else {
+                SearchField(query, onQueryChange, placeholder, Modifier.weight(1f))
+            }
+            filter?.invoke(Modifier.width(if (wide) br.app.stagebook.ui.theme.Sizes.tagFilter else br.app.stagebook.ui.theme.Sizes.tagFilterNarrow))
         }
-        filter?.invoke(Modifier.width(if (wide) br.app.stagebook.ui.theme.Sizes.tagFilter else br.app.stagebook.ui.theme.Sizes.tagFilterNarrow))
     }
 }
+
+private val STACK_BELOW = 360.dp
+private val WIDE_FROM = 560.dp   // from here the long hint and the wide filter fit side by side
 
 @LightPreview
 @Composable

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The same list as backup_rules.xml, for Android 12 and later: the copy in the Google account and the transfer from
-     one device to another carry the songs and setlists and the language, nothing else. -->
+     one device to another carry the library file (the songs, the setlists and, in the same file, the stage settings) and the language; tracks,
+     PDFs, pedals, USB profiles and the band stay on the device. -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="file" path="stagebook.json" />

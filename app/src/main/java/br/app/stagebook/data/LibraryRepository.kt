@@ -61,6 +61,7 @@ class LibraryRepository @Inject constructor(
     }
 
     private val file = File(context.filesDir, "stagebook.json")
+    private val pdfDir = File(context.filesDir, "pdfs")
     private val backup = File(context.filesDir, "stagebook.json.bak")   // the version saved before the current one
     private val _library = MutableStateFlow(Library())
     val library: StateFlow<Library> = _library.asStateFlow()
@@ -96,7 +97,7 @@ class LibraryRepository @Inject constructor(
             // a song pointing to a track that isn't here (the songs came with Android's copy, the tracks never do)
             // would look ready and fail on stage: the link goes, the track's name stays
             val tracks = File(context.filesDir, "tracks")
-            val clean = read.withoutMissingTracks { File(tracks, it).exists() }
+            val clean = read.withoutMissingTracks { File(tracks, it).exists() }.withoutMissingPdfs { File(pdfDir, it).exists() }
             _library.value = clean
             if (clean !== read) {
                 val linked = read.songs.filter { it.track.isNotEmpty() }.mapTo(HashSet()) { it.id }
@@ -163,7 +164,8 @@ class LibraryRepository @Inject constructor(
     /** Saves the song (empty id = new) and returns the id. */
     fun saveSong(song: Song): String {
         val id = song.id.ifEmpty { newId() }
-        val saved = song.copy(id = id)
+        // a PDF name from outside (a band answer, a file) that is not a plain file name is no PDF: it never points out of its folder
+        val saved = song.copy(id = id).let { if (it.pdf.isEmpty() || PdfStore.safeName(it.pdf) != null) it else it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0) }
         mutate { lib ->
             val exists = lib.songs.any { it.id == id }
             lib.copy(songs = if (exists) lib.songs.map { if (it.id == id) saved else it } else lib.songs + saved)
@@ -211,6 +213,8 @@ class LibraryRepository @Inject constructor(
     /** Deletes several songs (a selection) in one save, and takes them out of the setlists. */
     fun deleteSongs(ids: Collection<String>) {
         val set = ids.toSet()
+        // a deleted song's PDF goes with it (the startup sweep catches what a crash left)
+        _library.value.songs.filter { it.id in set && it.pdf.isNotEmpty() }.forEach { s -> PdfStore.safeName(s.pdf)?.let { File(pdfDir, it).delete() } }
         mutate { lib -> lib.copy(songs = lib.songs.filterNot { it.id in set }, sets = lib.sets.map { s -> s.withoutSongs(set) }) }
     }
 
@@ -218,16 +222,33 @@ class LibraryRepository @Inject constructor(
     fun deleteSong(id: String) = deleteSongs(listOf(id))
 
     // ---- setlists ----
-    fun createSetlist(name: String): String {
+    fun createSetlist(name: String, date: String = Setlist.today()): String {
         val id = newId()
-        mutate { it.copy(sets = listOf(Setlist(id = id, name = name)) + it.sets) }
+        mutate { it.copy(sets = listOf(Setlist(id = id, name = name, date = date)) + it.sets) }
         return id
+    }
+
+    /**
+     * A copy of the setlist (same songs and breaks, today's day) under [name], first in the list: to build one show from
+     * another. Null when the setlist isn't there.
+     */
+    fun duplicateSetlist(id: String, name: String): String? {
+        val from = library.value.setlist(id) ?: return null
+        val copy = newId()
+        mutate { it.copy(sets = listOf(Setlist(id = copy, name = name, items = from.items, breaks = from.breaks, date = Setlist.today())) + it.sets) }
+        return copy
     }
 
     private fun updateSet(id: String, change: (Setlist) -> Setlist) =
         mutate { lib -> lib.copy(sets = lib.sets.map { if (it.id == id) change(it) else it }) }
 
     fun renameSetlist(id: String, name: String) = updateSet(id) { it.copy(name = name) }
+
+    /** The setlist's show day ("yyyy-MM-dd", "" = none); anything else that isn't a date is left out. */
+    fun setSetlistDate(id: String, date: String) {
+        val clean = date.takeIf { it.isEmpty() || runCatching { java.time.LocalDate.parse(it) }.isSuccess } ?: return
+        updateSet(id) { it.copy(date = clean) }
+    }
 
     fun deleteSetlist(id: String) {
         setPickedTags(id, emptySet())
@@ -284,7 +305,9 @@ class LibraryRepository @Inject constructor(
 
     /** They go at the end, in the chosen order; one already in the setlist doesn't go in again. */
     fun addToSetlist(setId: String, songIds: List<String>) = updateSet(setId) { s ->
-        s.copy(items = s.items + songIds.filterNot { it in s.items }.distinct()).withValidBreaks()
+        // (a song deleted while it waited to go in doesn't go in as an empty row)
+        val known = _library.value.songs.mapTo(HashSet()) { it.id }
+        s.copy(items = s.items + songIds.filter { it in known && it !in s.items }.distinct()).withValidBreaks()
     }
 
     /**
@@ -303,7 +326,33 @@ class LibraryRepository @Inject constructor(
      * setlist can have one; with nothing said about breaks (null: the QR, an older app) the setlist's own stay, as
      * when its songs are replaced. The one way in for the app's receive screen and the editor on the computer.
      */
+    // how many times each setlist was changed by someone other than this screen (the band's, the computer's editor): a setlist half
+    // edited here compares it to tell that "Discard" would undo their change too
+    private val _external = kotlinx.coroutines.flow.MutableStateFlow<Map<String, Int>>(emptyMap())
+    val externalEdits: kotlinx.coroutines.flow.StateFlow<Map<String, Int>> = _external
+    /**
+     * Where the count starts in this run of the app: a screen that kept a count from a run the system killed finds a different
+     * one, and warns (it can't know what changed meanwhile) instead of comparing with a count that started over.
+     */
+    val externalBase: Int = (System.nanoTime() and 0x3fffffff).toInt()
+    // (several threads mark it: the band's, the computer's, the screen's)
+    fun markExternalEdit(setId: String) = _external.update { it + (setId to ((it[setId] ?: externalBase) + 1)) }
+
+    /**
+     * "Discard" on a setlist: its songs and breaks as they were, written as they were (an old setlist with the same song twice
+     * keeps both), but for the songs deleted meanwhile, which don't come back as empty rows.
+     */
+    fun restoreSetlist(setId: String, songIds: List<String>, breaks: List<Int>) = updateSet(setId) { s ->
+        val known = _library.value.songs.mapTo(HashSet()) { it.id }
+        val keep = songIds.map { it in known }
+        // a break before a song that is gone moves to the next one that stays
+        val moved = breaks.map { b -> keep.take(b.coerceIn(0, keep.size)).count { it } }
+        val items = songIds.filterIndexed { i, _ -> keep[i] }
+        s.copy(items = items, breaks = SetlistBreaks.normalise(moved, items.size))
+    }
+
     fun setReceivedSetlist(setId: String, slots: List<String?>, breaks: List<Int>?) {
+        markExternalEdit(setId)
         if (breaks == null) { setSetlistItems(setId, slots.filterNotNull()); return }
         updateSet(setId) { s ->
             val placed = SetlistBreaks.place(slots, breaks)

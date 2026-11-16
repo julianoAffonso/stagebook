@@ -44,7 +44,7 @@ def page_strings(lang):
     out["lyrics"] = texts.get("editor_lyrics_chords", out.get("lyrics", ""))
     # plurals come as three texts (0, 1, other), as WebEditorServer.texts sends them; Portuguese counts 0 as "one"
     xml = LANGS[lang].read_text(encoding="utf-8")
-    for name, res in (("songCount", "song_count"), ("breakCount", "break_count")):
+    for name, res in (("songCount", "song_count"), ("breakCount", "break_count"), ("pdfFacts", "editor_pdf_facts")):
         forms = dict(re.findall(r'<item quantity="(\w+)">(.*?)</item>', re.search(rf'<plurals name="{res}">(.*?)</plurals>', xml, re.S).group(1)))
         other = forms["other"]
         out[name + "0"] = forms["one"] if lang == "pt-BR" else other
@@ -125,6 +125,7 @@ class Stand(BaseHTTPRequestHandler):
                 "importar": "tab('import');",
                 "recebido": "tab('import'); showReview(" + json.dumps(review(lang), ensure_ascii=False) + ", 'words-status'); document.querySelectorAll('#view-import .blocks > div').forEach((d) => { if (!d.contains($('review'))) d.hidden = true; });",
                 "pedido": "",
+                "pdf": "await open('3');",
             }[Stand.scene]
             js = f"<script>setTimeout(async () => {{ {drive} }}, 400);</script></body>"
             return self.send(200, PAGE.read_text(encoding="utf-8").replace("</body>", js), "text/html")
@@ -136,6 +137,10 @@ class Stand(BaseHTTPRequestHandler):
             return self.send(200, json.dumps(library(lang), ensure_ascii=False))
         if p.startswith("/api/songs/"):
             song = next(x for x in library(lang) if x["id"] == p.rsplit("/", 1)[1])
+            if Stand.scene == "pdf":
+                # a song that is a PDF: the card takes the place of the lyrics (the lyrics stay under it)
+                return self.send(200, json.dumps({**song, "tempo": "", "text": s["lyrics"], "track": "", "trackName": "", "capo": 0, "pdf": "3-cifra.pdf",
+                                                  "pdfName": "Tempo Perdido - cifra.pdf", "pdfPages": 3, "pdfBytes": 412000}, ensure_ascii=False))
             return self.send(200, json.dumps({**song, "tempo": "92", "text": s["lyrics"], "track": song["id"] + "-faixa.ogg",
                                               "trackName": "malandragem-multitrack", "capo": 2}, ensure_ascii=False))
         if p == "/api/sets":
@@ -148,7 +153,7 @@ class Stand(BaseHTTPRequestHandler):
 
 
 # each scene's height: the import tab is a long page, the others fit a laptop screen
-HEIGHTS = {"pedido": 600, "musica": 940, "setlist": 820, "importar": 1900, "recebido": 820}
+HEIGHTS = {"pedido": 600, "musica": 940, "setlist": 820, "importar": 1900, "recebido": 820, "pdf": 820}
 EXTRA = 120   # headless Chrome repeats the top of the page in the last rows: shot taller, then the bottom is cut
 
 
@@ -197,7 +202,7 @@ def main(dest, narrow=False):
         for lang in LANGS:
             folder = Path(dest) / lang
             folder.mkdir(parents=True, exist_ok=True)
-            for n, scene in enumerate(["pedido", "musica", "setlist", "importar", "recebido"], 1):
+            for n, scene in enumerate(["pedido", "musica", "setlist", "importar", "recebido", "pdf"], 1):
                 Stand.lang, Stand.scene = lang, scene
                 shoot(url, str(folder / f"editor_web_{n}_{scene}.png"), profile, HEIGHTS[scene])
     server.shutdown()

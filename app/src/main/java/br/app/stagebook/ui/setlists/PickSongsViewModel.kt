@@ -4,10 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.domain.QrPayload
-import br.app.stagebook.navigation.PickSongs
 import br.app.stagebook.ui.songs.RowFactsReader
 import br.app.stagebook.ui.songs.artistLine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +31,7 @@ data class PickRowUi(
     val bpm: Int = 0,           // 0 = none
     val capo: Int = 0,
     val hasTrack: Boolean = false,
+    val order: Int = 0,   // the place it will take among the ones chosen now (1, 2, 3…): 0 = not chosen
 )
 
 @Immutable
@@ -40,6 +39,7 @@ data class PickSongsUiState(
     val setName: String = "",
     val rows: List<PickRowUi> = emptyList(),
     val selectedCount: Int = 0,
+    val inSetCount: Int = 0,   // the songs the setlist already has: the numbers of the ones chosen go on from there
     val tags: List<String> = emptyList(),
     val chosenTags: Set<String> = emptySet(),
 )
@@ -49,7 +49,7 @@ class PickSongsViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val setId = savedStateHandle.toRoute<PickSongs>().setId
+    private val setId: String = checkNotNull(savedStateHandle["setId"])
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
     // order they were checked = order they go into the setlist
@@ -74,12 +74,12 @@ class PickSongsViewModel @Inject constructor(
                 fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true,
             )
         }
-        PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, tags = all, chosenTags = kept)
+        PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, inSetCount = set?.items?.size ?: 0, tags = all, chosenTags = kept)
     }
 
     val uiState: StateFlow<PickSongsUiState> = combine(filtered, selected) { f, sel ->
-        val chosen = sel.toHashSet()
-        f.copy(rows = f.rows.map { if (it.id in chosen) it.copy(selected = true) else it }, selectedCount = sel.size)
+        val place = HashMap<String, Int>(sel.size * 2).also { m -> sel.forEachIndexed { i, id -> m[id] = f.inSetCount + i + 1 } }
+        f.copy(rows = f.rows.map { r -> place[r.id]?.let { r.copy(selected = true, order = it) } ?: r }, selectedCount = sel.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PickSongsUiState())
 
     fun onQueryChange(q: String) { query.value = q }
@@ -108,7 +108,25 @@ class PickSongsViewModel @Inject constructor(
 
     fun dismissLimit() { _limit.value = false }
 
-    fun confirm() = repository.addToSetlist(setId, selected.value)
+    fun confirm() = confirmPending()
+
+    /** The checks forgotten, nothing added ("Discard" when the menu is closed with songs checked). */
+    fun clearPending() { savedStateHandle[KEY_SELECTED] = ArrayList<String>() }
+
+    // the screen is gone for good (its entry popped some other way): what was checked was meant to go in
+    override fun onCleared() { confirmPending() }
+
+    /**
+     * Adds the checked songs to the setlist, in the order they were checked, and forgets the checks. Also what leaving
+     * the screen does with songs checked and not confirmed: they were meant to go in (user, 15/11), and a second call
+     * has nothing left to add.
+     */
+    fun confirmPending() {
+        val picked = selected.value
+        if (picked.isEmpty()) return
+        savedStateHandle[KEY_SELECTED] = ArrayList<String>()
+        repository.addToSetlist(setId, picked)
+    }
 
     private companion object {
         const val KEY_SELECTED = "selected"

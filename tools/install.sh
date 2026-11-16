@@ -21,10 +21,14 @@ MARK="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.cla
 # device answering and player off: the same check the direct path uses (tools/install-apk.sh)
 tools/player-off.sh "$SERIAL" || exit 1
 
-want="0.1.$(git rev-list --count HEAD) ($(git rev-parse --short HEAD))"
+# the commit count is the versionCode, and the commit is at the end of the name (the name's numbers come from app/build.gradle.kts)
+want_code="$(git rev-list --count HEAD)"
+want_sha="($(git rev-parse --short HEAD))"
 if [ "$VARIANT" = debug ]; then ./gradlew -q assembleDebug; else ./gradlew -q assembleRelease; fi
 apk=app/build/outputs/apk/$VARIANT/app-$VARIANT.apk
 out="$("${ADB[@]}" install -r "$apk" 2>&1)" || { echo "not installed: $out"; exit 1; }
-got="$("${ADB[@]}" shell dumpsys package br.app.stagebook | sed -n 's/.*versionName=//p' | head -1 | tr -d '\r')"
-[ "$got" = "$want" ] || { echo "version on the device ($got) is not the commit one ($want)"; exit 1; }
+info="$("${ADB[@]}" shell dumpsys package br.app.stagebook | tr -d '\r')"
+got="$(sed -n 's/.*versionName=//p' <<<"$info" | head -1)"
+code="$(sed -n 's/.*versionCode=\([0-9]*\).*/\1/p' <<<"$info" | head -1)"
+[ "$code" = "$want_code" ] && [ "${got% *}" != "$got" ] && [ "${got##* }" = "$want_sha" ] || { echo "version on the device ($got, $code) is not the commit one ($want_code $want_sha)"; exit 1; }
 echo "installed: $got"

@@ -18,7 +18,7 @@ import br.app.stagebook.domain.BreakTimer
 import br.app.stagebook.navigation.Home
 import br.app.stagebook.navigation.SongEditor
 import br.app.stagebook.navigation.Stage
-import br.app.stagebook.navigation.openSettingsFrom
+import br.app.stagebook.navigation.Settings
 import br.app.stagebook.ui.components.SetlistBreakRow
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
@@ -32,8 +32,8 @@ import org.robolectric.annotation.Config
 /**
  * Back from an adjust screen opened from the break goes to the break: the stage is still in the back stack with its own
  * view model (and its saved state, where the break is), so nothing has to be rebuilt. Checked with a stand-in view
- * model that counts instances, on the app's real routes. Settings used to take the stage's place instead; now it goes
- * over it.
+ * model that counts instances, on the app's real routes. Settings goes over the stage (and over an editor), as a page of
+ * its own.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h800dp-port-xxhdpi", application = android.app.Application::class)
@@ -50,6 +50,7 @@ class BreakBackFromAdjustTest {
             nav = rememberNavController()
             NavHost(nav, startDestination = Home) {
                 composable<Home> { Text("home") }
+                composable<Settings> { Text("settings") }
                 composable<SongEditor> { Text("editor") }
                 composable<Stage> { stageId = viewModel<Marker>().id; Text("stage") }
             }
@@ -74,19 +75,20 @@ class BreakBackFromAdjustTest {
         start()
         go { nav.navigate(Stage(setId = "s", start = 0)) }
         val first = stageId
-        go { nav.openSettingsFrom() }
-        compose.onNodeWithText("home").assertExists()
+        go { nav.navigate(Settings("DEVICE")) }
+        compose.onNodeWithText("settings").assertExists()
         go { nav.popBackStack() }
         compose.onNodeWithText("stage").assertExists()
         assertEquals(first, stageId)
     }
 
-    @Test fun `Settings from another screen still takes the place of what is above Home`() {
+    @Test fun `Settings opened from the editor goes over it and back returns to the editor`() {
         start()
         go { nav.navigate(SongEditor()) }
-        go { nav.openSettingsFrom() }
-        compose.onNodeWithText("home").assertExists()
-        assertEquals(Home::class.qualifiedName, nav.currentBackStackEntry?.destination?.route?.substringBefore('/')?.substringBefore('?'))
+        go { nav.navigate(Settings("DEVICE")) }
+        compose.onNodeWithText("settings").assertExists()
+        go { nav.popBackStack() }
+        compose.onNodeWithText("editor").assertExists()
     }
 
     @Test fun `a stage opened by tapping a song is another stage`() {
