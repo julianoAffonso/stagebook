@@ -27,7 +27,9 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
 
     @Immutable
     @Serializable
-    data class Device(val id: String, val name: String, val hash: String, val since: Long)
+    // [seen]: the last time this computer used the editor (0 = never since it was added: then [since] counts). A key unused for
+    // [KEY_DAYS] days no longer opens it, however long the browser keeps the cookie
+    data class Device(val id: String, val name: String, val hash: String, val since: Long, val seen: Long = 0L)
 
     /**
      * A browser asking to come in, waiting for the answer on the tablet: its network address and a short [code] the
@@ -62,7 +64,8 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     fun device(key: String?): Device? {
         if (key.isNullOrEmpty()) return null
         val hash = hash(key)
-        return _devices.value.firstOrNull { MessageDigest.isEqual(it.hash.toByteArray(), hash.toByteArray()) }
+        val found = _devices.value.firstOrNull { MessageDigest.isEqual(it.hash.toByteArray(), hash.toByteArray()) } ?: return null
+        return found.takeUnless { now() - maxOf(it.seen, it.since) > KEY_DAYS * DAY_MS }
     }
 
     /**
@@ -114,6 +117,15 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
         }
     }
 
+    /** The computer used the editor now: its key's clock starts again (written at most once an hour). */
+    @Synchronized
+    fun touch(id: String) {
+        val d = _devices.value.firstOrNull { it.id == id } ?: return
+        if (now() - d.seen < TOUCH_EVERY_MS) return
+        _devices.update { list -> list.map { if (it.id == id) it.copy(seen = now()) else it } }
+        save()
+    }
+
     fun remove(id: String) {
         _devices.update { list -> list.filterNot { it.id == id } }
         save()
@@ -143,6 +155,9 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
         const val MAX_NAME = 60
         const val REQUEST_TTL_MS = 2 * 60_000L
         const val DENIED_MS = 5 * 60_000L
+        const val KEY_DAYS = 90
+        private const val DAY_MS = 24L * 3600 * 1000
+        private const val TOUCH_EVERY_MS = 3_600_000L
 
         fun hash(key: String): String =
             MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }

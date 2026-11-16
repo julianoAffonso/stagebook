@@ -50,4 +50,20 @@ class DeezerBpmTest {
             server.stop(0)
         }
     }
+
+    @Test fun `a lookup the caller gave up on does not go on trying or sleeping`() {
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        var searches = 0
+        server.createContext("/search") { ex -> searches++; ex.sendResponseHeaders(503, -1); ex.close() }
+        server.start()
+        try {
+            val d = DeezerBpm().apply { endpoint = "http://127.0.0.1:${server.address.port}/"; pauseMs = 300 }
+            // gives up after 100 ms: the first try went, the pauses between the tries are not slept for nobody
+            assertEquals(null, kotlinx.coroutines.runBlocking { d.lookupWithin("Hazard", "Richard Marx", 100) })
+            Thread.sleep(1_200)
+            assertEquals("the later tries were not made: $searches", true, searches <= 2)
+        } finally {
+            server.stop(0)
+        }
+    }
 }

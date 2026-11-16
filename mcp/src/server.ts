@@ -127,7 +127,13 @@ export function buildServer(client: StagebookClient): McpServer {
       },
     },
     safe(async ({ url, name }: { url?: string; name?: string }) => {
-      if (url) client.url = url;
+      // an address given that is not the saved one never gets the saved key (a made-up address in text the assistant read
+      // would have received it): the key goes only to the tablet it was approved on, and a new one pairs from the start
+      if (url) {
+        const same = (a?: string, b?: string) => !!a && !!b && a.replace(/\/+$/, "") === b.replace(/\/+$/, "");
+        if (!same(url, client.url)) client.key = undefined;
+        client.url = url;
+      }
       // no address given: the saved one if it still answers, otherwise search again (the tablet's address can change
       // with the Wi-Fi; the saved one was used forever, audit 03/11)
       else if (!client.url || !(await answers(client.url))) {

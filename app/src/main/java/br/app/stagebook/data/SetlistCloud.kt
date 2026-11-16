@@ -359,11 +359,18 @@ class SetlistCloud @Inject constructor(
         val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
         val text = QrPayload.unpack(packed) ?: return null
         // what the sender says about files on this device is never believed: the PDF is whatever came as bytes, checked as any
+        // (the PDFs of one package share the budget the sender keeps to: a package with more is not one of ours, and a file is not
+        // kept for a song that will be turned away anyway)
+        var budget = br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES
         val songs = pkg.songs.take(br.app.stagebook.domain.BandContent.MAX_SONGS).map { s ->
             val clean = s.forWire()
-            val bytes = s.pdf.takeIf { it.isNotEmpty() }?.let { runCatching { java.util.Base64.getDecoder().decode(it) }.getOrNull() }
-                ?.takeIf { it.size <= br.app.stagebook.domain.BandContent.MAX_PDF_BYTES }
-            if (bytes != null) takePdf(clean, bytes, s.pdfName) else clean
+            if (s.pdf.isEmpty() || !s.allowed()) return@map clean
+            // by the text's length first: nothing is decoded that could not fit
+            if (s.pdf.length.toLong() * 3 / 4 > budget) return@map clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.TOO_BIG.name)
+            val bytes = runCatching { java.util.Base64.getDecoder().decode(s.pdf) }.getOrNull()
+                ?: return@map clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.NOT_PDF.name)
+            budget -= bytes.size
+            takePdf(clean, bytes, s.pdfName)
         }
         return Opened(text, songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
     }

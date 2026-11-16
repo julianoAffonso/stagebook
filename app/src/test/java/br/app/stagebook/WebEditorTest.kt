@@ -185,4 +185,20 @@ class WebEditorTest {
             assertTrue(cookie, "Max-Age=${WebEditorRoutes.COOKIE_DAYS * 24 * 3600}" in cookie)
         }
     }
+
+    @Test fun `a key not used for 90 days stops opening the editor, and each use starts the 90 days again`() {
+        val id = Regex("\"id\":\"([^\"]+)\"").find(routes.handle(req("POST", "/api/ask", """{"name":"Chrome · Windows"}""")).text())!!.groupValues[1]
+        auth.answer(auth.requests.value.single().id, true)
+        val key = Regex("${WebEditorRoutes.COOKIE}=([^;]+)").find(routes.handle(req("GET", "/api/ask?id=$id")).headers.getValue("Set-Cookie"))!!.groupValues[1]
+        val day = 24L * 3600 * 1000
+        // used on day 80: still in, and the clock starts again
+        clock += 80 * day
+        assertEquals(200, routes.handle(req("GET", "/api/session", cookie = key)).status)
+        // another 80 days after that use: in (it would be 160 from the start, but 80 from the last use)
+        clock += 80 * day
+        assertEquals(200, routes.handle(req("GET", "/api/session", cookie = key)).status)
+        // 91 days with no use: out
+        clock += 91 * day
+        assertEquals(401, routes.handle(req("GET", "/api/session", cookie = key)).status)
+    }
 }

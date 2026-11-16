@@ -13,13 +13,22 @@ class SongMetadata @Inject constructor(
     private val musicBrainz: MusicBrainz,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
+    private companion object { const val LATER_TRIES = 3; const val LATER_PAUSE_MS = 3_000L }
+
     fun completeLater(songId: String) {
         val song = repository.song(songId) ?: return
         if (song.title.isBlank() || (song.author.isNotBlank() && song.year.isNotBlank())) return
         scope.launch {
-            val info = musicBrainz.lookup(song.title, song.author) ?: return@launch
+            // in the background, nobody waits: it gives way to an import that is waiting for its year, and tries again a little later
+            var info: MusicBrainz.Info? = null
+            for (attempt in 0 until LATER_TRIES) {
+                info = musicBrainz.lookup(song.title, song.author, patient = false)
+                if (info != null) break
+                kotlinx.coroutines.delay(LATER_PAUSE_MS)
+            }
+            val found = info ?: return@launch
             repository.updateSong(songId) { cur ->
-                cur.copy(author = cur.author.ifBlank { info.artist }, year = cur.year.ifBlank { info.year })
+                cur.copy(author = cur.author.ifBlank { found.artist }, year = cur.year.ifBlank { found.year })
             }
         }
     }

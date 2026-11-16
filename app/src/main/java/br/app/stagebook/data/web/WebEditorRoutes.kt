@@ -48,6 +48,7 @@ class WebEditorRoutes(
             "/api/ask" -> return ask(req)
         }
         val device = auth.device(req.cookie(COOKIE)) ?: return HttpResponse.status(401)
+        auth.touch(device.id)   // its key's 90 days start again
         // only an approved computer keeps the editor on (a stranger pinging it would keep it on all show; audit 30/10)
         onAccess()
         if (req.path == "/api/ping") return HttpResponse.status(204)

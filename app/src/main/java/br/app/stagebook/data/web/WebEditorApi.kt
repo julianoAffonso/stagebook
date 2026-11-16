@@ -443,7 +443,7 @@ class WebEditorApi(
         if (song.pdf.isEmpty()) return HttpResponse.status(404)
         val v = runCatching { json.decodeFromString<PdfView>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         // each trim held to the page and to the least size, one per page, at most one more than the PDF has pages
-        val crops = v.crops?.map(br.app.stagebook.domain.PdfCrops::valid)?.filterNot { it.isWhole }?.distinctBy { it.page }?.take(MAX_CROPS)
+        val crops = v.crops?.filter { it.page == br.app.stagebook.data.model.PdfCrop.ALL || it.page in 0 until br.app.stagebook.data.PdfInspector.MAX_PAGES }?.map(br.app.stagebook.domain.PdfCrops::valid)?.filterNot { it.isWhole }?.distinctBy { it.page }?.take(MAX_CROPS)
         repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops) }
         val now = repository.song(id) ?: return HttpResponse.status(404)
         return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops)))

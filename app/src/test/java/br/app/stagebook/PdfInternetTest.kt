@@ -269,4 +269,32 @@ class PdfInternetTest {
         assertEquals("", got.pdfFile)
         assertEquals("NOT_PDF", got.pdfProblem)
     }
+
+    @Test fun `a pair package with more PDF than the budget leaves the excess out with the reason, and keeps no file for a song turned away`() {
+        val repo = repo(); val c = cloud(repo)
+        val id = song(repo, 5_000)
+        val shared = c.songsPackage(listOf(id))!!.second.single()
+        val mark = byteArrayOf('P'.code.toByte(), '1'.code.toByte())
+        val real = SetlistCloud.unpack(mark, c.pairPackage(loose("Chart"), listOf(shared)), SetlistCloud.MAX_PACKAGE)!!
+        val big = java.util.Base64.getEncoder().encodeToString(pdfBytes((br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES + 4_000).toInt()))
+        fun tamper(pdf: String, text: String? = null) = kotlinx.serialization.json.buildJsonObject {
+            kotlinx.serialization.json.Json.parseToJsonElement(real).let { it as kotlinx.serialization.json.JsonObject }.forEach { (k, v) ->
+                if (k != "songs") put(k, v) else put(k, kotlinx.serialization.json.JsonArray((v as kotlinx.serialization.json.JsonArray).map { sg ->
+                    kotlinx.serialization.json.buildJsonObject {
+                        (sg as kotlinx.serialization.json.JsonObject).forEach { (a, b) -> if (a == "text" && text != null) put(a, kotlinx.serialization.json.JsonPrimitive(text)) else put(a, b) }
+                        put("pdf", kotlinx.serialization.json.JsonPrimitive(pdf)); put("pdfName", kotlinx.serialization.json.JsonPrimitive("x.pdf"))
+                    }
+                }))
+            }
+        }
+        val before = java.io.File(context.filesDir, "pdfs").list()?.size ?: 0
+        // over the budget: no file, and the reason
+        val over = c.openPairPackage(SetlistCloud.pack(mark, tamper(big).toString()))!!.songs.single()
+        assertEquals("", over.pdfFile)
+        assertEquals("TOO_BIG", over.pdfProblem)
+        // a song whose text is not allowed (a control character) is turned away: its PDF is not kept either
+        val turned = c.openPairPackage(SetlistCloud.pack(mark, tamper(java.util.Base64.getEncoder().encodeToString(pdfBytes(5_000)), text = "a\u0000b").toString()))!!.songs.single()
+        assertEquals("", turned.pdfFile)
+        assertEquals(before, java.io.File(context.filesDir, "pdfs").list()?.size ?: 0)
+    }
 }

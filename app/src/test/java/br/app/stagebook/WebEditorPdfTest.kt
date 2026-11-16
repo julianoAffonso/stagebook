@@ -195,4 +195,10 @@ class WebEditorPdfTest {
             assertEquals(context.createConfigurationContext(c).getString(R.string.editor_pdf_note), texts["pdfNote"])
         }
     }
+
+    @Test fun `a trim for a page the PDF cannot have is dropped, one for all pages stays`() {
+        val (api, id) = withPdf()
+        call(api, "PUT", "/api/songs/$id/pdf-view", """{"crops":[{"page":900,"left":0.2,"top":0,"right":1,"bottom":1},{"page":-5,"left":0.2,"top":0,"right":1,"bottom":1},{"page":-1,"left":0.1,"top":0,"right":1,"bottom":1}]}""")
+        assertEquals(listOf(-1), repo.song(id)!!.pdfCrops.map { it.page })
+    }
 }

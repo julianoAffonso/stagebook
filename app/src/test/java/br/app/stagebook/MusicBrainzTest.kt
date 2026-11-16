@@ -116,4 +116,17 @@ class MusicBrainzTest {
         assertEquals(3, calls)
         assertEquals(1, mb.cacheSize())
     }
+
+    @Test fun `a lookup nobody waits for gives way at once while another one is going`() {
+        var calls = 0
+        server.createContext("/ocupada") { ex -> calls++; Thread.sleep(400); val b = body.toByteArray(); ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.write(b); ex.close() }
+        val mb = MusicBrainz().apply { endpoint = "http://127.0.0.1:${server.address.port}/ocupada"; spacingMs = 10 }
+        runBlocking {
+            val import = async { mb.lookup("Camila, Camila", "Nenhum de Nós") }
+            kotlinx.coroutines.delay(100)   // the import has the line
+            assertNull(mb.lookup("Outra", "Banda", patient = false))
+            assertEquals("1987", import.await()?.year)
+        }
+        assertEquals(1, calls)
+    }
 }

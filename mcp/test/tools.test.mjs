@@ -221,3 +221,19 @@ test("setlists filter by name and their order reads and changes", async () => {
   assert.equal(JSON.parse((await call("setlist_order", { order: "abc" })).body).order, "abc");
   assert.equal(JSON.parse((await call("setlist_order")).body).order, "abc");
 });
+
+// last of the file: it drops the saved key, which the tests before it need
+test("an address that is not the saved one never gets the saved key, and pairs from the start", async () => {
+  const other = await fakeTablet();
+  try {
+    const seen = [];
+    other.server.on("request", (req) => seen.push(req.headers.cookie ?? ""));
+    const r = await call("stagebook_connect", { url: other.url });
+    assert.equal(r.error, false, r.body);
+    assert.match(r.body, /4821/, "a new request, not \"already approved\"");
+    assert.ok(seen.every((c) => c === ""), `the saved key went to the other address: ${JSON.stringify(seen)}`);
+  } finally {
+    other.server.close();
+  }
+});
+

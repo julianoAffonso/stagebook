@@ -7,7 +7,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
@@ -57,16 +56,18 @@ class MusicBrainz @Inject constructor() {
     }
     internal fun cacheSize(): Int = synchronized(found) { found.size }
 
-    suspend fun lookup(title: String, artist: String): Info? = withContext(Dispatchers.IO) {
+    /** [patient] false (a lookup nobody waits for) gives up at once when another one is going: an import waiting for its year goes first. */
+    suspend fun lookup(title: String, artist: String, patient: Boolean = true): Info? = withContext(Dispatchers.IO) {
         val key = TextKey.of(title) + "|" + TextKey.of(artist)
         synchronized(found) { found[key] }?.let { return@withContext it }
-        val got = fetch(title, artist)
+        val got = fetch(title, artist, patient)
         if (got != null && got.year.isNotEmpty()) synchronized(found) { found[key] = got }
         got
     }
 
-    private suspend fun fetch(title: String, artist: String): Info? = run {
-        gate.withLock {
+    private suspend fun fetch(title: String, artist: String, patient: Boolean): Info? {
+        if (patient) gate.lock() else if (!gate.tryLock()) return null
+        try {
             // the first try, and more after a growing pause when the server said "too many" (503), "slow down" (429) or
             // the connection broke or timed out: the first try of a cold connection failed often (user, 15/11)
             for (attempt in 0 until ATTEMPTS) {
@@ -74,9 +75,11 @@ class MusicBrainz @Inject constructor() {
                 if (wait > 0) delay(wait)
                 lastAt = System.currentTimeMillis()
                 val r = ask(title, artist)
-                if (r !is Asked.Busy) return@withLock (r as? Asked.Found)?.info
+                if (r !is Asked.Busy) return (r as? Asked.Found)?.info
             }
-            null
+            return null
+        } finally {
+            gate.unlock()
         }
     }
 
