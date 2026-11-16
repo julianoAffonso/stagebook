@@ -32,7 +32,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   name and date, or deletes it. Put a **break** between songs: on
   stage it shows a timer, and the show time starts again after it. The setlist open in the menu shows what was played,
   what is now and what is next, with each song's tempo, capo and track. Send it to whoever is next to you by QR, far
-  away with 3 words over the internet, or to the whole band on the same Wi-Fi (the breaks go along, except by QR).
+  away with 3 words over the internet, or to the whole band (right away on the same Wi-Fi, online within 12 hours for whoever is away) (the breaks go along, except by QR).
 - **Band:** with "Lead the band" (arm it on the Setlists tab, then tap a setlist), whoever leads changes songs and
   everyone's stage follows, break included. A strip at the bottom shows who is leading, with **Go** to jump to where
   the band is. The leader sees **What's missing**, who lacks which song, and can send the songs; a follower can **Ask**
@@ -134,7 +134,7 @@ its gain is a simpler screen.
 Stagebook has an [MCP server](mcp/README.md) that lets Claude Code, Claude Desktop, Cursor, VS Code, Gemini CLI, Codex
 and other AI assistants read and edit your library: "build a 15-song setlist for Saturday", "move every song by this
 artist down a half tone", "check the chords of this song", "import this page". It runs on your computer and talks to the
-tablet over your Wi-Fi through **Settings → Band and computer → Edit on the computer**; you approve the computer once on the tablet.
+tablet over your Wi-Fi through **Settings → Band and computer → In the browser**; you approve the computer once on the tablet.
 It's on npm as [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): with [Node.js](https://nodejs.org) on
 the computer, Claude Code connects with `claude mcp add stagebook -- npx -y stagebook-mcp`. Setup for each assistant:
 [mcp/README.md](mcp/README.md).

@@ -135,7 +135,7 @@
     <string name="qr_limit_batch">These songs don\'t all fit in this setlist (the QR has a limit). Pick fewer songs or create another setlist.</string>
     <string name="qr_limit_name">This name is too long for this setlist. Use a shorter one.</string>
     <string name="set_empty_title">Empty setlist</string>
-    <string name="set_empty_message">Tap \"Songs\" to choose what goes into the setlist.</string>
+    <string name="set_empty_message">Tap the pencil and then the + to choose what goes into the setlist.</string>
     <string name="set_item_missing">(song removed)</string>
     <string name="set_reorder">Drag to change the order</string>
 
@@ -145,7 +145,7 @@
 
     <!-- QR -->
     <string name="qr_description">Setlist QR code</string>
-    <string name="qr_hint">The other person taps Import → Scan QR. The app warns if any song is missing.</string>
+    <string name="qr_hint">The other person taps the + → Scan QR. The app warns if any song is missing.</string>
     <plurals name="qr_count">
         <item quantity="one">%d song in the QR</item>
         <item quantity="other">%d songs in the QR</item>
@@ -645,7 +645,7 @@
     <!-- player mixer (Settings → Player) -->
     <string name="mixer_title">Mixer</string>
     <string name="mixer_monitor">Monitor live levels</string>
-    <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here, up to the widest track played so far. Tap a channel name to pick its output, even out the volume, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
+    <string name="mixer_help">Applies to every backing track. Each channel in the file is a channel here, up to the widest track played so far. Tap a channel name to rename it, and the icon next to it to pick its output, even out the volume, EQ and more. By default each channel goes to the output with the same number. Without a USB interface, only outputs 1 (left) and 2 (right) exist.</string>
     <string name="mixer_channel">Channel %1$d</string>
     <string name="mixer_pair" tools:ignore="PluralsCandidate">Channels %1$d and %2$d</string>
     <string name="mixer_name">Name</string>
@@ -850,15 +850,15 @@
         <item quantity="one">%1$d song was too big and didn\'t go.</item>
         <item quantity="other">%1$d songs were too big and didn\'t go.</item>
     </plurals>
-    <string name="share_sent_hint">On the other device, go to Import → Type the 3 words. They last 12 hours.</string>
+    <string name="share_sent_hint">On the other device, tap the + and then Type the 3 words. They last 12 hours.</string>
     <string name="share_send_code">Send in a message</string>
-    <string name="share_message_songs">Songs on Stagebook. Tap %1$s to get them. Or go to Import → Type the 3 words and type %2$s. Good for 12 hours.</string>
+    <string name="share_message_songs">Songs on Stagebook. Tap %1$s to get them. Or tap the + and then Type the 3 words and type %2$s. Good for 12 hours.</string>
     <string name="share_joined">%1$s accepted and is now in the band</string>
-    <string name="share_qr_or">If you prefer, scan this QR in Import → Scan QR.</string>
+    <string name="share_qr_or">If you prefer, scan this QR in the + → Scan QR.</string>
     <string name="share_copy">Copy the words</string>
     <string name="share_copied">Words copied</string>
-    <string name="share_code_qr">QR of the words. Take a photo or scan it in Import → Scan QR.</string>
-    <string name="share_message">Setlist \"%1$s\" on Stagebook. Tap %2$s to get it. Or go to Import → Type the 3 words and type %3$s. Good for 12 hours.</string>
+    <string name="share_code_qr">QR of the words. Take a photo or scan it in the + → Scan QR.</string>
+    <string name="share_message">Setlist \"%1$s\" on Stagebook. Tap %2$s to get it. Or tap the + and then Type the 3 words and type %3$s. Good for 12 hours.</string>
     <!-- selection in the Songs tab (share several) -->
     <string name="songs_select_cancel">Exit selection</string>
     <!-- band on the local network (Settings → Band and computer and join requests) -->

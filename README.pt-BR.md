@@ -32,7 +32,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   compartilha, edita o nome e a data ou apaga. Ponha um **intervalo**
   entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O setlist aberto no
   menu mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem
-  está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda no mesmo Wi-Fi (os intervalos
+  está do lado por QR, para longe com 3 palavras pela internet, ou para a banda toda (na hora no mesmo Wi-Fi, pela internet em até 12 horas para quem está longe) (os intervalos
   vão junto, menos pelo QR).
 - **Banda:** com o "Conduzir a banda" (arme na aba Setlists e toque num setlist), quem conduz troca de música e o palco
   de todo mundo acompanha, intervalo incluído. Uma faixa embaixo mostra quem está conduzindo, com o **Ir** para ir onde
@@ -137,7 +137,7 @@ números: o ganho dele é a tela mais simples.
 O Stagebook tem um [servidor MCP](mcp/README.pt-BR.md) que deixa o Claude Code, o Claude Desktop, o Cursor, o VS Code, o
 Gemini CLI, o Codex e outros assistentes de IA lerem e editarem a sua biblioteca: "monta um setlist de 15 músicas para
 sábado", "passa as músicas deste artista meio tom abaixo", "confere os acordes desta música", "importa esta página". Ele
-roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Banda e computador → Editar no computador**; você autoriza o
+roda no seu computador e conversa com o tablet pelo Wi-Fi, por **Ajustes → Banda e computador → No navegador**; você autoriza o
 computador uma vez no tablet. Está no npm como [`stagebook-mcp`](https://www.npmjs.com/package/stagebook-mcp): com o [Node.js](https://nodejs.org) no
 computador, o Claude Code se liga com `claude mcp add stagebook -- npx -y stagebook-mcp`. Configuração de cada
 assistente: [mcp/README.pt-BR.md](mcp/README.pt-BR.md).
