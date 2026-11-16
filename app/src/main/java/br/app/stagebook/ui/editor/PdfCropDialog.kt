@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.layout.layout
@@ -73,7 +74,11 @@ import kotlin.math.abs
  * trim stays on this device (the band gets the whole PDF).
  */
 @Composable
-fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int) -> Unit, onDismiss: () -> Unit) {
+fun PdfCropDialog(
+    pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int) -> Unit,
+    onComposed: () -> Unit = {},   // called each time the window's body composes (the tests count that a drag makes none)
+    onDismiss: () -> Unit,
+) {
     val pages = pdf.pages.coerceAtLeast(1)
     var page by rememberSaveable { mutableIntStateOf(0) }
     // the scope is "all pages" unless this page has a trim of its own
@@ -83,10 +88,7 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
     val scope = if (all) PdfCrop.ALL else page
     val current = pdf.crops.firstOrNull { it.page == scope } ?: PdfCrop(scope)
     // the frame being dragged, in fractions of the page; starts from what is kept for this scope
-    var left by remember(scope, current) { mutableFloatStateOf(current.left) }
-    var top by remember(scope, current) { mutableFloatStateOf(current.top) }
-    var right by remember(scope, current) { mutableFloatStateOf(current.right) }
-    var bottom by remember(scope, current) { mutableFloatStateOf(current.bottom) }
+    val frame = remember(scope, current) { CropFrameState(current) }
     val open by pdf.file?.let { rememberPdfOpen(it) } ?: remember { mutableStateOf<PdfOpen>(PdfOpen.Failed) }
     val ready = open as? PdfOpen.Ready
     val image by produceState<ImageBitmap?>(null, ready, page) {
@@ -97,6 +99,7 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            onComposed()
             Column(Modifier.systemBarsPadding().padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_cancel)) }
@@ -116,7 +119,7 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
                                 if (open is PdfOpen.Loading) CircularProgressIndicator()
                             }
                         }
-                        CropFrame(left, top, right, bottom) { l, t, r, b -> left = l; top = t; right = r; bottom = b }
+                        CropFrame(frame)
                     }
                 }
                 if (pages > 1) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
@@ -129,7 +132,7 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     ActionButton(stringResource(R.string.pdf_crop_none), { onClear(scope); onDismiss() }, Modifier.weight(1f), tone = ButtonTone.Quiet)
-                    ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, left, top, right, bottom)); onDismiss() }, Modifier.weight(1f))
+                    ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() }, Modifier.weight(1f))
                 }
             }
         }
@@ -141,12 +144,11 @@ fun PdfCropDialog(pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int)
  * little larger than the page, all round, so the handles on its edge are whole and not cut by the page's border.
  */
 @Composable
-private fun CropFrame(left: Float, top: Float, right: Float, bottom: Float, onChange: (Float, Float, Float, Float) -> Unit) {
+private fun CropFrame(frame: CropFrameState) {
     val line = MaterialTheme.colorScheme.primary
-    // what the drag reads must be the frame as it is now, not as it was when the gesture detector was made (the other
-    // edges went back to where they started on every new drag)
-    val now by rememberUpdatedState(PdfCrop(0, left, top, right, bottom))
-    val push by rememberUpdatedState(onChange)
+    // what the drag reads must be the frame as it is now (and of the scope chosen now), not as it was when the gesture
+    // detector was made (the other edges went back to where they started on every new drag)
+    val now by rememberUpdatedState(frame)
     Canvas(
         Modifier
             .layout { measurable, c ->
@@ -190,15 +192,16 @@ private fun CropFrame(left: Float, top: Float, right: Float, bottom: Float, onCh
                             if (grab and 2 != 0) t = (t + dy).coerceIn(0f, b - PdfCrops.MIN_SIDE)
                             if (grab and 8 != 0) b = (b + dy).coerceIn(t + PdfCrops.MIN_SIDE, 1f)
                         }
-                        push(l, t, r, b)
+                        f.left = l; f.top = t; f.right = r; f.bottom = b
                     }
                 }
             },
     ) {
         val room = HANDLE_ROOM.toPx()
         val pw = size.width - 2 * room; val ph = size.height - 2 * room
-        val x = room + left * pw; val y = room + top * ph
-        val w = (right - left) * pw; val h = (bottom - top) * ph
+        // read here, where it is drawn: a drag draws the frame again and composes nothing
+        val x = room + frame.left * pw; val y = room + frame.top * ph
+        val w = (frame.right - frame.left) * pw; val h = (frame.bottom - frame.top) * ph
         // dim the page (not the margin), then punch the frame out of it
         drawRect(Color.Black.copy(alpha = 0.55f), Offset(room, room), Size(pw, ph))
         drawRect(Color.Transparent, Offset(x, y), Size(w, h), blendMode = BlendMode.Clear)
@@ -208,6 +211,19 @@ private fun CropFrame(left: Float, top: Float, right: Float, bottom: Float, onCh
         listOf(x to y, x + w to y, x to y + h, x + w to y + h, x + w / 2 to y, x + w / 2 to y + h, x to y + h / 2, x + w to y + h / 2)
             .forEach { (cx, cy) -> drawCircle(line, radius, Offset(cx, cy)) }
     }
+}
+
+/**
+ * The frame being dragged, in fractions of the page. It is read where it is drawn and when it is saved, never while the
+ * window composes: every event of a drag used to compose the whole window again, the page's picture and the buttons too
+ * (audit 16/11).
+ */
+@Stable
+private class CropFrameState(from: PdfCrop) {
+    var left by mutableFloatStateOf(from.left)
+    var top by mutableFloatStateOf(from.top)
+    var right by mutableFloatStateOf(from.right)
+    var bottom by mutableFloatStateOf(from.bottom)
 }
 
 /** The room around the page for the handles on its edge. */
