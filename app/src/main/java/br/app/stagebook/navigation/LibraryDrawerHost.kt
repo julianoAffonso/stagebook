@@ -73,7 +73,7 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
     // a whole screen opened from outside the menu (the band strip's "Import the missing ones") must not stay hidden behind it:
     // the importer opened under the open menu, and nothing seemed to happen (device test 16/11)
-    MenuNotOverScreen(state, besideStage)
+    MenuNotOverScreen(state, besideStage) { nav.currentDestination?.let { it.hasRoute<Stage>() || it.hasRoute<Home>() } != false }
     val open = state.isOpen && !fixed
     val shown = !fixed && (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed)
     LaunchedEffect(shown) { onShown(shown) }
@@ -151,12 +151,15 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
  * open" let the menu finish opening over the screen it had just called (device test 16/11: nothing seemed to happen).
  */
 @Composable
-internal fun MenuNotOverScreen(state: androidx.compose.material3.DrawerState, besideStage: Boolean) {
-    if (besideStage) return
+internal fun MenuNotOverScreen(state: androidx.compose.material3.DrawerState, besideStage: Boolean, besideStageNow: () -> Boolean = { besideStage }) {
+    val now by androidx.compose.runtime.rememberUpdatedState(besideStageNow)
     // one close at a time, each run to its end: restarted whenever "showing" changed, a close cut itself short as it began
-    // (its target is "closed" at once) and the menu was left half way, opening again
-    LaunchedEffect(state) {
+    // (its target is "closed" at once) and the menu was left half way, opening again.
+    // [besideStageNow] is asked at the moment the menu shows, of the navigation itself: leaving Settings by its arrow goes
+    // back and opens the menu in the same instant, while what was composed still said "a screen is open", and the menu
+    // that should come back was closed as it opened (user, 16/11: "back from Options doesn't bring the menu back")
+    LaunchedEffect(state, besideStage) {
         androidx.compose.runtime.snapshotFlow { state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed }
-            .collect { showing -> if (showing) state.close() }
+            .collect { showing -> if (showing && !now()) state.close() }
     }
 }

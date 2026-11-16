@@ -36,12 +36,13 @@ class MenuNotOverScreenTest {
     private lateinit var state: DrawerState
     private lateinit var scope: CoroutineScope
     private var besideStage by mutableStateOf(true)
+    private var besideStageNow: Boolean? = null   // what the navigation says at this instant, when it differs from what is composed
 
     private fun show() = compose.setContent {
         StagebookTheme {
             state = rememberDrawerState(DrawerValue.Closed)
             scope = rememberCoroutineScope()
-            MenuNotOverScreen(state, besideStage)
+            MenuNotOverScreen(state, besideStage) { besideStageNow ?: besideStage }
             ModalNavigationDrawer({ ModalDrawerSheet { Text("menu") } }, drawerState = state) { Box(Modifier.fillMaxSize()) }
         }
     }
@@ -68,5 +69,18 @@ class MenuNotOverScreenTest {
         besideStage = false
         compose.waitForIdle()
         assertEquals(DrawerValue.Closed, state.currentValue)
+    }
+
+    @Test fun `leaving a screen and opening the menu in the same instant leaves the menu open`() {
+        besideStage = false   // Settings is open, and what is composed still says so
+        show()
+        compose.waitForIdle()
+        // the arrow of Settings: the navigation goes back and the menu is asked to open, before anything is composed again
+        compose.runOnIdle { besideStageNow = true; scope.launch { state.open() } }
+        compose.waitForIdle()
+        assertEquals(DrawerValue.Open, state.currentValue)
+        compose.runOnIdle { besideStage = true }
+        compose.waitForIdle()
+        assertEquals("and it stays open once the stage is composed again", DrawerValue.Open, state.currentValue)
     }
 }
