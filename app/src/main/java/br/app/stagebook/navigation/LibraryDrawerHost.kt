@@ -73,7 +73,7 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
     // a whole screen opened from outside the menu (the band strip's "Import the missing ones") must not stay hidden behind it:
     // the importer opened under the open menu, and nothing seemed to happen (device test 16/11)
-    LaunchedEffect(besideStage) { if (!besideStage && state.isOpen) state.close() }
+    MenuNotOverScreen(state, besideStage)
     val open = state.isOpen && !fixed
     val shown = !fixed && (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed)
     LaunchedEffect(shown) { onShown(shown) }
@@ -140,5 +140,21 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
                 content = content,
             )
         }
+    }
+}
+
+/**
+ * A whole screen (the importer, the receive screen) is never left behind the menu: the menu closes, also when it was
+ * still sliding open. A link kept during the show opens as soon as the menu starts to open, and looking only at "already
+ * open" let the menu finish opening over the screen it had just called (device test 16/11: nothing seemed to happen).
+ */
+@Composable
+internal fun MenuNotOverScreen(state: androidx.compose.material3.DrawerState, besideStage: Boolean) {
+    if (besideStage) return
+    // one close at a time, each run to its end: restarted whenever "showing" changed, a close cut itself short as it began
+    // (its target is "closed" at once) and the menu was left half way, opening again
+    LaunchedEffect(state) {
+        androidx.compose.runtime.snapshotFlow { state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed }
+            .collect { showing -> if (showing) state.close() }
     }
 }
