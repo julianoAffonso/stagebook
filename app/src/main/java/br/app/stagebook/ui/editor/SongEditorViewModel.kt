@@ -131,21 +131,37 @@ class SongEditorViewModel @Inject constructor(
         private set
     private var pdfPages by mutableStateOf(0)
     private var pdfBytes by mutableStateOf(0L)
+    // the PDF on the disk, for the card's preview: looked for off the main thread when the PDF changes, never when the card is
+    // read (null: it isn't there, or it wasn't looked for yet)
+    private var pdfFile by mutableStateOf<java.io.File?>(null)
 
-    /** The card that takes the place of the lyrics field: null when the song is not a PDF (a PDF whose file is gone is [EditorPdf.lost]). */
-    val pdfInfo: EditorPdf? get() = if (pdf.isEmpty() && pdfName.isEmpty()) null else EditorPdf(
+    // the song is a PDF (one whose file is gone still is)
+    private val isPdf get() = pdf.isNotEmpty() || pdfName.isNotEmpty()
+
+    /**
+     * The card that takes the place of the lyrics field: null when the song is not a PDF (a PDF whose file is gone is
+     * [EditorPdf.lost]). Made of state only: the screen reads it while composing, and it went to the disk on every read
+     * (audit 16/11).
+     */
+    val pdfInfo: EditorPdf? get() = if (!isPdf) null else EditorPdf(
         pdfName, pdfPages, pdfBytes, lost = pdf.isEmpty(),
-        file = pdf.takeIf { it.isNotEmpty() }?.let { pdfs?.file(it) }?.takeIf { it.isFile },
+        file = pdfFile,
         invert = pdfInvert ?: repository.library.value.look.pdfInvert,
         crops = pdfCrops,
     )
 
     init {
-        // a saved song's page count and size for the card: read once, off the main thread
-        if (pdf.isNotEmpty()) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val file = pdfs?.file(pdf)?.takeIf { it.isFile } ?: return@launch
-            pdfBytes = file.length()
-            (inspector.check(file) as? br.app.stagebook.data.PdfCheck.Ok)?.let { pdfPages = it.pages }
+        // a saved song's file, page count and size for the card: read once, off the main thread
+        val name = pdf
+        if (name.isNotEmpty()) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val file = pdfs?.file(name)?.takeIf { it.isFile } ?: return@launch
+            val bytes = file.length()
+            // another PDF was attached meanwhile: what it said about itself stays
+            if (pdf != name) return@launch
+            pdfFile = file
+            pdfBytes = bytes
+            val pages = (inspector.check(file) as? br.app.stagebook.data.PdfCheck.Ok)?.pages ?: return@launch
+            if (pdf == name) pdfPages = pages
         }
     }
 
@@ -163,7 +179,8 @@ class SongEditorViewModel @Inject constructor(
         val old = pdf
         if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
         if (old != result.name) store.remove(old)
-        keepPdf(result.name, shown, result.pages, result.bytes)
+        val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { store.file(result.name).takeIf { it.isFile } }
+        keepPdf(result.name, shown, result.pages, result.bytes, file)
         if (uiState.title.isBlank()) onTitle(shown.substringBeforeLast('.').trim())
         return result
     }
@@ -199,14 +216,15 @@ class SongEditorViewModel @Inject constructor(
         savedStateHandle.remove<Boolean>(KEY_PDF_INVERT)
         if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
         pdfs?.remove(pdf)
-        keepPdf("", "", 0, 0L)
+        keepPdf("", "", 0, 0L, null)
     }
 
-    private fun keepPdf(name: String, shown: String, pages: Int, bytes: Long) {
+    private fun keepPdf(name: String, shown: String, pages: Int, bytes: Long, file: java.io.File?) {
         pdf = name
         pdfName = shown
         pdfPages = pages
         pdfBytes = bytes
+        pdfFile = file
         pdfCrops = emptyList()   // another file: the old trims were of other pages
         savedStateHandle.remove<String>(KEY_PDF_CROPS)
         savedStateHandle[KEY_PDF] = name
@@ -377,7 +395,7 @@ class SongEditorViewModel @Inject constructor(
     fun transpose(semitones: Int) {
         // a PDF song has no chords to move (its text is hidden and left as it is): the key is only written down, a step at a
         // time, starting from C when none was (user, 15/11)
-        if (pdfInfo != null) {
+        if (isPdf) {
             val key = uiState.meta.key
             update(text = Chords.setDirective(uiState.text, "key", if (key.isEmpty()) "C" else Chords.transposeKey(key, semitones)))
             return
