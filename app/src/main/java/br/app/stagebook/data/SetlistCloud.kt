@@ -331,8 +331,25 @@ class SetlistCloud @Inject constructor(
     internal class Opened(val text: String, val songs: List<SharedSong>, val breaks: List<Int>?)
 
     /** A package for a pair's inbox, before splitting into chunks and encrypting. */
-    internal fun pairPackage(list: ByteArray, songs: List<SharedSong>): ByteArray =
-        pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), songs.map { it.forWire() }, BandProtocol.packageVersion(list))))
+    internal fun pairPackage(list: ByteArray, songs: List<SharedSong>): ByteArray {
+        // the PDFs that fit the package's budget ride inside it, in base64 (a far member gets the small ones); a send with
+        // PDFs is a version 4 one, so an older app says "newer version" instead of dropping them in silence
+        val files = pairPdfs(songs)
+        val carried = songs.map { s -> files[s]?.let { f -> s.forWire().copy(pdf = java.util.Base64.getEncoder().encodeToString(f.readBytes()), pdfName = s.pdfName.take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME)) } ?: s.forWire() }
+        return pack(PAIR_MARK, json.encodeToString(Pack(java.util.Base64.getEncoder().encodeToString(list), carried, BandProtocol.packageVersion(list, files.isNotEmpty()))))
+    }
+
+    /** The songs' PDF files that go in one pair package: each within the PDF limit, all together within [BandContent.PAIR_PDF_BYTES]. */
+    internal fun pairPdfs(songs: List<SharedSong>): Map<SharedSong, java.io.File> {
+        val store = pdfs ?: return emptyMap()
+        var left = br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES
+        val out = LinkedHashMap<SharedSong, java.io.File>()
+        for (s in songs) {
+            val f = s.pdfFile.takeIf { it.isNotEmpty() }?.let(store::file)?.takeIf { it.isFile } ?: continue
+            if (f.length() <= left) { out[s] = f; left -= f.length() }
+        }
+        return out
+    }
 
     internal fun openPairPackage(bytes: ByteArray): Opened? {
         // a whole package (setlist and every song) passes the single-song cap: 30 songs already did (audit 01/11)
@@ -341,7 +358,14 @@ class SetlistCloud @Inject constructor(
         if (pkg.list.isEmpty()) return null   // the "update" notice that rides with a request: nothing to open
         val packed = runCatching { java.util.Base64.getDecoder().decode(pkg.list) }.getOrNull() ?: return null
         val text = QrPayload.unpack(packed) ?: return null
-        return Opened(text, pkg.songs.map { it.forWire() }, br.app.stagebook.domain.SharedBreaks.read(packed, text))
+        // what the sender says about files on this device is never believed: the PDF is whatever came as bytes, checked as any
+        val songs = pkg.songs.take(br.app.stagebook.domain.BandContent.MAX_SONGS).map { s ->
+            val clean = s.forWire()
+            val bytes = s.pdf.takeIf { it.isNotEmpty() }?.let { runCatching { java.util.Base64.getDecoder().decode(it) }.getOrNull() }
+                ?.takeIf { it.size <= br.app.stagebook.domain.BandContent.MAX_PDF_BYTES }
+            if (bytes != null) takePdf(clean, bytes, s.pdfName) else clean
+        }
+        return Opened(text, songs, br.app.stagebook.domain.SharedBreaks.read(packed, text))
     }
 
     @Serializable

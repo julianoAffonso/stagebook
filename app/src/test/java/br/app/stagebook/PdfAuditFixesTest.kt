@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.BandLink
@@ -160,6 +161,8 @@ class PdfAuditFixesTest {
             StagebookTheme { PdfStageView(br.app.stagebook.ui.stage.PdfOpen.Ready(PdfPages(Source(failRender = true))), 0, invert = false, onPageCount = { count = it }) }
         }
         compose.waitUntil(5_000) { count > 0 }
+        // the count comes before the page fails to draw: wait for the notice itself
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Não consigo abrir este PDF", substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Não consigo abrir este PDF", substring = true).assertIsDisplayed()
     }
 

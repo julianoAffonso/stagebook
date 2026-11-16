@@ -32,6 +32,13 @@ object BandContent {
     const val PDF_PACKAGE_BYTES = 6L * 1024 * 1024
 
     /**
+     * The PDFs' bytes in one package for a band member's inbox over the internet: 60 KB in all. The package is cut in 2 KB
+     * messages of the same free server (about 80 KB of base64 is some 40 of them), and a PDF is written in base64 inside it.
+     * A PDF that doesn't fit goes without its file, and the inbox says why.
+     */
+    const val PAIR_PDF_BYTES = 60_000L
+
+    /**
      * The PDF's bytes in one internet message. A message is 4,000 characters of encrypted base64 (the server takes 4 KB):
      * that is at most 2,972 bytes of plain text, and a chunk of the PDF written in base64 and deflated takes about its
      * own size plus ~100 bytes of framing. 2,400 leaves room for that (checked with real encryption in the tests).

@@ -202,9 +202,9 @@ class PdfInternetTest {
         compose.onNodeWithText("The PDFs go along: 13 of the 60 messages the server takes.").assertExists()
     }
 
-    @Test fun `sending to the band with PDFs says a member far away gets the song without them`() {
+    @Test fun `sending to the band with PDFs says a member far away gets only the small ones`() {
         compose.setContent { StagebookTheme { ShareOptions(1, online = true, onQr = null, onInternet = {}, band = 2, limits = ShareLimits(lists = 1, songs = 1, pdfSizes = listOf(20_000L))) } }
-        compose.onNodeWithText("recebe a música sem o PDF", substring = true).assertExists()
+        compose.onNodeWithText("recebe os pequenos (até 60 KB no total)", substring = true).assertExists()
     }
 
     @Test fun `without PDFs the band option says nothing about them`() {
@@ -215,5 +215,58 @@ class PdfInternetTest {
     @Test fun `PDFs that add up to more than a band send takes say how much and that some go without`() {
         compose.setContent { StagebookTheme { ShareOptions(1, online = true, onQr = null, onInternet = {}, band = 2, limits = ShareLimits(lists = 1, songs = 2, pdfSizes = listOf(7_000_000L, 6_000_000L))) } }
         compose.onNodeWithText("somam 13 MB", substring = true).assertExists()
+    }
+
+    // ---- a band member's inbox over the internet carries the small PDFs ----
+
+    private fun loose(vararg titles: String) = SetlistCloud.looseSongs(titles.map { Song(title = it, author = "Ana", text = "x") })!!.first
+
+    @Test fun `a small PDF rides in the pair package, checked and saved on the other side, and the package is version 4`() {
+        val repo = repo(); val c = cloud(repo)
+        val id = song(repo, 20_000)
+        val shared = c.songsPackage(listOf(id))!!.second
+        val pkg = c.pairPackage(loose("Chart"), shared)
+        val opened = c.openPairPackage(pkg)!!
+        val got = opened.songs.single()
+        assertTrue("the PDF came and was saved here: ${got.pdfFile}", got.pdfFile.isNotEmpty() && pdfs.file(got.pdfFile).isFile)
+        assertEquals("Chart.pdf", got.pdfName)
+        assertEquals("", got.pdf)   // the bytes never stay in the song
+        assertEquals(4, kotlinx.serialization.json.Json.parseToJsonElement(SetlistCloud.unpack(byteArrayOf('P'.code.toByte(), '1'.code.toByte()), pkg, SetlistCloud.MAX_PACKAGE)!!).let { (it as kotlinx.serialization.json.JsonObject)["v"]!!.let { v -> (v as kotlinx.serialization.json.JsonPrimitive).content.toInt() } })
+    }
+
+    @Test fun `PDFs past the package's budget go without the file, the small ones still go`() {
+        val repo = repo(); val c = cloud(repo)
+        val small = song(repo, 20_000)
+        pdfs.file("big.pdf").writeBytes(pdfBytes((br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES + 5_000).toInt()))
+        val big = repo.saveSong(Song(title = "Grande", author = "Ana", text = "lyrics", pdf = "big.pdf", pdfName = "Grande.pdf"))
+        val shared = c.songsPackage(listOf(small, big))!!.second
+        val files = c.pairPdfs(shared)
+        assertEquals(1, files.size)
+        val opened = c.openPairPackage(c.pairPackage(loose("Chart", "Grande"), shared))!!
+        assertTrue(opened.songs.first { it.title == "Chart" }.pdfFile.isNotEmpty())
+        assertTrue(opened.songs.first { it.title == "Grande" }.pdfFile.isEmpty())
+    }
+
+    @Test fun `a pair package with a file that is not a PDF leaves the PDF out and says why`() {
+        val repo = repo(); val c = cloud(repo)
+        val id = song(repo, 5_000)
+        val shared = c.songsPackage(listOf(id))!!.second.single()
+        // made up on the wire, as anyone in the band could: the song's own package with a "PDF" that is only text
+        val mark = byteArrayOf('P'.code.toByte(), '1'.code.toByte())
+        val real = SetlistCloud.unpack(mark, c.pairPackage(loose("Chart"), listOf(shared)), SetlistCloud.MAX_PACKAGE)!!
+        val tampered = kotlinx.serialization.json.buildJsonObject {
+            kotlinx.serialization.json.Json.parseToJsonElement(real).let { it as kotlinx.serialization.json.JsonObject }.forEach { (k, v) ->
+                if (k != "songs") put(k, v) else put(k, kotlinx.serialization.json.JsonArray((v as kotlinx.serialization.json.JsonArray).map { sg ->
+                    kotlinx.serialization.json.buildJsonObject {
+                        (sg as kotlinx.serialization.json.JsonObject).forEach { (a, b) -> put(a, b) }
+                        put("pdf", kotlinx.serialization.json.JsonPrimitive(java.util.Base64.getEncoder().encodeToString("MZ not a pdf".toByteArray())))
+                        put("pdfName", kotlinx.serialization.json.JsonPrimitive("x.pdf"))
+                    }
+                }))
+            }
+        }
+        val got = c.openPairPackage(SetlistCloud.pack(mark, tampered.toString()))!!.songs.single()
+        assertEquals("", got.pdfFile)
+        assertEquals("NOT_PDF", got.pdfProblem)
     }
 }
