@@ -42,7 +42,7 @@ class ConductActionsBoundsTest {
     @get:Rule val compose = createComposeRule()
 
     private fun show(ui: ConductUi, waiting: FollowWait? = null, asking: Boolean = false, menus: Int = 0) {
-        val gate = FollowGate().also { it.menus = menus }
+        val gate = FollowGate().also { it.menus = menus; it.windows = menus }
         compose.setContent {
             StagebookTheme {
                 CompositionLocalProvider(LocalFollowGate provides gate) {

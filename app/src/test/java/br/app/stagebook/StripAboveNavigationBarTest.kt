@@ -71,7 +71,7 @@ class StripAboveNavigationBarTest {
     @Test fun `with a window open the strip's button is above the bar when it shows`() {
         val bar = 72
         show(barPx = bar)
-        compose.runOnIdle { gate.menus++ }
+        compose.runOnIdle { gate.menus++; gate.windows++ }
         compose.waitForIdle()
         val go = compose.onNodeWithText("Ir").getBoundsInRoot()
         val barDp = bar / compose.activity.resources.displayMetrics.density
@@ -86,11 +86,19 @@ class StripAboveNavigationBarTest {
 
     @Test fun `closing the window puts it back`() {
         show(barPx = 72)
-        compose.runOnIdle { gate.menus++ }
+        compose.runOnIdle { gate.menus++; gate.windows++ }
         compose.waitForIdle()
         val lifted = compose.onNodeWithText("Ir").getBoundsInRoot().bottom.value
-        compose.runOnIdle { gate.menus-- }
+        compose.runOnIdle { gate.menus--; gate.windows-- }
         compose.waitForIdle()
         assertTrue(compose.onNodeWithText("Ir").getBoundsInRoot().bottom.value > lifted)
+    }
+
+    @Test fun `with only the library menu open the strip stays at the bottom, off the menu's tabs`() {
+        show(barPx = 72)
+        val before = compose.onNodeWithText("Ir").getBoundsInRoot().bottom.value
+        compose.runOnIdle { gate.menus++ }   // the menu holds the follower back, but is not a window
+        compose.waitForIdle()
+        assertTrue(compose.onNodeWithText("Ir").getBoundsInRoot().bottom.value == before)
     }
 }

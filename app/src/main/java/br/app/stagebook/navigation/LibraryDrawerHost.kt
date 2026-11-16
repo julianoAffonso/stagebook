@@ -79,7 +79,7 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     // the leader's song waits while the drawer is open over the stage (a setlist is being looked at, or songs picked: the
     // stage behind it must not be replaced under the person's hands): a window of ours is open, as for a menu. Pinned, the
     // stage is in view and goes on following
-    br.app.stagebook.ui.components.FollowBusyWhile(open)
+    br.app.stagebook.ui.components.FollowBusyWhile(open, window = false)   // the menu is not a window: Android's bar stays hidden
     // and the pedal does not turn the stage behind it (composed only while it is open: the last handler registered gets the press)
     val pedalKeys by start.pedalKeys.collectAsStateWithLifecycle()
     if (open) br.app.stagebook.ui.PedalHandler { press -> br.app.stagebook.domain.pedalTakenByDrawer(press, pedalKeys) }

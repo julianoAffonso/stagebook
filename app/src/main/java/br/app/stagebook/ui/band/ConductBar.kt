@@ -294,7 +294,7 @@ internal fun br.app.stagebook.ui.components.FollowGate.goNow() {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun Modifier.aboveNavigationBar(): Modifier {
-    if (br.app.stagebook.ui.components.LocalFollowGate.current.menus <= 0) return this
+    if (br.app.stagebook.ui.components.LocalFollowGate.current.windows <= 0) return this
     val whenShown = WindowInsets.navigationBarsIgnoringVisibility
     val now = WindowInsets.navigationBars
     return offset { androidx.compose.ui.unit.IntOffset(0, -(whenShown.getBottom(this) - now.getBottom(this)).coerceAtLeast(0)) }
