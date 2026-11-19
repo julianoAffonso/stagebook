@@ -94,10 +94,6 @@ class WebEditorApi(
     @Serializable
     data class SetItem(val id: String, val name: String, val count: Int, val date: String = "")
 
-    /** The Setlists tab's order, the same choice on the tablet, in the browser and for the assistants. */
-    @Serializable
-    data class SetsOrder(val abc: Boolean)
-
     /**
      * A setlist with its songs in order; a song deleted from the library comes with an empty title. [breaks] are the
      * positions of its breaks: 1..n-1, a break before the song at that place (0-based), as in the app.
@@ -177,8 +173,6 @@ class WebEditorApi(
             parts == listOf("band", "sync") && req.method == "POST" -> bandSync()
             parts == listOf("band", "open") && req.method == "POST" -> bandOpen(req)
             parts == listOf("sets") && req.method == "GET" -> ok(json.encodeToString(setRows()))
-            parts == listOf("sets-order") && req.method == "GET" -> ok(json.encodeToString(SetsOrder(repository.library.value.look.setsAbc)))
-            parts == listOf("sets-order") && req.method == "PUT" -> setsOrder(req)
             parts == listOf("sets") && req.method == "POST" -> setCreate(req)
             parts.size == 2 && parts[0] == "sets" -> when (req.method) {
                 "GET" -> repository.library.value.setlist(parts[1])?.let { ok(json.encodeToString(setData(it))) } ?: HttpResponse.status(404)
@@ -480,18 +474,9 @@ class WebEditorApi(
         set.date,
     )
 
-    /** The setlists in the order the tab shows them, newest first or A to Z. */
-    private fun setRows(): List<SetItem> {
-        val lib = repository.library.value
-        val rows = lib.sets.map { SetItem(it.id, it.name, it.items.size, it.date) }
-        return if (lib.look.setsAbc) br.app.stagebook.domain.TextKey.sorted(rows) { it.name } else rows.byShowDay { it.date }
-    }
-
-    private fun setsOrder(req: HttpRequest): HttpResponse {
-        val d = runCatching { json.decodeFromString<SetsOrder>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
-        repository.updateLook { it.copy(setsAbc = d.abc) }
-        return ok(json.encodeToString(d))
-    }
+    /** The setlists in the order the tab shows them: newest show first. */
+    private fun setRows(): List<SetItem> =
+        repository.library.value.sets.map { SetItem(it.id, it.name, it.items.size, it.date) }.byShowDay { it.date }
 
     private fun setCreate(req: HttpRequest): HttpResponse {
         val d = runCatching { json.decodeFromString<SetSave>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)

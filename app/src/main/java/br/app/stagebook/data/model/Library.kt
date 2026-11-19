@@ -346,8 +346,6 @@ data class Look(
     val lyricSites: List<ImportSite> = ImportSites.LYRICS,
     val chordSites: List<ImportSite> = ImportSites.CHORDS,
     val pdfSites: List<ImportSite> = ImportSites.PDF,
-    // Setlists tab in A to Z instead of newest first (user, 03/11)
-    val setsAbc: Boolean = false,
 ) {
     companion object {
         const val MIN_FONT = 16f

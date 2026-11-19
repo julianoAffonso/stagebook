@@ -21,7 +21,7 @@ Copilot, Windsurf, Gemini CLI, OpenAI Codex CLI…).
 | Músicas | `list_songs` (filtros: texto, tag, tom; cada música vem com bpm, capo e `hasTrack`), `get_song`, `create_song`, `update_song`, `delete_song`, `transpose_song`, `set_capo` |
 | Importar | `import_song` (letra e cifra coladas em qualquer formato comum, ou o endereço de uma página) |
 | Backing tracks | `set_backing_track` (OGG, MP3 ou WAV do computador), `remove_backing_track` |
-| Setlists | `list_setlists` (filtro: nome), `setlist_order` (recentes ou A a Z, o mesmo da aba do app), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
+| Setlists | `list_setlists` (filtro: nome), `get_setlist`, `create_setlist`, `update_setlist`, `delete_setlist` |
 | Receber | `receive_by_code` (as 3 palavras), `receive_create`, `band_inbox`, `band_sync`, `open_band_item` |
 | Backup | `restore_backup` (ver o que um arquivo `.stagebook` tem, juntar o que falta ou substituir a biblioteca) |
 

@@ -78,16 +78,16 @@ class SetlistDateTest {
 
     @Test fun `the newest day comes first and the ones with no day go last`() {
         val sets = listOf(row("sem", ""), row("velho", "2025-01-17"), row("novo", "2026-11-15"), row("meio", "2025-09-26"))
-        assertEquals(listOf("novo", "meio", "velho", "sem"), setlistOrder(sets, abc = false).map { it.id })
+        assertEquals(listOf("novo", "meio", "velho", "sem"), setlistOrder(sets).map { it.id })
     }
 
     @Test fun `two setlists on the same day keep the stored order`() {
         val sets = listOf(row("b", "2026-11-15"), row("a", "2026-11-15"))
-        assertEquals(listOf("b", "a"), setlistOrder(sets, abc = false).map { it.id })
+        assertEquals(listOf("b", "a"), setlistOrder(sets).map { it.id })
     }
 
     @Test fun `the groups follow the order by month and the ones with no day are their own group at the end`() {
-        val ordered = setlistOrder(listOf(row("sem", ""), row("a", "2025-09-07"), row("b", "2025-09-26"), row("c", "2026-11-15")), abc = false)
+        val ordered = setlistOrder(listOf(row("sem", ""), row("a", "2025-09-07"), row("b", "2025-09-26"), row("c", "2026-11-15")))
         val groups = setlistMonths(ordered)
         assertEquals(listOf("2026-11", "2025-09", ""), groups.map { it.first })
         assertEquals(listOf("b", "a"), groups[1].second.map { it.id })

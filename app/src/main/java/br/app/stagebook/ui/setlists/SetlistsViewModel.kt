@@ -23,7 +23,7 @@ import javax.inject.Inject
 data class SetlistRowUi(val id: String, val name: String, val count: Int, val date: String = "")
 
 @Immutable
-data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val abc: Boolean = false, val total: Int = sets.size, val query: String = "")
+data class SetlistsUiState(val loading: Boolean = true, val sets: List<SetlistRowUi> = emptyList(), val total: Int = sets.size, val query: String = "")
 
 /**
  * The "Lead the band" button in the Setlists header: [shown] under the same conditions as the stage panel's menu item
@@ -36,13 +36,10 @@ internal fun conductButton(bandOn: Boolean, role: br.app.stagebook.data.BandCond
     ConductButtonUi(shown = bandOn && hasMembers && role is br.app.stagebook.data.BandConduct.Role.None, armed = armed)
 
 /**
- * The Setlists tab's order: as stored (newest first) or A to Z, ignoring case and accents with the app's one text
- * key, as tags and songs are sorted (a Collator here was a second way of doing it; audit 03/11).
+ * The Setlists tab's one order (user, 19/11: no A to Z): by show day, newest first, the ones with no day last; the stored
+ * order (newest created first) breaks ties.
  */
-fun setlistOrder(sets: List<SetlistRowUi>, abc: Boolean): List<SetlistRowUi> =
-    if (abc) br.app.stagebook.domain.TextKey.sorted(sets) { it.name }
-    // by show day, newest first, the ones with no day last; the stored order (newest created first) breaks ties
-    else sets.byShowDay { it.date }
+fun setlistOrder(sets: List<SetlistRowUi>): List<SetlistRowUi> = sets.byShowDay { it.date }
 
 /** The month a date falls in ("2026-11"), "" when the setlist has no date. */
 fun monthOf(date: String): String = if (date.length >= 7) date.substring(0, 7) else ""
@@ -127,8 +124,8 @@ class SetlistsViewModel @Inject constructor(
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val uiState: StateFlow<SetlistsUiState> = combine(repository.loaded, repository.library, query.debounce(::typingDelay)) { loaded, lib, q ->
-        val rows = setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size, it.date) }, lib.look.setsAbc)
-        SetlistsUiState(!loaded, setlistSearch(rows, q), lib.look.setsAbc, lib.sets.size, q)
+        val rows = setlistOrder(lib.sets.map { SetlistRowUi(it.id, it.name, it.items.size, it.date) })
+        SetlistsUiState(!loaded, setlistSearch(rows, q), lib.sets.size, q)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetlistsUiState())
 
     /** Empty name = current date and time. Returns the id to open the new setlist. */
@@ -144,8 +141,6 @@ class SetlistsViewModel @Inject constructor(
     fun delete(id: String) = repository.deleteSetlist(id)
 
     fun onQueryChange(q: String) { query.value = q }
-
-    fun sortAbc(abc: Boolean) = repository.updateLook { it.copy(setsAbc = abc) }
 
     private val _nameLimit = MutableStateFlow(false)
     /** The new name would push the setlist over the QR limit (same notice as inside the setlist). */
