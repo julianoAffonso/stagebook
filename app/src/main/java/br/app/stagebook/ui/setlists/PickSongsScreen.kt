@@ -105,9 +105,11 @@ fun PickSongsScreen(
         CenteredContent(Modifier.fillMaxSize().padding(inner)) {
             Column(Modifier.padding(horizontal = Spacing.m)) {
                 ScreenHeader(
-                    // the setlist's name alone, on one line ("Add songs" over it made it break in two; the check says the rest)
-                    title = uiState.setName,
-                    onBack = onBack,
+                    // as the open setlist (user, 19/11): the way back names the setlist ("‹ Show de sábado"), and what this screen
+                    // does is the big title under it, with the whole width (beside the icons it broke in two)
+                    title = stringResource(R.string.pick_screen_title),
+                    parent = uiState.setName,
+                    onParent = onBack,
                     modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                     iconActions = true,
                 ) {
@@ -116,13 +118,13 @@ fun PickSongsScreen(
                     // with the number of songs the setlist will have: the ones it already has and the ones checked
                     val total = uiState.inSetCount + uiState.selectedCount
                     val addLabel = stringResource(R.string.pick_add_short, uiState.selectedCount)
-                    androidx.compose.material3.IconButton(onClick = onConfirm, enabled = uiState.selectedCount > 0) {
-                        androidx.compose.material3.BadgedBox(badge = { if (total > 0) androidx.compose.material3.Badge { Text(total.toString()) } }) {
-                            androidx.compose.material3.Icon(
-                                AppIcons.Check, addLabel,
-                                tint = if (uiState.selectedCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                            )
-                        }
+                    // the number beside the check, not on it: as a badge it covered the drawing (user, 19/11)
+                    androidx.compose.material3.TextButton(onClick = onConfirm, enabled = uiState.selectedCount > 0) {
+                        androidx.compose.material3.Icon(
+                            AppIcons.Check, addLabel,
+                            tint = if (uiState.selectedCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        )
+                        if (total > 0) androidx.compose.material3.Badge(Modifier.padding(start = Spacing.xs)) { Text(total.toString()) }
                     }
                 }
                 br.app.stagebook.ui.components.SearchWithTags(

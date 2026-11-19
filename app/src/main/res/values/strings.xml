@@ -139,6 +139,7 @@
     <string name="set_reorder">Drag to change the order</string>
 
     <!-- pick songs -->
+    <string name="pick_screen_title">Add songs</string>
     <string name="pick_title">Songs</string>
     <string name="pick_add_short">Add (%1$d)</string>
 

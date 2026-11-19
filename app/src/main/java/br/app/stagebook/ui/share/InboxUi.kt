@@ -80,7 +80,11 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 // the same setlist sent by more than one member stays together (T11): who sent it, when, and the newest
                 // marked
-                br.app.stagebook.data.groupInbox(items).forEach { group ->
+                // a line between groups, and the versions' explanation right under its own group: at the end of the
+                // list, the next setlist sat under "2 versions" and read as a third one (user, 19/11)
+                var hinted = false
+                br.app.stagebook.data.groupInbox(items).forEachIndexed { g, group ->
+                    if (g > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = Spacing.xs))
                     if (group.size > 1) {
                         Text(
                             androidx.compose.ui.res.pluralStringResource(R.plurals.inbox_versions, group.size, group.first().setName, group.size),
@@ -108,9 +112,10 @@ fun InboxDialog(items: List<BandInbox.Item>, onOpen: (String) -> Unit, onDiscard
                             }
                         }
                     }
-                }
-                if (items.any { a -> items.count { it.setName.isNotEmpty() && it.setName.equals(a.setName, true) } > 1 }) {
-                    Text(stringResource(R.string.inbox_versions_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (group.size > 1 && !hinted) {
+                        hinted = true
+                        Text(stringResource(R.string.inbox_versions_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         },

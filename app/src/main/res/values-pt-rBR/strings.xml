@@ -144,6 +144,7 @@
     <string name="set_reorder">Arrastar para mudar a ordem</string>
 
     <!-- escolher músicas -->
+    <string name="pick_screen_title">Adicionar músicas</string>
     <string name="pick_title">Músicas</string>
     <string name="pick_add_short">Adicionar (%1$d)</string>
 

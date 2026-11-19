@@ -118,14 +118,15 @@ class PickSongsRowsTest {
         }
     }
 
-    @Test fun `the header names the setlist alone and the check counts what the setlist will have`() {
+    @Test fun `the header names the setlist as the way back, the screen's task as the title, and the check counts what the setlist will have`() {
         val state = PickSongsUiState(
             setName = "Show de sábado com um nome bem comprido que não cabe",
             rows = listOf(PickRowUi("1", "Com tudo", "Banda", inSet = false, selected = true, order = 6)),
             selectedCount = 1, inSetCount = 5,
         )
         compose.setContent { StagebookTheme { PickSongsScreen(state, "", {}, {}, {}, {}) } }
-        compose.onAllNodesWithText("Adicionar músicas").assertCountEquals(0)   // the name alone, on its line
+        compose.onAllNodesWithText("‹ Show de sábado com um nome bem comprido que não cabe").assertCountEquals(1)
+        compose.onAllNodesWithText("Adicionar músicas").assertCountEquals(1)
         // 5 it has + 1 checked = 6: on the check, and the row's own number is the 6th place too
         compose.onAllNodesWithText("6", useUnmergedTree = true).assertCountEquals(2)
     }
