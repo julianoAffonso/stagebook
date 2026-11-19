@@ -145,6 +145,24 @@ class ScreenshotTest {
     @Composable
     private fun Songs(modifier: Modifier = Modifier) = SongsScreen(songs, "", {}, {}, {}, {}, modifier)
 
+    /** The first use: no stage yet, the menu opened by itself on an empty song list, the logo in both (user, 19/11). */
+    @Composable
+    private fun FirstUse() {
+        val width = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.87f).dp.coerceAtMost(420.dp)
+        Box(Modifier.fillMaxSize()) {
+            br.app.stagebook.ui.drawer.BaseScreen(openDrawer = false)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)))
+            Surface(Modifier.width(width).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                DrawerFrame(HomeTab.SONGS, {}) { SongsScreen(br.app.stagebook.ui.songs.SongsUiState(loading = false), "", {}, {}, {}, {}, it) }
+            }
+        }
+    }
+
+    @Test fun firstUseTablet() = shoot("tablet_1_primeiro_uso") { FirstUse() }
+
+    @Test @Config(qualifiers = PHONE)
+    fun firstUsePhone() = shoot("celular_1_primeiro_uso") { FirstUse() }
+
     @Test fun homeSongsTablet() = shoot("tablet_1_musicas") { DrawerShot(HomeTab.SONGS) { Songs(it) } }
 
     // no internet: Import unavailable, with the crossed cloud and the notice

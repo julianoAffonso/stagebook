@@ -1895,8 +1895,17 @@ private fun UpdateDetail(uiState: SettingsUiState, actions: SettingsActions) {
 // About: the app, updating (check now), privacy in a few lines, the available code and support (donation)
 @Composable
 private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
-    SettingsCard(stringResource(R.string.app_name)) {
-        Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge)
+    // the logo, the name and what the app is, on top: the menu has no logo of its own any more (user, 19/11)
+    androidx.compose.foundation.layout.Row(
+        Modifier.fillMaxWidth().padding(vertical = Spacing.s),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        br.app.stagebook.ui.components.AppLogo()
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
     // the help is on the web (GitHub Pages), not inside the app
     SettingsCard(stringResource(R.string.about_help)) {
