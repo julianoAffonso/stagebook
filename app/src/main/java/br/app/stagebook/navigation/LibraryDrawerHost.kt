@@ -117,7 +117,10 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
             onRequestHandled = { request = null },
             pinned = fixed,
             onPin = if (wide) start::togglePin else null,
-            onOpenSettings = { section, alone -> go { nav.navigate(Settings(section?.name.orEmpty(), alone, fromMenu = true)) { launchSingleTop = true } } },
+            // a group from the menu takes the place of the one open (pinned menu: tapping another group switches the page)
+            onOpenSettings = { section, alone, item ->
+                go { nav.navigate(Settings(section?.name.orEmpty(), alone, fromMenu = true, item = item.orEmpty())) { popUpTo<Settings> { inclusive = true }; launchSingleTop = true } }
+            },
         ) }
     }
     CompositionLocalProvider(LocalDrawer provides drawer, br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) {
