@@ -56,11 +56,11 @@ SECTIONS = [
         "subs": [
             sub("musicas-indice", "Índice de A a Z", "A to Z index",
                 ["A lista fica em ordem alfabética. Com 20 músicas ou mais, uma letra separa cada grupo: A, B, C. Nomes que começam com número ou símbolo ficam em #, no começo. O acento não conta: Élan fica em E.",
-                 "- **As letras na borda:** ao rolar a lista, as letras aparecem na borda direita. Elas somem um instante depois que a lista para.",
+                 "- **As letras na borda:** ao rolar a lista, as letras aparecem grandes na borda direita, e as das músicas que estão na tela ficam destacadas, numa faixa colorida que acompanha a rolagem. Elas somem uns três segundos depois que a lista para.",
                  "- **Ir para uma letra:** toque na letra, ou deslize o dedo pelas letras, e a lista vai para aquele grupo.",
                  "- **Com busca ou tags:** só aparecem as letras das músicas que sobraram. Com menos de 20 músicas, ou menos de 3 letras, a lista fica simples, sem letras."],
                 ["The list is in alphabetical order. With 20 songs or more, a letter separates each group: A, B, C. Names that start with a number or a symbol go under #, at the start. Accents don't count: Élan goes under E.",
-                 "- **The letters at the edge:** when you scroll the list, the letters show at the right edge. They go away a moment after the list stops.",
+                 "- **The letters at the edge:** when you scroll the list, large letters show at the right edge, and those of the songs on screen are highlighted in a colored band that follows the scroll. They go away about three seconds after the list stops.",
                  "- **Going to a letter:** tap the letter, or slide a finger along the letters, and the list goes to that group.",
                  "- **With a search or tags:** only the letters of the songs left show. With fewer than 20 songs, or fewer than 3 letters, the list is plain, with no letters."],
                 [Fig(("tablet_1_musicas_indice", "celular_1_musicas_indice", "As letras na lista e na borda", "The letters in the list and at the edge"))]),
