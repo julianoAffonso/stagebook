@@ -4,6 +4,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasSetTextAction
@@ -78,6 +81,30 @@ class SettingsMenuTest {
         compose.onNodeWithText("Aparelho").assertIsDisplayed()
         compose.onNode(androidx.compose.ui.test.hasTestTag(br.app.stagebook.ui.stage.DRAWER_HANDLE_TAG)).performClick()
         assertEquals(1, menu)
+    }
+
+    // user, 19/11: the wider margin kept clear on the handle's side was one too many; the handle sits over the edge
+    @Test fun `a group's page has the same margin on both sides, with the handle on the left or on the right`() {
+        var right by androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.SettingsScreen(
+                    SettingsUiState(loading = false, look = br.app.stagebook.data.model.Look(drawerHandleRight = right)), br.app.stagebook.ui.settings.SettingsActions(),
+                    section = SettingsSection.DEVICE, onLeave = {}, onMenu = {},
+                )
+            }
+        }
+        val dp = compose.density.density
+        val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.width
+        // the gap after the first switch is the page's end margin plus the card's own, the same on both sides
+        val gaps = listOf(false, true).map { side ->
+            right = side
+            compose.waitForIdle()
+            val title = compose.onNodeWithText("Aparelho", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+            assertEquals("handle on the ${if (side) "right" else "left"}: title starts 16 dp in", 16f, title.left / dp, 1f)
+            (width - compose.onAllNodes(androidx.compose.ui.test.isToggleable())[0].fetchSemanticsNode().boundsInRoot.right) / dp
+        }
+        assertEquals("end gap with the handle on the left and on the right", gaps[0], gaps[1], 1f)
     }
 
     @Test fun `with the menu pinned beside it, the page has neither arrow nor handle`() {

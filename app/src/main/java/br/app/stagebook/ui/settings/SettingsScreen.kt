@@ -567,14 +567,14 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 /**
  * One section on its own page: the header, the pinned preview, then the content that scrolls. [onBack] null: no arrow
  * (opened from the side menu, user 19/11: the page is full screen like the stage, and the menu's handle leaves it).
- * [handle]: the edge the handle sits on, kept clear so it never covers a control.
+ * The same margin on both sides: the handle sits over the edge, as on the stage (user, 19/11: a wider margin on its
+ * side was one too many).
  */
 @Composable
-private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: (() -> Unit)?, handle: Boolean? = null) {
+private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: (() -> Unit)?) {
     // full width, like the rest of Settings beside the rail (user, 03/11)
     Box(Modifier.fillMaxSize()) {
-        val clear = Spacing.xl
-        Column(Modifier.fillMaxHeight().padding(start = if (handle == false) clear else Spacing.m, end = if (handle == true) clear else Spacing.m)) {
+        Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
             SectionPinned(open, uiState.look, draft)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -665,7 +665,7 @@ fun SettingsScreen(
                 // one group, full screen like the stage (user, 19/11): no arrow, the menu's handle on its edge; Android's
                 // back still leaves
                 val right = uiState.look.drawerHandleRight
-                SectionPage(alone, uiState, actions, draft, onBack = null, handle = if (onMenu != null) right else null)
+                SectionPage(alone, uiState, actions, draft, onBack = null)
                 if (onMenu != null) {
                     br.app.stagebook.ui.stage.StageDrawerHandle(
                         onMenu, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.surface, uiState.look.drawerHandleY,
