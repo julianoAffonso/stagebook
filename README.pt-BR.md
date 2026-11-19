@@ -14,8 +14,8 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 **Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
 
 ## O que ele faz
-- **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda esquerda do palco (segure e arraste
-  para onde preferir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas numa linha: Músicas, Setlists e
+- **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda do palco (segure e arraste para onde
+  preferir, até a outra borda, de onde o menu passa a abrir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas numa linha: Músicas, Setlists e
   Ajustes. O + traz coisas de fora (uma música nova, PDFs, sites, QR, as 3 palavras); o botão de lista com marcas liga as
   caixas de seleção. O setlist abre para olhar, com ‹ Todos os setlists para voltar, um lápis para editar e um disquete para salvar; com o palco aberto por
   um setlist, o menu abre nele. O app abre no palco onde você parou.

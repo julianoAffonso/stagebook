@@ -2,6 +2,7 @@ package br.app.stagebook.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -31,6 +32,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.theme.Spacing
@@ -52,10 +54,12 @@ fun LetterHeader(letter: String, modifier: Modifier = Modifier) {
 /**
  * The letters of an A to Z list in a narrow column, for its end edge. A tap on a letter, or a finger sliding along
  * them, calls [onLetter] with the letter's position; [onHeld] says while a finger is on them. [shown] comes from the
- * caller ([rememberLetterIndexShown]): hidden it fades out, draws nothing and takes no touch.
+ * caller ([rememberLetterIndexShown]): hidden it fades out, draws nothing and takes no touch. [onScreen] gives the
+ * positions of the letters whose songs are in view, marked in the column so the eye finds where the list is (user,
+ * 19/11); it is read only while the index shows, so scrolling with it hidden recomposes nothing here.
  */
 @Composable
-fun LetterIndex(letters: List<String>, shown: Boolean, onLetter: (Int) -> Unit, onHeld: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun LetterIndex(letters: List<String>, shown: Boolean, onLetter: (Int) -> Unit, onHeld: (Boolean) -> Unit, modifier: Modifier = Modifier, onScreen: () -> IntRange = { IntRange.EMPTY }) {
     val alpha = animateFloatAsState(if (shown) 1f else 0f, tween(INDEX_FADE_MS), label = "letter index")
     // only the end of the fade recomposes; each frame of it is read when drawing
     val faded by remember(alpha) { derivedStateOf { alpha.value == 0f } }
@@ -83,17 +87,32 @@ fun LetterIndex(letters: List<String>, shown: Boolean, onLetter: (Int) -> Unit, 
             }
         }
     }
+    val here = onScreen()
     Column(
         modifier.width(INDEX_WIDTH).graphicsLayer { this.alpha = alpha.value }.testTag(LETTER_INDEX_TAG).then(touch),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         letters.forEachIndexed { i, letter ->
             // squeezed rather than cut off when the list is too short for every letter
+            val inView = i in here
+            // the letters in view form one filled band: rounded only at its two ends
+            val shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                topStart = if (i - 1 in here) 0.dp else INDEX_CORNER, topEnd = if (i - 1 in here) 0.dp else INDEX_CORNER,
+                bottomStart = if (i + 1 in here) 0.dp else INDEX_CORNER, bottomEnd = if (i + 1 in here) 0.dp else INDEX_CORNER,
+            )
             Box(
-                Modifier.weight(1f, fill = false).height(INDEX_LETTER).fillMaxWidth().testTag(LETTER_INDEX_TAG + "_" + letter).semantics { onClick { pick(i); true } },
+                Modifier.weight(1f, fill = false).height(INDEX_LETTER).fillMaxWidth()
+                    .then(if (inView) Modifier.background(MaterialTheme.colorScheme.primary, shape) else Modifier)
+                    .testTag(LETTER_INDEX_TAG + "_" + letter).semantics { onClick { pick(i); true }; if (inView) selected = true },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(letter, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, softWrap = false)
+                Text(
+                    letter,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (inView) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                    color = if (inView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                    maxLines = 1, softWrap = false,
+                )
             }
         }
     }
@@ -124,9 +143,24 @@ const val LETTER_HEADER_TAG = "letter_header_"
 
 /** Wider than its letters: a finger finds it. The caller lets it hang over the list's end margin. */
 val INDEX_WIDTH = Spacing.l
-private val INDEX_LETTER = 18.dp
+private val INDEX_LETTER = 24.dp   // larger letters, easy to read while the list moves (user, 19/11)
+private val INDEX_CORNER = Spacing.s
 private const val INDEX_FADE_MS = 200
-private const val INDEX_LINGER_MS = 1_500L
+internal const val INDEX_LINGER_MS = 3_000L   // time to read where the list stopped before the letters go (user, 19/11)
+
+/**
+ * The positions of the groups whose rows (or header) are in view, from the first and last items on screen, for a list
+ * where each group's header sits after the rows and headers before it ([groupFirsts]: each group's first row).
+ */
+fun lettersOnScreen(groupFirsts: List<Int>, firstItem: Int, lastItem: Int): IntRange {
+    if (groupFirsts.isEmpty() || lastItem < firstItem) return IntRange.EMPTY
+    fun groupOf(item: Int): Int {
+        var lo = 0; var hi = groupFirsts.lastIndex
+        while (lo < hi) { val mid = (lo + hi + 1) / 2; if (groupFirsts[mid] + mid <= item) lo = mid else hi = mid - 1 }
+        return lo
+    }
+    return groupOf(firstItem)..groupOf(lastItem)
+}
 
 @Composable
 private fun LetterIndexSample() {
@@ -134,7 +168,7 @@ private fun LetterIndexSample() {
         LetterHeader("A")
         Box {
             SongListItem("Canção do Vento", "Banda Fictícia", {}, trailing = { SongFacts("Em", 120, 2, true) })
-            LetterIndex(listOf("#", "A", "C", "M"), shown = true, onLetter = {}, onHeld = {}, modifier = Modifier.align(Alignment.CenterEnd))
+            LetterIndex(listOf("#", "A", "C", "M"), shown = true, onLetter = {}, onHeld = {}, modifier = Modifier.align(Alignment.CenterEnd), onScreen = { 1..2 })
         }
     }
 }

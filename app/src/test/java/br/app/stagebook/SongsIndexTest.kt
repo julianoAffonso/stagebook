@@ -156,9 +156,9 @@ class SongsIndexTest {
         index().assertIsDisplayed()
         indexLetter("M").assertIsDisplayed()
         compose.onNodeWithText("A canção 2").performTouchInput { up() }
+        compose.mainClock.advanceTimeBy(2_500)
+        index().assertIsDisplayed()   // still there over two seconds after the finger left (user, 19/11: it went too soon)
         compose.mainClock.advanceTimeBy(1_000)
-        index().assertIsDisplayed()   // still there a second after the finger left
-        compose.mainClock.advanceTimeBy(1_500)
         index().assertDoesNotExist()
     }
 
@@ -176,6 +176,39 @@ class SongsIndexTest {
         indexLetter("#").performClick()
         compose.waitForIdle()
         assertEquals(top, header("#").fetchSemanticsNode().boundsInRoot.top, 2f)
+    }
+
+    // where the list is, marked in the index (user, 19/11): the letters whose songs are on screen, and only those
+    @Test fun `the index marks the letters on screen, and the mark follows the list`() {
+        show(long, pinned = true)
+        fun marked() = (listOf("#") + letters).filter { l ->
+            indexLetter(l).fetchSemanticsNode().config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Selected) { null } == true
+        }
+        assertEquals(listOf("#", "A", "B", "C", "D", "E", "F", "G").take(marked().size), marked())
+        assertTrue("some letters on screen: ${marked()}", marked().size in 2..10)
+        indexLetter("M").performClick()
+        compose.waitForIdle()
+        assertEquals("M", marked().first())
+        assertTrue("# and A left the screen: ${marked()}", "#" !in marked() && "A" !in marked())
+    }
+
+    @Test fun `the index letters are large enough to read while the list moves`() {
+        show(long, pinned = true)
+        val box = indexLetter("A").fetchSemanticsNode().boundsInRoot
+        val dp = compose.density.density
+        assertTrue("letter row ${box.height / dp} dp", box.height / dp >= 23f)
+        val text = compose.onNode(hasAnyAncestor(hasTestTag("letter_index_B")), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("letter ${text.height / dp} dp tall", text.height / dp >= 18f)
+    }
+
+    @Test fun `the groups on screen come from the first and last items in view`() {
+        // groups start at rows 0, 3 and 6; with their headers the items are: 0 H, 1-3 rows, 4 H, 5-7, 8 H, 9-11
+        val firsts = listOf(0, 3, 6)
+        assertEquals(0..0, br.app.stagebook.ui.components.lettersOnScreen(firsts, 0, 3))
+        assertEquals(0..1, br.app.stagebook.ui.components.lettersOnScreen(firsts, 2, 5))
+        assertEquals(1..2, br.app.stagebook.ui.components.lettersOnScreen(firsts, 4, 11))
+        assertEquals(2..2, br.app.stagebook.ui.components.lettersOnScreen(firsts, 8, 8))
+        assertTrue(br.app.stagebook.ui.components.lettersOnScreen(emptyList(), 0, 3).isEmpty())
     }
 
     @Test fun `a finger sliding along the index takes the list from letter to letter`() {
@@ -196,8 +229,8 @@ class SongsIndexTest {
     @Test fun `the index hangs over the margin and covers no key`() {
         show(state(letters.flatMap { l -> (1..3).map { "$l canção $it" } }) { i, t -> SongRowUi("s$i", t, "Banda Fictícia", songKey = "C#m", bpm = 100, capo = 2, hasTrack = true) }, pinned = true)
         val letter = compose.onNode(hasAnyAncestor(hasTestTag("letter_index_A")), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val key = compose.onAllNodesWithText("C#m")[0].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val track = compose.onAllNodesWithContentDescription("Backing track")[0].fetchSemanticsNode().boundsInRoot
+        val key = compose.onAllNodesWithText("C#m", useUnmergedTree = true)[0].assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val track = compose.onAllNodesWithContentDescription("Backing track", useUnmergedTree = true)[0].fetchSemanticsNode().boundsInRoot
         assertTrue("key $key, track mark $track, index letter $letter", key.right <= letter.left && track.right <= letter.left)
     }
 

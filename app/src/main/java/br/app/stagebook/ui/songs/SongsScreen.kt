@@ -277,6 +277,13 @@ fun SongsScreen(
                             var held by remember { mutableStateOf(false) }
                             val scope = androidx.compose.runtime.rememberCoroutineScope()
                             val letters = remember(groups) { groups.map { it.letter } }
+                            val firsts = remember(groups) { groups.map { it.first } }
+                            val onScreen by remember(firsts) {
+                                androidx.compose.runtime.derivedStateOf {
+                                    val items = listState.layoutInfo.visibleItemsInfo
+                                    if (items.isEmpty()) IntRange.EMPTY else br.app.stagebook.ui.components.lettersOnScreen(firsts, items.first().index, items.last().index)
+                                }
+                            }
                             LetterIndex(
                                 letters = letters,
                                 shown = rememberLetterIndexShown(listState, held) || indexPinned,
@@ -285,6 +292,7 @@ fun SongsScreen(
                                 onHeld = { held = it },
                                 // over the screen's margin, so it covers nothing of a row's key
                                 modifier = Modifier.align(Alignment.CenterEnd).offset(x = Spacing.m),
+                                onScreen = { onScreen },
                             )
                         }
                     }

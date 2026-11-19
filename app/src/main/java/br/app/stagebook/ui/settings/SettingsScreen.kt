@@ -341,7 +341,6 @@ fun SettingsRoute(
                 onShowSections = viewModel::setShowSections,
                 onPdfInvert = viewModel::setPdfInvert,
                 onDrawerHandle = viewModel::setDrawerHandle,
-                onHandleRight = viewModel::setHandleRight,
                 onTranslateSections = viewModel::setTranslateSections,
                 onProfile = viewModel::setProfile,
                 onChordScale = viewModel::setChordScale,
@@ -454,8 +453,7 @@ data class SettingsActions(
     val onSectionColor: (Int) -> Unit = {},
     val onShowSections: (Boolean) -> Unit = {},
     val onPdfInvert: (Boolean) -> Unit = {},
-    val onDrawerHandle: (Float) -> Unit = {},
-    val onHandleRight: (Boolean) -> Unit = {},
+    val onDrawerHandle: (Float, Boolean) -> Unit = { _, _ -> },
     val onTranslateSections: (Boolean) -> Unit = {},
     val onProfile: (SongProfile) -> Unit = {},
     val onChordScale: (Float) -> Unit = {},
@@ -567,14 +565,14 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
 /**
  * One section on its own page: the header, the pinned preview, then the content that scrolls. [onBack] null: no arrow
  * (opened from the side menu, user 19/11: the page is full screen like the stage, and the menu's handle leaves it).
- * [handle]: the edge the handle sits on, kept clear so it never covers a control.
+ * The same margin on both sides: the handle sits over the edge, as on the stage (user, 19/11: a wider margin on its
+ * side was one too many).
  */
 @Composable
-private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: (() -> Unit)?, handle: Boolean? = null) {
+private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: (() -> Unit)?) {
     // full width, like the rest of Settings beside the rail (user, 03/11)
     Box(Modifier.fillMaxSize()) {
-        val clear = Spacing.xl
-        Column(Modifier.fillMaxHeight().padding(start = if (handle == false) clear else Spacing.m, end = if (handle == true) clear else Spacing.m)) {
+        Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
             SectionPinned(open, uiState.look, draft)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -665,7 +663,7 @@ fun SettingsScreen(
                 // one group, full screen like the stage (user, 19/11): no arrow, the menu's handle on its edge; Android's
                 // back still leaves
                 val right = uiState.look.drawerHandleRight
-                SectionPage(alone, uiState, actions, draft, onBack = null, handle = if (onMenu != null) right else null)
+                SectionPage(alone, uiState, actions, draft, onBack = null)
                 if (onMenu != null) {
                     br.app.stagebook.ui.stage.StageDrawerHandle(
                         onMenu, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.surface, uiState.look.drawerHandleY,
@@ -924,10 +922,7 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
     // chords and section titles live with the rest of the stage look too, under the same preview (user, 01/11)
     ChordsLookCard(look, actions, draft)
     SectionsDetail(look, actions, draft)
-    // the stage's handle that opens the side menu: on the right for left-handed players (it moves up and down by holding it)
-    SettingsCard(stringResource(R.string.settings_menu_card)) {
-        SwitchRow(stringResource(R.string.settings_handle_right), look.drawerHandleRight, actions.onHandleRight, Modifier.settingsItem("handle_right"), detail = stringResource(R.string.settings_handle_right_detail))
-    }
+    // the handle's side has no switch: held and dragged to the other edge, it moves there (user, 19/11)
     // a song that is a PDF: its colours turned over (the song's own switch is in its editor)
     SettingsCard(stringResource(R.string.settings_pdf_card), help = stringResource(R.string.settings_pdf_invert_help)) {
         SwitchRow(stringResource(R.string.settings_pdf_invert), look.pdfInvert, actions.onPdfInvert, Modifier.settingsItem("pdf_invert"))

@@ -245,7 +245,7 @@ class StageViewModel @Inject constructor(
         repository.updateSong(songId) { it.copy(pdfMarks = br.app.stagebook.domain.PdfMarks.clearPage(it.pdfMarks, page)) }
 
     /** The side handle's place on the left edge (share of the height), kept as the person left it. */
-    fun setDrawerHandle(y: Float) = repository.updateLook { it.copy(drawerHandleY = y.coerceIn(HANDLE_MIN, HANDLE_MAX)) }
+    fun setDrawerHandle(y: Float, right: Boolean) = repository.updateLook { it.copy(drawerHandleY = y.coerceIn(HANDLE_MIN, HANDLE_MAX), drawerHandleRight = right) }
 
     /** Song on screen (position in the setlist): when leading this setlist, the band opens the same one. */
     fun songShown(index: Int) {
