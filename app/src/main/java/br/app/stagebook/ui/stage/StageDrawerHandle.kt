@@ -1,17 +1,17 @@
 package br.app.stagebook.ui.stage
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Column
@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
@@ -64,16 +66,19 @@ internal fun StageDrawerHandle(
     val density = LocalDensity.current
     val flingPx = with(density) { Sizes.swipe.toPx() }
     val hitH = Sizes.touch * 2
-    var pulled by remember { mutableFloatStateOf(0f) }
     // while held, the handle follows the finger up and down; let go and the place is kept
     var moving by remember { mutableStateOf(false) }
     var dragY by remember { mutableFloatStateOf(y) }
     var dragX by remember { mutableFloatStateOf(0f) }   // where the finger is across the screen, while held
+    // where the handle is placed now: the finger's positions come relative to the handle, which moves under it (and jumps
+    // to the other edge), so each one is turned into a place on the screen before measuring the move
+    val placed = remember { floatArrayOf(0f, 0f) }
     // the place as it is now: the gesture detector below is made once, and a second drag must start from where the first ended
     val yNow by androidx.compose.runtime.rememberUpdatedState(y)
     val rightNow by androidx.compose.runtime.rememberUpdatedState(right)
     val onMoveNow by androidx.compose.runtime.rememberUpdatedState(onMove)
     val onOpenNow by androidx.compose.runtime.rememberUpdatedState(onOpen)
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     val label = stringResource(R.string.drawer_open)
     val hint = stringResource(R.string.drawer_handle_move)
     BoxWithConstraints(modifier) {
@@ -89,38 +94,75 @@ internal fun StageDrawerHandle(
         Box(
             Modifier
                 .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
+                .onPlaced { val p = it.positionInParent(); placed[0] = p.x; placed[1] = p.y }
                 .systemGestureExclusion()
                 .size(width = Spacing.xl, height = hitH)
                 .testTag(DRAWER_HANDLE_TAG)
-                // a hold picks it up to move it along the edge; a short touch opens, a pull to the right opens too
+                // one reader for the whole gesture (user, 19/11: the handle seemed stuck, then obeyed): let go at once is a
+                // tap and opens; a move up or down takes the handle along at once, with no hold first; a move sideways
+                // before the long press is a pull and opens when it goes away from the edge; held still, the long press
+                // picks the handle up with a buzz, and it follows the finger, to the other edge too, until let go
                 .pointerInput(heightPx, widthPx) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { at ->
-                            moving = true; dragY = yNow
-                            dragX = (if (rightNow) (widthPx - boxW).coerceAtLeast(0f) else 0f) + at.x
-                        },
-                        onDrag = { change, amount ->
-                            change.consume()
-                            dragY = (dragY + amount.y / heightPx).coerceIn(0f, 1f)
-                            dragX = (dragX + amount.x).coerceIn(0f, widthPx)
-                        },
-                        onDragEnd = { moving = false; onMoveNow(dragY, dragX > widthPx / 2f) },
-                        onDragCancel = { moving = false },
-                    )
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        val slop = viewConfiguration.touchSlop
+                        val velocity = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                        velocity.addPosition(down.uptimeMillis, down.position)
+                        var travel = androidx.compose.ui.geometry.Offset.Zero
+                        // null: the long press came with the finger still; true: let go first; false: moved first
+                        val early: Boolean? = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                            var result: Boolean? = null
+                            while (result == null) {
+                                val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                velocity.addPosition(change.uptimeMillis, change.position)
+                                if (!change.pressed) { change.consume(); result = true; break }
+                                travel += change.positionChange()
+                                change.consume()
+                                if (kotlin.math.abs(travel.x) > slop || kotlin.math.abs(travel.y) > slop) result = false
+                            }
+                            result ?: true
+                        }
+                        val upOrDown = early == false && kotlin.math.abs(travel.y) > kotlin.math.abs(travel.x)
+                        if (early == null) haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        when {
+                            early == true -> onOpenNow()
+                            early == false && !upOrDown -> {
+                                // a pull: followed to its end, it opens when it went away from the edge, far or fast enough
+                                while (true) {
+                                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                    velocity.addPosition(change.uptimeMillis, change.position)
+                                    if (change.pressed) travel += change.positionChange()
+                                    change.consume()
+                                    if (!change.pressed) break
+                                }
+                                val toward = if (rightNow) -1f else 1f   // the way that opens it: away from its edge
+                                if (travel.x * toward > flingPx || velocity.calculateVelocity().x * toward > flingPx) onOpenNow()
+                            }
+                            else -> {
+                                moving = true
+                                dragY = yNow
+                                fun onScreen(at: androidx.compose.ui.geometry.Offset) = androidx.compose.ui.geometry.Offset(placed[0] + at.x, placed[1] + at.y)
+                                var last = onScreen(down.position + travel)
+                                dragX = last.x
+                                try {
+                                    while (true) {
+                                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                        if (!change.pressed) { change.consume(); onMoveNow(dragY, dragX > widthPx / 2f); break }
+                                        val now = onScreen(change.position)
+                                        dragY = (dragY + (now.y - last.y) / heightPx).coerceIn(0f, 1f)
+                                        dragX = now.x.coerceIn(0f, widthPx)
+                                        last = now
+                                        change.consume()
+                                    }
+                                } finally {
+                                    moving = false
+                                }
+                            }
+                        }
+                    }
                 }
-                .draggable(
-                    rememberDraggableState { pulled += it },
-                    Orientation.Horizontal,
-                    // held, a sideways drag carries the handle to the other edge: the pull that opens stands aside
-                    enabled = !moving,
-                    onDragStarted = { pulled = 0f },
-                    onDragStopped = { velocity ->
-                        val toward = if (rightNow) -1f else 1f   // the way that opens it: away from its edge
-                        if (!moving && (velocity * toward > flingPx || pulled * toward > flingPx)) onOpenNow()
-                        pulled = 0f
-                    },
-                )
-                .clickable(interactionSource = null, indication = null, role = Role.Button, onClickLabel = hint, onClick = onOpen)
+                .semantics { role = Role.Button; onClick(label = hint) { onOpenNow(); true } }
                 .semantics { contentDescription = label },
             contentAlignment = if (side) Alignment.CenterEnd else Alignment.CenterStart,
         ) {

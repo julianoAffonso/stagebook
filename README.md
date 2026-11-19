@@ -14,8 +14,8 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 **Help, with a picture of every screen:** [docs/help](docs/help/index.html)
 
 ## What it does
-- **Side menu:** the library lives in a menu you open from a small handle on the stage's edge (hold it to move it, also to
-  the other edge, where the menu then opens; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs on one line: Songs, Setlists
+- **Side menu:** the library lives in a menu you open from a small handle on the stage's edge (drag it up or down; hold it to take it
+  to the other edge, where the menu then opens; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs on one line: Songs, Setlists
   and Settings. A + brings things in (a new song, PDFs, sites, QR, the 3 words); the checklist button turns the
   selection boxes on. A setlist opens to look at, with ‹ All setlists to go back, a pencil to edit it and a floppy to save; with the stage open from
   a setlist, the menu opens on it. The app opens on the stage where you left off.
