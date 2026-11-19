@@ -44,8 +44,8 @@ enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
 }
 
 /**
- * Songs and Setlists tabs, and Settings beside them: bottom bar on phones, wide rail on tablets (Material 3 Expressive).
- * Settings is not a tab with a screen of its own here: its button opens the Settings page ([onOpenSettings]).
+ * The side menu's three tabs: Songs, Setlists and Settings. Settings shows only its groups and the search here (user,
+ * 19/11); a group opens on its own page, full screen like the stage ([onOpenSettings]).
  */
 @Composable
 fun HomeScreen(
@@ -60,7 +60,7 @@ fun HomeScreen(
     onRequestHandled: () -> Unit = {},
     pinned: Boolean = false,   // the drawer is pinned beside the stage: the pin shows in its top row
     onPin: (() -> Unit)? = null,
-    onOpenSettings: (section: br.app.stagebook.ui.settings.SettingsSection?, alone: Boolean) -> Unit = { _, _ -> },   // alone: only that section, as About from the logo
+    onOpenSettings: (section: br.app.stagebook.ui.settings.SettingsSection?, alone: Boolean, item: String?) -> Unit = { _, _, _ -> },   // alone: only that section; item: the setting to flash
     inboxVm: InboxViewModel = hiltViewModel(),
     homeVm: HomeViewModel = hiltViewModel(),
 ) {
@@ -100,12 +100,11 @@ fun HomeScreen(
     var setsToList by rememberSaveable { mutableStateOf(0) }
     val onTab: (HomeTab) -> Unit = { t ->
         when {
-            t == HomeTab.SETTINGS -> onOpenSettings(null, false)
             t == tab && t == HomeTab.SETLISTS -> setsToList++
             else -> picked = t
         }
     }
-    val openEssential = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.DEVICE, false) }
+    val openEssential = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.DEVICE, true, "essential") }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
     br.app.stagebook.ui.drawer.DrawerFrame(tab = tab, onTabChange = onTab, badges = badges, pinned = pinned, onPin = onPin) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
@@ -151,8 +150,8 @@ fun HomeScreen(
                                 received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                             )
                         }
-                        // Settings has its own page: never the tab in front
-                        HomeTab.SETTINGS -> Unit
+                        // only the groups and the search: each group opens on its own page
+                        HomeTab.SETTINGS -> br.app.stagebook.ui.settings.SettingsMenuRoute(onOpen = { section, item -> onOpenSettings(section, true, item) })
                     }
                 }
                 }

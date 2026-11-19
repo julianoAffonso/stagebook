@@ -259,6 +259,8 @@ class SettingsViewModel @Inject constructor(
     fun setBold(on: Boolean) = repository.updateLook { it.copy(bold = on) }
     fun setSectionColor(argb: Int) = repository.updateLook { it.copy(sectionColor = argb) }
     fun setShowSections(on: Boolean) = repository.updateLook { it.copy(showSections = on) }
+    /** The menu's handle moved on a Settings page: the same place as on the stage. */
+    fun setDrawerHandle(y: Float) = repository.updateLook { it.copy(drawerHandleY = y.coerceIn(br.app.stagebook.ui.stage.HANDLE_MIN, br.app.stagebook.ui.stage.HANDLE_MAX)) }
     fun setPdfInvert(on: Boolean) = repository.updateLook { it.copy(pdfInvert = on) }
 
     fun setHandleRight(on: Boolean) = repository.updateLook { it.copy(drawerHandleRight = on) }

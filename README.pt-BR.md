@@ -49,8 +49,8 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   texto.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
   mixer, roteamento por saída, EQ e normalização.
-- **Ajustes por tarefa:** sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
-  metrônomo, aparelho) com uma **busca** que também acha o que está desligado e diz por quê. A música tem a mesma linha
+- **Ajustes por tarefa:** a aba Ajustes do menu lista sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
+  metrônomo, aparelho), cada um em tela cheia como o palco, com uma **busca** que também acha o que está desligado e diz por quê. A música tem a mesma linha
   em todo lugar (título, artista, tom, BPM, capo, faixa). O editor de música tem duas telas, **Dados** e **Letra e
   cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
   outra versão.

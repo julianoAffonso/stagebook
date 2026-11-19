@@ -15,6 +15,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import br.app.stagebook.navigation.MenuNotOverScreen
+import br.app.stagebook.navigation.menuBeside
+import androidx.navigation.compose.composable
 import br.app.stagebook.ui.theme.StagebookTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -82,5 +84,26 @@ class MenuNotOverScreenTest {
         compose.runOnIdle { besideStage = true }
         compose.waitForIdle()
         assertEquals("and it stays open once the stage is composed again", DrawerValue.Open, state.currentValue)
+    }
+
+    // a Settings page is where the menu lives now (user, 19/11): its handle opened the menu and it closed at once, and a
+    // pinned menu left the tablet as soon as a group opened; the editor and the importer still close it
+    @Test fun `the menu may open beside a Settings page, and not over the editor or the importer`() {
+        lateinit var nav: androidx.navigation.NavHostController
+        compose.setContent {
+            nav = androidx.navigation.compose.rememberNavController()
+            androidx.navigation.compose.NavHost(nav, startDestination = br.app.stagebook.navigation.Home) {
+                composable<br.app.stagebook.navigation.Home> {}
+                composable<br.app.stagebook.navigation.Stage> {}
+                composable<br.app.stagebook.navigation.Settings> {}
+                composable<br.app.stagebook.navigation.SongEditor> {}
+                composable<br.app.stagebook.navigation.Importer> {}
+            }
+        }
+        fun at(route: Any): Boolean { compose.runOnIdle { nav.navigate(route) }; return compose.runOnIdle { nav.currentDestination.menuBeside() } }
+        assertEquals(true, at(br.app.stagebook.navigation.Stage(songId = "a")))
+        assertEquals(true, at(br.app.stagebook.navigation.Settings("DEVICE", alone = true)))
+        assertEquals(false, at(br.app.stagebook.navigation.SongEditor("a")))
+        assertEquals(false, at(br.app.stagebook.navigation.Importer()))
     }
 }

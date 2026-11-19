@@ -56,10 +56,10 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     val pinned by start.pinned.collectAsStateWithLifecycle()
     val width = LocalConfiguration.current.screenWidthDp
     val wide = width >= Sizes.pinBreakpoint.value
-    // pinned beside the stage only where there is a stage to be beside: the editor, the importer and Settings are whole
-    // screens (a tap in the list there would take the stage in place of what was being typed)
+    // pinned beside the stage only where there is a stage to be beside: the editor and the importer are whole screens (a
+    // tap in the list there would take the stage in place of what was being typed)
     val destination by nav.currentBackStackEntryAsState()
-    val besideStage = destination?.destination?.let { it.hasRoute<Stage>() || it.hasRoute<Home>() } != false
+    val besideStage = destination?.destination.menuBeside()
     val fixed = pinned && wide && besideStage
     // something outside asks the drawer to show a setlist (the stage's menu, a setlist just received or imported)
     var request by remember { mutableStateOf<SetlistRequest?>(null) }
@@ -73,7 +73,7 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
     // a whole screen opened from outside the menu (the band strip's "Import the missing ones") must not stay hidden behind it:
     // the importer opened under the open menu, and nothing seemed to happen (device test 16/11)
-    MenuNotOverScreen(state, besideStage) { nav.currentDestination?.let { it.hasRoute<Stage>() || it.hasRoute<Home>() } != false }
+    MenuNotOverScreen(state, besideStage) { nav.currentDestination.menuBeside() }
     val open = state.isOpen && !fixed
     val shown = !fixed && (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed)
     LaunchedEffect(shown) { onShown(shown) }
@@ -117,7 +117,10 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
             onRequestHandled = { request = null },
             pinned = fixed,
             onPin = if (wide) start::togglePin else null,
-            onOpenSettings = { section, alone -> go { nav.navigate(Settings(section?.name.orEmpty(), alone, fromMenu = true)) { launchSingleTop = true } } },
+            // a group from the menu takes the place of the one open (pinned menu: tapping another group switches the page)
+            onOpenSettings = { section, alone, item ->
+                go { nav.navigate(Settings(section?.name.orEmpty(), alone, fromMenu = true, item = item.orEmpty())) { popUpTo<Settings> { inclusive = true }; launchSingleTop = true } }
+            },
         ) }
     }
     CompositionLocalProvider(LocalDrawer provides drawer, br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) {
@@ -144,6 +147,14 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
         }
     }
 }
+
+/**
+ * Where the menu may open and stay pinned: the stage, the empty start, and a Settings page, whose list of groups is the
+ * menu itself (user, 19/11: the handle there brings the menu, and a pinned menu stays beside the page). Null: nothing
+ * composed yet.
+ */
+internal fun androidx.navigation.NavDestination?.menuBeside(): Boolean =
+    this?.let { it.hasRoute<Stage>() || it.hasRoute<Home>() || it.hasRoute<Settings>() } != false
 
 /**
  * A whole screen (the importer, the receive screen) is never left behind the menu: the menu closes, also when it was

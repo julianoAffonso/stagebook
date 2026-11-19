@@ -144,7 +144,8 @@ fun StagebookNavHost(
     // a link to a Settings section from any screen: the Settings page over it, on that section; back returns to where it
     // was (the stage with its break, its page and its counters; an editor with what was typed)
     val openSettings: (br.app.stagebook.ui.settings.SettingsSection) -> Unit = remember(nav) {
-        { section -> nav.navigate(Settings(section.name)) { launchSingleTop = true } }
+        // only that group, full screen like the stage: the list of groups lives in the side menu (user, 19/11)
+        { section -> nav.navigate(Settings(section.name, alone = true)) { launchSingleTop = true } }
     }
     // a .stagebook file tapped outside the app: Open file with its parts, as if picked there. On the stage it waits
     // and opens on leaving (the show is never interrupted); a file that isn't Stagebook's only gets the short message
@@ -228,7 +229,10 @@ fun StagebookNavHost(
                     val back = dropUnlessResumed { nav.popBackStack(); if (route.fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() }
                     MenuBack(route.fromMenu, back)
                     val section = br.app.stagebook.ui.settings.SettingsSection.fromSaved(route.section)
-                    if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(section, onLeave = back)
+                    // one group, full screen like the stage: the menu's handle in place of an arrow (pinned menu: neither)
+                    if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(
+                        section, onLeave = back, focusItem = route.item.ifEmpty { null }, onMenu = drawer?.takeIf { !it.pinned }?.open,
+                    )
                     else br.app.stagebook.ui.settings.SettingsRoute(section, onBack = back)
                 }
             }

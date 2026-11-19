@@ -182,6 +182,8 @@ fun SettingsRoute(
     start: SettingsSection? = null,   // start: section open on entry (link from the alert)
     onLeave: (() -> Unit)? = null,   // set: only [start], on its own page, whose back arrow calls this (About from the rail's logo)
     onBack: (() -> Unit)? = null,   // set: the list of sections has a back arrow that calls this (Settings is a page of its own)
+    focusItem: String? = null,   // the setting a search result in the side menu points at: it flashes on arrival
+    onMenu: (() -> Unit)? = null,   // set: the page shows the menu's handle, as the stage does (the menu not pinned)
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -327,6 +329,8 @@ fun SettingsRoute(
             onSection = { section = it },
             onLeave = onLeave,
             onBack = onBack,
+            focusItem = focusItem,
+            onMenu = onMenu,
             uiState = uiState,
             actions = SettingsActions(
                 onFont = viewModel::setFont,
@@ -336,6 +340,7 @@ fun SettingsRoute(
                 onSectionColor = viewModel::setSectionColor,
                 onShowSections = viewModel::setShowSections,
                 onPdfInvert = viewModel::setPdfInvert,
+                onDrawerHandle = viewModel::setDrawerHandle,
                 onHandleRight = viewModel::setHandleRight,
                 onTranslateSections = viewModel::setTranslateSections,
                 onProfile = viewModel::setProfile,
@@ -449,6 +454,7 @@ data class SettingsActions(
     val onSectionColor: (Int) -> Unit = {},
     val onShowSections: (Boolean) -> Unit = {},
     val onPdfInvert: (Boolean) -> Unit = {},
+    val onDrawerHandle: (Float) -> Unit = {},
     val onHandleRight: (Boolean) -> Unit = {},
     val onTranslateSections: (Boolean) -> Unit = {},
     val onProfile: (SongProfile) -> Unit = {},
@@ -558,12 +564,17 @@ enum class SettingsSection(@StringRes val title: Int, val icon: ImageVector) {
     }
 }
 
-/** One section on its own page: header with the back arrow, the pinned preview, then the content that scrolls. */
+/**
+ * One section on its own page: the header, the pinned preview, then the content that scrolls. [onBack] null: no arrow
+ * (opened from the side menu, user 19/11: the page is full screen like the stage, and the menu's handle leaves it).
+ * [handle]: the edge the handle sits on, kept clear so it never covers a control.
+ */
 @Composable
-private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: () -> Unit) {
+private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, onBack: (() -> Unit)?, handle: Boolean? = null) {
     // full width, like the rest of Settings beside the rail (user, 03/11)
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
+        val clear = Spacing.xl
+        Column(Modifier.fillMaxHeight().padding(start = if (handle == false) clear else Spacing.m, end = if (handle == true) clear else Spacing.m)) {
             ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
             SectionPinned(open, uiState.look, draft)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -608,12 +619,22 @@ fun SettingsScreen(
     onSection: (SettingsSection?) -> Unit = {},
     onLeave: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
+    focusItem: String? = null,
+    onMenu: (() -> Unit)? = null,
 ) {
     // the search: its text survives a rotation; what a result opened flashes once (the focus is cleared after)
     var query by rememberSaveable { mutableStateOf("") }
     val resources = LocalResources.current
-    // a State handed down (not its value): the screen never reads it while composing, only the item that flashes does
+    // a State handed down (not its value): the screen never reads it while composing, only the item that flashes does;
+    // a result found in the side menu arrives with its item and flashes as one found here
     val focus = remember { mutableStateOf<br.app.stagebook.ui.components.SettingsFocus?>(null) }
+    LaunchedEffect(Unit) {
+        val found = focusItem?.let(::settingsItemById) ?: return@LaunchedEffect
+        // after the page is laid out: before that there is nothing to bring into view
+        androidx.compose.runtime.withFrameNanos { }
+        androidx.compose.runtime.withFrameNanos { }
+        focus.value = br.app.stagebook.ui.components.SettingsFocus(resources.getString(found.card), 1, found.id)
+    }
     LaunchedEffect(Unit) {
         androidx.compose.runtime.snapshotFlow { focus.value }.collectLatest { if (it != null) { delay(2500); focus.value = null } }
     }
@@ -641,8 +662,16 @@ fun SettingsScreen(
             }
             val alone = section?.takeIf { onLeave != null }
             if (alone != null && onLeave != null) {
-                // opened by itself (About from the rail's logo, user 03/11): no section list, back leaves Settings
-                SectionPage(alone, uiState, actions, draft, onLeave)
+                // one group, full screen like the stage (user, 19/11): no arrow, the menu's handle on its edge; Android's
+                // back still leaves
+                val right = uiState.look.drawerHandleRight
+                SectionPage(alone, uiState, actions, draft, onBack = null, handle = if (onMenu != null) right else null)
+                if (onMenu != null) {
+                    br.app.stagebook.ui.stage.StageDrawerHandle(
+                        onMenu, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.surface, uiState.look.drawerHandleY,
+                        actions.onDrawerHandle, Modifier.fillMaxSize(), right = right,
+                    )
+                }
             } else if (maxWidth >= Sizes.contentMax) {
                 // tablet in landscape: fixed list on the left, open section on the right
                 val open = section ?: SettingsSection.LYRICS
@@ -669,13 +698,44 @@ fun SettingsScreen(
                     if (open == null) {
                         SectionList(uiState, null, onSection, Modifier.fillMaxSize(), band = actions.band, search = search, onBack = onBack)
                     } else {
-                        SectionPage(open, uiState, actions, draft) { onSection(null) }
+                        SectionPage(open, uiState, actions, draft, onBack = { onSection(null) })
                     }
                 }
             }
         }
     }
     }
+}
+
+/**
+ * Settings in the side menu (user, 19/11): the groups and the search, nothing else. A group, or a search result, opens
+ * on its own page, full screen like the stage ([onOpen] with the result's item, which flashes there).
+ */
+@Composable
+fun SettingsMenuRoute(onOpen: (SettingsSection, item: String?) -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // only read here: the band's search on the network runs with its page open, not with the menu
+    val bandVm: BandViewModel = hiltViewModel()
+    val band by bandVm.ui.collectAsStateWithLifecycle()
+    val advancedVm: AdvancedViewModel = hiltViewModel()
+    val advanced by advancedVm.ui.collectAsStateWithLifecycle()
+    SettingsMenu(uiState, onOpen, band = band, advanced = advanced)
+}
+
+@Composable
+fun SettingsMenu(uiState: SettingsUiState, onOpen: (SettingsSection, item: String?) -> Unit, modifier: Modifier = Modifier, band: BandUi = BandUi(), advanced: AdvancedUi = AdvancedUi()) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val search = SettingsSearch(
+        query, { query = it },
+        IndexCtx(uiState.look, uiState.midi.supported, advanced, br.app.stagebook.ui.components.nationalTagsShown()),
+    ) { hit ->
+        // a hidden item opens the place that turns it on, as on the page
+        val target = hit.hide?.opens?.let(::settingsItemById) ?: hit.item
+        onOpen(target.group, target.id)
+    }
+    BackHandler(enabled = query.isNotEmpty()) { query = "" }
+    if (uiState.loading) Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    else SectionList(uiState, null, { onOpen(it, null) }, modifier.fillMaxSize(), band = band, search = search)
 }
 
 /** The search over the settings: the text, the items that can show now, and what tapping a result does. */
