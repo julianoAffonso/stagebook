@@ -562,5 +562,3 @@ private const val BREAK_SONG = "breakSong"     // the song after the break on sc
 private const val USB_WAIT_MS = 6_000L   // a USB metronome output not ready by then: the device's own
 private const val USB_DROP_MS = 3_000L   // a USB "not ready" shorter than this doesn't restart the metronome
 
-private const val HANDLE_MIN = 0.1f
-private const val HANDLE_MAX = 0.9f

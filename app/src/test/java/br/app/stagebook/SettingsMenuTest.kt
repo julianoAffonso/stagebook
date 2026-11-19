@@ -1,6 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -61,6 +62,34 @@ class SettingsMenuTest {
         }
         compose.waitForIdle()
         compose.onNode(androidx.compose.ui.test.SemanticsMatcher.expectValue(br.app.stagebook.ui.components.SettingsItemKey, "language")).assertIsDisplayed()
+    }
+
+    @Test fun `a group's page has no back arrow - the menu's handle opens the menu, as on the stage`() {
+        var menu = 0
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.SettingsScreen(
+                    SettingsUiState(loading = false), br.app.stagebook.ui.settings.SettingsActions(),
+                    section = SettingsSection.DEVICE, onLeave = {}, onMenu = { menu++ },
+                )
+            }
+        }
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Voltar")).assertCountEquals(0)
+        compose.onNodeWithText("Aparelho").assertIsDisplayed()
+        compose.onNode(androidx.compose.ui.test.hasTestTag(br.app.stagebook.ui.stage.DRAWER_HANDLE_TAG)).performClick()
+        assertEquals(1, menu)
+    }
+
+    @Test fun `with the menu pinned beside it, the page has neither arrow nor handle`() {
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.SettingsScreen(
+                    SettingsUiState(loading = false), br.app.stagebook.ui.settings.SettingsActions(), section = SettingsSection.DEVICE, onLeave = {},
+                )
+            }
+        }
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Voltar")).assertCountEquals(0)
+        compose.onAllNodes(androidx.compose.ui.test.hasTestTag(br.app.stagebook.ui.stage.DRAWER_HANDLE_TAG)).assertCountEquals(0)
     }
 
     @Test fun `the page opened from the menu carries the setting found, and an old link has none`() {

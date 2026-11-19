@@ -44,6 +44,10 @@ import br.app.stagebook.R
 import br.app.stagebook.ui.theme.Sizes
 import br.app.stagebook.ui.theme.Spacing
 
+/** How far up and down the edge the handle may go (a share of the height), on the stage and on the Settings pages. */
+internal const val HANDLE_MIN = 0.1f
+internal const val HANDLE_MAX = 0.9f
+
 /**
  * The small handle at the middle of the stage's left edge (user, 15/11: the header's ☰ goes, the side handle stays and
  * the title gets the room). Tapped, or pulled to the right, it opens the library drawer: on the setlist the stage came

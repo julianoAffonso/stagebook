@@ -229,7 +229,10 @@ fun StagebookNavHost(
                     val back = dropUnlessResumed { nav.popBackStack(); if (route.fromMenu) drawer?.takeIf { !it.pinned }?.open?.invoke() }
                     MenuBack(route.fromMenu, back)
                     val section = br.app.stagebook.ui.settings.SettingsSection.fromSaved(route.section)
-                    if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(section, onLeave = back, focusItem = route.item.ifEmpty { null })
+                    // one group, full screen like the stage: the menu's handle in place of an arrow (pinned menu: neither)
+                    if (route.alone && section != null) br.app.stagebook.ui.settings.SettingsRoute(
+                        section, onLeave = back, focusItem = route.item.ifEmpty { null }, onMenu = drawer?.takeIf { !it.pinned }?.open,
+                    )
                     else br.app.stagebook.ui.settings.SettingsRoute(section, onBack = back)
                 }
             }

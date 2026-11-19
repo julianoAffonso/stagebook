@@ -56,16 +56,15 @@ class AboutHelpTest {
         assertEquals(1, taps)
     }
 
-    // the rail's logo opens About by itself, on a wide tablet too: no section list, and back leaves it (user, 03/11)
+    // a group by itself, on a wide tablet too: no section list and no arrow (user, 19/11: full screen like the stage, the
+    // menu's handle and Android's back leave it)
     @Test @Config(qualifiers = "w1100dp-h720dp-land-xhdpi")
-    fun `About opened by itself shows only About and its back arrow leaves`() {
-        var left = 0
+    fun `About opened by itself shows only About, with no back arrow`() {
         compose.setContent {
-            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(), section = SettingsSection.ABOUT, onLeave = { left++ }) }
+            StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(), section = SettingsSection.ABOUT, onLeave = {}) }
         }
         compose.onNodeWithText(context.getString(R.string.settings_appearance)).assertDoesNotExist()
-        compose.onNodeWithContentDescription(context.getString(R.string.action_back)).performClick()
-        assertEquals(1, left)
+        compose.onNodeWithContentDescription(context.getString(R.string.action_back)).assertDoesNotExist()
     }
 
     @Test fun `the help address is the web page in each language`() {
