@@ -78,15 +78,14 @@
     <string name="editor_error_title_taken">Você já tem uma música com esse nome e artista.</string>
 
     <!-- setlists -->
+    <string name="header_back_to">Voltar para %1$s</string>
+    <string name="sets_all">Todos os setlists</string>
     <string name="sets_title">Setlists</string>
     <string name="list_filtered">%1$d no filtro</string>
     <string name="filters_clear">Limpar filtros</string>
     <string name="sets_search">Buscar setlist</string>
     <string name="sets_search_hint">Nome do setlist</string>
     <string name="sets_not_found">Nenhum setlist encontrado</string>
-    <string name="sets_sort">Ordem</string>
-    <string name="sets_sort_newest">Recentes</string>
-    <string name="sets_sort_abc">A a Z</string>
     <string name="sets_new">Novo setlist</string>
     <string name="sets_name">Nome do setlist</string>
     <string name="sets_name_hint">Sem nome, usa data e hora</string>
@@ -145,6 +144,7 @@
     <string name="set_reorder">Arrastar para mudar a ordem</string>
 
     <!-- escolher músicas -->
+    <string name="pick_screen_title">Adicionar músicas</string>
     <string name="pick_title">Músicas</string>
     <string name="pick_add_short">Adicionar (%1$d)</string>
 

@@ -97,15 +97,11 @@ class WebEditorMoreTest {
         assertEquals(null, repo.library.value.setlist(id))
     }
 
-    @Test fun `the computer reads and changes the setlists order and lists by it`() {
+    @Test fun `the computer lists the setlists newest first and has no order to change`() {
         val api = WebEditorApi(repo)
-        repo.createSetlist("Zé"); repo.createSetlist("ábaco")
-        assertEquals("""{"abc":false}""", call(api, "GET", "/api/sets-order").text())
-        assertEquals(200, call(api, "PUT", "/api/sets-order", """{"abc":true}""").status)
-        assertTrue(repo.library.value.look.setsAbc)
+        repo.createSetlist("Zé", "2026-10-01"); repo.createSetlist("ábaco", "2026-11-01")
         val list = call(api, "GET", "/api/sets").text()
         assertTrue(list.indexOf("ábaco") < list.indexOf("Zé"))
-        assertEquals(400, call(api, "PUT", "/api/sets-order", "x").status)
     }
 
     @Test fun `backing track sent from the computer is linked to the song, and can be removed`() {

@@ -40,17 +40,11 @@ class SetlistsNewOnTopTest {
         compose.onNodeWithText("3 setlists · 0 no filtro").assertIsDisplayed()
     }
 
-    @Test fun `the order sits beside the search and changes from its menu`() {
-        var abc = false
+    @Test fun `the list has no order to choose, only the search`() {
         val sets = listOf(SetlistRowUi("1", "Um", 1), SetlistRowUi("2", "Dois", 2))
-        compose.setContent { StagebookTheme { SetlistsScreen(SetlistsUiState(false, sets), {}, {}, {}, {}, onSortAbc = { abc = it }) } }
-        compose.onNodeWithText("Recentes").performClick()
-        compose.onNodeWithText("A a Z").performClick()
-        assertTrue(abc)
-    }
-
-    @Test fun `one setlist has nothing to order`() {
-        compose.setContent { StagebookTheme { SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", "Um", 1))), {}, {}, {}, {}) } }
+        compose.setContent { StagebookTheme { SetlistsScreen(SetlistsUiState(false, sets), {}, {}, {}, {}) } }
+        compose.onNodeWithText("Buscar setlist").assertIsDisplayed()
         compose.onNodeWithText("Ordem").assertDoesNotExist()
+        compose.onNodeWithText("Recentes").assertDoesNotExist()
     }
 }

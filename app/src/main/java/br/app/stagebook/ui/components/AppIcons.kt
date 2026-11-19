@@ -209,6 +209,8 @@ object AppIcons {
     val AutoScroll by lazy { icon("autoscroll", "M5,2.5L12,9.5L19,2.5L21,4.5L12,13.5L3,4.5z", "M5,10.5L12,17.5L19,10.5L21,12.5L12,21.5L3,12.5z") }   // thick stroke (request from 29/10)
     val Replay by lazy { icon("replay", "M12,5V1L7,6l5,5V7c3.31,0 6,2.69 6,6s-2.69,6 -6,6 -6,-2.69 -6,-6H4c0,4.42 3.58,8 8,8s8,-3.58 8,-8 -3.58,-8 -8,-8z") }
     val Pause by lazy { icon("pause", "M6,19h4L10,5L6,5v14zM14,5v14h4L18,5h-4z") }
+    // Material "person_add": someone asking to join the band
+    val PersonAdd by lazy { icon("person_add", "M15,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zM6,10L6,7L4,7v3L1,10v2h3v3h2v-3h3v-2L6,10zM15,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z") }
     val Group by lazy {
         icon("group", "M16,11c1.66,0 2.99,-1.34 2.99,-3S17.66,5 16,5c-1.66,0 -3,1.34 -3,3s1.34,3 3,3zM8,11c1.66,0 2.99,-1.34 2.99,-3S9.66,5 8,5C6.34,5 5,6.34 5,8s1.34,3 3,3zM8,13c-2.33,0 -7,1.17 -7,3.5L1,19h14v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5zM16,13c-0.29,0 -0.62,0.02 -0.97,0.05 1.16,0.84 1.97,1.97 1.97,3.45L17,19h6v-2.5c0,-2.33 -4.67,-3.5 -7,-3.5z")
     }

@@ -31,7 +31,7 @@ fun BaseScreen(modifier: Modifier = Modifier, openDrawer: Boolean = true) {
     LaunchedEffect(openDrawer) { if (openDrawer) drawer?.takeIf { !it.pinned }?.open?.invoke() }
     Box(modifier.fillMaxSize().windowInsetsPadding(ScreenInsets).padding(Spacing.l), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
-            EmptyState(AppIcons.MusicNote, stringResource(R.string.base_title), stringResource(R.string.base_text))
+            EmptyState(AppIcons.MusicNote, stringResource(R.string.base_title), stringResource(R.string.base_text), logo = true)
             if (drawer != null && !drawer.pinned) ActionButton(stringResource(R.string.drawer_open), drawer.open, icon = AppIcons.Menu)
         }
     }

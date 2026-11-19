@@ -108,7 +108,6 @@ fun SetlistsRoute(
         onBandSearch = viewModel::bandSearch,
         songsIn = viewModel::songsIn,
         pdfSizesIn = viewModel::pdfSizesIn,
-        onSortAbc = viewModel::sortAbc,
     )
     br.app.stagebook.ui.share.BandResultMessage(viewModel.bandResult)
 }
@@ -142,7 +141,6 @@ fun SetlistsScreen(
     received: Int = 0,
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,
-    onSortAbc: (Boolean) -> Unit = {},
     query: String = "",
     onQueryChange: (String) -> Unit = {},
     // the new-setlist window also asks for the day, the edit window for name and day (the defaults keep a caller without a day working)
@@ -187,27 +185,21 @@ fun SetlistsScreen(
                 if (conduct.shown) ConductArmButton(conduct.armed, onConduct)
                 br.app.stagebook.ui.components.HomeStatusIcons()
             }
-            // the search and the order beside it, as Songs has them (user, 04/11); order only when there's something to order
+            // the search alone: the list has one order, newest show first (user, 19/11)
             br.app.stagebook.ui.components.SearchWithFilter(
                 query, onQueryChange, stringResource(R.string.sets_search), stringResource(R.string.sets_search_hint), Modifier.padding(bottom = Spacing.m),
-                filter = if (uiState.total < 2) null else { m ->
-                    br.app.stagebook.ui.components.ChoiceFilter(
-                        stringResource(R.string.sets_sort), listOf(false, true), uiState.abc, onSortAbc,
-                        { abc -> stringResource(if (abc) R.string.sets_sort_abc else R.string.sets_sort_newest) }, m,
-                    )
-                },
             )
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
             // that was first, and the new one stayed hidden above it, device test B-09). The same when the first item
-            // changes for any reason (a rename in A to Z), judged by where the list was before the change: the list
-            // already follows the old first item when the effect runs. Changing the order or the search always starts at
+            // changes for any reason (a new show day), judged by where the list was before the change: the list
+            // already follows the old first item when the effect runs. Changing the search always starts at
             // the top (it followed the old first item down the list; audit 03/11)
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             val firstId = uiState.sets.firstOrNull()?.id
             val atTop by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 } }
             val topBefore = atTop   // read while composing the change, before the list is measured with the new items
             androidx.compose.runtime.LaunchedEffect(firstId) { if (topBefore) listState.scrollToItem(0) }
-            br.app.stagebook.ui.components.ScrollToTopOn("${uiState.abc}|${uiState.query}", listState)
+            br.app.stagebook.ui.components.ScrollToTopOn(uiState.query, listState)
             val locale: java.util.Locale = androidx.compose.ui.platform.LocalConfiguration.current.locales.get(0)
             Crossfade(targetState = uiState.loading, label = "sets", modifier = Modifier.weight(1f)) { loading ->
                 when {
@@ -215,10 +207,9 @@ fun SetlistsScreen(
                     uiState.total == 0 -> EmptyState(AppIcons.QueueMusic, stringResource(R.string.sets_empty_title), stringResource(R.string.sets_empty_message))
                     uiState.sets.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.sets_not_found), "")
                     else -> LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(Spacing.s), contentPadding = PaddingValues(bottom = Spacing.l)) {
-                        // newest first: one heading per month (and "No date" for the old ones); in A to Z, no headings
-                        val groups = if (uiState.abc) listOf("-" to uiState.sets) else setlistMonths(uiState.sets)
-                        groups.forEach { (month, rows) ->
-                        if (!uiState.abc) item(key = "month-$month") {
+                        // newest first: one heading per month (and "No date" for the old ones)
+                        setlistMonths(uiState.sets).forEach { (month, rows) ->
+                        item(key = "month-$month") {
                             Text(
                                 if (month.isEmpty()) stringResource(R.string.sets_no_date) else monthTitle(month, locale),
                                 style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary,

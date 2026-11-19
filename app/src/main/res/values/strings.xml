@@ -75,15 +75,14 @@
     <string name="editor_error_title_taken">You already have a song with this name and artist.</string>
 
     <!-- setlists -->
+    <string name="header_back_to">Back to %1$s</string>
+    <string name="sets_all">All setlists</string>
     <string name="sets_title">Setlists</string>
     <string name="list_filtered">%1$d shown</string>
     <string name="filters_clear">Clear filters</string>
     <string name="sets_search">Search setlist</string>
     <string name="sets_search_hint">Setlist name</string>
     <string name="sets_not_found">No setlist found</string>
-    <string name="sets_sort">Order</string>
-    <string name="sets_sort_newest">Newest</string>
-    <string name="sets_sort_abc">A to Z</string>
     <string name="sets_new">New setlist</string>
     <string name="sets_name">Setlist name</string>
     <string name="sets_name_hint">Empty uses date and time</string>
@@ -140,6 +139,7 @@
     <string name="set_reorder">Drag to change the order</string>
 
     <!-- pick songs -->
+    <string name="pick_screen_title">Add songs</string>
     <string name="pick_title">Songs</string>
     <string name="pick_add_short">Add (%1$d)</string>
 

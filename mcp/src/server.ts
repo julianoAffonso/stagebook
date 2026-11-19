@@ -376,19 +376,6 @@ export function buildServer(client: StagebookClient): McpServer {
   );
 
   server.registerTool(
-    "setlist_order",
-    {
-      title: "Setlists order",
-      description: "Reads the order of the app's Setlists tab or, with order, changes it there: newest first or A to Z.",
-      inputSchema: { order: z.enum(["newest", "abc"]).optional().describe("Leave it out to only read the current order.") },
-    },
-    safe(async ({ order }: { order?: "newest" | "abc" }) => {
-      const now = order ? await client.send("PUT", "/api/sets-order", { abc: order === "abc" }) : await client.get("/api/sets-order");
-      return text({ order: now.abc ? "abc" : "newest" });
-    }),
-  );
-
-  server.registerTool(
     "get_setlist",
     {
       title: "Get a setlist",

@@ -15,13 +15,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import br.app.stagebook.ui.theme.Spacing
 
-/** Empty list: big icon, short sentence and, if there is one, the next-step button. */
+/** Empty list: big icon (or the app's logo, on a first-use screen), short sentence and, if there is one, the next-step button. */
 @Composable
 fun EmptyState(
     icon: ImageVector,
     title: String,
     message: String,
     modifier: Modifier = Modifier,
+    logo: Boolean = false,
     action: (@Composable () -> Unit)? = null,
 ) {
     Column(
@@ -29,7 +30,7 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(Spacing.xxl))
+        if (logo) AppLogo() else Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(Spacing.xxl))
         Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         action?.invoke()

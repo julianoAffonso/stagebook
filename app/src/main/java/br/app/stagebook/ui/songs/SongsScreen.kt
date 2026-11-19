@@ -235,7 +235,7 @@ fun SongsScreen(
             Crossfade(targetState = uiState.loading, label = "songs", modifier = Modifier.weight(1f)) { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                    uiState.total == 0 -> EmptyState(AppIcons.MusicNote, stringResource(R.string.songs_empty_title), stringResource(R.string.songs_empty_message))
+                    uiState.total == 0 -> EmptyState(AppIcons.MusicNote, stringResource(R.string.songs_empty_title), stringResource(R.string.songs_empty_message), logo = true)
                     uiState.songs.isEmpty() -> EmptyState(AppIcons.Search, stringResource(R.string.songs_not_found), "")
                     else -> Box {
                         val groups = uiState.groups

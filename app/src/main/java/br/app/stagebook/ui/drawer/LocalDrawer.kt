@@ -25,4 +25,10 @@ val LocalWaitingRequests = androidx.compose.runtime.compositionLocalOf { 0 }
 /** What the pinned menu's number of waiting requests does when tapped: the window with the first one comes up. */
 val LocalAttendRequest = staticCompositionLocalOf<() -> Unit> { {} }
 
+/**
+ * What the library drawer adds at the end of each title's line (the pin, the waiting requests): the drawer has no top row
+ * of its own (user, 19/11: the logo and the name took the room of the list). Nothing outside the drawer.
+ */
+val LocalDrawerTitleActions = staticCompositionLocalOf<@androidx.compose.runtime.Composable () -> Unit> { {} }
+
 val LocalDrawerGuard = staticCompositionLocalOf<DrawerGuard?> { null }

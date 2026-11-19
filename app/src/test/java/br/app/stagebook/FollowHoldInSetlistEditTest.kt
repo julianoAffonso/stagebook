@@ -171,12 +171,12 @@ class FollowHoldInSetlistEditTest {
         assertEquals("b", gate.pending?.target)
     }
 
-    // the setlist opens to be looked at: its back arrow is the way out
-    @Test fun `leaving the setlist by the arrow opens the newest song of the band`() {
+    // the setlist opens to be looked at: "‹ Todos os setlists" above its name is the way out
+    @Test fun `leaving the setlist by its link opens the newest song of the band`() {
         start(editing = false)
         band("b")
         band("c")
-        compose.onNodeWithContentDescription("Voltar").performClick()
+        compose.onNodeWithText("‹ Todos os setlists").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("stage c").assertExists()
         compose.onAllNodesWithText("stage b").assertCountEquals(0)
@@ -187,7 +187,7 @@ class FollowHoldInSetlistEditTest {
         band("b")
         following.value = null
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("Voltar").performClick()
+        compose.onNodeWithText("‹ Todos os setlists").performClick()
         compose.waitForIdle()
         // nothing opens: the stage that was under the setlist is still the one that shows
         compose.onNodeWithText("stage a").assertExists()

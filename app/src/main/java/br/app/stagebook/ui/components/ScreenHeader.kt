@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,7 +43,9 @@ val ScreenInsets: WindowInsets
 /**
  * Screen header: back (optional), big title, subtitle and actions on the right. On phones the subtitle runs on its own
  * line below the header, full width (between the title and the icons it got squeezed onto several lines); on tablets it
- * sits under the title.
+ * sits under the title. [parent] is the list this screen opened from, a link above the title that goes back to it (an
+ * open setlist in the menu, user 19/11: the arrow read as "close the menu"). Inside the library drawer its own icons (the
+ * pin, the waiting requests) end the title's line, since the drawer has no top row of its own.
  */
 @Composable
 fun ScreenHeader(
@@ -55,20 +58,47 @@ fun ScreenHeader(
     onClearFilter: (() -> Unit)? = null,   // a filter is on: an × after the subtitle turns it off
     iconActions: Boolean = true,   // the actions are icon buttons: their drawings go out to the margin
     closes: Boolean = false,   // [onBack] leaves a mode of the screen (editing): an ✕ instead of the arrow
+    parent: String? = null,
+    onParent: () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val wide = wideLists()
+    val drawerActions = br.app.stagebook.ui.drawer.LocalDrawerTitleActions.current
     Column(modifier.fillMaxWidth()) {
+        if (parent != null) {
+            // an inner screen in the menu, as SongbookPro's open set: a bar with the way back on the left ("‹ All setlists", or
+            // the ✕ that ends editing) and the icons on the right, the name big and full width under it (beside the icons
+            // it broke in two on a phone)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (onBack != null) BackButton(onBack, closes = closes) else ParentLink(parent, onParent)
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                Row(if (iconActions) Modifier.offset(x = HeaderIconInset) else Modifier, verticalAlignment = Alignment.CenterVertically) {
+                    actions()
+                    drawerActions()
+                }
+            }
+            Text(
+                title,
+                style = if (wide) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier,
+            )
+            if (subtitle.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+                Subtitle(subtitle)
+                if (onClearFilter != null) ClearFilterButton(onClearFilter)
+            }
+            return@Column
+        }
         // the arrow and the icons on the title's line (centred on title and subtitle, the arrow sat below the title,
         // user 03/11); the icons' drawings on the screen's margin, like the arrow's
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
-            // arrow came out black on the dark background (user, 02/11)
-            if (onBack != null) BackButton(onBack, closes = closes)
+        val titleStyle = when {
+            onBack != null -> MaterialTheme.typography.titleMedium
+            wide -> MaterialTheme.typography.headlineLarge
+            else -> MaterialTheme.typography.headlineMedium
+        }
+        val titleText = @Composable { m: Modifier ->
             Text(
                 title,
                 // Google's pattern: a main screen has a big title; an inner screen (with the arrow) on phones a
@@ -76,21 +106,33 @@ fun ScreenHeader(
                 // cut next to its icons); on tablets always big (it fits)
                 // (user, 16/11: a setlist's name, in an inner screen, kept the size of the phone standing when it lies down: the
                 // arrow screens don't grow with the width)
-                style = when {
-                    onBack != null -> MaterialTheme.typography.titleMedium
-                    wide -> MaterialTheme.typography.headlineLarge
-                    else -> MaterialTheme.typography.headlineMedium
-                },
+                style = titleStyle,
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 // the tap takes only the name itself, not the empty room up to the icons (that opened rename too; audit
                 // 03/11): the text wraps its content inside the room it is given
-                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.Start)
+                modifier = m.wrapContentWidth(Alignment.Start)
                     .then(if (onTitleClick != null) Modifier.clickable(onClickLabel = titleClickLabel, onClick = onTitleClick) else Modifier),
             )
-            Row(if (iconActions) Modifier.offset(x = HeaderIconInset) else Modifier, verticalAlignment = Alignment.CenterVertically, content = actions)
         }
+        val icons = @Composable {
+            Row(if (iconActions) Modifier.offset(x = HeaderIconInset) else Modifier, verticalAlignment = Alignment.CenterVertically) {
+                actions()
+                drawerActions()
+            }
+        }
+        if (onBack != null) Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        ) {
+            // the theme's colour, not the surroundings': on a screen with no surface under it (Review setlist) the
+            // arrow came out black on the dark background (user, 02/11)
+            BackButton(onBack, closes = closes)
+            titleText(Modifier.weight(1f))
+            icons()
+        } else TitleAndIcons({ titleText(Modifier) }, icons)
         if (subtitle.isNotEmpty()) {
             // aligned with the title (after the back button); on phones full width below, on tablets under the title
             Row(Modifier.padding(start = if (onBack != null) BackButtonWidth + Spacing.s else 0.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -99,6 +141,50 @@ fun ScreenHeader(
             }
         }
     }
+}
+
+/**
+ * A list's big title and its icons: side by side while the whole title fits beside them; when it doesn't (the menu on a
+ * tablet with the pin, essential mode and the band's icons on: "Setlists" broke in two, user 19/11), the icons go up to a
+ * line of their own on the right and the title keeps its width under them, as an open setlist has it.
+ */
+@Composable
+private fun TitleAndIcons(title: @Composable () -> Unit, icons: @Composable () -> Unit) {
+    val gap = Spacing.s
+    androidx.compose.ui.layout.Layout(contents = listOf(title, icons), modifier = Modifier.fillMaxWidth()) { (t, i), c ->
+        val width = c.maxWidth
+        val iconsP = i.first().measure(c.copy(minWidth = 0, minHeight = 0))
+        val gapPx = if (iconsP.width > 0) gap.roundToPx() else 0
+        val titleFull = t.first().maxIntrinsicWidth(c.maxHeight)
+        if (titleFull + gapPx + iconsP.width <= width) {
+            val titleP = t.first().measure(c.copy(minWidth = 0, maxWidth = (width - iconsP.width - gapPx).coerceAtLeast(0), minHeight = 0))
+            val h = maxOf(titleP.height, iconsP.height)
+            layout(width, h) {
+                titleP.place(0, (h - titleP.height) / 2)
+                iconsP.place(width - iconsP.width, (h - iconsP.height) / 2)
+            }
+        } else {
+            val titleP = t.first().measure(c.copy(minWidth = 0, minHeight = 0))
+            layout(width, iconsP.height + titleP.height) {
+                iconsP.place(width - iconsP.width, 0)
+                titleP.place(0, iconsP.height)
+            }
+        }
+    }
+}
+
+// "‹ All setlists": small, in the theme's colour, the touch area taller than the text so a finger finds it
+@Composable
+private fun ParentLink(name: String, onClick: () -> Unit) {
+    val label = stringResource(R.string.header_back_to, name)
+    Text(
+        "‹ $name",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.clip(MaterialTheme.shapes.small)
+            .clickable(onClickLabel = label, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .padding(vertical = Spacing.s, horizontal = Spacing.xs),
+    )
 }
 
 // as tall as the subtitle's line, so the list doesn't move when a filter turns on; the touch area goes past it. A faded
