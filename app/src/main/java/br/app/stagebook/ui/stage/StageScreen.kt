@@ -446,7 +446,7 @@ fun StageScreen(
     note: String = "",
     onBack: (() -> Unit)? = null,
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
-    onDrawerHandle: (Float) -> Unit = {},
+    onDrawerHandle: (Float, Boolean) -> Unit = { _, _ -> },
     onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
     onPdfPage: (String, Int) -> Unit = { _, _ -> },
     onPdfStroke: (songId: String, page: Int, points: List<br.app.stagebook.data.model.PdfPoint>) -> Unit = { _, _, _ -> },

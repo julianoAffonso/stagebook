@@ -51,13 +51,14 @@ internal const val HANDLE_MAX = 0.9f
 /**
  * The small handle at the middle of the stage's left edge (user, 15/11: the header's ☰ goes, the side handle stays and
  * the title gets the room). Tapped, or pulled to the right, it opens the library drawer: on the setlist the stage came
- * from, or on the lists. Only this rectangle takes the drag: the rest of the edge is Android's back gesture. Held and
- * dragged up or down, it moves along the edge and stays where the person puts it (user, 15/11).
+ * from, or on the lists. Only this rectangle takes the drag: the rest of the edge is Android's back gesture. Held, it
+ * follows the finger and stays where the person lets go: up or down the edge (user, 15/11), and on the other edge when
+ * let go past the middle (user, 19/11: in place of a switch in Settings). [onMove] gets the height and the side.
  */
 @Composable
 internal fun StageDrawerHandle(
-    onOpen: () -> Unit, fg: Color, bg: Color, y: Float, onMove: (Float) -> Unit, modifier: Modifier = Modifier,
-    right: Boolean = false,   // on the right edge, for left-handed players: it is pulled to the left
+    onOpen: () -> Unit, fg: Color, bg: Color, y: Float, onMove: (y: Float, right: Boolean) -> Unit, modifier: Modifier = Modifier,
+    right: Boolean = false,   // on the right edge (left-handed players): it is pulled to the left, and the menu opens there
     waiting: Int = LocalWaitingRequests.current,   // requests waiting for an answer: the number shows on the handle
 ) {
     val density = LocalDensity.current
@@ -67,8 +68,10 @@ internal fun StageDrawerHandle(
     // while held, the handle follows the finger up and down; let go and the place is kept
     var moving by remember { mutableStateOf(false) }
     var dragY by remember { mutableFloatStateOf(y) }
+    var dragX by remember { mutableFloatStateOf(0f) }   // where the finger is across the screen, while held
     // the place as it is now: the gesture detector below is made once, and a second drag must start from where the first ended
     val yNow by androidx.compose.runtime.rememberUpdatedState(y)
+    val rightNow by androidx.compose.runtime.rememberUpdatedState(right)
     val onMoveNow by androidx.compose.runtime.rememberUpdatedState(onMove)
     val onOpenNow by androidx.compose.runtime.rememberUpdatedState(onOpen)
     val label = stringResource(R.string.drawer_open)
@@ -77,7 +80,10 @@ internal fun StageDrawerHandle(
         val heightPx = with(density) { maxHeight.toPx() }
         val hitPx = with(density) { hitH.toPx() }
         val boxW = with(density) { Spacing.xl.toPx() }
-        val left = if (right) (constraints.maxWidth - boxW).coerceAtLeast(0f) else 0f
+        val widthPx = constraints.maxWidth.toFloat()
+        // held, it shows on the side the finger is on: let go there and it stays
+        val side = if (moving) dragX > widthPx / 2f else right
+        val left = if (side) (widthPx - boxW).coerceAtLeast(0f) else 0f
         val shown = if (moving) dragY else y
         val top = ((shown * heightPx) - hitPx / 2f).coerceIn(0f, (heightPx - hitPx).coerceAtLeast(0f))
         Box(
@@ -87,32 +93,41 @@ internal fun StageDrawerHandle(
                 .size(width = Spacing.xl, height = hitH)
                 .testTag(DRAWER_HANDLE_TAG)
                 // a hold picks it up to move it along the edge; a short touch opens, a pull to the right opens too
-                .pointerInput(heightPx) {
+                .pointerInput(heightPx, widthPx) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { moving = true; dragY = yNow },
-                        onDrag = { change, amount -> change.consume(); dragY = (dragY + amount.y / heightPx).coerceIn(0f, 1f) },
-                        onDragEnd = { moving = false; onMoveNow(dragY) },
+                        onDragStart = { at ->
+                            moving = true; dragY = yNow
+                            dragX = (if (rightNow) (widthPx - boxW).coerceAtLeast(0f) else 0f) + at.x
+                        },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            dragY = (dragY + amount.y / heightPx).coerceIn(0f, 1f)
+                            dragX = (dragX + amount.x).coerceIn(0f, widthPx)
+                        },
+                        onDragEnd = { moving = false; onMoveNow(dragY, dragX > widthPx / 2f) },
                         onDragCancel = { moving = false },
                     )
                 }
                 .draggable(
                     rememberDraggableState { pulled += it },
                     Orientation.Horizontal,
+                    // held, a sideways drag carries the handle to the other edge: the pull that opens stands aside
+                    enabled = !moving,
                     onDragStarted = { pulled = 0f },
                     onDragStopped = { velocity ->
-                        val toward = if (right) -1f else 1f   // the way that opens it: away from its edge
+                        val toward = if (rightNow) -1f else 1f   // the way that opens it: away from its edge
                         if (!moving && (velocity * toward > flingPx || pulled * toward > flingPx)) onOpenNow()
                         pulled = 0f
                     },
                 )
                 .clickable(interactionSource = null, indication = null, role = Role.Button, onClickLabel = hint, onClick = onOpen)
                 .semantics { contentDescription = label },
-            contentAlignment = if (right) Alignment.CenterEnd else Alignment.CenterStart,
+            contentAlignment = if (side) Alignment.CenterEnd else Alignment.CenterStart,
         ) {
             Column(
                 Modifier
                     .size(width = HANDLE_WIDTH, height = HANDLE_HEIGHT)
-                    .clip(if (right) RoundedCornerShape(topStart = HANDLE_CORNER, bottomStart = HANDLE_CORNER) else RoundedCornerShape(topEnd = HANDLE_CORNER, bottomEnd = HANDLE_CORNER))
+                    .clip(if (side) RoundedCornerShape(topStart = HANDLE_CORNER, bottomStart = HANDLE_CORNER) else RoundedCornerShape(topEnd = HANDLE_CORNER, bottomEnd = HANDLE_CORNER))
                     .overLyrics(bg, fg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -121,7 +136,7 @@ internal fun StageDrawerHandle(
             }
             // someone asked to join (the band, the computer): open the menu to answer
             if (waiting > 0) Box(
-                Modifier.align(if (right) Alignment.TopEnd else Alignment.TopStart).padding(if (right) PaddingValues(end = HANDLE_WIDTH - Spacing.s) else PaddingValues(start = HANDLE_WIDTH - Spacing.s)).size(Spacing.m + Spacing.xs).background(MaterialTheme.colorScheme.error, CircleShape),
+                Modifier.align(if (side) Alignment.TopEnd else Alignment.TopStart).padding(if (side) PaddingValues(end = HANDLE_WIDTH - Spacing.s) else PaddingValues(start = HANDLE_WIDTH - Spacing.s)).size(Spacing.m + Spacing.xs).background(MaterialTheme.colorScheme.error, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(waiting.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onError)

@@ -1,6 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -37,7 +38,7 @@ class StageDrawerHandleTest {
     private var moved: Float? = null
 
     private fun show(y: Float = 0.5f) = compose.setContent {
-        StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, y, { moved = it }, Modifier) }
+        StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, y, { y, _ -> moved = y }, Modifier) }
     }
 
     @Test fun `a touch opens the menu and moves nothing`() {
@@ -61,17 +62,17 @@ class StageDrawerHandleTest {
     }
 
     @Test fun `with requests waiting the handle carries their number, and with none it has none`() {
-        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, waiting = 2) } }
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { y, _ -> moved = y }, Modifier, waiting = 2) } }
         compose.onNodeWithText("2", useUnmergedTree = true).assertExists()
     }
 
     @Test fun `no number on the handle when nobody waits`() {
-        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, waiting = 0) } }
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { y, _ -> moved = y }, Modifier, waiting = 0) } }
         compose.onAllNodesWithText("0", useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test fun `on the right edge the handle sits at the right, and a pull to the left opens the menu`() {
-        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, right = true) } }
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { y, _ -> moved = y }, Modifier, right = true) } }
         val node = compose.onNodeWithTag("stage_drawer_handle")
         val b = node.fetchSemanticsNode().boundsInRoot
         val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
@@ -82,14 +83,14 @@ class StageDrawerHandleTest {
     }
 
     @Test fun `on the right edge a pull to the right does not open it`() {
-        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier, right = true) } }
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { y, _ -> moved = y }, Modifier, right = true) } }
         compose.onNodeWithTag("stage_drawer_handle").performTouchInput { swipeRight() }
         compose.waitForIdle()
         assertEquals(0, opened)
     }
 
     @Test fun `on the left edge a pull to the right opens the menu and a pull to the left does not`() {
-        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { moved = it }, Modifier) } }
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { y, _ -> moved = y }, Modifier) } }
         val node = compose.onNodeWithTag("stage_drawer_handle")
         node.performTouchInput { swipeLeft() }
         compose.waitForIdle()
@@ -103,12 +104,56 @@ class StageDrawerHandleTest {
         val moves = mutableListOf<Float>()
         compose.setContent {
             val y = androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0.3f) }
-            StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, y.floatValue, { y.floatValue = it; moves += it }, Modifier) }
+            StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, y.floatValue, { v, _ -> y.floatValue = v; moves += v }, Modifier) }
         }
         fun dragDown() = compose.onNodeWithTag("stage_drawer_handle").performTouchInput { down(center); advanceEventTime(700); moveBy(Offset(0f, 160f)); up() }
         dragDown(); compose.waitForIdle()
         dragDown(); compose.waitForIdle()
         assertEquals(2, moves.size)
         assertTrue("the second went on from the first: $moves", moves[1] > moves[0] + 0.02f)
+    }
+
+    // user, 19/11: no switch in Settings any more; the handle held and taken past the middle goes to that edge
+    private var side: Boolean? = null
+    private fun showSide(right: Boolean) = compose.setContent {
+        StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { _, r -> side = r }, Modifier.fillMaxSize(), right = right) }
+    }
+    private fun holdAndDrag(dx: Float) = compose.onNodeWithTag("stage_drawer_handle").performTouchInput {
+        down(center); advanceEventTime(700)
+        repeat(10) { moveBy(Offset(dx / 10f, 0f)) }
+        up()
+    }
+
+    @Test fun `held and taken past the middle, the handle goes to the right edge`() {
+        showSide(right = false)
+        holdAndDrag(compose.onRoot().fetchSemanticsNode().boundsInRoot.width * 0.8f)
+        compose.waitForIdle()
+        assertEquals(true, side)
+        assertEquals("moving it is not opening the menu", 0, opened)
+    }
+
+    @Test fun `on the right edge, held and taken past the middle, it goes back to the left`() {
+        showSide(right = true)
+        holdAndDrag(-compose.onRoot().fetchSemanticsNode().boundsInRoot.width * 0.8f)
+        compose.waitForIdle()
+        assertEquals(false, side)
+        assertEquals(0, opened)
+    }
+
+    @Test fun `held and moved a little sideways, the handle stays on its edge`() {
+        showSide(right = false)
+        holdAndDrag(compose.onRoot().fetchSemanticsNode().boundsInRoot.width * 0.3f)
+        compose.waitForIdle()
+        assertEquals(false, side)
+    }
+
+    @Test fun `while held past the middle the handle already shows on the other edge`() {
+        showSide(right = false)
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithTag("stage_drawer_handle").performTouchInput { down(center); advanceEventTime(700); repeat(10) { moveBy(Offset(root.width * 0.08f, 0f)) } }
+        compose.waitForIdle()
+        val b = compose.onNodeWithTag("stage_drawer_handle").fetchSemanticsNode().boundsInRoot
+        assertTrue("at the right edge while held: $b", b.right >= root.right - 1f)
+        compose.onNodeWithTag("stage_drawer_handle").performTouchInput { up() }
     }
 }

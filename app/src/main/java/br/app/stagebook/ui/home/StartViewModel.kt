@@ -40,6 +40,10 @@ class StartViewModel @Inject constructor(
     val pinned: StateFlow<Boolean> = repository.library.map { it.look.drawerPinned }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.drawerPinned)
 
+    /** The handle on the right edge: the menu opens from there, and pinned it sits on that side (user, 19/11). */
+    val handleRight: StateFlow<Boolean> = repository.library.map { it.look.drawerHandleRight }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.drawerHandleRight)
+
     /** The pedal buttons the stage knows: with the drawer open, a press of one of them is taken (see [br.app.stagebook.domain.pedalTakenByDrawer]). */
     val pedalKeys: StateFlow<Map<Int, br.app.stagebook.domain.PedalAction>> = repository.library.map { it.look.pedalKeys }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.pedalKeys)

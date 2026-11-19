@@ -54,6 +54,7 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     val scope = rememberCoroutineScope()
     val start: StartViewModel = hiltViewModel()
     val pinned by start.pinned.collectAsStateWithLifecycle()
+    val handleRight by start.handleRight.collectAsStateWithLifecycle()
     val width = LocalConfiguration.current.screenWidthDp
     val wide = width >= Sizes.pinBreakpoint.value
     // pinned beside the stage only where there is a stage to be beside: the editor and the importer are whole screens (a
@@ -125,19 +126,21 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     }
     CompositionLocalProvider(LocalDrawer provides drawer, br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) {
         if (fixed) {
+            // on the handle's side (user, 19/11: the menu opening on the other side of the handle was odd)
             Row {
-                Surface(Modifier.width(PINNED_WIDTH).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) { library() }
+                if (!handleRight) Surface(Modifier.width(PINNED_WIDTH).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) { library() }
                 Box(Modifier.weight(1f)) { content() }
+                if (handleRight) Surface(Modifier.width(PINNED_WIDTH).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainerLow) { library() }
             }
         } else {
             val sheet = (width * DRAWER_SHARE).dp.coerceAtMost(DRAWER_MAX)
-            ModalNavigationDrawer(
-                drawerState = state,
+            SideMenuDrawer(
+                state, right = handleRight,
                 // opened by the button only; once open, a drag or a tap outside may close it
                 gesturesEnabled = state.isOpen,
                 // composed only while it is open or moving: closed, it holds no list, no collectors and no network callbacks
                 // (the stage is what runs in a show, and the Fire is the ruler)
-                drawerContent = {
+                sheet = {
                     Surface(Modifier.width(sheet).fillMaxHeight().imePadding(), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         if (state.currentValue != DrawerValue.Closed || state.targetValue != DrawerValue.Closed) library()
                     }
@@ -174,3 +177,28 @@ internal fun MenuNotOverScreen(state: androidx.compose.material3.DrawerState, be
             .collect { showing -> if (showing && !now()) state.close() }
     }
 }
+
+/**
+ * The menu sliding in over the screen from the handle's edge: the left, or the right when [right] (user, 19/11: the
+ * menu opening on the other side of the handle was odd). Material's drawer only slides from the start edge, so the
+ * layout is turned over for the drawer alone, and back again for the menu and the screen inside it.
+ */
+@Composable
+internal fun SideMenuDrawer(
+    state: androidx.compose.material3.DrawerState, right: Boolean, gesturesEnabled: Boolean,
+    sheet: @Composable () -> Unit, content: @Composable () -> Unit,
+) {
+    val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
+    val flipped = if (right) direction.flip() else direction
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides flipped) {
+        ModalNavigationDrawer(
+            drawerState = state,
+            gesturesEnabled = gesturesEnabled,
+            drawerContent = { CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides direction) { sheet() } },
+            content = { CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides direction) { content() } },
+        )
+    }
+}
+
+private fun androidx.compose.ui.unit.LayoutDirection.flip() =
+    if (this == androidx.compose.ui.unit.LayoutDirection.Ltr) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr
