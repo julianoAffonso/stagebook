@@ -75,6 +75,8 @@
     <string name="editor_error_title_taken">You already have a song with this name and artist.</string>
 
     <!-- setlists -->
+    <string name="header_back_to">Back to %1$s</string>
+    <string name="sets_all">All setlists</string>
     <string name="sets_title">Setlists</string>
     <string name="list_filtered">%1$d shown</string>
     <string name="filters_clear">Clear filters</string>

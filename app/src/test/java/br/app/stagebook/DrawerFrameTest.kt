@@ -3,34 +3,59 @@ package br.app.stagebook
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import br.app.stagebook.ui.drawer.DrawerFrame
 import br.app.stagebook.ui.home.HomeTab
 import br.app.stagebook.ui.theme.StagebookTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import br.app.stagebook.ui.components.ScreenHeader
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The library drawer's frame (user, 15/11): name and version on top, the list in the middle, the three tabs with icon and name at the bottom. */
+/**
+ * The library drawer's frame: the list on top with no row of its own (user, 19/11: no logo or name), the three tabs at the
+ * bottom with a small icon beside each name; the pin and the waiting requests end the tab's title line.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h800dp-port-xxhdpi", application = android.app.Application::class)
 class DrawerFrameTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun `the three tabs are there with their names and the list sits between`() {
+    @androidx.compose.runtime.Composable
+    private fun list(m: androidx.compose.ui.Modifier) = Box(m) { ScreenHeader("Canções") }
+
+    @Test fun `the three tabs are there with their names, and no logo or app name on top`() {
         compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}) { m -> Box(m) { Text("a lista") } } } }
-        listOf("Músicas", "Setlists", "Ajustes", "Stagebook", "a lista").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
-        // the logo and the name only: no version under it
-        compose.onNode(androidx.compose.ui.test.hasText("0.1", substring = true)).assertDoesNotExist()
+        listOf("Músicas", "Setlists", "Ajustes", "a lista").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+        compose.onAllNodesWithText("Stagebook").assertCountEquals(0)
+    }
+
+    @Test fun `the list starts at the top of the drawer`() {
+        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}) { m -> Box(m) { Text("a lista") } } } }
+        assertEquals(0f, compose.onNodeWithText("a lista").getUnclippedBoundsInRoot().top.value, 0.5f)
+    }
+
+    @Test fun `each tab has its name on one line, beside the icon`() {
+        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, badges = mapOf(HomeTab.SETLISTS to 3)) { m -> Box(m) } } }
+        val name = compose.onNodeWithText("Setlists").getUnclippedBoundsInRoot()
+        val badge = compose.onNodeWithText("3").getUnclippedBoundsInRoot()
+        // the icon (where the badge sits) is on the name's line, not above it as before
+        assertTrue("icon on the name's line", badge.bottom > name.top)
+        // the bar is one line tall: a finger, not icon over name
+        assertTrue("one line tall", name.bottom.value > 800f - 56f)
     }
 
     @Test fun `tapping a tab says which one`() {
@@ -46,39 +71,67 @@ class DrawerFrameTest {
         compose.onNodeWithText("3").assertIsDisplayed()
     }
 
-    @Test fun `the logo and name open About`() {
-        var about = 0
-        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, onAbout = { about++ }) { m -> Box(m) } } }
-        compose.onNode(hasText("Stagebook")).performClick()
-        assertEquals(1, about)
-    }
-
-    @Test fun `the pin shows only when it can be used and says what it does`() {
+    @Test fun `the pin ends the tab's title line and says what it does`() {
         var pins = 0
-        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, onPin = { pins++ }) { m -> Box(m) } } }
+        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, onPin = { pins++ }) { m -> list(m) } } }
+        val title = compose.onNodeWithText("Canções").getUnclippedBoundsInRoot()
+        val pin = compose.onNodeWithContentDescription("Manter o menu aberto").getUnclippedBoundsInRoot()
+        assertTrue("on the title's line", pin.top < title.bottom && pin.bottom > title.top)
         compose.onNodeWithContentDescription("Manter o menu aberto").performClick()
         assertEquals(1, pins)
     }
 
     @Test fun `a pinned drawer offers to let it close`() {
-        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, pinned = true, onPin = {}) { m -> Box(m) } } }
+        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, pinned = true, onPin = {}) { m -> list(m) } } }
         compose.onNodeWithContentDescription("Deixar o menu fechar").assertIsDisplayed()
     }
 
     @Test fun `without a way to pin there is no pin`() {
-        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}) { m -> Box(m) } } }
+        compose.setContent { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}) { m -> list(m) } } }
         compose.onAllNodesWithContentDescription("Manter o menu aberto").assertCountEquals(0)
     }
 
-    @Test fun `with requests waiting the menu header carries their number, and a tap asks to answer`() {
+    @Test fun `a title outside the drawer has no pin`() {
+        compose.setContent { StagebookTheme { ScreenHeader("Ajustes") } }
+        compose.onAllNodesWithContentDescription("Manter o menu aberto").assertCountEquals(0)
+        compose.onAllNodesWithContentDescription("Deixar o menu fechar").assertCountEquals(0)
+    }
+
+    @Test fun `with requests waiting the title line carries their number, and a tap asks to answer`() {
         var attended = 0
         compose.setContent {
             androidx.compose.runtime.CompositionLocalProvider(
                 br.app.stagebook.ui.drawer.LocalWaitingRequests provides 2,
                 br.app.stagebook.ui.drawer.LocalAttendRequest provides { attended++ },
-            ) { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, pinned = true, onPin = {}) { m -> Box(m) { Text("a lista") } } } }
+            ) { StagebookTheme { DrawerFrame(HomeTab.SONGS, {}, pinned = true, onPin = {}) { m -> list(m) } } }
         }
         compose.onNodeWithContentDescription("2 pedidos esperando resposta").performClick()
         assertEquals(1, attended)
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun header(icons: Int) = Box(androidx.compose.ui.Modifier.width(300.dp)) {
+        ScreenHeader("Setlists") {
+            repeat(icons) { i -> androidx.compose.material3.IconButton({}) { androidx.compose.material3.Icon(br.app.stagebook.ui.components.AppIcons.Pin, "ícone $i") } }
+        }
+    }
+
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun `with room the icons sit beside the title`() {
+        compose.setContent { StagebookTheme { header(2) } }
+        val title = compose.onNodeWithText("Setlists").getUnclippedBoundsInRoot()
+        val icon = compose.onNodeWithContentDescription("ícone 0").getUnclippedBoundsInRoot()
+        assertTrue("same line", icon.top < title.bottom && icon.bottom > title.top)
+    }
+
+    // real text widths: without them the title measures a pixel a letter and always fits
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun `without room the icons go up to their own line and the title stays whole under them`() {
+        compose.setContent { StagebookTheme { header(6) } }
+        val title = compose.onNodeWithText("Setlists").getUnclippedBoundsInRoot()
+        val icon = compose.onNodeWithContentDescription("ícone 0").getUnclippedBoundsInRoot()
+        assertTrue("icons above the title", icon.bottom <= title.top + 1.dp)
+        // one line: the title is not broken in two
+        assertTrue("one line", title.bottom - title.top < 56.dp)
     }
 }

@@ -96,10 +96,18 @@ fun HomeScreen(
     // each tab keeps its own state (search, list position) when switching; no fade, which drew both full screens at
     // once on the Fire
     val tabs = rememberSaveableStateHolder()
-    val onTab: (HomeTab) -> Unit = { t -> if (t == HomeTab.SETTINGS) onOpenSettings(null, false) else picked = t }
+    // the Setlists tab tapped while it shows goes back to its list (an open setlist has no arrow; user, 19/11)
+    var setsToList by rememberSaveable { mutableStateOf(0) }
+    val onTab: (HomeTab) -> Unit = { t ->
+        when {
+            t == HomeTab.SETTINGS -> onOpenSettings(null, false)
+            t == tab && t == HomeTab.SETLISTS -> setsToList++
+            else -> picked = t
+        }
+    }
     val openEssential = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.DEVICE, false) }
     alert?.let { look -> EssentialAlert(look, onDismiss = { homeVm.alertSeen(false) }, onNeverAgain = homeVm::alertSeen, onOpen = { homeVm.alertSeen(false); openEssential() }) }
-    br.app.stagebook.ui.drawer.DrawerFrame(tab = tab, onTabChange = onTab, badges = badges, pinned = pinned, onPin = onPin, onAbout = { onOpenSettings(br.app.stagebook.ui.settings.SettingsSection.ABOUT, true) }) { m ->
+    br.app.stagebook.ui.drawer.DrawerFrame(tab = tab, onTabChange = onTab, badges = badges, pinned = pinned, onPin = onPin) { m ->
         // essential mode and what came from the band: icons next to the tab's title, not strips over the screen (user,
         // 01/11); something new from the band shows once as the short message at the bottom, with "View"
         val webAddress by homeVm.webAddress.collectAsStateWithLifecycle()
@@ -136,7 +144,7 @@ fun HomeScreen(
                             received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                         )
                         HomeTab.SETLISTS -> br.app.stagebook.ui.drawer.SetlistsPane(
-                            setlistRequest, onRequestHandled, onPlay = { id, index -> onPlaySetlist(id, index, false) },
+                            setlistRequest, onRequestHandled, onPlay = { id, index -> onPlaySetlist(id, index, false) }, toList = setsToList,
                         ) { open ->
                             SetlistsRoute(
                                 { open(it, false) }, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = { open(it, true) },

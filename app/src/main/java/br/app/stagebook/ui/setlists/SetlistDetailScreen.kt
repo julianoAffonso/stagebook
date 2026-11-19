@@ -94,6 +94,7 @@ fun SetlistDetailRoute(
     onPlayAt: (setId: String, index: Int) -> Unit = { _, _ -> },   // tapping a song: its stage, on that song
     viewModel: SetlistDetailViewModel = hiltViewModel(),
     openShare: Boolean = false,
+    toList: Int = 0,   // the Setlists tab tapped again: back to the list, asking first if an edit is half done
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val qr by viewModel.qr.collectAsStateWithLifecycle()
@@ -154,6 +155,7 @@ fun SetlistDetailRoute(
             if (id != null) { message.show(copied); drawer?.openSetlist(id, false) }
         },
         openShare = openShare,
+        toList = toList,
     )
 }
 
@@ -191,6 +193,7 @@ fun SetlistDetailScreen(
     onDuplicate: () -> Unit = {},   // the menu's "Duplicate": a copy of this setlist to build another show from
     startEditing: Boolean = false,   // opens in editing (tests, and a setlist just created)
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
+    toList: Int = 0,   // a new number = the Setlists tab tapped again: go back to the list (as Back would)
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -265,6 +268,13 @@ fun SetlistDetailScreen(
         gate.leaveGuard = guard
         onDispose { if (gate.leaveGuard === guard) gate.leaveGuard = null }
     }
+    // the tab tapped again goes back to the list as the "‹ All setlists" link does; an edit half done asks Save or Discard first
+    var toListSeen by rememberSaveable { mutableStateOf(toList) }
+    LaunchedEffect(toList) {
+        if (toList == toListSeen) return@LaunchedEffect
+        toListSeen = toList
+        if (editing && changedNow) { afterAsk = { leave() }; asking = true } else leave()
+    }
     fun finishEditing() { editing = false; asking = false; beforeIds = null; beforeBreaks = null; selected = emptyList(); drawerGuard?.asks = null }
     androidx.compose.runtime.DisposableEffect(drawerGuard, editing) {
         // the drawer closing (button, scrim, swipe, Back) while editing asks first; the answer closes it
@@ -307,8 +317,12 @@ fun SetlistDetailScreen(
                         // (user, 15/11); editing shows in the ✕, the floppy and the handles
                         title = uiState.name,
                         subtitle = count,
-                        onBack = if (editing) ({ if (changed) { afterAsk = null; asking = true } else finishEditing() }) else onBack,
+                        // editing: the ✕ that ends it. Otherwise no arrow, which read as "close the menu" (user, 19/11): the
+                        // list it came from as a link above the big name, as the tab's own title sits
+                        onBack = if (editing) ({ if (changed) { afterAsk = null; asking = true } else finishEditing() }) else null,
                         closes = editing,
+                        parent = stringResource(R.string.sets_all),
+                        onParent = onBack,
                         iconActions = true,
                         modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
                     ) {

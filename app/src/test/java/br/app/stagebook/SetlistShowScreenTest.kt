@@ -165,12 +165,12 @@ class SetlistShowScreenTest {
     }
 
     // ---- the top bar and its menu ----
-    @Test fun `looking, the back arrow leaves and there are no handles or remove buttons`() {
+    @Test fun `looking, the All setlists link leaves and there are no handles or remove buttons`() {
         screen(editing = false)
         handles().assertCountEquals(0)
         removeButtons().assertCountEquals(0)
         compose.onNodeWithContentDescription("Editar setlist").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Voltar").performClick()
+        compose.onNodeWithText("‹ Todos os setlists").performClick()
         assertEquals(1, left)
     }
 

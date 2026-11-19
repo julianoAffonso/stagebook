@@ -15,7 +15,7 @@ object Spacing {
 object Sizes {
     val touch = 48.dp           // minimum touch target
     val icon = 24.dp            // a standard icon beside text
-    val drawerLogo = 40.dp      // the app icon on top of the library drawer
+    val tabIcon = 18.dp         // the icon beside each name in the library drawer's tabs
     val fader = 200.dp          // vertical fader height (mixer and EQ on tablets)
     val meter = 8.dp            // width of the live meter bar
     val button = 56.dp          // main buttons (finger on stage, tablet far away)

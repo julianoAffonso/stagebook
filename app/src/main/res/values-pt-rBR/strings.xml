@@ -78,6 +78,8 @@
     <string name="editor_error_title_taken">Você já tem uma música com esse nome e artista.</string>
 
     <!-- setlists -->
+    <string name="header_back_to">Voltar para %1$s</string>
+    <string name="sets_all">Todos os setlists</string>
     <string name="sets_title">Setlists</string>
     <string name="list_filtered">%1$d no filtro</string>
     <string name="filters_clear">Limpar filtros</string>

@@ -9,6 +9,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import br.app.stagebook.navigation.PickSongs
 import br.app.stagebook.navigation.SetlistDetail
 import br.app.stagebook.navigation.SetlistsList
@@ -29,6 +32,7 @@ fun SetlistsPane(
     request: SetlistRequest?,
     onRequestHandled: () -> Unit,
     onPlay: (setId: String, index: Int) -> Unit,
+    toList: Int = 0,   // a new number = the Setlists tab tapped again while it shows: back to the list
     list: @Composable (open: (id: String, share: Boolean) -> Unit) -> Unit,
 ) {
     val inner = rememberNavController()
@@ -40,6 +44,18 @@ fun SetlistsPane(
             onRequestHandled()
         }
     }
+    // an open setlist leaves by its own way (it may ask about an edit); the song picker goes straight back to the list
+    var toListSeen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(toList) }
+    var detailToList by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(toList) {
+        if (toList == toListSeen) return@LaunchedEffect
+        toListSeen = toList
+        val here = inner.currentDestination
+        when {
+            here?.hasRoute<SetlistDetail>() == true -> detailToList++
+            here?.hasRoute<SetlistsList>() == false -> inner.popBackStack<SetlistsList>(inclusive = false)
+        }
+    }
     NavHost(inner, startDestination = SetlistsList, enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
         composable<SetlistsList> { list { id, share -> inner.navigate(SetlistDetail(id, share)) } }
         composable<SetlistDetail> { entry ->
@@ -48,6 +64,7 @@ fun SetlistsPane(
                 onAddSongs = { inner.navigate(PickSongs(it)) },
                 onPlayAt = onPlay,
                 openShare = remember { entry.toRoute<SetlistDetail>().share },
+                toList = detailToList,
             )
         }
         composable<PickSongs> { PickSongsRoute(onDone = { inner.popBackStack() }) }
