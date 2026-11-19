@@ -15,9 +15,9 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 
 ## What it does
 - **Side menu:** the library lives in a menu you open from a small handle on the stage's left edge (move it where you
-  like by holding it; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs: Songs, Setlists
+  like by holding it; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs on one line: Songs, Setlists
   and Settings. A + brings things in (a new song, PDFs, sites, QR, the 3 words); the checklist button turns the
-  selection boxes on. A setlist opens to look at, with a pencil to edit it and a floppy to save; with the stage open from
+  selection boxes on. A setlist opens to look at, with ‹ All setlists to go back, a pencil to edit it and a floppy to save; with the stage open from
   a setlist, the menu opens on it. The app opens on the stage where you left off.
 - **Stage:** full screen, always lit, in pages or scrolling. Turn with a Bluetooth or MIDI pedal (USB and Bluetooth),
   a tap or auto-scroll. In Scroll mode, tap the bottom half or drag up to go on, the top half or drag down to go
@@ -28,7 +28,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   Notes on the chords line (2x, Intro:, a chord's frets like B/F# 224442) stay on it, and the frets move when you
   transpose. Tap a chord, in the lyrics or in the chord list, to see its diagram.
 - **Setlists:** build the show inside the menu and drag to reorder; each setlist has a **date**, and the list is grouped by
-  month (or A to Z). Tap a setlist to open its songs, and a song to play it; the ⋮ on the card plays, shares, edits the
+  month, newest show first. Tap a setlist to open its songs, and a song to play it; the ⋮ on the card plays, shares, edits the
   name and date, or deletes it. Put a **break** between songs: on
   stage it shows a timer, and the show time starts again after it. The setlist open in the menu shows what was played,
   what is now and what is next, with each song's tempo, capo and track. Send it to whoever is next to you by QR, far

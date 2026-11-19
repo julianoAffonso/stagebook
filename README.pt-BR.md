@@ -15,9 +15,9 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 
 ## O que ele faz
 - **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda esquerda do palco (segure e arraste
-  para onde preferir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas: Músicas, Setlists e
+  para onde preferir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas numa linha: Músicas, Setlists e
   Ajustes. O + traz coisas de fora (uma música nova, PDFs, sites, QR, as 3 palavras); o botão de lista com marcas liga as
-  caixas de seleção. O setlist abre para olhar, com um lápis para editar e um disquete para salvar; com o palco aberto por
+  caixas de seleção. O setlist abre para olhar, com ‹ Todos os setlists para voltar, um lápis para editar e um disquete para salvar; com o palco aberto por
   um setlist, o menu abre nele. O app abre no palco onde você parou.
 - **Palco:** tela cheia, acesa, em páginas ou rolando. Vira com pedal Bluetooth ou MIDI (USB e Bluetooth), com toque
   ou com a rolagem automática. No modo Rolar, toque na metade de baixo ou arraste para cima para seguir, na de cima ou
@@ -28,7 +28,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   Anotações na linha dos acordes (2x, Intro:, as casas de um acorde como B/F# 224442) ficam nela, e as casas mudam
   ao transpor. Toque num acorde, na letra ou na lista de acordes, para ver o diagrama dele.
 - **Setlists:** monte o show dentro do menu e arraste para mudar a ordem; cada setlist tem uma **data**, e a lista fica
-  agrupada por mês (ou de A a Z). Tocar num setlist abre as músicas dele, e tocar numa música a toca; o ⋮ do cartão toca,
+  agrupada por mês, do show mais recente. Tocar num setlist abre as músicas dele, e tocar numa música a toca; o ⋮ do cartão toca,
   compartilha, edita o nome e a data ou apaga. Ponha um **intervalo**
   entre as músicas: no palco ele mostra um cronômetro, e o tempo de show recomeça depois dele. O setlist aberto no
   menu mostra o que já tocou, o que está tocando e o que vem, com BPM, capo e faixa de cada música. Mande para quem

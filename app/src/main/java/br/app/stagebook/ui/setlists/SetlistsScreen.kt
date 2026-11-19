@@ -191,8 +191,8 @@ fun SetlistsScreen(
             )
             // a new setlist goes in at the top: if the list was at the top, it shows (the list kept its place by the item
             // that was first, and the new one stayed hidden above it, device test B-09). The same when the first item
-            // changes for any reason (a rename in A to Z), judged by where the list was before the change: the list
-            // already follows the old first item when the effect runs. Changing the order or the search always starts at
+            // changes for any reason (a new show day), judged by where the list was before the change: the list
+            // already follows the old first item when the effect runs. Changing the search always starts at
             // the top (it followed the old first item down the list; audit 03/11)
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             val firstId = uiState.sets.firstOrNull()?.id

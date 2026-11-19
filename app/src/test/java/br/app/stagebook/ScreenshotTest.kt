@@ -236,14 +236,14 @@ class ScreenshotTest {
 
     @Test fun setlistsTablet() = shoot("tablet_2_setlists") {
         DrawerShot(HomeTab.SETLISTS) {
-            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
+            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 5, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
         }
     }
 
     @Test @Config(qualifiers = PHONE)
     fun setlistsPhone() = shoot("celular_2_setlists") {
         DrawerShot(HomeTab.SETLISTS) {
-            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
+            SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 5, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
         }
     }
 
@@ -286,7 +286,7 @@ class ScreenshotTest {
     }
 
     // setlist journey (user, 01/11): list, select, inside, select songs, add songs with the tag filter, add from Songs
-    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"), SetlistRowUi("3", "Casamento", 22, "2026-10-03")))
+    private val sets = SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 5, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"), SetlistRowUi("3", s("Casamento"), 22, "2026-10-03")))
 
     private fun journey(name: String, content: @Composable () -> Unit, then: () -> Unit = {}) {
         compose.setContent { StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
@@ -324,14 +324,14 @@ class ScreenshotTest {
 
     @Test fun setlistJourney2Select() = journey("jornada_setlist_2_selecionar", { DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it) } }) {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
-        compose.onNodeWithText("Casamento").performClick()
+        compose.onNodeWithText(s("Casamento")).performClick()
     }
 
     @Test fun setlistJourney2bShare() = journey("jornada_setlist_2b_compartilhar_varios", {
         DrawerShot(HomeTab.SETLISTS) { SetlistsScreen(sets, {}, {}, {}, {}, it, online = true, band = 2, songsIn = { ids -> ids.size * 20 }) }
     }) {
         compose.onNodeWithText("18/10/2026 20:30").performTouchInput { longClick() }
-        compose.onNodeWithText("Casamento").performClick()
+        compose.onNodeWithText(s("Casamento")).performClick()
         compose.onNodeWithText(s("Show de sábado")).performClick()
         compose.onNodeWithContentDescription(str(R.string.share_title)).performClick()
     }
@@ -357,7 +357,7 @@ class ScreenshotTest {
 
     @Test fun setlistJourney6FromSongs() = journey("jornada_setlist_6_das_musicas", {
         DrawerShot(HomeTab.SONGS) {
-            SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", s("Show de sábado")), br.app.stagebook.ui.songs.SetPick("3", "Casamento"))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
+            SongsScreen(songs.copy(sets = listOf(br.app.stagebook.ui.songs.SetPick("1", s("Show de sábado")), br.app.stagebook.ui.songs.SetPick("3", s("Casamento")))), "", {}, {}, {}, {}, it, initialSelection = listOf("2", "3"))
         }
     }) {
         compose.onNodeWithContentDescription(str(R.string.songs_add_to_set)).performClick()
@@ -831,7 +831,7 @@ class ScreenshotTest {
         val items = listOf(
             br.app.stagebook.data.BandInbox.Item("1", "a", s("Celular da Ana"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 600_000),
             br.app.stagebook.data.BandInbox.Item("2", "b", s("Tablet do Beto"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 60_000),
-            br.app.stagebook.data.BandInbox.Item("3", "c", s("Celular do Caio"), "STAGEBOOK1\n8\nEnsaio", at = now - 300_000, updated = true),
+            br.app.stagebook.data.BandInbox.Item("3", "c", s("Celular do Caio"), s("STAGEBOOK1\n8\nEnsaio"), at = now - 300_000, updated = true),
         )
         compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_2_recebidos_versoes.png")
@@ -844,7 +844,7 @@ class ScreenshotTest {
         val items = listOf(
             br.app.stagebook.data.BandInbox.Item("1", "a", s("Celular da Ana"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 600_000),
             br.app.stagebook.data.BandInbox.Item("2", "b", s("Tablet do Beto"), s("STAGEBOOK1\n12\nShow de sábado"), at = now - 60_000),
-            br.app.stagebook.data.BandInbox.Item("3", "c", s("Celular do Caio"), "STAGEBOOK1\n8\nEnsaio", at = now - 300_000, updated = true),
+            br.app.stagebook.data.BandInbox.Item("3", "c", s("Celular do Caio"), s("STAGEBOOK1\n8\nEnsaio"), at = now - 300_000, updated = true),
         )
         compose.setContent { StagebookTheme { br.app.stagebook.ui.share.InboxDialog(items, {}, {}, {}) } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/celular_2_recebidos_versoes.png")
@@ -1874,7 +1874,7 @@ class ScreenshotTest {
         // the band's count next to the title, with the leaf of essential mode (user, 01/11: icons, not strips)
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             DrawerShot(HomeTab.SETLISTS, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
-                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 5, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
             }
         }
     }
@@ -1882,7 +1882,7 @@ class ScreenshotTest {
     @Test fun inboxBannerTablet() = shoot("jornada_banda_4_aviso_tablet") {
         androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.components.LocalHomeStatus provides br.app.stagebook.ui.components.HomeStatus(true, 3, {}, {}, "http://192.168.0.10:8090")) {
             DrawerShot(HomeTab.SETLISTS, badges = mapOf(HomeTab.SETLISTS to 1, HomeTab.SONGS to 2)) {
-                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 15, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
+                SetlistsScreen(SetlistsUiState(false, listOf(SetlistRowUi("1", s("Show de sábado"), 5, "2026-11-14"), SetlistRowUi("2", "18/10/2026 20:30", 6, "2026-10-18"))), {}, {}, {}, {}, it)
             }
         }
     }
@@ -2207,6 +2207,8 @@ private val SAMPLES_EN = listOf(
     "Com outra linha" to "With another line",
     "Celular do Caio" to "Caio's phone",
     "Show de sábado" to "Saturday show",
+    "Casamento" to "Wedding",
+    "Ensaio" to "Rehearsal",
     "Celular da Ana" to "Ana's phone",
     "Terceira linha" to "Third line",
     "Banda Fictícia" to "Fictional Band",
