@@ -58,6 +58,11 @@ data class Song(
     val pdfCrops: List<PdfCrop> = emptyList(),
     // the page the PDF was left on: the song opens there (0 = the first)
     val pdfPage: Int = 0,
+    // how many show days it was on stage for a minute or more, and the last of them (yyyy-MM-dd, see ShowDay): the
+    // Songs list's most and least played (user, 19/11). This device and the backup only: never the band, the QR or the
+    // exported songs file. Kept with the song, so deleting a setlist or clearing its marks takes nothing away
+    val plays: Int = 0,
+    val lastPlayed: String = "",
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()

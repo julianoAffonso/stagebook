@@ -119,6 +119,8 @@ fun SongsRoute(
         onReceived = onReceived,
         onSync = onSync,
         onTagsChange = viewModel::onTagsChange,
+        onShowChange = viewModel::onShowChange,
+        onOrderChange = viewModel::onOrderChange,
         onSetTags = viewModel::setTags,
         tagsOf = viewModel::tagsOf,
         onDeleteMany = viewModel::deleteMany,
@@ -156,6 +158,8 @@ fun SongsScreen(
     onReceived: () -> Unit = {},
     onSync: (() -> Unit)? = null,
     onTagsChange: (Set<String>) -> Unit = {},
+    onShowChange: (br.app.stagebook.domain.PlayShow) -> Unit = {},
+    onOrderChange: (br.app.stagebook.domain.SongOrder) -> Unit = {},
     onSetTags: (ids: List<String>, add: List<String>, remove: List<String>) -> Unit = { _, _, _ -> },
     // the tags of every chosen song, the ones the search hides included
     tagsOf: (ids: List<String>) -> List<List<String>> = { ids -> uiState.songs.filter { it.id in ids }.map { it.tags } },
@@ -177,7 +181,7 @@ fun SongsScreen(
         if (r.count == 0) res.getString(R.string.songs_already_in_set, r.set)
         else res.getQuantityString(R.plurals.songs_added_to_set, r.count, r.count, r.set)
     val wide = wideLists()
-    val filtering = query.isNotBlank() || uiState.chosenTags.isNotEmpty()
+    val filtering = query.isNotBlank() || uiState.chosenTags.isNotEmpty() || uiState.show != br.app.stagebook.domain.PlayShow.ALL
     // tags of these songs (one from the ⋮, or the selection)
     var tagging by remember { mutableStateOf<List<String>?>(null) }
     // selection to share several: holding a song (or ⋮ → Share) starts it; back or ✕ ends it
@@ -217,12 +221,13 @@ fun SongsScreen(
                     br.app.stagebook.ui.components.songCountText(uiState.total), uiState.songs.size,
                     filtering,
                 ),
-                onClearFilter = if (filtering) { { onQueryChange(""); onTagsChange(emptySet()) } } else null,
+                onClearFilter = if (filtering) { { onQueryChange(""); onTagsChange(emptySet()); onShowChange(br.app.stagebook.domain.PlayShow.ALL) } } else null,
                 modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.m),
             ) { br.app.stagebook.ui.components.HomeStatusIcons() }
-            SearchWithTags(
-                query, onQueryChange, stringResource(R.string.songs_search), uiState.tags, uiState.chosenTags, onTagsChange,
-                Modifier.padding(bottom = Spacing.m),
+            // the tags, what shows by plays and the order, in one field (user, 19/11)
+            br.app.stagebook.ui.components.SearchWithFilter(
+                query, onQueryChange, stringResource(R.string.songs_search), stringResource(R.string.search_hint), Modifier.padding(bottom = Spacing.m),
+                filter = { m -> br.app.stagebook.ui.components.SongFilter(uiState.tags, uiState.chosenTags, onTagsChange, uiState.show, onShowChange, uiState.order, onOrderChange, m) },
             )
             AnimatedVisibility(!online) {
                 Row(Modifier.padding(bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
@@ -256,6 +261,8 @@ fun SongsScreen(
                                 dense = true,
                                 titleLines = 1,
                                 gap = Spacing.s,   // as the setlist's rows, with no number: the order is alphabetical
+                                // by plays, each row says how many and when the last was
+                                note = if (uiState.order == br.app.stagebook.domain.SongOrder.AZ) "" else playsLine(song),
                                 // tapping opens the stage and holding selects; editing is on the stage's pencil, tags and delete
                                 // in the editor (user, 01/11: the row's own pencil was one too many)
                             )
@@ -420,4 +427,20 @@ private fun SongsScreenLightPreview() = StagebookTheme(darkTheme = false) {
 @Composable
 private fun SongsScreenDarkPreview() = StagebookTheme(darkTheme = true) {
     SongsScreen(previewState, "", {}, {}, {}, {})
+}
+
+/** "18 times · last 2 days ago", or "Never played": the row's line when the list is in an order by plays. */
+@Composable
+internal fun playsLine(song: SongRowUi): String {
+    val ago = song.ago
+    if (song.plays == 0 || ago == null) return stringResource(R.string.songs_never_played)
+    val times = pluralStringResource(R.plurals.songs_plays, song.plays, song.plays)
+    val whenText = when (ago.unit) {
+        br.app.stagebook.domain.PlayAgo.Unit.TODAY -> stringResource(R.string.songs_played_today)
+        br.app.stagebook.domain.PlayAgo.Unit.YESTERDAY -> stringResource(R.string.songs_played_yesterday)
+        br.app.stagebook.domain.PlayAgo.Unit.DAYS -> pluralStringResource(R.plurals.songs_played_days, ago.count, ago.count)
+        br.app.stagebook.domain.PlayAgo.Unit.WEEKS -> pluralStringResource(R.plurals.songs_played_weeks, ago.count, ago.count)
+        br.app.stagebook.domain.PlayAgo.Unit.MONTHS -> pluralStringResource(R.plurals.songs_played_months, ago.count, ago.count)
+    }
+    return stringResource(R.string.songs_plays_line, times, whenText)
 }

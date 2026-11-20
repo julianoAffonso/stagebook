@@ -62,6 +62,17 @@ class WebEditorRowFactsTest {
         assertEquals(Triple(0, 0, false), row(list, "Nada").facts())
     }
 
+    // the computer's list sorts by plays too (user, 19/11): the count and the days since the last show day
+    @Test fun `the song list carries how often each song was played and how long ago`() {
+        repo.saveSong(Song(title = "Tocada", author = "D", text = "[G]la", plays = 5, lastPlayed = "2026-11-17"))
+        val counting = WebEditorApi(repo).also { it.today = { "2026-11-19" } }
+        val list = Json.parseToJsonElement(call(counting, "GET", "/api/songs")).jsonArray
+        val played = row(list, "Tocada")
+        assertEquals(5, played.getValue("plays").jsonPrimitive.int)
+        assertEquals(2, played.getValue("playedDays").jsonPrimitive.int)
+        assertEquals(-1, row(list, "Nada")["playedDays"]?.jsonPrimitive?.int ?: -1)
+    }
+
     @Test fun `a tempo out of range is none and a capo is held to the device's range, as the rows read them`() {
         val list = Json.parseToJsonElement(call(api, "GET", "/api/songs")).jsonArray
         assertEquals(Triple(0, 12, false), row(list, "Fora").facts())

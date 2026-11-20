@@ -45,6 +45,8 @@ data class SongRowUi(
     val capo: Int = 0,
     val hasTrack: Boolean = false,
     val hasPdf: Boolean = false,   // the song is a PDF (a sheet of paper in its row)
+    val plays: Int = 0,            // show days it was played (see PlayStats)
+    val ago: br.app.stagebook.domain.PlayAgo? = null,   // how long since the last of them (null: never)
 )
 
 /** A letter of the A to Z index and where its first song is in [SongsUiState.songs]. */
@@ -61,6 +63,8 @@ data class SongsUiState(
     val sets: List<SetPick> = emptyList(),        // setlists to add a selection to
     val query: String = "",                       // the search these rows came from
     val groups: List<SongGroupUi> = emptyList(),  // the A to Z groups of these rows (none: a plain list)
+    val show: br.app.stagebook.domain.PlayShow = br.app.stagebook.domain.PlayShow.ALL,
+    val order: br.app.stagebook.domain.SongOrder = br.app.stagebook.domain.SongOrder.AZ,
 )
 
 @Immutable
@@ -124,6 +128,13 @@ class SongsViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     private val search = repository.songSearch
     private val chosenTags = MutableStateFlow(emptySet<String>())
+    private val show = MutableStateFlow(br.app.stagebook.domain.PlayShow.ALL)
+    private val order = MutableStateFlow(br.app.stagebook.domain.SongOrder.AZ)
+    private data class Filters(val tags: Set<String>, val show: br.app.stagebook.domain.PlayShow, val order: br.app.stagebook.domain.SongOrder)
+    private val filters = combine(chosenTags, show, order, ::Filters)
+
+    /** The show day the "last 30 days" and "2 days ago" count from; a test names another one. */
+    internal var today: () -> String = { br.app.stagebook.domain.ShowDay.of(java.time.Instant.now(), java.time.ZoneId.systemDefault()) }
     // the setlists for "Add to which setlist?": they change without the songs changing (audit 01/11)
     private val setPicks = repository.library.map { l -> l.sets.map { SetPick(it.id, it.name) } }.distinctUntilChanged()
 
@@ -131,24 +142,35 @@ class SongsViewModel @Inject constructor(
     private val facts = RowFactsReader().of(repository.library.map { it.songs })
 
     @OptIn(FlowPreview::class)
-    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search.combine(facts, ::Pair), query.debounce(::typingDelay), chosenTags, setPicks) { loaded, (s, known), q, chosen, sets ->
+    val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search.combine(facts, ::Pair), query.debounce(::typingDelay), filters, setPicks) { loaded, (s, known), q, f, sets ->
         val all = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
-        val kept = br.app.stagebook.domain.Tags.stillUsed(chosen, all)
-        val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map {
+        val kept = br.app.stagebook.domain.Tags.stillUsed(f.tags, all)
+        val day = today()
+        // the plays as they are now: the search keeps the songs it indexed, and a play only changes the count
+        val now = repository.library.value.songs.associateBy { it.id }
+        val found = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map { now[it.id] ?: it }
+            .filter { br.app.stagebook.domain.PlayStats.shows(it, f.show, day) }
+        val rows = br.app.stagebook.domain.PlayStats.sorted(found, f.order) { it }.map {
             val fact = known[it.id]
             // a song the search already has and the facts don't yet: its row comes bare and is redone right after
-            SongRowUi(it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true, it.pdf.isNotEmpty()) to (fact?.letter ?: SongGroups.letter(it.title))
+            SongRowUi(
+                it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true, it.pdf.isNotEmpty(),
+                plays = it.plays, ago = br.app.stagebook.domain.PlayStats.ago(it.lastPlayed, day),
+            ) to (fact?.letter ?: SongGroups.letter(it.title))
         }
-        val grouped = SongGroups.group(rows) { it.second }
+        // the letters only in A to Z: by plays the list has no alphabet to jump through
+        val grouped = if (f.order == br.app.stagebook.domain.SongOrder.AZ) SongGroups.group(rows) { it.second } else null
         SongsUiState(
             loading = !loaded,
-            songs = grouped.rows.map { it.first },
+            songs = grouped?.rows?.map { it.first } ?: rows.map { it.first },
             total = repository.library.value.songs.size,
             tags = all,
             chosenTags = kept,
             sets = sets,
             query = q,
-            groups = grouped.groups.map { SongGroupUi(it.letter, it.first) },
+            groups = grouped?.groups?.map { SongGroupUi(it.letter, it.first) }.orEmpty(),
+            show = f.show,
+            order = f.order,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 
@@ -157,6 +179,8 @@ class SongsViewModel @Inject constructor(
     fun onQueryChange(q: String) { query.value = q }
 
     fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }
+    fun onShowChange(value: br.app.stagebook.domain.PlayShow) { show.value = value }
+    fun onOrderChange(value: br.app.stagebook.domain.SongOrder) { order.value = value }
 
     /** The tags of each chosen song (also the ones the search hides). */
     fun tagsOf(ids: List<String>): List<List<String>> = ids.mapNotNull { repository.song(it)?.tags }

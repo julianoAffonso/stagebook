@@ -49,7 +49,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   With a mixer, per-output routing, EQ and normalization.
 - **Settings by task:** the menu's Settings tab lists seven groups (stage, chords, page turning, import and backup, band and computer, player and
   metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Songs look the same everywhere
-  (title, artist, key, BPM, capo, track). The song editor has two screens, **Data** and **Lyrics and chords**; deleting
+  (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. The song editor has two screens, **Data** and **Lyrics and chords**; deleting
   a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
 - **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager

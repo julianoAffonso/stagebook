@@ -219,7 +219,11 @@ class WebEditorServer @Inject constructor(
                     listOf("0" to 0, "1" to 1, "N" to 2).map { (suffix, quantity) -> name + suffix to localized.resources.getQuantityText(id, quantity).toString() }
                 }
 
-        val WEB_PLURALS = mapOf("songCount" to R.plurals.song_count, "breakCount" to R.plurals.break_count, "pdfFacts" to R.plurals.editor_pdf_facts)
+        val WEB_PLURALS = mapOf(
+            "songCount" to R.plurals.song_count, "breakCount" to R.plurals.break_count, "pdfFacts" to R.plurals.editor_pdf_facts,
+            "plays" to R.plurals.songs_plays, "playedDays" to R.plurals.songs_played_days, "playedWeeks" to R.plurals.songs_played_weeks,
+            "playedMonths" to R.plurals.songs_played_months,
+        )
 
         /** Texts the page uses, by the name it knows them. */
         val WEB_STRINGS = mapOf(
@@ -258,6 +262,17 @@ class WebEditorServer @Inject constructor(
             "lyrics" to R.string.editor_lyrics,
             "tags" to R.string.tags_title,
             "tagsAll" to R.string.tags_all,
+            "songsShow" to R.string.songs_show,
+            "showRecent" to R.string.songs_show_recent,
+            "showNever" to R.string.songs_show_never,
+            "songsOrder" to R.string.songs_order,
+            "orderAz" to R.string.songs_order_az,
+            "orderMost" to R.string.songs_order_most,
+            "orderLeast" to R.string.songs_order_least,
+            "neverPlayed" to R.string.songs_never_played,
+            "playedToday" to R.string.songs_played_today,
+            "playedYesterday" to R.string.songs_played_yesterday,
+            "playsLine" to R.string.songs_plays_line,
             "tagsHint" to R.string.web_tags_hint,
             "midi" to R.string.song_midi_title,
             "midiEnter" to R.string.song_midi_enter,

@@ -1346,4 +1346,37 @@
     <string name="pdf_site_ask">Importar “%1$s” como música?</string>
     <string name="pdf_site_ask_yes">Importar</string>
     <string name="pdf_site_not_pdf">Este arquivo não é um PDF. Aqui só entram PDFs.</string>
+    <string name="songs_filter">Mostrar e ordenar</string>
+    <string name="songs_show">Mostrar</string>
+    <string name="songs_show_recent">Tocadas nos últimos 30 dias</string>
+    <string name="songs_show_recent_short">Últimos 30 dias</string>
+    <string name="songs_show_never">Nunca tocadas</string>
+    <string name="songs_order">Ordem</string>
+    <string name="songs_order_az">A a Z</string>
+    <string name="songs_order_most">Mais tocadas</string>
+    <string name="songs_order_least">Menos tocadas</string>
+    <string name="songs_never_played">Nunca tocada</string>
+    <string name="songs_played_today">hoje</string>
+    <string name="songs_played_yesterday">ontem</string>
+    <string name="songs_plays_line">%1$s · última %2$s</string>
+    <plurals name="songs_plays">
+        <item quantity="one">%d vez</item>
+        <item quantity="many">%d vezes</item>
+        <item quantity="other">%d vezes</item>
+    </plurals>
+    <plurals name="songs_played_days">
+        <item quantity="one">há %d dia</item>
+        <item quantity="many">há %d dias</item>
+        <item quantity="other">há %d dias</item>
+    </plurals>
+    <plurals name="songs_played_weeks">
+        <item quantity="one">há %d semana</item>
+        <item quantity="many">há %d semanas</item>
+        <item quantity="other">há %d semanas</item>
+    </plurals>
+    <plurals name="songs_played_months">
+        <item quantity="one">há %d mês</item>
+        <item quantity="many">há %d meses</item>
+        <item quantity="other">há %d meses</item>
+    </plurals>
 </resources>

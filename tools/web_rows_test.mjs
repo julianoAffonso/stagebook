@@ -78,3 +78,36 @@ test("the server hands the page the app's texts the row needs", () => {
   assert.match(server, /"factCapo" to R\.string\.editor_data_capo/);
   assert.match(server, /"track" to R\.string\.stage_backing_track/);
 });
+
+// ---- most and least played (the <plays-logic> block; domain/PlayStats.kt on the device) ----
+const playsBlock = page.split("// <plays-logic>")[1]?.split("// </plays-logic>")[0];
+assert.ok(playsBlock, "the page has no <plays-logic> block");
+const pluralLine = page.match(/^const plural = .*$/m)[0];
+const P = vm.runInNewContext(`${fill}\n${pluralLine}\n${playsBlock}\n({ playsShown, playsSorted, playsLine })`);
+const playsTexts = (dir) => {
+  const xml = read(`../app/src/main/res/${dir}/strings.xml`);
+  const get = (name) => xml.match(new RegExp(`<string name="${name}">([^<]*)</string>`))[1];
+  const pl = (name, q) => xml.match(new RegExp(`<plurals name="${name}">[\\s\\S]*?<item quantity="${q}">([^<]*)</item>`))[1];
+  const forms = (key, name) => ({ [key + "0"]: pl(name, dir === "values" ? "other" : "one"), [key + "1"]: pl(name, "one"), [key + "N"]: pl(name, "other") });
+  return {
+    neverPlayed: get("songs_never_played"), playedToday: get("songs_played_today"), playedYesterday: get("songs_played_yesterday"), playsLine: get("songs_plays_line"),
+    ...forms("plays", "songs_plays"), ...forms("playedDays", "songs_played_days"), ...forms("playedWeeks", "songs_played_weeks"), ...forms("playedMonths", "songs_played_months"),
+  };
+};
+const pten = playsTexts("values"), ptpt = playsTexts("values-pt-rBR");
+
+test("the play line is the app's, in both languages", () => {
+  assert.equal(P.playsLine({ plays: 18, playedDays: 2 }, ptpt), "18 vezes · última há 2 dias");
+  assert.equal(P.playsLine({ plays: 1, playedDays: 1 }, ptpt), "1 vez · última ontem");
+  assert.equal(P.playsLine({ plays: 3, playedDays: 20 }, pten), "3 times · last 2 weeks ago");
+  assert.equal(P.playsLine({ plays: 0, playedDays: -1 }, ptpt), "Nunca tocada");
+});
+
+test("show the last 30 days or the never played, and sort by plays", () => {
+  const list = [{ title: "A", plays: 2, playedDays: 18 }, { title: "B", plays: 9, playedDays: 9 }, { title: "C", plays: 0, playedDays: -1 }, { title: "D", plays: 2, playedDays: 31 }];
+  assert.deepEqual(list.filter((s) => P.playsShown(s, "recent")).map((s) => s.title), ["A", "B"]);
+  assert.deepEqual(list.filter((s) => P.playsShown(s, "never")).map((s) => s.title), ["C"]);
+  assert.deepEqual([...P.playsSorted(list, "most")].map((s) => s.title), ["B", "A", "D", "C"]);
+  assert.deepEqual([...P.playsSorted(list, "least")].map((s) => s.title), ["C", "D", "A", "B"]);
+  assert.deepEqual([...P.playsSorted(list, "az")].map((s) => s.title), ["A", "B", "C", "D"]);
+});

@@ -24,6 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import br.app.stagebook.ui.theme.Spacing
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import br.app.stagebook.R
@@ -66,6 +70,71 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
+        }
+    }
+}
+
+/**
+ * The Songs list's one control for what shows and in what order (user, 19/11: most and least played in the same field
+ * as the tags): Show (all, played in the last 30 days, never played), the tags, and the Order (A to Z, most played,
+ * least played). Like the tags alone, the menu stays open while choosing; the field sums up what is on.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SongFilter(
+    tags: List<String>, chosen: Set<String>, onTags: (Set<String>) -> Unit,
+    show: br.app.stagebook.domain.PlayShow, onShow: (br.app.stagebook.domain.PlayShow) -> Unit,
+    order: br.app.stagebook.domain.SongOrder, onOrder: (br.app.stagebook.domain.SongOrder) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var open by remember { mutableStateOf(false) }
+    val showNames = mapOf(
+        br.app.stagebook.domain.PlayShow.ALL to stringResource(R.string.tags_all),
+        br.app.stagebook.domain.PlayShow.RECENT to stringResource(R.string.songs_show_recent),
+        br.app.stagebook.domain.PlayShow.NEVER to stringResource(R.string.songs_show_never),
+    )
+    val orderNames = mapOf(
+        br.app.stagebook.domain.SongOrder.AZ to stringResource(R.string.songs_order_az),
+        br.app.stagebook.domain.SongOrder.MOST to stringResource(R.string.songs_order_most),
+        br.app.stagebook.domain.SongOrder.LEAST to stringResource(R.string.songs_order_least),
+    )
+    val picked = tags.filter { it in chosen }
+    val tagPart = when {
+        picked.isEmpty() -> null
+        picked.size == 1 -> picked[0]
+        else -> pluralStringResource(R.plurals.tags_count, picked.size, picked.size)
+    }
+    val showPart = if (show == br.app.stagebook.domain.PlayShow.RECENT) stringResource(R.string.songs_show_recent_short) else if (show == br.app.stagebook.domain.PlayShow.NEVER) showNames.getValue(show) else null
+    val summary = (listOfNotNull(showPart, tagPart).ifEmpty { listOf(showNames.getValue(br.app.stagebook.domain.PlayShow.ALL)) } + orderNames.getValue(order)).joinToString(" · ")
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
+        FilterField(summary, stringResource(R.string.songs_filter), open)
+        FilterMenu(open, { open = false }) {
+            @Composable fun heading(text: String) = Text(
+                text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.xs).semantics { heading() },
+            )
+            // two lines when needed: "Played in the last 30 days" was cut on a phone
+            @Composable fun radio(name: String, on: Boolean, pick: () -> Unit) = DropdownMenuItem(
+                text = { Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                onClick = pick, leadingIcon = { RadioButton(on, onClick = null) }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+            )
+            heading(stringResource(R.string.songs_show))
+            showNames.forEach { (value, name) -> radio(name, show == value) { onShow(value) } }
+            if (tags.isNotEmpty()) {
+                HorizontalDivider()
+                heading(stringResource(R.string.tags_filter))
+                tags.forEach { t ->
+                    DropdownMenuItem(
+                        text = { Text(t, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        onClick = { onTags(if (t in chosen) chosen - t else chosen + t) },
+                        leadingIcon = { Checkbox(t in chosen, onCheckedChange = null) },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
+            }
+            HorizontalDivider()
+            heading(stringResource(R.string.songs_order))
+            orderNames.forEach { (value, name) -> radio(name, order == value) { onOrder(value) } }
         }
     }
 }

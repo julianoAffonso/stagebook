@@ -229,6 +229,23 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("$SHOTS_DIR/$name.png")
     }
 
+    // the list by most played (user, 19/11): each row says how many times and when, and the letters go
+    private val mostPlayed = run {
+        val ago = listOf(
+            br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.DAYS, 2), br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.YESTERDAY, 1),
+            br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.WEEKS, 1), br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.WEEKS, 3),
+            br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.MONTHS, 2),
+        )
+        val rows = manySongs.songs.mapIndexed { i, r -> val n = (i * 7) % 23; if (n == 0) r else r.copy(plays = n, ago = ago[i % ago.size]) }
+            .sortedByDescending { it.plays }
+        manySongs.copy(songs = rows, groups = emptyList(), order = br.app.stagebook.domain.SongOrder.MOST)
+    }
+
+    @Test fun homeSongsMostPlayedTablet() = shoot("tablet_1_musicas_mais_tocadas") { DrawerShot(HomeTab.SONGS) { SongsScreen(mostPlayed, "", {}, {}, {}, {}, it) } }
+
+    @Test @Config(qualifiers = PHONE)
+    fun homeSongsMostPlayedPhone() = shoot("celular_1_musicas_mais_tocadas") { DrawerShot(HomeTab.SONGS) { SongsScreen(mostPlayed, "", {}, {}, {}, {}, it) } }
+
     @Test fun homeSongsIndexTablet() = shootSongsIndex("tablet_1_musicas_indice")
 
     @Test @Config(qualifiers = PHONE)
@@ -2151,7 +2168,8 @@ class ScreenshotTest {
                 StagebookTheme { Surface(color = MaterialTheme.colorScheme.background) { DrawerShot(HomeTab.SONGS) { SongsScreen(tagged, "", {}, {}, {}, {}, it) } } }
             }
         }
-        compose.onNodeWithText(if (fontScale > 0f && compose.onAllNodesWithText("2 tags").fetchSemanticsNodes().isNotEmpty()) "2 tags" else s("Nacional +1")).performClick()
+        // the one field of what shows and the order (user, 19/11), opened by its label
+        compose.onNodeWithText(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>().getString(R.string.songs_filter)).performClick()
         compose.waitForIdle()
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/$name.png")
     }

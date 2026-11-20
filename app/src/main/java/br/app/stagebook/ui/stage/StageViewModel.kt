@@ -257,7 +257,28 @@ class StageViewModel @Inject constructor(
         announce(index)
         sendMidi(index)
         markOnStage(index)
+        countPlay(index)
     }
+
+    /**
+     * The song's own count of plays (the Songs list's most and least played, user 19/11): a minute in a row on stage
+     * counts it, once a show day, from a setlist or alone. The leader's break alone has no song of ours.
+     */
+    private fun countPlay(index: Int) {
+        if (route.leaderBreak) return
+        val songId = route.setId?.let { repository.library.value.setlist(it)?.items?.getOrNull(index) } ?: route.songId ?: return
+        if (songId == countedSong) return   // shown again (the screen turned): its minute goes on
+        countedSong = songId
+        countJob?.cancel()
+        // dies with the stage: a song left before its minute isn't counted
+        countJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(br.app.stagebook.domain.SetlistShow.PLAYED_AFTER_MS)
+            repository.countPlay(songId, show.today())
+        }
+    }
+
+    private var countedSong: String? = null
+    private var countJob: kotlinx.coroutines.Job? = null
 
     /**
      * The setlist screen's marks: this song is the one on stage now, and after a minute in a row on it, played. Only
