@@ -48,4 +48,12 @@ class PlayStatsTest {
         assertNull(PlayStats.ago("", today))
         assertNull(PlayStats.ago("not a date", today))
     }
+
+    // user, 19/11: "Never played" with "Most played" was a choice that meant nothing
+    @Test fun `never played sorts only A to Z, the other shows take every order`() {
+        assertEquals(listOf(SongOrder.AZ), PlayStats.ordersFor(PlayShow.NEVER))
+        assertEquals(SongOrder.entries, PlayStats.ordersFor(PlayShow.RECENT))
+        assertEquals(SongOrder.AZ, PlayStats.orderFor(PlayShow.NEVER, SongOrder.MOST))
+        assertEquals(SongOrder.LEAST, PlayStats.orderFor(PlayShow.RECENT, SongOrder.LEAST))
+    }
 }

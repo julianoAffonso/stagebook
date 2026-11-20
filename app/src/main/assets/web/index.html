@@ -467,9 +467,14 @@ function showCount(list, shown, filtering) {
 
 function drawList() {
   const q = plain($("search").value.trim());
-  const pick = $("tag-filter").value, order = $("song-order").value || "az";
+  const pick = $("tag-filter").value;
   const tag = pick.startsWith("@") ? "" : pick.toLowerCase();
   const show = pick === "@recent" ? "recent" : pick === "@never" ? "never" : "all";
+  // the orders that make sense with what shows: the others are dimmed, and a dimmed one in use goes back to A to Z
+  const fit = ordersFor(show);
+  [...$("song-order").options].forEach((o) => (o.disabled = !fit.includes(o.value)));
+  if (!fit.includes($("song-order").value)) $("song-order").value = "az";
+  const order = $("song-order").value || "az";
   const shown = playsSorted(songs.filter((s) => (!q || s.k.includes(q)) && (!tag || (s.tags || []).some((tg) => tg.toLowerCase() === tag)) && playsShown(s, show)), order);
   $("songs").replaceChildren(...shown.slice(0, MAX_ROWS).map((s) => {
     // the year and the tags stay in the song's form: the device's list doesn't show them either; by plays, how many and when
@@ -954,6 +959,8 @@ const rowLabel = (s, t) => [s.title || "–", s.author || s.artist, rowFacts(s, 
 // The device's most and least played (domain/PlayStats.kt): the server sends each song's count and the days since its
 // last show day (-1: never). Tested without a browser by tools/web_rows_test.mjs.
 const RECENT_DAYS = 30;
+// never played songs all have zero plays: only A to Z sorts them (domain/PlayStats.ordersFor)
+const ordersFor = (show) => (show === "never" ? ["az"] : ["az", "most", "least"]);
 function playsShown(s, show) {
   if (show === "never") return !(s.plays > 0);
   if (show === "recent") return s.plays > 0 && s.playedDays >= 0 && s.playedDays <= RECENT_DAYS;

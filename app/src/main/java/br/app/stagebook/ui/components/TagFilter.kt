@@ -114,12 +114,19 @@ fun SongFilter(
                 modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.xs).semantics { heading() },
             )
             // two lines when needed: "Played in the last 30 days" was cut on a phone
-            @Composable fun radio(name: String, on: Boolean, pick: () -> Unit) = DropdownMenuItem(
+            @Composable fun radio(name: String, on: Boolean, enabled: Boolean = true, pick: () -> Unit) = DropdownMenuItem(
                 text = { Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                onClick = pick, leadingIcon = { RadioButton(on, onClick = null) }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                onClick = pick, enabled = enabled, leadingIcon = { RadioButton(on, onClick = null, enabled = enabled) }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
             )
             heading(stringResource(R.string.songs_show))
-            showNames.forEach { (value, name) -> radio(name, show == value) { onShow(value) } }
+            showNames.forEach { (value, name) ->
+                radio(name, show == value) {
+                    onShow(value)
+                    // never played: the order goes back to A to Z (the others sort songs that all have zero)
+                    val fit = br.app.stagebook.domain.PlayStats.orderFor(value, order)
+                    if (fit != order) onOrder(fit)
+                }
+            }
             if (tags.isNotEmpty()) {
                 HorizontalDivider()
                 heading(stringResource(R.string.tags_filter))
@@ -134,7 +141,8 @@ fun SongFilter(
             }
             HorizontalDivider()
             heading(stringResource(R.string.songs_order))
-            orderNames.forEach { (value, name) -> radio(name, order == value) { onOrder(value) } }
+            val orders = br.app.stagebook.domain.PlayStats.ordersFor(show)
+            orderNames.forEach { (value, name) -> radio(name, order == value, enabled = value in orders) { onOrder(value) } }
         }
     }
 }

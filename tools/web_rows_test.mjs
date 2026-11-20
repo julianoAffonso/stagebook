@@ -83,7 +83,7 @@ test("the server hands the page the app's texts the row needs", () => {
 const playsBlock = page.split("// <plays-logic>")[1]?.split("// </plays-logic>")[0];
 assert.ok(playsBlock, "the page has no <plays-logic> block");
 const pluralLine = page.match(/^const plural = .*$/m)[0];
-const P = vm.runInNewContext(`${fill}\n${pluralLine}\n${playsBlock}\n({ playsShown, playsSorted, playsLine })`);
+const P = vm.runInNewContext(`${fill}\n${pluralLine}\n${playsBlock}\n({ playsShown, playsSorted, playsLine, ordersFor })`);
 const playsTexts = (dir) => {
   const xml = read(`../app/src/main/res/${dir}/strings.xml`);
   const get = (name) => xml.match(new RegExp(`<string name="${name}">([^<]*)</string>`))[1];
@@ -110,4 +110,9 @@ test("show the last 30 days or the never played, and sort by plays", () => {
   assert.deepEqual([...P.playsSorted(list, "most")].map((s) => s.title), ["B", "A", "D", "C"]);
   assert.deepEqual([...P.playsSorted(list, "least")].map((s) => s.title), ["C", "D", "A", "B"]);
   assert.deepEqual([...P.playsSorted(list, "az")].map((s) => s.title), ["A", "B", "C", "D"]);
+});
+
+test("never played sorts only A to Z", () => {
+  assert.deepEqual([...P.ordersFor("never")], ["az"]);
+  assert.deepEqual([...P.ordersFor("recent")], ["az", "most", "least"]);
 });

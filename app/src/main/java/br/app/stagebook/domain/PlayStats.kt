@@ -23,6 +23,15 @@ object PlayStats {
     /** "Played in the last 30 days" counts a song last played up to this many days before today. */
     const val RECENT_DAYS = 30L
 
+    /**
+     * The orders that make sense with [show]: never played songs all have zero plays, so only A to Z sorts them
+     * (user, 19/11: "Never played" with "Most played" was a choice that meant nothing).
+     */
+    fun ordersFor(show: PlayShow): List<SongOrder> = if (show == PlayShow.NEVER) listOf(SongOrder.AZ) else SongOrder.entries
+
+    /** [order] kept when it fits [show], else A to Z. */
+    fun orderFor(show: PlayShow, order: SongOrder): SongOrder = if (order in ordersFor(show)) order else SongOrder.AZ
+
     /** The song played on [day]: one more time, unless it was already counted that day (null: nothing to change). */
     fun record(song: Song, day: String): Song? = if (song.lastPlayed == day) null else song.copy(plays = song.plays + 1, lastPlayed = day)
 

@@ -179,8 +179,13 @@ class SongsViewModel @Inject constructor(
     fun onQueryChange(q: String) { query.value = q }
 
     fun onTagsChange(tags: Set<String>) { chosenTags.value = tags }
-    fun onShowChange(value: br.app.stagebook.domain.PlayShow) { show.value = value }
-    fun onOrderChange(value: br.app.stagebook.domain.SongOrder) { order.value = value }
+    fun onShowChange(value: br.app.stagebook.domain.PlayShow) {
+        show.value = value
+        order.value = br.app.stagebook.domain.PlayStats.orderFor(value, order.value)   // never played: only A to Z
+    }
+    fun onOrderChange(value: br.app.stagebook.domain.SongOrder) {
+        if (value in br.app.stagebook.domain.PlayStats.ordersFor(show.value)) order.value = value
+    }
 
     /** The tags of each chosen song (also the ones the search hides). */
     fun tagsOf(ids: List<String>): List<List<String>> = ids.mapNotNull { repository.song(it)?.tags }

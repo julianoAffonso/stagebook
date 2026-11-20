@@ -1,6 +1,9 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -83,5 +86,26 @@ class SongsPlaysTest {
     @Test fun `with no tags in the library the field is still there, for the plays and the order`() {
         compose.setContent { StagebookTheme { SongsScreen(SongsUiState(loading = false, songs = rows, total = 3), "", {}, {}, {}, {}) } }
         compose.onNodeWithText("Mostrar e ordenar").assertIsDisplayed()
+    }
+
+    // user, 19/11: combinations that meant nothing; never played songs all have zero plays
+    @Test fun `with never played the play orders are dimmed, and choosing it goes back to A to Z`() {
+        val orders = mutableListOf<SongOrder>()
+        var show by androidx.compose.runtime.mutableStateOf(PlayShow.ALL)
+        compose.setContent {
+            StagebookTheme {
+                SongsScreen(
+                    SongsUiState(loading = false, songs = rows, total = 3, show = show, order = SongOrder.MOST), "", {}, {}, {}, {},
+                    onShowChange = { show = it }, onOrderChange = { orders += it },
+                )
+            }
+        }
+        compose.onNodeWithText("Mostrar e ordenar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Nunca tocadas").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(SongOrder.AZ), orders)
+        compose.onNode(androidx.compose.ui.test.hasText("Mais tocadas") and androidx.compose.ui.test.hasClickAction()).assertIsNotEnabled()
+        compose.onNode(androidx.compose.ui.test.hasText("Menos tocadas") and androidx.compose.ui.test.hasClickAction()).assertIsNotEnabled()
     }
 }
