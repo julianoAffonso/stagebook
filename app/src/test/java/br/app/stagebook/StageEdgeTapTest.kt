@@ -7,6 +7,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.ui.stage.STAGE_EDGE_LEFT_TAG
@@ -59,5 +61,14 @@ class StageEdgeTapTest {
         compose.onNodeWithTag(STAGE_EDGE_RIGHT_TAG).performTouchInput { click(Offset(2f, height * 0.1f)) }
         compose.waitForIdle()
         assert(page < after) { "the upper part of the right edge went back: $page" }
+    }
+
+    // the right strip took the outer quarter of the pencil and turned the page (audit 20/11)
+    @Test fun `the outer edge of the pencil is the pencil, not a page turn`() {
+        show()
+        val pencil = compose.onNodeWithContentDescription("Editar a letra nesta página").fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput { click(Offset(pencil.right - 2f, pencil.center.y)) }
+        compose.waitForIdle()
+        assertEquals(0, page)
     }
 }

@@ -257,45 +257,28 @@ class StageViewModel @Inject constructor(
         announce(index)
         sendMidi(index)
         markOnStage(index)
-        countPlay(index)
     }
 
     /**
-     * The song's own count of plays (the Songs list's most and least played, user 19/11): a minute in a row on stage
-     * counts it, once a show day, from a setlist or alone. The leader's break alone has no song of ours.
-     */
-    private fun countPlay(index: Int) {
-        if (route.leaderBreak) return
-        val songId = route.setId?.let { repository.library.value.setlist(it)?.items?.getOrNull(index) } ?: route.songId ?: return
-        if (songId == countedSong) return   // shown again (the screen turned): its minute goes on
-        countedSong = songId
-        countJob?.cancel()
-        // dies with the stage: a song left before its minute isn't counted
-        countJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(br.app.stagebook.domain.SetlistShow.PLAYED_AFTER_MS)
-            repository.countPlay(songId, show.today())
-        }
-    }
-
-    private var countedSong: String? = null
-    private var countJob: kotlinx.coroutines.Job? = null
-
-    /**
-     * The setlist screen's marks: this song is the one on stage now, and after a minute in a row on it, played. Only
-     * for a stage opened from a setlist. A break doesn't change the song on stage, so its time never counts for the
-     * song that comes after it.
+     * The song on stage now and, after a minute in a row on it, played: the setlist screen's marks (a stage opened from a
+     * setlist) and the song's own count of plays (the Songs list's most and least played, user 19/11; once a show day,
+     * from a setlist or alone). One timer for both (audit 20/11: two ran side by side). The minute goes on under the menu,
+     * a Settings page or the editor: the band is still playing the song. A break doesn't change the song on stage, so its
+     * time never counts for the song after it; the leader's break alone has no song of ours to count.
      */
     private fun markOnStage(index: Int) {
-        val setId = route.setId ?: return
-        val songId = repository.library.value.setlist(setId)?.items?.getOrNull(index) ?: return
+        val setId = route.setId
+        val songId = (if (setId != null) repository.library.value.setlist(setId)?.items?.getOrNull(index) else route.songId) ?: return
         if (songId == markedSong) return   // shown again (the screen turned): its minute goes on counting
         markedSong = songId
-        show.onStage(setId, songId)
+        if (setId != null) show.onStage(setId, songId)
+        val counts = !route.leaderBreak
         playedJob?.cancel()
         // dies with the stage: a song left before its minute isn't played
         playedJob = viewModelScope.launch {
             kotlinx.coroutines.delay(br.app.stagebook.domain.SetlistShow.PLAYED_AFTER_MS)
-            show.played(setId, songId)
+            if (setId != null) show.played(setId, songId)
+            if (counts) repository.countPlay(songId, show.today())
         }
     }
 
