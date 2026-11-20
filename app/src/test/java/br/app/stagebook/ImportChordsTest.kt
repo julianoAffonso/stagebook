@@ -11,6 +11,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -210,5 +212,24 @@ class ImportChordsTest {
         val text = importTab(include = false)
         assertFalse(text, text.contains("|---"))
         assertTrue(text, text.contains("[G]Saio cedo pela [D]rua"))
+    }
+
+    // the Release's tests (20/11) ran into this: the question showed before the import let go of its lock, and an answer
+    // given at that instant was dropped, the editor never opened. Answered here in the same instant the question shows
+    @Test fun `an answer given the instant the tablature question shows is not lost`() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        withTimeout(5_000) { repo.loaded.first { it } }
+        repo.updateLook { it.copy(chords = true) }
+        val draft = ImportDraft()
+        val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
+        // resumed inside the very update that shows the question, before anything after it runs (a dispatcher that runs at
+        // once, with no event loop to wait in as the unconfined ones have)
+        val atOnce = java.util.concurrent.Executor { it.run() }.asCoroutineDispatcher()
+        val answering = launch(atOnce) { vm.uiState.first { it.askTab }; vm.answerTab(false) }
+        vm.onExtracted(rawWithTab())
+        withTimeout(5_000) { vm.openEditor.first() }
+        answering.join()
+        assertFalse(draft.take()!!.text.contains("|---"))
     }
 }
