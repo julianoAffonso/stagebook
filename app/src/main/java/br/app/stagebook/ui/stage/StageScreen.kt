@@ -1606,7 +1606,9 @@ fun StageScreen(
                     if (autoDialog) AutoScrollDialog(autoOn, look.autoScroll, { autoOn = !autoOn; autoDialog = false }, onAutoScroll) { autoDialog = false }
                 }
             }
-            if (current < pageCount - 1) {
+            // the last page says what comes next; a song alone has nothing after it, so its dots stay (user, 20/11)
+            val hasNext = breakNext || nextTitle != null || uiState.songs.size > 1 || uiState.followEnd
+            if (current < pageCount - 1 || !hasNext) {
                 PageDots(current, pageCount, fg, Modifier.weight(1f))
             } else {
                 Text(

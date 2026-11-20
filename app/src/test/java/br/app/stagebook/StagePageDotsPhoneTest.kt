@@ -30,4 +30,13 @@ class StagePageDotsPhoneTest {
         assertTrue("sem bolinhas", dots.isNotEmpty())
         dots.forEach { assertTrue("passou da borda: ${it.boundsInRoot}", it.boundsInRoot.right <= width + 0.5f) }
     }
+
+    // a song alone has no "Next" to show on its last page: the dots stay, with the last one lit (user, 20/11)
+    @Test fun `a song alone keeps the page dots on its last page`() {
+        val long = (1..200).joinToString("\n") { "Linha $it da letra" }
+        compose.setContent { StagebookTheme { StageScreen(StageUiState(false, listOf(StageSong("Longa", "", long, false, id = "s1")), look = Look(fontSp = 51f)), 0, 9_999, { _, _ -> }) } }
+        compose.waitForIdle()
+        val dots = (1..99).flatMap { n -> compose.onAllNodesWithText("$n").fetchSemanticsNodes().filter { it.boundsInRoot.top > 1500 } }
+        assertTrue("sem bolinhas na última página", dots.size > 1)
+    }
 }
