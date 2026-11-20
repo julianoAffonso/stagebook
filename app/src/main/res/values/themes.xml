@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- tema só da janela (fundo enquanto o Compose carrega); o visual todo vem do StagebookTheme -->
-    <style name="Theme.Stagebook" parent="android:Theme.Material.NoActionBar">
+    <!-- window-only theme (the background while Compose loads); the whole look comes from StagebookTheme. The base holds
+         what every Android version shares, so the Android 12 file only adds its own items (audit 20/11) -->
+    <style name="Base.Theme.Stagebook" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <style name="Theme.Stagebook" parent="Base.Theme.Stagebook" />
 </resources>

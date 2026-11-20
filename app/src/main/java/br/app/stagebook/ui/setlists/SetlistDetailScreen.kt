@@ -275,12 +275,12 @@ fun SetlistDetailScreen(
         toListSeen = toList
         if (editing && changedNow) { afterAsk = { leave() }; asking = true } else leave()
     }
-    fun finishEditing() { editing = false; asking = false; beforeIds = null; beforeBreaks = null; selected = emptyList(); drawerGuard?.asks = null }
+    fun finishEditing() { editing = false; asking = false; beforeIds = null; beforeBreaks = null; selected = emptyList() }
     androidx.compose.runtime.DisposableEffect(drawerGuard, editing) {
         // the drawer closing (button, scrim, swipe, Back) while editing asks first; the answer closes it
         val asks: () -> Boolean = { if (editing && changedNow) { afterAsk = { drawer?.close?.invoke() }; asking = true; true } else false }
-        if (editing) drawerGuard?.asks = asks
-        onDispose { if (drawerGuard?.asks === asks) drawerGuard?.asks = null }
+        if (editing) drawerGuard?.add(asks)
+        onDispose { drawerGuard?.remove(asks) }
     }
     val listState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->

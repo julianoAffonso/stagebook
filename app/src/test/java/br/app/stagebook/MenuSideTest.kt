@@ -10,6 +10,8 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -17,7 +19,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
+import br.app.stagebook.navigation.OpenWhenAsked
 import br.app.stagebook.navigation.SideMenuDrawer
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import br.app.stagebook.ui.theme.StagebookTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -69,5 +74,68 @@ class MenuSideTest {
         assertEquals("the menu against the right edge: $sheet", root.right, sheet.right, 1f)
         assertTrue("inside the menu, left to right", text("primeiro").left < text("segundo").left)
         assertTrue("the screen behind, left to right", text("tela-a").left < text("tela-b").left)
+    }
+
+    // back from an update installed with the menu open, the menu opens again over the stage (user, 20/11)
+    private fun startAsked(ask: Boolean, fixed: Boolean = false): () -> Int {
+        var done = 0
+        compose.setContent {
+            StagebookTheme {
+                state = rememberDrawerState(DrawerValue.Closed)
+                OpenWhenAsked(state, ask, fixed) { done++ }
+                SideMenuDrawer(state, right = false, gesturesEnabled = true, sheet = {
+                    Row(Modifier.width(300.dp).fillMaxHeight().testTag("sheet")) { Text("menu") }
+                }) { Box(Modifier.fillMaxSize()) { Text("palco") } }
+            }
+        }
+        compose.waitForIdle()
+        return { done }
+    }
+
+    @Test fun `back from an update with the menu open the menu shows again`() {
+        val done = startAsked(ask = true)
+        compose.onNodeWithText("menu").assertIsDisplayed()
+        assertEquals(1, done())
+    }
+
+    @Test fun `a plain start keeps the menu closed`() {
+        val done = startAsked(ask = false)
+        compose.onNodeWithText("menu").assertIsNotDisplayed()
+        assertEquals(0, done())
+    }
+
+    @Test fun `pinned, nothing slides open, and the ask is used up`() {
+        val done = startAsked(ask = true, fixed = true)
+        compose.onNodeWithText("menu").assertIsNotDisplayed()
+        assertEquals(1, done())
+    }
+
+    // another move of the menu cuts the opening short: the ask is used up all the same (audit 20/11: it stayed set)
+    @Test fun `an opening cut short still uses the ask up`() {
+        var done = 0
+        var ask by androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent {
+            StagebookTheme {
+                state = rememberDrawerState(DrawerValue.Closed)
+                scope = rememberCoroutineScope()
+                OpenWhenAsked(state, ask, false) { done++ }
+                SideMenuDrawer(state, right = false, gesturesEnabled = true, sheet = {
+                    Row(Modifier.width(300.dp).fillMaxHeight()) { Text("menu") }
+                }) { Box(Modifier.fillMaxSize()) { Text("palco") } }
+            }
+        }
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+        compose.runOnUiThread { ask = true; androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications() }
+        // half way through the slide, something closes it
+        repeat(20) { if (state.targetValue != DrawerValue.Open) compose.mainClock.advanceTimeByFrame() }
+        compose.mainClock.advanceTimeByFrame()
+        assertEquals("still sliding", DrawerValue.Open, state.targetValue)
+        assertEquals("still sliding", 0, done)
+        compose.runOnIdle { scope.launch { state.snapTo(DrawerValue.Closed) } }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.mainClock.autoAdvance = true
+        compose.waitForIdle()
+        assertEquals(1, done)
     }
 }

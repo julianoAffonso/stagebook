@@ -7,14 +7,16 @@ package br.app.stagebook.domain
 object ResumePoint {
     const val FRESH_MS = 15 * 60_000L
     const val SETTINGS = "settings:"   // + a SettingsSection name
+    const val MENU = "menu"            // the stage of the last song, with the side menu open over it
 
     /**
-     * Where an update started from the update window comes back to: the screen in use ([current], null: unknown), or
-     * [home] (the stage of the last song) when the side menu was open over it. Behind the menu sat whatever was open
-     * before it, and coming back there was wrong (user, 19/11: updated with the menu open over a Settings page, and the
-     * app came back on that page, as if a group had been tapped).
+     * Where an update started from the update window comes back to: the screen in use ([current], null: unknown, then
+     * [home]), or [MENU] when the side menu was open: the stage of the last song with the menu open again. Behind the
+     * menu sat whatever was open before it, and coming back there was wrong (user, 19/11: updated with the menu open over
+     * a Settings page, and the app came back on that page, as if a group had been tapped); coming back with the menu
+     * closed was wrong too (user, 20/11).
      */
-    fun place(current: String?, menuOpen: Boolean, home: String): String = if (menuOpen) home else current ?: home
+    fun place(current: String?, menuOpen: Boolean, home: String): String = if (menuOpen) MENU else current ?: home
 
     fun fresh(savedAt: Long, now: Long): Boolean = savedAt > 0 && now >= savedAt && now - savedAt <= FRESH_MS
 

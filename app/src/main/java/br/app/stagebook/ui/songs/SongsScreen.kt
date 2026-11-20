@@ -82,6 +82,8 @@ fun SongsRoute(
     BandResultMessage(viewModel.bandResult)
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.onQueryChange(query) }
+    // composed each time the menu opens: "today" read again for "played yesterday" and the 30 days
+    LaunchedEffect(Unit) { viewModel.shown() }
     var askKind by rememberSaveable { mutableStateOf(false) }
     if (askKind) br.app.stagebook.ui.importer.ImportKindDialog({ kind -> askKind = false; onImport(query, kind.name) }, { askKind = false })
     // PDF files chosen in the + menu: each becomes a song named after the file (checked first, the reason told when one is left out)
@@ -236,7 +238,7 @@ fun SongsScreen(
                 }
             }
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-            br.app.stagebook.ui.components.ScrollToTopOn("${uiState.query}|${uiState.chosenTags.sorted()}", listState)
+            br.app.stagebook.ui.components.ScrollToTopOn("${uiState.query}|${uiState.chosenTags.sorted()}|${uiState.show}|${uiState.order}", listState)
             Crossfade(targetState = uiState.loading, label = "songs", modifier = Modifier.weight(1f)) { loading ->
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) { CircularProgressIndicator() }

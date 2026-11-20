@@ -73,6 +73,16 @@ class WebEditorRowFactsTest {
         assertEquals(-1, row(list, "Nada")["playedDays"]?.jsonPrimitive?.int ?: -1)
     }
 
+    // the show day is read once per list, so a list built across the day's turn doesn't mix two "todays"
+    @Test fun `the song list reads today once, however many songs it has`() {
+        repo.saveSong(Song(title = "Tocada", author = "D", text = "[G]la", plays = 5, lastPlayed = "2026-11-17"))
+        repo.saveSong(Song(title = "Outra", author = "D", text = "[G]la", plays = 1, lastPlayed = "2026-11-18"))
+        var asked = 0
+        val counting = WebEditorApi(repo).also { it.today = { asked++; "2026-11-19" } }
+        call(counting, "GET", "/api/songs")
+        assertEquals(1, asked)
+    }
+
     @Test fun `a tempo out of range is none and a capo is held to the device's range, as the rows read them`() {
         val list = Json.parseToJsonElement(call(api, "GET", "/api/songs")).jsonArray
         assertEquals(Triple(0, 12, false), row(list, "Fora").facts())

@@ -190,12 +190,16 @@ fun StagebookNavHost(
     }
     // the start, once the library is read: the stage that was open last; then, just updated, back where it was (Settings →
     // About, or the screen the update window was over), over that stage and not over the empty screen
+    // the update was installed with the menu open: it opens again over the stage (user, 20/11)
+    var menuAtStart by remember { androidx.compose.runtime.mutableStateOf(false) }
     LaunchedEffect(libraryRead) {
         if (!libraryRead || opened) return@LaunchedEffect
         opened = true
         start.route()?.let { route -> nav.navigate(route) { popUpTo<Home> { inclusive = true } } }
         val where = resume ?: return@LaunchedEffect
-        if (where.startsWith(br.app.stagebook.domain.ResumePoint.SETTINGS)) {
+        if (where == br.app.stagebook.domain.ResumePoint.MENU) {
+            menuAtStart = true
+        } else if (where.startsWith(br.app.stagebook.domain.ResumePoint.SETTINGS)) {
             val section = runCatching { br.app.stagebook.ui.settings.SettingsSection.fromSaved(where.removePrefix(br.app.stagebook.domain.ResumePoint.SETTINGS)) }.getOrNull()
             if (section != null) openSettings(section)
         } else if (where != br.app.stagebook.data.ResumeAfterUpdate.HOME && !where.contains("Home")) {
@@ -206,7 +210,7 @@ fun StagebookNavHost(
     var drawerShown by remember { androidx.compose.runtime.mutableStateOf(false) }
     CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalOpenImporter provides { nav.navigate(Importer(queued = true)) { launchSingleTop = true } }, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     BandStripLayout(liftIme = !drawerShown, screens = {
-    LibraryDrawerHost(nav, onShown = { drawerShown = it; start.menuShown(it) }) {
+    LibraryDrawerHost(nav, onShown = { drawerShown = it; start.menuShown(it) }, openNow = menuAtStart, onOpenedNow = { menuAtStart = false }) {
     NavHost(
         modifier = Modifier.fillMaxSize(),
         navController = nav,

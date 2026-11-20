@@ -202,22 +202,24 @@ class WebEditorApi(
         }
     }
 
-    private fun list(): String = json.encodeToString(
-        repository.library.value.songs
-            // the app's order (accents and case ignored): "À Francesa" with the A's, not after Z (device test B-22)
-            .sortedBy { br.app.stagebook.domain.TextKey.of(it.title) }
-            .map(::item),
-    )
+    private fun list(): String {
+        val day = today()   // once per list: every row counts from the same show day
+        return json.encodeToString(
+            repository.library.value.songs
+                // the app's order (accents and case ignored): "À Francesa" with the A's, not after Z (device test B-22)
+                .sortedBy { br.app.stagebook.domain.TextKey.of(it.title) }
+                .map { item(it, day) },
+        )
+    }
 
     /** The show day the days since a song was played count from; a test names another one. */
     internal var today: () -> String = { br.app.stagebook.domain.ShowDay.of(java.time.Instant.now(), java.time.ZoneId.systemDefault()) }
 
     /** The song's list row with the same facts the device's rows read once per song (key, BPM, capo, track). */
-    private fun item(s: br.app.stagebook.data.model.Song): SongItem {
+    private fun item(s: br.app.stagebook.data.model.Song, today: String): SongItem {
         val meta = Chords.meta(s.text)
-        val days = if (s.plays == 0 || s.lastPlayed.isEmpty()) -1 else runCatching {
-            java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(s.lastPlayed), java.time.LocalDate.parse(today())).toInt().coerceAtLeast(0)
-        }.getOrDefault(-1)
+        // the device's own count (PlayStats), so the filter and the line say the same here and on the tablet
+        val days = if (s.plays == 0 || s.lastPlayed.isEmpty()) -1 else br.app.stagebook.domain.PlayStats.daysAgo(s.lastPlayed, today)?.toInt() ?: -1
         return SongItem(s.id, s.title, s.author, s.year, meta.key, s.tags, meta.tempo, meta.capo, s.track.isNotEmpty(), s.pdf.isNotEmpty(), s.plays, days)
     }
 
@@ -476,12 +478,15 @@ class WebEditorApi(
     }
 
     // setlists (T37d): the same as the Setlists tab; an empty name becomes the date and time, as in the app
-    private fun setData(set: br.app.stagebook.data.model.Setlist) = SetData(
+    private fun setData(set: br.app.stagebook.data.model.Setlist): SetData {
+        val day = today()
+        return SetData(
         set.id, set.name,
-        set.items.map { id -> repository.song(id)?.let(::item) ?: SongItem(id, "", "", "", "") },
+        set.items.map { id -> repository.song(id)?.let { item(it, day) } ?: SongItem(id, "", "", "", "") },
         SetlistBreaks.normalise(set.breaks, set.items.size),
         set.date,
-    )
+        )
+    }
 
     /** The setlists in the order the tab shows them: newest show first. */
     private fun setRows(): List<SetItem> =

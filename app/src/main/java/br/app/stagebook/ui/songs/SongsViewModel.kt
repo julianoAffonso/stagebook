@@ -130,11 +130,15 @@ class SongsViewModel @Inject constructor(
     private val chosenTags = MutableStateFlow(emptySet<String>())
     private val show = MutableStateFlow(br.app.stagebook.domain.PlayShow.ALL)
     private val order = MutableStateFlow(br.app.stagebook.domain.SongOrder.AZ)
-    private data class Filters(val tags: Set<String>, val show: br.app.stagebook.domain.PlayShow, val order: br.app.stagebook.domain.SongOrder)
-    private val filters = combine(chosenTags, show, order, ::Filters)
-
     /** The show day the "last 30 days" and "2 days ago" count from; a test names another one. */
     internal var today: () -> String = { br.app.stagebook.domain.ShowDay.of(java.time.Instant.now(), java.time.ZoneId.systemDefault()) }
+    // read again each time the list shows (the menu opens): past the 5 am turn "today" and the 30 days move on with no
+    // library change (audit 20/11). Null: read at the next list
+    private val day = MutableStateFlow<String?>(null)
+    fun shown() { day.value = today() }
+
+    private data class Filters(val tags: Set<String>, val show: br.app.stagebook.domain.PlayShow, val order: br.app.stagebook.domain.SongOrder, val day: String?)
+    private val filters = combine(chosenTags, show, order, day, ::Filters)
     // the setlists for "Add to which setlist?": they change without the songs changing (audit 01/11)
     private val setPicks = repository.library.map { l -> l.sets.map { SetPick(it.id, it.name) } }.distinctUntilChanged()
 
@@ -145,7 +149,8 @@ class SongsViewModel @Inject constructor(
     val uiState: StateFlow<SongsUiState> = combine(repository.loaded, search.combine(facts, ::Pair), query.debounce(::typingDelay), filters, setPicks) { loaded, (s, known), q, f, sets ->
         val all = br.app.stagebook.domain.Tags.all(repository.library.value.songs)
         val kept = br.app.stagebook.domain.Tags.stillUsed(f.tags, all)
-        val day = today()
+        val day = f.day ?: today()
+        val byPlays = f.order != br.app.stagebook.domain.SongOrder.AZ
         // the plays as they are now: the search keeps the songs it indexed, and a play only changes the count
         val now = repository.library.value.songs.associateBy { it.id }
         val found = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map { now[it.id] ?: it }
@@ -155,11 +160,12 @@ class SongsViewModel @Inject constructor(
             // a song the search already has and the facts don't yet: its row comes bare and is redone right after
             SongRowUi(
                 it.id, it.title, it.artistLine(), it.tags, fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true, it.pdf.isNotEmpty(),
-                plays = it.plays, ago = br.app.stagebook.domain.PlayStats.ago(it.lastPlayed, day),
+                // "how long ago" shows only in the plays orders: A to Z reads no dates (audit 20/11)
+                plays = it.plays, ago = if (byPlays) br.app.stagebook.domain.PlayStats.ago(it.lastPlayed, day) else null,
             ) to (fact?.letter ?: SongGroups.letter(it.title))
         }
         // the letters only in A to Z: by plays the list has no alphabet to jump through
-        val grouped = if (f.order == br.app.stagebook.domain.SongOrder.AZ) SongGroups.group(rows) { it.second } else null
+        val grouped = if (!byPlays) SongGroups.group(rows) { it.second } else null
         SongsUiState(
             loading = !loaded,
             songs = grouped?.rows?.map { it.first } ?: rows.map { it.first },
@@ -172,7 +178,9 @@ class SongsViewModel @Inject constructor(
             show = f.show,
             order = f.order,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
+        // off the main thread: the whole library is filtered, sorted and dated here at each change, and a play counted a
+        // minute into a song must not cost the stage a frame on a weak tablet (audit 20/11)
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SongsUiState())
 
     /** The automatic profile imports lyrics or chords: the importer has to ask which before it opens a site. */
     fun asksKind(): Boolean = repository.library.value.look.autoProfile

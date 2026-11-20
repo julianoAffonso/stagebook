@@ -86,14 +86,17 @@ internal fun StageDrawerHandle(
         val hitPx = with(density) { hitH.toPx() }
         val boxW = with(density) { Spacing.xl.toPx() }
         val widthPx = constraints.maxWidth.toFloat()
-        // held, it shows on the side the finger is on: let go there and it stays
-        val side = if (moving) dragX > widthPx / 2f else right
-        val left = if (side) (widthPx - boxW).coerceAtLeast(0f) else 0f
-        val shown = if (moving) dragY else y
-        val top = ((shown * heightPx) - hitPx / 2f).coerceIn(0f, (heightPx - hitPx).coerceAtLeast(0f))
+        // held, it shows on the side the finger is on: let go there and it stays. Only the side is read while composing
+        // (it changes the shape); the place follows the finger in layout, with no composition at each move (audit 20/11)
+        val side by remember(widthPx) { androidx.compose.runtime.derivedStateOf { if (moving) dragX > widthPx / 2f else rightNow } }
         Box(
             Modifier
-                .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
+                .offset {
+                    val left = if (side) (widthPx - boxW).coerceAtLeast(0f) else 0f
+                    val shown = if (moving) dragY else yNow
+                    val top = ((shown * heightPx) - hitPx / 2f).coerceIn(0f, (heightPx - hitPx).coerceAtLeast(0f))
+                    IntOffset(left.roundToInt(), top.roundToInt())
+                }
                 .onPlaced { val p = it.positionInParent(); placed[0] = p.x; placed[1] = p.y }
                 .systemGestureExclusion()
                 .size(width = Spacing.xl, height = hitH)

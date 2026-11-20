@@ -217,23 +217,16 @@ private fun ExposedDropdownMenuBoxScope.FilterMenu(open: Boolean, onDismiss: () 
     val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
     val dismiss by androidx.compose.runtime.rememberUpdatedState(onDismiss)
     val openNow by androidx.compose.runtime.rememberUpdatedState(open)
-    val closedAt = remember { longArrayOf(Long.MIN_VALUE / 2) }   // never closed yet: nothing held
-    val wasOpen = remember { booleanArrayOf(false) }
+    val wasOpen = remember { booleanArrayOf(false) }   // never opened yet: nothing held
     androidx.compose.runtime.LaunchedEffect(open) {
-        if (!open && wasOpen[0]) closedAt[0] = android.os.SystemClock.uptimeMillis()
+        // only the dimmed area's touch is held: a song tapped right after still closes the menu (audit 20/11)
+        if (!open && wasOpen[0]) guard?.holdScrim(FILTER_TOUCH_MS)
         wasOpen[0] = open
     }
     androidx.compose.runtime.DisposableEffect(guard) {
-        val before = guard?.asks
-        val asks: () -> Boolean = {
-            when {
-                openNow -> { dismiss(); true }
-                android.os.SystemClock.uptimeMillis() - closedAt[0] < FILTER_TOUCH_MS -> true
-                else -> before?.invoke() == true
-            }
-        }
-        guard?.asks = asks
-        onDispose { if (guard?.asks === asks) guard.asks = before }
+        val asks: () -> Boolean = { if (openNow) { dismiss(); true } else false }
+        guard?.add(asks)
+        onDispose { guard?.remove(asks) }
     }
     ExposedDropdownMenu(
         expanded = open, onDismissRequest = onDismiss, matchAnchorWidth = false,

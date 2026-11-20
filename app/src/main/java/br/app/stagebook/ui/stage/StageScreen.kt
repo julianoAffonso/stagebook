@@ -26,6 +26,8 @@ import android.annotation.SuppressLint
 import android.Manifest
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.clip
 import br.app.stagebook.data.TrackStore
@@ -876,6 +878,9 @@ fun StageScreen(
         true   // the "release" is consumed too (some pedals send only that for media keys)
     }
 
+    // where the header ends and the footer starts (px): the edge strips stay between them, off the arrow, the pencil
+    // and the footer's buttons (audit 20/11: the right strip took the outer quarter of the pencil and turned the page)
+    val edgeBand = remember { androidx.compose.runtime.mutableStateListOf(0, Int.MAX_VALUE) }
     Box(modifier.fillMaxSize()) {
     Column(
         Modifier
@@ -891,7 +896,7 @@ fun StageScreen(
         val wide = wideLists()
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        Row(Modifier.fillMaxWidth().padding(top = Spacing.s, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().onPlaced { edgeBand[0] = (it.positionInParent().y + it.size.height).roundToInt() }.padding(top = Spacing.s, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
         BoxWithConstraints(Modifier.weight(1f)) {
@@ -1560,7 +1565,7 @@ fun StageScreen(
         val nextTitle = uiState.songs.getOrNull(index + 1)?.let { if (it.missing) stringResource(R.string.set_item_missing) else it.title }
             ?: uiState.followNext
         Row(
-            Modifier.fillMaxWidth().padding(top = Spacing.s, bottom = Spacing.m),
+            Modifier.fillMaxWidth().onPlaced { edgeBand[1] = it.positionInParent().y.roundToInt() }.padding(top = Spacing.s, bottom = Spacing.m),
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1628,7 +1633,7 @@ fun StageScreen(
     // at the edge of the device did nothing (user, 16/11). Under the break and the menu handle, which are drawn after
     // (read when touched, never while composing: the targets are a new object at every composition, and reading them here
     // made the stage compose for ever)
-    StageEdgeTaps(vertical = { latest.vertical }, enabled = { !latest.marking }, dismiss = { latest.dismiss() }, onPrevious = { latest.previous() }, onNext = { latest.next() })
+    StageEdgeTaps(band = { edgeBand[0] to edgeBand[1] }, vertical = { latest.vertical }, enabled = { !latest.marking }, dismiss = { latest.dismiss() }, onPrevious = { latest.previous() }, onNext = { latest.next() })
     if (onBreakNow && breakSince != null) {
         val next = uiState.songs[index + 1]
         val nextKey = remember(next.text) { Chords.key(next.text) }
@@ -2648,7 +2653,7 @@ internal fun playButtonIcon(hasTrack: Boolean, away: Boolean, playing: Boolean, 
 /** The two side margins of the stage as touch: the left one goes back and the right one forward (scrolling, the upper and lower halves). */
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.StageEdgeTaps(
-    vertical: () -> Boolean, enabled: () -> Boolean, dismiss: () -> Boolean, onPrevious: () -> Unit, onNext: () -> Unit,
+    band: () -> Pair<Int, Int>, vertical: () -> Boolean, enabled: () -> Boolean, dismiss: () -> Boolean, onPrevious: () -> Unit, onNext: () -> Unit,
 ) {
     val vertical by rememberUpdatedState(vertical)
     val enabled by rememberUpdatedState(enabled)
@@ -2658,8 +2663,14 @@ private fun androidx.compose.foundation.layout.BoxScope.StageEdgeTaps(
     listOf(false, true).forEach { right ->
         Box(
             Modifier
-                .align(if (right) Alignment.CenterEnd else Alignment.CenterStart)
-                .fillMaxHeight()
+                .align(if (right) Alignment.TopEnd else Alignment.TopStart)
+                // from the header's bottom to the footer's top, read when laid out (no composition when they move)
+                .layout { measurable, constraints ->
+                    val (top, bottom) = band()
+                    val h = (bottom.coerceAtMost(constraints.maxHeight) - top).coerceAtLeast(0)
+                    val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                    layout(placeable.width, constraints.maxHeight) { placeable.place(0, top.coerceAtMost(constraints.maxHeight)) }
+                }
                 .width(Spacing.l)
                 .testTag(if (right) STAGE_EDGE_RIGHT_TAG else STAGE_EDGE_LEFT_TAG)
                 .pointerInput(right) {

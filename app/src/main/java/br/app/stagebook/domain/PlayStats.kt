@@ -35,12 +35,17 @@ object PlayStats {
     /** The song played on [day]: one more time, unless it was already counted that day (null: nothing to change). */
     fun record(song: Song, day: String): Song? = if (song.lastPlayed == day) null else song.copy(plays = song.plays + 1, lastPlayed = day)
 
-    private fun daysSince(last: String, today: String): Long? = runCatching { ChronoUnit.DAYS.between(LocalDate.parse(last), LocalDate.parse(today)) }.getOrNull()
+    /**
+     * Whole days from [last] to [today] (null: a date that can't be read). A last play after today (the clock moved back,
+     * or another time zone) counts as today, everywhere: the list, its filter and the editor on the computer agree.
+     */
+    fun daysAgo(last: String, today: String): Long? =
+        runCatching { ChronoUnit.DAYS.between(LocalDate.parse(last), LocalDate.parse(today)).coerceAtLeast(0) }.getOrNull()
 
     fun shows(song: Song, show: PlayShow, today: String): Boolean = when (show) {
         PlayShow.ALL -> true
         PlayShow.NEVER -> song.plays == 0
-        PlayShow.RECENT -> song.plays > 0 && (daysSince(song.lastPlayed, today) ?: Long.MAX_VALUE) in 0..RECENT_DAYS
+        PlayShow.RECENT -> song.plays > 0 && (daysAgo(song.lastPlayed, today) ?: Long.MAX_VALUE) <= RECENT_DAYS
     }
 
     /**
@@ -56,7 +61,7 @@ object PlayStats {
     /** How long ago [last] was, from [today] (null: never played, or a date that can't be read). */
     fun ago(last: String, today: String): PlayAgo? {
         if (last.isEmpty()) return null
-        val days = daysSince(last, today)?.coerceAtLeast(0) ?: return null
+        val days = daysAgo(last, today) ?: return null
         return when {
             days == 0L -> PlayAgo(PlayAgo.Unit.TODAY, 0)
             days == 1L -> PlayAgo(PlayAgo.Unit.YESTERDAY, 1)

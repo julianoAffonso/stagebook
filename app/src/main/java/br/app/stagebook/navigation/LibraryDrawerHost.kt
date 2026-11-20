@@ -47,10 +47,13 @@ private val PINNED_WIDTH = 360.dp
  * show); pinned, on a wide screen, it stays open beside the stage. Choosing something closes it and goes there.
  */
 @Composable
-internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = {}, content: @Composable () -> Unit) {
+internal fun LibraryDrawerHost(
+    nav: NavController, onShown: (Boolean) -> Unit = {}, openNow: Boolean = false, onOpenedNow: () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
     val guard = remember { br.app.stagebook.ui.drawer.DrawerGuard() }
-    // a scrim tap or a swipe that would close it goes through the guard too
-    val state = rememberDrawerState(DrawerValue.Closed, confirmStateChange = { v -> !(v == DrawerValue.Closed && guard.asks?.invoke() == true) })
+    // a scrim tap or a swipe that would close it goes through the guard too (and a touch the filter just spent stays there)
+    val state = rememberDrawerState(DrawerValue.Closed, confirmStateChange = { v -> !(v == DrawerValue.Closed && (guard.scrimHeld() || guard.asks?.invoke() == true)) })
     val scope = rememberCoroutineScope()
     val start: StartViewModel = hiltViewModel()
     val pinned by start.pinned.collectAsStateWithLifecycle()
@@ -72,6 +75,7 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
     }
     // pinned, the sheet is not a sheet any more: it closes by itself (a left-open state held the pedal and Back for good)
     LaunchedEffect(fixed) { if (fixed) state.snapTo(DrawerValue.Closed) }
+    OpenWhenAsked(state, openNow, fixed, onOpenedNow)
     // a whole screen opened from outside the menu (the band strip's "Import the missing ones") must not stay hidden behind it:
     // the importer opened under the open menu, and nothing seemed to happen (device test 16/11)
     MenuNotOverScreen(state, besideStage) { nav.currentDestination.menuBeside() }
@@ -148,6 +152,20 @@ internal fun LibraryDrawerHost(nav: NavController, onShown: (Boolean) -> Unit = 
                 content = content,
             )
         }
+    }
+}
+
+/**
+ * Opens the menu once when [ask] turns true (back from an update installed with the menu open, user 20/11), then says
+ * it is done. Pinned ([fixed]) the menu is already in view beside the stage: nothing to open.
+ */
+@Composable
+internal fun OpenWhenAsked(state: androidx.compose.material3.DrawerState, ask: Boolean, fixed: Boolean, done: () -> Unit) {
+    val onDone by androidx.compose.runtime.rememberUpdatedState(done)
+    LaunchedEffect(ask) {
+        if (!ask) return@LaunchedEffect
+        // used up even when another move of the drawer cuts the opening short (audit 20/11: the flag stayed set)
+        try { if (!fixed) state.open() } finally { onDone() }
     }
 }
 
