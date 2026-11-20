@@ -55,11 +55,11 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
             stringResource(R.string.tags_filter), open,
         )
         FilterMenu(open, { open = false }) {
-            DoneRow { open = false }
             DropdownMenuItem(
                 text = { Text(all, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 onClick = { onChange(emptySet()); open = false },
                 leadingIcon = { Checkbox(chosen.isEmpty(), onCheckedChange = null) },
+                trailingIcon = { CloseFilter { open = false } },
                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
             )
             HorizontalDivider()
@@ -76,15 +76,14 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
 }
 
 /**
- * The top of a menu that stays open while choosing: "Done" closes it (user, 19/11: how to close the filter wasn't clear,
- * and a tap outside it also closed the side menu). At the top, where a long list of tags never scrolls it away.
+ * The × of a menu that stays open while choosing (user, 19/11: how to close the filter wasn't clear; a "Done" on a line
+ * of its own was one line too many). On the menu's first line, where a long list of tags never scrolls it away.
  */
 @Composable
-private fun DoneRow(onDone: () -> Unit) {
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.s), contentAlignment = androidx.compose.ui.Alignment.CenterEnd) {
-        androidx.compose.material3.TextButton(onClick = onDone) { Text(stringResource(R.string.filter_done)) }
+private fun CloseFilter(onClose: () -> Unit) {
+    androidx.compose.material3.IconButton(onClick = onClose) {
+        androidx.compose.material3.Icon(AppIcons.Close, stringResource(R.string.action_close), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    HorizontalDivider()
 }
 
 /**
@@ -131,8 +130,11 @@ fun SongFilter(
                 text = { Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 onClick = pick, enabled = enabled, leadingIcon = { RadioButton(on, onClick = null, enabled = enabled) }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
             )
-            DoneRow { open = false }
-            heading(stringResource(R.string.songs_show))
+            // the first heading carries the ×: closing sits on a line that is already there
+            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { heading(stringResource(R.string.songs_show)) }
+                CloseFilter { open = false }
+            }
             showNames.forEach { (value, name) ->
                 radio(name, show == value) {
                     onShow(value)
@@ -209,12 +211,27 @@ private fun ExposedDropdownMenuBoxScope.FilterField(value: String, label: String
 @Composable
 private fun ExposedDropdownMenuBoxScope.FilterMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     br.app.stagebook.ui.components.FollowBusyWhile(open)
-    // while it is open, a tap outside it closes only it: the side menu under it stays (user, 19/11: both closed at once)
+    // a tap outside it closes only it: the side menu under it stays (user, 19/11: both closed at once). The filter goes as
+    // the finger touches down, and the side menu's dimmed area takes the same touch as it lifts: so the guard stays a
+    // moment after the filter closed, and that touch is spent on the filter alone
     val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
     val dismiss by androidx.compose.runtime.rememberUpdatedState(onDismiss)
-    if (open) androidx.compose.runtime.DisposableEffect(guard) {
+    val openNow by androidx.compose.runtime.rememberUpdatedState(open)
+    val closedAt = remember { longArrayOf(Long.MIN_VALUE / 2) }   // never closed yet: nothing held
+    val wasOpen = remember { booleanArrayOf(false) }
+    androidx.compose.runtime.LaunchedEffect(open) {
+        if (!open && wasOpen[0]) closedAt[0] = android.os.SystemClock.uptimeMillis()
+        wasOpen[0] = open
+    }
+    androidx.compose.runtime.DisposableEffect(guard) {
         val before = guard?.asks
-        val asks: () -> Boolean = { dismiss(); true }
+        val asks: () -> Boolean = {
+            when {
+                openNow -> { dismiss(); true }
+                android.os.SystemClock.uptimeMillis() - closedAt[0] < FILTER_TOUCH_MS -> true
+                else -> before?.invoke() == true
+            }
+        }
         guard?.asks = asks
         onDispose { if (guard?.asks === asks) guard.asks = before }
     }
@@ -282,6 +299,7 @@ fun SearchWithFilter(
 }
 
 private val STACK_BELOW = 360.dp
+internal const val FILTER_TOUCH_MS = 500L   // the touch that closed a filter is spent within this, not passed to the side menu
 private val WIDE_FROM = 560.dp   // from here the long hint and the wide filter fit side by side
 
 @LightPreview

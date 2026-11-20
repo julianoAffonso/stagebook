@@ -1379,5 +1379,4 @@
         <item quantity="many">há %d meses</item>
         <item quantity="other">há %d meses</item>
     </plurals>
-    <string name="filter_done">Pronto</string>
 </resources>

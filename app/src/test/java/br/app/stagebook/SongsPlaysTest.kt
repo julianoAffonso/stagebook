@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.domain.PlayAgo
 import br.app.stagebook.domain.PlayShow
@@ -110,12 +111,12 @@ class SongsPlaysTest {
     }
 
     // user, 19/11: how to close the filter wasn't clear, and a tap outside it closed the side menu too
-    @Test fun `Done closes the filter`() {
+    @Test fun `the close on the filter's first line closes it`() {
         compose.setContent { StagebookTheme { SongsScreen(SongsUiState(loading = false, songs = rows, total = 3), "", {}, {}, {}, {}) } }
         compose.onNodeWithText("Mostrar e ordenar").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Nunca tocadas").assertIsDisplayed()
-        compose.onNodeWithText("Pronto").performClick()
+        compose.onNodeWithContentDescription("Fechar").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Nunca tocadas").assertDoesNotExist()
     }
@@ -133,6 +134,21 @@ class SongsPlaysTest {
         assertEquals(true, compose.runOnIdle { guard.asks?.invoke() })
         compose.waitForIdle()
         compose.onNodeWithText("Nunca tocadas").assertDoesNotExist()
-        assertEquals("with the filter closed nothing holds the side menu", null, guard.asks)
+        // the same touch, lifting on the dimmed stage right after: spent on the filter, the side menu stays (user, 19/11)
+        assertEquals(true, compose.runOnIdle { guard.asks?.invoke() })
+        // a moment later, a tap outside closes the side menu as always
+        org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(800))
+        assertEquals(false, compose.runOnIdle { guard.asks?.invoke() == true })
+    }
+
+    @Test fun `a list just opened, with the filter never touched, holds nothing`() {
+        val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+        compose.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) {
+                StagebookTheme { SongsScreen(SongsUiState(loading = false, songs = rows, total = 3), "", {}, {}, {}, {}) }
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(false, compose.runOnIdle { guard.asks?.invoke() == true })
     }
 }

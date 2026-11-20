@@ -1330,5 +1330,4 @@
         <item quantity="one">%d month ago</item>
         <item quantity="other">%d months ago</item>
     </plurals>
-    <string name="filter_done">Done</string>
 </resources>
