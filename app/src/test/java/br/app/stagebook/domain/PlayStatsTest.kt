@@ -39,6 +39,12 @@ class PlayStatsTest {
         assertEquals("A to Z keeps the title order", listOf("A", "B", "C", "D"), PlayStats.sorted(list, SongOrder.AZ) { it }.map { it.title })
     }
 
+    @Test fun `a last play after today counts as today, in the filter as in the line`() {
+        val ahead = song("F", 2, "2026-11-21")   // the clock moved back after it was played
+        assertTrue(PlayStats.shows(ahead, PlayShow.RECENT, today))
+        assertEquals(0L, PlayStats.daysAgo("2026-11-21", today))
+    }
+
     @Test fun `how long ago, in today, yesterday, days, weeks and months`() {
         assertEquals(PlayAgo(PlayAgo.Unit.TODAY, 0), PlayStats.ago(today, today))
         assertEquals(PlayAgo(PlayAgo.Unit.YESTERDAY, 1), PlayStats.ago("2026-11-18", today))
