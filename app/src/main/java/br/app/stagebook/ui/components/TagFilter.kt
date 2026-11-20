@@ -55,6 +55,7 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
             stringResource(R.string.tags_filter), open,
         )
         FilterMenu(open, { open = false }) {
+            DoneRow { open = false }
             DropdownMenuItem(
                 text = { Text(all, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 onClick = { onChange(emptySet()); open = false },
@@ -72,6 +73,18 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
             }
         }
     }
+}
+
+/**
+ * The top of a menu that stays open while choosing: "Done" closes it (user, 19/11: how to close the filter wasn't clear,
+ * and a tap outside it also closed the side menu). At the top, where a long list of tags never scrolls it away.
+ */
+@Composable
+private fun DoneRow(onDone: () -> Unit) {
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.s), contentAlignment = androidx.compose.ui.Alignment.CenterEnd) {
+        androidx.compose.material3.TextButton(onClick = onDone) { Text(stringResource(R.string.filter_done)) }
+    }
+    HorizontalDivider()
 }
 
 /**
@@ -118,6 +131,7 @@ fun SongFilter(
                 text = { Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 onClick = pick, enabled = enabled, leadingIcon = { RadioButton(on, onClick = null, enabled = enabled) }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
             )
+            DoneRow { open = false }
             heading(stringResource(R.string.songs_show))
             showNames.forEach { (value, name) ->
                 radio(name, show == value) {
@@ -195,6 +209,15 @@ private fun ExposedDropdownMenuBoxScope.FilterField(value: String, label: String
 @Composable
 private fun ExposedDropdownMenuBoxScope.FilterMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     br.app.stagebook.ui.components.FollowBusyWhile(open)
+    // while it is open, a tap outside it closes only it: the side menu under it stays (user, 19/11: both closed at once)
+    val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
+    val dismiss by androidx.compose.runtime.rememberUpdatedState(onDismiss)
+    if (open) androidx.compose.runtime.DisposableEffect(guard) {
+        val before = guard?.asks
+        val asks: () -> Boolean = { dismiss(); true }
+        guard?.asks = asks
+        onDispose { if (guard?.asks === asks) guard.asks = before }
+    }
     ExposedDropdownMenu(
         expanded = open, onDismissRequest = onDismiss, matchAnchorWidth = false,
         modifier = Modifier.widthIn(min = br.app.stagebook.ui.theme.Sizes.tagFilterNarrow, max = br.app.stagebook.ui.theme.Sizes.tagMenu),

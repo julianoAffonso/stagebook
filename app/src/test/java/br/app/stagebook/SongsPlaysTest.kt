@@ -108,4 +108,31 @@ class SongsPlaysTest {
         compose.onNode(androidx.compose.ui.test.hasText("Mais tocadas") and androidx.compose.ui.test.hasClickAction()).assertIsNotEnabled()
         compose.onNode(androidx.compose.ui.test.hasText("Menos tocadas") and androidx.compose.ui.test.hasClickAction()).assertIsNotEnabled()
     }
+
+    // user, 19/11: how to close the filter wasn't clear, and a tap outside it closed the side menu too
+    @Test fun `Done closes the filter`() {
+        compose.setContent { StagebookTheme { SongsScreen(SongsUiState(loading = false, songs = rows, total = 3), "", {}, {}, {}, {}) } }
+        compose.onNodeWithText("Mostrar e ordenar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Nunca tocadas").assertIsDisplayed()
+        compose.onNodeWithText("Pronto").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Nunca tocadas").assertDoesNotExist()
+    }
+
+    @Test fun `with the filter open, closing the side menu closes only the filter, and after it the menu closes as before`() {
+        val guard = br.app.stagebook.ui.drawer.DrawerGuard()
+        compose.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(br.app.stagebook.ui.drawer.LocalDrawerGuard provides guard) {
+                StagebookTheme { SongsScreen(SongsUiState(loading = false, songs = rows, total = 3), "", {}, {}, {}, {}) }
+            }
+        }
+        compose.onNodeWithText("Mostrar e ordenar").performClick()
+        compose.waitForIdle()
+        // what the side menu asks before closing (a tap on the dimmed stage, a swipe): kept open, the filter closes
+        assertEquals(true, compose.runOnIdle { guard.asks?.invoke() })
+        compose.waitForIdle()
+        compose.onNodeWithText("Nunca tocadas").assertDoesNotExist()
+        assertEquals("with the filter closed nothing holds the side menu", null, guard.asks)
+    }
 }
