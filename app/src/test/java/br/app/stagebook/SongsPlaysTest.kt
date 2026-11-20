@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import br.app.stagebook.domain.PlayAgo
 import br.app.stagebook.domain.PlayShow
 import br.app.stagebook.domain.SongOrder
@@ -135,10 +136,12 @@ class SongsPlaysTest {
         compose.waitForIdle()
         compose.onNodeWithText("Nunca tocadas").assertDoesNotExist()
         // the same touch, lifting on the dimmed stage right after: spent on the filter, the side menu stays (user, 19/11)
-        assertEquals(true, compose.runOnIdle { guard.asks?.invoke() })
+        assertEquals(true, compose.runOnIdle { guard.scrimHeld() })
+        // but a song tapped right after still closes the menu as it opens the stage (audit 20/11: the menu stayed open)
+        assertEquals(false, compose.runOnIdle { guard.asks?.invoke() == true })
         // a moment later, a tap outside closes the side menu as always
         org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(800))
-        assertEquals(false, compose.runOnIdle { guard.asks?.invoke() == true })
+        assertEquals(false, compose.runOnIdle { guard.scrimHeld() })
     }
 
     @Test fun `a list just opened, with the filter never touched, holds nothing`() {
@@ -150,5 +153,18 @@ class SongsPlaysTest {
         }
         compose.waitForIdle()
         assertEquals(false, compose.runOnIdle { guard.asks?.invoke() == true })
+        assertEquals(false, compose.runOnIdle { guard.scrimHeld() })
+    }
+
+    // the list went on following the song at its top, now somewhere in the middle (audit 20/11)
+    @Test fun `changing the order starts the list at the top`() {
+        val many = (1..60).map { SongRowUi("s$it", "Música $it", "", emptyList()) }
+        var state by androidx.compose.runtime.mutableStateOf(SongsUiState(loading = false, songs = many, total = 60))
+        compose.setContent { StagebookTheme { SongsScreen(state, "", {}, {}, {}, {}) } }
+        compose.onNode(androidx.compose.ui.test.hasScrollToIndexAction()).performScrollToIndex(40)
+        compose.waitForIdle()
+        state = state.copy(songs = many.reversed(), order = br.app.stagebook.domain.SongOrder.MOST)
+        compose.waitForIdle()
+        compose.onNodeWithText("Música 60").assertIsDisplayed()
     }
 }

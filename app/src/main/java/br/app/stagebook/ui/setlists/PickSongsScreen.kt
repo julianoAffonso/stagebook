@@ -59,16 +59,19 @@ fun PickSongsRoute(onDone: () -> Unit, viewModel: PickSongsViewModel = hiltViewM
     val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
     val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
     val pending by androidx.compose.runtime.rememberUpdatedState(uiState.selectedCount > 0)
+    // answered: lets the close that follows through at once (the count drops only at the next composition)
+    val answered = androidx.compose.runtime.remember { booleanArrayOf(false) }
+    LaunchedEffect(uiState.selectedCount) { if (uiState.selectedCount > 0) answered[0] = false }
     androidx.compose.runtime.DisposableEffect(guard) {
-        val asks: () -> Boolean = { if (pending) { asking = true; true } else false }
-        guard?.asks = asks
-        onDispose { if (guard?.asks === asks) guard.asks = null }
+        val asks: () -> Boolean = { if (pending && !answered[0]) { asking = true; true } else false }
+        guard?.add(asks)
+        onDispose { guard?.remove(asks) }
     }
     if (asking) QuestionDialog(
         stringResource(R.string.pick_title),
         stringResource(R.string.pick_ask_add, uiState.selectedCount, uiState.setName),
-        stringResource(R.string.pick_add_yes), { asking = false; viewModel.confirmPending(); guard?.asks = null; drawer?.close?.invoke() },
-        stringResource(R.string.set_discard), { asking = false; viewModel.clearPending(); guard?.asks = null; drawer?.close?.invoke() },
+        stringResource(R.string.pick_add_yes), { asking = false; viewModel.confirmPending(); answered[0] = true; drawer?.close?.invoke() },
+        stringResource(R.string.set_discard), { asking = false; viewModel.clearPending(); answered[0] = true; drawer?.close?.invoke() },
         onOutside = { asking = false },
         cancelLabel = stringResource(R.string.set_keep_editing), onCancel = { asking = false },
     )

@@ -52,8 +52,8 @@ internal fun LibraryDrawerHost(
     content: @Composable () -> Unit,
 ) {
     val guard = remember { br.app.stagebook.ui.drawer.DrawerGuard() }
-    // a scrim tap or a swipe that would close it goes through the guard too
-    val state = rememberDrawerState(DrawerValue.Closed, confirmStateChange = { v -> !(v == DrawerValue.Closed && guard.asks?.invoke() == true) })
+    // a scrim tap or a swipe that would close it goes through the guard too (and a touch the filter just spent stays there)
+    val state = rememberDrawerState(DrawerValue.Closed, confirmStateChange = { v -> !(v == DrawerValue.Closed && (guard.scrimHeld() || guard.asks?.invoke() == true)) })
     val scope = rememberCoroutineScope()
     val start: StartViewModel = hiltViewModel()
     val pinned by start.pinned.collectAsStateWithLifecycle()
@@ -164,8 +164,8 @@ internal fun OpenWhenAsked(state: androidx.compose.material3.DrawerState, ask: B
     val onDone by androidx.compose.runtime.rememberUpdatedState(done)
     LaunchedEffect(ask) {
         if (!ask) return@LaunchedEffect
-        if (!fixed) state.open()
-        onDone()
+        // used up even when another move of the drawer cuts the opening short (audit 20/11: the flag stayed set)
+        try { if (!fixed) state.open() } finally { onDone() }
     }
 }
 

@@ -14,10 +14,22 @@ class DrawerControl(
 val LocalDrawer = staticCompositionLocalOf<DrawerControl?> { null }
 
 /**
- * A screen inside the drawer that must be asked before the drawer closes (a setlist being edited): [asks] returns true
- * when it took the request and will close the drawer itself once answered.
+ * The screens inside the drawer that must be asked before the drawer closes (a setlist being edited, songs being picked,
+ * a filter open): [asks] asks the latest one first and returns true when one took the request (it closes the drawer
+ * itself once answered). Each screen adds and removes only its own question (audit 20/11: one screen setting the single
+ * question to none wiped the one under it). [holdScrim] spends, for a moment, a touch on the dimmed area alone (the
+ * touch that closed a filter lifts there): it holds that touch only, never a close the app asks for.
  */
-class DrawerGuard { var asks: (() -> Boolean)? = null }
+class DrawerGuard {
+    private val askers = mutableListOf<() -> Boolean>()
+    fun add(ask: () -> Boolean) { askers += ask }
+    fun remove(ask: () -> Boolean) { askers.removeAll { it === ask } }
+    val asks: (() -> Boolean)? get() = if (askers.isEmpty()) null else ({ askers.asReversed().toList().any { it() } })
+
+    private var scrimHeldUntil = Long.MIN_VALUE
+    fun holdScrim(ms: Long) { scrimHeldUntil = android.os.SystemClock.uptimeMillis() + ms }
+    fun scrimHeld(): Boolean = android.os.SystemClock.uptimeMillis() < scrimHeldUntil
+}
 
 /** How many requests wait for an answer (someone to join the band, a computer to edit): the stage's handle says so. */
 val LocalWaitingRequests = androidx.compose.runtime.compositionLocalOf { 0 }

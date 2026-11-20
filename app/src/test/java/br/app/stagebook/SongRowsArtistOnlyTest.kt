@@ -129,6 +129,37 @@ class SongRowsArtistOnlyTest {
         noYear()
     }
 
+    // past the 5 am turn "yesterday" moves on with no library change: read again when the list shows (audit 20/11)
+    @Test fun `the list reads today again each time it shows`() {
+        val played = Song(title = "Tocada", author = "Banda", text = "linha", plays = 3, lastPlayed = "2026-11-18")
+        val (_, agos) = built({ p ->
+            p.songs.today = { "2026-11-19" }
+            p.songs.onOrderChange(br.app.stagebook.domain.SongOrder.MOST)
+            val job = CoroutineScope(Dispatchers.Main).launch { p.songs.uiState.collect {} }
+            val first = p.songs.uiState.first { s -> !s.loading && s.songs.any { it.title == "Tocada" && it.ago != null } }
+            p.songs.today = { "2026-11-21" }
+            p.songs.shown()
+            val later = p.songs.uiState.first { s -> s.songs.first { it.title == "Tocada" }.ago?.unit == br.app.stagebook.domain.PlayAgo.Unit.DAYS }
+            job.cancel()
+            first.songs.first { it.title == "Tocada" }.ago to later.songs.first { it.title == "Tocada" }.ago
+        }, listOf(played))
+        assertEquals(br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.YESTERDAY, 1), agos.first)
+        assertEquals(br.app.stagebook.domain.PlayAgo(br.app.stagebook.domain.PlayAgo.Unit.DAYS, 3), agos.second)
+    }
+
+    // A to Z shows no "how long ago": its dates aren't read (audit 20/11)
+    @Test fun `in A to Z no row reads how long ago`() {
+        val played = Song(title = "Tocada", author = "Banda", text = "linha", plays = 3, lastPlayed = "2026-11-18")
+        val (_, rows) = built({ p ->
+            val job = CoroutineScope(Dispatchers.Main).launch { p.songs.uiState.collect {} }
+            val all = p.songs.uiState.first { s -> !s.loading && s.songs.any { it.title == "Tocada" } }
+            job.cancel()
+            all.songs
+        }, listOf(played))
+        assertEquals(3, rows.first { it.title == "Tocada" }.plays)
+        assertEquals(null, rows.first { it.title == "Tocada" }.ago)
+    }
+
     @Test fun `the song list follows a key written later, and its letters follow the search and the tags`() {
         val many = ('A'..'J').flatMap { l -> (1..3).map { Song(title = "$l canção $it", author = "Banda", text = "linha", tags = if (it == 1) listOf("Lenta") else emptyList()) } }
         val (states, _) = built({ p ->
