@@ -156,4 +156,25 @@ class StageDrawerHandleTest {
         assertTrue("at the right edge while held: $b", b.right >= root.right - 1f)
         compose.onNodeWithTag("stage_drawer_handle").performTouchInput { up() }
     }
+
+    // user, 19/11: the handle "didn't obey, then after a while it worked": a drag up or down with no hold first moved
+    // nothing; now it takes the handle along at once
+    @Test fun `a drag up or down with no hold first moves the handle and keeps its side`() {
+        var at: Pair<Float, Boolean>? = null
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.3f, { y, r -> at = y to r }, Modifier.fillMaxSize()) } }
+        compose.onNodeWithTag("stage_drawer_handle").performTouchInput { down(center); repeat(8) { moveBy(Offset(0f, 40f)) }; up() }
+        compose.waitForIdle()
+        assertTrue("moved down from 0.3: $at", (at?.first ?: 0f) > 0.3f)
+        assertEquals(false, at?.second)
+        assertEquals(0, opened)
+    }
+
+    @Test fun `a quick pull sideways away from the edge still opens the menu and moves nothing`() {
+        var at: Pair<Float, Boolean>? = null
+        compose.setContent { StagebookTheme { StageDrawerHandle({ opened++ }, Color.White, Color.Black, 0.5f, { y, r -> at = y to r }, Modifier.fillMaxSize()) } }
+        compose.onNodeWithTag("stage_drawer_handle").performTouchInput { down(center); repeat(8) { moveBy(Offset(30f, 2f)) }; up() }
+        compose.waitForIdle()
+        assertEquals(1, opened)
+        assertEquals(null, at)
+    }
 }

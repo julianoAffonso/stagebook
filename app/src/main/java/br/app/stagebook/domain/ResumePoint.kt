@@ -8,6 +8,14 @@ object ResumePoint {
     const val FRESH_MS = 15 * 60_000L
     const val SETTINGS = "settings:"   // + a SettingsSection name
 
+    /**
+     * Where an update started from the update window comes back to: the screen in use ([current], null: unknown), or
+     * [home] (the stage of the last song) when the side menu was open over it. Behind the menu sat whatever was open
+     * before it, and coming back there was wrong (user, 19/11: updated with the menu open over a Settings page, and the
+     * app came back on that page, as if a group had been tapped).
+     */
+    fun place(current: String?, menuOpen: Boolean, home: String): String = if (menuOpen) home else current ?: home
+
     fun fresh(savedAt: Long, now: Long): Boolean = savedAt > 0 && now >= savedAt && now - savedAt <= FRESH_MS
 
     /** The app was really replaced after the mark: [updatedAt] is when Android last installed this package. */

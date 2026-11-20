@@ -176,6 +176,13 @@ class LibraryRepository @Inject constructor(
     fun updateSong(id: String, change: (Song) -> Song) =
         mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id == id) change(it) else it }) }
 
+    /** The song was played on show day [day]: counted once a day (a second time that day writes nothing). */
+    fun countPlay(id: String, day: String) {
+        val song = song(id) ?: return
+        if (br.app.stagebook.domain.PlayStats.record(song, day) == null) return
+        updateSong(id) { br.app.stagebook.domain.PlayStats.record(it, day) ?: it }
+    }
+
     /** Changes several songs in one save (tags on a selection). */
     fun updateSongs(ids: Collection<String>, change: (Song) -> Song) {
         val set = ids.toSet()

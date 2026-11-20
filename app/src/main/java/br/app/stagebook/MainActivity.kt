@@ -137,7 +137,9 @@ class MainActivity : ComponentActivity() {
                         onInstall = {
                             (updateOffer.offer.value as? UpdateOffer.Ready)?.let {
                                 // the screen it was on comes back after the update (user, 09/11)
-                                val route = br.app.stagebook.data.ResumeAfterUpdate.currentRoute ?: br.app.stagebook.data.ResumeAfterUpdate.HOME
+                                val route = br.app.stagebook.domain.ResumePoint.place(
+                                    br.app.stagebook.data.ResumeAfterUpdate.currentRoute, stageGate.menuOpen.value, br.app.stagebook.data.ResumeAfterUpdate.HOME,
+                                )
                                 // a session started: the window closes so the "installing" message shows (it sat behind it, 09/11)
                                 lifecycleScope.launch { if (installApk(updater, it.apk, route)) updateOffer.dismiss() }
                             }

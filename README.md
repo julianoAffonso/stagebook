@@ -14,8 +14,8 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 **Help, with a picture of every screen:** [docs/help](docs/help/index.html)
 
 ## What it does
-- **Side menu:** the library lives in a menu you open from a small handle on the stage's edge (hold it to move it, also to
-  the other edge, where the menu then opens; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs on one line: Songs, Setlists
+- **Side menu:** the library lives in a menu you open from a small handle on the stage's edge (drag it up or down; hold it to take it
+  to the other edge, where the menu then opens; 87% of a phone's width, or pinned beside the stage on a tablet), with three tabs on one line: Songs, Setlists
   and Settings. A + brings things in (a new song, PDFs, sites, QR, the 3 words); the checklist button turns the
   selection boxes on. A setlist opens to look at, with ‹ All setlists to go back, a pencil to edit it and a floppy to save; with the stage open from
   a setlist, the menu opens on it. The app opens on the stage where you left off.
@@ -49,7 +49,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   With a mixer, per-output routing, EQ and normalization.
 - **Settings by task:** the menu's Settings tab lists seven groups (stage, chords, page turning, import and backup, band and computer, player and
   metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Songs look the same everywhere
-  (title, artist, key, BPM, capo, track). The song editor has two screens, **Data** and **Lyrics and chords**; deleting
+  (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. The song editor has two screens, **Data** and **Lyrics and chords**; deleting
   a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
 - **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager

@@ -32,4 +32,17 @@ class ResumePointTest {
         assertNull(ResumePoint.fill("p.Stage?setId={setId}&songId={songId}", mapOf("setId" to "s1", "songId" to null)) { it })
         assertNull(ResumePoint.fill("p.SetlistDetail/{setId}", emptyMap()) { it })
     }
+
+    // user, 19/11: the update window with the menu open over a Settings page brought the app back on that page
+    @Test fun `with the menu open the update comes back to the stage, not to the screen behind the menu`() {
+        val page = "p.Settings?section=LYRICS&alone=true&fromMenu=true&item="
+        assertEquals("home", ResumePoint.place(page, menuOpen = true, home = "home"))
+        assertEquals("home", ResumePoint.place("p.Stage?songId=x", menuOpen = true, home = "home"))
+    }
+
+    @Test fun `with the menu closed the update comes back to the screen in use`() {
+        val page = "p.Settings?section=LYRICS&alone=true&fromMenu=true&item="
+        assertEquals(page, ResumePoint.place(page, menuOpen = false, home = "home"))
+        assertEquals("home", ResumePoint.place(null, menuOpen = false, home = "home"))
+    }
 }

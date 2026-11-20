@@ -50,6 +50,7 @@ fun SongListItem(
     subtitleLines: Int = 1,   // two where a long summary must not be cut (the settings groups)
     dense: Boolean = false,   // a lower row with less room around the texts, where many must fit (the setlist over the stage)
     titleBadge: (@Composable () -> Unit)? = null,   // a small tag beside the title ("In setlist"); the title gives it room
+    note: String = "",   // a third line, in the accent colour (the Songs list by plays: "18 times · last 2 days ago")
 ) {
     Surface(
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).let { if (onClick == null) it else it.combinedClickable(onClick = onClick, onLongClick = onLongClick) },
@@ -98,6 +99,7 @@ fun SongListItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                if (note.isNotEmpty()) Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             trailing?.invoke()
         }

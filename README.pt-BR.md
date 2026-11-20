@@ -14,8 +14,8 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
 **Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
 
 ## O que ele faz
-- **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda do palco (segure e arraste para onde
-  preferir, até a outra borda, de onde o menu passa a abrir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas numa linha: Músicas, Setlists e
+- **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda do palco (arraste para cima ou para baixo;
+  segure para levá-la à outra borda, de onde o menu passa a abrir; 87% da largura do celular, ou fixo ao lado do palco no tablet), com três abas numa linha: Músicas, Setlists e
   Ajustes. O + traz coisas de fora (uma música nova, PDFs, sites, QR, as 3 palavras); o botão de lista com marcas liga as
   caixas de seleção. O setlist abre para olhar, com ‹ Todos os setlists para voltar, um lápis para editar e um disquete para salvar; com o palco aberto por
   um setlist, o menu abre nele. O app abre no palco onde você parou.
@@ -51,7 +51,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   mixer, roteamento por saída, EQ e normalização.
 - **Ajustes por tarefa:** a aba Ajustes do menu lista sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
   metrônomo, aparelho), cada um em tela cheia como o palco, com uma **busca** que também acha o que está desligado e diz por quê. A música tem a mesma linha
-  em todo lugar (título, artista, tom, BPM, capo, faixa). O editor de música tem duas telas, **Dados** e **Letra e
+  em todo lugar (título, artista, tom, BPM, capo, faixa), e a lista de Músicas mostra e ordena pelas **mais e menos tocadas**. O editor de música tem duas telas, **Dados** e **Letra e
   cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
   outra versão.
 - **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume

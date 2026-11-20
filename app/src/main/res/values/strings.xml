@@ -1301,4 +1301,33 @@
     <string name="pdf_site_ask">Import “%1$s” as a song?</string>
     <string name="pdf_site_ask_yes">Import</string>
     <string name="pdf_site_not_pdf">This file is not a PDF. Only PDFs come in here.</string>
+    <string name="songs_filter">Show and sort</string>
+    <string name="songs_show">Show</string>
+    <string name="songs_show_recent">Played in the last 30 days</string>
+    <string name="songs_show_recent_short">Last 30 days</string>
+    <string name="songs_show_never">Never played</string>
+    <string name="songs_order">Order</string>
+    <string name="songs_order_az">A to Z</string>
+    <string name="songs_order_most">Most played</string>
+    <string name="songs_order_least">Least played</string>
+    <string name="songs_never_played">Never played</string>
+    <string name="songs_played_today">today</string>
+    <string name="songs_played_yesterday">yesterday</string>
+    <string name="songs_plays_line">%1$s · last %2$s</string>
+    <plurals name="songs_plays">
+        <item quantity="one">%d time</item>
+        <item quantity="other">%d times</item>
+    </plurals>
+    <plurals name="songs_played_days">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <plurals name="songs_played_weeks">
+        <item quantity="one">%d week ago</item>
+        <item quantity="other">%d weeks ago</item>
+    </plurals>
+    <plurals name="songs_played_months">
+        <item quantity="one">%d month ago</item>
+        <item quantity="other">%d months ago</item>
+    </plurals>
 </resources>

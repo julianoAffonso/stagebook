@@ -94,6 +94,8 @@
   .srow .ttl { grid-area: ttl; line-height: 1.3; }
   .srow .art { grid-area: art; font-size: 13px; line-height: 1.3; color: var(--muted); min-height: 1.3em; }
   .srow .more { grid-area: more; margin-top: 4px; }
+  /* the list by plays: how many and when, under the artist, in the accent colour (the app's third line) */
+  .srow .plays { grid-column: 1 / -1; font-size: 12px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .srow .more .sub { line-height: 1.3; }
   .srow .ctl { grid-area: ctl; display: flex; }
   .facts { grid-area: facts; justify-self: end; align-self: center; display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; color: var(--muted); }
@@ -136,7 +138,10 @@
       <div class="card side">
         <button id="new" class="outline"></button>
         <input id="search" type="search">
-        <select id="tag-filter" aria-label="Tags" hidden></select>
+        <div class="row" id="list-filters">
+          <select id="tag-filter" aria-label="Tags" class="grow"></select>
+          <select id="song-order" class="grow"></select>
+        </div>
         <div class="row" id="list-filtered" hidden><span id="list-count" class="muted grow"></span><button class="icon" id="list-clear">×</button></div>
         <ul class="list" id="songs"></ul>
         <p id="list-empty" class="muted" hidden></p>
@@ -436,12 +441,22 @@ function allTags() {
   return [...seen.values()].sort((a, b) => plain(a).localeCompare(plain(b)));
 }
 
-// the tag filter, like the app's song list: shows only with tags in the library
+// what shows, like the app's song list: all, by plays (played in the last 30 days, never played) or one tag; and the
+// order beside it (A to Z, most played, least played). A select holds one choice: the plays and the tags share it here
 function drawTagFilter() {
   const f = $("tag-filter"), keep = f.value, tags = allTags();
-  f.replaceChildren(new Option(t.tags + ": " + t.tagsAll, ""), ...tags.map((tg) => new Option(tg, tg)));
-  f.value = tags.some((tg) => tg === keep) ? keep : "";
-  f.hidden = tags.length === 0;
+  const group = (label, opts) => { const g = document.createElement("optgroup"); g.label = label; g.append(...opts); return g; };
+  f.setAttribute("aria-label", t.songsShow);
+  f.replaceChildren(
+    new Option(t.songsShow + ": " + t.tagsAll, ""),
+    group(t.songsShow, [new Option(t.showRecent, "@recent"), new Option(t.showNever, "@never")]),
+    ...(tags.length ? [group(t.tags, tags.map((tg) => new Option(tg, tg)))] : []),
+  );
+  f.value = keep.startsWith("@") || tags.some((tg) => tg === keep) ? keep : "";
+  const o = $("song-order"), order = o.value || "az";
+  o.setAttribute("aria-label", t.songsOrder);
+  o.replaceChildren(new Option(t.songsOrder + ": " + t.orderAz, "az"), new Option(t.orderMost, "most"), new Option(t.orderLeast, "least"));
+  o.value = order;
 }
 
 // how many the filter left, only while there's one
@@ -452,16 +467,24 @@ function showCount(list, shown, filtering) {
 
 function drawList() {
   const q = plain($("search").value.trim());
-  const tag = $("tag-filter").value.toLowerCase();
-  const shown = songs.filter((s) => (!q || s.k.includes(q)) && (!tag || (s.tags || []).some((tg) => tg.toLowerCase() === tag)));
+  const pick = $("tag-filter").value;
+  const tag = pick.startsWith("@") ? "" : pick.toLowerCase();
+  const show = pick === "@recent" ? "recent" : pick === "@never" ? "never" : "all";
+  // the orders that make sense with what shows: the others are dimmed, and a dimmed one in use goes back to A to Z
+  const fit = ordersFor(show);
+  [...$("song-order").options].forEach((o) => (o.disabled = !fit.includes(o.value)));
+  if (!fit.includes($("song-order").value)) $("song-order").value = "az";
+  const order = $("song-order").value || "az";
+  const shown = playsSorted(songs.filter((s) => (!q || s.k.includes(q)) && (!tag || (s.tags || []).some((tg) => tg.toLowerCase() === tag)) && playsShown(s, show)), order);
   $("songs").replaceChildren(...shown.slice(0, MAX_ROWS).map((s) => {
-    // the year and the tags stay in the song's form: the device's list doesn't show them either
-    const el = songRow(s, { onclick: () => open(s.id) });
+    // the year and the tags stay in the song's form: the device's list doesn't show them either; by plays, how many and when
+    const note = order === "az" ? null : Object.assign(document.createElement("div"), { className: "plays", textContent: playsLine(s, t) });
+    const el = songRow(s, { onclick: () => open(s.id), extra: note });
     el.dataset.id = s.id;
     if (current && current.id === s.id) el.classList.add("on");
     return el;
   }));
-  showCount("list", shown.length, q || tag);
+  showCount("list", shown.length, q || pick);
   $("list-empty").hidden = shown.length > 0;
   $("list-empty").textContent = songs.length ? t.notFound : t.noSongs;
 }
@@ -792,7 +815,8 @@ let searchTimer = 0;
 $("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { drawList(); $("songs").scrollTop = 0; }, 150); };
 $("new").onclick = () => { if (leaveOk()) fillForm({ id: "", title: "", author: "", year: "", tempo: "", text: "", track: "", key: "", capo: 0, tags: [] }); };
 $("tag-filter").onchange = () => { drawList(); $("songs").scrollTop = 0; };
-$("list-clear").onclick = () => { $("search").value = ""; $("tag-filter").value = ""; drawList(); $("songs").scrollTop = 0; };
+$("song-order").onchange = () => { drawList(); $("songs").scrollTop = 0; };
+$("list-clear").onclick = () => { $("search").value = ""; $("tag-filter").value = ""; drawList(); $("songs").scrollTop = 0; };   // the order is kept: it is a way to look, not a filter
 $("save").onclick = save;
 $("delete").onclick = removeSong;
 // a PDF song has no chords to move: the key is only written down, a step at a time (C when there was none), and the hidden
@@ -930,6 +954,33 @@ function rowFacts(s, t) {
 // the row's accessible name: title, artist and the facts (the wave is named by the app's own "Backing track")
 const rowLabel = (s, t) => [s.title || "–", s.author || s.artist, rowFacts(s, t).label].filter(Boolean).join(", ");
 // </rows-logic>
+
+// <plays-logic>
+// The device's most and least played (domain/PlayStats.kt): the server sends each song's count and the days since its
+// last show day (-1: never). Tested without a browser by tools/web_rows_test.mjs.
+const RECENT_DAYS = 30;
+// never played songs all have zero plays: only A to Z sorts them (domain/PlayStats.ordersFor)
+const ordersFor = (show) => (show === "never" ? ["az"] : ["az", "most", "least"]);
+function playsShown(s, show) {
+  if (show === "never") return !(s.plays > 0);
+  if (show === "recent") return s.plays > 0 && s.playedDays >= 0 && s.playedDays <= RECENT_DAYS;
+  return true;
+}
+// already in title order: most played first (a tie: played last first), or least (never first; a tie: longest ago first)
+function playsSorted(list, order) {
+  const days = (s) => (s.playedDays >= 0 ? s.playedDays : Infinity);
+  if (order === "most") return [...list].sort((a, b) => (b.plays || 0) - (a.plays || 0) || days(a) - days(b));
+  if (order === "least") return [...list].sort((a, b) => (a.plays || 0) - (b.plays || 0) || days(b) - days(a));
+  return list;
+}
+// "18 times · last 2 days ago", or "Never played": the same steps as the app (today, yesterday, days, weeks, months)
+function playsLine(s, t) {
+  const n = s.plays || 0, d = s.playedDays;
+  if (n === 0 || d < 0) return t.neverPlayed;
+  const ago = d === 0 ? t.playedToday : d === 1 ? t.playedYesterday : d < 14 ? plural(t, "playedDays", d) : d < 60 ? plural(t, "playedWeeks", Math.floor(d / 7)) : plural(t, "playedMonths", Math.floor(d / 30));
+  return fill(t.playsLine, plural(t, "plays", n), ago);
+}
+// </plays-logic>
 
 // the app's audio wave (AppIcons.AudioWave, "graphic_eq"), same path, in the page's colors
 const WAVE_PATH = "M7,18h2V6H7v12zM11,22h2V2h-2v20zM3,14h2v-4H3v4zM15,18h2V6h-2v12zM19,10v4h2v-4h-2z";

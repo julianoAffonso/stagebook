@@ -24,6 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import br.app.stagebook.ui.theme.Spacing
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import br.app.stagebook.R
@@ -55,6 +59,7 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
                 text = { Text(all, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 onClick = { onChange(emptySet()); open = false },
                 leadingIcon = { Checkbox(chosen.isEmpty(), onCheckedChange = null) },
+                trailingIcon = { CloseFilter { open = false } },
                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
             )
             HorizontalDivider()
@@ -66,6 +71,94 @@ fun TagFilter(tags: List<String>, chosen: Set<String>, onChange: (Set<String>) -
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
+        }
+    }
+}
+
+/**
+ * The × of a menu that stays open while choosing (user, 19/11: how to close the filter wasn't clear; a "Done" on a line
+ * of its own was one line too many). On the menu's first line, where a long list of tags never scrolls it away.
+ */
+@Composable
+private fun CloseFilter(onClose: () -> Unit) {
+    androidx.compose.material3.IconButton(onClick = onClose) {
+        androidx.compose.material3.Icon(AppIcons.Close, stringResource(R.string.action_close), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * The Songs list's one control for what shows and in what order (user, 19/11: most and least played in the same field
+ * as the tags): Show (all, played in the last 30 days, never played), the tags, and the Order (A to Z, most played,
+ * least played). Like the tags alone, the menu stays open while choosing; the field sums up what is on.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SongFilter(
+    tags: List<String>, chosen: Set<String>, onTags: (Set<String>) -> Unit,
+    show: br.app.stagebook.domain.PlayShow, onShow: (br.app.stagebook.domain.PlayShow) -> Unit,
+    order: br.app.stagebook.domain.SongOrder, onOrder: (br.app.stagebook.domain.SongOrder) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var open by remember { mutableStateOf(false) }
+    val showNames = mapOf(
+        br.app.stagebook.domain.PlayShow.ALL to stringResource(R.string.tags_all),
+        br.app.stagebook.domain.PlayShow.RECENT to stringResource(R.string.songs_show_recent),
+        br.app.stagebook.domain.PlayShow.NEVER to stringResource(R.string.songs_show_never),
+    )
+    val orderNames = mapOf(
+        br.app.stagebook.domain.SongOrder.AZ to stringResource(R.string.songs_order_az),
+        br.app.stagebook.domain.SongOrder.MOST to stringResource(R.string.songs_order_most),
+        br.app.stagebook.domain.SongOrder.LEAST to stringResource(R.string.songs_order_least),
+    )
+    val picked = tags.filter { it in chosen }
+    val tagPart = when {
+        picked.isEmpty() -> null
+        picked.size == 1 -> picked[0]
+        else -> pluralStringResource(R.plurals.tags_count, picked.size, picked.size)
+    }
+    val showPart = if (show == br.app.stagebook.domain.PlayShow.RECENT) stringResource(R.string.songs_show_recent_short) else if (show == br.app.stagebook.domain.PlayShow.NEVER) showNames.getValue(show) else null
+    val summary = (listOfNotNull(showPart, tagPart).ifEmpty { listOf(showNames.getValue(br.app.stagebook.domain.PlayShow.ALL)) } + orderNames.getValue(order)).joinToString(" · ")
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
+        FilterField(summary, stringResource(R.string.songs_filter), open)
+        FilterMenu(open, { open = false }) {
+            @Composable fun heading(text: String) = Text(
+                text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = Spacing.m, end = Spacing.m, top = Spacing.s, bottom = Spacing.xs).semantics { heading() },
+            )
+            // two lines when needed: "Played in the last 30 days" was cut on a phone
+            @Composable fun radio(name: String, on: Boolean, enabled: Boolean = true, pick: () -> Unit) = DropdownMenuItem(
+                text = { Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                onClick = pick, enabled = enabled, leadingIcon = { RadioButton(on, onClick = null, enabled = enabled) }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+            )
+            // the first heading carries the ×: closing sits on a line that is already there
+            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { heading(stringResource(R.string.songs_show)) }
+                CloseFilter { open = false }
+            }
+            showNames.forEach { (value, name) ->
+                radio(name, show == value) {
+                    onShow(value)
+                    // never played: the order goes back to A to Z (the others sort songs that all have zero)
+                    val fit = br.app.stagebook.domain.PlayStats.orderFor(value, order)
+                    if (fit != order) onOrder(fit)
+                }
+            }
+            if (tags.isNotEmpty()) {
+                HorizontalDivider()
+                heading(stringResource(R.string.tags_filter))
+                tags.forEach { t ->
+                    DropdownMenuItem(
+                        text = { Text(t, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        onClick = { onTags(if (t in chosen) chosen - t else chosen + t) },
+                        leadingIcon = { Checkbox(t in chosen, onCheckedChange = null) },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
+            }
+            HorizontalDivider()
+            heading(stringResource(R.string.songs_order))
+            val orders = br.app.stagebook.domain.PlayStats.ordersFor(show)
+            orderNames.forEach { (value, name) -> radio(name, order == value, enabled = value in orders) { onOrder(value) } }
         }
     }
 }
@@ -118,6 +211,30 @@ private fun ExposedDropdownMenuBoxScope.FilterField(value: String, label: String
 @Composable
 private fun ExposedDropdownMenuBoxScope.FilterMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     br.app.stagebook.ui.components.FollowBusyWhile(open)
+    // a tap outside it closes only it: the side menu under it stays (user, 19/11: both closed at once). The filter goes as
+    // the finger touches down, and the side menu's dimmed area takes the same touch as it lifts: so the guard stays a
+    // moment after the filter closed, and that touch is spent on the filter alone
+    val guard = br.app.stagebook.ui.drawer.LocalDrawerGuard.current
+    val dismiss by androidx.compose.runtime.rememberUpdatedState(onDismiss)
+    val openNow by androidx.compose.runtime.rememberUpdatedState(open)
+    val closedAt = remember { longArrayOf(Long.MIN_VALUE / 2) }   // never closed yet: nothing held
+    val wasOpen = remember { booleanArrayOf(false) }
+    androidx.compose.runtime.LaunchedEffect(open) {
+        if (!open && wasOpen[0]) closedAt[0] = android.os.SystemClock.uptimeMillis()
+        wasOpen[0] = open
+    }
+    androidx.compose.runtime.DisposableEffect(guard) {
+        val before = guard?.asks
+        val asks: () -> Boolean = {
+            when {
+                openNow -> { dismiss(); true }
+                android.os.SystemClock.uptimeMillis() - closedAt[0] < FILTER_TOUCH_MS -> true
+                else -> before?.invoke() == true
+            }
+        }
+        guard?.asks = asks
+        onDispose { if (guard?.asks === asks) guard.asks = before }
+    }
     ExposedDropdownMenu(
         expanded = open, onDismissRequest = onDismiss, matchAnchorWidth = false,
         modifier = Modifier.widthIn(min = br.app.stagebook.ui.theme.Sizes.tagFilterNarrow, max = br.app.stagebook.ui.theme.Sizes.tagMenu),
@@ -182,6 +299,7 @@ fun SearchWithFilter(
 }
 
 private val STACK_BELOW = 360.dp
+internal const val FILTER_TOUCH_MS = 500L   // the touch that closed a filter is spent within this, not passed to the side menu
 private val WIDE_FROM = 560.dp   // from here the long hint and the wide filter fit side by side
 
 @LightPreview
