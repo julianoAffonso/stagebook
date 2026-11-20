@@ -80,13 +80,21 @@ class ImportViewModel @Inject constructor(
     /** `raw` is what evaluateJavascript returns: the script's JSON string, in quotes. */
     fun onExtracted(raw: String?) {
         if (extracting) return   // double tap on Import opened the editor twice
-        extracting = true
-        viewModelScope.launch {
-            try { extract(raw) } finally { extracting = false }
-        }
+        startRun { extract(raw) }
     }
 
     private var extracting = false
+    // which run holds the lock: a run that asked about the tablature lets go before asking, and its own end must not
+    // free the lock of the run the answer started
+    private var runs = 0
+
+    private fun startRun(work: suspend () -> Unit) {
+        extracting = true
+        val mine = ++runs
+        viewModelScope.launch {
+            try { work() } finally { if (runs == mine) extracting = false }
+        }
+    }
 
     // page with tablature waiting for the "import it too?" answer
     private var pendingTab: String? = null
@@ -97,10 +105,7 @@ class ImportViewModel @Inject constructor(
         val raw = pendingTab ?: return
         pendingTab = null
         _uiState.update { it.copy(askTab = false) }
-        extracting = true
-        viewModelScope.launch {
-            try { extract(raw, include) } finally { extracting = false }
-        }
+        startRun { extract(raw, include) }
     }
 
     private suspend fun extract(raw: String?, withTab: Boolean? = null) {
@@ -115,6 +120,9 @@ class ImportViewModel @Inject constructor(
         when (r) {
             PageImport.AskTab -> {
                 pendingTab = raw   // the answer comes back through answerTab
+                // free before asking: an answer given the instant the question shows was dropped by the lock still held
+                // (the Release's tests, 20/11), and the editor never opened
+                extracting = false
                 _uiState.update { it.copy(askTab = true) }
             }
             is PageImport.Problem -> _uiState.update { it.copy(problem = r.problem) }
