@@ -68,6 +68,9 @@ class ConductNoticeShownTest {
     private fun following() {
         val msg = Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = songs, index = 1)
         link.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!)
+        // the strip is on screen before anything arrives: with no strip a notice is the app's message at the bottom, by
+        // design, and a slow machine (CI, 20/11) got the song in before the strip was worked out
+        compose.waitUntil(10_000) { vm.ui.value != null }
     }
 
     /** The song comes from the band as the leader's loose song, with lyrics only. */
@@ -77,8 +80,10 @@ class ConductNoticeShownTest {
         link.accept(voice.id, voice.name, link.packageBytes(QrPayload.pack(list), listOf(song)))
     }
 
+    private lateinit var vm: ConductViewModel
+
     private fun screen() {
-        val vm = ConductViewModel(follower, repo, DeviceIdentity(context))
+        vm = ConductViewModel(follower, repo, DeviceIdentity(context))
         compose.setContent {
             StagebookTheme {
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
