@@ -447,7 +447,7 @@ SECTIONS = [
         "text_en": [
             "Each song can have a backing track, as multichannel OGG, MP3 or WAV. Pick it in Song details, in the field with the audio wave, the same mark the lists show. On stage, play only shows on songs that have one. If a song's audio didn't come with it, an alert shows where play would be. Tap it to see the audio's name and attach it again.",
         ],
-        "figs": [Fig(("tablet_11_player_com_faixa", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
+        "figs": [Fig(("tablet_11_player_tocando", "celular_11_player_tocando", "Tocando com backing track", "Playing with a backing track")),
                  Fig(("tablet_11_player_usb_fora", "celular_11_player_usb_fora", "A interface saiu no meio da música", "The interface came out mid-song"))],
         "subs": [
             sub("backing-tocar", "Tocar e trocar", "Playing and changing",
