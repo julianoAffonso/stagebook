@@ -690,7 +690,7 @@
     <string name="settings_midi_out_help">As músicas podem enviar MIDI quando aparecem no palco e quando você sai delas, para trocar um preset ou uma cena. Escolha aqui para onde vai. Um aparelho Bluetooth aparece na lista depois de conectado em Conectar pedal ou aparelho MIDI. Mesa ou placa de som na USB não aparece, porque abrir o MIDI dela tiraria a interface de áudio do player.</string>
     <string name="settings_midi_out_device">Enviar para</string>
     <string name="settings_midi_out_none">Nenhum lugar</string>
-    <string name="settings_midi_out_find_bt">Não achou o seu aparelho Bluetooth? Conecte-o em Conectar pedal ou aparelho MIDI.</string>
+    <string name="settings_midi_out_find_bt">Não achou o seu aparelho Bluetooth? Conecte-o em %1$s.</string>
     <string name="settings_midi_out_away">%1$s, desconectado</string>
     <string name="settings_midi_usb_help">Desligado, o Stagebook não usa o USB e deixa ele livre para uma interface de áudio.</string>
     <string name="settings_midi_scanning">Procurando…</string>
@@ -1396,7 +1396,8 @@
     <string name="sub_import">Importar de sites</string>
     <string name="sub_copies">Cópias</string>
     <string name="sub_band">Tocar com a banda</string>
-    <string name="sub_broadcast">Transmissão</string>
+    <string name="sub_broadcast">Para fora do app</string>
+    <string name="sub_android">Ajustes do Android</string>
     <string name="sub_computer">Computador</string>
     <string name="sub_player">Backing track</string>
     <string name="sub_page">Página</string>

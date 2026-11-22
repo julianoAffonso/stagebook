@@ -89,13 +89,14 @@ class AdvancedViewModel @Inject constructor(@ApplicationContext private val cont
 @Composable
 fun AdvancedDetail(ui: AdvancedUi, onTweak: (DeviceTweak, Boolean) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        // the permission first, above the switches it unlocks (user, 22/11)
+        if (!ui.canWrite) PermissionCard()
         SettingsCard(stringResource(R.string.advanced_battery)) {
             // these change the whole device and come back on every start: said before anyone wonders why
             Text(stringResource(R.string.advanced_rewrite), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Tweaks(ui, DeviceTweak.Group.BATTERY, onTweak, except = DeviceTweak.SCREEN_TIMEOUT)   // the screen timeout sits with keeping the screen on
         }
         SettingsCard(stringResource(R.string.advanced_computer)) { Tweaks(ui, DeviceTweak.Group.COMPUTER, onTweak) }
-        if (!ui.canWrite) PermissionCard()
     }
 }
 

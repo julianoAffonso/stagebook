@@ -424,7 +424,7 @@ class ScreenshotTest {
                         SettingsScreen(
                             settings.copy(look = settings.look.copy(midiOut = "2:WIDI Master", midiOutName = "WIDI Master"), midi = br.app.stagebook.data.MidiState(supported = true)),
                             SettingsActions(midiOutputs = listOf(br.app.stagebook.data.MidiOutput("2:WIDI Master", "WIDI Master", true))),
-                            it, section = SettingsSection.PAGE, onLeave = {}, onMenu = {},
+                            it, section = SettingsSection.BAND, onLeave = {}, onMenu = {},
                         )
                     }
                 }
@@ -442,7 +442,7 @@ class ScreenshotTest {
                         SettingsScreen(
                             settings.copy(look = settings.look.copy(midiOut = "2:WIDI Master", midiOutName = "WIDI Master"), midi = br.app.stagebook.data.MidiState(supported = true)),
                             SettingsActions(midiOutputs = listOf(br.app.stagebook.data.MidiOutput("2:WIDI Master", "WIDI Master", true))),
-                            it, section = SettingsSection.PAGE, onLeave = {}, onMenu = {},
+                            it, section = SettingsSection.BAND, onLeave = {}, onMenu = {},
                         )
                     }
                 }
@@ -1235,10 +1235,10 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
-    fun settingsPhoneChords() = shootLyricsAt("celular_5_ajustes_cifras", settings, str(R.string.settings_chords_card), extraUp = 900f)
+    fun settingsPhoneChords() = shoot("celular_5_ajustes_cifras") { SettingsPage { SettingsScreen(settings, SettingsActions(), it, onLeave = {}, onMenu = {}, section = SettingsSection.CHORDS) } }
 
     // the tablet shows more of Lyrics at once: scroll the Chords in the lyrics card into view, down to its color
-    @Test fun settingsTabletChords() = shootLyricsAt("tablet_5_ajustes_cifras", settings, str(R.string.settings_chords_color), extraUp = 100f)
+    @Test fun settingsTabletChords() = shoot("tablet_5_ajustes_cifras") { SettingsPage { SettingsScreen(settings, SettingsActions(), it, onLeave = {}, onMenu = {}, section = SettingsSection.CHORDS) } }
 
     // the whole Settings → Chords screen (tall, no scrolling): instrument, diagram on tap and chord list
     @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")

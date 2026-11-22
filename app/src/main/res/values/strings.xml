@@ -670,7 +670,7 @@
     <string name="settings_midi_out_help">Songs can send MIDI when they show on stage and when you leave them, to change a preset or a scene. Pick here where it goes. A Bluetooth device shows up in the list once it\'s connected in Connect a pedal or MIDI device. A mixer or sound card on USB doesn\'t show up, because opening its MIDI would take the audio interface from the player.</string>
     <string name="settings_midi_out_device">Send to</string>
     <string name="settings_midi_out_none">Nowhere</string>
-    <string name="settings_midi_out_find_bt">Can\'t find your Bluetooth device? Connect it in Connect a pedal or MIDI device.</string>
+    <string name="settings_midi_out_find_bt">Can\'t find your Bluetooth device? Connect it in %1$s.</string>
     <string name="settings_midi_out_away">%1$s, not connected</string>
     <string name="settings_midi_usb_help">When off, Stagebook leaves USB alone, so it\'s free for a USB audio interface.</string>
     <string name="settings_midi_scanning">Searching…</string>
@@ -1344,7 +1344,8 @@
     <string name="sub_import">Import from sites</string>
     <string name="sub_copies">Copies</string>
     <string name="sub_band">Playing with the band</string>
-    <string name="sub_broadcast">Broadcast</string>
+    <string name="sub_broadcast">Out of the app</string>
+    <string name="sub_android">Android settings</string>
     <string name="sub_computer">Computer</string>
     <string name="sub_player">Backing track</string>
     <string name="sub_page">Page</string>

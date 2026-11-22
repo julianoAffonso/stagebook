@@ -95,7 +95,7 @@ class AutoProfileTest {
     @Config(qualifiers = "pt-rBR-w1280dp-h4000dp-port-hdpi")
     @Test fun `Settings offers automatic beside the other two profiles`() {
         var chosen: SongProfile? = null
-        compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onProfile = { chosen = it }), section = SettingsSection.LYRICS) } }
+        compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onProfile = { chosen = it }), section = SettingsSection.CHORDS) } }
         compose.onNodeWithText(str(R.string.settings_lyrics_only)).assertExists()
         // "Automático" is also an answer of other cards further down (the columns): the profile's comes first
         compose.onAllNodesWithText(str(R.string.settings_profile_auto))[0].performClick()

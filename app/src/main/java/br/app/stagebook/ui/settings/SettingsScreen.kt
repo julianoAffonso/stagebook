@@ -616,9 +616,9 @@ private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
-            SectionPinned(open, uiState.look, draft)
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                SectionDetail(open, uiState, actions, draft)
+            val scroll = rememberScrollState()
+            Column(Modifier.weight(1f).verticalScroll(scroll)) {
+                SectionDetail(open, uiState, actions, draft, scroll)
                 Spacer(Modifier.height(Spacing.l))
             }
         }
@@ -644,7 +644,6 @@ fun SettingsSection.iconOf(@Suppress("UNUSED_PARAMETER") look: Look): ImageVecto
  * internet, telling OBS (extras) or the editor on the computer (everything but essential mode).
  */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
-    SettingsSection.CHORDS -> look.chords
     SettingsSection.PLAYER -> look.extrasOn || look.playerMode
     SettingsSection.BAND -> look.bandOn || look.internetOn || look.extrasOn || !look.essential
     else -> true
@@ -725,9 +724,9 @@ fun SettingsScreen(
                     ) {
                         // fixed header; only the content scrolls
                         ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
-                        SectionPinned(open, uiState.look, draft)
-                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                            SectionDetail(open, uiState, actions, draft)
+                        val scroll = androidx.compose.runtime.key(open) { rememberScrollState() }   // each group opens at its top
+                        Column(Modifier.weight(1f).verticalScroll(scroll)) {
+                            SectionDetail(open, uiState, actions, draft, scroll)
                             Spacer(Modifier.height(Spacing.l))
                         }
                     }
@@ -881,12 +880,18 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
 }
 
 @Composable
-private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft) {
+private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, scroll: androidx.compose.foundation.ScrollState) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         when (section) {
-            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft)
+            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft, scroll)
             SettingsSection.PAGE -> PageDetail(uiState, actions)
-            SettingsSection.CHORDS -> ChordShapesCard(uiState.look, actions)
+            SettingsSection.CHORDS -> {
+                // how the chords look on the lyrics, with their own preview held on top while their card passes (user, 22/11)
+                br.app.stagebook.ui.components.StickyPreview(scroll, { StagePreviewBox(uiState.look, draft, "chordsPreview") }) {
+                    ChordsLookCard(uiState.look, actions, draft)
+                }
+                ChordShapesCard(uiState.look, actions)
+            }
             SettingsSection.PLAYER -> {
                 // the metronome card leads (its own name says what it is); the backing track's cards under their subtitle
                 if (uiState.look.extrasOn) MetronomeDetail(uiState.look, actions)
@@ -902,9 +907,11 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
                     br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_band))
                     BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
                 }
+                // what goes out of the app to other screens, apps and gear (user, 22/11: the songs' MIDI with them)
                 if (uiState.look.extrasOn) br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_broadcast))
                 AnnounceCard(uiState.look, actions)
                 ExternalScreenCard(uiState.look, actions)
+                if (uiState.midi.supported && uiState.look.extrasOn) MidiOutCard(uiState.look, actions)
                 if (!uiState.look.essential) {
                     br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_computer))
                     WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
@@ -913,6 +920,8 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.DEVICE -> {
                 EssentialDetail(uiState.look, actions)
                 LanguageDetail(uiState.language, actions)
+                // Android's own settings, with the permission that unlocks them first (user, 22/11)
+                br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_android))
                 AdvancedDetail(actions.advanced, actions.onTweak)
             }
             SettingsSection.ABOUT -> AboutDetail(uiState, actions)
@@ -929,19 +938,18 @@ internal class StageDraft(fontSp: Float, sectionScale: Float, chordScale: Float)
 }
 
 /**
- * Pinned above the scrolling content: on Stage look, the stage preview, so every change (lyrics, section titles,
- * chords) shows right away while scrolling through the options (user, 01/11).
+ * The stage preview with the look being set, so every change shows right away (user, 01/11). It stays on top while its
+ * cards scroll under it and goes up with the page after them ([br.app.stagebook.ui.components.StickyPreview], 22/11).
  */
 @Composable
-private fun SectionPinned(section: SettingsSection, look: Look, draft: StageDraft) {
-    if (section != SettingsSection.LYRICS) return
+private fun StagePreviewBox(look: Look, draft: StageDraft, tag: String) {
     // fixed height: changing the size doesn't move the screen; on a wide screen the box is taller, so the miniature
     // (sized so 72 fits) stays close to the real size (30/10)
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(bottom = Spacing.m)) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
         Surface(
             color = Color(look.bg),
             shape = MaterialTheme.shapes.small,
-            modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview).testTag("lyricsPreview"),
+            modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview).testTag(tag),
         ) {
             StagePreview(look.copy(sectionScale = draft.sectionScale, chordScale = draft.chordScale), draft.font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(draft.font), R.string.settings_preview_size_text)
         }
@@ -949,9 +957,10 @@ private fun SectionPinned(section: SettingsSection, look: Look, draft: StageDraf
 }
 
 @Composable
-private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
+private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft, scroll: androidx.compose.foundation.ScrollState) {
     // everything about how the lyrics look in one card (user, 01/11: the size was far from the colors and the font);
-    // the preview is pinned above
+    // the preview stays on top while the lyrics and section title cards pass, then goes up with the page (user, 22/11)
+    br.app.stagebook.ui.components.StickyPreview(scroll, { StagePreviewBox(look, draft, "lyricsPreview") }) {
     SettingsCard(stringResource(R.string.settings_lyrics_card), help = stringResource(R.string.settings_font_help)) {
         Text(stringResource(R.string.settings_font_size, draft.font.roundToInt()), style = MaterialTheme.typography.bodyLarge)
         Slider(
@@ -974,9 +983,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground, Modifier.settingsItem("background"))
         LegibilityWarnings(look)
     }
-    // chords and section titles live with the rest of the stage look too, under the same preview (user, 01/11)
-    ChordsLookCard(look, actions, draft)
+    // section titles under the same preview; the chords' look moved to Chords, with its own preview (user, 22/11)
     SectionsDetail(look, actions, draft)
+    }
     // the handle's side has no switch: held and dragged to the other edge, it moves there (user, 19/11)
     // a song that is a PDF: its colours turned over (the song's own switch is in its editor)
     SettingsCard(stringResource(R.string.settings_pdf_card), help = stringResource(R.string.settings_pdf_invert_help)) {
@@ -1029,8 +1038,6 @@ private fun PageDetail(uiState: SettingsUiState, actions: SettingsActions) {
             detail = stringResource(if (missing) R.string.settings_stage_dnd_missing else R.string.settings_stage_dnd_detail),
         )
         if (missing) ActionButton(stringResource(R.string.stage_dnd_allow), actions.onDndAllow, Modifier.settingsItem("stage_dnd"), icon = AppIcons.VolumeOff, tone = ButtonTone.Tonal)
-        // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10); player only
-        if (look.playerMode) SwitchRow(stringResource(R.string.settings_track_stops), look.trackStops, actions.onTrackStops, Modifier.settingsItem("track_stops"), detail = stringResource(R.string.settings_track_stops_detail))
         // Android's own screen timeout sits next to keeping the screen on (user, 14/11); only where the device has it
         Tweaks(actions.advanced, DeviceTweak.Group.BATTERY, actions.onTweak, only = DeviceTweak.SCREEN_TIMEOUT)
     }
@@ -1255,7 +1262,7 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
         PedalButtonsContent(uiState, actions)
     }
     // the songs' MIDI is one of the extras (essential mode, T19): off, the card leaves too
-    if (uiState.midi.supported && uiState.look.extrasOn) MidiOutCard(uiState.look, actions)
+
 }
 
 /** Where the songs' MIDI goes (user, 07/11): one output for the whole app, USB or Bluetooth. */
@@ -1276,7 +1283,8 @@ private fun MidiOutCard(look: Look, actions: SettingsActions) {
         )
         // a Bluetooth device only shows up once connected, in the card above: say where, when none is listed
         if (actions.midiOutputs.none { it.bluetooth }) {
-            Text(stringResource(R.string.settings_midi_out_find_bt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // the pedal and MIDI connection lives in Turn the page: a link takes there (user, 22/11, the output moved out of it)
+            br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.settings_midi_out_find_bt), stringResource(R.string.settings_pedal_connect), SettingsSection.PAGE, Modifier.settingsItem("midi_out"), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -1641,6 +1649,9 @@ private fun TrackEndsCard(look: Look, actions: SettingsActions) {
         )
         InfoText(stringResource(R.string.stop_fade_detail))
         SwitchRow(stringResource(R.string.trim_silence), look.trimSilence, actions.onTrimSilence, Modifier.settingsItem("trim_silence"), detail = stringResource(R.string.trim_silence_detail))
+        // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10). With the
+        // track's start and stop, not with the show (user, 22/11)
+        SwitchRow(stringResource(R.string.settings_track_stops), look.trackStops, actions.onTrackStops, Modifier.settingsItem("track_stops"), detail = stringResource(R.string.settings_track_stops_detail))
     }
 }
 

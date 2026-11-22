@@ -30,12 +30,12 @@ class MidiOutSettingsTest {
     private val chosen = mutableListOf<MidiOutput?>()
     private var opened = 0
 
-    private fun show(look: Look, outputs: List<MidiOutput>) = compose.setContent {
+    private fun show(look: Look, outputs: List<MidiOutput>, section: SettingsSection = SettingsSection.BAND) = compose.setContent {
         StagebookTheme {
             SettingsScreen(
                 SettingsUiState(loading = false, look = look, midi = MidiState(supported = true)),
                 SettingsActions(midiOutputs = outputs, onMidiOutputsOpen = { opened++ }, onMidiOut = { chosen += it }),
-                section = SettingsSection.PAGE,
+                section = section,
             )
         }
     }
@@ -52,8 +52,8 @@ class MidiOutSettingsTest {
     // and the output says where to connect one when none is listed
     @Test fun `with no Bluetooth device listed the output says where to connect one`() {
         show(Look(), listOf(MidiOutput("1:Keystation", "Keystation", false)))
-        compose.onNodeWithText("Não achou o seu aparelho Bluetooth? Conecte-o em Conectar pedal ou aparelho MIDI.", substring = true).performScrollTo()
-        compose.onNodeWithText("Conectar pedal ou aparelho MIDI").assertExists()
+        // the connection is in Turn the page now: the hint names it as a link there
+        compose.onNodeWithText("Não achou o seu aparelho Bluetooth? Conecte-o em Conectar pedal ou aparelho MIDI.", substring = true).performScrollTo().assertExists()
     }
 
     @Test fun `with a Bluetooth device listed the hint is gone`() {
@@ -69,7 +69,7 @@ class MidiOutSettingsTest {
 
     // S26 and Chuwi, 07/11: a blank band between "Pedal Bluetooth comum" and "Pedal MIDI Bluetooth"
     @Test fun `the ways to add a pedal sit one right under the other`() {
-        show(Look(), emptyList())
+        show(Look(), emptyList(), SettingsSection.PAGE)
         val common = compose.onNodeWithText("Pedal Bluetooth comum").getBoundsInRoot()
         val midi = compose.onNodeWithText("Aparelho MIDI Bluetooth").getBoundsInRoot()
         assertEquals(common.bottom.value, midi.top.value, 0.5f)

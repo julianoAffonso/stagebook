@@ -38,7 +38,7 @@ class SettingsSubheadersTest {
 
     @Test fun `the Band section groups band, broadcast and computer`() {
         open(SettingsSection.BAND, Look(bandOn = true))
-        for (t in listOf("Tocar com a banda", "Transmissão", "Computador")) {
+        for (t in listOf("Tocar com a banda", "Para fora do app", "Computador")) {
             compose.onNode(androidx.compose.ui.test.hasText(t) and androidx.compose.ui.test.isHeading()).performScrollTo().assertExists()
         }
     }

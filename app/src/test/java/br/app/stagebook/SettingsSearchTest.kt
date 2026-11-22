@@ -70,7 +70,7 @@ class SettingsSearchTest {
         screen()
         type("midi")
         assertTrue(compose.onAllNodesWithText("Virar a página › Pedal › Pedal e MIDI").fetchSemanticsNodes().isNotEmpty())
-        assertTrue(shown("Virar a página › Pedal › Saída MIDI"))
+        assertTrue(shown("Banda e computador › Para fora do app › Saída MIDI"))
         compose.onNodeWithText("Enviar para").assertExists()
     }
 
@@ -112,7 +112,7 @@ class SettingsSearchTest {
     @Test fun `the songs MIDI output shows with the reason when the extras are off`() {
         screen(essentialLook)
         type("saida midi")
-        assertTrue(shown("Virar a página › Pedal › Saída MIDI"))
+        assertTrue(shown("Banda e computador › Para fora do app › Saída MIDI"))
         assertTrue(shown("Só aparece com Metrônomo e extras dos acordes ligado"))
         assertTrue(shown("Virar a página › Pedal › Pedal e MIDI"))   // the pedal stays
     }
@@ -219,7 +219,7 @@ class SettingsSearchTest {
         type("midi")
         tester.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
-        assertTrue(shown("Virar a página › Pedal › Saída MIDI"))
+        assertTrue(shown("Banda e computador › Para fora do app › Saída MIDI"))
     }
 
     // ---- the guard: the index and the screen say the same thing --------------------------------------------------
@@ -305,7 +305,7 @@ class SettingsSearchNarrowTest {
         compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false, midi = MidiState(supported = true)), SettingsActions(advanced = sampleAdvanced)) } }
         compose.onNode(hasSetTextAction()).performTextInput("midi")
         compose.waitForIdle()
-        for (text in listOf("Pedal MIDI pelo USB", "Virar a página › Pedal › Saída MIDI", "Enviar para")) {
+        for (text in listOf("Pedal MIDI pelo USB", "Banda e computador › Para fora do app › Saída MIDI", "Enviar para")) {
             val node = compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().first()
             val out = mutableListOf<TextLayoutResult>()
             node.config.getOrNull(SemanticsActions.GetTextLayoutResult)!!.action!!(out)
