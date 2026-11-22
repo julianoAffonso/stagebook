@@ -36,4 +36,22 @@ object MirrorLines {
         }
         return if (first < 0) heights.lastIndex..heights.lastIndex else first..last
     }
+
+    /**
+     * On the external screen nothing scrolls (user, 22/11: "it should pass, as long as the whole song does"): while the
+     * stage scrolls, the screen shows whole steps of it. The step whose window holds the top of the stage's view, from
+     * the step offsets [offsets]: the line at the top of the tablet is always on the TV, and every step comes in turn.
+     */
+    fun stepAt(offsets: List<Int>, offset: Int): Int = offsets.indexOfLast { it <= offset }.coerceAtLeast(0)
+
+    /**
+     * The height, in the PDF's pages one under the other ([total] tall), whose page the external screen shows when the
+     * stage is scrolled [offset] in a view [viewport] tall: from the top of the view at the start to its bottom at the end,
+     * so a short first or last page shows too (the middle of the view never reached them).
+     */
+    fun pdfProbe(offset: Int, viewport: Int, total: Int): Int {
+        val max = (total - viewport).coerceAtLeast(0)
+        if (max == 0) return 0
+        return offset + (viewport.toLong() * offset.coerceIn(0, max) / max).toInt().coerceAtMost(viewport - 1)
+    }
 }

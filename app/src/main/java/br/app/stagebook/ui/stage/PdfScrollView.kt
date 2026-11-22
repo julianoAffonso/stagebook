@@ -61,7 +61,7 @@ fun PdfScrollView(
     autoPxPerSecond: Float = 0f,
     onAutoEnd: () -> Unit = {},
     onPaused: (step: Int) -> Unit = {},
-    onTopPage: ((page: Int) -> Unit)? = null,   // the page in the middle of the view, for the external screen
+    onTopPage: ((page: Int) -> Unit)? = null,   // the page the external screen shows (every page passes there in turn)
     pageKey: Any = Unit,
 ) {
     when (open) {
@@ -128,8 +128,9 @@ fun PdfScrollView(
             val offset = scroll.value.roundToInt()
             val visible = PdfScroll.visible(tops, heights, offset, viewport)
             if (onTopPage != null) {
-                val middle = PdfScroll.pageAt(tops, offset + viewport / 2)
-                LaunchedEffect(middle, pageKey) { onTopPage(middle) }
+                // from the top of the view at the start to its bottom at the end: every page passes on the TV, short ones too
+                val shownPage = PdfScroll.pageAt(tops, br.app.stagebook.domain.MirrorLines.pdfProbe(offset, viewport, total))
+                LaunchedEffect(shownPage, pageKey) { onTopPage(shownPage) }
             }
             // the pictures of the pages in view, drawn off the main thread; the others are let go
             val drawn = remember(pages, width, crops) { mutableStateMapOf<Int, ImageBitmap>() }

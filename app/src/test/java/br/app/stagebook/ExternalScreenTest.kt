@@ -63,6 +63,32 @@ class ExternalScreenTest {
         assertEquals(0, PdfScroll.pageAt(listOf(0, 100, 200), 50))
     }
 
+    @Test fun `scrolling, the TV passes whole steps and the whole song goes by`() {
+        val heights = List(40) { 10 }   // 400 px of lyrics in a 100 px view
+        val steps = br.app.stagebook.domain.ScrollSteps.steps(heights.mapIndexed { i, h -> br.app.stagebook.domain.Pagination.Line(h, false) }, 100, 0).map { it.offset }
+        val shown = (0..steps.last()).map { o -> br.app.stagebook.domain.MirrorLines.stepAt(steps, o) }
+        // it never goes back and never skips a step: the screen changes only when the stage reaches the next one
+        assertEquals(steps.indices.toList(), shown.distinct())
+        assertEquals(shown, shown.sorted())
+        val seen = steps.flatMap { MirrorLines.visible(heights, it, 100).toList() }.toSet()
+        assertEquals((0 until 40).toSet(), seen)
+        // the line at the top of the tablet is always on the TV
+        for (o in 0..steps.last()) {
+            val k = br.app.stagebook.domain.MirrorLines.stepAt(steps, o)
+            assertTrue(o / 10 in MirrorLines.visible(heights, steps[k], 100))
+        }
+    }
+
+    @Test fun `scrolling a PDF, every page passes on the TV, a short first and last one too`() {
+        val heights = listOf(30, 400, 400, 30)   // a cover and a last page shorter than half the view
+        val tops = PdfScroll.tops(heights)
+        val total = heights.sum()
+        val view = 300
+        val pages = (0..total - view).map { o -> PdfScroll.pageAt(tops, br.app.stagebook.domain.MirrorLines.pdfProbe(o, view, total)) }
+        assertEquals(listOf(0, 1, 2, 3), pages.distinct())
+        assertEquals(pages, pages.sorted())
+    }
+
     private val song = "[Verse]\n[G]Primeira linha\n[D]Segunda linha\n\n[Chorus]\n[C]Terceira linha\n[Em]Quarta linha"
 
     private fun show(frame: MirrorFrame?, look: Look) {

@@ -1415,9 +1415,12 @@ fun StageScreen(
             // the external screen shows the song lines the stage has in view (user, 22/11)
             if (mirror != null) {
                 val sources = remember(fitted) { fitted.map { it.source } }
-                if (scrollMode) LaunchedEffect(mirror, song.id, shownText, measured, height) {
+                // scrolling: the TV doesn't scroll, it shows whole steps, each as the stage reaches it (user, 22/11)
+                if (scrollMode) LaunchedEffect(mirror, song.id, shownText, measured, height, steps) {
                     val heights = measured.map { it.height }
-                    snapshotFlow { br.app.stagebook.domain.MirrorLines.visible(heights, scrollY.value.roundToInt(), height) }.collect { inView ->
+                    val offsets = steps.map { it.offset }
+                    snapshotFlow { br.app.stagebook.domain.MirrorLines.stepAt(offsets, scrollY.value.roundToInt()) }.collect { k ->
+                        val inView = br.app.stagebook.domain.MirrorLines.visible(heights, offsets.getOrElse(k) { 0 }, height)
                         mirror.frame = MirrorFrame(song.id, song.title, song.meta, shownText, br.app.stagebook.domain.MirrorLines.sourceRange(sources, listOf(inView)))
                     }
                 } else SideEffect {
