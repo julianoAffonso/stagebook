@@ -129,6 +129,18 @@ class WebEditorPdfTest {
         assertTrue(repo.song(id)!!.pdfCrops.isEmpty())
     }
 
+    @Test fun `pages left off the stage are real pages, never all of them, and go with the PDF`() {
+        val (api, id) = withPdf()
+        assertEquals(200, call(api, "PUT", "/api/songs/$id/pdf-view", """{"hidden":[4,1,1,99,-2]}""").status)
+        assertEquals(listOf(1, 4), repo.song(id)!!.pdfHidden)
+        assertTrue(call(api, "GET", "/api/songs/$id").text().contains("\"pdfHidden\":[1,4]"))
+        // all six hidden: refused, what was kept stays
+        call(api, "PUT", "/api/songs/$id/pdf-view", """{"hidden":[0,1,2,3,4,5]}""")
+        assertEquals(listOf(1, 4), repo.song(id)!!.pdfHidden)
+        call(api, "DELETE", "/api/songs/$id/pdf")
+        assertTrue(repo.song(id)!!.pdfHidden.isEmpty())
+    }
+
     @Test fun `a page from before these fields saves the song without wiping them`() {
         val (api, id) = withPdf()
         call(api, "PUT", "/api/songs/$id/pdf-view", """{"invert":true,"crops":[{"page":-1,"left":0.2,"top":0.0,"right":1.0,"bottom":1.0}]}""")

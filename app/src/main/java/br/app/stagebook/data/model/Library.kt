@@ -64,6 +64,8 @@ data class Song(
     // exported songs file. Kept with the song, so deleting a setlist or clearing its marks takes nothing away
     val plays: Int = 0,
     val lastPlayed: String = "",
+    // the PDF's pages left off the stage, by file page (user, 22/11); like the trims, this device and the backup
+    val pdfHidden: List<Int> = emptyList(),
 ) {
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
@@ -72,7 +74,7 @@ data class Song(
     val pdfLost: Boolean get() = pdf.isEmpty() && pdfName.isNotEmpty()
 
     /** The same song with no trace of a PDF (what the QR, the text export and a received song never carry). */
-    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty() && pdfInvert == null && pdfScale == 1f && pdfPanX == 0f && pdfPanY == 0f) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfInvert = null, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f)
+    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty() && pdfHidden.isEmpty() && pdfInvert == null && pdfScale == 1f && pdfPanX == 0f && pdfPanY == 0f) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfInvert = null, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f)
 }
 
 /**

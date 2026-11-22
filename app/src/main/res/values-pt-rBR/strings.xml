@@ -132,6 +132,17 @@
         <item quantity="many">+ %d sem duração</item>
         <item quantity="other">+ %d sem duração</item>
     </plurals>
+    <string name="pdf_pages_title">Páginas no palco</string>
+    <string name="pdf_pages_of">%1$d de %2$d</string>
+    <string name="pdf_pages_hint">Toque numa página para tirá-la do palco, e de novo para trazê-la de volta. O arquivo não muda.</string>
+    <plurals name="pdf_pages_shown">
+        <item quantity="one">%1$d de %2$d página no palco</item>
+        <item quantity="many">%1$d de %2$d páginas no palco</item>
+        <item quantity="other">%1$d de %2$d páginas no palco</item>
+    </plurals>
+    <string name="pdf_page_label">Página %d</string>
+    <string name="pdf_page_shown">no palco</string>
+    <string name="pdf_page_hidden">escondida</string>
     <string name="enrich_title">Completar dados das músicas</string>
     <string name="enrich_start">Buscar o que falta</string>
     <string name="enrich_stop">Parar</string>

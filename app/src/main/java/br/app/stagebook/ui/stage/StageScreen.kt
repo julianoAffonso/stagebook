@@ -1125,7 +1125,18 @@ fun StageScreen(
             }
             // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
             if (song.pdf.isNotEmpty()) {
-                val open by rememberPdfOpen(pdfFile(song.pdf))
+                val opened by rememberPdfOpen(pdfFile(song.pdf))
+                // pages left off the stage (user, 22/11): the stage counts only the pages shown; the marks and the trims stay
+                // on their file pages
+                val visible = remember(opened, song.pdfHidden) { (opened as? br.app.stagebook.ui.stage.PdfOpen.Ready)?.let { br.app.stagebook.domain.PdfHidden.visible(it.pages.pageCount, song.pdfHidden) } }
+                val open = remember(opened, visible) {
+                    val ready = opened as? br.app.stagebook.ui.stage.PdfOpen.Ready
+                    if (ready != null && visible != null && song.pdfHidden.isNotEmpty()) br.app.stagebook.ui.stage.PdfOpen.Ready(ready.pages.only(visible)) else opened
+                }
+                val hiding = visible != null && song.pdfHidden.isNotEmpty()
+                val shownMarks = if (hiding) br.app.stagebook.domain.PdfHidden.marks(song.pdfMarks, visible!!) else song.pdfMarks
+                val shownCrops = if (hiding) br.app.stagebook.domain.PdfHidden.crops(song.pdfCrops, visible!!) else song.pdfCrops
+                fun fileOf(page: Int) = if (hiding) br.app.stagebook.domain.PdfHidden.fileOf(page, visible!!) else page
                 // scroll mode: the pages one under the other, scrolled like the lyrics (user, 22/11). The pedal, the tap
                 // and the swipe go through its steps as through pages; the page it was left on isn't kept (steps aren't pages)
                 if (look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL) {
@@ -1134,7 +1145,7 @@ fun StageScreen(
                     Box(Modifier.fillMaxSize()) {
                         PdfScrollView(
                             open, current, song.pdfInvert ?: look.pdfInvert, onStepCount = { pageCount = it; pageCountFor = index },
-                            crops = song.pdfCrops, marks = song.pdfMarks, markColor = Color(look.highlightColor),
+                            crops = shownCrops, marks = shownMarks, markColor = Color(look.highlightColor),
                             autoOn = autoOn, autoPxPerSecond = autoPx, onAutoEnd = { autoOn = false },
                             onPaused = { k -> onPosition(index, k) }, pageKey = index,
                         )
@@ -1163,10 +1174,10 @@ fun StageScreen(
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
                         open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
-                        marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
-                        onStroke = { page, points -> onPdfStroke(song.id, page, points) },
+                        marks = shownMarks, marking = marking, markColor = Color(look.highlightColor),
+                        onStroke = { page, points -> onPdfStroke(song.id, fileOf(page), points) },
                         view = song.pdfView,
-                        crops = song.pdfCrops,
+                        crops = shownCrops,
                         // nothing is drawn for page 0 while the song's own last page is being found
                         ready = song.pdfPage == 0 || restoredFor == index,
                         pageKey = index,
@@ -1178,11 +1189,11 @@ fun StageScreen(
                     // holding the page: the highlighter, and taking back what was marked on it
                     val boxW = this@BoxWithConstraints.constraints.maxWidth
                     editOffer?.let { offer ->
-                        val onPage = song.pdfMarks.any { it.page == current }
+                        val onPage = shownMarks.any { it.page == current }
                         PdfHoldButtons(
                             onMarker = { editOffer = null; marking = true },
-                            onUndo = if (onPage) ({ editOffer = null; onPdfUndo(song.id, current) }) else null,
-                            onClear = if (onPage) ({ editOffer = null; onPdfClear(song.id, current) }) else null,
+                            onUndo = if (onPage) ({ editOffer = null; onPdfUndo(song.id, fileOf(current)) }) else null,
+                            onClear = if (onPage) ({ editOffer = null; onPdfClear(song.id, fileOf(current)) }) else null,
                             modifier = Modifier.layout { measurable, c ->
                                 val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
                                 val gap = Spacing.l.roundToPx()

@@ -127,6 +127,16 @@
         <item quantity="one">+ %d with no length</item>
         <item quantity="other">+ %d with no length</item>
     </plurals>
+    <string name="pdf_pages_title">Pages on stage</string>
+    <string name="pdf_pages_of">%1$d of %2$d</string>
+    <string name="pdf_pages_hint">Tap a page to leave it off the stage, and again to bring it back. The file doesn\'t change.</string>
+    <plurals name="pdf_pages_shown">
+        <item quantity="one">%1$d of %2$d page on stage</item>
+        <item quantity="other">%1$d of %2$d pages on stage</item>
+    </plurals>
+    <string name="pdf_page_label">Page %d</string>
+    <string name="pdf_page_shown">on stage</string>
+    <string name="pdf_page_hidden">hidden</string>
     <string name="enrich_title">Complete song details</string>
     <string name="enrich_start">Look up what is missing</string>
     <string name="enrich_stop">Stop</string>

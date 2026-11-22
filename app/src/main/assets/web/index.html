@@ -59,6 +59,14 @@
   .switch input { width: 20px; height: 20px; flex: none; }
   dialog#crop-dialog { background: var(--surface); color: var(--text); border: 0; border-radius: 28px; padding: 24px; width: min(94vw, 760px); }
   dialog#crop-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  /* which pages show on the stage (user, 22/11): every page small, a tap hides it or brings it back */
+  dialog#pages-dialog { background: var(--surface); color: var(--text); border: 0; border-radius: 28px; padding: 24px; width: min(94vw, 760px); }
+  dialog#pages-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  #pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; max-height: 60vh; overflow: auto; }
+  #pages-grid button { background: none; border: 0; color: inherit; padding: 0; cursor: pointer; display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  #pages-grid img { width: 100%; aspect-ratio: .707; object-fit: contain; background: #fff; border-radius: 8px; }
+  #pages-grid button.off img { opacity: .3; }
+  #pages-grid button.off span { color: var(--muted, #888); text-decoration: line-through; }
   #crop-wrap { position: relative; padding: 12px; touch-action: none; user-select: none; width: fit-content; max-width: 100%; margin: 8px auto; }
   #crop-stage { position: relative; overflow: hidden; line-height: 0; }
   #crop-img { display: block; max-width: 100%; max-height: 56vh; background: #fff; }
@@ -186,7 +194,15 @@
             <p id="pdf-note"></p>
             <label class="switch"><input type="checkbox" id="pdf-invert"><span data-t="pdfInvert"></span></label>
             <button class="outline" type="button" id="pdf-crop"></button>
+            <button class="outline" type="button" id="pdf-pages"></button>
           </div>
+          <dialog id="pages-dialog">
+            <h3 data-t="pagesTitle"></h3>
+            <p class="muted" data-t="pagesHint"></p>
+            <p id="pages-count"></p>
+            <div id="pages-grid"></div>
+            <div class="row"><span class="grow"></span><button type="button" id="pages-close"></button></div>
+          </dialog>
           <dialog id="crop-dialog">
             <h3 data-t="cropTitle"></h3>
             <p class="muted" data-t="cropHint"></p>
@@ -570,6 +586,9 @@ function drawPdf() {
   $("pdf-invert").parentElement.hidden = !has;
   $("pdf-crop").textContent = t.pdfCrop;
   $("pdf-crop").hidden = !has;
+  const hidden = (current && current.pdfHidden) || [];
+  $("pdf-pages").textContent = `${t.pagesTitle} · ${fill(t.pagesOf, n - hidden.filter((p) => p < n).length, n)}`;
+  $("pdf-pages").hidden = !has || n < 2;
 }
 
 function drawTrack() {
@@ -744,9 +763,38 @@ async function sendPdfView(body) {
   const r = await api(`/api/songs/${encodeURIComponent(current.id)}/pdf-view`, { method: "PUT", body: JSON.stringify(body) }).catch(() => null);
   if (!r || r.status !== 200) return offline();
   const v = await r.json();
-  current.pdfInvert = v.invert; current.pdfCrops = v.crops;
+  current.pdfInvert = v.invert; current.pdfCrops = v.crops; current.pdfHidden = v.hidden || [];
   drawPdf();
+  if ($("pages-dialog").open) drawPages();
 }
+// the pages on the stage: a tap leaves one off or brings it back; the last one shown stays (the app checks it too)
+function drawPages() {
+  const n = current.pdfPages || 0, hidden = current.pdfHidden || [];
+  $("pages-count").textContent = fill(t.pagesOf, n - hidden.filter((p) => p < n).length, n);
+  $("pages-grid").replaceChildren(...Array.from({ length: n }, (_, p) => {
+    const off = hidden.includes(p);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = off ? "off" : "";
+    const label = fill(t.pageLabel, p + 1);
+    b.setAttribute("aria-label", `${label}, ${off ? t.pageHidden : t.pageShown}`);
+    const img = document.createElement("img");
+    img.alt = "";
+    img.style.filter = current.pdfInvert ? "invert(1)" : "";
+    loadPdfPage(p).then((url) => { if (url) img.src = url; });
+    const s = document.createElement("span");
+    s.textContent = label;
+    b.append(img, s);
+    b.onclick = () => {
+      const next = off ? hidden.filter((x) => x !== p) : [...hidden, p].sort((a, c) => a - c);
+      if (next.length >= n) return;
+      sendPdfView({ hidden: next });
+    };
+    return b;
+  }));
+}
+$("pdf-pages").onclick = () => { $("pages-close").textContent = t.close; drawPages(); $("pages-dialog").showModal(); };
+$("pages-close").onclick = () => $("pages-dialog").close();
 $("pdf-invert").onchange = () => sendPdfView({ invert: $("pdf-invert").checked });
 
 // the crop window: the page with a frame, for every page or for this one

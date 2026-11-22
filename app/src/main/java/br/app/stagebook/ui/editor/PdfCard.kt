@@ -65,7 +65,7 @@ internal fun fileSizeText(bytes: Long): String =
  * device (a backup without the files), and the card says to attach it again.
  */
 @Composable
-fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}, onCrop: () -> Unit = {}) {
+fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}, onCrop: () -> Unit = {}, onPages: () -> Unit = {}) {
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -86,10 +86,15 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
                 }
             }
             // the first page, as it will look on the stage (with the colours turned over, if they are)
-            pdf.file?.let { PdfPreview(it, pdf.invert) }
+            pdf.file?.let { PdfPreview(it, pdf.invert, br.app.stagebook.domain.PdfHidden.visible(pdf.pages.coerceAtLeast(1), pdf.hidden).first()) }
             Text(stringResource(R.string.editor_pdf_note), style = MaterialTheme.typography.bodyMedium)
             // the colours of this song's PDF: white paper black, for a dark stage. Here, and not on the stage's header
             if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
+            // which pages show on the stage (user, 22/11): only with more than one
+            if (!pdf.lost && pdf.pages > 1) ActionButton(
+                stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),
+                onPages, Modifier.fillMaxWidth(), icon = AppIcons.Visibility, tone = ButtonTone.Tonal,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, Modifier.weight(1f), tone = ButtonTone.Tonal)
                 ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, Modifier.weight(1f), tone = ButtonTone.Tonal)
@@ -113,12 +118,12 @@ private fun PdfSongCardDarkPreview() = PreviewSurface(dark = true) {
 
 /** The PDF's first page, small, in the card: drawn off the main thread, closed with the card. */
 @Composable
-private fun PdfPreview(file: java.io.File, invert: Boolean, modifier: Modifier = Modifier) {
+private fun PdfPreview(file: java.io.File, invert: Boolean, page: Int = 0, modifier: Modifier = Modifier) {
     val open by br.app.stagebook.ui.stage.rememberPdfOpen(file)
     val ready = open as? br.app.stagebook.ui.stage.PdfOpen.Ready
-    val image by produceState<ImageBitmap?>(null, ready) {
+    val image by produceState<ImageBitmap?>(null, ready, page) {
         value = null
-        value = ready?.let { r -> runCatching { r.pages.bitmap(0, PREVIEW_WIDTH).asImageBitmap() }.getOrNull() }
+        value = ready?.let { r -> runCatching { r.pages.bitmap(page.coerceIn(0, r.pages.pageCount - 1), PREVIEW_WIDTH).asImageBitmap() }.getOrNull() }
     }
     Box(modifier.fillMaxWidth().heightIn(max = PREVIEW_MAX_HEIGHT), contentAlignment = Alignment.Center) {
         val shown = image

@@ -484,7 +484,7 @@ class ScreenshotTest {
             StagebookTheme {
                 SongEditorScreen(
                     editorSong, {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(playerMode = true),
-                    pdf = br.app.stagebook.ui.editor.EditorPdf(s("Canção de teste - cifra.pdf"), pages = 3, bytes = 412_000),
+                    pdf = br.app.stagebook.ui.editor.EditorPdf(s("Canção de teste - cifra.pdf"), pages = 3, bytes = 412_000, hidden = listOf(1)),
                     position = br.app.stagebook.ui.editor.EditorPosition(2, 12),
                 )
             }
